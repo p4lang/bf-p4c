@@ -8,6 +8,7 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/resolve_parser_values.h"
@@ -15,6 +16,8 @@
 #include "bf-p4c/common/utils.h"
 
 namespace BFN {
+
+using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 
 struct ParserPragmas : public Inspector {
     static bool checkNumArgs(cstring pragma, const IR::Vector<IR::Expression>& exprs,
@@ -281,7 +284,7 @@ class GetBackendParser {
                               const ParserPragmas& pg) :
         typeMap(typeMap), refMap(refMap), parserPragmas(pg) { }
 
-    const IR::BFN::Parser* extract(const IR::BFN::TnaParser* parser);
+    const IR::BFN::Parser* extract(const IR::BFN::TnaParser* parser, ParseTna *arch);
 
     bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
                        const IR::P4ValueSet* valueSet = nullptr);
@@ -327,7 +330,7 @@ class GetBackendParser {
 };
 
 const IR::BFN::Parser*
-GetBackendParser::extract(const IR::BFN::TnaParser* parser) {
+GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
     forAllMatching<IR::ParserState>(parser, [&](const IR::ParserState* state) {
         auto stateName = getStateName(state);
 
@@ -344,7 +347,39 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser) {
     });
 
     IR::BFN::ParserState* startState = getState(getStateName("start"));
-    return new IR::BFN::Parser(parser->thread, startState, parser->phase0, parser->portmap);
+    cstring pipeName = parser->pipeName;
+    BlockInfoMapping* binfo = &arch->toBlockInfo;
+    if (binfo && (arch->hasMultipleParsers || arch->hasMultiplePipes)) {
+        auto bitr = binfo->begin();
+        while (bitr != binfo->end()) {
+            auto b = *bitr;
+            auto bparser = b.first->to<IR::P4Parser>();
+            if (bparser && (bparser->name.originalName == parser->name) &&
+                (b.second.gress == parser->thread)) {
+                pipeName = b.second.pipe;
+                if (!b.second.arch.isNullOrEmpty())
+                    pipeName += "." + b.second.arch;
+                binfo->erase(bitr);
+                break;
+            }
+            bitr++;
+        }
+    }
+
+    IR::BFN::Phase0 *phase0 = nullptr;
+    if (parser->phase0) {
+        phase0 = parser->phase0->clone();
+        // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
+        // which is not used in phase0 table name in backend
+        // For multi parsers arch, the fully qualified name prefix is determined
+        // in the pipe name
+        if ((BackendOptions().arch != "v1model") && (!arch->hasMultipleParsers))
+            phase0->tableName = parser->name + "." + phase0->tableName;
+        if (!pipeName.isNullOrEmpty())
+            phase0->tableName = pipeName + "." + phase0->tableName;
+    }
+    return new IR::BFN::Parser(parser->thread, startState, parser->name,
+            pipeName, phase0, parser->portmap);
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
@@ -359,7 +394,7 @@ bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         if (sizeConstant->value < 0) {
             ::error("valueset size must be a positive integer %1%", valueSet); }
         sz = sizeConstant->value.get_ui();
-        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->controlPlaneName(), sz);
+        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->name.originalName, sz);
     } else {
         match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
     }
@@ -985,7 +1020,7 @@ void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {
     parser->apply(pg);
 
     GetBackendParser gp(typeMap, refMap, pg);
-    rv->thread[parser->thread].parsers.push_back(gp.extract(parser));
+    rv->thread[parser->thread].parsers.push_back(gp.extract(parser, arch));
 }
 
 void ExtractParser::end_apply() {

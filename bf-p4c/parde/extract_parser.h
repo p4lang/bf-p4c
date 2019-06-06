@@ -31,8 +31,9 @@ class ExtractParser : public ParserInspector {
     Logging::FileLog *parserLog = nullptr;
 
  public:
-    explicit ExtractParser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe *rv)
-        : refMap(refMap), typeMap(typeMap), rv(rv) { setName("ExtractParser"); }
+    explicit ExtractParser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            IR::BFN::Pipe *rv, ParseTna *arch)
+        : refMap(refMap), typeMap(typeMap), rv(rv), arch(arch) { setName("ExtractParser"); }
     void postorder(const IR::BFN::TnaParser* parser) override;
     void end_apply() override;
 
@@ -46,6 +47,7 @@ class ExtractParser : public ParserInspector {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
     IR::BFN::Pipe *rv;
+    ParseTna *arch;
 };
 
 /// Process IR::BFN::Parser and IR::BFN::Deparser to resolve header stack and add shim

@@ -17,7 +17,7 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
-const std::string SCHEMA_VERSION = "1.7.3";
+const std::string SCHEMA_VERSION = "1.7.4";
 
 option_t options = {
     .binary = PIPE0,
@@ -37,7 +37,7 @@ option_t options = {
 #else
     .singlewrite = false,
 #endif
-    .multi_parsers = false,
+    .multi_parsers = true, // TODO:Remove option after testing
     .stage_dependency_pattern = "",
     .target = NO_TARGET,
     .version = CONFIG_OLD,
@@ -99,8 +99,6 @@ void output_all() {
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["parser"] = json::map();
-    if (options.multi_parsers)
-        ctxtJson["parsers"] = json::map();  // used by multiple parsers support
     ctxtJson["phv_allocation"] = json::vector();
     ctxtJson["tables"] = json::vector();
     ctxtJson["stage_dependency"] = json::vector();

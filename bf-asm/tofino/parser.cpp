@@ -377,15 +377,15 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
 
     if (gress == INGRESS) {
         init_common_regs(this, regs.ingress.prsr_reg, INGRESS);
-        regs.ingress.ing_buf_regs.glb_group.disable();
-        regs.ingress.ing_buf_regs.chan0_group.chnl_drop.disable();
-        regs.ingress.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
-        regs.ingress.ing_buf_regs.chan1_group.chnl_drop.disable();
-        regs.ingress.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
-        regs.ingress.ing_buf_regs.chan2_group.chnl_drop.disable();
-        regs.ingress.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
-        regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
-        regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
+        // regs.ingress.ing_buf_regs.glb_group.disable();
+        // regs.ingress.ing_buf_regs.chan0_group.chnl_drop.disable();
+        // regs.ingress.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
+        // regs.ingress.ing_buf_regs.chan1_group.chnl_drop.disable();
+        // regs.ingress.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
+        // regs.ingress.ing_buf_regs.chan2_group.chnl_drop.disable();
+        // regs.ingress.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
+        // regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
+        // regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
         regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj;
     }
@@ -427,18 +427,21 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
 
-    if (options.condense_json) {
-        // FIXME -- removing the uninitialized memory causes problems?
-        // FIXME -- walle gets the addresses wrong.  Might also require explicit
-        // FIXME -- zeroing in the driver on real hardware
-        // regs.memory[INGRESS].disable_if_reset_value();
-        // regs.memory[EGRESS].disable_if_reset_value();
-        regs.ingress.disable_if_reset_value();
-        regs.egress.disable_if_reset_value();
-        regs.merge.disable_if_reset_value(); }
+    // if (options.condense_json) {
+    //     // FIXME -- removing the uninitialized memory causes problems?
+    //     // FIXME -- walle gets the addresses wrong.  Might also require explicit
+    //     // FIXME -- zeroing in the driver on real hardware
+    //     // regs.memory[INGRESS].disable_if_reset_value();
+    //     // regs.memory[EGRESS].disable_if_reset_value();
+    //     regs.ingress.disable_if_reset_value();
+    //     regs.egress.disable_if_reset_value();
+    //     regs.merge.disable_if_reset_value(); 
+    // }
 
     if (error_count == 0 && options.gen_json) {
         /// XXX(hanw) remove after 8.7 release
+        /// XXX(amresh) Needs fix to simple test harness for parsers node
+        /// support
         if (single_parser) {
             if (gress == INGRESS) {
                 regs.memory[INGRESS].emit_json(
@@ -479,14 +482,17 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
             }
         }
     } else {
-        TopLevel::regs<Target::Tofino>()->parser_ingress.emplace(
-                ctxt_json["handle"]->as_number()->val, &regs.ingress);
-        TopLevel::regs<Target::Tofino>()->parser_egress.emplace(
-                ctxt_json["handle"]->as_number()->val, &regs.egress);
-        TopLevel::regs<Target::Tofino>()->parser_memory[INGRESS].emplace(
-                ctxt_json["handle"]->as_number()->val, &regs.memory[INGRESS]);
-        TopLevel::regs<Target::Tofino>()->parser_memory[EGRESS].emplace(
-                ctxt_json["handle"]->as_number()->val, &regs.memory[EGRESS]);
+        if (gress == INGRESS) {
+            TopLevel::regs<Target::Tofino>()->parser_ingress.emplace(
+                    ctxt_json["handle"]->as_number()->val, &regs.ingress);
+            TopLevel::regs<Target::Tofino>()->parser_memory[INGRESS].emplace(
+                    ctxt_json["handle"]->as_number()->val, &regs.memory[INGRESS]);
+        } else if (gress == EGRESS) {
+            TopLevel::regs<Target::Tofino>()->parser_egress.emplace(
+                    ctxt_json["handle"]->as_number()->val, &regs.egress);
+            TopLevel::regs<Target::Tofino>()->parser_memory[EGRESS].emplace(
+                    ctxt_json["handle"]->as_number()->val, &regs.memory[EGRESS]);
+        }
 
 #if 0
         /// for initiliazing the parser registers in default configuration.

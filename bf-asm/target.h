@@ -160,7 +160,7 @@ void undeclare_registers(const Target::Tofino::parser_regs *regs);
 void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
 void declare_registers(const Target::Tofino::deparser_regs *regs);
 void undeclare_registers(const Target::Tofino::deparser_regs *regs);
-void emit_parser_registers(const Target::Tofino::top_level_regs *regs, std::ostream &, uint64_t);
+void emit_parser_registers(const Target::Tofino::top_level_regs *regs, std::ostream &);
 
 #if HAVE_JBAY
 #include "gen/jbay/memories.jbay_mem.h"

@@ -363,6 +363,8 @@ void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
     }
 }
 
+std::map<std::string, unsigned> Parser::parser_handles;
+
 // output context.json format with multiple parser support
 void Parser::output(json::map& ctxt_json) {
     json::vector& cjson = ctxt_json["parsers"][gress ? "egress" : "ingress"];
@@ -374,7 +376,14 @@ void Parser::output(json::map& ctxt_json) {
         auto *regs = new TARGET::parser_regs;
         declare_registers(regs);
         json::map parser_ctxt_json;
+        // Parser Handles are generated in the assembler. Since the assembler
+        // has no idea about multipipe program (since assembler is separately
+        // invoked for each pipe bfa) the parser handles generated can be same
+        // across multiple pipes. Here, we rely on the driver to prefix a pipe id
+        // (profile id) to make the handles unique. The upper 2 bits are
+        // reserved for this id.
         parser_handle = next_handle();
+        parser_handles[name] = parser_handle;  // store parser handles
         parser_ctxt_json["name"] = name;
         parser_ctxt_json["handle"] = parser_handle;
         json::vector default_ports;
@@ -1645,3 +1654,4 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
         }
     }
 }
+

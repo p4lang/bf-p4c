@@ -23,6 +23,10 @@ int dump_bin (std::istream &in) {
             if (!options.noHeader)
                 for (auto &el : hdr)
                     std::cout << el.first << " = " << el.second << std::endl;
+        } else if ((atom_typ >> 24) == 'P') {
+            uint32_t prsr_hdl = 0;
+            if (!in.read((char *)&prsr_hdl, 4)) return -1;
+            printf("P: %08x (parser handle)\n", prsr_hdl);
         } else if ((atom_typ >> 24) == 'R') {
             // R block -- writing a single 32-bit register via 32-bit PCIe address
             uint32_t reg_addr = 0, reg_data = 0;

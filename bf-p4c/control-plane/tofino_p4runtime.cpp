@@ -240,7 +240,8 @@ struct ValueSet {
                                         // declaration.
 
     static boost::optional<ValueSet>
-    from(const IR::P4ValueSet* instance,
+    from(const cstring name,
+         const IR::P4ValueSet* instance,
          const ReferenceMap* refMap,
          const TypeMap* typeMap,
          p4configv1::P4TypeInfo* p4RtTypeInfo) {
@@ -259,7 +260,7 @@ struct ValueSet {
         auto typeSpec = TypeSpecConverter::convert(
             refMap, typeMap, instance->elementType, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
-        return ValueSet{instance->controlPlaneName(),
+        return ValueSet{name,
                         typeSpec,
                         size,
                         instance->to<IR::IAnnotated>()};
@@ -568,14 +569,55 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
  public:
     template <typename Func>
     void forAllPipeBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
-        static std::vector<cstring> pipeNames = {"pipe0", "pipe1", "pipe2", "pipe3"};
         auto main = evaluatedProgram->getMain();
-        for (auto pipeName : pipeNames) {
-            auto pipe = main->findParameterValue(pipeName);
-            // all pipes but "pipe0" are optional
-            if (!pipe) continue;
-            BUG_CHECK(pipe->is<IR::PackageBlock>(), "Expected package");
+        auto cparams = main->getConstructorParameters();
+        int index = -1;
+        for (auto param : main->constantValue) {
+            index++;
+            if (!param.second) continue;
+            auto pipe = param.second;
+            BUG_CHECK(pipe->is<IR::PackageBlock>(), "Expected PackageBlock");
+            auto idxParam = cparams->getParameter(index);
+            auto pipeName = idxParam->name;
             function(pipeName, pipe->to<IR::PackageBlock>());
+        }
+    }
+
+    template <typename Func>
+    void forAllPortMetadataBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
+        auto main = evaluatedProgram->getMain();
+        if (main->type->name == "MultiParserSwitch") {
+            int numParsersPerPipe = Device::numParsersPerPipe();
+            auto parsersName = "ig_prsr";
+            forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock* pkg) {
+                auto parsers = pkg->findParameterValue(parsersName);
+                BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                auto parsersBlock = parsers->to<IR::PackageBlock>();
+                for (int idx = 0; idx < numParsersPerPipe; idx++) {
+                    auto mpParserName = "prsr" + std::to_string(idx);
+                    auto parser = parsersBlock->findParameterValue(mpParserName);
+                    if (!parser) break;  // all parsers optional except for first one
+                    auto parserBlock = parser->to<IR::ParserBlock>();
+                    if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
+                        auto portMetadataFullName =
+                            getFullyQualifiedName(parserBlock, PortMetadata::name());
+                        function(portMetadataFullName);
+                    }
+                }
+            });
+        } else {
+            auto parserName = "ingress_parser";
+            forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock* pkg) {
+                auto *block = pkg->findParameterValue(parserName);
+                if (!block) return;
+                if (!block->is<IR::ParserBlock>()) return;
+                auto parserBlock = block->to<IR::ParserBlock>();
+                if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
+                    auto portMetadataFullName =
+                        getFullyQualifiedName(parserBlock, PortMetadata::name());
+                    function(portMetadataFullName);
+                }
+            });
         }
     }
 
@@ -592,28 +634,79 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
             forDescendantBlocks(pkg, [&](const IR::Block* block) {
                 auto decl = pkg->node->to<IR::Declaration_Instance>();
+                cstring blockName = "";
                 // TODO(unknown): I (Antonin) think that we should always use
                 // pipeName, to guarantee a uniform naming scheme even in the
                 // presence of a user name. However, the tna_32q_2pipe PTF test
                 // currently assumes that the user name is used.
-                if (decl == nullptr)
-                    blockPipeNameMap[block] = pipeName;
-                else
-                    blockPipeNameMap[block] = decl->controlPlaneName();
+                cstring blockNamePrefix = pipeName;
+                if (decl)
+                    blockNamePrefix = decl->controlPlaneName();
+
+                if (auto cont = block->getContainer()) {
+                    blockName = cont->getName();
+                    if (!blockName.isNullOrEmpty()) {
+                        blockNamePrefix += ".";
+                        blockNamePrefix += blockName;
+                    }
+                }
+                blockNamePrefixMap[block] = blockNamePrefix;
                 pipes.insert(pipeName);
             });
         });
         isMultiPipe = (pipes.size() > 1);
+
+        // Update multi parser names
+        static std::vector<cstring> gressNames = {"ig", "eg"};
+        int numParsersPerPipe = Device::numParsersPerPipe();
+
+        auto main = evaluatedProgram->getMain();
+        if (main->type->name == "MultiParserSwitch") {
+            forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
+                BUG_CHECK(
+                    pkg->type->name == "MultiParserPipeline",
+                    "Only MultiParserPipeline pipes can be used with a MultiParserSwitch switch");
+                for (auto gressName : gressNames) {
+                    auto parsersName = gressName + "_prsr";
+                    auto parsers = pkg->findParameterValue(parsersName);
+                    BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                    auto parsersBlock = parsers->to<IR::PackageBlock>();
+                    auto decl = parsersBlock->node->to<IR::Declaration_Instance>();
+                    if (decl)
+                        parsersName = decl->controlPlaneName();
+                    for (int idx = 0; idx < numParsersPerPipe; idx++) {
+                        auto parserName = "prsr" + std::to_string(idx);
+                        auto parser = parsersBlock->findParameterValue(parserName);
+                        if (!parser) break;  // all parsers optional except for first one
+                        BUG_CHECK(parser->is<IR::ParserBlock>(), "Expected ParserBlock");
+                        auto parserBlock = parser->to<IR::ParserBlock>();
+
+                        // Update Parser Block Names
+                        auto parser_full_name = pipeName + "." + parsersName + "." + parserName;
+                        blockNamePrefixMap[parserBlock] = parser_full_name;
+                    }
+                    isMultiParser = true;
+                }
+            });
+        }
     }
 
-    cstring getFullyQualifiedPortMetadataName(const IR::ParserBlock *parserBlock) {
-        auto name = parserBlock->getName() + "." + PortMetadata::name();
-        // Generate fully qualified names only for multipipe scenarios
-        if (isMultiPipe) {
-            name = blockPipeNameMap[parserBlock]
-                   + "." + name;
+    cstring getFullyQualifiedName(const IR::Block *block, const cstring name) {
+        cstring block_name = "";
+        if (auto cont = block->getContainer()) {
+            block_name = cont->getName();
         }
-        return name;
+        // auto full_name = isMultiParser ? name : block_name + "." + name;
+        auto full_name = name;
+        // Generate fully qualified names only for multipipe scenarios
+        if (isMultiPipe || isMultiParser) {
+            full_name = blockNamePrefixMap[block]
+                   + "." + full_name;
+        } else {
+            full_name = block_name + "." + name;
+        }
+        LOG1("Block : " << block << ", name: " << name << ", fqname: " << full_name);
+        return full_name;
     }
 
     void collectTableProperties(P4RuntimeSymbolTableIface* symbols,
@@ -702,7 +795,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 return;
             }
             hasUserPortMetadata.insert(parserBlock);
-            auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
+            auto portMetadataFullName = getFullyQualifiedName(parserBlock, PortMetadata::name());
             symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         }
     }
@@ -726,7 +819,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
-                symbols->add(SymbolType::VALUE_SET(), inst);
+                auto name = getFullyQualifiedName(parserBlock, inst->name.originalName);
+                symbols->add(SymbolType::VALUE_SET(), name);
             }
         }
 
@@ -819,7 +913,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// the "architecture name", the "P4 type name" and the "user-provided name"
     /// (if applicable, i.e. if the P4 programmer used a declaration).
     void collectParserChoices(P4RuntimeSymbolTableIface* symbols) {
-        static std::vector<cstring> gressNames = {"ingress", "egress"};
+        static std::vector<cstring> gressNames = {"ig", "eg"};
         int numParsersPerPipe = Device::numParsersPerPipe();
 
         auto main = evaluatedProgram->getMain();
@@ -833,17 +927,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 ::barefoot::ParserChoices parserChoices;
 
                 parserChoices.set_pipe(pipeName);
-                if (gressName == "ingress")
+                if (gressName == "ig")
                     parserChoices.set_direction(::barefoot::DIRECTION_INGRESS);
                 else
                     parserChoices.set_direction(::barefoot::DIRECTION_EGRESS);
 
-                auto parsersName = gressName + "_parser";
+                auto parsersName = gressName + "_prsr";
                 auto parsers = pkg->findParameterValue(parsersName);
                 BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
                 auto parsersBlock = parsers->to<IR::PackageBlock>();
+                auto decl = parsersBlock->node->to<IR::Declaration_Instance>();
+                if (decl)
+                    parsersName = decl->controlPlaneName();
                 for (int idx = 0; idx < numParsersPerPipe; idx++) {
-                    auto parserName = gressName + "_parser" + std::to_string(idx);
+                    auto parserName = "prsr" + std::to_string(idx);
                     auto parser = parsersBlock->findParameterValue(parserName);
                     if (!parser) break;  // all parsers optional except for first one
                     BUG_CHECK(parser->is<IR::ParserBlock>(), "Expected ParserBlock");
@@ -852,13 +949,18 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                     auto userName = (decl == nullptr) ? "" : decl->controlPlaneName();
 
                     auto choice = parserChoices.add_choices();
-                    choice->set_arch_name(parserName);
+                    auto parser_full_name = parsersName + "." + parserName;
+                    if (isMultiPipe)
+                        parser_full_name = pipeName + "." + parser_full_name;
+                    choice->set_arch_name(parser_full_name);
                     choice->set_type_name(parserBlock->getName().name);
                     choice->set_user_name(userName);
                 }
-
-                symbols->add(SymbolType::PARSER_CHOICES(), parsersName);
-                parserConfiguration.emplace(parsersName, parserChoices);
+                auto parsers_full_name = parsersName;
+                if (isMultiPipe)
+                    parsers_full_name = pipeName + "." + parsers_full_name;
+                symbols->add(SymbolType::PARSER_CHOICES(), parsers_full_name);
+                parserConfiguration.emplace(parsers_full_name, parserChoices);
             }
         });
     }
@@ -882,18 +984,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             collectSnapshot(symbols, block->to<IR::ControlBlock>(), &snapshotFieldIds);
         });
 
+        collectParserChoices(symbols);
+
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances to symbol table
-        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
-            if (!block->is<IR::ParserBlock>()) return;
-            auto parserBlock = block->to<IR::ParserBlock>();
-            if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
-                auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
-                symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
-            }
+        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName) {
+            symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         });
-
-        collectParserChoices(symbols);
     }
 
     void postCollect(const P4RuntimeSymbolTableIface& symbols) override {
@@ -1131,8 +1228,9 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto p4RtTypeInfo = p4info->mutable_type_info();
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, p4RtTypeInfo);
         if (portMetadata) {
-            if (blockPipeNameMap.count(parserBlock)) {
-                auto portMetadataFullName = getFullyQualifiedPortMetadataName(parserBlock);
+            if (blockNamePrefixMap.count(parserBlock)) {
+                auto portMetadataFullName =
+                    getFullyQualifiedName(parserBlock, PortMetadata::name());
                 addPortMetadata(symbols, p4info, *portMetadata, portMetadataFullName);
             }
         }
@@ -1159,7 +1257,9 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
-                auto valueSet = ValueSet::from(inst, refMap, typeMap, p4info->mutable_type_info());
+                auto namePrefix = getFullyQualifiedName(parserBlock, inst->name.originalName);
+                auto valueSet = ValueSet::from(namePrefix, inst, refMap,
+                        typeMap, p4info->mutable_type_info());
                 if (valueSet) addValueSet(symbols, p4info, *valueSet);
             }
         }
@@ -1189,14 +1289,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         // Check if each parser block in program has a port metadata extern
         // defined, if not we add a default instances
-        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
-            if (!block->is<IR::ParserBlock>()) return;
-            auto parserBlock = block->to<IR::ParserBlock>();
-            if (hasUserPortMetadata.count(parserBlock) == 0) {
-                auto portMetadataFullName =
-                    getFullyQualifiedPortMetadataName(parserBlock);
-                addPortMetadataDefault(symbols, p4info, portMetadataFullName);
-            }
+        forAllPortMetadataBlocks(evaluatedProgram, [&](cstring portMetadataFullName) {
+            addPortMetadataDefault(symbols, p4info, portMetadataFullName);
         });
 
         for (const auto& snapshot : snapshotInfo)
@@ -1696,11 +1790,12 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     using SnapshotInfoMap = std::map<const IR::ControlBlock*, SnapshotInfo>;
     SnapshotInfoMap snapshotInfo;
 
-    std::unordered_map<const IR::Block *, cstring> blockPipeNameMap;
+    std::unordered_map<const IR::Block *, cstring> blockNamePrefixMap;
 
     std::map<cstring, ::barefoot::ParserChoices> parserConfiguration;
 
     bool isMultiPipe;
+    bool isMultiParser;
 };
 
 /// The architecture handler builder implementation for Tofino.

@@ -938,9 +938,9 @@ struct BfRtSchemaGenerator::ParserChoices {
         std::string name;
         // The name is "<pipe>.<gress>.$PARSER_CONFIGURE".
         if (parserChoices.direction() == ::barefoot::DIRECTION_INGRESS)
-          name = parserChoices.pipe() + "." + "ingress" + "." + "$PARSER_CONFIGURE";
+          name = parserChoices.pipe() + "." + "ingress_parser" + "." + "$PARSER_CONFIGURE";
         else if (parserChoices.direction() == ::barefoot::DIRECTION_EGRESS)
-          name = parserChoices.pipe() + "." + "egress" + "." + "$PARSER_CONFIGURE";
+          name = parserChoices.pipe() + "." + "egress_parser" + "." + "$PARSER_CONFIGURE";
         else
           BUG("Unknown direction");
         std::vector<cstring> choices;
@@ -2302,7 +2302,9 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
             for (const auto& externInstance : externType.instances()) {
                 auto parserChoices = ParserChoices::fromTofino(externInstance);
                 if (parserChoices != boost::none) {
-                    addParserChoices(tablesJson, *parserChoices);
+                    // Disabled unless driver adds BF-RT support for dynamically
+                    // changing parser configurations
+                    // addParserChoices(tablesJson, *parserChoices);
                 }
             }
         }

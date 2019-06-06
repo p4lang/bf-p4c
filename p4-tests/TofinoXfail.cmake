@@ -1298,11 +1298,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/neg_test_1_lpf_constant_param.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Duplicate phv name"
-  extensions/p4_tests/p4_16/compile_only/test_config_3_unused_parsers.p4
-)
-
 # Negative test: ensure the compiler does not seg fault
 p4c_add_xfail_reason("tofino"
   "error: mirror.emit: Unsupported unconditional mirror.emit"

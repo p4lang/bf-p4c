@@ -34,13 +34,14 @@ static int pvs_handle = 512;
 static std::map<cstring, int> pvs_handles;
 struct ParserAsmSerializer : public ParserInspector {
     explicit ParserAsmSerializer(std::ostream& out)
-       : out(out) { }
+       : out(out) {
+        is_v1Model = (BackendOptions().arch == "v1model"); }
 
  private:
+    bool is_v1Model = false;
     void init_apply() {
        // If not v1Model share pvs handles only when pvs is invoked multiple
        // times within the same parser.
-       bool is_v1Model = (BackendOptions().arch == "v1model");
        if (!is_v1Model) pvs_handles.clear();
     }
 
@@ -161,9 +162,14 @@ struct ParserAsmSerializer : public ParserInspector {
         if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
             out << indent << const_val->value << ':' << std::endl;
         } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
-            out << indent << "value_set " << pvs->name << " " << pvs->size << ":" << std::endl;
+            auto parser = findContext<IR::BFN::LoweredParser>();
+            // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
+            // which is not used as a prefix for pvs names in backend
+            auto pvs_name = (parser && !is_v1Model) ?
+                parser->name + "." + pvs->name : pvs->name;
+            out << indent << "value_set " << pvs_name << " " << pvs->size << ":" << std::endl;
             AutoIndent indentMatch(indent);
-            out << indent << "handle: " << getPvsHandle(pvs->name) << std::endl;
+            out << indent << "handle: " << getPvsHandle(pvs_name) << std::endl;
             out << indent << "field_mapping" << ":" << std::endl;
             AutoIndent indentFieldMap(indent);
             for (const auto& m : pvs->mapping) {

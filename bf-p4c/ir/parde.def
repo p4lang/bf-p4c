@@ -380,6 +380,8 @@ class Parser : AbstractParser {
     toString { return gress ? "egress parser" : "ingress parser"; }
 
     ParserState start;
+    optional NullOK IR::ID name;
+    optional NullOK cstring pipeName;
     optional NullOK Phase0 phase0; // only valid for ingress
     optional inline std::vector<int> portmap;  // used for multiple parser support
 }

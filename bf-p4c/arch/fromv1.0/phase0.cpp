@@ -732,9 +732,10 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     if (parser->thread == EGRESS) return parser;
     auto *origParser = getOriginal<IR::BFN::TnaParser>();
     auto size = Device::numMaxChannels();
-    auto tableName = parser->name + ".$PORT_METADATA";
-    if (!parser->pipeName.isNullOrEmpty())
-        tableName = parser->pipeName + "." + tableName;
+    cstring tableName = (parser->pipeName.isNullOrEmpty()) ?
+                        parser->name.toString() : parser->pipeName;
+    // tableName = tableName + ".$PORT_METADATA";
+    tableName = "$PORT_METADATA";
     auto actionName = "set_port_metadata";
 
     auto *params = parser->getApplyParameters();

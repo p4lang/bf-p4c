@@ -1446,7 +1446,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
         std::list<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
             if (!arch->threads.count(std::make_pair(npipe, gress))) {
-                ::error("Unabled to find thread %1%", npipe);
+                ::error("Unable to find thread %1%", npipe);
                 return; }
             auto thread = arch->threads.at(std::make_pair(npipe, gress));
             thread = thread->apply(*simplifyReferences);
@@ -1458,7 +1458,7 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
                     parser->apply(CheckChecksumAlgorithm());
-                    parser->apply(ExtractParser(refMap, typeMap, rv));
+                    parser->apply(ExtractParser(refMap, typeMap, rv, arch));
                 }
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {

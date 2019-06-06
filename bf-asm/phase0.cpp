@@ -1,5 +1,6 @@
 #include "stage.h"
 #include "tables.h"
+#include "parser.h"
 
 DEFINE_TABLE_TYPE(Phase0MatchTable)
 
@@ -54,6 +55,13 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "phase_0_match", size);
     match_attributes["match_type"] = "phase_0_match";
     stage_tbl["stage_number"] = -1;
+    // Associate the phase0 table with corresponding parser. This is used in a
+    // multi parser scenario which has multiple phase0 tables
+    // and the handle is used by the driver to link the phase0 table to the
+    // parser.
+    auto parser_handle = Parser::get_parser_handle(name());
+    if (parser_handle > 0)
+        stage_tbl["parser_handle"] = parser_handle;
     stage_tbl.erase("logical_table_id");
     stage_tbl.erase("default_next_table");
     stage_tbl.erase("has_attached_gateway");

@@ -84,7 +84,7 @@ void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
                 this->reg_pipe.emit_binary(*binfile, 0); }
 
             if (options.multi_parsers) {
-                emit_parser_registers(this, *binfile, 0);
+                emit_parser_registers(this, *binfile);
             }
         }
     }

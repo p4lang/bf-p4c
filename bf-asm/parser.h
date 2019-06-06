@@ -287,6 +287,17 @@ class Parser {
         // assume parser type is 15, table type used 0 - 6
         return max_handle++ << 12 | unique_table_offset << 20 | 15 << 24;
     }
+    // Store parser names to their handles. Used by phase0 match tables to link
+    // parser handle
+    static std::map<std::string, unsigned>     parser_handles;
+    static const unsigned get_parser_handle(std::string phase0Table) {
+        for (auto p : Parser::parser_handles) {
+            auto parser_name = p.first;
+            if (phase0Table.find(parser_name) != std::string::npos)
+                return p.second;
+        }
+        return 0;
+    }
 
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);

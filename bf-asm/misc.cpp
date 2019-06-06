@@ -70,3 +70,4 @@ void gen_instfield_name(const std::string &fullname, std::string &instname,
         field_name = fullname.substr(dotpos+1, fullname.size());
     }
 }
+

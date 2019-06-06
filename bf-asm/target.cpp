@@ -81,28 +81,38 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs) {
     undeclare_registers(&regs->header);
 }
 
-void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostream &out, uint64_t a) {
+void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostream &out) {
     std::set<int> emitted_parsers;
+    // The driver can reprogram parser blocks at runtime. We output parser
+    // blocks in the binary with the same base address. The driver uses the
+    // parser handle at the start of each block to associate the parser block
+    // with its respective parser node in context.json.  
+    // In a p4 program, the user can associate multiple parsers to a
+    // multi-parser configuration but only map a few ports. The unmapped
+    // parser(s) will be output in context.json node and binary but not have an
+    // associated port map in context.json. The driver will not initialize any
+    // parsers with these unmapped parser(s) but use them to reconfigure at
+    // runtime if required.
+    uint64_t pipe_mem_base_addr = 0x200000000000;
+    uint64_t prsr_mem_base_addr = (pipe_mem_base_addr + 0x1C800000000) >> 4;
+    uint64_t pipe_regs_base_addr = 0x2000000;
+    uint64_t prsr_regs_base_addr = pipe_regs_base_addr + 0x700000;
     for (auto ig : regs->parser_ingress) {
-        json::map header;
-        header["handle"] = ig.first;
-        out << binout::tag('P') << json::binary(header);
-        ig.second->emit_binary(out, 0); }
-    for (auto eg : regs->parser_egress) {
-        json::map header;
-        header["handle"] = eg.first;
-        out << binout::tag('P') << json::binary(header);
-        eg.second->emit_binary(out, 0); }
+        out << binout::tag('P') << binout::byte4(ig.first);
+        ig.second->emit_binary(out, prsr_regs_base_addr); 
+    }
     for (auto ig : regs->parser_memory[INGRESS]) {
-        json::map header;
-        header["handle"] = ig.first;
-        out << binout::tag('P') << json::binary(header);
-        ig.second->emit_binary(out, 0); }
+        out << binout::tag('P') << binout::byte4(ig.first);
+        ig.second->emit_binary(out, prsr_mem_base_addr); 
+    }
+    for (auto eg : regs->parser_egress) {
+        out << binout::tag('P') << binout::byte4(eg.first);
+        eg.second->emit_binary(out, prsr_regs_base_addr); 
+    }
     for (auto eg : regs->parser_memory[EGRESS]) {
-        json::map header;
-        header["handle"] = eg.first;
-        out << binout::tag('P') << json::binary(header);
-        eg.second->emit_binary(out, 0); }
+        out << binout::tag('P') << binout::byte4(eg.first);
+        eg.second->emit_binary(out, prsr_mem_base_addr); 
+    }
 }
 
 #if HAVE_JBAY
@@ -182,7 +192,7 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
             regs->emit_fieldname(out, addr, end); });
 }
 
-void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &out, uint64_t a) {
+void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &out) {
     std::set<int> emitted_parsers;
     for (auto ig : regs->parser_ingress) {
         json::map header;
