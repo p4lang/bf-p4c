@@ -276,7 +276,7 @@ AllocScore::AllocScore(
         for (const auto& slice : slices) {
             if (slice.field()->no_pack())
                 score[kind].n_wasted_bits += (container.size() - slice.width());
-            if (clot.allocated(slice.field()))
+            if (clot.fully_allocated(slice.field()))
                 score[kind].n_clot_bits += slice.width(); }
 
         if (kind == PHV::Kind::normal) {
@@ -1488,7 +1488,7 @@ static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& s
     if (sc.slice_lists().size() == 1) {
         auto* slices = *sc.slice_lists().begin();
         bool allClotCandidates = std::all_of(slices->begin(), slices->end(),
-            [&](const PHV::FieldSlice& slice) { return clots.allocated(slice.field()); });
+            [&](const PHV::FieldSlice& slice) { return clots.fully_allocated(slice.field()); });
         if (allClotCandidates)
             return true; }
     return false;

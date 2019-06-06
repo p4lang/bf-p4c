@@ -871,6 +871,8 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     }
 
     cstring shortString() const {
+        if (is_whole_field()) return field_i->name;
+
         std::stringstream ss;
         ss << field_i->name << "[" << range_i.hi << ":" << range_i.lo << "]";
         return ss.str();
@@ -919,6 +921,9 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
     /// @returns the bits of the field included in this field slice.
     const le_bitrange &range() const override { return range_i; }
+
+    /// @returns true if this field slice contains the entirety of its field.
+    bool is_whole_field() const { return range_i == StartLen(0, field_i->size); }
 
     /// Sets the valid starting bit positions (little Endian) for this field.
     /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least

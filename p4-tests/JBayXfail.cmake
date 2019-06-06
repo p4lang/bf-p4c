@@ -296,3 +296,9 @@ p4c_add_xfail_reason("tofino2"
   "error: Found .* duplicate name.* in the P4Info"
   extensions/p4_tests/p4_16/jbay/multistage_fifo.p4
 )
+
+# P4C-1785
+p4c_add_xfail_reason("tofino2"
+  "mismatch from expected.*at byte"
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
+)

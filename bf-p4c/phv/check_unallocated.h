@@ -23,7 +23,7 @@ class CheckForUnallocatedTemps : public PassManager {
             if (!uses.is_referenced(&field))
                 continue;
 
-            if (clot.allocated(&field))
+            if (clot.fully_allocated(&field))
                 continue;
 
             // XXX(hanw): padding does not need phv allocation
@@ -35,12 +35,24 @@ class CheckForUnallocatedTemps : public PassManager {
             // allocation for that field here. So, we need a special check here.
             auto* aliasDest = phv.getAliasDestination(&field);
             if (aliasDest != nullptr)
-                if (clot.allocated(aliasDest)) continue;
+                if (clot.fully_allocated(aliasDest)) continue;
 
             bitvec allocatedBits;
             field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
                 bitvec sliceBits(slice.field_bit, slice.width);
-                allocatedBits |= sliceBits; });
+                allocatedBits |= sliceBits;
+            });
+
+            // Account for bits allocated to CLOTs, both for this field and for its alias (if any).
+            for (auto f : (const PHV::Field*[2]) {&field, aliasDest}) {
+                if (!f) continue;
+                for (auto entry : *clot.slice_clots(f)) {
+                    auto slice = entry.first;
+                    auto range = slice->range();
+                    bitvec sliceBits(range.lo, range.size());
+                    allocatedBits |= sliceBits;
+                }
+            }
 
             bitvec allBitsInField(0, field.size);
             if (allocatedBits != allBitsInField) unallocated.insert(&field);

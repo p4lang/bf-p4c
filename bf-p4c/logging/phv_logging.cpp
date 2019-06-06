@@ -75,7 +75,7 @@ void PhvLogging::end_apply(const IR::Node *root) {
 }
 
 void PhvLogging::logHeaders() {
-    /// Map of all headers and their referenced fields.
+    /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> headerFields;
 
     /* Determine set of all allocated fields and the headers to which they belong */
@@ -86,9 +86,19 @@ void PhvLogging::logHeaders() {
             bitvec sliceBits(alloc.field_bit, alloc.width);
             allocatedBits |= sliceBits;
         });
-        // Ignore unallocated fields if they are unreferenced or if they are allocated to clots.
+
+        // Ignore unallocated fields if they are unreferenced.
         if (!info.uses.is_referenced(&f)) continue;
-        if (clot.allocated(&f)) continue;
+
+        // Include bits that are CLOT-allocated.
+        if (auto allocated_slices = clot.allocated_slices(&f)) {
+            for (auto entry : *allocated_slices) {
+                auto range = entry.first->range();
+                bitvec sliceBits(range.lo, range.size());
+                allocatedBits |= sliceBits;
+            }
+        }
+
         bitvec allBitsInField(0, f.size);
         if (allocatedBits != allBitsInField) {
             int unallocated = 0;

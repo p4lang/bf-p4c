@@ -163,6 +163,28 @@ class Extract : ParserPrimitive {
     optional boost::optional<MarshaledFrom> marshaled_from;  // not visited
 }
 
+/// An Extract node that is destined to become a LoweredExtractPhv. This is a
+/// short-lived type, used internally by the parser IR lowering passes.
+/// Instances are introduced during state splitting, and are eliminated once
+/// the parser IR is lowered.
+class ExtractPhv : Extract {
+    dbprint { out << "extract " << source << " to PHV-allocated " << dest; }
+}
+
+/// An Extract node that is destined to become a LoweredExtractClot. This is a
+/// short-lived type, used internally by the parser IR lowering passes.
+/// Instances are introduced during state splitting, and are eliminated once
+/// the parser IR is lowered.
+class ExtractClot : Extract {
+    dbprint { out << "extract " << source << " to CLOT-allocated " << dest; }
+
+    validate {
+        BUG_CHECK(source->to<IR::BFN::PacketRVal>(),
+                  "ExtractClot source is not a PacketRVal: %1%",
+                  source);
+    }
+}
+
 /// Save data from input buffer to a match register.
 class SaveToRegister : ParserPrimitive {
 #emit

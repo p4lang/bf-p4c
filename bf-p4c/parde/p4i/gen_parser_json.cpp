@@ -127,8 +127,12 @@ GenerateParserP4iJson::generateExtractClot(const IR::BFN::LoweredExtractClot* ex
         // TODO: Clot can contain multiple field lists due to overlay. Add once
         // support is availabe in Clot structure.
         std::vector<cstring> fl;
-        for (auto *f : c->all_fields())
-            fl.push_back(cstring::to_cstring(canon_name(f->name)));
+        for (auto *f : c->all_slices()) {
+            std::stringstream out;
+            out << canon_name(f->field()->name);
+            if (!f->is_whole_field()) out << f->range().formatAsSlice(f->field()->size);
+            fl.push_back(cstring::to_cstring(out.str()));
+        }
         clot.field_lists.push_back(fl);
     }
     return clot;

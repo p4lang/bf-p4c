@@ -148,7 +148,7 @@ void DarkLiveRange::end_apply() {
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
-        if (clot.allocated(&f)) continue;
+        if (clot.fully_allocated(&f)) continue;
         if (f.is_deparser_zero_candidate()) continue;
         // Ignore unreferenced fields because they are not allocated anyway.
         if (!uses.is_referenced(&f)) continue;

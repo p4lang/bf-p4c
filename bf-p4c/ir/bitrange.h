@@ -610,6 +610,15 @@ struct ClosedRange {
         return hi < other.hi;
     }
 
+    /// Formats this range as P4 syntax by converting to a little-endian range of bits, and
+    /// formatting the result as "[hi:lo]".
+    cstring formatAsSlice(int spaceSize) const {
+        auto normalized = toOrder<Endian::Little>(spaceSize).toUnit<RangeUnit::Bit>();
+        std::stringstream out;
+        out << "[" << normalized.hi << ":" << normalized.lo << "]";
+        return cstring(out.str());
+    }
+
     /// The lowest numbered index in the range. For Endian::Network, this is the
     /// most significant bit or byte; for Endian::Little, it's the least
     /// significant.

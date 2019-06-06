@@ -13,7 +13,7 @@
 
 class PhvInfo;
 
-class FieldExtractInfo;
+class FieldSliceExtractInfo;
 
 /// Implements equality correctly.
 class PovBitSet : public std::set<const PHV::FieldSlice*, PHV::FieldSlice::Less> {
@@ -135,7 +135,6 @@ class ClotInfo {
         return start_state_to_clots_;
     }
 
- public:
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const {
         auto state_name = state->name;
         if (!start_state_to_clots_.count(state_name)) {
@@ -164,58 +163,17 @@ class ClotInfo {
         return nullptr;
     }
 
+    /// @return a map from overwrite offsets to corresponding containers.
     std::map<int, PHV::Container>
-    get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
-        // Maps overwrite offsets to corresponding containers.
-        std::map<int, PHV::Container> containers;
-        PHV::FieldUse use(PHV::FieldUse::READ);
+    get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const;
 
-        for (auto f : clot->all_fields()) {
-            if (field_overwritten(phv, clot, f)) {
-                f->foreach_alloc(PHV::AllocContext::DEPARSER, &use,
-                        [&](const PHV::Field::alloc_slice &alloc) {
-                    auto container = alloc.container;
-                    int field_in_clot_offset = clot->bit_offset(f);
-
-                    auto field_range = alloc.field_bits().toOrder<Endian::Network>(f->size);
-
-                    auto container_range = alloc.container_bits().
-                                 toOrder<Endian::Network>(alloc.container.size());
-
-                    auto container_offset = field_in_clot_offset - container_range.lo +
-                                            field_range.lo;
-
-                    BUG_CHECK(container_offset % 8 == 0,
-                              "CLOT %d container overwrite offset not byte-aligned", clot->tag);
-
-                    auto container_offset_in_byte = container_offset / 8;
-
-                    if (containers.count(container_offset_in_byte)) {
-                        auto other_container = containers.at(container_offset_in_byte);
-                        BUG_CHECK(container == other_container,
-                            "CLOT %d has more than one container at overwrite offset %d: "
-                            "%s and %s",
-                            clot->tag,
-                            container_offset_in_byte,
-                            container,
-                            other_container);
-                    } else {
-                        containers[container_offset_in_byte] = container;
-                    }
-                });
-            }
-        }
-
-        return containers;
-    }
-
+    /// @return a map from overwrite offsets to corresponding checksum fields.
     std::map<int, const PHV::Field*>
     get_csum_fields(const Clot* clot) const {
-        // Maps overwrite offsets to corresponding checksum fields.
         std::map<int, const PHV::Field*> csum_fields;
 
         for (auto f : clot->csum_fields()) {
-            auto offset = clot->byte_offset(f);
+            auto offset = clot->byte_offset(new PHV::FieldSlice(f));
             if (csum_fields.count(offset)) {
                 auto other_field = csum_fields.at(offset);
                 BUG_CHECK(false,
@@ -239,7 +197,7 @@ class ClotInfo {
 
  private:
     void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
-             const IR::BFN::ParserState* state) {
+                   const IR::BFN::ParserState* state) {
         LOG4("adding " << f->name << " to " << state->name << " (range " << rval->range << ")");
         parser_state_to_fields_[state].push_back(f);
         field_to_parser_states_[f].insert(state);
@@ -335,11 +293,11 @@ class ClotInfo {
     /// fields that are PHV-allocated.
     bool can_be_in_clot(const PHV::Field* field) const;
 
-    /// Determines whether a field can be the first one in a CLOT.
-    bool can_start_clot(const FieldExtractInfo* extract_info) const;
+    /// Determines whether a field slice can be the first one in a CLOT.
+    bool can_start_clot(const FieldSliceExtractInfo* extract_info) const;
 
-    /// Determines whether a field can be the last one in a CLOT.
-    bool can_end_clot(const FieldExtractInfo* extract_info) const;
+    /// Determines whether a field slice can be the last one in a CLOT.
+    bool can_end_clot(const FieldSliceExtractInfo* extract_info) const;
 
     /// Determines whether a field extracts its full width from the packet.
     /// Returns false if the field is not extracted.
@@ -351,61 +309,138 @@ class ClotInfo {
  public:
     /// Determines whether a field is a checksum field.
     bool is_checksum(const PHV::Field* field) const;
+    bool is_checksum(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is modified, as defined in
     /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
     bool is_modified(const PHV::Field* field) const;
+    bool is_modified(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is read-only, as defined in
     /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
     bool is_readonly(const PHV::Field* field) const;
+    bool is_readonly(const PHV::FieldSlice* slice) const;
 
     /// Determines whether a field is unused, as defined in
     /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
     bool is_unused(const PHV::Field* field) const;
+    bool is_unused(const PHV::FieldSlice* slice) const;
 
-    /// @return the given field's CLOT if the field is unused and is covered in a CLOT. Otherwise,
-    /// nullptr is returned.
-    Clot* allocated(const PHV::Field* field) const {
-        return is_unused(field) ? clot(field) : nullptr;
+    /// @return nullptr if the @arg field is read-only or modified. Otherwise, if the @arg field is
+    /// unused, returns a map from each CLOT-allocated slice for the field to its corresponding
+    /// CLOT.
+    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    allocated_slices(const PHV::Field* field) const {
+        return is_unused(field) ? slice_clots(field) : nullptr;
     }
 
-    /// Adjusts a CLOT so that it neither starts nor ends with an overwritten field. See
-    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    /// @return the given field's CLOT if the field is unused and is entirely covered in a CLOT.
+    /// Otherwise, nullptr is returned.
+    const Clot* fully_allocated(const PHV::Field* field) const {
+        return is_unused(field) ? whole_field_clot(field) : nullptr;
+    }
+
+    /// Adjusts all allocated CLOTs so that they neither start nor end with an overwritten field
+    /// slice. See
+    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
+    void adjust_clots(const PhvInfo& phv);
+
+ private:
+    /// Adjusts a CLOT so that it neither starts nor ends with an overwritten field slice. See
+    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
     ///
     /// @return true if the CLOT is non-empty as a result of the adjustment.
     bool adjust(const PhvInfo& phv, Clot* clot);
 
-    /// Adjusts all allocated CLOTs so that they neither start nor end with an overwritten field.
-    /// See https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
-    void adjust_clots(const PhvInfo& phv);
+    /// Removes bits from the start and end of the given @arg clot.
+    void crop(Clot* clot, unsigned start_bits, unsigned end_bits);
 
-    /// Determines whether a field in a CLOT will be overwritten by a PHV container or a checksum
-    /// calculation when deparsed. See
+    void crop(Clot* clot, unsigned num_bits, bool from_start);
+
+ public:
+    /// Determines whether a field slice in a CLOT will be overwritten by a PHV container or a
+    /// checksum calculation when deparsed. See
     /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
     ///
-    /// @return true when @arg f is a field in @arg clot and will be overwritten by a PHV container
-    ///         or a checksum calculation when deparsed.
-    bool field_overwritten(const PhvInfo& phvInfo, const Clot* clot, const PHV::Field* f) const;
+    /// @return true when @arg f is a field slice covered by @arg clot and at least part of @arg f
+    ///         will be overwritten by a PHV container or a checksum calculation when deparsed.
+    bool slice_overwritten(const PhvInfo& phvInfo,
+                           const Clot* clot,
+                           const PHV::FieldSlice* f) const;
 
-    /// Determines whether @arg f is a field in @arg clot that will be deparsed from the CLOT.
+    /// Determines whether a field slice in a CLOT will be overwritten by a PHV container when
+    /// deparsed. See
+    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
     ///
-    /// @return true when @arg f is a non-checksum field in @arg clot that will not be overwritten
-    ///         by a PHV when deparsed.
-    bool field_deparsed_from_clot(const PhvInfo& phvInfo,
+    /// @return true when @arg f is a field slice covered by @arg clot and at least part of @arg f
+    ///         will be overwritten by a PHV container when deparsed.
+    bool slice_overwritten_by_phv(const PhvInfo& phvInfo,
                                   const Clot* clot,
-                                  const PHV::Field* f) const;
+                                  const PHV::FieldSlice* f) const;
 
+ private:
+    /// Determines which bits in the given field slice @arg f will be overwritten by a PHV
+    /// container or a checksum calculation when deparsed. See
+    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    ///
+    /// @return a bit vector with the given @arg Order, indicating those bits in @arg f that
+    ///         will be overwritten.
+    template<Endian Order = Endian::Network>
+    bitvec bits_overwritten(const PhvInfo& phvInfo,
+                            const Clot* clot,
+                            const PHV::FieldSlice* f) const;
+
+    /// Determines which bits in the given field slice @arg f will be overwritten by a PHV
+    /// container when deparsed. See
+    /// https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU.
+    ///
+    /// @return a bit vector with the given @arg Order, indicating those bits in @arg f that
+    ///         will be overwritten.
+    template<Endian Order = Endian::Network>
+    bitvec bits_overwritten_by_phv(const PhvInfo& phvInfo,
+                                   const Clot* clot,
+                                   const PHV::FieldSlice* f) const;
+
+ public:
     /// Determines whether @arg h is a header that might be added by MAU.
     bool is_added_by_mau(cstring h) const;
 
-    /// @return the given field's CLOT, if any; otherwise, nullptr.
-    Clot* clot(const PHV::Field* field) const {
+    /// @return the CLOT-allocated slices that overlap with the given @arg slice, mapped to the
+    /// corresponding CLOTs.
+    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    slice_clots(const PHV::FieldSlice* slice) const {
+        auto result = new std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>();
+        auto field = slice->field();
+        for (auto c : clots_) {
+            auto fields_to_slices = c->fields_to_slices();
+            if (!fields_to_slices.count(field)) continue;
+
+            auto clot_slice = fields_to_slices.at(field);
+            if (clot_slice->range().overlaps(slice->range()))
+                (*result)[clot_slice] = c;
+        }
+
+        return result;
+    }
+
+    /// @return the CLOT-allocated slices of the given @arg field, mapped to the CLOTs containing
+    /// those slices.
+    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    slice_clots(const PHV::Field* field) const {
+        return slice_clots(new PHV::FieldSlice(field));
+    }
+
+    /// @return the CLOT containing the entirety of the given field, or nullptr if no such CLOT
+    /// exists.
+    Clot* whole_field_clot(const PHV::Field* field) const {
         for (auto c : clots_)
-            if (c->has_field(field))
+            if (c->has_slice(new PHV::FieldSlice(field)))
                 return c;
         return nullptr;
     }
+
+    /// @return true if the given @arg slice is covered by the given @arg clot.
+    bool clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const;
 
     std::string print(const PhvInfo* phvInfo = nullptr) const;
 

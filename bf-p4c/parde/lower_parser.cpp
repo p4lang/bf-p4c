@@ -146,16 +146,40 @@ struct ExtractSimplifier {
     /// Add a new extract operation to the sequence.
     void add(const IR::BFN::Extract* extract) {
         LOG4("adding " << extract);
+        if (auto ec = extract->to<IR::BFN::ExtractClot>())
+            add(ec);
+        else if (auto ep = extract->to<IR::BFN::ExtractPhv>())
+            add(ep);
+        else
+            BUG("Unexpected unclassified extract encountered while lowering parser IR: %1%",
+                extract);
+    }
 
-        auto field = phv.field(extract->dest->field);
+    void add(const IR::BFN::ExtractClot* extract) {
+        le_bitrange extracted_range;
+        auto field = phv.field(extract->dest->field, &extracted_range);
+        auto extracted_slice = new PHV::FieldSlice(field, extracted_range);
 
-        if (auto c = clot.clot(field)) {
-            clotExtracts[c].push_back(extract);
+        // Populate clotExtracts with entries for the current extract.
+        auto slice_clots = clot.slice_clots(extracted_slice);
+        BUG_CHECK(slice_clots, "Parser extract didn't receive a CLOT allocation: %1%", extract);
+        BUG_CHECK(slice_clots->size() == 1,
+                  "Expected a single CLOT for a parser extract, but it was allocated across %1% "
+                  "CLOTs: %2%",
+                  slice_clots->size(), extract);
 
-            if (!c->is_phv_field(field))
-                return;
-        }
+        auto entry = *slice_clots->begin();
+        auto slice = entry.first;
+        auto clot = entry.second;
 
+        BUG_CHECK(slice->range().contains(extracted_range),
+                  "Parser extract received an incomplete CLOT allocation: %1%",
+                  extract);
+
+        clotExtracts[clot].push_back(extract);
+    }
+
+    void add(const IR::BFN::ExtractPhv* extract) {
         std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field);
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
@@ -366,6 +390,10 @@ struct ExtractSimplifier {
         }
 
         for (auto cx : clotExtracts) {
+            auto clot = cx.first;
+            auto first_slice = clot->all_slices().front();
+            auto first_field = first_slice->field();
+
             bool is_start = false;
             nw_bitinterval bitInterval;
 
@@ -373,13 +401,25 @@ struct ExtractSimplifier {
                 auto rval = extract->source->to<IR::BFN::PacketRVal>();
                 bitInterval = bitInterval.unionWith(rval->interval());
 
+                // Figure out if the current extract includes the first bit in the CLOT.
+
+                if (is_start) continue;
+
+                // Make sure we're extracting the first field.
                 auto dest = phv.field(extract->dest->field);
-                if (cx.first->is_first_field_in_clot(dest)) {
-                    if (extract->dest->field->is<IR::Member>()) {
+                if (dest != first_field) continue;
+
+                if (extract->dest->field->is<IR::Member>()) {
+                    // Extracting the whole field.
+                    is_start = true;
+                    continue;
+                }
+
+                if (auto sl = extract->dest->field->to<IR::Slice>()) {
+                    if (sl->getH() == first_slice->range().hi) {
+                        // Extracted slice includes the first bit of the slice.
                         is_start = true;
-                    } else if (auto sl = extract->dest->field->to<IR::Slice>()) {
-                        if (sl->getH() == dest->size - 1)  // first slice of field
-                            is_start = true;
+                        continue;
                     }
                 }
             }
@@ -402,7 +442,7 @@ struct ExtractSimplifier {
     std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
-    std::map<const Clot*, std::vector<const IR::BFN::Extract*>> clotExtracts;
+    std::map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
 };
 
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
@@ -424,10 +464,14 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
     for (auto* fieldRef : fields) {
         auto field = phv.field(fieldRef->field);
 
-        if (auto* clot = clotInfo.allocated(field)) {
-            if (clots.empty() || clots.back() != *clot)
-                clots.push_back(*clot);
-            continue;
+        if (auto* slice_clots = clotInfo.allocated_slices(field)) {
+            for (auto entry : *slice_clots) {
+                auto clot = entry.second;
+                if (clots.empty() || clots.back() != *clot)
+                    clots.push_back(*clot);
+            }
+
+            if (clotInfo.fully_allocated(field)) continue;
         }
 
         // padding in digest list does not need phv allocation
@@ -1025,9 +1069,9 @@ struct RewriteEmitClot : public DeparserModifier {
 
         IR::Vector<IR::BFN::Emit> newEmits;
 
-        // The next fields we expect to see being emitted, represented as a stack. These are fields
-        // left over from the last emitted CLOT.
-        std::vector<const PHV::Field*> expectedNextFields;
+        // The next field slices we expect to see being emitted, represented as a stack. These are
+        // field slices left over from the last emitted CLOT.
+        std::vector<const PHV::FieldSlice*> expectedNextSlices;
 
         const PHV::FieldSlice* lastPhvPovBit = nullptr;
         const Clot* lastClot = nullptr;
@@ -1049,55 +1093,156 @@ struct RewriteEmitClot : public DeparserModifier {
             BUG_CHECK(source, "No emit source for %1%", emit);
 
             auto field = phv.field(source);
-            auto clot = clotInfo.clot(field);
-            auto emit_csum = emit->to<IR::BFN::EmitChecksum>();
+            auto sliceClots = clotInfo.slice_clots(field);
 
             // If we are emitting a checksum that overwrites a CLOT, register this fact with
             // ClotInfo.
-            if (clot && emit_csum) clotInfo.clot_to_emit_checksum()[clot] = emit_csum;
-
-            if (expectedNextFields.empty()) {
-                // No fields left over from the last emitted CLOT. If we are emitting a new CLOT,
-                // replace the current emit with a CLOT emit.
-                if (clot) {
-                    auto clotEmit = new IR::BFN::EmitClot(irPovBit);
-                    clotEmit->clot = clot;
-                    emit = clotEmit;
-
-                    auto clotFields = clot->all_fields();
-                    std::copy(clotFields.rbegin(), --clotFields.rend(),
-                              std::back_inserter(expectedNextFields));
-
-                    lastPhvPovBit = phvPovBit;
-                    lastClot = clot;
+            if (auto emitCsum = emit->to<IR::BFN::EmitChecksum>()) {
+                if (auto fieldClot = clotInfo.whole_field_clot(field)) {
+                    clotInfo.clot_to_emit_checksum()[fieldClot] = emitCsum;
+                } else {
+                    BUG_CHECK(sliceClots->empty(),
+                              "Checksum field %s was partially allocated to CLOTs, but this is not"
+                              "allowed",
+                              field->name);
                 }
+            }
+
+            // Points to the next bit in `field` that we haven't yet accounted for. This is -1 if
+            // we have accounted for all bits. NB: this is little-endian to correspond to the
+            // little-endianness of field slices.
+            int nextFieldBit = field->size - 1;
+
+            // Handle any slices left over from the last emitted CLOT.
+            if (!expectedNextSlices.empty()) {
+                // The current slice being emitted had better line up with the next expected slice,
+                // and the expected POV bit had better match.
+                auto nextSlice = expectedNextSlices.back();
+
+                BUG_CHECK(nextSlice->field() == field,
+                          "Emitted field %1% does not match expected slice %2% in CLOT %3%",
+                          field->name, nextSlice->shortString(), lastClot->tag);
+                BUG_CHECK(nextSlice->range().hi == nextFieldBit,
+                          "Emitted slice %1% does not line up with expected slice %2% in CLOT %3%",
+                          PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(),
+                          nextSlice->shortString(),
+                          lastClot->tag);
+                BUG_CHECK(*phvPovBit == *lastPhvPovBit,
+                          "POV bit %1% for emit of %2% does not match expected POV bit %3% for "
+                          "CLOT %4%",
+                          phvPovBit->shortString(),
+                          field->name,
+                          lastPhvPovBit->shortString(),
+                          lastClot->tag);
+
+                nextFieldBit = nextSlice->range().lo - 1;
+                expectedNextSlices.pop_back();
+            }
+
+            // If we've covered all bits in the current field, move on to the next emit.
+            if (nextFieldBit == -1) continue;
+
+            // We haven't covered all bits in the current field yet. The next bit in the field must
+            // be in a new CLOT, if it is covered by a CLOT at all. There had better not be any
+            // slices left over from the last emitted CLOT.
+            BUG_CHECK(expectedNextSlices.empty(),
+                "Emitted slice %1% does not match expected slice %2% in CLOT %3%",
+                PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(),
+                expectedNextSlices.back()->shortString(),
+                lastClot->tag);
+
+            if (sliceClots->empty()) {
+                // None of this field should have come from CLOTs.
+                BUG_CHECK(nextFieldBit == field->size - 1,
+                          "Field %1% has no slices allocated to CLOTs, but %2% somehow came from "
+                          "CLOT %3%",
+                          field->name,
+                          PHV::FieldSlice(field,
+                                          StartLen(nextFieldBit + 1,
+                                                   field->size - nextFieldBit)).shortString(),
+                          lastClot->tag);
 
                 newEmits.pushBackOrAppend(emit);
                 continue;
             }
 
-            // We have fields left over from the last emitted CLOT. The current field and POV bit
-            // had better match what we are expecting.
-            BUG_CHECK(expectedNextFields.back() == field,
-                      "Emitted field %1% does not match expected field %2% in CLOT %3%",
-                      field->name, expectedNextFields.back()->name, lastClot->tag);
-            BUG_CHECK(*phvPovBit == *lastPhvPovBit,
-                      "POV bit %1% for emit of %2% does not match expected POV bit %3% for CLOT "
-                      "%4%",
-                      phvPovBit->shortString(),
-                      field->name,
-                      lastPhvPovBit->shortString(),
-                      lastClot->tag);
-            expectedNextFields.pop_back();
+            for (auto entry : *sliceClots) {
+                auto slice = entry.first;
+                auto clot = entry.second;
+
+                BUG_CHECK(nextFieldBit > -1,
+                    "While processing emits for %1%, the entire field has been emitted, but "
+                    "encountered an extra CLOT (tag %2%)",
+                    field->name, clot->tag);
+
+                // Ignore the CLOT if it starts before `nextFieldBit`. If this is working right,
+                // we've emitted it already with a previous field.
+                if (nextFieldBit < slice->range().hi) continue;
+
+                if (slice->range().hi != nextFieldBit) {
+                    // The next part of the field comes from PHVs. Produce an emit of the slice
+                    // containing just that part.
+                    auto irSlice = new IR::Slice(source, nextFieldBit, slice->range().hi + 1);
+                    auto sliceEmit = new IR::BFN::EmitField(irSlice, irPovBit->field);
+                    newEmits.pushBackOrAppend(sliceEmit);
+
+                    nextFieldBit = slice->range().hi;
+                }
+
+                // Make sure the first slice in the CLOT lines up with the slice we're expecting.
+                auto clotSlices = clot->all_slices();
+                auto firstSlice = clotSlices.front();
+                BUG_CHECK(firstSlice->field() == field,
+                          "First field in CLOT %1% is %2%, but expected %3%",
+                          clot->tag, firstSlice->field()->name, field->name);
+                BUG_CHECK(firstSlice->range().hi == nextFieldBit,
+                          "First slice %1% in CLOT %2% does not match expected slice %3%",
+                          firstSlice->shortString(),
+                          clot->tag,
+                          PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
+
+                // Produce an emit for the CLOT.
+                auto clotEmit = new IR::BFN::EmitClot(irPovBit);
+                clotEmit->clot = clot;
+                newEmits.pushBackOrAppend(clotEmit);
+                lastPhvPovBit = phvPovBit;
+                lastClot = clot;
+
+                nextFieldBit = firstSlice->range().lo - 1;
+
+                if (clotSlices.size() == 1) continue;
+
+                // There are more slices in the CLOT. We had better be done with the current field.
+                BUG_CHECK(nextFieldBit == -1,
+                          "CLOT %1% is missing slice %2%",
+                          clot->tag,
+                          PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
+
+                std::copy(clotSlices.rbegin(), --clotSlices.rend(),
+                          std::back_inserter(expectedNextSlices));
+            }
+
+            if (nextFieldBit != -1) {
+                BUG_CHECK(expectedNextSlices.empty(),
+                          "CLOT %1% is missing slice %2%",
+                          lastClot->tag,
+                          PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString());
+
+                // The last few bits of the field comes from PHVs. Produce an emit of the slice
+                // containing just those bits.
+                auto irSlice = new IR::Slice(source, nextFieldBit, 0);
+                auto sliceEmit = new IR::BFN::EmitField(irSlice, irPovBit->field);
+                newEmits.pushBackOrAppend(sliceEmit);
+            }
         }
 
-        if (!expectedNextFields.empty()) {
+        if (!expectedNextSlices.empty()) {
             std::stringstream out;
-            out << "CLOT " << lastClot->tag << " has extra fields not covered by the deparser "
-                << "before RewriteEmitClot: ";
-            for (auto it = expectedNextFields.rbegin(); it != expectedNextFields.rend(); ++it) {
-                if (it != expectedNextFields.rbegin()) out << ", ";
-                out << (*it)->name;
+            out << "CLOT " << lastClot->tag << " has extra field slices not covered by the "
+                << "deparser before RewriteEmitClot: ";
+            for (auto it = expectedNextSlices.rbegin(); it != expectedNextSlices.rend(); ++it) {
+                if (it != expectedNextSlices.rbegin()) out << ", ";
+                out << (*it)->shortString();
             }
             BUG("%s", out.str());
         }

@@ -46,13 +46,12 @@ Clot::Clot(cstring name) {
     tag = v;
 }
 
-void Clot::add_field(FieldKind kind,
-                     const PHV::Field* field,
-                     unsigned offset) {
+void Clot::add_slice(FieldKind kind, const PHV::FieldSlice* slice) {
+    auto field = slice->field();
+
     switch (kind) {
     case MODIFIED:
         phv_fields_.insert(field);
-        phv_modified_fields_.insert(field);
         break;
 
     case READONLY:
@@ -60,6 +59,10 @@ void Clot::add_field(FieldKind kind,
         break;
 
     case CHECKSUM:
+        BUG_CHECK(slice->is_whole_field(),
+                  "Attempted to allocate checksum slice to CLOT %d: %s",
+                  tag,
+                  slice->shortString());
         csum_fields_.insert(field);
         break;
 
@@ -67,29 +70,38 @@ void Clot::add_field(FieldKind kind,
         break;
     }
 
-    all_fields_.push_back(field);
-    field_offsets[field] = offset;
+    all_slices_.push_back(slice);
+    BUG_CHECK(!fields_to_slices_.count(field), "CLOT %d already has field %s", tag, field->name);
+    fields_to_slices_[field] = slice;
 }
 
 unsigned Clot::length_in_byte() const {
     unsigned length_in_bits = 0;
-    for (auto f : all_fields_)
-        length_in_bits += f->size;
+    for (auto f : all_slices_)
+        length_in_bits += f->range().size();
+
+    BUG_CHECK(length_in_bits % 8 == 0,
+              "CLOT %d has %d bits, which is not a whole number of bytes",
+              tag, length_in_bits);
+
     return length_in_bits / 8;
 }
 
-unsigned Clot::bit_offset(const PHV::Field* field) const {
-    BUG_CHECK(field_offsets.count(field), "field %s not in %s", field->name, toString());
-    return field_offsets.at(field);
+unsigned Clot::bit_offset(const PHV::FieldSlice* slice) const {
+    // XXX This should really use an std::map<FieldSlice*, unsigned, FieldSlice::Less>, but we
+    // can't declare a field of this type, since we don't have access to FieldSlice::Less in clot.h
+
+    unsigned offset = 0;
+    for (auto mem : all_slices_) {
+        if (PHV::FieldSlice::equal(slice, mem)) return offset;
+        offset += mem->range().size();
+    }
+
+    BUG("Field %s not in %s", slice->shortString(), toString());
 }
 
-unsigned Clot::byte_offset(const PHV::Field* field) const {
-    return bit_offset(field) / 8;
-}
-
-template <class T> bool contains(const std::vector<T> vec, const T elt) {
-    // Assumes == operator is appropriately defined for T.
-    return std::find(vec.begin(), vec.end(), elt) != vec.end();
+unsigned Clot::byte_offset(const PHV::FieldSlice* slice) const {
+    return bit_offset(slice) / 8;
 }
 
 bool Clot::is_phv_field(const PHV::Field* field) const {
@@ -100,37 +112,55 @@ bool Clot::is_csum_field(const PHV::Field* field) const {
     return csum_fields_.count(field);
 }
 
-bool Clot::has_field(const PHV::Field* field) const {
-    return contains(all_fields_, field);
+bool Clot::has_slice(const PHV::FieldSlice* slice) const {
+    auto field = slice->field();
+    if (!fields_to_slices_.count(field)) return false;
+    return PHV::FieldSlice::equal(fields_to_slices_.at(field), slice);
 }
 
 bool Clot::is_first_field_in_clot(const PHV::Field* field) const {
-    return all_fields_.at(0) == field;
+    return all_slices_.at(0)->field() == field;
 }
 
-void Clot::crop(int start_idx, int end_idx) {
-    int num_fields = all_fields_.size();
+void Clot::set_slices(const std::vector<const PHV::FieldSlice*> slices) {
+    all_slices_ = slices;
 
-    if (start_idx == 0 && end_idx == num_fields - 1)
-        // Nothing to do.
-        return;
+    // Check that all fields in the slices we were given is a subset of the existing fields. At the
+    // same time, start fixing up fields_to_slices_.
+    std::set<const PHV::Field*> fields;
+    for (auto slice : slices) {
+        auto field = slice->field();
+        BUG_CHECK(fields_to_slices_.count(field),
+                  "Found a foreign field %s when setting slices for CLOT %d",
+                  field->name, tag);
 
-    // Collect up the fields we're keeping, while removing the rest from auxiliary data structures
-    // and computing the new start offset.
-    std::vector<const PHV::Field*> all_fields;
-
-    for (int idx = 0; idx < num_fields; idx++) {
-        auto field = all_fields_.at(idx);
-        if (start_idx <= idx && idx <= end_idx) {
-            all_fields.push_back(field);
-        } else {
-            phv_modified_fields_.erase(field);
-            field_offsets.erase(field);
-        }
+        fields.insert(field);
+        fields_to_slices_[field] = slice;
     }
 
-    // Fix up the CLOT's list of fields
-    all_fields_ = all_fields;
+    // Finish fixing up fields_to_slices_.
+    for (auto it = fields_to_slices_.begin(); it != fields_to_slices_.end(); ) {
+        if (fields.count(it->first))
+          ++it;
+        else
+          it = fields_to_slices_.erase(it);
+    }
+
+    // Fix up phv_fields_.
+    for (auto it = phv_fields_.begin(); it != phv_fields_.end(); ) {
+        if (fields.count(*it))
+            ++it;
+        else
+            it = phv_fields_.erase(it);
+    }
+
+    // Fix up csum_fields_.
+    for (auto it = csum_fields_.begin(); it != csum_fields_.end(); ) {
+        if (fields.count(*it))
+            ++it;
+        else
+            it = csum_fields_.erase(it);
+    }
 }
 
 void Clot::toJSON(JSONGenerator& json) const {

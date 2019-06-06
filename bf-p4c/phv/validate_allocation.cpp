@@ -61,9 +61,11 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // Check that every bit in each field is allocated without overlap, and
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
+        bool no_clots_allocated = clot.slice_clots(&field)->empty();
+
         if (!uses.is_referenced(&field)) {
             // FIXME(zma) ChecksumLVal field can be allocated to clot, e.g. csum
-            WARN_CHECK(field.is_unallocated() /*&& !clot.clot(&field)*/ ,
+            WARN_CHECK(field.is_unallocated() /*&& no_clots_allocated*/ ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
@@ -71,7 +73,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        if (field.privatized() && (field.is_unallocated() && !clot.clot(&field))) {
+        if (field.privatized() && (field.is_unallocated() && no_clots_allocated)) {
             boost::optional<cstring> privatizedFieldName = field.getPHVPrivateFieldName();
             if (!privatizedFieldName)
                 BUG("Did not find PHV name of privatized field %1%", field.name);
@@ -81,7 +83,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         } else {
             // XXX(hanw): paddings do not require phv allocation.
-            ERROR_CHECK(!field.is_unallocated() || clot.clot(&field) || field.is_ignore_alloc(),
+            ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated || field.is_ignore_alloc(),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
         }
@@ -91,7 +93,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     cstring::to_cstring(field));
 
         // TODO(zma) add clot validation
-        if (clot.clot(&field))
+        if (!no_clots_allocated)
             continue;
 
         bitvec assignedContainers;
@@ -224,7 +226,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // Check for consistent container thread assignment within deparser groups.
     std::set<unsigned> visitedCIDs;
     for (auto& field : phv) {
-        if (!uses.is_referenced(&field) || clot.clot(&field)) continue;
+        if (!uses.is_referenced(&field) || clot.whole_field_clot(&field)) continue;
         if (!field.deparsed()) continue;
         for (auto& slice : field.get_alloc()) {
             auto this_cid = phvSpec.containerToId(slice.container);

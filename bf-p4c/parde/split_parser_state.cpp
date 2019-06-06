@@ -66,31 +66,38 @@ class DumpSplitStates : public DotDumper {
     }
 };
 
-/// Slice extract into multiple extracts if the extract destination is
-/// allocated across multiple PHV containers. This is a preparation of
-/// the subsequent state splitting pass, where we may need to allocate
-/// the sliced extracts into different states (this is the case when
-/// field straddles the input buffer boundary).
+/// Slices each extract into multiple extracts that each write into a single PHV container or CLOT.
+/// This prepares for the subsequent state-splitting pass, where we may need to allocate the sliced
+/// extracts into different states (this is the case when field straddles the input-buffer
+/// boundary).
 struct SliceExtracts : public ParserModifier {
     const PhvInfo& phv;
     const ClotInfo& clot;
 
     SliceExtracts(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
 
-    const IR::BFN::Extract*
-    make_slice(const IR::BFN::Extract* extract, const PHV::Field::alloc_slice& alloc_slice) {
-        auto slice_lo = alloc_slice.field_bit;
-        auto slice_hi = slice_lo + alloc_slice.width - 1;
+    /// Rewrites an extract so that it extracts exactly the slice specified by @arg le_low_idx and
+    /// @arg width, and marks the extract with the given @arg extract_type.
+    ///
+    /// @param le_low_idx the little-endian index for the low end of the slice.
+    /// @param width the width of the slice, in bits.
+    template <class Extract>
+    const Extract* make_slice(const IR::BFN::Extract* extract, int le_low_idx, int width) {
+        auto slice_lo = le_low_idx;
+        auto slice_hi = slice_lo + width - 1;
 
         auto dest = extract->dest->field;
-        auto dest_slice = new IR::Slice(dest, slice_hi, slice_lo);
-        auto dest_slice_lval = new IR::BFN::FieldLVal(dest_slice);
+        while (auto s = dest->to<IR::Slice>()) dest = s->e0;
+        if (width != phv.field(dest)->size)
+            dest = IR::Slice::make(dest, slice_lo, slice_hi);
+
+        auto dest_lval = new IR::BFN::FieldLVal(dest);
 
         IR::BFN::ParserRVal* src_slice = nullptr;
 
         if (auto src = extract->source->to<IR::BFN::InputBufferRVal>()) {
             auto src_hi = src->range.hi - slice_lo;
-            auto src_lo = src_hi - alloc_slice.width + 1;
+            auto src_lo = src_hi - width + 1;
 
             if (src->is<IR::BFN::PacketRVal>())
                 src_slice = new IR::BFN::PacketRVal(nw_bitrange(src_lo, src_hi));
@@ -100,12 +107,12 @@ struct SliceExtracts : public ParserModifier {
                 BUG("expect source to be from input buffer");
         } else if (auto c = extract->source->to<IR::BFN::ConstantRVal>()) {
             auto const_slice = *(c->constant) >> slice_lo;
-            const_slice = const_slice & IR::Constant::GetMask(alloc_slice.width);
+            const_slice = const_slice & IR::Constant::GetMask(width);
 
             BUG_CHECK(const_slice.fitsUint(), "Constant slice larger than 32-bit?");
 
             if (const_slice.asUnsigned())
-                src_slice = new IR::BFN::ConstantRVal(IR::Type::Bits::get(alloc_slice.width),
+                src_slice = new IR::BFN::ConstantRVal(IR::Type::Bits::get(width),
                                                       const_slice.asUnsigned());
             else
                 return nullptr;
@@ -113,19 +120,49 @@ struct SliceExtracts : public ParserModifier {
             BUG("unknown extract source");
         }
 
-        auto sliced_extract = new IR::BFN::Extract(dest_slice_lval, src_slice);
-        return sliced_extract;
+        return new Extract(dest_lval, src_slice);
     }
 
-    std::vector<const IR::BFN::Extract*>
-    slice_extract(const IR::BFN::Extract* extract,
-                  const std::vector<PHV::Field::alloc_slice>& alloc_slices) {
+    /// Breaks up an Extract into a series of Extracts according to the extracted field's PHV and
+    /// CLOT allocation.
+    std::vector<const IR::BFN::Extract*> slice_extract(const IR::BFN::Extract* extract) {
+        LOG4("rewrite " << extract << " as:");
         std::vector<const IR::BFN::Extract*> rv;
 
-        for (auto slice : alloc_slices) {
-             if (auto sliced = make_slice(extract, slice))
-                 rv.push_back(sliced);
+        // Keeps track of which bits have been allocated, for sanity checking.
+        bitvec bits_allocated;
+
+        // Slice according to the field's PHV allocation.
+        for (auto slice : phv.get_alloc(extract->dest->field)) {
+            auto lo = slice.field_bit;
+            auto size = slice.width;
+
+            if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size)) {
+                rv.push_back(sliced);
+                LOG4("  " << sliced);
+            }
+
+            bits_allocated.setrange(lo, size);
         }
+
+        // Slice according to the field's CLOT allocation.
+        auto field = phv.field(extract->dest->field);
+        for (auto kv : *clot.slice_clots(field)) {
+            auto slice = kv.first;
+            auto lo = slice->range().lo;
+            auto size = slice->size();
+
+            if (auto sliced = make_slice<IR::BFN::ExtractClot>(extract, lo, size)) {
+                rv.push_back(sliced);
+                LOG4("  " << sliced);
+            }
+
+            bits_allocated.setrange(lo, size);
+        }
+
+        BUG_CHECK(bits_allocated == bitvec(0, field->size),
+                  "Extracted field %s received an incomplete allocation",
+                  field->name);
 
         return rv;
     }
@@ -135,20 +172,9 @@ struct SliceExtracts : public ParserModifier {
 
         for (auto stmt : state->statements) {
             if (auto extract = stmt->to<IR::BFN::Extract>()) {
-                auto alloc_slices = phv.get_alloc(extract->dest->field);
-
-                if (!alloc_slices.empty() && alloc_slices.size() > 1) {
-                    LOG4("rewrite " << extract << " as:");
-
-                    auto sliced = slice_extract(extract, alloc_slices);
-
-                    for (auto sl : sliced) {
-                        new_statements.push_back(sl);
-                        LOG4(sl);
-                    }
-
-                    continue;
-                }
+                auto sliced = slice_extract(extract);
+                new_statements.insert(new_statements.end(), sliced.begin(), sliced.end());
+                continue;
             }
 
             new_statements.push_back(stmt);
@@ -196,8 +222,13 @@ struct AllocateParserState : public ParserTransform {
 
         void sort_state_primitives() {
             for (auto p : state->statements) {
-                if (auto e = p->to<IR::BFN::Extract>())
-                    extracts.push_back(e);
+                if (auto e = p->to<IR::BFN::ExtractPhv>())
+                    phv_extracts.push_back(e);
+                else if (auto e = p->to<IR::BFN::ExtractClot>())
+                    clot_extracts.push_back(e);
+                else if (auto e = p->to<IR::BFN::Extract>())
+                    BUG("Unexpected extract encountered during state-splitting: "
+                      "%1%", e);
                 else if (auto c = p->to<IR::BFN::ParserChecksumPrimitive>())
                     checksums.push_back(c);
                 else
@@ -257,10 +288,7 @@ struct AllocateParserState : public ParserTransform {
 
         struct ExtractAllocator : Allocator {
             ordered_map<PHV::Container,
-                        ordered_set<const IR::BFN::Extract*>> container_to_extracts;
-
-            ordered_map<Clot*,
-                        ordered_set<const IR::BFN::Extract*>> clot_to_extracts;
+                        ordered_set<const IR::BFN::ExtractPhv*>> container_to_extracts;
 
             virtual
             std::pair<size_t, unsigned>
@@ -272,7 +300,7 @@ struct AllocateParserState : public ParserTransform {
 
             boost::optional<std::pair<size_t, unsigned>>
             constant_extractor_needed(PHV::Container container,
-                             const ordered_set<const IR::BFN::Extract*>& extracts) {
+                             const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 boost::optional<std::pair<size_t, unsigned>> rv;
 
                 unsigned c = merge_const_source(extracts);
@@ -285,7 +313,7 @@ struct AllocateParserState : public ParserTransform {
 
             std::map<size_t, unsigned>
             total_extractor_needed(PHV::Container container,
-                             const ordered_set<const IR::BFN::Extract*>& extracts) {
+                             const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 std::map<size_t, unsigned> rv;
 
                 if (has_inbuf_extract(extracts)) {
@@ -305,7 +333,7 @@ struct AllocateParserState : public ParserTransform {
                 return rv;
             }
 
-            bool has_inbuf_extract(const ordered_set<const IR::BFN::Extract*>& extracts) {
+            bool has_inbuf_extract(const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 for (auto e : extracts) {
                     if (e->source->is<IR::BFN::InputBufferRVal>())
                         return true;
@@ -314,7 +342,7 @@ struct AllocateParserState : public ParserTransform {
             }
 
             unsigned
-            merge_const_source(const ordered_set<const IR::BFN::Extract*>& extracts) {
+            merge_const_source(const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 unsigned merged = 0;
 
                 for (auto e : extracts) {
@@ -357,7 +385,7 @@ struct AllocateParserState : public ParserTransform {
 
                             extractors_by_size[container.size()]++;
 
-                            LOG2("reversed " << container.size()
+                            LOG2("reserved " << container.size()
                                              << "b extractor for checksum verification");
                         }
                     }
@@ -426,18 +454,18 @@ struct AllocateParserState : public ParserTransform {
             }
 
             explicit ExtractAllocator(ParserStateAllocator& sa) : Allocator(sa) {
-                for (auto e : sa.extracts) {
+                for (auto e : sa.phv_extracts) {
                     auto alloc_slices = sa.phv.get_alloc(e->dest->field);
 
-                    if (!alloc_slices.empty()) {
-                        BUG_CHECK(alloc_slices.size() == 1,
-                            "extract allocator expects dest to be individual slice");
+                    BUG_CHECK(!alloc_slices.empty(), "No slices allocated for %1%", e);
+                    BUG_CHECK(alloc_slices.size() == 1,
+                        "extract allocator expects dest to be individual slice for %1%",
+                        e);
 
-                        auto slice = alloc_slices[0];
-                        auto container = slice.container;
+                    auto slice = alloc_slices[0];
+                    auto container = slice.container;
 
-                        container_to_extracts[container].insert(e);
-                    }
+                    container_to_extracts[container].insert(e);
                 }
             }
         };
@@ -578,22 +606,22 @@ struct AllocateParserState : public ParserTransform {
         };
 
         struct ClotAllocator : Allocator {
-            const IR::BFN::Extract*
+            const IR::BFN::ExtractClot*
             create_extract(const IR::BFN::FieldLVal* dest, const IR::BFN::PacketRVal* rval) {
-                return new IR::BFN::Extract(dest, rval);
+                return new IR::BFN::ExtractClot(dest, rval);
             }
 
             const IR::BFN::FieldLVal*
-            slice_dest(const IR::BFN::Extract* extract, int slice_hi, int slice_lo) {
+            slice_dest(const IR::BFN::ExtractClot* extract, int slice_hi, int slice_lo) {
                 auto dest = extract->dest->field;
-                auto dest_slice = new IR::Slice(dest, slice_hi, slice_lo);
+                auto dest_slice = IR::Slice::make(dest, slice_lo, slice_hi);
                 auto dest_slice_lval = new IR::BFN::FieldLVal(dest_slice);
                 return dest_slice_lval;
             }
 
-            std::pair<const IR::BFN::Extract*,
-                      const IR::BFN::Extract*>
-            slice_by_buffer(const IR::BFN::Extract* extract) {
+            std::pair<const IR::BFN::ExtractClot*,
+                      const IR::BFN::ExtractClot*>
+            slice_by_buffer(const IR::BFN::ExtractClot* extract) {
                 auto rval = extract->source->to<IR::BFN::PacketRVal>();
 
                 BUG_CHECK(rval, "unexpected source type for CLOT extract %1%", extract);
@@ -614,16 +642,16 @@ struct AllocateParserState : public ParserTransform {
 
             void allocate() override {
                 ordered_map<Clot*,
-                        ordered_set<const IR::BFN::Extract*>> clot_to_extracts;
+                        ordered_set<const IR::BFN::ExtractClot*>> clot_to_extracts;
 
-                for (auto e : sa.extracts) {
-                    auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+                for (auto e : sa.clot_extracts) {
+                    le_bitrange range;
+                    auto field = sa.phv.field(e->dest->field, &range);
+                    auto slice = new PHV::FieldSlice(field, range);
 
-                    if (alloc_slices.empty()) {
-                        auto field = sa.phv.field(e->dest->field);
-                        auto c = sa.clot.clot(field);
-                        BUG_CHECK(c, "%1% has no allocation?", field);
-                        clot_to_extracts[c].insert(e);
+                    for (auto entry : *sa.clot.slice_clots(slice)) {
+                        auto clot = entry.second;
+                        clot_to_extracts[clot].insert(e);
                     }
                 }
 
@@ -708,7 +736,7 @@ struct AllocateParserState : public ParserTransform {
 
             explicit GetMinExtractBufferPos(const PhvInfo& phv) : phv(phv) { }
 
-            bool preorder(const IR::BFN::Extract* extract) override {
+            bool preorder(const IR::BFN::ExtractPhv* extract) override {
                 if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
                     auto alloc_slices = phv.get_alloc(extract->dest->field);
 
@@ -770,7 +798,8 @@ struct AllocateParserState : public ParserTransform {
         const PhvInfo& phv;
         ClotInfo& clot;
 
-        std::vector<const IR::BFN::Extract*> extracts;
+        std::vector<const IR::BFN::ExtractPhv*> phv_extracts;
+        std::vector<const IR::BFN::ExtractClot*> clot_extracts;
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
         std::vector<const IR::BFN::ParserPrimitive*> others;
 
@@ -959,7 +988,7 @@ struct AllocateParserState : public ParserTransform {
                 "The compiler will optimize the extractor usage of the state so that "
                 "splitting may not be needed.";
 
-            BUG("An error occured while the compiler was splitting parser state %1%. \n%2%",
+            BUG("An error occurred while the compiler was splitting parser state %1%.\n%2%",
                 state->name, workaround);
         }
 
@@ -967,9 +996,9 @@ struct AllocateParserState : public ParserTransform {
     }
 };
 
-/// If after state splitting, the transition to end of parsing has shift more
-/// than 32 byte (input buffer size), we can safely clip the shift amout to
-/// 32 as the remaining amount will not contribute to header length.
+/// If after state splitting, if the transition to end of parsing shifts more
+/// than 32 bytes (input buffer size), we can safely clip the shift amount to
+/// 32, as the remaining amount will not contribute to header length.
 struct ClipTerminalTransition : ParserModifier {
     bool preorder(IR::BFN::Transition* t) {
         if (t->next == nullptr &&
