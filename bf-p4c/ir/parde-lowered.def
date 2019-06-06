@@ -118,7 +118,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
         for (auto& r : masked_ranges) {
             out << r << ", "; }
         out << "] ";
-        out << "swap = "  << swap << ", ";
+        out << "swap = " << swap << ", ";
         out << "start = " << start << ", ";
         out << "end = " << end << ", ";
         out << "end_pos = " << end_pos << ", ";

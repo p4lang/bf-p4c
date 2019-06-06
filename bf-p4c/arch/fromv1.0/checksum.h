@@ -390,17 +390,32 @@ class InsertParserChecksums : public Inspector {
             } else {
                 decl = parserResidualChecksumDecls->at(rc);
             }
-
+            const IR::Expression* constant = nullptr;
+            std::vector<const IR::Expression*> exprList;
             for (auto extract : extracts) {
                 for (auto f : fieldlist->to<IR::ListExpression>()->components) {
-                    if (belongsTo(f->to<IR::Member>(), extract)) {
-                        auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
-                            new IR::Member(new IR::PathExpression(decl->name), "subtract"),
-                                                                  { new IR::Argument(f) });
+                    if (f->is<IR::Constant>()) {
+                        constant = f;
+                    } else if (belongsTo(f->to<IR::Member>(), extract)) {
+                        if (constant) {
+                            exprList.emplace_back(constant);
+                            constant = nullptr;
+                            // If immediate next field after the constant is extracted in this field
+                            // then the constant belongs to subtract field list of this state
+                        }
+                        exprList.emplace_back(f);
 
-                        parserStatements->push_back(subtractCall);
-                    }
+                     } else {
+                        constant = nullptr;
+                     }
                 }
+                for (auto e : exprList) {
+                    auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
+                                    new IR::Member(new IR::PathExpression(decl->name), "subtract"),
+                                    { new IR::Argument(e)});
+
+                    parserStatements->push_back(subtractCall);
+               }
 
                 if (belongsTo(destfield->to<IR::Member>(), extract)) {
                     auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,

@@ -37,8 +37,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     # residual checksum still needs work for JBay
-    extensions/p4_tests/p4_14/stf/update_checksum_4.p4
-    extensions/p4_tests/p4_14/stf/update_checksum_5.p4
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4

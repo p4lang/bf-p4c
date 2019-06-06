@@ -293,7 +293,6 @@ struct ParserAsmSerializer : public ParserInspector {
         }
 
         out << " ]" << std::endl;
-
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;

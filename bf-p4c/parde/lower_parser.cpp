@@ -664,6 +664,21 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         return loweredChecksums;
     }
+    unsigned int getChecksumSwap(const IR::BFN::PacketRVal* range,
+                                 const IR::BFN::ParserChecksumPrimitive* csumOpt) {
+        auto low = range->range.loByte();
+        auto hi = range->range.hiByte();
+        unsigned swap = 0;
+        for (int byte = low; byte <= hi; ++byte) {
+            swap |= (1 << byte/2);
+        }
+        // swap register is 17 bit long
+        if (swap <= ((1 << 17) - 1)) {
+            return swap;
+        } else {
+            ::fatal_error("Swap byte is out of input buffer in checksum operation %1%", csumOpt);
+        }
+    }
 
     int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {
         auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
@@ -697,16 +712,23 @@ struct ComputeLoweredParserIR : public ParserInspector {
         auto type = checksumAlloc.get_type(parser, name);
 
         const IR::BFN::FieldLVal* dest = nullptr;
-
+        unsigned swap = 0;
         std::set<nw_byterange> masked_ranges;
-
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
-                if (auto v = add->source->to<IR::BFN::PacketRVal>())
+                if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
                     masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
+                    if (add->swap) {
+                        swap |= getChecksumSwap(v, add);
+                    }
+                }
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
-                if (auto v = sub->source->to<IR::BFN::PacketRVal>())
+                if (auto v = sub->source->to<IR::BFN::PacketRVal>()) {
                     masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
+                    if (sub->swap) {
+                        swap |= getChecksumSwap(v, sub);
+                    }
+                }
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
             } else if (auto get = c->to<IR::BFN::ChecksumGet>()) {
@@ -725,7 +747,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         }
 
         auto csum = new IR::BFN::LoweredParserChecksum(
-            id, masked_ranges, 0x0, start, end, end_pos, type);
+            id, masked_ranges, swap, start, end, end_pos, type);
 
         std::vector<alloc_slice> slices;
 

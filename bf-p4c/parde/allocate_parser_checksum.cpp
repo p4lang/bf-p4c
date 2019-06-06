@@ -529,19 +529,24 @@ struct InsertParserClotChecksums : public PassManager {
 
             for (auto emit : deparser->emits) {
                 if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
+                   int idx = 0;
                     for (auto source : csum->sources) {
                         auto field = phv.field(source->field);
-                        if (auto* clot = clotInfo.fully_allocated(field))
+                        if (auto* clot = clotInfo.fully_allocated(field)) {
                             checksum_field_to_clot[field] = clot;
+                            checksum_field_to_offset[field] =
+                                      csum->source_index_to_offset.at(idx);
+                        }
+                       idx++;
                     }
                 }
             }
 
             return false;
         }
-
         std::map<const PHV::Field*, const Clot*> checksum_field_to_clot;
-
+        // Maps checksum field used in CLOT to their offset in deparser checksum fieldlist
+        std::map<const PHV::Field*, int> checksum_field_to_offset;
         const PhvInfo& phv;
         const ClotInfo& clotInfo;
     };
@@ -550,7 +555,6 @@ struct InsertParserClotChecksums : public PassManager {
         const PhvInfo& phv;
         const ClotInfo& clotInfo;
         const CollectClotChecksumFields& clot_checksum_fields;
-
         std::map<const IR::BFN::ParserState*,
                  std::map<const Clot*,
                           std::vector<const IR::BFN::ParserChecksumPrimitive*>>>
@@ -564,9 +568,9 @@ struct InsertParserClotChecksums : public PassManager {
             clot_checksum_fields(clot_checksum_fields) { }
 
         IR::BFN::ChecksumAdd*
-        create_checksum_add(const Clot* clot, const IR::BFN::PacketRVal* rval) {
+        create_checksum_add(const Clot* clot, const IR::BFN::PacketRVal* rval, bool swap) {
             cstring name = "$clot_" + cstring::to_cstring(clot->tag) + "_csum";
-            auto add = new IR::BFN::ChecksumAdd(name, rval, false);
+            auto add = new IR::BFN::ChecksumAdd(name, rval, swap, false);
             return add;
         }
 
@@ -581,16 +585,21 @@ struct InsertParserClotChecksums : public PassManager {
 
         bool preorder(const IR::BFN::ParserState* state) override {
             auto& checksum_field_to_clot = clot_checksum_fields.checksum_field_to_clot;
-
+            auto& checksum_field_to_offset = clot_checksum_fields.checksum_field_to_offset;
             for (auto stmt : state->statements) {
                 if (auto extract = stmt->to<IR::BFN::ExtractClot>()) {
                     auto dest = phv.field(extract->dest->field);
 
                     if (checksum_field_to_clot.count(dest)) {
                         auto clot = checksum_field_to_clot.at(dest);
-
+                        bool swap = false;
                         auto rval = extract->source->to<IR::BFN::PacketRVal>();
-                        auto add = create_checksum_add(clot, rval);
+                        // If a field is on an even byte in the checksum operation field list
+                        // but on an odd byte in the input buffer and vice-versa then swap is true.
+                        if ((checksum_field_to_offset.at(dest)/8) % 2 != rval->range.loByte() % 2) {
+                            swap = true;
+                        }
+                        auto add = create_checksum_add(clot, rval, swap);
 
                         state_to_clot_primitives[state][clot].push_back(add);
                         clot_to_states[clot].insert(state);

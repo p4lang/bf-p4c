@@ -2,14 +2,14 @@ add test1 data.f1:0x01010101 set_data_f1(val:0x7f7f7f7f, port:2)
 add test2 load3.b1:0x01 remove_load1()
 add test2 load3.b1:0x02 remove_load2()
 
-expect 2 80 7f7f7f7f 0202babe 06ff 0303 04040404 05050505 00
+expect 2 80 7f7f7f7f 0202babe 0303 0303 04040404 05050505 00
 packet 0 80 01010101 0202babe ffff 0303 04040404 05050505 00
 
-expect 2 80 7f7f7f7f 0202babe 1c14 01
+expect 2 80 7f7f7f7f 0202babe 1818 01
 packet 0 80 01010101 0202babe ffff 0303 04040404 05050505 01
 
-expect 2 aa 7f7f7f7f 0202babe 06ff 0303 04040404 00
+expect 2 aa 7f7f7f7f 0202babe 0303 0303 04040404 00
 packet 0 aa 01010101 0202babe ffff 0303 04040404 00
 
-expect 2 aa 7f7f7f7f 0202babe 120a 02
+expect 2 aa 7f7f7f7f 0202babe 0e0e 02
 packet 0 aa 01010101 0202babe ffff 0303 04040404 02

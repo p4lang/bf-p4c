@@ -458,14 +458,16 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
                     if ((hi + 1) > PARSER_INPUT_BUFFER_SIZE)
                         error(kv.value.lineno, "Parser checksum out of input buffer?");
 
-                    for (unsigned byte = lo; byte <= hi; ++byte)
-                       mask |= (1 << byte);
+                    for (unsigned byte = lo; byte <= hi; ++byte) {
+                       if (kv.key == "mask")
+                           mask |= (1 << byte);
+                    }
                 }
             }
-        } else if (kv.key == "shift") {
-            shift = get_bool(kv.value);
         } else if (kv.key == "swap") {
             if (CHECKTYPE(kv.value, tINT)) swap = kv.value.i;
+        } else if (kv.key == "shift") {
+            shift = get_bool(kv.value);
         } else {
              warning(kv.key.lineno, "ignoring unknown item %s in checksum", value_desc(kv.key)); } }
 }

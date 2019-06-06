@@ -230,6 +230,8 @@ class ChecksumDepositToClot : ParserChecksumPrimitive {
 class ChecksumAdd : ParserChecksumPrimitive {
     dbprint { out << "add " << source << " to checksum " << declName; }
     PacketRVal source;
+    // Indicates if even and odd byte in the field need to be swapped
+    bool swap;
     bool isHeaderChecksum;
 }
 
@@ -238,6 +240,8 @@ class ChecksumSubtract : ParserChecksumPrimitive {
     PacketRVal source;
     /// original field in the packet, needed to compute header end position
     Member field;
+    // Indicates if even and odd byte in the field need to be swapped
+    bool swap;
     bool isPayloadChecksum;
 }
 

@@ -488,32 +488,49 @@ struct RewriteParserStatements : public Transform {
         }
         return false;
     }
-
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
         auto* method = call->method->to<IR::Member>();
         auto* path = method->expr->to<IR::PathExpression>()->path;
         cstring declName = path->name;
-
+        if (!declNameToOffset.count(declName)) {
+            declNameToOffset[declName] = 0;
+        }
         auto src = (*call->arguments)[0]->expression;
+        IR::Vector<IR::Expression> srcList;
+        if (auto listExpr = src->to<IR::ListExpression>()) {
+            srcList = listExpr->components;
+        } else {
+            srcList.push_back(src);
+        }
         bool isAdd = method->member == "add";
 
         auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-
         IR::Vector<IR::Expression> list;
-        if (auto member = src->to<IR::Member>()) {
-            list.push_back(member);
-        } else if (auto listExpr = src->to<IR::ListExpression>()) {
-            list = listExpr->components;
-        } else if (auto headerRef = src->to<IR::ConcreteHeaderRef>()) {
-            auto header = headerRef->baseRef();
-            for (auto field : header->type->fields) {
-                auto* member = new IR::Member(src->srcInfo, headerRef, field->name);
+        for (auto srcComp : srcList) {
+            if (auto member = srcComp->to<IR::Member>()) {
                 list.push_back(member);
+            } else if (auto constant = srcComp->to<IR::Constant>()) {
+                list.push_back(constant);
+            } else if (auto headerRef = srcComp->to<IR::ConcreteHeaderRef>()) {
+                auto header = headerRef->baseRef();
+                for (auto field : header->type->fields) {
+                    auto* member = new IR::Member(src->srcInfo, headerRef, field->name);
+                    list.push_back(member);
+                }
             }
         }
 
         for (auto expr : list) {
+            bool swap = false;
+            if (auto* constant = expr->to<IR::Constant>()) {
+                if (constant->asInt() != 0) {
+                   P4C_UNIMPLEMENTED(
+                   "Non-zero constant entry is not supported in checksum calculation %1%", expr);
+                }
+                declNameToOffset[declName] += constant->type->width_bits();
+                continue;
+            }
             auto member = expr->to<IR::Member>();
             BUG_CHECK(member != nullptr,
                       "Invalid field in the checksum calculation : %1%",
@@ -532,6 +549,11 @@ struct RewriteParserStatements : public Transform {
                 if (member->member == extracted->member &&
                     member->expr->equiv(*(extracted->expr))) {
                     rval = kv.second;
+                    // If a field is on an even byte in the checksum operation field list
+                    // but on an odd byte in the input buffer and vice-versa then swap is true.
+                    if ((declNameToOffset[declName]/8) % 2 != rval->range.loByte() % 2) {
+                        swap = true;
+                    }
                     break;
                 }
             }
@@ -543,13 +565,15 @@ struct RewriteParserStatements : public Transform {
                     << "where the fields are extracted.";
                 ::fatal_error("%1% %2%", expr, msg.str());
             }
+            declNameToOffset[declName] += rval->range.size();
             if (isAdd) {
                 bool isChecksum = isChecksumField(member, "header_checksum");
-                auto* add = new IR::BFN::ChecksumAdd(declName, rval, isChecksum);
+                auto* add = new IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
                 rv->push_back(add);
             } else {
                 bool isChecksum = isChecksumField(member, "payload_checksum");
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, member, isChecksum);
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, member,
+                                                               swap, isChecksum);
                 rv->push_back(subtract);
             }
 
@@ -740,6 +764,8 @@ struct RewriteParserStatements : public Transform {
     const cstring stateName;
     const gress_t gress;
     unsigned currentBit = 0;
+    // A bit offset counter for each checksum operation
+    std::map<cstring, int> declNameToOffset;
     std::map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
 };
 
@@ -879,7 +905,6 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     RewriteParserStatements rewriteStatements(typeMap,
                                               state->p4State->controlPlaneName(),
                                               state->gress);
-
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
