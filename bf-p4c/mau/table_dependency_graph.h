@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
+#include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/reduction_or.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -504,7 +505,7 @@ class PrintPipe : public MauInspector {
     PrintPipe() { }
 };
 
-class FindDependencyGraph : public PassManager {
+class FindDependencyGraph : public Logging::PassManager {
     bool _add_logical_deps = true;
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
     calc_topological_stage(unsigned deps_flag = 0);

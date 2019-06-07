@@ -192,6 +192,8 @@ int IR::MAU::Table::action_next_paths() const {
         if (n.first == "$default" || n.first[0] != '$')
             action_paths++;
     }
+    if (has_exit_action())
+        action_paths++;
     return action_paths;
 }
 

@@ -311,7 +311,7 @@ class BarefootBackend(BackendDriver):
             self.runVerifiers = False
 
         if opts.verbose > 0:
-            ta_logging = "table_placement:3,table_summary:1"
+            ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:2"
             phv_verbosity = str(2 * opts.verbose - 1)
             pa_logging = "allocate_phv:" + phv_verbosity
             parde_verbosity = str(2 * opts.verbose - 1)

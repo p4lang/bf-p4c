@@ -1682,7 +1682,7 @@ void MauAsmOutput::emit_ternary_match(std::ostream &out, indent_t indent,
  * to output it with correct asm syntax.  Also has a cstring converter for those cases where
  * it needs to be a single table */
 class MauAsmOutput::NextTableSet {
-    ordered_set<const IR::MAU::Table *>   tables;
+    ordered_set<UniqueId> tables;
 
  public:
     NextTableSet() = default;
@@ -1691,20 +1691,25 @@ class MauAsmOutput::NextTableSet {
     NextTableSet &operator=(const NextTableSet &) = default;
     NextTableSet &operator=(NextTableSet &&) = default;
     NextTableSet(const IR::MAU::Table *t) {                     // NOLINT(runtime/explicit)
-        if (t) tables.insert(t); }
+        if (t) tables.insert(t->unique_id()); }
+    NextTableSet(UniqueId ui) {                                 // NOLINT(runtime/explicit)
+        tables.insert(ui); }
+
     operator cstring() const {
         BUG_CHECK(tables.size() == 1, "not a single next table");
-        return tables.front()->unique_id().build_name(); }
+        return tables.front().build_name(); }
     bool operator==(const NextTableSet &a) const { return tables == a.tables; }
     bool operator<(const NextTableSet &a) const { return tables < a.tables; }
-    bool insert(const IR::MAU::Table *t) { return t ? tables.insert(t).second : false; }
+    bool insert(const IR::MAU::Table *t) {
+        return t ? tables.insert(t->unique_id()).second : false; }
+    bool insert(UniqueId ui) { return tables.insert(ui).second; }
     friend inline std::ostream &operator<<(std::ostream &out, const NextTableSet &nxt) {
         const char *sep = " ";
         if (nxt.tables.size() != 1) {
             BUG_CHECK(nxt.tables.empty() || Device::numLongBranchTags() > 0, "long branch snafu");
             out << '['; }
-        for (auto *t : nxt.tables) {
-            out << sep << t->unique_id().build_name();
+        for (auto ui : nxt.tables) {
+            out << sep << ui;
             sep = ", "; }
         if (nxt.tables.size() != 1) out << (sep+1) << ']';
         return out; }
@@ -1713,23 +1718,28 @@ class MauAsmOutput::NextTableSet {
 MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cstring what) const {
     if (what == "$miss" && tbl->next.count("$try_next_stage"))
         what = "$try_next_stage";
+
     if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
         BUG_CHECK(!Device::numLongBranchTags() || options.disable_long_branch,
                   "long branch incompatible with exit action");
-        return NextTableSet(); }
+        LOG1("  next for exit action");
+        NextTableSet rv;
+        rv.insert(UniqueId("END"));
+        return rv;
+    }
     if (!tbl->next.count(what))
         what = "$default";
     if (tbl->next.count(what)) {
         if (tbl->next.at(what) && Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
             NextTableSet rv;
             for (auto *tbl1 : tbl->next.at(what)->tables)
-                rv.insert(tbl1);
+                rv.insert(tbl1->unique_id());
             return rv; }
         if (tbl->next.at(what) && !tbl->next.at(what)->empty())
             return tbl->next.at(what)->front(); }
     if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
         return NextTableSet();
-    return default_next.next_in_thread(tbl);
+    return default_next.next_in_thread_uniq_id(tbl);
 }
 
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
@@ -1776,12 +1786,17 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << indent << "- next_table: ";
         if (table->action_chain()) {
             int ntb = table->resources->table_format.next_table_bits();
+            LOG1("  next table bits " << ntb);
             if (ntb == 0) {
                 out << mem_code;
             } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
                 safe_vector<NextTableSet> next_table_map;
                 self.next_table_non_action_map(table, next_table_map);
+                for (auto entry : next_table_map) {
+                    LOG1("  next table entry : " << entry);
+                }
                 cstring act_next_for = self.next_for(table, act->name.originalName);
+                LOG1("  act next for " << act_next_for);
                 auto it = std::find(next_table_map.begin(), next_table_map.end(), act_next_for);
                 BUG_CHECK(it != next_table_map.end(), "Next table cannot be associated");
                 out << (it - next_table_map.begin());

@@ -975,7 +975,6 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     if (LOGGING(3))
         dg.display_min_edges = true;
 
-    LOG2(dg);
 
     dg.vertex_rst = topo_rst_control_anti;
     calc_topological_stage();
@@ -1010,7 +1009,9 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
                                          cstring dotFileName,
                                          cstring passCont) :
-    dg(out), dotFile(dotFileName), passContext(passCont) {
+        Logging::PassManager("table_dependency_graph", Logging::Mode::AUTO),
+        dg(out), dotFile(dotFileName),
+        passContext(passCont) {
     addPasses({
         &mutex,
         &ntp,
@@ -1031,7 +1032,7 @@ Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
 
 void FindDependencyGraph::end_apply(const IR::Node *root) {
     finalize_dependence_graph();
-    LOG5(dg);
+    LOG2(dg);
     if (BackendOptions().create_graphs && dotFile != "") {
         auto pipeId = root->to<IR::BFN::Pipe>()->id;
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
