@@ -661,6 +661,16 @@ const char *PragmaSelectorNumMaxGroups::help = "@pragma selector_num_max_groups 
     "resources to support the indicated number of groups of maximum size. "
     "By default, the number of maximum groups is 1.";
 
+const char *PragmaSelectorEnableScramble::name = "selector_enable_scramble";
+const char *PragmaSelectorEnableScramble::description =
+    "Specifies whether to enable or disable SPS scrambling.";
+const char *PragmaSelectorEnableScramble::help = "@pragma selector_enable_scramble 0\n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "Specifies that the match table’s selector should enable or disable the "
+    "SPS scrambling logic.  A value of 0 disables the scramble logic.  A value "
+    "of 1 enables the scramble logic.  By default, scrambling is enabled.";
+
 const char *PragmaStage::name = "stage";
 const char *PragmaStage::description =
     "Specifies the stage for a table.";

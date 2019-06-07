@@ -86,6 +86,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaResidualChecksumParserUpdateLocation, PARSE, StringLiteral, intPragma);
         BFN_PARSE(PragmaSelectorMaxGroupSize, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaSelectorNumMaxGroups, PARSE, Expression, extPragma);
+        BFN_PARSE(PragmaSelectorEnableScramble, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaStage, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaTerminateParsing, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it

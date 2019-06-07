@@ -575,6 +575,7 @@ class Selector : AttachedMemory {
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::SELECTOR; }
     int num_pools = 0;
     int max_pool_size = 0;
+    bool sps_scramble = true;  // Indicates if non-linear hash (SPS scramble) should be used.
     NullOK HashDist hash_mod = nullptr;
     cstring externType() const override { return "ActionSelector"; }
 #nodbprint
@@ -701,7 +702,7 @@ class ActionArg : Expression {
     toString { return name.toString(); }
 }
 
-class ConditionalArg : ActionArg { 
+class ConditionalArg : ActionArg {
     ActionArg   orig_arg;
     dbprint { ActionArg::dbprint(out);  out << " = orig " << orig_arg; }
     bool one_on_true = true;
@@ -827,7 +828,7 @@ class HashGenExpression : Expression {
     ID id;
     bool dynamic = false;
     HashFunction algorithm;
-    bool any_alg_allowed = false; 
+    bool any_alg_allowed = false;
     NullOK NameList alg_names = nullptr;
     // for dyn_hash, not sure if it can be summarized within type
     int hash_output_width = 0;
@@ -843,7 +844,7 @@ class HashGenExpression : Expression {
                   ?  (a.alg_names ? alg_names->equiv(*a.alg_names) : false)
                   : a.alg_names == nullptr;
         rv &= dynamic && a.dynamic ? id == a.id : true;
-        return rv;          
+        return rv;
     }
 
  private:

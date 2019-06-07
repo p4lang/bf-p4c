@@ -3512,7 +3512,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
     // either the tofino native definitions or pragmas
-    out << indent << "non_linear: true" << std::endl;
+    out << indent << "non_linear: " << (as->sps_scramble ? "true" : "false") << std::endl;
     out << indent << "pool_sizes: [" << as->max_pool_size << "]" << std::endl;
     if (as->hash_mod) {
         safe_vector<IXBar::HashDistUse> sel_hash_dist;

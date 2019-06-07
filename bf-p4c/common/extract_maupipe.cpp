@@ -418,6 +418,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         // setup action selector group and group size.
         int num_groups = StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS;
         int max_group_size = StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
+        bool sps_scramble = true;
 
         // Check match table for selector pragmas that specify selector properties.
         // P4-14 legacy reasons put these pragmas on the match table rather than
@@ -441,10 +442,24 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 if (num_groups < 1) {
                     ::error("%s: The selector_num_max_groups pragma value on table %s is "
                             "not greater than or equal to 1.", match_table->srcInfo,
-                             match_table->name); } } }
+                             match_table->name); } }
+            // Check for selector_enable_scramble pragma.
+            int pragma_sps_en = getSingleAnnotationValue("selector_enable_scramble",
+                                                         match_table);
+            if (pragma_sps_en != -1) {
+                if (pragma_sps_en == 0) {
+                    sps_scramble = false;
+                } else if (pragma_sps_en == 1) {
+                    sps_scramble = true;
+                } else {
+                  ::error("%s: The selector_enable_scramble pragma value on table %s is "
+                          "only allowed to be 0 or 1.", match_table->srcInfo,
+                           match_table->name); } } }
+
         sel->num_pools = num_groups;
         sel->max_pool_size = max_group_size;
         sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
+        sel->sps_scramble = sps_scramble;
 
         // processing ActionSelector constructor parameters.
         for (auto p : *substitution->getParametersInOrder()) {

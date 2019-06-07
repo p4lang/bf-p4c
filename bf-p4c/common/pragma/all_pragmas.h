@@ -59,6 +59,7 @@ DEFINE_PRAGMA_CLASS(PragmaReg);
 DEFINE_PRAGMA_CLASS(PragmaResidualChecksumParserUpdateLocation);
 DEFINE_PRAGMA_CLASS(PragmaSelectorMaxGroupSize);
 DEFINE_PRAGMA_CLASS(PragmaSelectorNumMaxGroups);
+DEFINE_PRAGMA_CLASS(PragmaSelectorEnableScramble);
 DEFINE_PRAGMA_CLASS(PragmaStage);
 DEFINE_PRAGMA_CLASS(PragmaTerminateParsing);
 DEFINE_PRAGMA_CLASS(PragmaTernary);

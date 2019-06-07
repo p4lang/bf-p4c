@@ -198,7 +198,7 @@ bool SelectionTable::validate_length_call(const Table::Call &call) {
         return false;
     }
 
-    
+
     if (call.args[0].field() && call.args[1].field()) {
         auto mod = call.args[0].field();
         auto shift = call.args[1].field();
@@ -214,9 +214,9 @@ bool SelectionTable::validate_length_call(const Table::Call &call) {
 unsigned SelectionTable::determine_length_shiftcount(const Table::Call &call, int group,
         int word) const {
     if (auto f = call.args[0].field()) {
-        BUG_CHECK(f->by_group[group]->bit(0)/128 == word && group == 0); 
+        BUG_CHECK(f->by_group[group]->bit(0)/128 == word && group == 0);
         BUG_CHECK(f->by_group[group]->bit(0)%128 <= 8);
-        return f->by_group[group]->bit(0)%128U; 
+        return f->by_group[group]->bit(0)%128U;
     }
     return 0;
 }
@@ -379,7 +379,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     std::string hr = how_referenced();
     if (hr.empty())
         hr = indirect ? "indirect" : "direct";
-    tbl["how_referenced"] = hr; 
+    tbl["how_referenced"] = hr;
     if (pool_sizes.size() > 0)
         tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
     for (MatchTable *m : match_tables)
@@ -392,6 +392,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
     add_alu_index(stage_tbl, "meter_alu_index");
+    stage_tbl["sps_scramble_enable"] = non_linear_hash;
     if (context_json)
         stage_tbl.merge(*context_json);
 }
