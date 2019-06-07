@@ -62,6 +62,9 @@ class PardeSpec {
     /// Total parsers supported ingress/egress
     virtual int numParsers() const = 0;
 
+    /// Total TCAM Rows supported ingress/egress
+    virtual int numTcamRows() const = 0;
+
     /// The maximum number of CLOTs that can be generated in each parser state.
     virtual unsigned maxClotsPerState() const = 0;
 
@@ -99,6 +102,7 @@ class TofinoPardeSpec : public PardeSpec {
     }
 
     int numParsers() const override { return 18; }
+    int numTcamRows() const override { return 256; }
 
     unsigned maxClotsPerState() const override { BUG("No CLOTs in Tofino"); }
     unsigned byteMaxClotSize() const override { BUG("No CLOTs in Tofino"); }
@@ -133,6 +137,7 @@ class JBayPardeSpec : public PardeSpec {
 
     // TBD
     int numParsers() const override { return 36; }
+    int numTcamRows() const override { return 256; }
 
     unsigned maxClotsPerState() const override { return 2; }
     unsigned byteMaxClotSize() const override { return 64; }

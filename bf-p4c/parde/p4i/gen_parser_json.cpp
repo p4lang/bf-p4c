@@ -32,34 +32,19 @@ GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match
 
 std::vector<P4iParserMatchOn>
 GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_state,
-                                       const IR::BFN::LoweredParserState* curr_state,
                                        const IR::BFN::LoweredParserMatch* match) {
     std::vector<P4iParserMatchOn> rst;
+    if (!prev_state) return rst;
 
-    for (const auto& reg : curr_state->select->regs) {
+    for (const auto& reg : prev_state->select->regs) {
         P4iParserMatchOn match_on;
         match_on.hardware_id   = reg.id;
         match_on.bit_width     = reg.size * 8;
 
-        // XXX(zma) This assumes the match word is saved into the match registers in the
-        // previous state. This however is not true in general -- match word can be saved
-        // and forward to any future state.
-        if (prev_state) {
-            for (auto prev_match : prev_state->transitions) {
-                for (auto prev_save : prev_match->saves) {
-                    if (prev_save->dest == reg) {
-                        match_on.buffer_offset = prev_save->source->range.loByte();
-                    }
-                }
-            }
-        }
-
         if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
-            // TODO(yumin): value can be truncated to represent values in each
-            // match register, for more precise result.
-            match_t v = const_val->value;
-            match_on.mask = (~(v.word0 ^ v.word1));
-            match_on.value = (v.word0 ^ v.word1);
+            std::stringstream v;
+            v << const_val->value;
+            match_on.value = v.str();
         } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
             match_on.value_set = pvs->name;
         } else {
@@ -67,6 +52,24 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
         }
         rst.push_back(match_on);
     }
+    return rst;
+}
+
+std::vector<P4iParserSavesTo>
+GenerateParserP4iJson::generateSaves(const IR::BFN::LoweredParserMatch* match) {
+    std::vector<P4iParserSavesTo> rst;
+
+    for (const auto& save : match->saves) {
+        P4iParserSavesTo saves_to;
+        saves_to.hardware_id   = save->dest.id;
+        if (auto* buffer = save->source->to<IR::BFN::LoweredInputBufferRVal>()) {
+            saves_to.buffer_offset = buffer->range.loByte();
+        } else {
+            BUG("Unknown match save source : %1%", save);
+        }
+        rst.push_back(saves_to);
+    }
+
     return rst;
 }
 
@@ -80,35 +83,35 @@ int GenerateParserP4iJson::getStateId(const IR::BFN::LoweredParserState* state) 
 }
 
 /// Assign a tcam id for this match, higher the number, higher the priority.
-int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match) {
-    static const int MAX_TCAM_ID = 255;
-    if (!tcam_ids.count(match)) {
-        int id = MAX_TCAM_ID - (tcam_ids.size() - 1);
-        id = (id < 0) ? 0 : ((id > MAX_TCAM_ID) ? MAX_TCAM_ID : id);
-        tcam_ids[match] = id; }
-    return tcam_ids.at(match);
+int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress) {
+    if (!tcam_ids[gress].count(match)) {
+        tcam_ids[gress][match] = Device::pardeSpec().numTcamRows() - tcam_ids[gress].size();
+    }
+    return tcam_ids[gress].at(match);
 }
 
-P4iParserState
-GenerateParserP4iJson::generateStateByMatch(
-        const IR::BFN::LoweredParserState* curr_state,
+P4iParserStateTransition
+GenerateParserP4iJson::generateStateTransitionByMatch(
+        const IR::BFN::LoweredParserState* next_state,
         const IR::BFN::LoweredParserState* prev_state,
         const IR::BFN::LoweredParserMatch* match) {
-    // Create a parser state out from this match.
-    P4iParserState state;
-    state.state_id      = getStateId(curr_state);
-    state.tcam_row      = getTcamId(match);
-    state.shifts        = match->shift;
-    state.extracts      = generateExtracts(match);
-    state.matches       = generateMatches(prev_state, curr_state, match);
-    state.has_counter   = false;  // TODO(yumin): update this when counter is supported.
-    state.state_name    = curr_state->name;
+    // Create a parser state transition out from this match.
+    P4iParserStateTransition state_transition;
+    state_transition.tcam_row           = getTcamId(match, prev_state->gress);
+    state_transition.shifts             = match->shift;
+    state_transition.extracts           = generateExtracts(match);
+    state_transition.saves              = generateSaves(match);
+    state_transition.matches            = generateMatches(prev_state, match);
+    // TODO(yumin): update this when counter is supported.
+    state_transition.has_counter        = false;
+    state_transition.next_state_id      = getStateId(next_state);
+    state_transition.next_state_name    = next_state ? next_state->name : "END";
     if (prev_state) {
-        state.previous_state_id = getStateId(prev_state);
-        state.previous_state_name = prev_state->name;
+        state_transition.previous_state_id = getStateId(prev_state);
+        state_transition.previous_state_name = prev_state->name;
     }
 
-    return state;
+    return state_transition;
 }
 
 P4iParserClot
@@ -157,10 +160,11 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     auto parser_ir = findContext<IR::BFN::LoweredParser>();
     BUG_CHECK(parser_ir, "state does not belong to a parser? %1%", state);
 
-    auto prev_state = findContext<IR::BFN::LoweredParserState>();
+    // auto prev_state = findContext<IR::BFN::LoweredParserState>();
     for (const auto* match : state->transitions) {
+        LOG1("State Match: " << match);
         parsers[parser_ir->gress].states.push_back(
-                generateStateByMatch(state, prev_state, match));
+                generateStateTransitionByMatch(match->next, state, match));
     }
 
     if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {

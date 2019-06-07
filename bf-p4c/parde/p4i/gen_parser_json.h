@@ -19,20 +19,21 @@ class GenerateParserP4iJson : public ParserInspector {
     bool collected;
 
     std::map<const IR::BFN::LoweredParserState*, int> state_ids;
-    std::map<const IR::BFN::LoweredParserMatch*, int> tcam_ids;
+    std::map<const IR::BFN::LoweredParserMatch*, int> tcam_ids[2];
 
     int getStateId(const IR::BFN::LoweredParserState* state);
-    int getTcamId(const IR::BFN::LoweredParserMatch* match);
+    int getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress);
 
     std::vector<P4iParserMatchOn> generateMatches(
             const IR::BFN::LoweredParserState* prev_state,
-            const IR::BFN::LoweredParserState* curr_state,
             const IR::BFN::LoweredParserMatch* match);
+
+    std::vector<P4iParserSavesTo> generateSaves(const IR::BFN::LoweredParserMatch* match);
 
     std::vector<P4iParserExtract> generateExtracts(const IR::BFN::LoweredParserMatch* match);
 
-    P4iParserState
-    generateStateByMatch(const IR::BFN::LoweredParserState* curr_state,
+    P4iParserStateTransition
+    generateStateTransitionByMatch(const IR::BFN::LoweredParserState* next_state,
                          const IR::BFN::LoweredParserState* prev_state,
                          const IR::BFN::LoweredParserMatch* match);
 

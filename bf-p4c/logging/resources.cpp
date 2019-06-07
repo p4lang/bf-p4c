@@ -882,7 +882,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.1.2"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.2.0"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BackendOptions().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));
