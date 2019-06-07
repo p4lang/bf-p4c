@@ -576,7 +576,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             index++;
             if (!param.second) continue;
             auto pipe = param.second;
-            BUG_CHECK(pipe->is<IR::PackageBlock>(), "Expected PackageBlock");
+            if (!pipe->is<IR::PackageBlock>()) {
+                ::error(ErrorType::ERR_INVALID, "package block. You are compiling for the %2% "
+                        "P4 architecture.\n"
+                        "Please verify that you included the correct architecture file.",
+                        pipe, BackendOptions().arch);
+                return;
+            }
             auto idxParam = cparams->getParameter(index);
             auto pipeName = idxParam->name;
             function(pipeName, pipe->to<IR::PackageBlock>());
@@ -591,7 +597,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto parsersName = "ig_prsr";
             forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock* pkg) {
                 auto parsers = pkg->findParameterValue(parsersName);
-                BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                if (!parsers->is<IR::PackageBlock>()) {
+                    ::error(ErrorType::ERR_INVALID, "package block. "
+                            "You are compiling for the %2% P4 architecture.\n"
+                            "Please verify that you included the correct architecture file.",
+                            parsers, BackendOptions().arch);
+                    return;
+                }
                 auto parsersBlock = parsers->to<IR::PackageBlock>();
                 for (int idx = 0; idx < numParsersPerPipe; idx++) {
                     auto mpParserName = "prsr" + std::to_string(idx);

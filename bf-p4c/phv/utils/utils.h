@@ -750,14 +750,14 @@ class Transaction : public Allocation {
     /// @returns false if a dark container is used for the read half cycle in between stages
     /// minStage and maxStage for either this transaction or its parent.
     bool isDarkReadAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
-        return (isDarkReadAvailable(c, minStage, maxStage) ||
+        return (Allocation::isDarkReadAvailable(c, minStage, maxStage) ||
                 parent_i->isDarkReadAvailable(c, minStage, maxStage));
     }
 
     /// @returns false if a dark container is used for the write half cycle in between stages
     /// minStage and maxStage for either this transaction or its parent.
     bool isDarkWriteAvailable(PHV::Container c, unsigned minStage, unsigned maxStage) const {
-        return (isDarkWriteAvailable(c, minStage, maxStage) ||
+        return (Allocation::isDarkWriteAvailable(c, minStage, maxStage) ||
                 parent_i->isDarkWriteAvailable(c, minStage, maxStage));
     }
 

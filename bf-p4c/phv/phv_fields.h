@@ -613,7 +613,7 @@ class Field : public LiftLess<Field> {
     void foreach_alloc(const le_bitrange *r, const IR::MAU::Table *ctxt,
                        const PHV::FieldUse* use,
                        std::function<void(const alloc_slice &)> fn) const {
-        foreach_alloc(r, ctxt, use, fn);
+        foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
     /// @returns the number of distinct container bytes that contain slices of

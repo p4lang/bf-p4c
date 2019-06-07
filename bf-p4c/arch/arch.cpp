@@ -150,7 +150,10 @@ bool ParseTna::preorder(const IR::PackageBlock* block) {
 const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Parser *node) {
     auto orig = getOriginal();
     if (!block_info->count(orig)) {
-        BUG("P4Parser is mutated after evaluation");
+        ::error(ErrorType::ERR_INVALID, "parser. You are compiling for the %2% "
+                "P4 architecture.\n"
+                "Please verify that you included the correct architecture file.",
+                node, BackendOptions().arch);
         return node;
     }
     auto binfoItr = block_info->equal_range(orig);
@@ -167,7 +170,10 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Parser *node) {
 const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) {
     auto orig = getOriginal();
     if (!block_info->count(orig)) {
-        BUG("P4Control is mutated after evaluation");
+        ::error(ErrorType::ERR_INVALID, "control. You are compiling for the %2% "
+                "P4 architecture.\n"
+                "Please verify that you included the correct architecture file.",
+                node, BackendOptions().arch);
         return node;
     }
     auto binfoItr = block_info->equal_range(orig);

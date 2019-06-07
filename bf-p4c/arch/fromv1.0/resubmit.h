@@ -20,8 +20,6 @@ using ResubmitSources = IR::Vector<IR::Expression>;
 using ResubmitExtracts = std::map<unsigned, std::pair<cstring, const ResubmitSources*>>;
 
 class FixupResubmitMetadata : public PassManager {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap* typeMap;
     ResubmitExtracts fieldExtracts;
 
  public:

@@ -226,7 +226,7 @@ class AddResubmitParser : public Transform {
 
 FixupResubmitMetadata::FixupResubmitMetadata(
         P4::ReferenceMap *refMap,
-        P4::TypeMap *typeMap) : refMap(refMap), typeMap(typeMap) {
+        P4::TypeMap *typeMap) {
     auto findResubmit = new FindResubmit(refMap, typeMap);
     addPasses({
         findResubmit,

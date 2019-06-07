@@ -613,9 +613,17 @@ struct ClosedRange {
     /// Formats this range as P4 syntax by converting to a little-endian range of bits, and
     /// formatting the result as "[hi:lo]".
     cstring formatAsSlice(int spaceSize) const {
-        auto normalized = toOrder<Endian::Little>(spaceSize).toUnit<RangeUnit::Bit>();
+        auto r = toOrder<Endian::Little>(spaceSize);
+        auto hi = r.hi;
+        auto lo = r.lo;
+        if (Unit == RangeUnit::Byte) {
+            lo = lo * 8;
+            hi = hi * 8 + 7;
+        } else {
+            BUG_CHECK(Unit == RangeUnit::Bit, "mismatch range units");
+        }
         std::stringstream out;
-        out << "[" << normalized.hi << ":" << normalized.lo << "]";
+        out << "[" << hi << ":" << lo << "]";
         return cstring(out.str());
     }
 
