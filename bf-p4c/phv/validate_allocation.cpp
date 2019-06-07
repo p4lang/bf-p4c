@@ -739,7 +739,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
         for (auto flval : fieldList->sources) {
             const PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
-            f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            f->foreach_alloc(PHV::AllocContext::DEPARSER, nullptr,
+                    [&](const PHV::Field::alloc_slice& alloc) {
                 digestSizeInBits += alloc.container.size();
             });
         }
