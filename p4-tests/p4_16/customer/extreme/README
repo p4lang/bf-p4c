@@ -1,0 +1,17 @@
+This directory contains customer programs provided by Extreme Networks, via a
+Zendesk ticket, which was attached to one or more JIRA tickets. Each program is
+named according to the following schema:
+
+       +-- The JIRA ticket number.
+       |
+       |   +-- Designates a different program that was associated with the JIRA
+       |   |   ticket. Omitted if there was only a single program.
+       |   |
+       |   |+----- 1 = Tofino program
+       |   ||      2 = Tofino2 program
+       |   ||
+       |   ||      Omitted if the two can be unified (i.e., the target didn't
+       |   ||      affect the feature set)
+       V   VV
+  p4c-1234-b2.p4
+
