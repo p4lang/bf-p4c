@@ -72,14 +72,8 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
-  #testdata/p4_14_samples/08-FullTPHV3.p4
-  extensions/p4_tests/p4_16/compile_only/lrn1.p4
-)
-
-# P4C-1777
-p4c_add_xfail_reason("tofino2"
-  "Packet has 32 live CLOTs, when at most 16 are allowed"
   testdata/p4_14_samples/08-FullTPHV3.p4
+  extensions/p4_tests/p4_16/compile_only/lrn1.p4
 )
 
 p4c_add_xfail_reason("tofino2"

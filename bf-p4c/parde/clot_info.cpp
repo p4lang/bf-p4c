@@ -7,7 +7,6 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/cmp.h"
 #include "bf-p4c/logging/logging.h"
-#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -146,70 +145,74 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
     unsigned total_unused_bits_in_clots = 0;
     unsigned total_bits = 0;
 
-    out << "CLOT Allocation:" << std::endl;
-
-    TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
-                          TablePrinter::Align::CENTER);
-
     std::set<int> unaligned_clots;
-    for (auto entry : clot_to_start_state()) {
-        auto c = entry.first;
-        auto state = entry.second;
+    for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+        out << "CLOT Allocation (" << toString(gress) << "):" << std::endl;
+        TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
+                              TablePrinter::Align::CENTER);
 
-        std::vector<std::vector<std::string>> rows;
-        unsigned bits_in_clot = 0;
+        for (auto entry : clot_to_parser_state()) {
+            auto c = entry.first;
+            auto pair = entry.second;
+            if (gress != pair.first) continue;
+            auto state = pair.second;
 
-        for (auto f : c->all_slices()) {
-            if (is_unused(f)) {
-                total_unused_fields_in_clots++;
-                total_unused_bits_in_clots += f->size();
+            std::vector<std::vector<std::string>> rows;
+            unsigned bits_in_clot = 0;
+
+            for (auto f : c->all_slices()) {
+                if (is_unused(f)) {
+                    total_unused_fields_in_clots++;
+                    total_unused_bits_in_clots += f->size();
+                }
+
+                std::stringstream bits;
+                bits << f->size()
+                     << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size() - 1)
+                     << "]";
+
+                bool is_phv = c->is_phv_field(f->field());
+                bool is_csum = c->is_csum_field(f->field());
+                bool is_phv_overwrite = phvInfo && slice_overwritten_by_phv(*phvInfo, c, f);
+
+                std::string attr;
+                if (is_phv || is_csum) {
+                    attr += " (";
+                    if (is_phv) attr += " phv";
+                    if (is_phv_overwrite) attr += "*";
+                    if (is_csum) attr += " csum";
+                    attr += " ) ";
+                }
+
+                rows.push_back({"", std::string(f->shortString()), bits.str(), attr});
+                bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size());
             }
 
-            std::stringstream bits;
-            bits << f->size()
-                 << " [" << c->bit_offset(f) << ".." << (c->bit_offset(f) + f->size() - 1) << "]";
+            total_bits += bits_in_clot;
 
-            bool is_phv = c->is_phv_field(f->field());
-            bool is_csum = c->is_csum_field(f->field());
-            bool is_phv_overwrite = phvInfo && slice_overwritten_by_phv(*phvInfo, c, f);
+            if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
+            unsigned bytes = bits_in_clot / 8;
 
-            std::string attr;
-            if (is_phv || is_csum) {
-                attr += " (";
-                if (is_phv) attr += " phv";
-                if (is_phv_overwrite) attr += "*";
-                if (is_csum) attr += " csum";
-                attr += " ) ";
-            }
+            tp.addRow({std::to_string(c->tag),
+                       "state " + std::string(state),
+                       std::to_string(bytes) + " bytes",
+                       ""});
+            tp.addBlank();
 
-            rows.push_back({"", std::string(f->shortString()), bits.str(), attr});
-            bits_in_clot = std::max(bits_in_clot, c->bit_offset(f) + f->size());
+            for (const auto& row : rows)
+                tp.addRow(row);
+
+            tp.addSep();
         }
 
-        total_bits += bits_in_clot;
-
-        if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
-        unsigned bytes = bits_in_clot / 8;
-
-        tp.addRow({std::to_string(c->tag),
-                   "state " + std::string(state),
-                   std::to_string(bytes) + " bytes",
-                   ""});
-        tp.addBlank();
-
-        for (const auto& row : rows)
-            tp.addRow(row);
-
-        tp.addSep();
+        tp.addRow({"", "Total Bits", std::to_string(total_bits), ""});
+        tp.print();
+        out << std::endl;
     }
-
-    tp.addRow({"", "Total Bits", std::to_string(total_bits), ""});
-    tp.print();
 
     unsigned total_unused_fields = 0;
     unsigned total_unused_bits = 0;
 
-    out << std::endl;
     out << "All fields:" << std::endl;
 
     TablePrinter field_tp(out, {"Field", "Bits", "CLOTs", "Property"},
@@ -561,12 +564,15 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
             clots.push_back(clot);
         } else {
             // Adjustment resulted in an empty CLOT, so remove it.
-            auto state_name = clot_to_start_state_.at(clot);
-            clot_to_start_state_.erase(clot);
+            auto pair = clot_to_parser_state_.at(clot);
+            auto gress = pair.first;
+            auto state_name = pair.second;
+            clot_to_parser_state_.erase(clot);
 
-            auto& state_clots = start_state_to_clots_.at(state_name);
+            auto& parser_state_to_clots = this->parser_state_to_clots(gress);
+            auto& state_clots = parser_state_to_clots.at(state_name);
             state_clots.erase(clot);
-            if (state_clots.empty()) start_state_to_clots_.erase(state_name);
+            if (state_clots.empty()) parser_state_to_clots.erase(state_name);
         }
     }
 
@@ -694,7 +700,7 @@ ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
 //
 // DANGER: This function assumes the parser graph is a DAG.
 std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
-        const std::map<cstring, std::set<const Clot*>>& start_state_to_clots,
+        const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
         const IR::BFN::ParserGraph* graph,
         const IR::BFN::ParserState* state,
         std::map<const IR::BFN::ParserState*,
@@ -713,7 +719,7 @@ std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
     auto max_path_states = new std::set<const IR::BFN::ParserState*>();
     if (graph->successors().count(state)) {
         for (auto child : graph->successors().at(state)) {
-            const auto result = find_largest_paths(start_state_to_clots, graph, child, memo);
+            const auto result = find_largest_paths(parser_state_to_clots, graph, child, memo);
             if (result->first > max_clots) {
                 max_clots = result->first;
                 max_path_states->clear();
@@ -726,8 +732,8 @@ std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
     }
 
     // Add the current state's result to the table and return.
-    if (start_state_to_clots.count(state->name))
-        max_clots += start_state_to_clots.at(state->name).size();
+    if (parser_state_to_clots.count(state->name))
+        max_clots += parser_state_to_clots.at(state->name).size();
     max_path_states->insert(state);
     auto result =
         new std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>(
@@ -747,7 +753,7 @@ const std::set<const IR::BFN::ParserState*>* ClotInfo::find_full_states(
     if (num_clots_allocated(gress) < MAX_LIVE_CLOTS) {
         result = new std::set<const IR::BFN::ParserState*>();
     } else {
-        auto largest = find_largest_paths(start_state_to_clots(), graph, root);
+        auto largest = find_largest_paths(parser_state_to_clots(gress), graph, root);
         BUG_CHECK(largest->first <= MAX_LIVE_CLOTS,
             "Packet has %d live CLOTs, when at most %d are allowed",
             largest->first,
@@ -783,8 +789,9 @@ void ClotInfo::clear() {
     checksum_dests_.clear();
     field_to_checksum_updates_.clear();
     clots_.clear();
-    clot_to_start_state_.clear();
-    start_state_to_clots_.clear();
+    clot_to_parser_state_.clear();
+    parser_state_to_clots_[INGRESS].clear();
+    parser_state_to_clots_[EGRESS].clear();
     field_range_.clear();
     field_aliases_.clear();
     headers_added_by_mau_.clear();
@@ -1026,6 +1033,7 @@ unsigned ClotCandidate::nextId = 0;
 class GreedyClotAllocator : public Visitor {
     ClotInfo& clotInfo;
     const CollectParserInfo& parserInfo;
+    Logging::FileLog* log = nullptr;
 
  public:
     explicit GreedyClotAllocator(ClotInfo& clotInfo,
@@ -1469,6 +1477,12 @@ class GreedyClotAllocator : public Visitor {
     }
 
     Visitor::profile_t init_apply(const IR::Node* root) override {
+        // Configure logging for this visitor.
+        if (BackendOptions().verbose > 0) {
+            auto pipe = root->to<IR::BFN::Pipe>();
+            log = new Logging::FileLog(pipe->id, "parser.log");
+        }
+
         // Make sure we clear our state from previous invocations of the visitor.
         auto result = Visitor::init_apply(root);
         clear();
@@ -1515,6 +1529,15 @@ class GreedyClotAllocator : public Visitor {
         return root;
     }
 
+    void end_apply() override {
+        if (log) {
+            delete log;
+            log = nullptr;
+        }
+
+        Visitor::end_apply();
+    }
+
     void clear() {
     }
 };
@@ -1529,6 +1552,18 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses)
     });
 }
 
+Visitor::profile_t ClotAdjuster::init_apply(const IR::Node* root) {
+    auto result = Visitor::init_apply(root);
+
+    // Configure logging for this visitor.
+    if (BackendOptions().verbose > 0) {
+        auto pipe = root->to<IR::BFN::Pipe>();
+        log = new Logging::FileLog(pipe->id, "parser.log");
+    }
+
+    return result;
+}
+
 const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     clotInfo.adjust_clots(phv);
 
@@ -1537,4 +1572,13 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     LOG2(clotInfo.print(&phv));
 
     return root;
+}
+
+void ClotAdjuster::end_apply(const IR::Node* root) {
+    if (log) {
+        delete log;
+        log = nullptr;
+    }
+
+    Visitor::end_apply();
 }

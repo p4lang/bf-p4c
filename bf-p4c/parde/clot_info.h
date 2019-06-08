@@ -6,6 +6,7 @@
 #include "clot.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/lib/cmp.h"
+#include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -98,8 +99,8 @@ class ClotInfo {
               std::vector<const IR::BFN::EmitChecksum*>> field_to_checksum_updates_;
 
     std::vector<Clot*> clots_;
-    std::map<const Clot*, cstring> clot_to_start_state_;
-    std::map<cstring, std::set<const Clot*>> start_state_to_clots_;
+    std::map<const Clot*, std::pair<gress_t, cstring>, Clot::Less> clot_to_parser_state_;
+    std::map<gress_t, std::map<cstring, std::set<const Clot*>>> parser_state_to_clots_;
 
     std::map<const IR::BFN::ParserState*,
              std::map<const PHV::Field*, nw_bitrange>> field_range_;
@@ -127,17 +128,23 @@ class ClotInfo {
     }
 
  public:
-    const std::map<const Clot*, cstring>& clot_to_start_state() const {
-        return clot_to_start_state_;
+    const std::map<const Clot*, std::pair<gress_t, cstring>, Clot::Less>&
+    clot_to_parser_state() const {
+        return clot_to_parser_state_;
     }
 
-    const std::map<cstring, std::set<const Clot*>>& start_state_to_clots() const {
-        return start_state_to_clots_;
+    std::map<cstring, std::set<const Clot*>>& parser_state_to_clots(gress_t gress) {
+        return parser_state_to_clots_.at(gress);
+    }
+
+    const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots(gress_t gress) const {
+        return parser_state_to_clots_.at(gress);
     }
 
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const {
         auto state_name = state->name;
-        if (!start_state_to_clots_.count(state_name)) {
+        auto& parser_state_to_clots = this->parser_state_to_clots(state->thread());
+        if (!parser_state_to_clots.count(state_name)) {
             // Prefix gress to generate full state name
             if (state->thread() == INGRESS)
                 state_name = "ingress::" + state_name;
@@ -146,7 +153,7 @@ class ClotInfo {
             // It is likely the state name is that of a split state,
             // e.g. Original state = ingress::stateA
             //      Split state = ingress::stateA.$common.0
-            // The start_state_to_clots_ map is created before splitting and
+            // The parser_state_to_clots_ map is created before splitting and
             // carries the original state name. We regenerate the original state
             // name by stripping out the split name addition ".$common.0"
             std::string st(state_name.c_str());
@@ -154,8 +161,8 @@ class ClotInfo {
             if (pos != std::string::npos)
                 state_name = st.substr(0, pos);
         }
-        if (start_state_to_clots_.count(state_name)) {
-            auto& clots = start_state_to_clots_.at(state_name);
+        if (parser_state_to_clots.count(state_name)) {
+            auto& clots = parser_state_to_clots.at(state_name);
             auto it = std::find_if(clots.begin(), clots.end(), [&](const Clot* sclot) {
                 return (sclot->tag == tag); });
             if (it != clots.end()) return *it;
@@ -253,8 +260,8 @@ class ClotInfo {
 
     void add_clot(Clot* cl, const IR::BFN::ParserState* state) {
         clots_.push_back(cl);
-        clot_to_start_state_[cl] = state->name;
-        start_state_to_clots_[state->name].insert(cl);
+        clot_to_parser_state_[cl] = {state->thread(), state->name};
+        parser_state_to_clots_[state->thread()][state->name].insert(cl);
     }
 
     /// @return a set of parser states to which no more CLOTs may be allocated,
@@ -454,6 +461,7 @@ class CollectClotInfo : public Inspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
     std::map<const PHV::Field*, PovBitSet> fields_to_pov_bits;
+    Logging::FileLog* log = nullptr;
 
  public:
     explicit CollectClotInfo(const PhvInfo& phv, ClotInfo& clotInfo) :
@@ -464,6 +472,13 @@ class CollectClotInfo : public Inspector {
         auto rv = Inspector::init_apply(root);
         clotInfo.clear();
         fields_to_pov_bits.clear();
+
+        // Configure logging for this visitor.
+        if (BackendOptions().verbose > 0) {
+            auto pipe = root->to<IR::BFN::Pipe>();
+            log = new Logging::FileLog(pipe->id, "parser.log");
+        }
+
         return rv;
     }
 
@@ -635,7 +650,13 @@ class CollectClotInfo : public Inspector {
 
     void end_apply(const IR::Node* root) override {
         clotInfo.compute_byte_maps();
-        return Inspector::end_apply(root);
+
+        if (log) {
+            delete(log);
+            log = nullptr;
+        }
+
+        Inspector::end_apply(root);
     }
 };
 
@@ -653,11 +674,14 @@ class AllocateClot : public PassManager {
 class ClotAdjuster : public Visitor {
     ClotInfo& clotInfo;
     const PhvInfo& phv;
+    Logging::FileLog* log = nullptr;
 
  public:
     ClotAdjuster(ClotInfo& clotInfo, const PhvInfo& phv) : clotInfo(clotInfo), phv(phv) { }
 
+    Visitor::profile_t init_apply(const IR::Node* root) override;
     const IR::Node *apply_visitor(const IR::Node* root, const char*) override;
+    void end_apply(const IR::Node* root) override;
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_INFO_H_ */

@@ -25,7 +25,7 @@ class JSONGenerator;
 class JSONLoader;
 class PhvInfo;
 
-class Clot : public LiftEqual<Clot> {
+class Clot : public LiftCompare<Clot> {
     friend class ClotInfo;
     friend class GreedyClotAllocator;
 
@@ -41,8 +41,15 @@ class Clot : public LiftEqual<Clot> {
 
     cstring toString() const;
 
+    /// Equality based on gress and tag.
     bool operator==(const Clot& c) const {
         return tag == c.tag && gress == c.gress;
+    }
+
+    /// Lexicographic ordering according to (gress, tag).
+    bool operator<(const Clot& c) const {
+        if (gress != c.gress) return gress < c.gress;
+        return tag < c.tag;
     }
 
     /// JSON serialization/deserialization.
