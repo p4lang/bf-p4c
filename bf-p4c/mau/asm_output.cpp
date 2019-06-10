@@ -205,6 +205,8 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         }
 
         auto ad_pos = alu_pos.alu_op->parameter_positions();
+
+        int wrapped_con_idx = 0;
         for (auto pos : ad_pos) {
             // Stop at the bitmasked-set
             if (pos.first >= static_cast<int>(alu_pos.alu_op->size()))
@@ -218,7 +220,22 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
                 // bit position has to be added to the range, as immediate is one keyword
                 adt_range = adt_range.shiftedByBits(postpone_range.lo);
             }
-            emit_single_alias(out, sep, pos.second, adt_range, second_level_alias,
+
+            const ActionData::Parameter *param = pos.second;
+            auto wrapped_con_name = alu_pos.alu_op->wrapped_constant();
+
+            // A constant that is wrapped around the RAM slot will two separate values, and
+            // will be some split of one of those two values
+            if (!wrapped_con_name.isNull() && pos.second->name() == wrapped_con_name) {
+                auto curr_con = param->to<ActionData::Constant>();
+                BUG_CHECK(curr_con, "Wrapped constant function is not working correctly");
+                auto next_con = new ActionData::Constant(*curr_con);
+                next_con->set_alias(curr_con->alias() + "_" + std::to_string(wrapped_con_idx));
+                wrapped_con_idx++;
+                param = next_con;
+            }
+
+            emit_single_alias(out, sep, param, adt_range, second_level_alias,
                               full_args, af->name);
         }
 

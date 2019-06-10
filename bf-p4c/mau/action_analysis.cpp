@@ -3,6 +3,7 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/bitrange.h"
 
 std::set<unsigned> ActionAnalysis::FieldAction::codesForErrorCases =
     { READ_AFTER_WRITES,
@@ -761,37 +762,42 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     ActionData::UniqueLocationKey key(action_name, param, container, write_bits);
     const ActionData::ALUPosition *alu_pos = nullptr;
     const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
-    bitvec slot_bits_bv = alu_param->slot_bits(container);
-    le_bitrange slot_bits = { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
-
     if (alu_param == nullptr)
         return false;
+    bitvec slot_bits_bv = alu_param->slot_bits(container);
 
-    auto &adi = cont_action.adi;
-    if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-        cstring alias = alu_pos->alu_op->alias();
-        if (alias == nullptr)
-            alias = alu_param->param->name();
-        adi.alignment.add_alignment(write_bits, slot_bits);
-        adi.initialize(alias, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
-        cont_action.counts[ActionParam::ACTIONDATA] = 1;
-    } else if (static_cast<int>(alu_pos->start_byte) != adi.start ||
-               (alu_pos->loc == ActionData::IMMEDIATE) != adi.immediate) {
-        cont_action.counts[ActionParam::ACTIONDATA]++;
-    } else {
-        adi.field_affects++;
-        adi.alignment.add_alignment(write_bits, slot_bits);
+    int bits_seen = 0;
+    for (auto br : bitranges(slot_bits_bv)) {
+        le_bitrange slot_bits = { br.first, br.second };
+        int write_hi = write_bits.hi - bits_seen;
+        int write_lo = write_hi - slot_bits.size() + 1;
+        le_bitrange mini_write_bits = { write_lo, write_hi };
+        bits_seen += slot_bits.size();
+
+        auto &adi = cont_action.adi;
+        if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
+            cstring alias = alu_pos->alu_op->alias();
+            if (alias == nullptr)
+                alias = alu_param->param->name();
+            adi.alignment.add_alignment(mini_write_bits, slot_bits);
+            adi.initialize(alias, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
+            cont_action.counts[ActionParam::ACTIONDATA] = 1;
+        } else if (static_cast<int>(alu_pos->start_byte) != adi.start ||
+                   (alu_pos->loc == ActionData::IMMEDIATE) != adi.immediate) {
+            cont_action.counts[ActionParam::ACTIONDATA]++;
+        } else {
+            adi.field_affects++;
+            adi.alignment.add_alignment(mini_write_bits, slot_bits);
+        }
+        adi.specialities.setbit(read.speciality);
     }
-    adi.specialities.setbit(read.speciality);
     return true;
 }
 
 
 void ActionAnalysis::initialize_constant(const ActionParam &read,
-        ContainerAction &cont_action, le_bitrange write_bits, le_bitrange read_bits) {
+        ContainerAction &cont_action, le_bitrange write_bits, bitvec read_bits_bv) {
     cont_action.ci.initialized = true;
-    cont_action.ci.alignment.add_alignment(write_bits, read_bits);
-
     auto constant = read.expr->to<IR::Constant>();
 
     // FIXME: Could use a helper function on IR::Constant, but not pressing, though
@@ -805,7 +811,23 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
         constant_value = constant->value.get_ui();
     else
         constant_value = static_cast<uint32_t>(constant->asInt());
-    cont_action.ci.positions.emplace_back(constant_value, write_bits);
+
+    int bits_seen = 0;
+    for (auto br : bitranges(read_bits_bv)) {
+        le_bitrange read_bits = { br.first, br.second };
+        int write_hi = write_bits.hi - bits_seen;
+        int write_lo = write_hi - read_bits.size() + 1;
+        le_bitrange mini_write_bits = { write_lo, write_hi };
+        bits_seen += read_bits.size();
+
+
+        cont_action.ci.alignment.add_alignment(mini_write_bits, read_bits);
+        uint32_t shift = write_bits.size() - bits_seen;
+        uint32_t mask = read_bits.size() == 32 ? 0xffffffff
+                                               : ((1U << read_bits.size()) - 1) << shift;
+        uint32_t mini_constant_value = (constant_value & mask) >> shift;
+        cont_action.ci.positions.emplace_back(mini_constant_value, mini_write_bits);
+    }
 }
 
 bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
@@ -828,9 +850,7 @@ bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
         return false;
 
     bitvec slot_bits_bv = alu_param->slot_bits(container);
-    le_bitrange slot_bits = { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
-
-    initialize_constant(read, cont_action, write_bits, slot_bits);
+    initialize_constant(read, cont_action, write_bits, slot_bits_bv);
     return true;
 }
 
@@ -865,9 +885,7 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
         return init_simple_alignment(read, cont_action, write_bits);
 
     bitvec slot_bits_bv = alu_param->slot_bits(container);
-    le_bitrange slot_bits { slot_bits_bv.min().index(), slot_bits_bv.max().index() };
-
-    initialize_constant(read, cont_action, write_bits, slot_bits);
+    initialize_constant(read, cont_action, write_bits, slot_bits_bv);
     cont_action.counts[ActionParam::CONSTANT]++;
     return true;
 }
@@ -890,7 +908,8 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         cont_action.adi.initialized = true;
         cont_action.adi.specialities.setbit(read.speciality);
     } else if (read.type == ActionParam::CONSTANT) {
-        initialize_constant(read, cont_action, write_bits, read_bits);
+        bitvec read_bits_bv(read_bits.lo, read_bits.size());
+        initialize_constant(read, cont_action, write_bits, read_bits_bv);
     }
     cont_action.counts[read.type]++;
     return true;
@@ -1133,7 +1152,7 @@ bool ActionAnalysis::TotalAlignment::contiguous() const {
 bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, int *lo,
         int *hi) const {
     BUG_CHECK(contiguous(), "Wrapped Shift instruction can only be src1 operations");
-    if (direct_read_bits.popcount() == static_cast<int>(container.size())) {
+    if (read_bits().popcount() == static_cast<int>(container.size())) {
         if (right_shift == 0) {
             return false;
         } else {
@@ -1144,18 +1163,22 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
             return true;
         }
     } else {
-        bitvec right_shifted_bv = direct_read_bits >> right_shift;
-        bitvec rotated_shifted_bv = direct_read_bits << (container.size() - right_shift);
-        rotated_shifted_bv &= bitvec(0, container.size());
+        // Implicit read bits might not yet be set, in verify_alignment
+        bitvec left_shifted_read_bits = df_src1_mask() << right_shift;
+        bitvec rotated_shifted_read_bits = df_src1_mask() >> (container.size() - right_shift);
+        bitvec curr_read_bits = left_shifted_read_bits | rotated_shifted_read_bits;
+        curr_read_bits &= bitvec(0, container.size());
 
-        if (rotated_shifted_bv.popcount() == direct_read_bits.popcount() ||
-            right_shifted_bv.popcount() == direct_read_bits.popcount())
+        if (curr_read_bits.is_contiguous())
             return false;
 
+        bitvec reverse = bitvec(0, container.size()) - curr_read_bits;
+        BUG_CHECK(reverse.is_contiguous(), "Wrapped shift reverse should be contiguous");
+
         if (lo)
-            *lo = direct_read_bits.max().index();
+            *lo = reverse.max().index() + 1;
         if (hi)
-            *hi = direct_read_bits.min().index();
+            *hi = reverse.min().index() - 1;
         return true;
     }
 }
@@ -1250,7 +1273,7 @@ bitvec ActionAnalysis::ContainerAction::specialities() const {
 bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &container,
         TotalAlignment &ad_alignment) {
     TotalAlignment *single_src_alignment = nullptr;
-    if (ad_sources() && !ad_alignment.contiguous()) {
+    if (ad_sources()) {
         single_src_alignment = &ad_alignment;
     } else if (phv_alignment.size() == 1) {
         for (auto phv_ta : Values(phv_alignment))
@@ -1375,6 +1398,12 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
     if (ad_sources())
         if (!ad_alignment.verify_individual_alignments(container))
             return false;
+
+    if (adi.initialized)
+        adi.alignment.right_shift = ad_alignment.right_shift;
+    if (ci.initialized)
+        ci.alignment.right_shift = ad_alignment.right_shift;
+
     for (auto &ta : Values(phv_alignment))
         if (!ta.verify_individual_alignments(container))
             return false;

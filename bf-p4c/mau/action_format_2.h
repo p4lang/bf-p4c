@@ -430,7 +430,7 @@ class ALUOperation {
     ALUOperation(PHV::Container cont, ALUOPConstraint_t cons)
         : _right_shift(0), _container(cont), _constraint(cons) { }
     const RamSection *create_RamSection(bool shift_to_lsb) const;
-    const ALUOperation *add_right_shift(int right_shift) const;
+    const ALUOperation *add_right_shift(int right_shift, int *rot_alias_idx) const;
     cstring alias() const { return _alias; }
     cstring mask_alias() const { return _mask_alias; }
     cstring action_name() const { return _action_name; }
@@ -440,6 +440,7 @@ class ALUOperation {
     PHV::Container container() const { return _container; }
     const ALUParameter *find_param_alloc(UniqueLocationKey &key) const;
     ParameterPositions parameter_positions() const;
+    cstring wrapped_constant() const;
 };
 
 struct SharedParameter {
@@ -864,7 +865,7 @@ class Format {
     void assign_RamSections_to_bytes();
 
     void build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
-        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs);
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, bool realias);
     void build_locked_in_format(Use &use);
     void build_potential_format(bool immediate_forced);
 

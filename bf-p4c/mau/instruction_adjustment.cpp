@@ -241,6 +241,7 @@ const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
+    aa.set_verbose();
     act->apply(aa);
 
     for (auto &container_action_entry : container_actions_map) {
@@ -719,6 +720,12 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                     single_action_data = false;
                 }
             }
+        }
+
+        int wrapped_lo = 0;  int wrapped_hi = 0;
+        if (!cont_action.convert_instr_to_bitmasked_set
+            && adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+            src1 = MakeWrappedSlice(src1, wrapped_lo, wrapped_hi, container.size());
         }
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
         // Constant merged into a single constant over the entire container

@@ -695,11 +695,18 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     return rv;
 }
 
-const ALUOperation *ALUOperation::add_right_shift(int right_shift) const {
+const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alias_idx) const {
     ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
+    bool rotational_alias = false;
     for (auto &param : rv->_params) {
         param.right_shift = right_shift;
+        if (!param.slot_bits(_container).is_contiguous())
+            rotational_alias = true;
+    }
+    if (rotational_alias && rv->_alias.isNull() && rot_alias_idx) {
+        rv->_alias = "$rot_data" + std::to_string(*rot_alias_idx);
+        *rot_alias_idx = *rot_alias_idx + 1;
     }
     return rv;
 }
@@ -721,6 +728,20 @@ const ALUParameter *ALUOperation::find_param_alloc(UniqueLocationKey &key) const
 ParameterPositions ALUOperation::parameter_positions() const {
     auto ram_section = create_RamSection(false);
     return ram_section->parameter_positions(true);
+}
+
+cstring ALUOperation::wrapped_constant() const {
+    cstring rv;
+    for (auto param : _params) {
+        if (param.slot_bits(_container).is_contiguous())
+            continue;
+        auto con = param.param->to<Constant>();
+        if (con == nullptr)
+            continue;
+        rv = con->alias();
+        break;
+    }
+    return rv;
 }
 
 /**
@@ -2139,6 +2160,7 @@ bool Format::analyze_actions() {
         container_actions_map.clear();
         ActionAnalysis aa(phv, true, false, tbl);
         aa.set_container_actions_map(&container_actions_map);
+        aa.set_verbose();
         action->apply(aa);
         create_alu_ops_for_action(container_actions_map, action->name);
     }
@@ -2659,7 +2681,9 @@ void Format::assign_RamSections_to_bytes() {
 
 
 void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
-        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs) {
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, bool realias) {
+    int rot_alias_idx = 0;
+    int *rot_alias_idx_p = realias ? &rot_alias_idx : nullptr;
     for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
         // Determines the right shift of each ALUOperation
         int first_phv_bit_pos = 0;
@@ -2670,7 +2694,7 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
         int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
         right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
-        auto ad_alu = init_ad_alu->add_right_shift(right_shift);
+        auto ad_alu = init_ad_alu->add_right_shift(right_shift, rot_alias_idx_p);
         // Validates that the right shift is calculated correctly, by shifting the
         // alu operation by that much, and determining if the ALU operation is
         // a subset of the original Ram Section
@@ -2697,7 +2721,7 @@ void Format::build_locked_in_format(Use &use) {
     auto &single_action_input = locked_in_all_actions_inputs.at(0);
     for (auto &ram_sect : single_action_input.all_inputs) {
         build_single_ram_sect(ram_sect, IMMEDIATE, use.locked_in_all_actions_alu_positions,
-                              verify_inputs);
+                              verify_inputs, false);
     }
     for (int i = 0; i < SLOT_TYPES; i++) {
         BUG_CHECK(locked_in_all_actions_input_bitvecs.at(i) == verify_inputs.at(i),
@@ -2723,7 +2747,7 @@ void Format::build_potential_format(bool immediate_forced) {
         for (auto &single_action_input : loc_inputs) {
             safe_vector<ALUPosition> alu_positions;
             for (auto &ram_sect : single_action_input.all_inputs) {
-                build_single_ram_sect(ram_sect, loc, alu_positions, verify_inputs);
+                build_single_ram_sect(ram_sect, loc, alu_positions, verify_inputs, true);
 
                 if (ram_sect.section->index() == DOUBLE_FULL) {
                     BUG_CHECK(loc == ACTION_DATA_TABLE, "Cannot have a 64 bit requirement in "
