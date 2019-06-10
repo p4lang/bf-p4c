@@ -328,6 +328,14 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
     for (const auto& info : *fieldsInOrder) {
         LOG2("\tTrying to allocate field " << idx << ": " << info.field << " in container " <<
                 c);
+        LOG2("\t\tRelevant units:");
+        for (const auto* u : info.units) {
+            std::stringstream ss;
+            ss << "\t\t  " << DBPrint::Brief << u;
+            if (const auto* t = u->to<IR::MAU::Table>())
+                ss << " (Stage " << dg.min_stage(t) << ")";
+            LOG2(ss.str());
+        }
         if (idx == 0) {
             LOG2("\t  Field with earliest live range: " << info.field << " already allocated "
                  "to " << c);
@@ -347,14 +355,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
              ", and move last field " << lastField->field << " into a dark container");
         LOG2("\t\tLive range: (" << info.minStage.first << info.minStage.second << ", " <<
              info.maxStage.first << info.maxStage.second << ")");
-        LOG2("\t\tRelevant units:");
-        for (const auto* u : info.units) {
-            std::stringstream ss;
-            ss << "\t\t  " << DBPrint::Brief << u;
-            if (const auto* t = u->to<IR::MAU::Table>())
-                ss << " (Stage " << dg.min_stage(t) << ")";
-            LOG2(ss.str());
-        }
         // Check the uses of fields initialized so far in this container with the uses relevant to
         // this particular field.
         unsigned idx_g = 0;
@@ -386,7 +386,11 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         unsigned idx_2 = 0;
         for (const auto& info_2 : *fieldsInOrder) {
             if (idx_2++ <= idx) continue;
-            LOG1("\t\t\tNow adding units for " << info_2.field);
+            LOG2("\t\t\tNow adding " << info_2.units.size() << " units for " << info_2.field <<
+                 " : (" << info_2.minStage.first << info_2.minStage.second << ", " <<
+                 info_2.maxStage.first << info_2.maxStage.second << ")");
+            for (auto* u : info_2.units)
+                LOG2("\t\t\t  " << DBPrint::Brief << u);
             f_nodes.insert(info_2.units.begin(), info_2.units.end());
         }
         bool onlyDeparserUse = false;
@@ -406,9 +410,14 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 return boost::none;
             }
             if (LOGGING(2)) {
-                for (const auto* u : f_nodes)
-                    LOG2("\t\t\t" << DBPrint::Brief << u << " (stage " <<
-                            dg.min_stage(u->to<IR::MAU::Table>()) << ")");
+                for (const auto* u : f_nodes) {
+                    if (u->is<IR::BFN::Deparser>()) {
+                        LOG2("\t\t\t" << DBPrint::Brief << u);
+                    } else {
+                        LOG2("\t\t\t" << DBPrint::Brief << u << " (stage " <<
+                             dg.min_stage(u->to<IR::MAU::Table>()) << ")");
+                    }
+                }
             }
         }
         bool moveCurrentToDark = mustMoveToDark(*lastField, *fieldsInOrder);
@@ -873,6 +882,7 @@ bool DarkLiveRange::mustInitializeCurrentField(
         const ordered_set<const IR::BFN::Unit*>& fieldUses) const {
     ordered_set<const IR::MAU::Table*> tableUses;
     for (const auto* u : fieldUses) {
+        if (u->is<IR::BFN::Deparser>()) continue;
         const IR::MAU::Table* t = u->to<IR::MAU::Table>();
         BUG_CHECK(t, "Field use unit %1% cannot be a non-table entity", u);
         tableUses.insert(t);

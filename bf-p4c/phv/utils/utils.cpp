@@ -58,7 +58,7 @@ PHV::AllocSlice::AllocSlice(
               "Trying to slice field %1% at [%2%:%3%] but it's only %4% bits wide",
               cstring::to_cstring(f), slice_range.lo, slice_range.hi, f->size);
     min_stage_i = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
-    max_stage_i = std::make_pair(Device::numStages(), PHV::FieldUse(PHV::FieldUse::WRITE));
+    max_stage_i = std::make_pair(PhvInfo::getDeparserStage(), PHV::FieldUse(PHV::FieldUse::WRITE));
     init_i = new DarkInitPrimitive();
 }
 
@@ -1654,7 +1654,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::DarkInitPrimitive& prim) 
             out << " = " << *source;
     }
     if (prim.mustInitInLastMAUStage()) {
-        out << " : always_run Stage " << Device::numStages();
+        out << " : always_run Stage " << (PhvInfo::getDeparserStage() - 1);
     } else {
         const auto& actions = prim.getInitPoints();
         out << "  :  " << actions.size() << " actions";

@@ -427,9 +427,9 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/dark_live_range.cpp
-  phv/analysis/dark_overlay_deps.cpp
   phv/analysis/deparser_zero.cpp
   phv/analysis/dominator_tree.cpp
+  phv/analysis/memoize_min_stage.cpp
   phv/analysis/meta_live_range.cpp
   phv/analysis/mutex_overlay.cpp
   phv/analysis/live_range_shrinking.cpp
@@ -484,9 +484,9 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/dark_live_range.h
-  phv/analysis/dark_overlay_deps.h
   phv/analysis/deparser_zero.h
   phv/analysis/dominator_tree.h
+  phv/analysis/memoize_min_stage.h
   phv/analysis/meta_live_range.h
   phv/analysis/mutex_overlay.h
   phv/analysis/live_range_shrinking.h

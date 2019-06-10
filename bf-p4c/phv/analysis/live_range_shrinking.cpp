@@ -654,10 +654,16 @@ FindInitializationNode::findInitializationNodes(
                  "Cannot initialize metadata.");
             return boost::none;
         }
-        if (LOGGING(2))
-            for (const auto* u : f_dominators)
-                LOG3("\t\t\t" << DBPrint::Brief << u << " (stage " <<
-                        dg.min_stage(u->to<IR::MAU::Table>()) << ")");
+        if (LOGGING(3)) {
+            for (const auto* u : f_dominators) {
+                if (u->is<IR::MAU::Table>()) {
+                    LOG3("\t\t\t" << DBPrint::Brief << u << " (stage " <<
+                            dg.min_stage(u->to<IR::MAU::Table>()) << ")");
+                } else {
+                    LOG3("\t\t\t" << DBPrint::Brief << u);
+                }
+            }
+        }
         // Only the set of tables in which field f has been defined/used.
         ordered_set<const IR::MAU::Table*> f_table_uses;
         for (const auto* u : f_dominators) {

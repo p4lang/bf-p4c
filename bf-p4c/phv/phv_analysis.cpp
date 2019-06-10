@@ -10,8 +10,8 @@
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
-#include "bf-p4c/phv/analysis/dark_overlay_deps.h"
 #include "bf-p4c/phv/analysis/deparser_zero.h"
+#include "bf-p4c/phv/analysis/memoize_min_stage.h"
 #include "bf-p4c/phv/analysis/jbay_phv_analysis.h"
 #include "bf-p4c/phv/analysis/mocha.h"
 #include "bf-p4c/phv/analysis/mutex_overlay.h"
@@ -66,6 +66,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &parser_critical_path,
             // Refresh dependency graph for live range analysis
             new FindDependencyGraph(phv, deps, "", "Just Before PHV allocation"),
+            new MemoizeMinStage(phv, deps),
             // Refresh defuse
             &defuse,
             // Analysis of operations on PHV fields.
@@ -111,8 +112,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     parser_critical_path, critical_path_clusters, table_alloc, meta_init,
                     dark_live_range, table_ids),
-            Device::currentDevice() == Device::JBAY
-                ? new AddDarkOverlayDeps(phv, tableActionsMap, deps) : nullptr,
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse
         }); }

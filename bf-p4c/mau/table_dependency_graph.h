@@ -515,6 +515,7 @@ class FindDependencyGraph : public Logging::PassManager {
     void verify_dependence_graph(void);
     void add_logical_deps_from_control_deps(void);
     void finalize_dependence_graph(void);
+    void calc_max_min_stage();
 
     Visitor::profile_t init_apply(const IR::Node *node) override;
     TablesMutuallyExclusive mutex;

@@ -138,6 +138,7 @@ class ComputeDependencies : public Inspector {
     const MetadataLiveRange&                    liverange;
 
     profile_t init_apply(const IR::Node* root) override;
+    void end_apply() override;
 
     // @fields: Map of a field being initialized to the overlapping fields.
     // @inits: Map of a field being initialized to the tables where the initialization is inserted.

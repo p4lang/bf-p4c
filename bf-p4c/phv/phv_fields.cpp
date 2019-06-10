@@ -55,15 +55,12 @@ int PhvInfo::deparser_stage = -1;
 ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stage;
 
 bool PHV::Field::alloc_slice::isUsedDeparser() const {
-    if (max_stage.first == PhvInfo::deparser_stage ||
-        max_stage.first == Device::numStages())
-        return true;
-    return false;
+    return (max_stage.first == PhvInfo::deparser_stage);
 }
 
 bool PHV::Field::alloc_slice::isUsedParser() const {
     if (container.is(PHV::Kind::dark)) return false;
-    int minStage = Device::numStages();
+    int minStage = PhvInfo::deparser_stage;
     const le_bitrange range = field_bits();
     field->foreach_alloc(range, [&](const PHV::Field::alloc_slice& alloc) {
         if (alloc.min_stage.first < minStage) minStage = alloc.min_stage.first;
@@ -626,8 +623,7 @@ bool PHV::Field::checkContext(
         return slice.min_stage.first == -1;
 
     case AllocContext::Type::DEPARSER:
-        return slice.max_stage.first == Device::numStages() ||
-                slice.max_stage.first == PhvInfo::getDeparserStage();
+        return slice.max_stage.first == PhvInfo::getDeparserStage();
 
     default:
         BUG("Unexpected PHV context type");

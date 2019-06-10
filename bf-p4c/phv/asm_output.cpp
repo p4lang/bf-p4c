@@ -119,11 +119,11 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
             else
                 min_stage = alloc.min_stage.first;
             if (alloc.max_stage.second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
-                alloc.max_stage.first != Device::numStages())
+                alloc.max_stage.first != PhvInfo::getDeparserStage())
                 max_stage = alloc.max_stage.first + 1;
             else
                 max_stage = alloc.max_stage.first;
-            if (min_stage != 0 || max_stage != Device::numStages()) {
+            if (min_stage != 0 || max_stage != PhvInfo::getDeparserStage()) {
                 stageAllocReqd = true;
                 if (alloc_num == 1) out << "{ ";
                 if (min_stage != max_stage)

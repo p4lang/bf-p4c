@@ -776,8 +776,6 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
                                 [this] (int sz, const IR::MAU::Table* later) {
                                     return std::max(sz, dg.stage_info[later].dep_stages + 1); });
-            if (dg.stage_info[table].dep_stages > dg.max_min_stage)
-                dg.max_min_stage = dg.stage_info[table].dep_stages;
         }
     }
 
@@ -982,7 +980,15 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     verify_dependence_graph();
     if (LOGGING(4))
         DependencyGraph::dump_viz(std::cout, dg);
+    calc_max_min_stage();
     dg.finalized = true;
+}
+
+void FindDependencyGraph::calc_max_min_stage() {
+    for (const auto& kv : dg.stage_info)
+        if (kv.second.min_stage > dg.max_min_stage)
+            dg.max_min_stage = kv.second.min_stage;
+    LOG1("    Maximum stage number according to dependences: " << dg.max_min_stage);
 }
 
 void FindDependencyGraph::verify_dependence_graph() {

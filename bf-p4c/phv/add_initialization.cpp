@@ -239,25 +239,13 @@ void ComputeDependencies::noteDependencies(
                     if (!readTable) continue;
                     LOG5("\tInit unit for " << kv.first << " : " << initTable->name);
                     LOG5("\t  Read unit for " << readSlice << " : " << readTable->name);
-                    if (readTable != initTable)
+                    if (readTable != initTable) {
                         phv.addMetadataDependency(readTable, initTable);
+                        LOG2("\t" << readTable->name << " --> " << initTable->name);
+                    }
                 }
             }
         }
-    }
-
-    LOG1("\t  Printing new dependencies to be inserted");
-    for (auto kv : phv.getMetadataDeps())
-        for (cstring t : kv.second)
-            LOG1("\t\t" << kv.first << " -> " << t);
-
-    LOG3("\t  Printing reverse metadata deps");
-    for (auto kv : phv.getReverseMetadataDeps()) {
-        std::stringstream ss;
-        ss << "\t\t" << kv.first << " : ";
-        for (auto t : kv.second)
-            ss << t << " ";
-        LOG3(ss.str());
     }
 }
 
@@ -372,7 +360,8 @@ void ComputeDependencies::addDepsForDarkInitialization() {
     static PHV::FieldUse READ(PHV::FieldUse::READ);
     static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
     static std::pair<int, PHV::FieldUse> parserMin = std::make_pair(-1, READ);
-    static std::pair<int, PHV::FieldUse> deparserMax = std::make_pair(Device::numStages(), WRITE);
+    static std::pair<int, PHV::FieldUse> deparserMax = std::make_pair(PhvInfo::getDeparserStage(),
+            WRITE);
     // Summarize use defs for all fields.
     StageFieldUse fieldWrites;
     StageFieldUse fieldReads;
@@ -408,7 +397,9 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         LOG5("\tContainer: " << kv.first);
         std::sort(kv.second.begin(), kv.second.end(),
                 [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
-            return lhs.min_stage.first < rhs.min_stage.first;
+            if (lhs.min_stage.first != rhs.min_stage.first)
+                return lhs.min_stage.first < rhs.min_stage.first;
+            return lhs.min_stage.second < rhs.min_stage.second;
         });
         addDepsForSetsOfAllocSlices(kv.second, fieldWrites, fieldReads);
     }
@@ -417,7 +408,9 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         LOG5("\tField: " << kv.first);
         std::sort(kv.second.begin(), kv.second.end(),
                 [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
-            return lhs.min_stage.first < rhs.min_stage.first;
+            if (lhs.min_stage.first != rhs.min_stage.first)
+                return lhs.min_stage.first < rhs.min_stage.first;
+            return lhs.min_stage.second < rhs.min_stage.second;
         });
         addDepsForSetsOfAllocSlices(kv.second, fieldWrites, fieldReads, false);
     }
@@ -525,8 +518,25 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
             for (const auto* toDep : nextAllocUses) {
                 if (fromDep == toDep) continue;
                 phv.addMetadataDependency(fromDep, toDep);
+                LOG2("\t" << fromDep->name << " --> " << toDep->name);
             }
         }
+    }
+}
+
+void ComputeDependencies::end_apply() {
+    LOG1("\t  Printing new dependencies to be inserted");
+    for (auto kv : phv.getMetadataDeps())
+        for (cstring t : kv.second)
+            LOG1("\t\t" << kv.first << " --> " << t);
+
+    LOG3("\t  Printing reverse metadata deps");
+    for (auto kv : phv.getReverseMetadataDeps()) {
+        std::stringstream ss;
+        ss << "\t\t" << kv.first << " : ";
+        for (auto t : kv.second)
+            ss << t << " ";
+        LOG3(ss.str());
     }
 }
 

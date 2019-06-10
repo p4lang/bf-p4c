@@ -165,9 +165,20 @@ BuildDominatorTree::strictlyDominates(const IR::MAU::Table* t1, const IR::MAU::T
     // nullptr is passed if the unit is the deparser, and deparser is always strictly dominated by
     // tables.
     if (t1 == nullptr) return false;
-    if (t2 == nullptr) return true;
-    if (t1->gress != t2->gress) return false;
     const ImmediateDominatorMap* iDom = iDominator.at(t1->gress);
+    if (t2 == nullptr) {
+        // TODO: Remove this device-dependent dominator tree condition. This is needed currently to
+        // get over fitting issues.
+        if (Device::currentDevice() == Device::JBAY) {
+            // Figure out the dominator for the deparser.
+            auto dom = getNonGatewayImmediateDominator(t2, t1->gress);
+            if (!dom) return false;
+            return strictlyDominates(t1, *dom);
+        } else if (Device::currentDevice() == Device::TOFINO) {
+            return true;
+        }
+    }
+    if (t1->gress != t2->gress) return false;
     // For the source node, immediate dominator is the same as the node. Therefore, loop until we
     // reach the source node.
     while (t2 != iDom->at(t2)) {
