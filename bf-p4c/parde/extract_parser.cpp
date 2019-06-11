@@ -1028,10 +1028,7 @@ void ExtractParser::end_apply() {
         DumpParser dp("extract_parser");
         rv->apply(dp);
     }
-    if (parserLog != nullptr) {
-        delete parserLog;
-        parserLog = nullptr;
-    }
+    Logging::FileLog::close(parserLog);
 }
 
 /// XXX(hanw): This pass must be applied to IR::BFN::Pipe. It modifies the

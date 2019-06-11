@@ -45,10 +45,7 @@ class PassManager : public ::PassManager {
     }
 
     void end_apply() override {
-        if (_logFile != nullptr) {
-            delete _logFile;
-            _logFile = nullptr;
-        }
+        Logging::FileLog::close(_logFile);
         ::PassManager::end_apply();
     }
 };

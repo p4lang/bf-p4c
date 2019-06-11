@@ -44,10 +44,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
 void TableSummary::end_apply() {
     printTablePlacement();
     LOG2(*this);
-    if (tsLog != nullptr) {
-        delete tsLog;
-        tsLog = nullptr;
-    }
+    Logging::FileLog::close(tsLog);
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {

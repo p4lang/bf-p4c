@@ -1530,11 +1530,7 @@ class GreedyClotAllocator : public Visitor {
     }
 
     void end_apply() override {
-        if (log) {
-            delete log;
-            log = nullptr;
-        }
-
+        Logging::FileLog::close(log);
         Visitor::end_apply();
     }
 
@@ -1575,10 +1571,6 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
 }
 
 void ClotAdjuster::end_apply(const IR::Node* root) {
-    if (log) {
-        delete log;
-        log = nullptr;
-    }
-
+    Logging::FileLog::close(log);
     Visitor::end_apply();
 }

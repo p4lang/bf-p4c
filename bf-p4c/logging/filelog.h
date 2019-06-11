@@ -91,6 +91,13 @@ class FileLog {
         }
     }
 
+    /// Closes a FileLog and cleans up.
+    static void close(FileLog*& log) {
+        if (!log) return;
+        delete log;
+        log = nullptr;
+    }
+
     static void setOutputDir(cstring &outDir) { outputDir = outDir; }
 };
 }  // end namespace Logging

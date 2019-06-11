@@ -650,12 +650,7 @@ class CollectClotInfo : public Inspector {
 
     void end_apply(const IR::Node* root) override {
         clotInfo.compute_byte_maps();
-
-        if (log) {
-            delete(log);
-            log = nullptr;
-        }
-
+        Logging::FileLog::close(log);
         Inspector::end_apply(root);
     }
 };
