@@ -467,7 +467,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
 
   # P4C-1778
-  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4 
+  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
 )
@@ -1341,6 +1341,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slice point cannot be -1 at this point"
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
+  extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
+)
+p4c_add_xfail_reason("tofino"
+  "Slicing the following supercluster is taking too long...|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
 )
 
 # P4C-1445, DRV-2667
