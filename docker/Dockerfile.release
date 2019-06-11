@@ -56,6 +56,7 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 # building locally or you know there are more cores available, you may want to
 # override this.
 ARG MAKEFLAGS=-j2
+ARG BFN_P4C_GIT_SHA="UNKNOWN"
 
 # testing dependencies
 RUN apt-get install -y net-tools
