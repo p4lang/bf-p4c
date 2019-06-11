@@ -753,7 +753,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
              * Converting ternary operands into conditionally-set format:
              *
              *     conditionally-set destination, (optional background), source, conditional arg
-             * 
+             *
              * In examples:
              *     f1 = cond ? arg1 : f1 -> conditionally-set f1, arg1, cond1 (implicit background)
              *

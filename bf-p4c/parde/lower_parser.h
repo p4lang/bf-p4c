@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "logging/pass_manager.h"
+#include "common/utils.h"
 
 class ClotInfo;
 class PhvInfo;

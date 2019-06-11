@@ -426,15 +426,30 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     return true;
 }
 
+uint64_t convert_crc_polynomial_to_koopman(uint64_t poly, uint32_t width) {
+    mpz_class koopman;
+    mpz_import(koopman.get_mpz_t(), 1, 0, sizeof(poly), 0, 0, &poly);
+    mpz_class upper_bit = 1;
+    mpz_class mask = upper_bit << width - 1;
+    koopman &= mask;
+    return koopman.get_ui();
+}
+
 /*
  * Convert CRCPolynomial extern to a IR::MAU::HashFunction structure.
- * This is used by TNA.p4
+ *
+ * Tna defines polynomial as 1w1 ++ PV with a leading 1 omitted.
+ *
+ * Compiler stores polynomial in koopman form, which is PV ++ 1w1 with
+ * the trailing 1 omitted.
  */
 bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     auto decl = ref->obj->to<IR::Declaration_Instance>();
     size = decl->type->width_bits();
     auto it = decl->arguments->begin();
-    poly = (*it)->expression->to<IR::Constant>()->asInt();
+    poly = (*it)->expression->to<IR::Constant>()->asUint64();
+    // convert to koopman form.
+    poly = convert_crc_polynomial_to_koopman(poly, size);
     std::advance(it, 1);
     reverse = (*it)->expression->to<IR::BoolLiteral>()->value;
     std::advance(it, 1);
