@@ -629,6 +629,37 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
     return (next_level_bit_pos + shift + bit_width) % bit_width;
 }
 
+/**
+ * Could be non-contiguous due to phv_bits rotated around the container size due to
+ * deposit-field
+ */
+bitvec ALUParameter::slot_bits_bv(PHV::Container cont) const {
+    bitvec rv = bitvec(phv_bits.lo, phv_bits.size());
+    rv.rotate_right(0, right_shift, cont.size());
+    return rv;
+}
+
+/**
+ * The bits used by this parameter in the action bus slot.  Due to wrapped rotations
+ * in deposit-field, at most 2 ranges could be provided
+ */
+safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const {
+    safe_vector<le_bitrange> rv;
+    int cont_size = static_cast<int>(cont.size());
+    if (phv_bits.size() == cont_size) {
+        if (right_shift == 0) {
+            rv.push_back({0, cont_size - 1});
+        } else {
+            rv.push_back({0, right_shift - 1});
+            rv.push_back({right_shift, cont_size - 1});
+        }
+    } else {
+        for (auto br : bitranges(slot_bits_bv(cont))) {
+            rv.push_back({br.first, br.second});
+        }
+    }
+    return rv;
+}
 
 /**
  * This function creates from a RamSection with it's isolated ALU information.  This is
@@ -695,15 +726,25 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     return rv;
 }
 
+/**
+ * In the case where a parameter is rotated around the slot_size, as is the case in a
+ * deposit-field instruction, an alias is necessary for this rotation to be
+ * printed out correctly in assembly (as this is converted to a deposit-field with a wrapped
+ * slice).
+ *
+ * If the ALUOperation does not yet have an alias, then one is created.  Potentially multiple
+ * can be created per action, requiring an index to be tracked
+ */
 const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alias_idx) const {
     ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
     bool rotational_alias = false;
     for (auto &param : rv->_params) {
         param.right_shift = right_shift;
-        if (!param.slot_bits(_container).is_contiguous())
+        if (param.is_wrapped(_container))
             rotational_alias = true;
     }
+
     if (rotational_alias && rv->_alias.isNull() && rot_alias_idx) {
         rv->_alias = "$rot_data" + std::to_string(*rot_alias_idx);
         *rot_alias_idx = *rot_alias_idx + 1;
@@ -733,7 +774,7 @@ ParameterPositions ALUOperation::parameter_positions() const {
 cstring ALUOperation::wrapped_constant() const {
     cstring rv;
     for (auto param : _params) {
-        if (param.slot_bits(_container).is_contiguous())
+        if (!param.is_wrapped(_container))
             continue;
         auto con = param.param->to<Constant>();
         if (con == nullptr)
@@ -2160,7 +2201,6 @@ bool Format::analyze_actions() {
         container_actions_map.clear();
         ActionAnalysis aa(phv, true, false, tbl);
         aa.set_container_actions_map(&container_actions_map);
-        aa.set_verbose();
         action->apply(aa);
         create_alu_ops_for_action(container_actions_map, action->name);
     }
@@ -2681,9 +2721,7 @@ void Format::assign_RamSections_to_bytes() {
 
 
 void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
-        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, bool realias) {
-    int rot_alias_idx = 0;
-    int *rot_alias_idx_p = realias ? &rot_alias_idx : nullptr;
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, int *rot_alias_idx) {
     for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
         // Determines the right shift of each ALUOperation
         int first_phv_bit_pos = 0;
@@ -2694,7 +2732,7 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
         int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
         right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
-        auto ad_alu = init_ad_alu->add_right_shift(right_shift, rot_alias_idx_p);
+        auto ad_alu = init_ad_alu->add_right_shift(right_shift, rot_alias_idx);
         // Validates that the right shift is calculated correctly, by shifting the
         // alu operation by that much, and determining if the ALU operation is
         // a subset of the original Ram Section
@@ -2721,7 +2759,7 @@ void Format::build_locked_in_format(Use &use) {
     auto &single_action_input = locked_in_all_actions_inputs.at(0);
     for (auto &ram_sect : single_action_input.all_inputs) {
         build_single_ram_sect(ram_sect, IMMEDIATE, use.locked_in_all_actions_alu_positions,
-                              verify_inputs, false);
+                              verify_inputs, nullptr);
     }
     for (int i = 0; i < SLOT_TYPES; i++) {
         BUG_CHECK(locked_in_all_actions_input_bitvecs.at(i) == verify_inputs.at(i),
@@ -2740,14 +2778,25 @@ void Format::build_locked_in_format(Use &use) {
 void Format::build_potential_format(bool immediate_forced) {
     Use use;
     int loc_i = 0;
+
+    // @seealso comments on add_right_shift to explain need for more aliases
+    std::map<cstring, int> act_to_rot_alias;
+    for (auto &loc_inputs : action_bus_inputs) {
+        for (auto &single_action_input : loc_inputs) {
+            act_to_rot_alias[single_action_input.action_name] = 0;
+        }
+    }
+
     for (auto &loc_inputs : action_bus_inputs) {
         bitvec all_double_fulls;
         Location_t loc = static_cast<Location_t>(loc_i);
         BusInputs verify_inputs = { { bitvec(), bitvec(), bitvec() } };
         for (auto &single_action_input : loc_inputs) {
+            int rot_alias_idx = act_to_rot_alias.at(single_action_input.action_name);
+            int *rot_alias_idx_p = &rot_alias_idx;
             safe_vector<ALUPosition> alu_positions;
             for (auto &ram_sect : single_action_input.all_inputs) {
-                build_single_ram_sect(ram_sect, loc, alu_positions, verify_inputs, true);
+                build_single_ram_sect(ram_sect, loc, alu_positions, verify_inputs, rot_alias_idx_p);
 
                 if (ram_sect.section->index() == DOUBLE_FULL) {
                     BUG_CHECK(loc == ACTION_DATA_TABLE, "Cannot have a 64 bit requirement in "
@@ -2759,6 +2808,7 @@ void Format::build_potential_format(bool immediate_forced) {
 
             auto &alu_vec = use.alu_positions[single_action_input.action_name];
             alu_vec.insert(alu_vec.end(), alu_positions.begin(), alu_positions.end());
+            act_to_rot_alias[single_action_input.action_name] = rot_alias_idx;
         }
         for (int i = 0; i < SLOT_TYPES; i++) {
             BUG_CHECK(action_bus_input_bitvecs.at(loc_i).at(i) == verify_inputs.at(i),

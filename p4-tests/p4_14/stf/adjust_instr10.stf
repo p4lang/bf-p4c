@@ -1,0 +1,9 @@
+add cc1_table init.read:0x01010101 cc1_act(p1:0x3, p2:0xc)
+add cc2_table init.read:0x02020202 cc2_act(p1:0x1, p2:0x2, p3:0x3, p4:0x1)
+
+add port_table 500 init.read:0x******** port_action(port:0x1)
+
+expect 1 01010101 01 3c c3 
+packet 0 01010101 01 01 10 
+expect 1 02020202 02 6d 58
+packet 0 02020202 02 00 00 

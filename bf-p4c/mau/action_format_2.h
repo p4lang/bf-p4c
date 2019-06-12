@@ -330,10 +330,11 @@ struct ALUParameter {
     le_bitrange phv_bits;
     int right_shift;
 
-    bitvec slot_bits(PHV::Container cont) const {
-        bitvec rv = bitvec(phv_bits.lo, phv_bits.size());
-        rv.rotate_right(0, right_shift, cont.size());
-        return rv;
+
+    bitvec slot_bits_bv(PHV::Container cont) const;
+    safe_vector<le_bitrange> slot_bits_brs(PHV::Container cont) const;
+    bool is_wrapped(PHV::Container cont) const {
+        return slot_bits_brs(cont).size() > 1;
     }
 
     ALUParameter(const Parameter *p, le_bitrange pb)
@@ -865,7 +866,7 @@ class Format {
     void assign_RamSections_to_bytes();
 
     void build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
-        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, bool realias);
+        safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, int *rot_alias_idx);
     void build_locked_in_format(Use &use);
     void build_potential_format(bool immediate_forced);
 

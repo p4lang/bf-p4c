@@ -475,7 +475,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool init_simple_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits);
     void initialize_constant(const ActionParam &read, ContainerAction &cont_action,
-        le_bitrange write_bits, bitvec read_bits_bv);
+        le_bitrange write_bits, safe_vector<le_bitrange> &read_bits_brs);
     void determine_unused_bits(PHV::Container container, ContainerAction &cont_action);
 
     bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,
