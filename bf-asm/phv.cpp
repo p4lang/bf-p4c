@@ -39,14 +39,26 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
     remove_name_tail_range(phv_name);
     if (stage == -1 && what.type == tMAP) {
         int rv = 0;
+        value_t prev_kv;
+        int prev_stage = -1;
         for (auto &kv : what.map) {
             auto &key = kv.key.type == tCMD && kv.key.vec.size > 1 && kv.key == "stage"
                 ? kv.key[1] : kv.key;
             if (CHECKTYPE2(key, tINT, tRANGE)) {
-                if (key.type == tINT)
-                    rv |= addreg(gress, name, kv.value, key.i);
-                else
-                    rv |= addreg(gress, name, kv.value, key.lo, key.hi); } }
+                if (key.type == tINT) {
+                    if ((key.i > prev_stage + 1) && (prev_stage >= 0))
+                        rv |= addreg(gress, name, prev_kv, prev_stage + 1, key.i - 1);
+                    rv |= addreg(gress, name, kv.value, key.i, key.i);
+                    prev_stage = key.i;
+                } else {
+                    if ((key.lo > prev_stage + 1) && (prev_stage >= 0))
+                        rv |= addreg(gress, name, prev_kv, prev_stage + 1, key.lo - 1);
+                    rv |= addreg(gress, name, kv.value, key.lo, key.hi);
+                    prev_stage = key.hi;
+                }
+            }
+            prev_kv = kv.value;
+        }
         int size = -1;
         PerStageInfo *prev = 0;
         for (auto &ch : names[gress].at(name)) {
