@@ -51,6 +51,10 @@ class TablePlacement : public MauTransform, public Backtrack {
     // is a global set of tables.
     ordered_set<cstring> placed_table_names;
 
+    // Find potential tables to merge into a gateway
+    using GatewayMergeChoices = ordered_map<const IR::MAU::Table *, cstring>;
+    GatewayMergeChoices gateway_merge_choices(const IR::MAU::Table *table);
+
     struct TableInfo;
     UpwardDownwardPropagation *upward_downward_prop;
     void log_choice(const Placed *t, const Placed *best, choice_t choice);
@@ -91,7 +95,8 @@ class TablePlacement : public MauTransform, public Backtrack {
 
     bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
-        const StageUseEstimate &current);
+                                          const StageUseEstimate &current,
+                                          GatewayMergeChoices &gmc);
     Placed *try_place_table(Placed *rv, const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current);
     bool try_alloc_ixbar(Placed *next, const Placed *done, TableResourceAlloc *alloc);

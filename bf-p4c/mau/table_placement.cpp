@@ -298,7 +298,7 @@ struct TablePlacement::Placed {
         BUG("Can't find group for %s", tbl->name);
         return nullptr; }
 
-    bool gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables);
+    void gateway_merge(const IR::MAU::Table*, cstring);
 
     /// Update a Placed object to reflect resources (re)allocated in the same stage due
     /// to another table being added to the stage.  Copy-on-write, so actually clones
@@ -390,70 +390,61 @@ static int count(const TablePlacement::Placed *pl) {
     return rv;
 }
 
-
-bool TablePlacement::Placed::gateway_merge(ordered_set<const IR::MAU::Table *> &attempted_tables) {
-    bool can_have_link = true;
-    bool has_link = false;
-    if (gw || !table->uses_gateway() || table->match_table) {
-        can_have_link = false;
+TablePlacement::GatewayMergeChoices
+        TablePlacement::gateway_merge_choices(const IR::MAU::Table *table) {
+    GatewayMergeChoices rv;
+    // Abort and return empty if we're not a gateway
+    if (!table->uses_gateway() || table->match_table) {
+        LOG2(table->name << " is not a gateway! Aborting search for merge choices");
+        return rv;
     }
-    /* table is just a gateway -- look for a dependent match table to combine with */
-    cstring result_tag;
-    const IR::MAU::Table *match = 0;
-    if (can_have_link) {
-        for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
-            if (self.seqInfo.at(it->second).refs.size() > 1)
-                continue;
-            int idx = -1;
-            for (auto t : it->second->tables) {
-                ++idx;
-                if (it->second->deps[idx]) continue;
-                bool should_skip = false;
-                for (auto t2 : it->second->tables) {
-                    if (self.deps->happens_before_control(t, t2))
-                        should_skip = true;
-                }
-                if (should_skip)
-                    continue;
-                // if (deps->happens_before_control)
-                if (t->uses_gateway()) continue;
-                // FIXME: Look for notes above preorder for IR::MAU::Table
-                if (t->next.count("$hit") || t->next.count("$miss")) continue;
-                // Currently would potentially require multiple gateways if split into
-                // multiple tables.  Not supported yet during allocation
-                if (t->for_dleft()) continue;
-                if (!self.phv.darkLivenessOkay(table, t)) {
-                    LOG2("\tCannot merge " << name << " with " << t->name << " because of "
-                         "liveness check");
-                    continue;
-                }
-                has_link = true;
-                if (attempted_tables.count(t))
-                    continue;
-                match = t;
-                result_tag = it->first;
-                break;
+
+    // Now, use the same criteria as gateway_merge to find viable tables
+    for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
+        if (this->seqInfo.at(it->second).refs.size() > 1) continue;
+        int idx = -1;
+        for (auto t : it->second->tables) {
+            bool should_skip = false;
+            ++idx;
+            if (it->second->deps[idx]) continue;
+            for (auto t2 : it->second->tables) {
+                if (this->deps->happens_before_control(t, t2)) should_skip = true;
             }
-            if (match) break;
+            // If we have dependence ordering problems
+            if (should_skip) continue;
+            // if (deps->happens_before_control)
+            // If this table also uses gateways
+            if (t->uses_gateway()) continue;
+            // FIXME: Look for notes above preorder for IR::MAU::Table
+            if (t->next.count("$hit") || t->next.count("$miss")) continue;
+            // Currently would potentially require multiple gateways if split into
+            // multiple tables.  Not supported yet during allocation
+            if (t->for_dleft()) continue;
+            // Liveness problems
+            if (!this->phv.darkLivenessOkay(table, t)) {
+                LOG2("\tCannot merge " << table->name << " with " << t->name << " because of "
+                     "liveness check");
+                continue;
+            }
+            // Check if we have already seen this table
+            if (rv.count(t))
+                continue;
+            rv[t] = it->first;
         }
     }
-    if (match) {
-        LOG2("  - making " << name << " gateway on " << match->name);
-        name = match->name;
-        gw = table;
-        table = match;
-        gw_result_tag = result_tag;
-        attempted_tables.insert(match);
-        return true;
-    }
+    return rv;
+}
 
-    if (!can_have_link || (can_have_link && !has_link)) {
-        if (attempted_tables.count(table) == 0) {
-            attempted_tables.insert(table);
-            return true;
-        }
-    }
-    return false;
+void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring result_tag) {
+    // Check that the table we're attempting to merge with is a gateway
+    BUG_CHECK((table->uses_gateway() || !table->match_table),
+              "Gateway merge called on a non-gateway!");
+    BUG_CHECK(!match->uses_gateway(), "Merging a non-match table into a gateway!");
+    // Perform the merge
+    name = match->name;
+    gw = table;
+    table = match;
+    gw_result_tag = result_tag;
 }
 
 /**
@@ -872,21 +863,41 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
  *  this table.  This loops through all possible tables to be merged, and will
  *  return a vector of these possible choices to the is_better function to choose
  */
-safe_vector<TablePlacement::Placed *> TablePlacement::try_place_table(const IR::MAU::Table *t,
-        const Placed *done, const StageUseEstimate &current) {
+safe_vector<TablePlacement::Placed *>
+    TablePlacement::try_place_table(const IR::MAU::Table *t,
+                                    const Placed *done, const StageUseEstimate &current,
+                                    GatewayMergeChoices& gmc) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    ordered_set<const IR::MAU::Table *> attempted_tables;
     safe_vector<TablePlacement::Placed *> rv_vec;
-    while (true) {
+    // Place and save a placement, as a lambda
+    auto try_place = [&](Placed* rv) {
+                         rv = try_place_table(rv, t, done, current);
+                         if (rv == nullptr) {
+                             LOG2("Unable to place table " << t->name << ". Aborting!");
+                             rv_vec.clear();
+                             return false;
+                         }
+                         rv_vec.push_back(rv);
+                         return true;
+                     };
+
+    // If we're not a gateway or there are no merge options for the gateway, we create exactly one
+    // placement for it
+    if (!t->uses_gateway() || t->match_table || gmc.size() == 0) {
         auto *rv = new Placed(*this, t);
-        bool try_allocation = rv->gateway_merge(attempted_tables);
-        if (!try_allocation) break;
-        rv = try_place_table(rv, t, done, current);
-        if (rv == nullptr) {
-            rv_vec.clear();
+        try_place(rv);
+        return rv_vec;
+    }
+
+    // Otherwise, we are a gateway, so we need to iterate through all tables it can possibly be
+    // merged with
+    for (auto mc : gmc) {
+        auto *rv = new Placed(*this, t);
+        // Merge
+        rv->gateway_merge(mc.first, mc.second);
+        // Get a placement
+        if (!try_place(rv))
             break;
-        }
-        rv_vec.push_back(rv);
     }
     return rv_vec;
 }
@@ -1498,9 +1509,39 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         done = false;
                         should_skip = true;
                         break; } }
+                // Find potential tables this table can be merged with (if it's a gateway)
+                auto gmc = TablePlacement::gateway_merge_choices(t);
+                // Prune these choices according to happens after
+                std::vector<const IR::MAU::Table*> to_erase;
+                for (auto mc : gmc) {
+                    // Iterate through all of this merge choice's happens afters and make sure
+                    // they're placed
+                    for (auto* prev : deps->happens_after_map.at(mc.first)) {
+                        if (!placed || !placed->is_placed(prev)) {
+                            LOG3("    + removing " << mc.first->name << " from merge list because "
+                                 "it depends on " << prev->name);
+                            to_erase.push_back(mc.first);
+                            break;
+                        }
+                    }
+                }
+                // If we did have choices to merge but all of them are not ready yet, don't try to
+                // place this gateway
+                if (gmc.size() > 0 && gmc.size() == to_erase.size()) {
+                    LOG2("  - skipping gateway " << t->name <<
+                         " until mergeable tables are available");
+                    should_skip = true;
+                    done = false;
+                }
+                // Finally, erase these choices from gmc
+                for (auto mc_unready : to_erase)
+                    gmc.erase(mc_unready);
+
+                // Now skip attempting to place this table if this flag was set at all
                 if (should_skip) continue;
 
-                auto pl_vec = try_place_table(t, placed, current);
+                // Attempt to actually place the table
+                auto pl_vec = try_place_table(t, placed, current, gmc);
                 LOG3("    Pl vector: " << pl_vec);
                 done = false;
                 for (auto pl : pl_vec) {
