@@ -1430,6 +1430,11 @@ void ReplaceFlexFieldUses::addBridgedFields(const IR::HeaderOrMetadata* header) 
     }
 }
 
+// XXX(hanw): this class can be avoided if we implement a mini-pass between
+// MidEnd and BackEnd to do the analysis for bridging and transform
+// midend IR directly:
+// - replace the header type with repacked header type;
+// - replace the digest list with repacked digest list;
 Visitor::profile_t ReplaceFlexFieldUses::init_apply(const IR::Node* root) {
     bridgedFields.clear();
     emitsToBeReplaced.clear();
@@ -1516,6 +1521,16 @@ IR::BFN::Extract* ReplaceFlexFieldUses::getNewSavedVal(const IR::BFN::Extract* e
         return newExtract;
     }
     return newE;
+}
+
+/**
+ * Update the staled type info in concreteHeaderRef
+ */
+IR::Node* ReplaceFlexFieldUses::preorder(IR::ConcreteHeaderRef* ref) {
+    const IR::HeaderOrMetadata* hdr = info.getHeaderRefForName(ref->ref->name);
+    auto newRef = new IR::ConcreteHeaderRef(hdr);
+    LOG3("\tConcrete header ref " << newRef);
+    return newRef;
 }
 
 IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::ParserState* p) {

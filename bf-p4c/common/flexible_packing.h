@@ -573,6 +573,7 @@ class ReplaceFlexFieldUses : public Transform {
     IR::Node* preorder(IR::BFN::Pipe* pipe) override;
     IR::Node* preorder(IR::BFN::EmitField* e) override;
     IR::Node* preorder(IR::BFN::Extract* e) override;
+    IR::Node* preorder(IR::ConcreteHeaderRef* ref) override;
     void end_apply() override;
 
     bool processExtract(const IR::BFN::Extract* e);

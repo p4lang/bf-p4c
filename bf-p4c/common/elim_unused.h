@@ -3,6 +3,13 @@
 
 #include "field_defuse.h"
 
+class ReplaceMember : public Transform {
+    const IR::BFN::AliasMember *preorder(IR::BFN::AliasMember *m) {
+        return m; }
+    const IR::BFN::AliasMember *preorder(IR::Member *m) {
+        return new IR::BFN::AliasMember(m, m); }
+};
+
 class ElimUnused : public PassManager {
     const PhvInfo       &phv;
     FieldDefUse         &defuse;

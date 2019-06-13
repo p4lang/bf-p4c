@@ -77,22 +77,17 @@ class ElimUnused::Instructions : public Transform {
         return nullptr;
     }
 
-    bool equiv(const IR::Expression *a, const IR::Expression *b) {
-        if (*a == *b) return true;
-        if (typeid(*a) != typeid(*b)) return false;
-        if (auto ca = a->to<IR::Cast>()) {
-            auto cb = b->to<IR::Cast>();
-            return ca->type == cb->type && equiv(ca->expr, cb->expr);
-        }
-        return false;
-    }
-
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override {
+    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *inst) override {
         /// HACK(hanw): copy-propagation introduces set(a, a) instructions, which
         /// is not deadcode eliminated because 'a' is still in-use in the control flow.
-        if (i->name == "set" && (i->operands[0])->equiv(*i->operands[1]))
-            return nullptr;
-        return i;
+        if (inst->operands.size() < 2) return inst;
+        auto left = (inst->operands[0])->apply(ReplaceMember());
+        auto right = (inst->operands[1])->apply(ReplaceMember());
+        if (auto lmem = left->to<IR::Member>()) {
+            if (auto rmem = right->to<IR::Member>()) {
+                if (inst->name == "set" && lmem->equiv(*rmem))
+                    return nullptr; } }
+        return inst;
     }
 
     const IR::GlobalRef *preorder(IR::GlobalRef *gr) override {

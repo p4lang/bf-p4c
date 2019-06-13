@@ -308,12 +308,17 @@ class BFN::AliasMember : IR::Member {
 
     dbprint {
         IR::Member::dbprint(out);
-        out << "alias: " << source;
+        out << " alias: " << source;
     }
 
     visit_children {
         IR::Member::visit_children(v);
     }
+
+#noequiv
+    /// do not use the auto-generated equiv function.
+    /// do not compare the 'source' field of the AliasMember.
+    equiv { return Member::equiv(a_); }
 
 #emit
     /// A convenience method to construct an AliasMember with source info from
@@ -383,19 +388,5 @@ class BFN::SignExtend : Cast {
     stringOp = "(sign_extend)";
     toString{ return "sign_extend"; }
     validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
-}
-
-/**
- * This class represents the flexible header that maybe optimized by the backend
- * with a different layout. It is used by bridging.
- * Since we do not have corresponding P4-syntax, we use the @flexible annotation
- * to infer this IR node, e.g.
- *
- * @flexible
- * struct s { bit<8> f0; }
- */
-class BFN::Type_StructFlexible : IR::Type_StructLike {
-#nodbprint
-    toString{ return cstring("struct ") + externalName(); }
 }
 
