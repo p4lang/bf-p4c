@@ -197,17 +197,18 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -215,30 +216,26 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  switch_8.7_ent_fin_postcard
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
+  switch_l3_heavy_int_leaf
+  switch_8.7_l3_heavy_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for .* could not place it until stage"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
-  switch_l3_heavy_int_leaf
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
-  switch_8.7_l3_heavy_int_leaf
   switch_ent_fin_postcard
   switch_generic_int_leaf
   switch_8.7_generic_int_leaf
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "Tofino requires byte-aligned headers"
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Failed to place tables that .* is attached to in the same stage"
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
 )
 
 # Issue with PHV::Field on header stack.
@@ -250,8 +247,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "error.*Unable to force_immediate on table"
+)
 
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
@@ -275,11 +275,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: : condition too complex"
+  "error.*condition too complex"
   extensions/p4_tests/p4_14/compile_only/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/compile_only/08-MacAddrCheck1.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/kindlings_0.p4
   testdata/p4_16_samples/issue1544-bmv2.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 # BRIG_132
@@ -908,7 +909,6 @@ p4c_add_xfail_reason("tofino"
   c2_COMPILER-514_balancer_one
   c2_COMPILER-510_case2682
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -920,7 +920,6 @@ p4c_add_xfail_reason("tofino"
 
   # new xfail after flexible PR
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -975,7 +974,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: The stage specified for table .* is .*, but we could not place it until stage .*"
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 # Valid XFAIL

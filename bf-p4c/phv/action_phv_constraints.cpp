@@ -993,8 +993,7 @@ int ActionPhvConstraints::count_bitmasked_set_instructions(
         const std::vector<PHV::AllocSlice>& slices,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     int numBitmaskedSet = 0;
-    if (slices.size() == 0)
-        return 0;
+    if (slices.size() == 0) return 0;
     // Create a set out of the vector of slices, because has_ad_or_constant_sources() only takes the
     // set.
     ordered_set<PHV::AllocSlice> setOfSlices;
@@ -1038,7 +1037,8 @@ bool ActionPhvConstraints::is_bitmasked_set(
             continue;
         auto container_range = slice.container_slice();
         bitvec writtenThisSlice(container_range.lo, container_range.size());
-        written |= writtenThisSlice; }
+        written |= writtenThisSlice;
+    }
     // Contiguity is enough because we don't currently support making action data rotationally
     // equivalent. If the bits written are contiguous, then this instruction is going to be realized
     // using deposit-field rather than bitmasked-set.
@@ -1454,6 +1454,21 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (Device::currentDevice() == Device::TOFINO)
         if (!parser_constant_extract_satisfied(c, container_state))
             return boost::none;
+
+    // Check if any of the destinations require a speciality read, and therefore, we cannot have a
+    // bitmasked-set instruction for this packing.
+    auto WriteFromSpeciality = [&](const PHV::AllocSlice& slice) {
+        return special_no_pack.count(slice.field());
+    };
+    if (std::any_of(container_state.begin(), container_state.end(), WriteFromSpeciality)) {
+        std::vector<PHV::AllocSlice> existingVector;
+        for (auto& sl : container_state) existingVector.push_back(sl);
+        if (count_bitmasked_set_instructions(existingVector, initActions) != 0) {
+            LOG5("\t\tThis packing requires a bitmasked-set instruction for a slice that reads "
+                 "special action data. Therefore, this packing is not possible.");
+            return boost::none;
+        }
+    }
 
     // Merge actions for all the candidate fields into a set, including initialization actions for
     // any metadata fields overlaid due to live range shrinking.

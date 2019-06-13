@@ -1427,22 +1427,48 @@ class CollectPardeConstraints : public Inspector {
         phv_field->set_privatizable(true);
     }
 
+    static std::vector<std::pair<cstring, cstring>> bottom_bit_aligned_deparser_params() {
+        static std::vector<std::pair<cstring, cstring>> rv;
+
+        if (rv.empty()) {
+            rv = {
+                { "eg_intr_md", "egress_port" },
+                { "ig_intr_md_for_tm", "mcast_grp_a" },
+                { "ig_intr_md_for_tm", "mcast_grp_b" },
+                { "ig_intr_md_for_tm", "ucast_egress_port" }};
+
+            if (Device::currentDevice() == Device::TOFINO) {
+                rv.insert(rv.end(), {
+                    { "ig_intr_md_for_tm", "level1_mcast_hash" },
+                    { "ig_intr_md_for_tm", "level2_mcast_hash" },
+                    { "ig_intr_md_for_tm", "level1_exclusion_id" },
+                    { "ig_intr_md_for_tm", "level2_exclusion_id" },
+                    { "ig_intr_md_for_tm", "rid"}});
+            }
+        }
+
+        return rv;
+    }
+
     void postorder(const IR::BFN::DeparserParameter* param) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
         PHV::Field* f = phv.field(param->source->field);
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
 
-        // Deparser parameters all need to be placed right-justified in their
-        // containers *for now*.
-        // XXX(seth): We can relax this restriction once we add support for the
-        // shifters that the deparser hardware makes available.
-        LOG3("D. Updating alignment of " << f->name << " to " <<
-                FieldAlignment(le_bitrange(StartLen(0, f->size))));
-        f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
-        f->set_deparsed_bottom_bits(true);
         f->set_deparsed_to_tm(true);
         f->set_no_split(true);
+
+        for (auto& kv : bottom_bit_aligned_deparser_params()) {
+            std::string f_name(f->name.c_str());
+            if (f_name.find(kv.first) != std::string::npos
+                && f_name.find(kv.second) != std::string::npos) {
+                LOG3("D. Updating alignment of " << f->name << " to " <<
+                        FieldAlignment(le_bitrange(StartLen(0, f->size))));
+                f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
+                f->set_deparsed_bottom_bits(true);
+            }
+        }
 
         BUG_CHECK(f->size <= 32, "The architecture requires that field %1% not be split "
                   "across PHV containers, but the field is larger than the largest PHV container.",
@@ -1450,9 +1476,8 @@ class CollectPardeConstraints : public Inspector {
     }
 
     void postorder(const IR::BFN::Digest* digest) override {
-        // TODO:
-        // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
-        // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
+        // learning, mirror, resubmit
+        // have differing constraints -- bottom-bits, bridge-metadata mirror packing
         // learning, mirror field list in bottom bits of container, e.g.,
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists

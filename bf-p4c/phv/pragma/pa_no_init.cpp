@@ -90,7 +90,7 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
 std::ostream& operator<<(std::ostream& out, const PragmaNoInit& pa_no) {
     std::stringstream logs;
     for (auto* f : pa_no.getFields())
-        logs << "@pa_no_init specifies that " << f->name << " should be marked no_split" <<
+        logs << "@pa_no_init specifies that " << f->name << " should be marked no_init" <<
             std::endl;
     out << logs.str();
     return out;

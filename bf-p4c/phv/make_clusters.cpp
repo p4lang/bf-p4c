@@ -572,7 +572,8 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             field_slice_list_size += slice.size();
             self.slices_used_in_slice_lists_i.insert(slice); }
         accumulator_bits += field->size;
-        lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field));
+        lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
+            (lastNoPack && field->padding);
         lastWideArith = field->used_in_wide_arith();
         lastDeparserZero = field->is_deparser_zero_candidate();
         lastUnreferenced = !self.uses_i.is_referenced(field);

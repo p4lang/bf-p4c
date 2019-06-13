@@ -91,6 +91,7 @@ def prep_test_matrix(tests_csv, out_dir, ts):
     return test_dict
 
 def run_test_matrix(p4c, test_cmd):
+    failed = []
     rc = RunCmd(test_cmd, config.TEST_DRIVER_TIMEOUT)
     writeblock_to_file(os.path.join(config.REF_OUTPUTS_DIR, \
         p4c + '_test_error.log'), rc.err)
@@ -101,12 +102,13 @@ def run_test_matrix(p4c, test_cmd):
         lines = rc.out.split('\n')
         for line in lines[-10:]:
             print line + '\n'
+            failed.append(line.strip())
     print 'Test Errors:\n'
     if rc.err is not None:
         print rc.err + '\n'
-    return rc.return_code
+    return rc.return_code, failed
 
-def process_metrics(tests, metrics_db, metrics_outdir, ts, update):
+def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
     final_result = 0
     db_curr = database.copy_metrics(tests, metrics_outdir, ts)
     db_master = metrics_db.extract_metrics()
@@ -117,10 +119,13 @@ def process_metrics(tests, metrics_db, metrics_outdir, ts, update):
     else:
         print ('Analyzing metrics in the current run')
         results = database.test_and_report_metrics(db_curr, db_master)
-    for test, result in results.iteritems():
-        print test, result
-        if result is 'FAIL':
+    for test, metrics_result in results.iteritems():
+        test_result = metrics_result
+        if test in failed:
+            test_result = 'FAIL'
+        if test_result is 'FAIL':
             final_result -= 1
+        print test, test_result
     return final_result
 
 # Generate and run the test matrix for Glass and P4C compilation
@@ -154,18 +159,18 @@ def main():
     print '='*120
     print 'Running Glass tests: '
     print '='*120
-    print 'Completed Glass tests: ' + str(run_test_matrix('Glass', \
-        config.GLASS_TEST_CMD))
+    glass_res, glass_failed = run_test_matrix('Glass', config.GLASS_TEST_CMD)
+    print 'Completed Glass tests: ' + str(glass_res)
     print '='*120 + '\n\n'
     print '='*120
     print 'Running P4C tests: '
     print '='*120
-    print 'Completed P4C tests: ' + str(run_test_matrix('P4C', \
-        config.P4C_TEST_CMD))
+    p4c_res, p4c_failed = run_test_matrix('P4C', config.P4C_TEST_CMD)
+    print 'Completed P4C tests: ' + str(p4c_res)
     print '='*120
     if args.process_metrics:
         metrics_db = database.metricstable()
-        result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics)   
+        result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics, p4c_failed)   
         if result < 0:
             sys.exit(1) 
 

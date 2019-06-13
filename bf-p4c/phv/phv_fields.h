@@ -787,6 +787,20 @@ class Field : public LiftLess<Field> {
     bool operator<(const Field& other) const {
         return name < other.name;
     }
+
+    void setToBottomByte() {
+        if (size > 8) {
+            ::warning("Ignoring bottom byte constraint for field %1% of size %2%b",
+                    name, size);
+            return;
+        }
+        for (auto container_size : Device::phvSpec().containerSizes()) {
+            int start = (size > 8) ? 1 : (8 - size + 1);
+            startBitsByContainerSize_i[container_size] = bitvec(0, start);
+            LOG3("Setting field " << name << " to bottom byte: " <<
+                    startBitsByContainerSize_i[container_size]);
+        }
+    }
 };
 
 /**

@@ -71,7 +71,7 @@ file (RELATIVE_PATH switch_${SWITCH_VERSION}_test ${P4C_SOURCE_DIR} ${SWITCH_${S
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_${SWITCH_VERSION}_dc_basic" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DDC_BASIC_PROFILE")
 
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE 
     "switch_${SWITCH_VERSION}_ent_fin_postcard" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DENT_FIN_POSTCARD_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
