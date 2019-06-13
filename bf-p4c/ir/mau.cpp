@@ -396,6 +396,20 @@ cstring IR::MAU::Table::externalName() const {
     return match_table ? match_table->externalName() : name;
 }
 
+void IR::MAU::Table::remove_gateway() {
+    std::set<cstring> gateway_rows_next_table;
+    for (auto &gw : gateway_rows) {
+        if (gw.second.isNull()) continue;
+        gateway_rows_next_table.insert(gw.second);
+    }
+
+    gateway_name = cstring();
+    gateway_rows.clear();
+    for (auto gw_next : gateway_rows_next_table) {
+        next.erase(gw_next);
+    }
+}
+
 cstring IR::MAU::Action::externalName() const {
     if (auto *name_annot = annotations->getSingle("name"))
         return IR::Annotation::getName(name_annot);

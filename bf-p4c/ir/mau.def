@@ -236,6 +236,7 @@ class Table : BFN::Unit {
     bool getAnnotation(cstring name, ID &val) const;
     bool getAnnotation(cstring name, std::vector<ID> &val) const;
     cstring externalName() const;  // name to use in error messages
+    void remove_gateway();
 
     UniqueId pp_unique_id(AttachedMemory at = nullptr,
        bool is_gw = false, int stage_table = -1, int logical_table = -1,

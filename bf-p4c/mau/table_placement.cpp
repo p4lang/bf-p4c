@@ -1703,17 +1703,17 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
     IR::MAU::Table *rv = nullptr;
     IR::MAU::Table *prev = nullptr;
     int logical_tables = placed->use.preferred()->logical_tables();
+
+
     for (int lt = 0; lt < logical_tables; lt++) {
         auto *table_part = tbl->clone();
-        // Clear gateway_name for the split tables
-        if (lt != 0)
-            table_part->gateway_name = cstring();
+        // Clear gateway_name for the split table
         table_part->logical_id = placed->logical_id + lt;
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
-        if (lt != 0) {
-            tbl->gateway_rows.clear();
-        }
+
+        if (stage_table > 0 || lt > 0)
+            table_part->remove_gateway();
         int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
         table_set_resources(table_part, placed->resources->clone_rename(tbl, stage_table, lt),
                             entries);  // table_part->ways[0].entries);
@@ -1721,12 +1721,10 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
             rv = table_part;
             assert(!prev);
         } else {
-            for (auto &gw : table_part->gateway_rows)
-                table_part->next.erase(gw.second);
-            table_part->gateway_rows.clear();
             prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
             prev->next.erase("$miss");
         }
+
         if (last != nullptr)
             *last = table_part;
         prev = table_part;
@@ -1748,12 +1746,10 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
         auto *table_part = tbl->clone();
 
         if (lt != 0)
-            table_part->gateway_name = cstring();
+            table_part->remove_gateway();
         table_part->logical_id = placed->logical_id + lt;
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
-        if (lt != 0)
-            tbl->gateway_rows.clear();
 
         const IR::MAU::StatefulAlu *salu = nullptr;
         for (auto back_at : tbl->attached) {
@@ -1948,9 +1944,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             rv = table_part;
             assert(!prev);
         } else {
-            for (auto &gw : table_part->gateway_rows)
-                table_part->next.erase(gw.second);
-            table_part->gateway_rows.clear();
+            table_part->remove_gateway();
 
             // FIXME: Long term solution could be the following for these types of actions:
             //    - Clone all actions and set them all to hit_only

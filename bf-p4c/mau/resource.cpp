@@ -14,6 +14,19 @@ TableResourceAlloc *TableResourceAlloc::clone_rename(const IR::MAU::Table *tbl, 
             rv->memuse[kv.first] = kv.second;
         }
     }
+
+    // Gateway ixbar has to be cleared from ATCAM in the non-first logical table
+    bool has_gateway = false;
+    for (auto &kv : rv->memuse) {
+        if (kv.second.type == Memories::Use::GATEWAY) {
+            has_gateway = true;
+            break;
+        }
+    }
+
+    if (!has_gateway)
+        rv->gateway_ixbar.clear();
+
     return rv;
 }
 

@@ -166,11 +166,12 @@ class GenerateOutputs : public PassManager {
         if (_outputDir == "") exit(1);
         auto logsDir = BFNContext::get().getOutputDirectory("logs", pipeId);
         std::string phvLogFile(logsDir + "/phv.json");
-        addPasses({ new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o, success),
+        addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
+                                // information in assembly
+                    new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), o, success),
                     new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                    *b.get_phv_logging(), b.get_defuse(), b.get_table_alloc()),
-                    &_visualization,
-                    &_dynhash
+                    &_visualization
                     });
         setName("Assembly output");
     }
