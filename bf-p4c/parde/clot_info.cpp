@@ -468,6 +468,15 @@ bool ClotInfo::is_unused(const PHV::FieldSlice* slice) const {
     return is_unused(slice->field());
 }
 
+const std::set<const PHV::Field*>* ClotInfo::clot_eligible_fields() const {
+    auto result = new std::set<const PHV::Field*>();
+    for (auto entry : field_to_parser_states_) {
+        auto field = entry.first;
+        if (can_be_in_clot(field)) result->insert(field);
+    }
+    return result;
+}
+
 void ClotInfo::crop(Clot* clot, unsigned num_bits, bool from_start) {
     if (num_bits == 0) return;
 

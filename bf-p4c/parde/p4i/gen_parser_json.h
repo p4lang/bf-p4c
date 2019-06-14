@@ -53,17 +53,42 @@ class GenerateParserP4iJson : public ParserInspector {
  public:
     explicit GenerateParserP4iJson(const ClotInfo& clotInfo)
         : clotInfo(clotInfo), parsers(2), clot_usage(2), collected(false) {
-        parsers[INGRESS].parser_id = 0;
-        parsers[INGRESS].n_states = 256;
-        parsers[INGRESS].gress = cstring::to_cstring(INGRESS);
-        parsers[EGRESS].parser_id = 0;
-        parsers[EGRESS].n_states = 256;
-        parsers[EGRESS].gress = cstring::to_cstring(EGRESS);
-        if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
-            clot_usage[INGRESS].gress = INGRESS;
-            clot_usage[INGRESS].num_clots = Device::numClots();
-            clot_usage[EGRESS].gress = EGRESS;
-            clot_usage[EGRESS].num_clots = Device::numClots();
+        bool using_clots = Device::currentDevice() == Device::JBAY && BackendOptions().use_clot;
+
+        for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+            parsers[gress].parser_id = 0;
+            parsers[gress].n_states = 256;
+            parsers[gress].gress = cstring::to_cstring(gress);
+
+            if (!using_clots) continue;
+
+            clot_usage[gress].gress = gress;
+            clot_usage[gress].num_clots = Device::numClots();
+        }
+
+        if (using_clots) {
+            // Populate information for CLOT-eligible fields.
+            for (auto field : *clotInfo.clot_eligible_fields()) {
+                P4iFieldAlloc field_alloc;
+                field_alloc.name = canon_name(field->name);
+                field_alloc.is_readonly = clotInfo.is_readonly(field);
+                field_alloc.is_modified = clotInfo.is_modified(field);
+                field_alloc.is_checksum = clotInfo.is_checksum(field);
+                field_alloc.bit_width = field->size;
+                field_alloc.num_bits_in_clots = 0;
+                field_alloc.num_bits_in_phvs = 0;
+
+                for (auto entry : *clotInfo.slice_clots(field)) {
+                    auto slice = entry.first;
+                    field_alloc.num_bits_in_clots += slice->size();
+                }
+
+                field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+                    field_alloc.num_bits_in_phvs += alloc.width;
+                });
+
+                clot_usage[field->gress].clot_eligible_fields.emplace_back(field_alloc);
+            }
         }
     }
 

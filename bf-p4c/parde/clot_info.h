@@ -333,6 +333,9 @@ class ClotInfo {
     bool is_unused(const PHV::Field* field) const;
     bool is_unused(const PHV::FieldSlice* slice) const;
 
+    /// Produces the set of CLOT-eligible fields.
+    const std::set<const PHV::Field*>* clot_eligible_fields() const;
+
     /// @return nullptr if the @arg field is read-only or modified. Otherwise, if the @arg field is
     /// unused, returns a map from each CLOT-allocated slice for the field to its corresponding
     /// CLOT.

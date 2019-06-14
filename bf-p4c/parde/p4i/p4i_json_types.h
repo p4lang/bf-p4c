@@ -67,15 +67,39 @@ struct P4iParserClot : ToJsonObject {
     }
 };
 
+struct P4iFieldAlloc : ToJsonObject {
+    cstring name;
+    bool is_readonly;
+    bool is_modified;
+    bool is_checksum;
+    int bit_width;
+    int num_bits_in_clots;
+    int num_bits_in_phvs;
+    Util::JsonObject* toJson() const override {
+        auto* rst = new Util::JsonObject();
+        rst->emplace("name", new Util::JsonValue(name));
+        rst->emplace("is_readonly", new Util::JsonValue(is_readonly));
+        rst->emplace("is_modified", new Util::JsonValue(is_modified));
+        rst->emplace("is_checksum", new Util::JsonValue(is_checksum));
+        rst->emplace("bit_width", new Util::JsonValue(bit_width));
+        rst->emplace("num_bits_in_clots", new Util::JsonValue(num_bits_in_clots));
+        rst->emplace("num_bits_in_phvs", new Util::JsonValue(num_bits_in_phvs));
+        return rst;
+    }
+};
+
 struct P4iParserClotUsage : ToJsonObject {
     gress_t gress;
     int num_clots;
     std::vector<P4iParserClot> clots;
+    std::vector<P4iFieldAlloc> clot_eligible_fields;
+
     Util::JsonObject* toJson() const override {
         auto* rst = new Util::JsonObject();
         rst->emplace("gress", new Util::JsonValue(::toString(gress)));
         rst->emplace("num_clots", new Util::JsonValue(clots.size()));
         rst->emplace("clots", toJsonArray(clots));
+        rst->emplace("clot_eligible_fields", toJsonArray(clot_eligible_fields));
         return rst;
     }
 };
