@@ -463,7 +463,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ContainerAction &cont_action, cstring &error_message, PHV::Container container,
         cstring action_name);
     bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
-                            le_bitrange write_bits, cstring &error_message);
+                            le_bitrange write_bits, PHV::Container container,
+                            cstring &error_message);
     bool init_special_alignment(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, cstring action_name, PHV::Container container);
     bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,

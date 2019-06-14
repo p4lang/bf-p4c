@@ -593,7 +593,7 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     if (read.is_conditional)
         return true;
     if (read.type == ActionParam::PHV) {
-        initialized = init_phv_alignment(read, cont_action, write_bits, error_message);
+        initialized = init_phv_alignment(read, cont_action, write_bits, container, error_message);
     } else if (ad_alloc) {
         if (read.type == ActionParam::ACTIONDATA)
             initialized = init_ad_alloc_alignment(read, cont_action, write_bits, action_name,
@@ -615,11 +615,12 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
  *  is only one PHV read per PHV write.
  */
 bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
-        le_bitrange write_bits, cstring &error_message) {
+        le_bitrange write_bits, const PHV::Container container, cstring &error_message) {
     le_bitrange range;
     auto *field = phv.field(read.expr, &range);
 
-    BUG_CHECK(field, "PHV read has no allocation");
+    BUG_CHECK(field, "%1%: Operand %2% of instruction %3% operating on container %4% must be "
+              "a PHV.", read.expr->srcInfo, read.expr, cont_action, container);
 
     int count = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);

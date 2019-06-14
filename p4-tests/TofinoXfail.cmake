@@ -1037,7 +1037,8 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-604
 p4c_add_xfail_reason("tofino"
-  "PHV read has no allocation"
+  "Compiler Bug.*Operand.*of instruction.*operating on container.*must be a PHV"
+  extensions/p4_tests/p4_16/compile_only/deparse-zero-clustering.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/clue_0.p4

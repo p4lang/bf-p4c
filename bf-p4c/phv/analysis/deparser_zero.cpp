@@ -66,7 +66,7 @@ void IdentifyDeparserZeroCandidates::eliminateNonByteAlignedFields() {
     LOG1("\tEliminating non byte aligned fields");
     ordered_set<const PHV::Field*> fieldsToBeRemoved;
     for (const auto* f : candidateFields) {
-        if (f->size % 8 == 0)
+        if (f->size % 8 == 0 && f->offset % 8 == 0)
             continue;
         auto lo = f->offset % 8;
         auto minOffset = (lo == 0) ? f->offset : f->offset - lo;
