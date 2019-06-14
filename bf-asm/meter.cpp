@@ -442,7 +442,10 @@ void MeterTable::write_regs(REGS &regs) {
                     .b_oflo_color_write_o_sel_t_oflo_color_write_i = 1; } }
         auto &map_alu_row =  map_alu.row[row.row];
         auto vpn = row.vpns.begin();
-
+        if (color_mapram_addr == STATS_MAP_ADDR) {
+            BUG_CHECK((row.row % 2) == 0);
+            adrdist.mau_ad_stats_virt_lt[row.row / 2] |= (1U << logical_id);
+        }
         // Enable the row to be used (even if only color maprams are on this row)
         map_alu_row.i2portctl.synth2port_ctl.synth2port_enable = 1;
         // If the color mapram is not on the same row as the meter ALU, even if no meter
