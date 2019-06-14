@@ -539,9 +539,13 @@ bool CoreAllocation::satisfies_constraints(
     auto IsDeparsed = [](const PHV::AllocSlice& slice) {
         return (slice.field()->deparsed() || slice.field()->exact_containers());
     };
+    auto IsDeparsedOrDigest = [](const PHV::AllocSlice& slice) {
+        return (slice.field()->deparsed() || slice.field()->exact_containers() ||
+                slice.field()->is_digest());
+    };
     if (std::any_of(slices.begin(), slices.end(), IsDeparsed)) {
         // Reject mixes of deparsed/not deparsed fields.
-        if (!std::all_of(slices.begin(), slices.end(), IsDeparsed)) {
+        if (!std::all_of(slices.begin(), slices.end(), IsDeparsedOrDigest)) {
             LOG5("        constraint: mix of deparsed/not deparsed fields cannot be placed "
                  "together:" << slices);
             return false; }

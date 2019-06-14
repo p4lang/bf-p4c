@@ -230,10 +230,18 @@ struct Whitten {
     bit<1>  Powderly;
 }
 
+// header Welcome {
+//     @padding bit<4> __pad_1;
+//     bit<12> Teigen;
+//     bit<9>  Lowes;
+//     bit<3>  Almedia;
+//     @padding bit<4> __pad_2;
+// }
+
 header Welcome {
-    bit<12> Teigen;
-    bit<9>  Lowes;
-    bit<3>  Almedia;
+    @flexible bit<12> Teigen;
+    @flexible bit<9>  Lowes;
+    @flexible bit<3>  Almedia;
 }
 
 struct Chugwater {
@@ -260,10 +268,12 @@ struct Pridgen {
 
 @pa_alias("ingress" , "Naubinway.Boerne.Basic" , "Naubinway.Alamosa.PineCity") @pa_alias("ingress" , "Naubinway.DonaAna.Riner" , "Naubinway.DonaAna.Turkey") @pa_alias("ingress" , "Naubinway.Devers.Charco" , "Naubinway.Devers.Sutherlin") @pa_alias("egress" , "Naubinway.Elderon.Allison" , "Naubinway.Elderon.Ronda") @pa_alias("egress" , "Naubinway.Laxon.Algoa" , "Naubinway.Laxon.Thayne") @pa_no_init("ingress" , "Naubinway.Elderon.Rexville") @pa_no_init("ingress" , "Naubinway.Elderon.Quinwood") @pa_no_init("ingress" , "Naubinway.WindGap.Pilar") @pa_no_init("ingress" , "Naubinway.WindGap.Loris") @pa_no_init("ingress" , "Naubinway.WindGap.Vinemont") @pa_no_init("ingress" , "Naubinway.WindGap.Kenbridge") @pa_no_init("ingress" , "Naubinway.WindGap.Parkville") @pa_no_init("ingress" , "Naubinway.WindGap.Poulan") @pa_no_init("ingress" , "Naubinway.WindGap.Mystic") @pa_no_init("ingress" , "Naubinway.WindGap.Kearns") @pa_no_init("ingress" , "Naubinway.WindGap.Blakeley") @pa_no_init("ingress" , "Naubinway.Sewaren.Mackville") @pa_no_init("ingress" , "Naubinway.Sewaren.McBride") @pa_no_init("ingress" , "Naubinway.Montross.SoapLake") @pa_no_init("ingress" , "Naubinway.Montross.Linden") @pa_no_init("ingress" , "Naubinway.Knierim.Weinert") @pa_no_init("ingress" , "Naubinway.Knierim.Cornell") @pa_no_init("ingress" , "Naubinway.Knierim.Noyes") @pa_no_init("ingress" , "Naubinway.Knierim.Helton") @pa_no_init("ingress" , "Naubinway.Knierim.Grannis") @pa_no_init("ingress" , "Naubinway.Knierim.StarLake") @pa_no_init("egress" , "Naubinway.Elderon.Topanga") @pa_no_init("egress" , "Naubinway.Elderon.Allison") @pa_no_init("ingress" , "Naubinway.Lordstown.Suttle") @pa_no_init("ingress" , "Naubinway.Luzerne.Joslin") @pa_no_init("ingress" , "Naubinway.Brinkman.Skime") @pa_no_init("ingress" , "Naubinway.Brinkman.Goldsboro") @pa_no_init("ingress" , "Naubinway.Brinkman.Fabens") @pa_no_init("ingress" , "Naubinway.Brinkman.CeeVee") @pa_no_init("ingress" , "Naubinway.Brinkman.Roosville") @pa_no_init("ingress" , "Naubinway.Brinkman.Anacortes") @pa_no_init("ingress" , "Naubinway.Sewaren.Pilar") @pa_no_init("ingress" , "Naubinway.Sewaren.Loris") @pa_no_init("ingress" , "Naubinway.Devers.Sutherlin") @pa_no_init("ingress" , "Naubinway.Elderon.Ocoee") @pa_no_init("ingress" , "Naubinway.Elderon.Levittown") @pa_no_init("ingress" , "Naubinway.Hickox.Newfane") @pa_no_init("ingress" , "Naubinway.Hickox.Westboro") @pa_no_init("ingress" , "Naubinway.Hickox.LasVegas") @pa_no_init("ingress" , "Naubinway.Hickox.Armona") @pa_no_init("ingress" , "Naubinway.Hickox.Madawaska") @pa_no_init("ingress" , "Naubinway.Elderon.Albemarle") @pa_no_init("ingress" , "Naubinway.Elderon.LaPalma") @pa_mutually_exclusive("ingress" , "Naubinway.Montross.SoapLake" , "Naubinway.Montross.Linden")
 @pa_mutually_exclusive("ingress" , "Naubinway.Elderon.LaPalma" , "ig_intr_md.ingress_port")
-// @pa_container_size("egress", "Lamona.Knoke.McCammon", 32)
 @pa_mutually_exclusive("ingress", "Naubinway.Boerne.Oriskany", "Naubinway.Alamosa.Floyd")
 @pa_mutually_exclusive("ingress", "Lamona.Ackley.Lenexa", "Lamona.Knoke.McCammon")
 @pa_mutually_exclusive("ingress", "Naubinway.Boerne.Higginson", "Naubinway.Alamosa.Exton")
+@pa_container_size("ingress", "Naubinway.Alamosa.Exton", 32)
+@pa_container_size("egress", "Lamona.Knoke.Ipava", 32)
+@pa_container_size("ingress", "Lamona.Broussard.Monahans", 32)
 struct Beaverdam {
     Exell     ElVerano;
     Iberia    Brinkman;
@@ -302,14 +312,23 @@ struct Kremlin {
     bit<3>    Philbrook;
 }
 
+//struct Skyway {
+//    bit<24> Rocklin;
+//    bit<24> Wakita;
+//    bit<12> Latham;
+//    bit<20> Dandridge;
+//}
+
 struct Skyway {
     bit<24> Rocklin;
     bit<24> Wakita;
+    @padding bit<4> pad_1;
     bit<12> Latham;
+    @padding bit<12> pad_0;
     bit<20> Dandridge;
 }
 
-struct Colona {
+@flexible struct Colona {
     bit<12>  Wilmore;
     bit<24>  Piperton;
     bit<24>  Fairmount;
@@ -452,30 +471,54 @@ header Vergennes {
     bit<16> LaLuz;
 }
 
+// header Townville {
+//     bit<32> Monahans;
+//     @padding
+//     bit<4>  _pad_3;
+//     bit<12> Pinole;
+//     @padding
+//     bit<4> _pad_4;
+//     bit<3>  Bells;
+//     bit<1>  Corydon;
+//     bit<12> Heuvelton;
+//     bit<3>  Chavies;
+//     bit<1>  Miranda;
+//     bit<8>  Peebles;
+//     bit<24> Wellton;
+//     bit<24> Kenney;
+//     bit<1>  Crestone;
+//     bit<1>  Buncombe;
+//     bit<6>  Pettry;
+//     bit<6>  Montague;
+//     bit<2>  Rocklake;
+//     bit<16> Fredonia;
+//     @padding bit<7> _pad_6;
+//     bit<9>  Stilwell;
+//     @padding bit<1>  _pad_5;
+//     bit<3>  LaUnion;
+//     bit<4>  Cuprum;
+// }
+
 header Townville {
     bit<32> Monahans;
-    @padding
-    bit<4>  _pad_3;
-    bit<12> Pinole;
-    @padding
-    bit<4> _pad_4;
-    bit<3>  Bells;
-    bit<1>  Corydon;
-    bit<12> Heuvelton;
-    bit<3>  Chavies;
-    bit<1>  Miranda;
-    bit<8>  Peebles;
-    bit<24> Wellton;
-    bit<24> Kenney;
-    bit<1>  Crestone;
-    bit<1>  Buncombe;
-    bit<6>  Pettry;
-    bit<6>  Montague;
-    bit<2>  Rocklake;
-    bit<16> Fredonia;
-    bit<9>  Stilwell;
-    bit<3>  LaUnion;
-    bit<4>  Cuprum;
+    @flexible bit<12> Pinole;
+    @flexible bit<3>  Bells;
+    @flexible bit<1>  Corydon;
+    @flexible bit<12> Heuvelton;
+    @flexible bit<3>  Chavies;
+    @flexible bit<1>  Miranda;
+    @flexible bit<8>  Peebles;
+    @flexible bit<24> Wellton;
+    @flexible bit<24> Kenney;
+    @flexible bit<1>  Crestone;
+    @flexible bit<1>  Buncombe;
+    @flexible bit<6>  Pettry;
+    @flexible bit<6>  Montague;
+    @flexible bit<2>  Rocklake;
+    @flexible bit<16> Fredonia;
+    @flexible bit<9>  Stilwell;
+    @flexible bit<3>  LaUnion;
+    @flexible bit<4>  Cuprum;
 }
 
 @pa_no_init("egress" , "Lamona.Arvada.Sheldahl") @pa_no_init("egress" , "Lamona.Arvada.Soledad") @pa_no_init("egress" , "Lamona.Arvada.Gasport") @pa_no_init("egress" , "Lamona.Arvada.Chatmoss") @pa_no_init("egress" , "Lamona.Arvada.Billings") @pa_no_init("egress" , "Lamona.Arvada.Lakehills") @pa_no_init("egress" , "Lamona.Arvada.Wartburg") @pa_no_init("egress" , "Lamona.Arvada.Heppner") @pa_no_init("egress" , "Lamona.Arvada.NewMelle") @pa_no_init("egress" , "Lamona.Arvada.Sledge") struct Belview {
@@ -803,7 +846,8 @@ control Rainelle(packet_out Paulding, inout Belview Millston, in Beaverdam HillT
             Doddridge.emit<Welcome>(HillTop.Devers.Charco, HillTop.Crozet);
         }
         if (Dateland.digest_type == 3w2) {
-            Emida.pack({ HillTop.Brinkman.Fabens, HillTop.Brinkman.CeeVee, HillTop.Brinkman.Haugan, HillTop.Brinkman.Paisano });
+            Emida.pack({ HillTop.Brinkman.Fabens, HillTop.Brinkman.CeeVee, 4w0,
+                    HillTop.Brinkman.Haugan, 12w0, HillTop.Brinkman.Paisano });
         }
         else 
             if (Dateland.digest_type == 3w3) {

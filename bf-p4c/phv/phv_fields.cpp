@@ -591,31 +591,31 @@ bool PHV::Field::checkContext(
             auto stages = PhvInfo::minStage(TableSummary::getTableName(tbl));
             bool inLiveRange = false;
             for (auto stage : stages) {
-                LOG1("\t\tStage: " << stage);
-                LOG1("\t\tTable: " << tbl->name << ", P4 Name: " <<
+                LOG3("\t\tStage: " << stage);
+                LOG3("\t\tTable: " << tbl->name << ", P4 Name: " <<
                         TableSummary::getTableName(tbl));
                 if (use) {
-                    LOG1("\t\t  " << slice.min_stage.first << " < " << stage << " = " <<
+                    LOG3("\t\t  " << slice.min_stage.first << " < " << stage << " = " <<
                             (slice.min_stage.first < stage));
-                    LOG1("\t\t  " << (slice.min_stage.first == stage) << " && (" << *use <<
+                    LOG3("\t\t  " << (slice.min_stage.first == stage) << " && (" << *use <<
                             " <= " << slice.max_stage.second << ") = " <<
                             (*use <= slice.min_stage.second));
                     bool greaterThanMinStage = (slice.min_stage.first < stage) ||
                         (slice.min_stage.first == stage && *use >= slice.min_stage.second);
                     bool lessThanMaxStage = (stage < slice.max_stage.first) ||
                         (stage == slice.max_stage.first && *use <= slice.max_stage.second);
-                    LOG1("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
+                    LOG3("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
                             ", lessThanMaxStage: " << lessThanMaxStage);
                     inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
                 } else {
                     bool greaterThanMinStage = slice.min_stage.first <= stage;
                     bool lessThanMaxStage = stage <= slice.max_stage.first;
-                    LOG1("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
+                    LOG3("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
                             ", lessThanMaxStage: " << lessThanMaxStage);
                     inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
                 }
             }
-            LOG1("\t\tinLiveRange: " << inLiveRange);
+            LOG3("\t\tinLiveRange: " << inLiveRange);
             return inLiveRange;
         }
 
