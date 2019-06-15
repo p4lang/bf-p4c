@@ -250,7 +250,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Unable to force_immediate on table"
+  "error.*Unable to force_immediate on table|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
 )
 
@@ -281,7 +281,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/08-MacAddrCheck1.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/kindlings_0.p4
   testdata/p4_16_samples/issue1544-bmv2.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 # BRIG_132
@@ -424,6 +423,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The input .* cannot be found on the hash input"
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -472,7 +473,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
-)
+ 
+  ba101_20-simple_l2
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
+  )
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -829,6 +833,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
 )
 
 # Negative test. Constant extractor destination whose sources need more than 3 bits to express must
@@ -906,10 +911,12 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
-  c2_COMPILER-537_case2834
-  c2_COMPILER-514_balancer_one
-  c2_COMPILER-510_case2682
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error.*condition too complex|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1342,6 +1349,25 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slice point cannot be -1 at this point"
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Slicing the following supercluster is taking too long...|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Slicing the following supercluster is taking too long..."
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
 )
 
 # P4C-1445, DRV-2667
@@ -1371,4 +1397,44 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
+)
+
+# P4C-1723
+p4c_add_xfail_reason("tofino"
+  "Invalid args to MakeSlice"
+  ba101_07-simple_l3_ind_cntr
+)
+
+p4c_add_xfail_reason("tofino"
+  "Inconsisten index for next of"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Dynamic hashes must have the same field list and sets of algorithm for each get call|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1672-1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "is not allocated contiguously by bit on the input xbar and cannot be resolved"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-a.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Parser match register not allocated for .*"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )

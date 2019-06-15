@@ -84,6 +84,10 @@ p4c_add_ptf_test_with_ptfdir (
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
 set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/emulation/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/atomic_mod/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/dyn_hash/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/entry_read_from_hw/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/hash_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/incremental_checksum/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_switching/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/chksum/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/deparse_zero/*.p4"
@@ -93,9 +97,36 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/emulation
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/resubmit/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/multicast_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/mirror_test/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/default_entry/*.p4"
+               # Might need to move this test to nightly if it times out on Travis
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/dkm/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/hash_driven/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/meters/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pvs/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/resubmit/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/smoke_large_tbls/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/stful/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/fast_reconfig/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 bfn_add_p4factory_tests("tofino2" "smoketest_programs" BFN_TESTS_LIST)
+
+bfn_set_ptf_test_spec("tofino2" "extensions/p4_tests/p4-programs/programs/meters/meters.p4"
+        "^test.TestMeterOmnet
+        test.TestTCAMLpfIndirect
+        test.TestExmLpfIndirect
+        test.TestExmLpfdirect
+        test.TestByteAdj
+        test.TestMeterIndirectStateRestore
+        test.TestMeterScopes
+        test.TestExmMeterIndirect
+        test.TestMeterDirectStateRestore
+        test.TestExmMeterColorAwareIndirect
+        test.TestTCAMLpfdirect
+        test.TestExmMeterDirect")
+
+bfn_set_ptf_test_spec("tofino2" "extensions/p4_tests/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4"
+       "test.TestAtcam
+       test.TestAtcamTernaryValid")
 
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/multicast_test/ports.json")
@@ -105,9 +136,40 @@ bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/mirror_test/ports.json")
 bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
                             "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/ha/ports.json")
+bfn_set_ptf_ports_json_file("tofino2" "extensions/p4_tests/p4-programs/programs/pvs/pvs.p4"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/pvs/ports.json")
 
 bfn_set_pd_build_flag("tofino2" "extensions/p4_tests/p4-programs/programs/ha/ha.p4"
     "\"--gen-hitless-ha-test-pd\"")
+
+# Add some tests as compile only (if they take too long to run or cannot be run
+# in compiler docker env due to port issues or lack of pd-16 support)
+set (TOF2_V1MODEL_COMPILE_ONLY_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/action_spec_format/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_direct_1/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_indirect_1/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/exm_smoke_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/knet_mgr_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/mau_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/mod_field_conditionally/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/multi_device/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/multicast_scale/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_saturating/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_signed/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/opcode_test_signed_and_saturating/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/parser_error/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/parser_intr_md/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/pgrs_tof2/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/range/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/alpm_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/iterator/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/perf_test/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/perf_test_alpm/*.p4"
+                                     "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/pgrs/*.p4")
+bfn_find_tests ("${TOF2_V1MODEL_COMPILE_ONLY_TESTS}" TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "smoketest_programs" "${TOF2_V1MODEL_COMPILE_ONLY_TESTS_LIST}")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
@@ -144,6 +206,24 @@ p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+
+file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_hwlrn" ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE  
+  "p4_16_internal_p4_16_lrn" ${p4_16_internal_p4_16_path}/lrn/lrn.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_t2na_emulation" ${p4_16_internal_p4_16_path}/t2na_emulation/t2na_emulation.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_t2na_fifo" ${p4_16_internal_p4_16_path}/t2na_fifo/t2na_fifo.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_t2na_pgr" ${p4_16_internal_p4_16_path}/t2na_pgr/t2na_pgr.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_t2na_static_entry" ${p4_16_internal_p4_16_path}/t2na_static_entry/t2na_static_entry.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_tna_pvs_multi_states" ${p4_16_internal_p4_16_path}/tna_pvs_multi_states/tna_pvs_multi_states.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)

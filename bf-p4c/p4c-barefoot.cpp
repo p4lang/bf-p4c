@@ -81,30 +81,35 @@ class GenerateOutputs : public PassManager {
     void outputContext() {
         cstring ctxtFileName = _outputDir + "/context.json";
         std::ofstream ctxtFile(ctxtFileName);
-        auto ctxt = new Util::JsonObject();
+        rapidjson::StringBuffer sb;
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
+        writer.StartObject();
         const time_t now = time(NULL);
         char build_date[1024];
         strftime(build_date, 1024, "%c", localtime(&now));
-        ctxt->emplace("build_date", new Util::JsonValue(build_date));
-        ctxt->emplace("program_name", new Util::JsonValue(_options.programName + ".p4"));
-        ctxt->emplace("run_id", new Util::JsonValue(RunId::getId()));
-        ctxt->emplace("schema_version", new Util::JsonValue(CONTEXT_SCHEMA_VERSION));
-        ctxt->emplace("compiler_version", new Util::JsonValue(BF_P4C_VERSION));
-        ctxt->emplace("target", new Util::JsonValue(_options.target));
-        ctxt->emplace("tables", new Util::JsonArray());
-        ctxt->emplace("phv_allocation", new Util::JsonArray());
-        auto parser = new Util::JsonObject();
-        parser->emplace("ingress", new Util::JsonArray());
-        parser->emplace("egress", new Util::JsonArray());
-        ctxt->emplace("parser", parser);
-        ctxt->emplace("learn_quanta", new Util::JsonArray());
-        ctxt->emplace("dynamic_hash_calculations", new Util::JsonArray());
-        ctxt->emplace("configuration_cache", new Util::JsonArray());
-        auto drv_opts = new Util::JsonObject();
-        drv_opts->emplace("hash_parity_enabled", new Util::JsonValue(false));
-        ctxt->emplace("driver_options", drv_opts);
-
-        ctxt->serialize(ctxtFile);
+        writer.Key("build_date"); writer.String(build_date);
+        writer.Key("program_name");
+        writer.String(std::string(_options.programName + ".p4").c_str());
+        writer.Key("run_id"); writer.String(RunId::getId().c_str());
+        writer.Key("schema_version"); writer.String(CONTEXT_SCHEMA_VERSION);
+        writer.Key("compiler_version"); writer.String(BF_P4C_VERSION);
+        writer.Key("target"); writer.String(std::string(_options.target).c_str());
+        writer.Key("tables"); writer.StartArray(); writer.EndArray();
+        writer.Key("phv_allocation"); writer.StartArray(); writer.EndArray();
+        writer.Key("parser");
+        writer.StartObject();
+        writer.Key("ingress"); writer.StartArray(); writer.EndArray();
+        writer.Key("egress"); writer.StartArray(); writer.EndArray();
+        writer.EndObject();
+        writer.Key("learn_quanta"); writer.StartArray(); writer.EndArray();
+        writer.Key("dynamic_hash_calculations"); writer.StartArray(); writer.EndArray();
+        writer.Key("configuration_cache"); writer.StartArray(); writer.EndArray();
+        writer.Key("driver_options");
+        writer.StartObject();
+        writer.Key("hash_parity_enabled"); writer.Bool(false);
+        writer.EndObject();
+        writer.EndObject();  // end of context
+        ctxtFile << sb.GetString();
         ctxtFile.flush();
         ctxtFile.close();
         auto contextDir = BFNContext::get().getOutputDirectory("", _pipeId)

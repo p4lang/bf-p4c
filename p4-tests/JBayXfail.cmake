@@ -74,6 +74,8 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -293,4 +295,93 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "mismatch from expected.*at byte"
   extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
+)
+
+# Not being tracked by JBay regression yet
+p4c_add_xfail_reason("tofino2"
+  "Field key is not a member of structure header pktgen_recirc_header_t"
+  extensions/p4_tests/p4-programs/programs/stful/stful.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Inconsisten index for next of"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Dynamic hashes must have the same field list and sets of algorithm for each get call"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Metadata initialization analysis incorrect.  Live ranges between .* and .* overlap"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "ActionAnalysis did not split up container by container"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Slice point cannot be -1 at this point"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Parser match register not allocated for .*"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "The input .* cannot be found on the hash input"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Slicing the following supercluster is taking too long"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  ".* is not allocated contiguously by bit on the input xbar and cannot be resolved"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-a.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Field .* is not a member of structure header .*"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Select on uninitialized value:"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Inconsisten index for next of .* in state .*"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Name '.*' is used for multiple Register objects in the P4Info message"
+  p4_16_internal_p4_16_t2na_fifo
+  p4_16_internal_p4_16_t2na_pgr
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Unsupported on target Cannot specify .* as the default action, as it requires the hash distribution unit"
+  p4_16_internal_p4_16_hwlrn
 )

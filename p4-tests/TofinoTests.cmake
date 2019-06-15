@@ -68,41 +68,6 @@ set (TOFINO_V1_TEST_SUITES
   # glass parde tests
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/*/*.p4
-  # glass c1 tests
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-913/test_config_395_checksum_update_location.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-915/test_config_393_alias_dep.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-964/test_config_401_random_num.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-977/comp_977.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1019/case6894.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1041/comp_1041.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1066/test_config_414_container_valid_bit_for_tcam.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1105/test_config_417_disable_xbar_sharing.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-673/test_config_350_atcam_with_default_action.p4
-  # glass c2 tests
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
-  # glass c13 tests
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-564/case3825.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-687/case3769.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-688/06-Phase0.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-842/comp_842.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-842/mod_field_cond.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-854/case5273.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-922/case5792.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-938/bitscopy_test.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1003/case6738.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1006/case6738_2.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1026/case6830.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/COMPILER-1028/case6962.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/noviflow/DRV-1092/drv_1092.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES}")
 
@@ -112,38 +77,6 @@ set (TOFINO_V1_TEST_SUITES_P416
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf_p4c_samples/*.p4
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${TOFINO_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
-
-set (ARISTA_P4_14_TESTS
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
-  )
-
-# Add additional flags to c1 tests
-p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${ARISTA_P4_14_TESTS}"
-  "--backward-compatible -to 595 -Xp4c=\"--disable-pragma=pa_container_size\"")
-
-# Add some long running glass c2 tests with increased timeout
-file(RELATIVE_PATH glass_c2_path ${P4C_SOURCE_DIR} ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp)
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-421_case2434" ${glass_c2_path}/COMPILER-421/case2434.p4 "${testExtraArgs} -to 2400" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-426_case2475" ${glass_c2_path}/COMPILER-426/case2475.p4 "${testExtraArgs} -to 2400" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-599_case3230" ${glass_c2_path}/COMPILER-599/case3230.p4 "${testExtraArgs} -to 2400" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-510_case2682" ${glass_c2_path}/COMPILER-510/case2682.p4 "${testExtraArgs} -to 2400" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-514_balancer_one" ${glass_c2_path}/COMPILER-514/balancer_one.p4 "${testExtraArgs} -to 2400" "")
-p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "c2_COMPILER-537_case2834" ${glass_c2_path}/COMPILER-537/case2834.p4 "${testExtraArgs} -to 2400" "")
-
-
-# 500s timeout is too little for compiling some glass c2 tests, bumping it up
-set_tests_properties("tofino/c2_COMPILER-421_case2434" PROPERTIES TIMEOUT 2400)
-set_tests_properties("tofino/c2_COMPILER-426_case2475" PROPERTIES TIMEOUT 2400)
-set_tests_properties("tofino/c2_COMPILER-599_case3230" PROPERTIES TIMEOUT 2400)
-set_tests_properties("tofino/c2_COMPILER-510_case2682" PROPERTIES TIMEOUT 2400)
-set_tests_properties("tofino/c2_COMPILER-514_balancer_one" PROPERTIES TIMEOUT 2400)
-set_tests_properties("tofino/c2_COMPILER-537_case2834" PROPERTIES TIMEOUT 2400)
 
 set (TOFINO_TNA_TEST_SUITES
   ${p16_tna_tests}
@@ -556,10 +489,10 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "P4C-1021-2"
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/P4C-1021-2/P4C_1021_2.ptf")
 
 # Barefoot academy tests
-set (BA_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ba-101/labs/*/solution/p4src/*.p4")
-p4c_find_tests("${BA_TESTS_FOR_TOFINO}" ba_tests INCLUDE "__TARGET_TOFINO__")
-# message("BA-101 tests: ${ba_tests}")
-foreach(t IN LISTS ba_tests)
+set (BA101_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ba-101/labs/*/solution/p4src/*.p4")
+p4c_find_tests("${BA101_TESTS_FOR_TOFINO}" ba101_tests INCLUDE "__TARGET_TOFINO__")
+# message("BA-101 tests: ${ba101_tests}")
+foreach(t IN LISTS ba101_tests)
   get_filename_component(__td ${t} DIRECTORY)
   string (REGEX REPLACE "ba-101/labs/([0-9]+[a-z0-9_-]+)/solution.*" "\\1" __t ${__td})
   if (CMAKE_MATCH_1)
@@ -567,12 +500,24 @@ foreach(t IN LISTS ba_tests)
   endif()
   set (ptfdir "${__td}/../ptf-tests")
   if (EXISTS ${ptfdir})
-    p4c_add_ptf_test_with_ptfdir ("tofino" ${testname} ${t} "${testExtraArgs} -pd" ${ptfdir})
+    p4c_add_ptf_test_with_ptfdir ("tofino" ba101_${testname} ${t} "${testExtraArgs} -pd" ${ptfdir})
   else()
     file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
-    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ${testname} ${testfile} "${testExtraArgs}" "")
+    p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba101_${testname} ${testfile} "${testExtraArgs}" "")
   endif()
-  p4c_add_test_label("tofino" "BA-101" ${testname})
+  p4c_add_test_label("tofino" "BA-101" ba101_${testname})
+endforeach()
+
+set (BA102_TESTS_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ba-102/labs/*/solution/p4src/*.p4")
+p4c_find_tests("${BA102_TESTS_FOR_TOFINO}" ba102_tests INCLUDE "tna.p4")
+# message("BA-102 tests: ${ba102_tests}")
+foreach(t IN LISTS ba102_tests)
+  get_filename_component(p4name ${t} NAME)
+  string (REGEX REPLACE ".p4" "" testname ${p4name})
+  # TODO: Only one ptf test available, figure out how to run p4-16 pd test in our env
+  p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+  p4c_add_test_label("tofino" "BA-102" ba102_${testname})
+  set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
 endforeach()
 
 # p4testgen ptf tests for p4factory programs
@@ -738,6 +683,9 @@ set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 
 set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
 
 include(Switch.cmake)
+
+# TODO: Move all glass tests to this file
+include(GlassTests.cmake)
 
 include(TofinoMustPass.cmake)
 include(TofinoXfail.cmake)
