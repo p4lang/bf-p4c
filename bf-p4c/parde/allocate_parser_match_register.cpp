@@ -11,8 +11,6 @@
 // Insert a stall state on transition whose next state requires
 // branch word that is out of the input buffer of the current state.
 struct ResolveOutOfBufferSelects : public ParserTransform {
-    std::map<gress_t, std::map<cstring, IR::BFN::ParserState*>> src_to_stall_state;
-
     CollectParserInfo parser_info;
 
     profile_t init_apply(const IR::Node* root) override {
@@ -27,19 +25,16 @@ struct ResolveOutOfBufferSelects : public ParserTransform {
         return p;
     }
 
+    // keep track of number stall states from orig_state
+    std::map<cstring, unsigned> orig_state_to_stall_cnt;
+
     void insert_stall_state_for_oob_select(IR::BFN::Transition* t) {
         auto orig = getOriginal<IR::BFN::Transition>();
         auto src = parser_info.graph(parser).get_src(orig);
 
-        IR::BFN::ParserState* stall = nullptr;
-
-        if (src_to_stall_state[src->gress].count(src->name)) {
-            stall = src_to_stall_state[src->gress].at(src->name);
-        } else {
-            cstring name = src->name + ".$stall";
-            stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
-            src_to_stall_state[src->gress][src->name] = stall;
-        }
+        auto cnt = orig_state_to_stall_cnt[src->name]++;
+        cstring name = src->name + ".$stall_" + cstring::to_cstring(cnt);
+        auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
 
         LOG2("created stall state for out of buffer select on "
               << src->name << " -> " << t->next->name);
