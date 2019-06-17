@@ -575,6 +575,28 @@ struct AllocateParserState : public ParserTransform {
                         spilled->to<IR::BFN::ParserPrimitive>()};
             }
 
+            struct GetPacketRVal : Inspector {
+                const IR::BFN::PacketRVal* rv = nullptr;
+
+                bool preorder(const IR::BFN::PacketRVal* rval) override {
+                    rv = rval;
+                    return false;
+                }
+            };
+
+            void sort_by_buffer_pos(std::vector<const IR::BFN::ParserChecksumPrimitive*>& prims) {
+                std::stable_sort(prims.begin(), prims.end(),
+                    [&] (const IR::BFN::ParserChecksumPrimitive* a,
+                         const IR::BFN::ParserChecksumPrimitive* b) {
+                    GetPacketRVal va, vb;
+
+                    a->apply(va);
+                    b->apply(vb);
+
+                    return (va.rv && vb.rv) ? va.rv->range < vb.rv->range : false;
+                });
+            }
+
             void allocate() override {
                 std::map<cstring,
                          std::vector<const IR::BFN::ParserChecksumPrimitive*>> decl_to_checksums;
@@ -583,17 +605,27 @@ struct AllocateParserState : public ParserTransform {
                     decl_to_checksums[c->declName].push_back(c);
 
                 for (auto& kv : decl_to_checksums) {
+                    sort_by_buffer_pos(kv.second);
+                }
+
+                for (auto& kv : decl_to_checksums) {
+                    bool oob = false;
+
                     for (auto c : kv.second) {
-                        if (within_buffer(c)) {
+                        if (oob) {
+                            spilled.push_back(c);
+                        } else if (within_buffer(c)) {
                             current.push_back(c);
                         } else if (out_of_buffer(c)) {
                             spilled.push_back(c);
                             LOG3("spill " << c << " (out of buffer)");
+                            oob = true;
                         } else if (straddles_buffer(c)) {
                             auto sliced = slice_by_buffer(c);
                             current.push_back(sliced.first);
                             spilled.push_back(sliced.second);
                             LOG3("spill " << c << " (straddles buffer)");
+                            oob = true;
                         }
                     }
                 }
