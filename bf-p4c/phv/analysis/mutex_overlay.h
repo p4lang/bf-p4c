@@ -209,12 +209,17 @@ class ExcludePragmaNoOverlayFields : public Inspector {
 class FindAddedHeaderFields : public MauInspector {
  private:
     PhvInfo& phv;
-    bitvec& rv;
+    bitvec rv;
 
+    profile_t init_apply(const IR::Node* root) override {
+        rv.clear();
+        return Inspector::init_apply(root);
+    }
     bool preorder(const IR::Primitive* prim) override;
 
  public:
-    FindAddedHeaderFields(PhvInfo& phv, bitvec& rv) : phv(phv), rv(rv) { }
+    explicit FindAddedHeaderFields(PhvInfo& phv) : phv(phv) { }
+    bool isAddedInMAU(const PHV::Field* field) const { return rv[field->id]; }
 };
 
 class ExcludeMAUOverlays : public MauInspector {
@@ -222,7 +227,8 @@ class ExcludeMAUOverlays : public MauInspector {
     using ActionToFieldsMap = ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>>;
 
  private:
-    PhvInfo& phv;
+    PhvInfo&                        phv;
+    const FindAddedHeaderFields&    addedFields;
 
     ActionToFieldsMap actionToWrites;
     ActionToFieldsMap actionToReads;
@@ -234,7 +240,7 @@ class ExcludeMAUOverlays : public MauInspector {
     }
 
     bool preorder(const IR::MAU::Table* tbl) override;
-    bool preorder(const IR::MAU::Instruction* act) override;
+    bool preorder(const IR::MAU::Instruction* inst) override;
     void end_apply() override;
 
     // Given map of action to fields @arg, mark all fields corresponding to the same action as
@@ -242,7 +248,8 @@ class ExcludeMAUOverlays : public MauInspector {
     void markNonMutex(const ActionToFieldsMap& arg);
 
  public:
-    explicit ExcludeMAUOverlays(PhvInfo& p) : phv(p) { }
+    explicit ExcludeMAUOverlays(PhvInfo& p, const FindAddedHeaderFields& a)
+        : phv(p), addedFields(a) { }
 };
 
 class MarkMutexPragmaFields : public Inspector {
@@ -261,20 +268,22 @@ class MarkMutexPragmaFields : public Inspector {
 class MutexOverlay : public PassManager {
  private:
     /// Field IDs of fields that cannot be overlaid.
-    bitvec              neverOverlay;
+    bitvec                  neverOverlay;
+    FindAddedHeaderFields   addedFields;
 
  public:
     MutexOverlay(
             PhvInfo& phv,
-            const PHV::Pragmas& pragmas) {
+            const PHV::Pragmas& pragmas)
+    : addedFields(phv) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
-            // new FindAddedHeaderFields(phv, neverOverlay),
+            &addedFields,
             new ExcludeAliasedHeaderFields(phv, neverOverlay),
             new BuildParserOverlay(phv, neverOverlay),
             new BuildMetadataOverlay(phv, neverOverlay),
-            new ExcludeMAUOverlays(phv),
+            new ExcludeMAUOverlays(phv, addedFields),
             new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())
         });
     }

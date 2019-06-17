@@ -63,7 +63,7 @@ void BuildMutex::end_apply() {
             if (f1->overlayable) {
                 ::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
             } else {
-                LOG5("Excluding field from overlay: " << *it1);
+                LOG5("Excluding field from overlay: " << phv.field(*it1));
                 continue;
             }
         }
@@ -76,7 +76,7 @@ void BuildMutex::end_apply() {
                 if (f2->overlayable) {
                     ::warning("Ignoring pa_no_overlay for padding field %1%", f2->name);
                 } else {
-                    LOG5("Excluding field from overlay: " << *it2);
+                    LOG5("Excluding field from overlay: " << phv.field(*it2));
                     continue;
                 }
             }
@@ -128,6 +128,7 @@ bool ExcludeMAUOverlays::preorder(const IR::MAU::Table* tbl) {
     for (auto* f1 : keyFields) {
         for (auto* f2 : keyFields) {
             if (f1 == f2) continue;
+            if (!addedFields.isAddedInMAU(f1) && !addedFields.isAddedInMAU(f2)) continue;
             phv.removeFieldMutex(f1, f2);
             LOG5("\t  Mark key fields for table " << tbl->name << " as non mutually exclusive: "
                  << f1->name << ", " << f2->name);
@@ -160,6 +161,8 @@ void ExcludeMAUOverlays::markNonMutex(const ActionToFieldsMap& arg) {
         for (auto* f1 : kv.second) {
             for (auto* f2 : kv.second) {
                 if (f1 == f2) continue;
+                if (!addedFields.isAddedInMAU(f1) && !addedFields.isAddedInMAU(f2))
+                    continue;
                 LOG3("\t  Mark as non mutually exclusive: " << f1->name << ", " << f2->name);
                 phv.removeFieldMutex(f1, f2); } } }
 }
@@ -197,8 +200,7 @@ bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {
             if (auto* hr = m->expr->to<IR::HeaderRef>()) {
                 // then add all fields of the header (not including $valid) to
                 // the set of fields that are part of added headers
-                LOG1("Found added header.  Conservatively assuming it is not "
-                     "mutually exclusive with any other header:" << hr);
+                LOG4("Found added header: " << hr);
                 PhvInfo::StructInfo info = phv.struct_info(hr);
                 for (int id : info.field_ids()) {
                     rv[id] = true; } } } }
