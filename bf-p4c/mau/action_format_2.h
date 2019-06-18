@@ -741,6 +741,7 @@ using ModCondMap = std::map<cstring, safe_vector<bitvec>>;
 class Format {
  public:
     static constexpr int IMMEDIATE_BITS = 32;
+    static constexpr int ACTION_RAM_BYTES = 16;
 
     struct Use {
         std::map<cstring, safe_vector<ALUPosition>> alu_positions;
@@ -848,6 +849,7 @@ class Format {
         const RamSection *ad, size_t i_pos, size_t j_pos);
     void set_ram_sect_byte(SingleActionAllocation &single_action_alloc,
         bitvec &allocated_slots_in_action, RamSectionPosition &ram_sect, int byte_position);
+    bitvec adt_iteration(SlotType_t slot_type, int &iteration);
     void alloc_adt_slots_of_size(SlotType_t slot_size, SingleActionAllocation &single_action_alloc,
         int max_bytes_required);
     void alloc_immed_slots_of_size(SlotType_t size, SingleActionAllocation &single_action_alloc,

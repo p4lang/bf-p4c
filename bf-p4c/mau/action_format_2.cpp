@@ -2480,6 +2480,47 @@ void Format::alloc_immed_slots_of_size(SlotType_t slot_type,
 }
 
 /**
+ * For differently sized ALU Slots, particular regions of the Action RAM are more optimal
+ * for these kind of slots.
+ *
+ * The constraints of the Action Data Bus allocation require more Action Data Bus bytes
+ * the higher lsb on a particular RAM.  However, it is much more constraining the smaller the
+ * size.
+ *
+ * For example, if byte 8 is used for an 8-bit ALU, then any data between bytes 8-15 get ORed
+ * onto the action data bus, meaning potentially 8 8-bit slots are used.  The same rules apply
+ * for 32-bit slots, however, only 2 32-bit slots get used.
+ *
+ * This is most impactful for a table that uses more than 1 wide action RAM, as this would
+ * allocate the lower bytes to the smaller slot_types across multiple RAMs.
+ *
+ * On each iteration, depending on the size of the slot_type, more potential action RAM space
+ * for allocation opens up.
+ */
+bitvec Format::adt_iteration(SlotType_t slot_type, int &iteration) {
+    bitvec rv;
+    if (slot_type == BYTE) {
+        switch (iteration) {
+            case 0: rv.setrange(0, 4); break;
+            case 1: rv.setrange(4, 4); break;
+            case 2: rv.setrange(0, 8); break;
+            case 3: rv.setrange(0, 16);
+            default: break;
+        }
+    } else if (slot_type == HALF) {
+        switch (iteration) {
+            case 0: rv.setrange(0, 8); break;
+            case 1: rv.setrange(0, 16); break;
+            default: break;
+        }
+    } else {
+        if (iteration == 0)
+            rv.setrange(0, 16);
+    }
+    return rv;
+}
+
+/**
  * Allocate the action data sections that have inputs of size == slot_type.  They will remove
  * themselves from the orig_input and the allocation will be added to the alloc_inputs.
  * The inputs will also try to reuse already used action data inputs from other actions in the
@@ -2504,7 +2545,7 @@ void Format::alloc_adt_slots_of_size(SlotType_t slot_type,
         bool found = false;
         int byte_position = 0;
         // Try to reuse other actions inputs of the same size
-        for (int i = 0; i <= max_bytes_required; i += byte_sz) {
+        for (int i = 0; i < max_bytes_required; i += byte_sz) {
             if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
                 continue;
             bitvec slots_in_use = (*single_action_alloc.all_action_inputs)[ss_i];
@@ -2517,12 +2558,24 @@ void Format::alloc_adt_slots_of_size(SlotType_t slot_type,
 
         // Just find the first available space
         if (!found) {
-            for (int i = 0; i <= max_bytes_required; i += byte_sz) {
-                if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
-                    continue;
-                found = true;
-                byte_position = i;
-                break;
+            int iteration = 0;
+            bitvec ram_bytes_avail = adt_iteration(slot_type, iteration);
+            while (!ram_bytes_avail.empty()) {
+                for (int i = 0; i < max_bytes_required; i += byte_sz) {
+                    bitvec can_alloc_bytes = ram_bytes_avail.getslice(i % ACTION_RAM_BYTES,
+                                                                      byte_sz);
+                    if (can_alloc_bytes.popcount() != byte_sz)
+                        continue;
+                    if (!allocated_slots_in_action.getslice(i, byte_sz).empty())
+                        continue;
+                    found = true;
+                    byte_position = i;
+                    break;
+                }
+                if (found)
+                    break;
+                iteration++;
+                ram_bytes_avail = adt_iteration(slot_type, iteration);
             }
         }
 

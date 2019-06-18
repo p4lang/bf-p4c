@@ -493,7 +493,7 @@ bool ActionDataBus::alloc_bytes(Use &use, bitvec layout, bitvec combined_layout,
     ActionData::SlotType_t type = ActionData::BYTE;
     bitvec adjacent = layout.getslice(8 /* start byte 8 */, 8 /* size 8 */);
     bitvec combined_adjacent = combined_layout.getslice(8, 8);
-    if (layout.max().index() > 8) {
+    if (!adjacent.empty()) {
         bool found = fit_adf_section(use, adjacent, combined_adjacent, type, FIND_NORMAL,
                                      init_byte_offset, 8, 8, name, source);
         if (!found) return false;
