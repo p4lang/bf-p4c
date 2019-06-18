@@ -500,15 +500,15 @@ PhvSpec::AddressSpec JBayPhvSpec::_physicalParserAddresses = {
 };
 
 JBayPhvSpec::JBayPhvSpec() {
-    addType(PHV::Type::B);
-    addType(PHV::Type::H);
     addType(PHV::Type::W);
-    addType(PHV::Type::MB);
-    addType(PHV::Type::MH);
     addType(PHV::Type::MW);
-    addType(PHV::Type::DB);
-    addType(PHV::Type::DH);
     addType(PHV::Type::DW);
+    addType(PHV::Type::B);
+    addType(PHV::Type::MB);
+    addType(PHV::Type::DB);
+    addType(PHV::Type::H);
+    addType(PHV::Type::MH);
+    addType(PHV::Type::DH);
 
     auto phv_scale_factor = BackendOptions().phv_scale_factor;
     if (phv_scale_factor != 1.0)

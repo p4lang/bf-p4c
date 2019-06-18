@@ -13,10 +13,11 @@ GenerateParserP4iJson::generateExtracts(const IR::BFN::LoweredParserMatch* match
         if (auto* extract_ir = prim->to<IR::BFN::LoweredExtractPhv>()) {
             P4iParserExtract extract;
             size_t container_sz = extract_ir->dest->container.size();
+            const auto &phvSpec = Device::phvSpec();
+            auto cid = phvSpec.containerToId(extract_ir->dest->container);
             extract.extractor_id = extractor_ids[container_sz]++;
             extract.bit_width = container_sz;
-            extract.dest_container =
-                Device::phvSpec().containerToId(extract_ir->dest->container);
+            extract.dest_container = phvSpec.physicalAddress(cid,  PhvSpec::MAU);
             if (auto* buffer = extract_ir->source->to<IR::BFN::LoweredInputBufferRVal>()) {
                 extract.buffer_offset = buffer->range.loByte();
             } else if (auto* const_val = extract_ir->source->to<IR::BFN::LoweredConstantRVal>()) {
