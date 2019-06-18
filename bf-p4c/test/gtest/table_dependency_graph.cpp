@@ -1675,30 +1675,30 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     EXPECT_EQ(dg.dependence_tail_size(d), 0);
     EXPECT_EQ(dg.dependence_tail_size(e), 0);
 
-    EXPECT_EQ(dg.happens_before(a, b), true);
-    EXPECT_EQ(dg.happens_before(a, c), true);
-    EXPECT_EQ(dg.happens_before(a, e), true);
-    EXPECT_EQ(dg.happens_before(a, d), true);
+    EXPECT_EQ(dg.happens_phys_before(a, b), true);
+    EXPECT_EQ(dg.happens_phys_before(a, c), true);
+    EXPECT_EQ(dg.happens_phys_before(a, e), true);
+    EXPECT_EQ(dg.happens_phys_before(a, d), true);
 
-    EXPECT_EQ(dg.happens_before(b, a), false);
-    EXPECT_EQ(dg.happens_before(b, c), true);
-    EXPECT_EQ(dg.happens_before(b, d), true);
-    EXPECT_EQ(dg.happens_before(b, e), true);
+    EXPECT_EQ(dg.happens_phys_before(b, a), false);
+    EXPECT_EQ(dg.happens_phys_before(b, c), true);
+    EXPECT_EQ(dg.happens_phys_before(b, d), true);
+    EXPECT_EQ(dg.happens_phys_before(b, e), true);
 
-    EXPECT_EQ(dg.happens_before(c, a), false);
-    EXPECT_EQ(dg.happens_before(c, b), false);
-    EXPECT_EQ(dg.happens_before(c, d), true);
-    EXPECT_EQ(dg.happens_before(c, e), false);
+    EXPECT_EQ(dg.happens_phys_before(c, a), false);
+    EXPECT_EQ(dg.happens_phys_before(c, b), false);
+    EXPECT_EQ(dg.happens_phys_before(c, d), true);
+    EXPECT_EQ(dg.happens_phys_before(c, e), false);
 
-    EXPECT_EQ(dg.happens_before(d, a), false);
-    EXPECT_EQ(dg.happens_before(d, b), false);
-    EXPECT_EQ(dg.happens_before(d, c), false);
-    EXPECT_EQ(dg.happens_before(d, e), false);
+    EXPECT_EQ(dg.happens_phys_before(d, a), false);
+    EXPECT_EQ(dg.happens_phys_before(d, b), false);
+    EXPECT_EQ(dg.happens_phys_before(d, c), false);
+    EXPECT_EQ(dg.happens_phys_before(d, e), false);
 
-    EXPECT_EQ(dg.happens_before(e, a), false);
-    EXPECT_EQ(dg.happens_before(e, b), false);
-    EXPECT_EQ(dg.happens_before(e, c), false);
-    EXPECT_EQ(dg.happens_before(e, e), false);
+    EXPECT_EQ(dg.happens_phys_before(e, a), false);
+    EXPECT_EQ(dg.happens_phys_before(e, b), false);
+    EXPECT_EQ(dg.happens_phys_before(e, c), false);
+    EXPECT_EQ(dg.happens_phys_before(e, e), false);
 }
 
 TEST_F(TableDependencyGraphTest, HitMissValidation) {
@@ -1862,6 +1862,160 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
     EXPECT_EQ(dg.min_stage(b), 0);
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 0);
+}
+
+TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
+    auto test = createTableDependencyGraphTestCase(
+            P4_SOURCE(P4Headers::NONE, R"(
+            action set_f1(bit<8> f1) {
+              headers.h1.f1 = f1;
+            }
+            
+            action set_f2(bit<8> f2) {
+              headers.h1.f2 = f2;
+            }
+            
+            table node_a {
+              actions = { set_f2; }
+                key = { headers.h1.f3 : exact; }
+            }
+            
+            table node_b {
+              actions = { set_f1; }
+                key = { headers.h1.f2 : exact; }
+            }
+            
+            table node_c {
+              actions = { set_f2; }
+                key = { headers.h1.f3 : exact; }
+            }
+            
+            table node_d {
+              actions = { set_f1; }
+                key = { headers.h1.f3 : exact; }
+            }
+            
+            table node_e {
+              actions = { set_f1; }
+                key = { headers.h1.f1 : exact; headers.h1.f2 : exact; }
+            }
+            
+            table node_f {
+              actions = { set_f1; }
+                key = { headers.h1.f3 : exact; }
+            }
+            
+            table node_g {
+              actions = { set_f2; }
+                key = { headers.h1.f3 : exact; }
+            }
+            
+            table node_h {
+              actions = { set_f2; }
+                key = { headers.h1.f2 : exact; }
+            }
+            
+            apply {
+              if (node_a.apply().hit) {
+                node_b.apply();
+                node_c.apply();
+              } else {
+                node_d.apply();
+              }
+              if (node_e.apply().hit) {
+                if (!node_f.apply().hit) {
+                  node_g.apply();
+                }
+              }
+              node_h.apply();
+            })"));
+
+    ASSERT_TRUE(test);
+
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+
+    const IR::MAU::Table *a, *b, *c, *d, *e, *f, *g, *h;
+    a = b = c = d = e = f = g = h = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0")
+            a = kv.first;
+        else if (kv.first->name == "node_b_0")
+            b = kv.first;
+        else if (kv.first->name == "node_c_0")
+            c = kv.first;
+        else if (kv.first->name == "node_d_0")
+            d = kv.first;
+        else if (kv.first->name == "node_e_0")
+            e = kv.first;
+        else if (kv.first->name == "node_f_0")
+            f = kv.first;
+        else if (kv.first->name == "node_g_0")
+            g = kv.first;
+        else if (kv.first->name == "node_h_0")
+            h = kv.first;
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+    EXPECT_NE(e, nullptr);
+    EXPECT_NE(f, nullptr);
+    EXPECT_NE(g, nullptr);
+    EXPECT_NE(h, nullptr);
+
+    auto hpam = dg.happens_phys_after_map;
+    auto hlam = dg.happens_logi_after_map;
+
+    // Expected physical sets
+    std::set<const IR::MAU::Table*> pd_a;
+    std::set<const IR::MAU::Table*> pd_b {a};
+    std::set<const IR::MAU::Table*> pd_c {a};
+    std::set<const IR::MAU::Table*> pd_d;
+    std::set<const IR::MAU::Table*> pd_e {a, b, c, d};
+    std::set<const IR::MAU::Table*> pd_f {a, b, c, d, e};  // WAW on f1
+    std::set<const IR::MAU::Table*> pd_g {a, c};  // WAW on f2
+    std::set<const IR::MAU::Table*> pd_h {a, c, g};  // RAW/WAW on f2
+
+    // Expected logical sets
+    std::set<const IR::MAU::Table*> ld_a;
+    std::set<const IR::MAU::Table*> ld_b {a};
+    std::set<const IR::MAU::Table*> ld_c {a, b};
+    std::set<const IR::MAU::Table*> ld_d {a};
+    std::set<const IR::MAU::Table*> ld_e {a, b, c, d};
+    std::set<const IR::MAU::Table*> ld_f {a, b, c, e, d};
+    std::set<const IR::MAU::Table*> ld_g {a, b, c, d, e, f};
+    std::set<const IR::MAU::Table*> ld_h {a, b, c, d, e, f, g};
+
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>
+        physical_sets {{a, pd_a}, {b, pd_b}, {c, pd_c}, {d, pd_d}, {e, pd_e}, {f, pd_f},
+                       {g, pd_g}, {h, pd_h}};
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>
+        logical_sets {{a, ld_a}, {b, ld_b}, {c, ld_c}, {d, ld_d}, {e, ld_e}, {f, ld_f},
+                      {g, ld_g}, {h, ld_h}};
+
+    // Check physical dependence sets are correct
+    for (auto it = physical_sets.begin(), end = physical_sets.end();
+         it != end; ++it) {
+        for (auto d : (*it).second) {
+            EXPECT_TRUE(hpam[(*it).first].count(d));
+        }
+    }
+    // Check logical dependence sets are correct
+    for (auto it = logical_sets.begin(), end = logical_sets.end();
+         it != end; ++it) {
+        for (auto d : (*it).second) {
+            EXPECT_TRUE(hlam[(*it).first].count(d));
+        }
+    }
 }
 
 }  // namespace Test

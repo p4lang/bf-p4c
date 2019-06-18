@@ -107,22 +107,43 @@ struct DependencyGraph {
     // True once the graph has been fully constructed.
     bool finalized;
 
-    // These maps are reverse named -- happens_after_map[t] is the set of tables that that
-    // are before t, while happens_before_map[t] is the set of tables that are after t...
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_after_map;
+    // NOTE: These maps are reverse named -- happens_after_map[t] is the set of tables that that are
+    // before t, while happens_before_map[t] is the set of tables that are after t... This naming
+    // comes from the idea that t must happen after anything in the set given by
+    // happens_after_map[t] ("t happens after what is in happens_after_map[t]")
 
-    // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
-    // and t3: t1 MUST be placed in an earlier stage.
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_map;
+    // NOTE: happens_after/before_map are "work lists," used by functions in this file to calculate
+    // other happens.*_maps. As such, it is much more prefereable to NOT use them externally. Use
+    // the appropriately named map for your situation, which is better for readability
+    // anyhow. Currently, happens_after/before_map ends up being the same as
+    // happens_phys_after/before_map, although this could change.
 
-    // Same as happens_before_map, with the additional inclusion of control dependences when
+    // Work happens after map
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_after_work_map;
+
+    // Work happens before map
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_work_map;
+
+    // For a given table t, happens_phys_after_map[t] is the set of tables that must be placed in an
+    // earlier stage than t---i.e. there is a data dependence between t and any table in the
+    // set. This is the default result of the calc_topological_stage function.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_phys_after_map;
+
+    // Analagous to above, but for the tables that must be placed in a later stage than t
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_phys_before_map;
+
+    // Same as happens_phys_before_map, with the additional inclusion of control dependences when
     // calculating the happens_before relationship.
     std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_control_map;
 
-    // Same as happens_before_map, with the additional inclusion of control and anti dependences
-    // when calculating the happens_before relationship.
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>>
-        happens_before_control_anti_map;
+    // Same as happens_phys_after_map, with the additional inclusion of control and anti dependences
+    // when calculating the happens_after relationship, which corresponds to an ordering on logical
+    // IDs.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_logi_after_map;
+
+    // Analagous to above, but for tables that must be placed into a later logical ID than t. New
+    // name for happens_before_control_anti_map
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_logi_before_map;
 
     std::map<const IR::MAU::Table*, std::map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
 
@@ -169,9 +190,8 @@ struct DependencyGraph {
         g.clear();
         finalized = false;
         max_min_stage = -1;
-        happens_before_map.clear();
+        happens_before_work_map.clear();
         happens_before_control_map.clear();
-        happens_before_control_anti_map.clear();
         dependency_map.clear();
         labelToVertex.clear();
         stage_info.clear();
@@ -239,33 +259,33 @@ struct DependencyGraph {
         return true;
     }
 
-    bool happens_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_phys_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
-        if (happens_before_map.count(t1)) {
-            return happens_before_map.at(t1).count(t2);
+        if (happens_phys_before_map.count(t1)) {
+            return happens_phys_before_map.at(t1).count(t2);
         } else {
             return false; }
     }
 
     // returns true if any table in s or control dependent on a table in s is data dependent on t1
-    bool happens_before_recursive(const IR::MAU::Table* t1, const IR::MAU::TableSeq* s) const {
+    bool happens_phys_before_recursive(const IR::MAU::Table* t1, const IR::MAU::TableSeq* s) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
-        if (happens_before_map.count(t1))
+        if (happens_phys_before_map.count(t1))
             for (auto *t2 : s->tables)
-                if (happens_before_recursive(t1, t2)) return true;
+                if (happens_phys_before_recursive(t1, t2)) return true;
         return false;
     }
 
     // returns true if t2 or any table control dependent on it is data dependent on t1
-    bool happens_before_recursive(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_phys_before_recursive(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
-        if (happens_before_map.count(t1)) {
-            if (t2 != t1 && happens_before_map.at(t1).count(t2)) return true;
+        if (happens_phys_before_map.count(t1)) {
+            if (t2 != t1 && happens_phys_before_map.at(t1).count(t2)) return true;
             for (auto *next : Values(t2->next))
-                if (happens_before_recursive(t1, next)) return true; }
+                if (happens_phys_before_recursive(t1, next)) return true; }
         return false;
     }
 
@@ -278,11 +298,11 @@ struct DependencyGraph {
             return false; }
     }
 
-    bool happens_before_control_anti(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_logi_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed");
-        if (happens_before_control_anti_map.count(t1))
-            return happens_before_control_anti_map.at(t1).count(t2);
+        if (happens_logi_before_map.count(t1))
+            return happens_logi_before_map.at(t1).count(t2);
         else
             return false;
     }
@@ -394,7 +414,7 @@ struct DependencyGraph {
     happens_before_dependences(const IR::MAU::Table* t) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
-        return happens_before_map.at(t);
+        return happens_before_work_map.at(t);
     }
 
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);

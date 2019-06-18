@@ -129,7 +129,7 @@ bool CollectWeakFields::all_defs_happen_before(const PHV::Field* src, const PHV:
             auto ts = sd.first->to<IR::MAU::Table>();
             auto td = dd.first->to<IR::MAU::Table>();
             if (ts && td) {
-                if (dg.happens_before(td, ts)) {
+                if (dg.happens_phys_before(td, ts)) {
                     return false;
                 }
             }

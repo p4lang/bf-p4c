@@ -788,10 +788,11 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
         } else if (p->stage == rv->stage) {
             if (options.forced_placement)
                 continue;
-            if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
+            if (deps->happens_phys_before(p->table, rv->table)
+                && !mutex.action(p->table, rv->table)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and table advances stage");
-            } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
+            } else if (rv->gw && deps->happens_phys_before(p->table, rv->gw)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
             } else if (deps->container_conflict(p->table, rv->table)) {
@@ -805,7 +806,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, const Placed *done,
                 for (auto ctbl : tables_with_shared) {
                     // FIXME -- once we can put shared attached tables in different stages, we
                     // probably don't want to do this any more...
-                    if (deps->happens_before(p->table, ctbl) && !mutex.action(p->table, ctbl)) {
+                    if (deps->happens_phys_before(p->table, ctbl)
+                        && !mutex.action(p->table, ctbl)) {
                         rv->stage++;
                         LOG2("  - dependency between " << p->table->name << " and " <<
                              ctbl->name << " advances stage");
@@ -1503,7 +1505,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     done = false;
                     continue;
                 }
-                for (auto *prev : deps->happens_after_map.at(t)) {
+                for (auto *prev : deps->happens_logi_after_map.at(t)) {
                     if (!placed || !placed->is_placed(prev)) {
                         LOG3("  - skipping " << t->name << " because it depends on " << prev->name);
                         done = false;
@@ -1516,9 +1518,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 for (auto mc : gmc) {
                     // Iterate through all of this merge choice's happens afters and make sure
                     // they're placed
-                    for (auto* prev : deps->happens_after_map.at(mc.first)) {
+                    for (auto* prev : deps->happens_logi_after_map.at(mc.first)) {
+                        if (prev == t)
+                            continue;
                         if (!placed || !placed->is_placed(prev)) {
-                            LOG3("    + removing " << mc.first->name << " from merge list because "
+                            LOG3("    - removing " << mc.first->name << " from merge list because "
                                  "it depends on " << prev->name);
                             to_erase.push_back(mc.first);
                             break;
@@ -1528,7 +1532,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 // If we did have choices to merge but all of them are not ready yet, don't try to
                 // place this gateway
                 if (gmc.size() > 0 && gmc.size() == to_erase.size()) {
-                    LOG2("  - skipping gateway " << t->name <<
+                    LOG2("    - skipping gateway " << t->name <<
                          " until mergeable tables are available");
                     should_skip = true;
                     done = false;

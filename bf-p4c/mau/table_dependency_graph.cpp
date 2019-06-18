@@ -588,19 +588,19 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     // Current in-degree of vertices
     std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
 
-    // Build initial n_depending_on, and happens_after_map
+    // Build initial n_depending_on, and happens_after_work_map
     const auto& dep_graph = dg.g;
-    auto& happens_after_map = dg.happens_after_map;
-    auto& happens_before_map = dg.happens_before_map;
-    happens_after_map.clear();
-    happens_before_map.clear();
+    auto& happens_after_work_map = dg.happens_after_work_map;
+    auto& happens_before_work_map = dg.happens_before_work_map;
+    happens_after_work_map.clear();
+    happens_before_work_map.clear();
     for (boost::tie(v, v_end) = boost::vertices(dep_graph);
          v != v_end;
          ++v) {
         n_depending_on[*v] = 0;
         const IR::MAU::Table* label_table = dg.get_vertex(*v);
-        happens_after_map[label_table] = {};
-        happens_before_map[label_table] = {}; }
+        happens_after_work_map[label_table] = {};
+        happens_before_work_map[label_table] = {}; }
 
     for (boost::tie(out, out_end) = boost::edges(dep_graph);
          out != out_end;
@@ -639,9 +639,10 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
                     auto vertex_later = boost::target(*out, dep_graph);
                     const auto* table_later = dg.get_vertex(vertex_later);
-                    happens_after_map[table_later].insert(table);
-                    happens_after_map[table_later].insert(happens_after_map[table].begin(),
-                                                          happens_after_map[table].end());
+                    happens_after_work_map[table_later].insert(table);
+                    happens_after_work_map[table_later].insert(
+                            happens_after_work_map[table].begin(),
+                            happens_after_work_map[table].end());
                     n_depending_on[vertex_later]--;
                 }
             }
@@ -651,10 +652,10 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
         rst.emplace_back(std::move(this_generation));
     }
 
-    for (const auto& kv : happens_after_map) {
+    for (const auto& kv : happens_after_work_map) {
         auto* table = kv.first;
         for (const auto* prev : kv.second) {
-            happens_before_map[prev].insert(table); } }
+            happens_before_work_map[prev].insert(table); } }
     return rst;
 }
 
@@ -771,7 +772,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst[i]) {
             const IR::MAU::Table* table = dg.get_vertex(vertex);
-            auto& happens_later = dg.happens_before_map[table];
+            auto& happens_later = dg.happens_before_work_map[table];
             dg.stage_info[table].dep_stages =
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
                                 [this] (int sz, const IR::MAU::Table* later) {
@@ -800,7 +801,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst_control[i]) {
             const IR::MAU::Table* table = dg.get_vertex(vertex);
-            auto& happens_later = dg.happens_before_map[table];
+            auto& happens_later = dg.happens_before_work_map[table];
             dg.stage_info[table].dep_stages_control = std::accumulate(happens_later.begin(),
                 happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
                     int stage_addition = 0;
@@ -824,8 +825,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
-    // dg.happens_before_control_map = dg.happens_before_map;
-    for (const auto& kv : dg.happens_before_map) {
+    // dg.happens_before_control_map = dg.happens_before_work_map;
+    for (const auto& kv : dg.happens_before_work_map) {
         auto* table = kv.first;
         for (const auto* prev : kv.second) {
             dg.happens_before_control_map[prev].insert(table); } }
@@ -850,25 +851,38 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
-    // Calculate dg.happens_before_control_anti_map
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> topo_rst_control_anti =
-        calc_topological_stage(DependencyGraph::CONTROL | DependencyGraph::ANTI);
+    // When we include control and anti dependences, what we're really computing is the
+    // happens_before with respect to logical IDs, not stages. In other words, adding in control
+    // dependences and anti dependences tells us the set of tables a table needs to be placed
+    // logically before to guarantee correct execution. This is a strictre requirement than without
+    // control and anti dependences. If Table A has a control/anti dependence on Table B, while we
+    // may be able to place Table A and Table B in the same stage, we cannot place Table A in an
+    // earlier stage than Table B. To enforce this (since table placement only places one table at a
+    // time), we guarantee that Table B has a lower logical ID than Table A (i.e. Table A doesn't
+    // get placed until Table B has been placed).
+    auto topo_rst_logical = calc_topological_stage(DependencyGraph::CONTROL |
+                                                   DependencyGraph::ANTI);
+    // Log the resulting sort
     if (LOGGING(4)) {
-        LOG4("Printing results of topological sorting with control and anti dependences included");
-        for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
+        LOG4("Printing results of topological sorting with control and anti dependences included."
+             << " This is a topological sort with respect to logical placement");
+        for (size_t i = 0; i < topo_rst_logical.size(); ++i) {
             LOG4(">>> Stage#" << i << ":");
-            for (const auto& vertex : topo_rst_control_anti[i]) {
+            for (const auto& vertex : topo_rst_logical[i]) {
                 const auto* t = dg.get_vertex(vertex);
                 LOG4("Table: " << vertex << ", " << t->name);
             }
         }
     }
-    for (const auto& kv : dg.happens_before_map)
-        dg.happens_before_control_anti_map[kv.first].insert(kv.second.begin(), kv.second.end());
+    // Construct the maps
+    for (auto kv : dg.happens_before_work_map)
+        dg.happens_logi_before_map[kv.first].insert(kv.second.begin(), kv.second.end());
+    for (auto kv : dg.happens_after_work_map)
+        dg.happens_logi_after_map[kv.first].insert(kv.second.begin(), kv.second.end());
 
     if (LOGGING(4)) {
         std::stringstream ss;
-        for (auto& kv : dg.happens_before_control_anti_map) {
+        for (auto& kv : dg.happens_logi_before_map) {
             ss << "Table " << kv.first->name << " has priors of ";
             for (auto& tbl : kv.second)
                 ss << tbl->name << ", ";
@@ -890,10 +904,10 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         }
     }
 
-    for (int i = int(topo_rst_control_anti.size()) - 1; i >= 0; --i) {
-        for (const auto& vertex : topo_rst_control_anti[i]) {
+    for (int i = int(topo_rst_logical.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo_rst_logical[i]) {
             const IR::MAU::Table* table = dg.get_vertex(vertex);
-            auto& happens_later = dg.happens_before_map[table];
+            auto& happens_later = dg.happens_before_work_map[table];
             dg.stage_info[table].dep_stages_control_anti = std::accumulate(happens_later.begin(),
                 happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
                     int stage_addition = 0;
@@ -922,8 +936,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // but is control dependent on table T1, which -- because of its own match and action
     // dependencies -- must be placed in at least stage 4, then T2 and T1 will both have a
     // min_stage of 4.
-    for (size_t i = 0; i < topo_rst_control_anti.size(); ++i) {
-        for (const auto& vertex : topo_rst_control_anti[i]) {
+    for (size_t i = 0; i < topo_rst_logical.size(); ++i) {
+        for (const auto& vertex : topo_rst_logical[i]) {
             const IR::MAU::Table* table = dg.get_vertex(vertex);
             dg.stage_info[table].min_stage = i;
         }
@@ -932,8 +946,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
     // Compress the stages to take out the addition caused by control edges and anti edges,
     // but the min stage needs to be propagated through these edges
-    for (size_t i = 1; i < topo_rst_control_anti.size(); i++) {
-        for (const auto& vertex : topo_rst_control_anti[i]) {
+    for (size_t i = 1; i < topo_rst_logical.size(); i++) {
+        for (const auto& vertex : topo_rst_logical[i]) {
             const auto* tbl = dg.get_vertex(vertex);
             int orig_stage = dg.stage_info[tbl].min_stage;
             int true_min_stage = 0;
@@ -973,9 +987,15 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     if (LOGGING(3))
         dg.display_min_edges = true;
 
-
-    dg.vertex_rst = topo_rst_control_anti;
+    // Compute for the final time the dependence graph, which will leave happens_after and
+    // happens_before with stage orders
+    dg.vertex_rst = topo_rst_logical;
     calc_topological_stage();
+    // Use this final computation to create the happens_physical maps
+    for (auto kv : dg.happens_before_work_map)
+        dg.happens_phys_before_map[kv.first].insert(kv.second.begin(), kv.second.end());
+    for (auto kv : dg.happens_after_work_map)
+        dg.happens_phys_after_map[kv.first].insert(kv.second.begin(), kv.second.end());
 
     verify_dependence_graph();
     if (LOGGING(4))
