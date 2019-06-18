@@ -499,13 +499,6 @@ extern Hash<W> {
     /// @param data : The list of fields contributing to the hash.
     /// @return The hash value.
     W get<D>(in D data);
-
-    /// Compute the hash for data.
-    /// @param data : The list of fields contributing to the hash.
-    /// @param base : Minimum return value.
-    /// @param max : The value use in modulo operation.
-    /// @return (base + (h % max)) where h is the hash value.
-    W get<D>(in D data, in W base, in W max);
 }
 
 /// Random number generator.

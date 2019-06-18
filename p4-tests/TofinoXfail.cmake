@@ -1381,6 +1381,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-counter6.p4
 )
 
+# need to handle slice in frontend local copyprop
+p4c_add_xfail_reason("tofino"
+  "Unhandled expression in makeSideEffectStatement"
+  testdata/p4_16_samples/issue430-bmv2.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected IDENTIFIER"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4

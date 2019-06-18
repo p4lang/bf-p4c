@@ -120,19 +120,19 @@ control IngressP(
     Hash<bit<32>>(HashAlgorithm_t.RANDOM) hash_3;
     @name(".check_bloom_filter_1") action check_bloom_filter_1() {
         {
-            bit<32> temp = hash_1.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+            bit<32> temp = (bit<32>)(hash_1.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort })[17:0]);
             meta.md.bf_tmp = meta.md.bf_tmp | bloom_filter_alu_1.execute(temp);
         }
     }
     @name(".check_bloom_filter_1") action check_bloom_filter_2() {
         {
-            bit<32> temp = hash_2.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+            bit<32> temp = (bit<32>)(hash_2.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort })[17:0]);
             meta.md.bf_tmp = meta.md.bf_tmp | bloom_filter_alu_2.execute(temp);
         }
     }
     @name(".check_bloom_filter_1") action check_bloom_filter_3() {
         {
-            bit<32> temp = hash_3.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort }, 32w0, 32w262144);
+            bit<32> temp = (bit<32>)(hash_3.get({ hdr.ipv4.proto, hdr.ipv4.sip, hdr.ipv4.dip, hdr.tcp.sPort, hdr.tcp.dPort })[17:0]);
             meta.md.bf_tmp = meta.md.bf_tmp | bloom_filter_alu_3.execute(temp);
         }
     }
@@ -182,10 +182,10 @@ control DeparserI(
         inout headers hdr,
         in metadata meta,
         in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    apply { 
-        b.emit(hdr.ethernet); 
-        b.emit(hdr.ipv4); 
-        b.emit(hdr.tcp); 
+    apply {
+        b.emit(hdr.ethernet);
+        b.emit(hdr.ipv4);
+        b.emit(hdr.tcp);
     }
 }
 
@@ -213,7 +213,7 @@ control DeparserE(packet_out b,
                   inout headers hdr,
                   in metadata meta,
                   in egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md) {
-    apply { 
+    apply {
         b.emit(hdr.ethernet);
     }
 }

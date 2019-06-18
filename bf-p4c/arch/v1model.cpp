@@ -1393,38 +1393,50 @@ class ConstructSymbolTable : public Inspector {
         structure->_map.emplace(node, assign);
     }
 
-    void convertHashPrimitive(const IR::MethodCallStatement *node, cstring hashName) {
+    void convertHashPrimitive(const IR::MethodCallStatement *node,
+            cstring hashName, int hashWidth) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         ERROR_CHECK(mce->arguments->size() > 4, "insufficient arguments to hash() function");
         auto pDest = mce->arguments->at(0)->expression;
         auto pBase = mce->arguments->at(2)->expression;
         auto pMax = mce->arguments->at(4)->expression;
 
-        // Check the max value
-        auto w = pDest->type->width_bits();
+        auto dstWidth = pDest->type->width_bits();
         // Add data unconditionally.
         auto args = new IR::Vector<IR::Argument>({ mce->arguments->at(3) });
         if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
-        if (pMax->to<IR::Constant>()->asUint64() < (1ULL << w))  {
-            if (pBase->type->width_bits() != w)
-                pBase = new IR::Cast(IR::Type::Bits::get(w), pBase);
-            args->push_back(new IR::Argument(pBase));
+        if (pBase->to<IR::Constant>()->asInt() != 0)
+            ::error("The initial offset for a hash calculation function has to be zero");
 
-            if (pMax->type->width_bits() != w)
-                pMax = new IR::Cast(IR::Type::Bits::get(w), pMax);
-            args->push_back(new IR::Argument(pMax));
-        } else {
-            ERROR_CHECK(pBase->to<IR::Constant>()->asInt() == 0,
-                      "The base offset for a hash calculation must be zero");
+        int bit_size = 0;
+        if (auto *constant = pMax->to<IR::Constant>()) {
+            auto value = constant->asUint64();
+            if (value != 0) {
+                bit_size = bitcount(value - 1);
+                if ((1ULL << bit_size) != value)
+                    error("%1%: The hash offset must be a power of 2 in a hash calculation "
+                          "instead of %2%", node, value);
+            }
         }
-
         auto member = new IR::Member(new IR::PathExpression(hashName), "get");
+        IR::Expression* methodCall = new IR::MethodCallExpression(node->srcInfo, member, args);
+        // only introduce slice if
+        // hash.get() returns value that is wider than the specified max width.
+        if (bit_size != 0 && hashWidth > bit_size)
+            methodCall = new IR::Slice(methodCall,
+                    new IR::Constant(bit_size-1), new IR::Constant(0));
 
-        auto result = new IR::AssignmentStatement(pDest,
-            new IR::MethodCallExpression(node->srcInfo, member, args));
+        LOG3("dst width " << dstWidth << " bit size " << bit_size);
 
+        if (dstWidth > bit_size)
+            methodCall = new IR::Cast(IR::Type::Bits::get(dstWidth), methodCall);
+        else if (dstWidth < bit_size)
+            methodCall = new IR::Slice(methodCall,
+                    new IR::Constant(dstWidth-1), new IR::Constant(0));
+
+        auto result = new IR::AssignmentStatement(pDest, methodCall);
         structure->_map.emplace(node, result);
     }
 
@@ -1440,11 +1452,12 @@ class ConstructSymbolTable : public Inspector {
 
         ERROR_CHECK(mce->arguments->size() > 3, "hash extern must have at least 4 arguments");
         auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(0)});
+        int hashWidth = mce->typeArguments->at(0)->width_bits();
 
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
         structure->unique_names.insert(hashName);
-        convertHashPrimitive(node, hashName);
+        convertHashPrimitive(node, hashName, hashWidth);
 
         // create hash instance
         auto algorithm = mce->arguments->at(1)->clone();
