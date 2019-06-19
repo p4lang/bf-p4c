@@ -565,7 +565,9 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 LOG5("\t\t\tSlice: " << slice);
                 LOG5("\t\t\t  right: " << sliceLocations[slice].second);
                 // First byte of the original slice list is within its own slice list, so ignore it.
-                if (!firstSliceInCurrentSliceList && slice.size() < 8 &&
+                // In this case, the size of the slice in its own slice list may be less than OR
+                // EQUAL to 8b.
+                if (!firstSliceInCurrentSliceList && slice.size() <= 8 &&
                         sliceLocations[slice].second == -1)
                     continue;
                 // Potential first slice in the slice list for the current slice.
