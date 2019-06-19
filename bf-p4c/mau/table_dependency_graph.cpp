@@ -279,7 +279,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
     }
 
     bool preorder(const IR::Expression *e) override {
-        auto* originalField = self.phv.field(e);
+        le_bitrange range;
+        auto* originalField = self.phv.field(e, &range);
         if (!originalField) return true;
         ordered_set<const PHV::Field*> candidateFields;
         candidateFields.insert(originalField);
@@ -346,6 +347,9 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 /// FIXME(cc): Do we need to restrict the context here, or is it always the
                 /// whole pipeline?
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                    // Consider actual field slices instead of entire fields when calculating
+                    // container conflicts.
+                    if (!range.overlaps(sl.field_bits())) return;
                     bitvec range(sl.container_bit, sl.width);
                     cont_writes[sl.container] |= range;
                 });

@@ -166,6 +166,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
  protected:
     /// Not a const PhvInfo because this pass create padding PHV::Field.
     PhvInfo& phv;
+    const PhvUse& uses;
     /// Reference to mapping of original P4 field to the bridged field.
     const CollectBridgedFields& fields;
     /// Reference to object used to query action-related constraints.
@@ -395,6 +396,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
  public:
     explicit RepackFlexHeaders(
         PhvInfo& p,
+        const PhvUse& u,
         const CollectBridgedFields& f,
         const ActionPhvConstraints& a,
         SymBitMatrix& s,
@@ -403,8 +405,8 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         const GatherParserExtracts& pa,
         const MauBacktracker& b,
         ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
-        : phv(p), fields(f), actionConstraints(a), doNotPack(s), noPackFields(z), deparserParams(d),
-          parserAlignedFields(pa), alloc(b), repackedTypes(rt) { }
+        : phv(p), uses(u), fields(f), actionConstraints(a), doNotPack(s), noPackFields(z),
+          deparserParams(d), parserAlignedFields(pa), alloc(b), repackedTypes(rt) { }
 
     /// @returns the set of all repacked headers.
     const ordered_map<cstring, const IR::HeaderOrMetadata*> getRepackedHeaders() const {
@@ -488,6 +490,7 @@ class RepackDigestFieldList : public RepackFlexHeaders {
  public:
     explicit RepackDigestFieldList(
             PhvInfo& p,
+            const PhvUse& u,
             const CollectBridgedFields& f,
             const ActionPhvConstraints& a,
             SymBitMatrix& s,
@@ -496,7 +499,7 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             const GatherParserExtracts& pa,
             const MauBacktracker& b,
             ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
-        : RepackFlexHeaders(p, f, a, s, z, d, pa, b, rt) { }
+        : RepackFlexHeaders(p, u, f, a, s, z, d, pa, b, rt) { }
 
     profile_t init_apply(const IR::Node* root) override;
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override { return h; }
@@ -669,7 +672,7 @@ class FlexiblePacking : public Logging::PassManager {
  public:
     explicit FlexiblePacking(
             PhvInfo& p,
-            PhvUse& u,
+            const PhvUse& u,
             DependencyGraph& dg,
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,

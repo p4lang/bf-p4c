@@ -1137,6 +1137,8 @@ struct ComputeFieldAlignments : public Inspector {
         const auto extractedBits = bufferSource->range;
         const auto alignment = FieldAlignment(extractedBits);
         LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
+        LOG3("Extract: " << extract << ", parser state: " <<
+                findContext<IR::BFN::ParserState>()->name);
         fieldInfo->updateAlignment(alignment);
 
         // If a parsed field starts at a container bit index larger than the bit
@@ -1217,6 +1219,7 @@ struct ComputeFieldAlignments : public Inspector {
             // program. (If not, you'd end up with garbage bits on the wire.)
             nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
             LOG3("C. Updating alignment of " << fieldInfo->name << " to " << emittedBits);
+            LOG3("Emit primitive: " << emitPrimitive);
             fieldInfo->updateAlignment(FieldAlignment(emittedBits));
             currentBit += fieldInfo->size;
         }

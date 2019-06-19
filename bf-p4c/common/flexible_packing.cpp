@@ -645,6 +645,7 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
         ordered_map<const PHV::Field*, std::set<int>>& conflictingAlignmentConstraints,
         ordered_set<const PHV::Field*>& mustAlignFields) {
+    ordered_map<const PHV::Field*, le_bitrange> nonNegotiableAlignments;
     for (auto field : fieldsToBePacked) {
         ordered_set<const PHV::Field*> relatedFields;
         std::queue<const PHV::Field*> fieldsNotVisited;
@@ -655,21 +656,36 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         if (parserAlignedFields.count(field) && field->alignment) {
             alignmentConstraints[field] = le_bitrange(StartLen(field->alignment->align,
                         field->size));
-            LOG4("\t\tDetected bit in byte alignment " << alignmentConstraints[field] <<
-                                                       " for field " << field->name); }
+            nonNegotiableAlignments[field] = alignmentConstraints[field];
+            LOG4("\t\tDetected non-negotiable bit in byte alignment " << alignmentConstraints[field]
+                 << " for field " << field->name << " due to parser initialization"); }
 
         // DeparserParams must be in the bottom bits.
         if (deparserParams.count(field)) {
             if (alignmentConstraints.count(field)) {
-                ::warning("Alignment constraint already present for field %1%: %2%", field->name,
-                          alignmentConstraints.at(field).lo);
-                conflictingAlignmentConstraints[field].insert(
-                        alignmentConstraints.at(field).lo);
+                le_bitrange align = le_bitrange(StartLen(0, field->size));
+                if (alignmentConstraints[field] != align) {
+                    ::warning("Alignment constraint %3% already present for field %1%: %2%",
+                            field->name, alignmentConstraints.at(field).lo, align.lo);
+                    conflictingAlignmentConstraints[field].insert(
+                            alignmentConstraints.at(field).lo);
+                }
             } else {
-                alignmentConstraints[field] = le_bitrange(StartLen(0, field->size));
-                LOG4("\t\tDetected deparser parameter alignment: "  <<
-                    alignmentConstraints[field] << " for field " << field->name); } }
+                le_bitrange align = le_bitrange(StartLen(0, field->size));
+                alignmentConstraints[field] = align;
+                LOG4("\t\tDetected non-negotiable deparser parameter alignment: "  <<
+                    alignmentConstraints[field] << " for field " << field->name);
+                nonNegotiableAlignments[field] = align;
+            }
+        }
 
+        if (fields.bridged_to_orig.count(field->name)) {
+            const auto* origField = phv.field(fields.bridged_to_orig.at(field->name));
+            if (origField) {
+                fieldsNotVisited.push(origField);
+                LOG5("\t\t\tDetected original bridged field: " << origField);
+            }
+        }
         // Also summarize the egress version of this field, as alignment
         // constraints may be induced by uses of the egress version of the
         // bridged field.
@@ -710,7 +726,6 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                 for (const auto* f : parserAlignedFields.revAt(currentField))
                     if (!relatedFields.count(f))
                         fieldsNotVisited.push(f);
-
             LOG6("\t\t  Now, we have " << fieldsNotVisited.size() << " fields unvisited"); }
 
         if (LOGGING(4) && relatedFields.count(field) == 0) {
@@ -727,13 +742,18 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                 LOG5("\t\tAdding field " << field->name << " as digest use");
             }
             if (f->alignment) {
-                LOG5("\t\t  New alignment: " << *(f->alignment));
+                LOG5("\t\t  New candidate alignment: " << *(f->alignment));
                 // If the field must be aligned at this bit position (instead of not being aligned
                 // and instead satisfying constraints because of deposit-field operations),
                 if (mustAlign(f)) {
                     LOG5("\t\t  Field " << field->name << " must be placed at the given "
                                                                 "alignment " << *(f->alignment));
                     mustAlignFields.insert(field); }
+
+                bool this_non_negotiable_alignment =
+                    parserAlignedFields.count(f) || parserAlignedFields.revCount(f) ||
+                    uses.is_extracted(f, f->gress) ||
+                    (f->isPacketField() && !f->is_flexible() && !f->bridged);
                 if (fieldAlignmentMap.count(field)) {
                     // alignSource is where the alignment constraint originates from.
                     const PHV::Field* alignSource = fieldAlignmentMap[field];
@@ -743,18 +763,22 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                     if (*(f->alignment) == *(alignSource->alignment)) continue;
                     // Only compare the little endian alignments because the network endian
                     // alignments differ for some fields of different sizes.
-                    // XXX(Deep): Figure out why we get conflicting alignment constraints for
-                    // related fields and how to reconcile it. Until then, don't pack these fields
-                    // with anything else.
-                    WARN_CHECK(f->alignment->align == alignSource->alignment->align,
-                               "Conflicting alignment constraints detected for bridged field %1%"
-                               ": %2%, %3%", field->name, f->alignment->align,
-                               alignSource->alignment->align);
-                    conflictingAlignmentConstraints[field].insert(f->alignment->align);
-                    conflictingAlignmentConstraints[field].insert(
-                            alignSource->alignment->align);
-                    LOG5("\t\t  Conflicting alignment constraint detected for " << field);
-                    continue; }
+                    // Choose the alignment that emanates from a non-negotiable alignment
+                    // constraint (parser initialized field/deparser parameter/header field)
+                    LOG5("\t\t  Does this field enforce non-negotiable alignment? " <<
+                            (this_non_negotiable_alignment ? "YES" : "NO"));
+                    if (this_non_negotiable_alignment && nonNegotiableAlignments.count(field)) {
+                        ::warning("Multiple fields enforcing non-negotiable alignment for "
+                                "flexible field %1%: %2%, %3%", field->name, f->alignment->align,
+                                alignSource->alignment->align);
+                        conflictingAlignmentConstraints[field].insert(f->alignment->align);
+                        conflictingAlignmentConstraints[field].insert(
+                                alignSource->alignment->align);
+                        continue;
+                    }
+                }
+                if (this_non_negotiable_alignment)
+                    nonNegotiableAlignments[field] = StartLen(f->alignment->align, f->size);
                 fieldAlignmentMap[field] = f;
                 le_bitrange alignment = StartLen(f->alignment->align, f->size);
                 alignmentConstraints[field] = alignment; } } }
@@ -905,10 +929,13 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             // them in the bottom bits and add padding afterwards.
             if (packingWithPositions.size() == 1) {
                 for (auto kv : packingWithPositions) {
-                    if (conflictingAlignmentConstraints.count(kv.first) ||
-                        !mustAlignFields.count(kv.first)) {
+                    if (conflictingAlignmentConstraints.count(kv.first)) {
                         packingWithPositions[kv.first] = 0;
-                        LOG4("\t\t  Okay to pack " << kv.first->name << " in bottom bits."); } } }
+                        LOG4("\t\t  Conflicting alignment, pack " << kv.first <<
+                             " in bottom bits");
+                    }
+                }
+            }
         }
 
         // Total number of bits in this required packing.
@@ -1900,7 +1927,7 @@ std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std:
 
 FlexiblePacking::FlexiblePacking(
         PhvInfo& p,
-        PhvUse& u,
+        const PhvUse& u,
         DependencyGraph& dg,
         CollectBridgedFields& b,
         ordered_map<cstring, ordered_set<cstring>>& e,
@@ -1910,9 +1937,9 @@ FlexiblePacking::FlexiblePacking(
           packConflicts(p, dg, tMutex, alloc, aMutex),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
           parserAlignedFields(p),
-          packDigestFieldLists(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
+          packDigestFieldLists(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes),
-          packHeaders(p, b, actionConstraints, doNotPack, noPackFields, deparserParams,
+          packHeaders(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes),
           parserMappings(p),
           bmUses(p, packHeaders, parserMappings, e, parserStatesToModify),

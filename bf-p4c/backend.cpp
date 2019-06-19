@@ -141,6 +141,11 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // metadata packing.
         &table_alloc,
         new CollectPhvInfo(phv),
+        // Aliasing replaces all uses of the alias source field with the alias destination field.
+        // Therefore, run it first in the backend to ensure that all other passes use a union of the
+        // constraints of the alias source and alias destination fields.
+        new Alias(phv, options),
+        new CollectPhvInfo(phv),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
         new FlexiblePacking(phv, uses, deps, bridged_fields, extracted_together, table_alloc),
@@ -150,8 +155,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?
             new InferPayloadOffset(phv, defuse) : nullptr,
-        new CollectPhvInfo(phv),
-        new Alias(phv, options),             // Add aliasing from the pa_alias pragmas
         new CollectPhvInfo(phv),
         &defuse,
         new AlpmSetup,
