@@ -942,7 +942,6 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
                                               state->gress);
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
-
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
 

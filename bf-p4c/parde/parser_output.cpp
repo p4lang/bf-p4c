@@ -272,9 +272,8 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "start: " << source->range.lo << std::endl;
             out << indent << "length: " << extract->dest.length_in_byte() << std::endl;
 
-            if (clot_tag_to_checksum_unit.count(extract->dest.tag)) {
-                out << indent << "checksum: " << clot_tag_to_checksum_unit.at(extract->dest.tag)
-                    << std::endl;
+            if (extract->dest.csum_unit) {
+                out << indent << "checksum: " << extract->dest.csum_unit << std::endl;
             }
         } else {
             out << indent << "# clot " << extract->dest.tag << " (spilled)" << std::endl;
@@ -314,12 +313,7 @@ struct ParserAsmSerializer : public ParserInspector {
             if (csum->type == IR::BFN::ChecksumMode::RESIDUAL)
                 out << indent << "end_pos: " << csum->end_pos  << std::endl;
         }
-
-        if (csum->type == IR::BFN::ChecksumMode::CLOT)
-            clot_tag_to_checksum_unit[csum->clot_dest.tag] = csum->unit_id;
     }
-
-    std::map<unsigned, unsigned> clot_tag_to_checksum_unit;
 
     std::ostream& out;
     indent_t indent;

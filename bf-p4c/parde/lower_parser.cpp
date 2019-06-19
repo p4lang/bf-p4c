@@ -175,7 +175,6 @@ struct ExtractSimplifier {
         BUG_CHECK(slice->range().contains(extracted_range),
                   "Parser extract received an incomplete CLOT allocation: %1%",
                   extract);
-
         clotExtracts[clot].push_back(extract);
     }
 
@@ -343,7 +342,8 @@ struct ExtractSimplifier {
     /// Convert the sequence of Extract operations that have been passed to
     /// `add()` so far into a sequence of LoweredExtract operations. Extracts
     /// that write to the same container are merged together.
-    IR::Vector<IR::BFN::LoweredParserPrimitive> lowerExtracts() {
+    IR::Vector<IR::BFN::LoweredParserPrimitive> lowerExtracts(
+                   std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit) {
         IR::Vector<IR::BFN::LoweredParserPrimitive> loweredExtracts;
 
         for (auto& item : extractFromPacketByContainer) {
@@ -429,6 +429,9 @@ struct ExtractSimplifier {
 
             auto rval = new IR::BFN::LoweredPacketRVal(byterange);
             auto extractClot = new IR::BFN::LoweredExtractClot(is_start, rval, *(cx.first));
+            if (clotTagToCsumUnit[clot->gress].count(clot->tag)) {
+                extractClot->dest.csum_unit = clotTagToCsumUnit[clot->gress][clot->tag];
+            }
             loweredExtracts.push_back(extractClot);
         }
 
@@ -774,6 +777,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             auto deposit = last->to<IR::BFN::ChecksumDepositToClot>();
             BUG_CHECK(deposit, "clot checksum does not end with a deposit?");
             csum->clot_dest = *deposit->clot;
+            clotTagToCsumUnit[state->gress][deposit->clot->tag] = csum->unit_id;
         }
 
         return csum;
@@ -820,11 +824,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
             }
         }
 
-        auto loweredExtracts = simplifier.lowerExtracts();
-
         auto parser = findContext<IR::BFN::Parser>();
         auto loweredChecksums = lowerParserChecksums(parser, state, checksums);
 
+        auto loweredExtracts = simplifier.lowerExtracts(clotTagToCsumUnit);
         /// Convert multiple select into one.
         auto* loweredSelect = new IR::BFN::LoweredSelect();
         forAllMatching<IR::BFN::Select>(&state->selects,
@@ -890,6 +893,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
     const PhvInfo& phv;
     ClotInfo& clotInfo;
     const AllocateParserChecksums& checksumAlloc;
+    // Maps clot tag to checksum unit whose output will be deposited in that CLOT for each gress
+    std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit;
 };
 
 /// Replace the high-level parser IR version of each parser's root node with its

@@ -86,6 +86,9 @@ class Clot : public LiftCompare<Clot> {
     /// @return true when the first slice in this CLOT is part of the given field @arg f.
     bool is_first_field_in_clot(const PHV::Field* f) const;
 
+    /// Indicates the checksum engine (if any) that will deposit in this CLOT
+    boost::optional<unsigned> csum_unit;
+
  private:
     void set_slices(const std::vector<const PHV::FieldSlice*> slices);
 

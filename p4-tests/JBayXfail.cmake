@@ -291,12 +291,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/jbay/multistage_fifo.p4
 )
 
-# P4C-1785
-p4c_add_xfail_reason("tofino2"
-  "mismatch from expected.*at byte"
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
-)
-
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
   "Field key is not a member of structure header pktgen_recirc_header_t"
