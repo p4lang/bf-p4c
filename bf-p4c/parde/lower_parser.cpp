@@ -14,6 +14,7 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/allocate_parser_checksum.h"

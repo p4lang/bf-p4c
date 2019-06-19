@@ -24,7 +24,7 @@ static std::string typeName(Memories::Use::type_t type) {
         case Memories::Use::TERNARY:    return "ternary_match";
         case Memories::Use::GATEWAY:    return "gateway";
         case Memories::Use::TIND:       return "ternary_indirection_ram";
-        case Memories::Use::COUNTER:    return "counter";
+        case Memories::Use::COUNTER:    return "statistics_ram";
         case Memories::Use::METER:      return "meter_ram";
         case Memories::Use::STATEFUL:   return "stateful_ram";
         case Memories::Use::SELECTOR:   return "select_ram";

@@ -1724,7 +1724,11 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
     if (layout_option->layout.direct_ad_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
 
-        cstring ad_name = tbl->name + "$action";
+        // TODO: Add pipe prefix with multi pipe support
+        cstring ad_name = tbl->match_table->externalName();
+        if (tbl->layout.pre_classifier)
+            ad_name = ad_name + "_preclassifier";
+        ad_name = ad_name + "$action";
         auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
         act_data->direct = true;
         auto *ba = new IR::MAU::BackendAttached(act_data->srcInfo, act_data);
