@@ -86,7 +86,10 @@ node ('compiler-svr1 || master') {
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.7|p4_14|glass' -LE 'METRICS'"
                     sh "echo 'Running switch profiles compilation for rel_8_7'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
-
+                    // TODO: Add a MUST PASS tag to extract customer programs automatically from
+                    // ctest
+                    sh "echo 'Running customer must passes that may timeout on Travis'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'arista/p4c-1813.p4'"
                     sh "echo 'Running switch-14 and switch-16 tests for METRICS'"
                     withCredentials([usernamePassword(
                         credentialsId: "bfndocker",

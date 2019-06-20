@@ -1573,11 +1573,12 @@ control Ruffin(inout Belview Rochert, inout Beaverdam Swanlake, in ingress_intri
 
 control Dwight(inout Belview RockHill, inout Beaverdam Robstown) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Ponder;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Ponder2;
     action Fishers() {
         Robstown.Knierim.Cornell = Ponder.get<tuple<bit<8>, bit<32>, bit<32>>>({ RockHill.Ackley.Tilton, RockHill.Ackley.Lecompte, RockHill.Ackley.Lenexa });
     }
     action Philip() {
-        Robstown.Knierim.Cornell = Ponder.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ RockHill.Knoke.Ipava, RockHill.Knoke.McCammon, 4w0, RockHill.Knoke.Manilla, RockHill.Knoke.Hematite });
+        Robstown.Knierim.Cornell = Ponder2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ RockHill.Knoke.Ipava, RockHill.Knoke.McCammon, 4w0, RockHill.Knoke.Manilla, RockHill.Knoke.Hematite });
     }
     table Levasy {
         actions = {
@@ -1688,7 +1689,9 @@ control Marquand(inout Belview Kempton, inout Beaverdam GunnCity) {
     action Boring(bit<16> Nucla) {
         GunnCity.Boerne.Basic = Nucla;
     }
-    @idletime_precision(1) @force_immediate(1) table Tillson {
+    @idletime_precision(1)
+    // @force_immediate(1)
+    table Tillson {
         idle_timeout = true;
         actions = {
             Oneonta();
@@ -1704,7 +1707,8 @@ control Marquand(inout Belview Kempton, inout Beaverdam GunnCity) {
         size = 512;
         default_action = Castle();
     }
-    @force_immediate(1) table Micro {
+    // @force_immediate(1)
+    table Micro {
         actions = {
             Aguila();
             Midas();
@@ -1767,7 +1771,9 @@ control Lattimore(inout Belview Cheyenne, inout Beaverdam Pacifica) {
         Pacifica.Alamosa.PineCity = Baranof;
         Forepaugh(Anita);
     }
-    @idletime_precision(1) @force_immediate(1) table Cairo {
+    @idletime_precision(1)
+    // @force_immediate(1)
+    table Cairo {
         idle_timeout = true;
         actions = {
             Judson();
@@ -1783,7 +1789,9 @@ control Lattimore(inout Belview Cheyenne, inout Beaverdam Pacifica) {
         size = 512;
         default_action = WildRose();
     }
-    @action_default_only("WildRose") @force_immediate(1) table Exeter {
+    @action_default_only("WildRose")
+    // @force_immediate(1)
+    table Exeter {
         actions = {
             Kellner();
             Decherd();
@@ -2251,11 +2259,12 @@ control Heizer(inout Belview Froid, inout Beaverdam Hector) {
 
 control Bammel(inout Belview Mendoza, inout Beaverdam Paragonah) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) DeRidder;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) DeRidder2;
     action Bechyn() {
         Paragonah.Knierim.Noyes = DeRidder.get<tuple<bit<16>, bit<16>, bit<16>>>({ Paragonah.Knierim.Cornell, Mendoza.Daleville.Fristoe, Mendoza.Daleville.Traverse });
     }
     action Duchesne() {
-        Paragonah.Knierim.StarLake = DeRidder.get<tuple<bit<16>, bit<16>, bit<16>>>({ Paragonah.Knierim.Grannis, Mendoza.RossFork.Fristoe, Mendoza.RossFork.Traverse });
+        Paragonah.Knierim.StarLake = DeRidder2.get<tuple<bit<16>, bit<16>, bit<16>>>({ Paragonah.Knierim.Grannis, Mendoza.RossFork.Fristoe, Mendoza.RossFork.Traverse });
     }
     action Centre() {
         Bechyn();
@@ -2320,7 +2329,11 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
     action Punaluu(bit<15> Linville) {
         Beeler(Linville);
     }
-    @ways(2) @atcam_partition_index("Boerne.Basic") @atcam_number_partitions(1024) @force_immediate(1) @action_default_only("Blakeman") table Kelliher {
+    @ways(2) @atcam_partition_index("Boerne.Basic")
+    @atcam_number_partitions(1024)
+    // @force_immediate(1)
+    @action_default_only("Blakeman")
+    table Kelliher {
         actions = {
             Beeler();
             Lovelady();
@@ -2335,7 +2348,9 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
         size = 16384;
         default_action = Blakeman();
     }
-    @idletime_precision(1) @force_immediate(1) @action_default_only("Palco") table Hopeton {
+    @idletime_precision(1)
+    // @force_immediate(1)
+    @action_default_only("Palco") table Hopeton {
         idle_timeout = true;
         actions = {
             Beeler();
@@ -2381,7 +2396,9 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
         size = 8192;
         default_action = Melder();
     }
-    @force_immediate(1) table Lyman {
+
+    // @force_immediate(1)
+    table Lyman {
         actions = {
             FourTown();
             Mondovi();
@@ -2396,7 +2413,10 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
         size = 1024;
         default_action = Melder();
     }
-    @action_default_only("Brownson") @idletime_precision(1) @force_immediate(1) table BirchRun {
+    @action_default_only("Brownson")
+    @idletime_precision(1)
+    // @force_immediate(1)
+    table BirchRun {
         idle_timeout = true;
         actions = {
             Beeler();
@@ -3527,14 +3547,16 @@ control RushCity(inout Belview Naguabo, inout Beaverdam Browning, in ingress_int
         Browning.Tehachapi.Ledoux = 32w0;
     }
     Hash<bit<16>>(HashAlgorithm_t.CRC16) Stout;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Stout2;
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) Stout3;
     action Blunt() {
         Browning.Knierim.Grannis = Stout.get<tuple<bit<32>, bit<32>, bit<8>>>({ Browning.Boerne.Higginson, Browning.Boerne.Oriskany, Browning.ElVerano.Breese });
     }
     action Ludowici() {
-        Browning.Knierim.Grannis = Stout.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Browning.Alamosa.Exton, Browning.Alamosa.Floyd, 4w0, Naguabo.Aldan.Manilla, Browning.ElVerano.Breese });
+        Browning.Knierim.Grannis = Stout2.get<tuple<bit<128>, bit<128>, bit<4>, bit<20>, bit<8>>>({ Browning.Alamosa.Exton, Browning.Alamosa.Floyd, 4w0, Naguabo.Aldan.Manilla, Browning.ElVerano.Breese });
     }
     action Forbes() {
-        Browning.Montross.SoapLake = Stout.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Naguabo.Kalkaska.Havana, Naguabo.Kalkaska.Nenana, Naguabo.Kalkaska.Morstein, Naguabo.Kalkaska.Waubun, Browning.Brinkman.Quebrada });
+        Browning.Montross.SoapLake = Stout3.get<tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>>({ Naguabo.Kalkaska.Havana, Naguabo.Kalkaska.Nenana, Naguabo.Kalkaska.Morstein, Naguabo.Kalkaska.Waubun, Browning.Brinkman.Quebrada });
     }
     action Calverton() {
         Browning.Montross.SoapLake = Browning.Knierim.Cornell;

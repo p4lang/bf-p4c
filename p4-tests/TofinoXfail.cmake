@@ -250,11 +250,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Unable to force_immediate on table|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
   smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest
   smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test
