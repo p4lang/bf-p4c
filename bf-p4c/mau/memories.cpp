@@ -383,7 +383,9 @@ class SetupAttachedTables : public MauInspector {
         if (tind_check) {
             if (ta->table_format->has_overhead()) {
                 for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
-                    (*ta->memuse)[u_id].type = Memories::Use::TIND;
+                    auto &alloc = (*ta->memuse)[u_id];
+                    alloc.type = Memories::Use::TIND;
+                    alloc.used_by = ta->table->externalName();
                     mi.tind_tables++;
                 }
                 int per_row = TernaryIndirectPerWord(&ta->layout_option->layout, ta->table);
@@ -396,7 +398,13 @@ class SetupAttachedTables : public MauInspector {
 
         if (ta->layout_option->layout.direct_ad_required()) {
             for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
-                (*ta->memuse)[u_id].type = Memories::Use::ACTIONDATA;
+                auto &alloc = (*ta->memuse)[u_id];
+                alloc.type = Memories::Use::ACTIONDATA;
+                alloc.used_by = ta->table->externalName();
+                if (ta->layout_option->layout.pre_classifier)
+                    alloc.used_by += "_preclassifier";
+                alloc.used_by += "$action";
+
                 mi.action_tables++;
             }
             mem.action_tables.push_back(ta);
@@ -456,7 +464,9 @@ class SetupAttachedTables : public MauInspector {
             return false;
 
         for (auto u_id : ta->allocation_units(ad)) {
-            (*ta->memuse)[u_id].type = Memories::Use::ACTIONDATA;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::ACTIONDATA;
+            alloc.used_by = ad->name.name;
             mi.action_tables++;
         }
 
@@ -474,7 +484,9 @@ class SetupAttachedTables : public MauInspector {
             return false;
 
         for (auto u_id : ta->allocation_units(mtr)) {
-            (*ta->memuse)[u_id].type = Memories::Use::METER;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::METER;
+            alloc.used_by = mtr->name.name;
             mi.meter_tables++;
         }
 
@@ -495,7 +507,9 @@ class SetupAttachedTables : public MauInspector {
         if (determine_unattached(cnt))
             return false;
         for (auto u_id : ta->allocation_units(cnt)) {
-            (*ta->memuse)[u_id].type = Memories::Use::COUNTER;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::COUNTER;
+            alloc.used_by = cnt->name.name;
             mi.stats_tables++;
         }
         mem.shared_attached[cnt] = ta;
@@ -535,7 +549,9 @@ class SetupAttachedTables : public MauInspector {
             return false;
 
         for (auto u_id : ta->allocation_units(salu)) {
-            (*ta->memuse)[u_id].type = Memories::Use::STATEFUL;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::STATEFUL;
+            alloc.used_by = salu->name.name;
             mi.stateful_tables++;
         }
 
@@ -565,7 +581,9 @@ class SetupAttachedTables : public MauInspector {
             return false;
 
         for (auto u_id : ta->allocation_units(as)) {
-            (*ta->memuse)[u_id].type = Memories::Use::SELECTOR;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::SELECTOR;
+            alloc.used_by = as->name.name;
         }
 
         mem.selector_tables.push_back(ta);
@@ -576,7 +594,9 @@ class SetupAttachedTables : public MauInspector {
 
     bool preorder(const IR::MAU::IdleTime *idle) {
         for (auto u_id : ta->allocation_units(idle)) {
-            (*ta->memuse)[u_id].type = Memories::Use::IDLETIME;
+            auto &alloc = (*ta->memuse)[u_id];
+            alloc.type = Memories::Use::IDLETIME;
+            alloc.used_by = ta->table->externalName();
         }
         mem.idletime_tables.push_back(ta);
         int per_row = IdleTimePerWord(idle);
@@ -592,6 +612,7 @@ class SetupAttachedTables : public MauInspector {
 void Memories::set_logical_memuse_type(table_alloc *ta, Use::type_t type) {
     for (auto u_id : ta->allocation_units()) {
         (*ta->memuse)[u_id].type = type;
+        (*ta->memuse)[u_id].used_by = ta->table->externalName();
     }
 }
 
@@ -3430,6 +3451,7 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
         for (auto u_id : u_ids) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
+            alloc.used_by = ta->table->name + "";
             if (alloc_search_bus != ta->match_ixbar->search_data())
                 continue;
 
@@ -3460,9 +3482,11 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
         safe_vector<UniqueId> u_ids = ta->table_link
                                           ? ta->table_link->allocation_units(nullptr, true)
                                           : ta->allocation_units(nullptr, true);
+        std::string used_by = ta->table->name + "";
         for (auto u_id : u_ids) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
+            alloc.used_by = used_by;
             if (alloc_search_bus != ta->match_ixbar->search_data())
                 continue;
             bool gw_found = false;
@@ -3490,6 +3514,7 @@ bool Memories::allocate_all_no_match_gw() {
         for (auto u_id : ta->allocation_units(nullptr, true)) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::GATEWAY;
+            alloc.used_by = ta->table->externalName();
             bool unit_found = find_unit_gw(alloc, u_id.build_name(), false);
             bool result_bus_found = find_result_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
                                                        u_id.logical_table);
@@ -3606,6 +3631,7 @@ bool Memories::allocate_all_no_match_miss() {
         for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Use::TIND;
+            alloc.used_by = ta->table->externalName();
             bool found = false;
             for (int i = 0; i < SRAM_ROWS; i++) {
                 for (int j = 0; j < BUS_COUNT; j++) {

@@ -191,6 +191,7 @@ struct Memories {
                       STATEFUL, ACTIONDATA } type;
         bool is_twoport() const { return type == COUNTER || type == METER || type == SELECTOR
                                          || type == STATEFUL; }
+        std::string used_by;
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {

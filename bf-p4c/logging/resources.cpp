@@ -482,6 +482,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     tcams_res->emplace("tcams", tcams);
     parent->emplace("tcams", tcams_res);
 
+    /*
     auto p4name = [](const MemoriesResource &res) {
         // // find the P4Table
         // const IR::MAU::Table *table = nullptr;
@@ -498,6 +499,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
         // else
         return res._tableName;
     };
+    */
 
     auto mkItem = [](Util::JsonArray *parent, const cstring tableName, const cstring matchType,
                      int r, int c, const cstring &colName) {
@@ -514,6 +516,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             std::string memTypeName = typeName(memuse.type);
             std::string ext = "";
 
+            std::string used_by = memuse.used_by;
             switch (memuse.type) {
             case Memories::Use::ACTIONDATA:
                 ext = "$action"; break;
@@ -538,7 +541,7 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
                 break;
             }
 
-            LOG3("MemUse: (" << res._tableName << ", p4name: " << p4name(res)
+            LOG3("MemUse: (" << res._tableName << ", p4name: " << used_by
                  << " " << memuse.type << ")");
             switch (memuse.type) {
             case Memories::Use::EXACT:
@@ -546,22 +549,21 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             case Memories::Use::TIND:
             case Memories::Use::ACTIONDATA:
                 for (auto &r : memuse.row) {
-                    auto n = p4name(res) + ext;
                     for (auto &c : r.col)
-                        mkItem(rams, n, memTypeName, r.row, c, "column");
+                        mkItem(rams, used_by, memTypeName, r.row, c, "column");
                     if ((r.stash_unit == 0) || (r.stash_unit == 1))
-                        mkItem(stashes, n, memTypeName, r.row, r.stash_unit, "unit_id"); }
+                        mkItem(stashes, used_by, memTypeName, r.row, r.stash_unit, "unit_id"); }
                 break;
             case Memories::Use::TERNARY:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(tcams, p4name(res) + ext, memTypeName, r.row, c, "column");
+                        mkItem(tcams, used_by, memTypeName, r.row, c, "column");
                 LOG1("TCAMS");
                 break;
             case Memories::Use::GATEWAY: {
                 auto row = memuse.row[0].row;
                 auto unit = memuse.gateway.unit;
-                mkItem(gateways, p4name(res) + ext, memTypeName, row, unit, "unit_id");
+                mkItem(gateways, used_by, memTypeName, row, unit, "unit_id");
 
                 break; }
             case Memories::Use::COUNTER:
@@ -572,27 +574,27 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
                 if (!memuse.home_row.empty()) {
                     auto *item = new Util::JsonObject();
                     item->emplace("row", new Util::JsonValue(memuse.home_row.at(0).first/2));
-                    usagesToCtxJson(item, p4name(res).c_str(), memTypeName);
+                    usagesToCtxJson(item, used_by, memTypeName);
                     if (memuse.type == Memories::Use::COUNTER) statistics_alus->append(item);
                     else                                       jmeter_alus->append(item);
                 }
                 // rams and map rams
                 for (auto &r : memuse.row) {
                     for (auto &c : r.col)
-                        mkItem(rams, p4name(res) + ext, memTypeName, r.row, c, "column");
+                        mkItem(rams, used_by, memTypeName, r.row, c, "column");
                     for (auto c : r.mapcol)
-                        mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, c, "unit_id");
+                        mkItem(map_rams, used_by, memTypeName, r.row, c, "unit_id");
                 }
                 // color map rams
                 for (auto &r : memuse.color_mapram)
                     for (auto &col : r.col)
-                        mkItem(map_rams, p4name(res) + ext, memTypeName, r.row, col, "unit_id");
+                        mkItem(map_rams, used_by, memTypeName, r.row, col, "unit_id");
 
                 break;
             case Memories::Use::IDLETIME:
                 for (auto &r : memuse.row)
                     for (auto &c : r.col)
-                        mkItem(map_rams, p4name(res), "idletime", r.row, c, "unit_id");
+                        mkItem(map_rams, used_by, "idletime", r.row, c, "unit_id");
                 break;
             default:
                 BUG("Unhandled memory use type %d in Visualization::gen_memories", memuse.type);
