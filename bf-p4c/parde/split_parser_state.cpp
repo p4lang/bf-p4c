@@ -658,15 +658,16 @@ struct AllocateParserState : public ParserTransform {
 
                 BUG_CHECK(rval, "unexpected source type for CLOT extract %1%", extract);
 
-                auto field_size = rval->range.size();
+                auto extract_size = rval->range.size();
 
                 auto current_slice_size = 256 - rval->range.lo;
+                auto current_slice_lo = extract_size - current_slice_size;
 
                 auto current =
-                    create_extract(slice_dest(extract, field_size - 1, current_slice_size),
+                    create_extract(slice_dest(extract, extract_size - 1, current_slice_lo),
                                               rval->apply(ClipHi())->to<IR::BFN::PacketRVal>());
 
-                auto spilled = create_extract(slice_dest(extract, current_slice_size - 1, 0),
+                auto spilled = create_extract(slice_dest(extract, current_slice_lo - 1, 0),
                                               rval->apply(ClipLo())->to<IR::BFN::PacketRVal>());
 
                 return {current, spilled};
