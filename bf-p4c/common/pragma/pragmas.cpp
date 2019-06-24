@@ -31,7 +31,7 @@ const char *PragmaAlpmPartitions::help = "@pragma alpm_partitions 2048\n"
     "pragma specifies how many partitions to use.  The only supported "
     "values are 1024, 2048, 4096, 8192.  The default is 1024.";
 
-const char *PragmaAlpmSubtreePartitions::name = "alpm_subtree_per_partition";
+const char *PragmaAlpmSubtreePartitions::name = "alpm_subtrees_per_partition";
 const char *PragmaAlpmSubtreePartitions::description =
     "Specifies the number of subtrees per ALPM partition.";
 const char *PragmaAlpmSubtreePartitions::help = "@pragma alpm_subtrees_per_partition 2\n"
