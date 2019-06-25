@@ -17,6 +17,12 @@ bool MauBacktracker::backtrack(trigger &trig) {
         // If we are directed to ignore pack conflicts, then do not note down the previous table
         // placement.
         if (!ignorePackConflicts) {
+            if (tables.size() > 0) {
+                // There exists already a table placement from a previous round without container
+                // conflicts.
+                for (auto entry : tables)
+                    prevRoundTables[entry.first] = entry.second;
+            }
             for (auto entry : t->tableAlloc) {
                 tables[entry.first] = entry.second;
                 for (int st : entry.second)
@@ -53,14 +59,27 @@ MauBacktracker::inSameStage(const IR::MAU::Table* t1, const IR::MAU::Table* t2) 
     BUG_CHECK(t1, "Null table!");
     BUG_CHECK(t2, "Null table!");
     ordered_set<int> rs;
-    if (tables.size() == 0) return rs;
+    auto thisRound = inSameStage(t1, t2, tables);
+    rs.insert(thisRound.begin(), thisRound.end());
+    auto prevRound = inSameStage(t1, t2, prevRoundTables);
+    rs.insert(prevRound.begin(), prevRound.end());
+    return rs;
+}
+
+ordered_set<int>
+MauBacktracker::inSameStage(
+        const IR::MAU::Table* t1,
+        const IR::MAU::Table* t2,
+        const ordered_map<cstring, ordered_set<int>>& tableMap) const {
+    ordered_set<int> rs;
+    if (tableMap.size() == 0) return rs;
     // Some tables in the list of tableActions maintained by PackConflicts may not have an
     // allocation (dead code eliminated away). The following if condition handles that case.
-    if (!tables.count(TableSummary::getTableName(t1)) ||
-            !tables.count(TableSummary::getTableName(t2)))
+    if (!tableMap.count(TableSummary::getTableName(t1)) ||
+            !tableMap.count(TableSummary::getTableName(t2)))
         return rs;
-    const ordered_set<int>& t1Stages = tables.at(TableSummary::getTableName(t1));
-    const ordered_set<int>& t2Stages = tables.at(TableSummary::getTableName(t2));
+    const ordered_set<int>& t1Stages = tableMap.at(TableSummary::getTableName(t1));
+    const ordered_set<int>& t2Stages = tableMap.at(TableSummary::getTableName(t2));
     BUG_CHECK(t1Stages.size() > 0, "No allocation for table %1%", t1->name);
     BUG_CHECK(t2Stages.size() > 0, "No allocation for table %2%", t2->name);
     for (int a : t1Stages) {

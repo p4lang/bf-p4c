@@ -1385,13 +1385,67 @@ void ActionAnalysis::ContainerAction::determine_src1() {
     }
 }
 
-void ActionAnalysis::TotalAlignment::determine_implicit_bits(PHV::Container container) {
+void ActionAnalysis::TotalAlignment::determine_df_implicit_bits(PHV::Container container) {
     bitvec cont_mask(0, container.size());
     bitvec mask = is_src1 ? df_src1_mask() : df_src2_mask(container);
 
     implicit_write_bits |= (mask & unused_container_bits);
     implicit_read_bits = (implicit_write_bits >> right_shift);
     implicit_read_bits |= (implicit_write_bits << (container.size() - right_shift)) & cont_mask;
+}
+
+
+
+void ActionAnalysis::TotalAlignment::implicit_bits_full(PHV::Container container) {
+    BUG_CHECK(right_shift == 0, "Whole container writes cannot have a shift");
+    bitvec cont_mask = bitvec(0, container.size());
+    implicit_write_bits = cont_mask - direct_write_bits;
+    implicit_read_bits = cont_mask - direct_read_bits;
+}
+
+/**
+ * The implicit bits are calculated as bits that aren't directly written or read from fields
+ * in the PHV, but are written anyway by the operation.  Either fields can possibly be dead,
+ * or padding, or just empty space within the allocation.
+ *
+ * This function runs at the end of verify_alignment, when src1 and src2 are possibly known
+ */
+void ActionAnalysis::ContainerAction::determine_implicit_bits(PHV::Container container,
+        TotalAlignment &ad_alignment) {
+    if (is_deposit_field_variant) {
+        for (auto &ta : phv_alignment) {
+            ta.second.determine_df_implicit_bits(container);
+        }
+        if (adi.initialized || ci.initialized)
+            ad_alignment.determine_df_implicit_bits(container);
+    } else if (convert_instr_to_bitmasked_set) {
+        bitvec ad_write_bits = ad_alignment.write_bits();
+        for (auto &ta : phv_alignment) {
+            bitvec src2_write_bits = bitvec(0, container.size()) - ad_write_bits;
+            ta.second.implicit_write_bits = src2_write_bits - ta.second.direct_write_bits;
+        }
+    } else {
+        for (auto &ta : phv_alignment) {
+            ta.second.implicit_bits_full(container);
+        }
+        if (adi.initialized || ci.initialized)
+            ad_alignment.determine_df_implicit_bits(container);
+    }
+
+    // The source can either only be action data or a constant at the moment, so currently,
+    // this behavior is safe.  This is only used by determining constants to action data,
+    // which will only be necessary if the action is constant only, and during
+    // MergeInstructions, which at that point, everything will either be action data or
+    // constants
+    if (adi.initialized) {
+        adi.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
+        adi.alignment.implicit_read_bits = ad_alignment.implicit_read_bits;
+    }
+
+    if (ci.initialized) {
+        ci.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
+        ci.alignment.implicit_read_bits = ad_alignment.implicit_read_bits;
+    }
 }
 
 bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container) {
@@ -1426,26 +1480,7 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
     determine_src1();
     ad_alignment.is_src1 = ci.alignment.is_src1 | adi.alignment.is_src1;
 
-    if (is_deposit_field_variant) {
-        for (auto &ta : Values(phv_alignment)) {
-            ta.determine_implicit_bits(container);
-        }
-        // The source can either only be action data or a constant at the moment, so currently,
-        // this behavior is safe.  This is only used by determining constants to action data,
-        // which will only be necessary if the action is constant only, and during
-        // MergeInstructions, which at that point, everything will either be action data or
-        // constants
-        if (adi.initialized) {
-            ad_alignment.determine_implicit_bits(container);
-            adi.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
-            adi.alignment.implicit_read_bits = ad_alignment.implicit_read_bits;
-        }
-        if (ci.initialized) {
-            ad_alignment.determine_implicit_bits(container);
-            ci.alignment.implicit_write_bits = ad_alignment.implicit_write_bits;
-            ci.alignment.implicit_write_bits = ad_alignment.implicit_read_bits;
-        }
-    }
+    determine_implicit_bits(container, ad_alignment);
     return true;
 }
 
@@ -1469,6 +1504,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.direct_write_bits;
     }
+
 
     total_write_bits |= adi.alignment.direct_write_bits;
     total_write_bits |= ci.alignment.direct_write_bits;
@@ -1617,6 +1653,13 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         // Bitmasked-set must be converted to action data
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         return;
+    } else if (container.is(PHV::Kind::mocha)) {
+         constant_value = cont_action.ci.build_constant();
+         if (!valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
+                                         container.size())) {
+             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+             return;
+         }
     } else if (cont_action.name == "set" &&
                cont_action.ci.alignment.direct_write_bits.popcount()
                                             == static_cast<int>(container.size()) &&
@@ -1828,6 +1871,27 @@ bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
 }
 
 
+bool ActionAnalysis::ContainerAction::verify_mocha_and_dark(cstring &error_message,
+        PHV::Container container) {
+    if (container.is(PHV::Kind::normal))
+        return true;
+    std::string cont_type_name = container.is(PHV::Kind::mocha) ? "mocha" : "dark";
+    int sources_needed = ad_sources() + counts[ActionParam::PHV];
+    if (!(sources_needed == 1 && name == "set")) {
+        error_code |= ILLEGAL_MOCHA_OR_DARK_WRITE;
+        error_message += cont_type_name + " containers can only perform assignment operations "
+            "from a single source";
+        return false;
+    }
+
+    if (container.is(PHV::Kind::dark) && ad_sources() > 0) {
+        error_code |= ILLEGAL_MOCHA_OR_DARK_WRITE;
+        error_message += "dark containers can only be sourced from PHV containers";
+        return false;
+    }
+    return true;
+}
+
 /** The goal of this function is to validate a container operation given the allocation
  *  the write fields and the sources of the particular operation.  The following checks are:
  *    - If the ALU operation requires too many sources
@@ -1878,6 +1942,9 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return false;
     }
 
+    if (!verify_mocha_and_dark(error_message, container))
+        return false;
+
     bool source_to_bit_correct = verify_source_to_bit(operands(), container);
     if (!source_to_bit_correct) {
         error_code |= BIT_COLLISION;
@@ -1891,14 +1958,6 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         error_code |= OPERAND_MISMATCH;
         error_message += "the number of operands does not match the number of sources";
         return false;
-    }
-
-    // Bitmasked-set and deposit-field instructions must only be generated for normal PHVs, not dark
-    // or mocha PHVs.
-    if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
-        if (!(name == "set" && sources_needed == 1)) {
-            error_message += "mocha and dark PHV can only be used in simple set operations";
-        }
     }
 
     bool aligned = verify_alignment(container);

@@ -85,9 +85,6 @@ void PackConflicts::end_apply() {
             auto* t1 = row1.first;
             auto* t2 = row2.first;
             if (t1 == t2) continue;
-            // This is the field added for bridged metadata initialization. We don't need to enforce
-            // no-pack conflicts for this table.
-            if (t1->name == "tbl_act_0" || t2->name == "tbl_act_0") continue;
             ordered_set<int> stage = bt.inSameStage(t1, t2);
             if (!stage.empty()) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<

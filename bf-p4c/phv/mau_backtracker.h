@@ -22,6 +22,8 @@ class MauBacktracker : public Inspector, Backtrack {
     /// Store a map of table names to stage, used as reference by the second round of PHV allocation
     /// (after a backtrack exception has been thrown by TableSummary)
     ordered_map<cstring, ordered_set<int>> tables;
+    /// Map of table names to stage from a previous round without container conflicts.
+    ordered_map<cstring, ordered_set<int>> prevRoundTables;
 
     /// Set of bridged fields that should be interpreted as no-pack, based on backtracking.
     ordered_set<cstring>    noPackFields;
@@ -44,6 +46,11 @@ class MauBacktracker : public Inspector, Backtrack {
     /// This is the function that catches the backtracking exception from TableSummary. This should
     /// return true.
     bool backtrack(trigger &) override;
+
+    ordered_set<int> inSameStage(
+            const IR::MAU::Table* t1,
+            const IR::MAU::Table* t2,
+            const ordered_map<cstring, ordered_set<int>>& tableMap) const;
 
  public:
     /// @returns the stage number(s) if tables @t1 and @t2 are placed in the same stage

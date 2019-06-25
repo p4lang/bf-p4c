@@ -170,7 +170,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool deposit_field_src2(PHV::Container container) const;
         bool verify_individual_alignments(PHV::Container &container);
         bool is_wrapped_shift(PHV::Container container, int *lo = nullptr, int *hi = nullptr) const;
-        void determine_implicit_bits(PHV::Container container);
+        void determine_df_implicit_bits(PHV::Container container);
+        void implicit_bits_full(PHV::Container container);
 
         int bitrange_size() const {
             BUG_CHECK(write_bits().is_contiguous(), "Converting a bitvec to a bitrange requires "
@@ -286,7 +287,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             REFORMAT_CONSTANT = (1 << 18),
                             UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19),
                             ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20),
-                            CONSTANT_TO_HASH = (1 << 21)
+                            CONSTANT_TO_HASH = (1 << 21),
+                            ILLEGAL_MOCHA_OR_DARK_WRITE = (1 << 22)
                          };
         unsigned error_code = NO_PROBLEM;
         cstring name;
@@ -378,6 +380,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
 
+        bool verify_mocha_and_dark(cstring &error_message, PHV::Container container);
         bool verify_speciality(cstring &error_message, PHV::Container container,
             cstring action_name);
         bool verify_shift(cstring &error_message, PHV::Container container, const PhvInfo &phv);
@@ -393,6 +396,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         bool verify_set_alignment(PHV::Container &container, TotalAlignment &ad_alignment);
         void determine_src1();
+        void determine_implicit_bits(PHV::Container container, TotalAlignment &ad_alignment);
         bool verify_alignment(PHV::Container &container);
         bitvec specialities() const;
 

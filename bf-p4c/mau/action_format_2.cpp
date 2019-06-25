@@ -679,8 +679,11 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
 
 
     RamSection *init_rv = new RamSection(sec_size, pc);
+    bool has_hash = false;
+
     for (auto param : _params) {
         init_rv->add_param(param.phv_bits.lo, param.param);
+        has_hash |= param.param->is<Hash>();
     }
 
     if (_constraint != DEPOSIT_FIELD) {
@@ -688,8 +691,17 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
         bitvec reverse_mask = bitvec(0, size()) - _phv_bits;
         for (auto br : bitranges(reverse_mask)) {
             int br_size = (br.second - br.first) + 1;
-            Constant *con = new Constant(bitvec(), br_size);
-            init_rv->add_param(br.first, con);
+            Parameter *param;
+            if (has_hash) {
+                P4HashFunction func;
+                func.inputs.push_back(new IR::Constant(IR::Type::Bits::get(br_size), 0));
+                func.algorithm = IR::MAU::HashFunction::identity();
+                func.hash_bits = { 0, br_size - 1 };
+                param = new Hash(func);
+            } else {
+                param = new Constant(bitvec(), br_size);
+            }
+            init_rv->add_param(br.first, param);
         }
     }
 
@@ -1882,7 +1894,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
         if (cont_action.convert_instr_to_bitmasked_set)
             alu_cons = BITMASKED_SET;
-        if (cont_action.action_data_isolated())
+        if (cont_action.action_data_isolated() || container.is(PHV::Kind::mocha))
             alu_cons = ISOLATED;
 
         ALUOperation *alu = new ALUOperation(container, alu_cons);
