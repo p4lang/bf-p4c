@@ -88,6 +88,7 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/emulation
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/entry_read_from_hw/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/hash_test/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/incremental_checksum/*.p4"
+               "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/stashes/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/basic_switching/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/chksum/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/deparse_zero/*.p4"

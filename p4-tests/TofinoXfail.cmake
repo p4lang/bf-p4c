@@ -116,11 +116,6 @@ if (PTF_REQUIREMENTS_MET)
     basic_switching
     )
 
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: 50 not less than 30"
-    extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
-    )
-
 # BRIG-686
 # NameError: global name 'smoke_large_tbls_idle_stats_tbl_match_spec_t' is not defined
   p4c_add_xfail_reason("tofino"
@@ -471,6 +466,8 @@ p4c_add_xfail_reason("tofino"
  
   ba101_20-simple_l2
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
+  
+  ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed

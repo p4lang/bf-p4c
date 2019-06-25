@@ -45,7 +45,7 @@ control ingress(inout Headers h, inout Meta m, inout standard_metadata_t sm) {
         if (m.mtr_out == 0) {  // green
             h.hdr.is_green_0 = 1;
         } else {
-            h.hdr.is_green_1 = 0;
+            h.hdr.is_green_0 = 0;
         }
 
         mtr_1.execute_meter((bit<32>)sm.ingress_port, m.mtr_out);
