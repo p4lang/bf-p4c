@@ -219,6 +219,9 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
                                TablePrinter::Align::CENTER);
     for (auto kv : parser_state_to_fields_) {
         for (auto f : kv.second) {
+            // Ignore extracts that aren't sourced from the packet.
+            if (!field_range(kv.first, f)) continue;
+
             std::string attr;
             if (is_checksum(f)) {
                 attr = "checksum";
@@ -359,20 +362,15 @@ bool ClotInfo::extracts_full_width(const PHV::Field* field) const {
     if (!field_to_parser_states_.count(field))
         return false;
 
+    bool have_packet_extract = false;
     for (auto state : field_to_parser_states_.at(field)) {
-        BUG_CHECK(field_range_.count(state),
-                  "No field range found for %s extracted in %s",
-                  field->name, state->name);
-
-        const auto& submap = field_range_.at(state);
-        BUG_CHECK(submap.count(field),
-                  "No field range found for %s extracted in %s",
-                  field->name, state->name);
-
-        if (field->size != submap.at(field).size()) return false;
+        if (auto range = field_range(state, field)) {
+            have_packet_extract = true;
+            if (field->size != range->size()) return false;
+        }
     }
 
-    return true;
+    return have_packet_extract;
 }
 
 void ClotInfo::add_alias(const PHV::Field* f1, const PHV::Field* f2) {
@@ -420,7 +418,11 @@ bool ClotInfo::is_modified(const PHV::Field* field) const {
     // Recursively check if the field is packed with a modified field in the same header.
     if (field_to_parser_states_.count(field)) {
         for (auto state : field_to_parser_states_.at(field)) {
-            for (auto idx : field_to_byte_idx.at(state).at(field)) {
+            if (!field_to_byte_idx.count(state)) continue;
+            auto byte_indices = field_to_byte_idx.at(state);
+
+            if (!byte_indices.count(field)) continue;
+            for (auto idx : byte_indices.at(field)) {
                 for (auto other_field : byte_idx_to_field.at(state).at(idx)) {
                     if (field->header() == other_field->header() && is_modified(other_field)) {
                         return is_modified_[field] = true;
@@ -1078,7 +1080,7 @@ class GreedyClotAllocator : public Visitor {
         LOG6("Finding extracts in state " << state->name);
         visited->insert(state);
 
-        // Find all extracts in the current state.
+        // Find all packet-sourced extracts in the current state.
         if (clotInfo.field_range_.count(state)) {
             for (auto entry : clotInfo.field_range_.at(state)) {
                 auto field = entry.first;

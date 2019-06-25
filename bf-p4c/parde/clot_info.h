@@ -78,13 +78,15 @@ class ClotInfo {
 
     PhvUse &uses;
 
+    /// Maps parser states to all fields extracted in that state, regardless of source.
     ordered_map<const IR::BFN::ParserState*,
                 std::vector<const PHV::Field*>> parser_state_to_fields_;
 
+    /// Maps fields to all states that extract the field, regardless of source.
     ordered_map<const PHV::Field*,
                 std::set<const IR::BFN::ParserState*>> field_to_parser_states_;
 
-    /// Maps the fields extracted in each state to the state-relative byte indices
+    /// Maps the fields extracted from the packet in each state to the state-relative byte indices
     /// occupied by the field.
     std::map<const IR::BFN::ParserState*,
              std::map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
@@ -122,9 +124,29 @@ class ClotInfo {
  private:
     unsigned num_clots_allocated(gress_t gress) const { return Clot::tagCnt.at(gress); }
 
+    /// The extracted packet range of a given field for a given parser state.
+    boost::optional<nw_bitrange> field_range(const IR::BFN::ParserState* state,
+                                             const PHV::Field* field) const {
+        BUG_CHECK(field_to_parser_states_.count(field),
+                  "Field %1% is never extracted from the packet",
+                  field->name);
+        BUG_CHECK(field_to_parser_states_.at(field).count(state),
+                  "Parser state %1% does not extract %2%",
+                  state->name, field->name);
+
+        if (field_range_.count(state) && field_range_.at(state).count(field))
+            return field_range_.at(state).at(field);
+
+        return boost::optional<nw_bitrange>{};
+    }
+
     /// The bit offset of a given field for a given parser state.
-    unsigned offset(const IR::BFN::ParserState* state, const PHV::Field* field) const {
-        return field_range_.at(state).at(field).lo;
+    boost::optional<unsigned> offset(const IR::BFN::ParserState* state,
+                                     const PHV::Field* field) const {
+        if (auto range = field_range(state, field))
+            return range->lo;
+
+        return boost::optional<unsigned>{};
     }
 
  public:
@@ -203,12 +225,14 @@ class ClotInfo {
     }
 
  private:
-    void add_field(const PHV::Field* f, const IR::BFN::PacketRVal* rval,
+    void add_field(const PHV::Field* f, const IR::BFN::ParserRVal* source,
                    const IR::BFN::ParserState* state) {
-        LOG4("adding " << f->name << " to " << state->name << " (range " << rval->range << ")");
+        LOG4("adding " << f->name << " to " << state->name << " (source " << source << ")");
         parser_state_to_fields_[state].push_back(f);
         field_to_parser_states_[f].insert(state);
-        field_range_[state][f] = rval->range;
+
+        if (auto rval = source->to<IR::BFN::PacketRVal>())
+            field_range_[state][f] = rval->range;
     }
 
     /// Populates @ref field_to_byte_idx and @ref byte_idx_to_field.
@@ -218,13 +242,16 @@ class ClotInfo {
             auto& fields_in_state = kv.second;
 
             for (auto f : fields_in_state) {
-                unsigned f_offset = offset(state, f);
-                unsigned start_byte =  f_offset / 8;
-                unsigned end_byte = (f_offset + f->size - 1) / 8;
+                if (auto f_offset_opt = offset(state, f)) {
+                    unsigned f_offset = *f_offset_opt;
 
-                for (unsigned i = start_byte; i <= end_byte; i++) {
-                    field_to_byte_idx[state][f].insert(i);
-                    byte_idx_to_field[state][i].insert(f);
+                    unsigned start_byte =  f_offset / 8;
+                    unsigned end_byte = (f_offset + f->size - 1) / 8;
+
+                    for (unsigned i = start_byte; i <= end_byte; i++) {
+                        field_to_byte_idx[state][f].insert(i);
+                        byte_idx_to_field[state][i].insert(f);
+                    }
                 }
             }
         }
@@ -306,8 +333,8 @@ class ClotInfo {
     /// Determines whether a field slice can be the last one in a CLOT.
     bool can_end_clot(const FieldSliceExtractInfo* extract_info) const;
 
-    /// Determines whether a field extracts its full width from the packet.
-    /// Returns false if the field is not extracted.
+    /// Determines whether a field extracts its full width whenever it is extracted from the
+    /// packet. Returns false if the field is not extracted from the packet in any state.
     bool extracts_full_width(const PHV::Field* field) const;
 
     /// Memoization table for @ref is_modified.
@@ -489,11 +516,9 @@ class CollectClotInfo : public Inspector {
     bool preorder(const IR::BFN::Extract* extract) override {
         auto state = findContext<IR::BFN::ParserState>();
 
-        if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
-            if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
-                if (auto f = phv.field(field_lval->field))
-                    clotInfo.add_field(f, rval, state);
-            }
+        if (auto field_lval = extract->dest->to<IR::BFN::FieldLVal>()) {
+            if (auto f = phv.field(field_lval->field))
+                clotInfo.add_field(f, extract->source, state);
         }
 
         return true;
