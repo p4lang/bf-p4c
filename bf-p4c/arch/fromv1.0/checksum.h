@@ -76,7 +76,7 @@ createChecksumDeclaration(ProgramStructure *structure,
     structure->unique_names.insert(csum_name);
     auto args = new IR::Vector<IR::Argument>();
     auto hashAlgo = new IR::Member(
-            new IR::TypeNameExpression("HashAlgorithm_t"), "CSUM16");
+            new IR::TypeNameExpression("ChecksumAlgorithm_t"), "CSUM16");
     args->push_back(new IR::Argument(hashAlgo));
     auto decl = new IR::Declaration_Instance(csum_name, inst, args);
 

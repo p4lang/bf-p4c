@@ -96,7 +96,7 @@ parser SwitchIngressParser(
     out metadata_t ig_md,
     out ingress_intrinsic_metadata_t ig_intr_md) {
 
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) udp_checksum;
+    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) udp_checksum;
 
     state start {
         pkt.extract(ig_intr_md);
@@ -277,7 +277,7 @@ control SwitchEgressDeparser(packet_out pkt, inout Parsed_packet hdr,
                         in metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr){
     
 
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) udp_checksum;
+    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) udp_checksum;
     apply {
         if (hdr.ipv4.isValid()) {
             hdr.udpv4.checksum = udp_checksum.update({hdr.ipv4.src_addr,

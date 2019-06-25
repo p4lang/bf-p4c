@@ -283,7 +283,7 @@ control SwitchIngressDeparser(
  in ingress_metadata_t ig_md,
  in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md
 ) {
- Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
+ Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
  apply {
   hdr.ipv4.hdr_checksum = ipv4_checksum.update({
    hdr.ipv4.version,
@@ -342,7 +342,7 @@ control SwitchEgressDeparser(
  in egress_metadata_t eg_md,
  in egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
 ) {
- Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
+ Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
  apply {
   hdr.ipv4.hdr_checksum = ipv4_checksum.update({
    hdr.ipv4.version,

@@ -62,7 +62,7 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
 }
 
 control IgDeparser(packet_out packet, inout headers_t hdr,in metadata_t meta, in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) sample1_checksum;
+    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) sample1_checksum;
     apply {
         if (hdr.sample2.isValid()) {
             hdr.sample1.csum = sample1_checksum.update({

@@ -570,7 +570,7 @@ extern Checksum<W> {
     /// Constructor.
     /// @type_param W : Width of the calculated checksum. Only bit<16> is
     /// supported.
-    /// @param algorithm : Only HashAlgorithm_t.CSUM16 is supported.
+    /// @param algorithm : Only ChecksumAlgorithm_t.CSUM16 is supported.
     Checksum(HashAlgorithm_t algorithm);
 
     /// Add data to checksum.

@@ -68,8 +68,12 @@ enum HashAlgorithm_t {
     CRC8,
     CRC16,
     CRC32,
-    CRC64,
-    CSUM16
+    CRC64
+}
+
+enum ChecksumAlgorithm_t {
+    CSUM16,
+    CSUM16_UDP
 }
 
 match_kind {
@@ -399,7 +403,7 @@ extern Checksum<W> {
     /// @type_param W : Width of the calculated checksum. Only bit<16> is
     /// supported.
     /// @param algorithm : Only HashAlgorithm_t.CSUM16 is supported.
-    Checksum(HashAlgorithm_t algorithm);
+    Checksum(ChecksumAlgorithm_t algorithm);
 
     /// Add data to checksum.
     /// @param data : List of fields to be added to checksum calculation. The

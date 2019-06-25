@@ -65,7 +65,7 @@ Use 32-bit values for all enums.
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
     std::set<cstring> reserved_enums = {
             "MeterType_t", "MeterColor_t", "CounterType_t", "SelectorMode_t", "HashAlgorithm_t",
-            "MathOp_t", "CloneType" };
+            "MathOp_t", "CloneType", "ChecksumAlgorithm_t" };
 
     bool convert(const IR::Type_Enum* type) const override {
         LOG1("convert ? " << type->name);

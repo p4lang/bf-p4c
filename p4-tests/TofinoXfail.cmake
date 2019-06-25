@@ -175,6 +175,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "HashAlgorithm_t.CSUM16: Invalid enum tag"
+  testdata/p4_14_samples/issue894.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "Expression for parser counter is not supported"
   extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
   )
@@ -463,7 +468,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
- 
+
   ba101_20-simple_l2
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
   
@@ -596,7 +601,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register2.p4
   testdata/p4_16_samples/psa-register3.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
-  testdata/p4_14_samples/issue894.p4
   testdata/p4_16_samples/issue298-bmv2.p4
   testdata/p4_14_samples/register.p4
   testdata/p4_16_samples/issue1520-bmv2.p4

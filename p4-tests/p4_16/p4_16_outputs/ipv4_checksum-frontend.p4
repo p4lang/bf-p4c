@@ -71,7 +71,7 @@ struct switch_metadata_t {
 
 parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_metadata_t ig_md, out ingress_intrinsic_metadata_t ig_intr_md) {
     bool tmp_1;
-    @name("SwitchIngressParser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
+    @name("SwitchIngressParser.ipv4_checksum") Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
     state start {
         pkt.extract<ingress_intrinsic_metadata_t>(ig_intr_md);
         transition select(ig_intr_md.resubmit_flag) {
@@ -110,7 +110,7 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out switch_me
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in switch_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
     bit<16> tmp_2;
-    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum_2;
+    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum_2;
     apply {
         tmp_2 = ipv4_checksum_2.update<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         hdr.ipv4.hdr_checksum = tmp_2;
