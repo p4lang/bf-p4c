@@ -40,6 +40,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
+    extensions/p4_tests/p4_14/stf/update_checksum_9.p4
     )
 
 endif() # HARLYN_STF

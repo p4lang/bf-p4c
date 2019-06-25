@@ -156,9 +156,9 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
     const InsertParsedValidBits& parsed_valid_bits;
 
     std::map<gress_t, std::vector<IR::MAU::Table*>> tables_to_insert;
-
     IR::MAU::Table*
-    create_actions(gress_t gress, const ordered_set<const PHV::Field*>& fields_to_reset) {
+    create_actions(gress_t gress, const ordered_set<const PHV::Field*>& fields_to_reset,
+                   IR::BFN::Pipe* pipe) {
         auto action = new IR::MAU::Action("__reset_invalidated_checksum_fields__");
         action->default_allowed = action->init_default = true;
 
@@ -166,8 +166,13 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
             auto field_expr = phv_field_to_expr.at(field);
             auto reset = new IR::MAU::Instruction("set", field_expr,
                              new IR::Constant(IR::Type_Bits::get(field->size), 0));
-
             action->action.push_back(reset);
+            auto* annotation = new IR::Annotation(IR::ID("pa_no_overlay"), {
+                               new IR::StringLiteral(IR::ID(toString(gress))),
+                               new IR::StringLiteral(IR::ID(field->name))} );
+            pipe->global_pragmas.push_back(annotation);
+            LOG3("Added pa_no_overlay pragma on field: " << field->name << " in gress: "
+                  << field->gress);
         }
 
         static int id = 0;
@@ -184,8 +189,9 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
 
     IR::MAU::Table*
     create_reset_table(gress_t gress, const PHV::Field* pov_bit,
-                       const ordered_set<const PHV::Field*>& fields_to_reset) {
-        auto ac = create_actions(gress, fields_to_reset);
+                       const ordered_set<const PHV::Field*>& fields_to_reset,
+                       IR::BFN::Pipe* pipe) {
+        auto ac = create_actions(gress, fields_to_reset, pipe);
 
         static int id = 0;
         cstring gateway_name = toString(gress) +
@@ -201,34 +207,6 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         gw->next.emplace("$true", new IR::MAU::TableSeq(ac));
 
         return gw;
-    }
-
-    profile_t init_apply(const IR::Node* root) override {
-        for (auto& gf  : invalidated_headers.invalidated_header_pov_bits) {
-            auto gress = gf.first;
-
-            for (auto pov_bit : gf.second) {
-                if (invalidated_headers.pov_bit_to_invalidated_checksum_fields.count(pov_bit)) {
-                    auto& fields_to_reset =
-                        invalidated_headers.pov_bit_to_invalidated_checksum_fields.at(pov_bit);
-
-                    // At the end of the control flow, insert table to reset invalidated header:
-                    //
-                    //    if (hdr.$parsed && !hdr.$valid)
-                    //        hdr = 0;
-                    //
-                    // For now, create one table for each invalidated header.
-                    //
-                    // Combine multiple headers into single table? What's the tradeoff?
-                    // IMEM capacity, instr color, and induces no overlay constraint? TODO
-                    //
-                    auto t = create_reset_table(gress, pov_bit, fields_to_reset);
-                    tables_to_insert[gress].push_back(t);
-                }
-            }
-        }
-
-        return MauTransform::init_apply(root);
     }
 
     IR::MAU::TableSeq*
@@ -248,6 +226,34 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         }
 
         return seq;
+    }
+
+    IR::BFN::Pipe*
+    preorder(IR::BFN::Pipe* pipe) override {
+        for (auto& gf  : invalidated_headers.invalidated_header_pov_bits) {
+            auto gress = gf.first;
+
+            for (auto pov_bit : gf.second) {
+                if (invalidated_headers.pov_bit_to_invalidated_checksum_fields.count(pov_bit)) {
+                    auto& fields_to_reset =
+                        invalidated_headers.pov_bit_to_invalidated_checksum_fields.at(pov_bit);
+
+                    // At the end of the control flow, insert table to reset invalidated header:
+                    //
+                    //    if (hdr.$parsed && !hdr.$valid)
+                    //        hdr = 0;
+                    //
+                    // For now, create one table for each invalidated header.
+                    //
+                    // Combine multiple headers into single table? What's the tradeoff?
+                    // IMEM capacity, instr color, and induces no overlay constraint? TODO
+                    //
+                    auto t = create_reset_table(gress, pov_bit, fields_to_reset, pipe);
+                    tables_to_insert[gress].push_back(t);
+                }
+            }
+        }
+        return pipe;
     }
 
  public:
