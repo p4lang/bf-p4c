@@ -64,7 +64,7 @@ RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
 # Install python3 packaging for test_p4c_driver.py
-RUN pip3 install packaging jsl
+RUN pip3 install packaging jsl xlsxwriter
 
 ENV PATH="/usr/bin:${PATH}"
 

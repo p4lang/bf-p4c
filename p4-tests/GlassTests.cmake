@@ -218,3 +218,32 @@ foreach(t IN LISTS GTS_ALIBABA)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
   p4c_add_test_label("tofino" "GTS_WEEKLY" ${test_path})
 endforeach()
+
+set (GTS_KALOOM
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-662/case3689.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-753/case4263.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-773/case4398.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-789/big_state.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-789/case4569.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/kaloom/COMPILER-839/leaf.p4
+)
+
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_KALOOM}")
+
+foreach(t IN LISTS GTS_KALOOM)
+  file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
+  p4c_add_test_label("tofino" "GTS_WEEKLY" ${test_path})
+endforeach()
+
+set (GTS_KEYSIGHT
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/keysight/COMPILER-1049/case7268.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/keysight/COMPILER-924/case5801.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/keysight/COMPILER-996/pktgen8.p4
+)
+
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_KEYSIGHT}")
+
+foreach(t IN LISTS GTS_KEYSIGHT)
+  file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
+  p4c_add_test_label("tofino" "GTS_WEEKLY" ${test_path})
+endforeach()

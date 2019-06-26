@@ -73,7 +73,7 @@ RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
 # Install python3 packaging for test_p4c_driver.py
-RUN pip3 install packaging jsl
+RUN pip3 install packaging jsl xlsxwriter
 # Force /usr/bin to be before /usr/local/bin because bf-driver
 # installs a version of python3 in /usr/local and that version is not
 # picking up modules installed with pip3
