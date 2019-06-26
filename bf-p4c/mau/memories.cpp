@@ -2118,16 +2118,14 @@ int Memories::log_to_phys_row(int logical_row, RAM_side_t *side) const {
  */
 int Memories::lowest_row_to_overflow(const SRAM_group *candidate, int logical_row) const {
     int lowest_phys_row = 0;
-    if (Device::currentDevice() == Device::TOFINO) {
+    if (!Device::isMemoryCoreSplit()) {
         int phys_row = log_to_phys_row(logical_row);
         if (candidate->recent_home_row >= 0)
             phys_row = log_to_phys_row(candidate->recent_home_row);
         lowest_phys_row = std::max(phys_row - MAX_DATA_SWBOX_ROWS, 0);
-    } else if (Device::currentDevice() == Device::JBAY) {
+    } else {
         int phys_row = log_to_phys_row(logical_row);
         lowest_phys_row = (phys_row / MATCH_CENTRAL_ROW) * MATCH_CENTRAL_ROW;
-    } else {
-        BUG("Unrecognized device for overflow calculation");
     }
     return candidate->is_synth_type() ? phys_to_log_row(lowest_phys_row, RIGHT)
                                       : phys_to_log_row(lowest_phys_row, LEFT);
@@ -2223,7 +2221,7 @@ bool Memories::break_other_overflow(const SRAM_group *candidate, const SRAM_grou
  */
 bool Memories::can_be_placed_in_half(const SRAM_group *candidate, int row, RAM_side_t side,
         const SRAM_group *synth, int avail_RAMs_on_row) const {
-    if (Device::currentDevice() == Device::TOFINO)
+    if (!Device::isMemoryCoreSplit())
         return true;
 
     if (must_place_in_half.find(candidate) != must_place_in_half.end())
@@ -2379,7 +2377,7 @@ void Memories::determine_max_req(SRAM_group **max_req, SRAM_group *candidate) co
     //
     // Really, what needs to be opened is the reallocation of a selector in both halves,
     // if the action data table is too large
-    if (Device::currentDevice() != Device::TOFINO) {
+    if (Device::isMemoryCoreSplit()) {
         if (*max_req && candidate->type == SRAM_group::ACTION) {
             if ((**max_req).sel.sel_linked() != candidate->sel.sel_linked()) {
                 *max_req = candidate->sel.sel_linked() ? candidate : *max_req;
@@ -2498,13 +2496,24 @@ void Memories::determine_synth_logical_row_users(SRAM_group *fit_on_logical_row,
 }
 
 void Memories::determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
-        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
-        int RAMs_avail) const {
+        SRAM_group *max_req, SRAM_group *curr_oflow, SRAM_group *synth,
+        safe_vector<LogicalRowUser> &lrus, int RAMs_avail) const {
+    ///> For JBay only, the math of action data tables placed with selectors requires
+    ///> those to be favorited much earlier than any other group.  When the memory algorithm
+    ///> is refactored to handle the core split better
+    bool action_bus_used = false;
+    if (Device::isMemoryCoreSplit() && synth && synth->type == SRAM_group::SELECTOR &&
+        curr_oflow && curr_oflow->type == SRAM_group::ACTION) {
+        if (max_req) {
+            lrus.emplace_back(max_req, ACTION);
+            action_bus_used = true;
+        }
+    }
+
     // If a action table is overflowing and we can finish a table on a single row while using
     // all possible RAMs, then we place the single row table
-    bool action_bus_used = false;
     if (curr_oflow && !curr_oflow->is_synth_type()) {
-        if (fit_on_logical_row &&
+        if (fit_on_logical_row && !action_bus_used &&
             curr_oflow->left_to_place() + fit_on_logical_row->left_to_place() >= RAMs_avail) {
             lrus.emplace_back(fit_on_logical_row, ACTION);
             action_bus_used = true;
@@ -2779,7 +2788,7 @@ void Memories::find_swbox_candidates(safe_vector<LogicalRowUser> &lrus, int row,
     candidates_for_action_row(&fit_on_logical_row[ACTION], &max_req[ACTION], row, side, curr_oflow,
                               sel_oflow, RAMs_avail_on_row[ACTION], synth);
     determine_action_logical_row_users(fit_on_logical_row[ACTION], max_req[ACTION], curr_oflow,
-                                       lrus, RAMs_avail_on_row[ACTION]);
+                                       synth, lrus, RAMs_avail_on_row[ACTION]);
     determine_logical_row_masks(lrus, row, side, RAMs_avail_on_row[ACTION], false);
 
     for (auto &lru : lrus) {
@@ -3219,7 +3228,7 @@ bool Memories::allocate_all_swbox_users() {
 
 #ifdef HAVE_JBAY
         // JBay has no overflow bus between logical row 7 and 8
-        if ((Device::currentDevice() == Device::JBAY) && i == MATCH_CENTRAL_ROW) {
+        if ((Device::isMemoryCoreSplit()) && i == MATCH_CENTRAL_ROW) {
             for (auto group : must_place_in_half) {
                 if (!(group->all_placed() && group->cm.all_placed())) {
                     LOG4("    Group not finished " << group);

@@ -44,6 +44,7 @@ class Device {
     static int numParsersPerPipe() { return 18; }
     static int numMaxChannels() { return Device::get().getNumMaxChannels(); }
     static int numClots() { return pardeSpec().numClotsPerGress(); }
+    static int isMemoryCoreSplit() { return Device::get().getIfMemoryCoreSplit(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -67,6 +68,7 @@ class Device {
     virtual int getQueueIdWidth() const = 0;
     virtual int getPortBitWidth() const = 0;
     virtual int getNumMaxChannels() const = 0;
+    virtual bool getIfMemoryCoreSplit() const = 0;
 
  private:
     static Device* instance_;
@@ -106,6 +108,7 @@ class TofinoDevice : public Device {
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    bool getIfMemoryCoreSplit() const override { return false; }
 };
 
 #if HAVE_JBAY
@@ -142,6 +145,7 @@ class JBayDevice : public Device {
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    bool getIfMemoryCoreSplit() const override { return true; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of

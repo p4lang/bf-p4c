@@ -601,8 +601,8 @@ struct Memories {
         SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
         int RAMs_avail) const;
     void determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
-        SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
-        int RAMs_avail) const;
+        SRAM_group *max_req, SRAM_group *curr_oflow, SRAM_group *synth,
+        safe_vector<LogicalRowUser> &lrus, int RAMs_avail) const;
     void determine_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
         int RAMs_available, bool is_synth_type) const;
     void one_color_map_RAM_mask(LogicalRowUser &lru, bitvec &map_RAM_in_use,
