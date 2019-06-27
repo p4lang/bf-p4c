@@ -59,15 +59,14 @@ class MauAsmOutput : public MauInspector {
  private:
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *, const IXBar::Use *,
         const safe_vector<IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
-        bool ternary) const;
+        const IR::MAU::Table *, bool ternary) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
             const Memories::Use *mem) const;
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
     void emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-             std::map<int, std::map<int, Slice>> &sort,
-             std::map<int, std::map<int, Slice>> &midbytes, bool ternary,
-             bool atcam = false) const;
+        std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
+        const IR::MAU::Table *tbl, bool ternary, bool atcam = false) const;
     void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
             safe_vector<Slice> &ghost, const TableMatch *fmt,
             std::map<int, std::map<int, Slice>> &sort) const;
@@ -101,7 +100,7 @@ class MauAsmOutput : public MauInspector {
             const safe_vector<const IR::Expression *> &field_list_order) const;
 
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
-            const TableMatch *fmt) const;
+            const TableMatch *fmt, const IR::MAU::Table *) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
         const IR::MAU::Table::Layout *l = nullptr, const TableFormat::Use *f = nullptr) const;
     bool emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,

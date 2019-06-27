@@ -444,23 +444,30 @@ class MauAsmOutput::EmitHashExpression : public Inspector {
 
 /* Calculate the hash tables used by an individual P4 table in the IXBar */
 void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-        std::map<int, std::map<int, Slice>> &sort,
-        std::map<int, std::map<int, Slice>> &midbytes, bool ternary, bool atcam) const {
+        std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
+        const IR::MAU::Table *tbl, bool ternary, bool atcam) const {
+    PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
         if (atcam && !b.is_spec(IXBar::ATCAM_INDEX))
             continue;
         for (auto &fi : b.field_bytes) {
-            if (b.loc.byte == byte_loc && ternary) {
-                Slice sl(phv, fi.get_use_name(), fi.lo, fi.hi);
-                auto n = midbytes[b.loc.group/2].emplace(sl.bytealign(), sl);
-                BUG_CHECK(n.second, "duplicate byte use in ixbar");
-            } else {
-                Slice sl(phv, fi.get_use_name(), fi.lo, fi.hi);
-                auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-                BUG_CHECK(n.second, "duplicate byte use in ixbar");
-            }
+            auto field = phv.field(fi.get_use_name());
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            // It is not a guarantee, especially in Tofino2 due to live ranges being different
+            // that a FieldInfo is not corresponding to a single alloc_slice object
+            field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::Field::alloc_slice &sl) {
+                if (b.loc.byte == byte_loc && ternary) {
+                    Slice asm_sl(phv, fi.get_use_name(), sl.field_bit, sl.field_hi());
+                    auto n = midbytes[b.loc.group/2].emplace(asm_sl.bytealign(), asm_sl);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
+                } else {
+                    Slice asm_sl(phv, fi.get_use_name(), sl.field_bit, sl.field_hi());
+                    auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
+                    BUG_CHECK(n.second, "duplicate byte use in ixbar");
+                }
+            });
         }
     }
 
@@ -1106,10 +1113,10 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const TableMatch *fmt) const {
+        const TableMatch *fmt, const IR::MAU::Table *tbl) const {
     std::map<int, std::map<int, Slice>> sort;
     std::map<int, std::map<int, Slice>> midbytes;
-    emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary);
+    emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->ternary);
     cstring group_type = use->ternary ? "ternary" : "exact";
     for (auto &group : sort)
         out << indent << group_type << " group "
@@ -1120,7 +1127,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
     if (use->atcam) {
         sort.clear();
         midbytes.clear();
-        emit_ixbar_gather_bytes(use->use, sort, midbytes, use->ternary, use->atcam);
+        emit_ixbar_gather_bytes(use->use, sort, midbytes, tbl, use->ternary, use->atcam);
     }
     for (int hash_group = 0; hash_group < IXBar::HASH_GROUPS; hash_group++) {
         unsigned hash_table_input = use->hash_table_inputs[hash_group];
@@ -1149,7 +1156,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
 
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const IXBar::Use *proxy_hash_use, const safe_vector<IXBar::HashDistUse> *hash_dist_use,
-        const Memories::Use *mem, const TableMatch *fmt, bool ternary) const {
+        const Memories::Use *mem, const TableMatch *fmt, const IR::MAU::Table *tbl,
+        bool ternary) const {
     if (!ternary) {
         emit_ways(out, indent, use, mem);
     }
@@ -1162,17 +1170,17 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
     if (ternary && use && !use->ternary) return;
     out << indent++ << "input_xbar:" << std::endl;
     if (use) {
-        emit_single_ixbar(out, indent, use, fmt);
+        emit_single_ixbar(out, indent, use, fmt, tbl);
     }
 
     if (proxy_hash_use) {
-        emit_single_ixbar(out, indent, proxy_hash_use, nullptr);
+        emit_single_ixbar(out, indent, proxy_hash_use, nullptr, tbl);
     }
 
     if (hash_dist_use) {
         for (auto &hash_dist : *hash_dist_use) {
             for (auto &ir_alloc : hash_dist.ir_allocations) {
-                emit_single_ixbar(out, indent, &(ir_alloc.use), nullptr);
+                emit_single_ixbar(out, indent, &(ir_alloc.use), nullptr, tbl);
             }
         }
     }
@@ -2229,26 +2237,35 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
 
         safe_vector<Slice> single_byte_match_fields;
         for (auto &fi : byte.field_bytes) {
-            bitvec cont_loc = fi.cont_loc();
+            bitvec total_cont_loc = fi.cont_loc();
+            int first_cont_bit = total_cont_loc.min().index();
             bitvec layout_shifted
                 = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
 
-            int lo = fi.lo;
-            int hi = fi.hi;
-
-            bitvec matched_bits = layout_shifted & cont_loc;
-            // If a byte is partially ghosted, then currently the bits from the lsb are
-            // ghosted so the algorithm always shrinks from the bottom
-            if (matched_bits.empty()) {
-                continue;
-            } else if (matched_bits != cont_loc) {
-                lo += (matched_bits.min().index() - cont_loc.min().index());
-            }
-            Slice sl(phv, fi.get_use_name(), lo, hi);
-
-            if (sl.bytealign() != (matched_bits.min().index() % 8))
-                BUG("Byte alignment for matching does not match up properly");
-            single_byte_match_fields.push_back(sl);
+            auto field = phv.field(fi.get_use_name());
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            int bits_seen = 0;
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            // It is not a guarantee, especially in Tofino2 due to live ranges being different
+            // that a FieldInfo is not corresponding to a single alloc_slice object
+            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
+                int lo = sl.field_bit;
+                int hi = sl.field_hi();
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width);
+                bitvec matched_bits = layout_shifted & cont_loc;
+                bits_seen += sl.width;
+                // If a byte is partially ghosted, then currently the bits from the lsb are
+                // ghosted so the algorithm always shrinks from the bottom
+                if (matched_bits.empty()) {
+                    return;
+                } else if (matched_bits != cont_loc) {
+                    lo += (matched_bits.min().index() - cont_loc.min().index());
+                }
+                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
+                if (asm_sl.bytealign() != (matched_bits.min().index() % 8))
+                    BUG("Byte alignment for matching does not match up properly");
+                single_byte_match_fields.push_back(asm_sl);
+            });
         }
 
         std::sort(single_byte_match_fields.begin(), single_byte_match_fields.end(),
@@ -2271,19 +2288,29 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             bitvec cont_loc = fi.cont_loc();
             bitvec layout_shifted
                 = byte_layout.getslice(byte_layout.min().index() / 8 * 8, 8);
-
-            int lo = fi.lo;
-            int hi = fi.hi;
-
-            bitvec ghosted_bits = layout_shifted & cont_loc;
-            if (ghosted_bits.empty())
-                continue;
-            else if (ghosted_bits != cont_loc)
-                hi -= (cont_loc.max().index() - ghosted_bits.max().index());
-            Slice sl(phv, fi.get_use_name(), lo, hi);
-            if (sl.bytealign() != (ghosted_bits.min().index() % 8))
-                BUG("Byte alignment for ghosting does not match up properly");
-            ghost_bits.push_back(sl);
+            bitvec total_cont_loc = fi.cont_loc();
+            int first_cont_bit = total_cont_loc.min().index();
+            auto field = phv.field(fi.get_use_name());
+            le_bitrange field_bits = { fi.lo, fi.hi };
+            int bits_seen = 0;
+            // It is not a guarantee, especially in Tofino2 due to live ranges being different
+            // that a FieldInfo is not corresponding to a single alloc_slice object
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
+                int lo = sl.field_bit;
+                int hi = sl.field_hi();
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width);
+                bitvec ghosted_bits = layout_shifted & cont_loc;
+                bits_seen += sl.width;
+                if (ghosted_bits.empty())
+                    return;
+                else if (ghosted_bits != cont_loc)
+                    hi -= (cont_loc.max().index() - ghosted_bits.max().index());
+                Slice asm_sl(phv, fi.get_use_name(), lo, hi);
+                if (asm_sl.bytealign() != (ghosted_bits.min().index() % 8))
+                    BUG("Byte alignment for ghosting does not match up properly");
+                ghost_bits.push_back(asm_sl);
+            });
         }
     }
     /* Store the table pointer handy in case we need to write the seed */
@@ -2916,7 +2943,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                                             &tbl->resources->proxy_hash_ixbar : nullptr;
             emit_ixbar(out, indent, &tbl->resources->match_ixbar, proxy_ixbar,
                          &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
-                         &fmt, tbl->layout.ternary);
+                         &fmt, tbl, tbl->layout.ternary);
             if (proxy_ixbar) {
                 out << indent << "proxy_hash_algorithm: "
                               << proxy_ixbar->proxy_hash_key_use.alg_name << std::endl;
@@ -2965,7 +2992,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, nullptr,
-                   nullptr, false);
+                   nullptr, tbl, false);
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
@@ -3433,7 +3460,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     out << " }" << std::endl;
     if (meter->input)
         self.emit_ixbar(out, indent, &tbl->resources->meter_ixbar, nullptr, nullptr, nullptr,
-                        nullptr, false);
+                        nullptr, tbl, false);
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     cstring imp_type;
     if (!meter->implementation.name)
@@ -3523,8 +3550,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr,
-
-                    nullptr, nullptr, nullptr, false);
+                    nullptr, nullptr, nullptr, tbl, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
@@ -3554,7 +3580,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     out << indent++ << "ternary_indirect " << unique_id << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, nullptr,
-                      &tbl->resources->hash_dists, nullptr, nullptr, false);
+                      &tbl->resources->hash_dists, nullptr, nullptr, tbl, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true, false);
     bitvec source;
     source.setbit(ActionFormat::IMMED);
@@ -3618,7 +3644,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     } else {
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id)); }
     self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, nullptr,
-                    false);
+                    tbl, false);
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;
