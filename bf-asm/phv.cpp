@@ -372,12 +372,13 @@ void Phv::output(json::map &ctxt_json) {
                     pov_headers.push_back(std::move(pov_header)); }
                 phv_records.push_back(std::move(phv_record)); }
             phv_container["word_bit_width"] = phv_container_size;
-            if (gress == INGRESS) {
+            // Ghost phv's are considered as ingress phv's
+            if ((gress == INGRESS) || (gress == GHOST)) {
                 phv_alloc_stage_ingress.push_back(std::move(phv_container));
             } else if (gress == EGRESS) {
                 phv_alloc_stage_egress.push_back(std::move(phv_container));
-            } else if (gress == GHOST) {
-                /* FIXME -- deal with ghost phv */ } }
+            } 
+        }
         phv_alloc_stage["stage_number"] = i;
         phv_alloc.push_back(std::move(phv_alloc_stage)); }
     // FIXME: Fix json clone method to do above loops more efficiently

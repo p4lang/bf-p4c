@@ -323,13 +323,26 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
 
     regs.main[gress].hdr_len_adj.amt = hdr_len_adj;
 
-    /* This reg has a active high reset for enable: en, Enable, [23], R/W, Reset->1
-     * and is causing the parser error codes not to be captured. By making this '0'
-     * we are allowing the error codes to be captured in the PHV for debug
+    /* err_phv_cfg register 
+     * This reg has a reset value on enable bit of 1
      *
-     * When parser error codes are supported from assembly this can be added as a
-     * proper feature. It seems that we do not support this completely
+     * Identifier Title         Bit     Access Reset    Description
+     * en         Enable        [23]    R/W      1      Enable Error PHV output
+     * 
+     * This means it is enabled by default during hw bringup. 
+     * However, when the register is enabled, the dst container also must be set. 
+     *
+     * Identifier Title         Bit     Access Reset    Description
+     * dst        Destination   [31:24] R/W      0      Destination PHV container
+     *
+     * If dst is not set, it will assume the reset value '0' and cause problems
+     * while running tests.
+     *
+     * Since currently this support is not added by the compiler & assembler, we
+     * disable the register.
      */
+    regs.main[INGRESS].err_phv_cfg[0].en = 0;
+    regs.main[INGRESS].err_phv_cfg[1].en = 0;
     regs.main[EGRESS].err_phv_cfg[0].en = 0;
     regs.main[EGRESS].err_phv_cfg[1].en = 0;
 
@@ -361,8 +374,8 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
             // FIXME -- zeroing in the driver on real hardware
             // regs.memory[INGRESS].disable_if_reset_value();
             // regs.memory[EGRESS].disable_if_reset_value();
-            regs.ingress.disable_if_reset_value();
-            regs.egress.disable_if_reset_value();
+            // regs.ingress.disable_if_reset_value();
+            // regs.egress.disable_if_reset_value();
             regs.main[INGRESS].disable_if_reset_value();
             regs.main[EGRESS].disable_if_reset_value();
             regs.merge.disable_if_reset_value(); }
