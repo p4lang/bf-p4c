@@ -498,6 +498,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     const IR::Expression *isActionParam(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
+    const IR::Expression *isStrengthReducible(const IR::Expression *expr);
     const IR::MAU::ActionArg *isActionArg(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr);
 

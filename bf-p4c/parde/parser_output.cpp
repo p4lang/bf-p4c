@@ -1,4 +1,3 @@
-
 #include <boost/optional/optional_io.hpp>
 
 #include "bf-p4c/common/asm_output.h"

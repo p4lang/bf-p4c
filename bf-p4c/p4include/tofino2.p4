@@ -231,7 +231,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<7> mirror_qid;                  // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
-    bit<32> adv_flow_ctl;       	// Advanced flow control for TM
+    bit<32> adv_flow_ctl;       // Advanced flow control for TM
     bit<14> mtu_trunc_len;		// MTU for truncation check
     bit<1> mtu_trunc_err_f;		// MTU truncation error flag
 
@@ -364,7 +364,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<7> mirror_qid;                  // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
-    bit<32> adv_flow_ctl;       	// Advanced flow control for TM
+    bit<32> adv_flow_ctl;       // Advanced flow control for TM
     bit<14> mtu_trunc_len;		// MTU for truncation check
     bit<1> mtu_trunc_err_f;		// MTU truncation error flag
 }
@@ -604,6 +604,10 @@ extern void invalidate<T>(in T field);
 
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
+
+extern bit<32> sizeInBits<H>(in H h);
+
+extern bit<32> sizeInBytes<H>(in H h);
 
 /// Counter
 extern Counter<W, I> {

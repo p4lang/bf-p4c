@@ -70,6 +70,7 @@ class EliminateEmitHeaders : public Transform {
     EliminateEmitHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
         refMap(refMap), typeMap(typeMap) { setName("EliminateEmitHeaders"); }
 
+    const IR::Node* preorder(IR::MethodCallExpression* mce) override;
     const IR::Node* preorder(IR::Argument *arg) override;
 };
 

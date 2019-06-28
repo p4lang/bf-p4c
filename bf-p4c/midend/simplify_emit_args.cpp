@@ -255,6 +255,16 @@ IR::ListExpression* FlattenHeader::flatten_list(const IR::ListExpression* args) 
     return new IR::ListExpression(components);
 }
 
+const IR::Node *EliminateEmitHeaders::preorder(IR::MethodCallExpression* mce) {
+    auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap, true);
+    if (auto em = mi->to<P4::ExternMethod>()) {
+        auto extName = em->actualExternType->name;
+        if (extName == "Digest" || extName == "Mirror" || extName == "Resubmit")
+            return mce; }
+    prune();
+    return mce;
+}
+
 const IR::Node *EliminateEmitHeaders::preorder(IR::Argument *arg) {
     const IR::Type *type = nullptr;
     if (auto path = arg->expression->to<IR::PathExpression>()) {
@@ -269,16 +279,6 @@ const IR::Node *EliminateEmitHeaders::preorder(IR::Argument *arg) {
             return arg; }
 
     if (!type) return arg;
-
-    auto mc = findContext<IR::MethodCallExpression>();
-    if (!mc) return arg;
-
-    auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
-    if (auto em = mi->to<P4::ExternMethod>()) {
-        if (em->actualExternType->name != "Digest" &&
-            em->actualExternType->name != "Mirror" &&
-            em->actualExternType->name != "Resubmit")
-            return arg; }
 
     cstring type_name;
     bool isHeader;

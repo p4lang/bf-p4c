@@ -12,6 +12,7 @@
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/multiple_apply.h"
+#include "bf-p4c/common/size_of.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
@@ -149,6 +150,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
         new FlexiblePacking(phv, uses, deps, bridged_fields, extracted_together, table_alloc),
+        new ResolveSizeOfOperator(),
+        new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new CollectPhvInfo(phv),
         new ResolveParserValues,

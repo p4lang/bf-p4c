@@ -529,6 +529,10 @@ extern void invalidate<T>(in T field);
 /// Phase0
 extern T port_metadata_unpack<T>(packet_in pkt);
 
+extern bit<32> sizeInBits<H>(in H h);
+
+extern bit<32> sizeInBytes<H>(in H h);
+
 /// Counter
 /// Indexed counter with `size’ independent counter values.
 extern Counter<W, I> {

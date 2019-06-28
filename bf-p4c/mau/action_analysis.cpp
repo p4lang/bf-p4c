@@ -178,6 +178,23 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
     return nullptr;
 }
 
+/**
+ * sizeInBytes() and sizeInBits() are converted to constant after flexible
+ * packing. The converted constant is constant-folded and strength-reduced (to
+ * eliminate subtract operation). Action analysis needs to be aware of the
+ * special treatment on 'sizeInBytes' and 'sizeInBits' function and not report
+ * an error when a slice is applied to the output of the functions.
+ */
+const IR::Expression *ActionAnalysis::isStrengthReducible(const IR::Expression *e) {
+    if (auto *sl = e->to<IR::Slice>())
+        e = sl->e0;
+    if (e->is<IR::MAU::TypedPrimitive>()) {
+        if (e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBytes" ||
+            e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBits") {
+            return e; } }
+    return nullptr;
+}
+
 const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
     le_bitrange *bits_out) {
     le_bitrange bits = { 0, e->type->width_bits() - 1 };
@@ -303,6 +320,8 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
         initialize_phv_field(sl);
     } else if (isActionParam(sl)) {
         initialize_action_data(sl);
+    } else if (isStrengthReducible(sl)) {
+        // ignore, will be strength reduced
     } else {
         ERROR("Slice is of IR structure not handled by ActionAnalysis");
     }
