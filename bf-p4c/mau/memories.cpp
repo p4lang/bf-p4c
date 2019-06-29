@@ -2495,21 +2495,51 @@ void Memories::determine_synth_logical_row_users(SRAM_group *fit_on_logical_row,
     }
 }
 
-void Memories::determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
-        SRAM_group *max_req, SRAM_group *curr_oflow, SRAM_group *synth,
-        safe_vector<LogicalRowUser> &lrus, int RAMs_avail) const {
-    ///> For JBay only, the math of action data tables placed with selectors requires
-    ///> those to be favorited much earlier than any other group.  When the memory algorithm
-    ///> is refactored to handle the core split better
-    bool action_bus_used = false;
-    if (Device::isMemoryCoreSplit() && synth && synth->type == SRAM_group::SELECTOR &&
+/**
+ * For JBay only, the math of action data tables placed with selectors requires those to be
+ * favorited much earlier than any other group.  When the memory algorithm is refactored to
+ * handle the core split better, potentially this preference could be updated
+ *
+ * If an action data table is currently the overflow into the row, then without this check
+ * the algorithm would prefer it.  This will prefer the selector link, but will still possibly
+ * place the overflow if the action RAMs with the selector do not take up the entirety of the
+ * row.
+ */
+bool Memories::action_candidate_prefer_sel(SRAM_group *max_req, SRAM_group *synth,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow, safe_vector<LogicalRowUser> &lrus) const {
+    if (!Device::isMemoryCoreSplit())
+        return false;
+    // If a selector is placed, and there is more room on the RAM line, prefer the action data
+    // RAM
+    if (synth && synth->type == SRAM_group::SELECTOR &&
         curr_oflow && curr_oflow->type == SRAM_group::ACTION) {
         if (max_req) {
+            BUG_CHECK(max_req->sel.is_sel_corr_group(synth), "Action RAMs in Tofino2 must be "
+                "preferred with its selector RAMs");
             lrus.emplace_back(max_req, ACTION);
-            action_bus_used = true;
+            return true;
         }
     }
 
+    // If a selector is already placed and an action RAM not connected to the selector
+    // is overflowing (i.e. a selector wasthe only thing that could be placed, so overflow was
+    // never cleared)
+    if (sel_oflow && curr_oflow && curr_oflow->type == SRAM_group::ACTION
+        && !curr_oflow->sel.is_sel_corr_group(sel_oflow)) {
+        if (max_req) {
+            BUG_CHECK(max_req->sel.is_sel_corr_group(sel_oflow), "Action RAMs in Tofino2 must be "
+                "preferred with its selector RAMs");
+            lrus.emplace_back(max_req, ACTION);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Memories::determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
+        SRAM_group *max_req, SRAM_group *synth, SRAM_group *curr_oflow, SRAM_group *sel_oflow,
+        safe_vector<LogicalRowUser> &lrus, int RAMs_avail) const {
+    bool action_bus_used = action_candidate_prefer_sel(max_req, synth, curr_oflow, sel_oflow, lrus);
     // If a action table is overflowing and we can finish a table on a single row while using
     // all possible RAMs, then we place the single row table
     if (curr_oflow && !curr_oflow->is_synth_type()) {
@@ -2787,8 +2817,8 @@ void Memories::find_swbox_candidates(safe_vector<LogicalRowUser> &lrus, int row,
     determine_action_RAMs(RAMs_avail_on_row[ACTION], row, side, lrus);
     candidates_for_action_row(&fit_on_logical_row[ACTION], &max_req[ACTION], row, side, curr_oflow,
                               sel_oflow, RAMs_avail_on_row[ACTION], synth);
-    determine_action_logical_row_users(fit_on_logical_row[ACTION], max_req[ACTION], curr_oflow,
-                                       synth, lrus, RAMs_avail_on_row[ACTION]);
+    determine_action_logical_row_users(fit_on_logical_row[ACTION], max_req[ACTION], synth,
+                                       curr_oflow, sel_oflow, lrus, RAMs_avail_on_row[ACTION]);
     determine_logical_row_masks(lrus, row, side, RAMs_avail_on_row[ACTION], false);
 
     for (auto &lru : lrus) {

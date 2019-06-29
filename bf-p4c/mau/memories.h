@@ -600,8 +600,10 @@ struct Memories {
     void determine_synth_logical_row_users(SRAM_group *fit_on_logical_row,
         SRAM_group *max_req, SRAM_group *curr_oflow, safe_vector<LogicalRowUser> &lrus,
         int RAMs_avail) const;
+    bool action_candidate_prefer_sel(SRAM_group *max_req, SRAM_group *synth,
+        SRAM_group *curr_oflow, SRAM_group *sel_oflow, safe_vector<LogicalRowUser> &lrus) const;
     void determine_action_logical_row_users(SRAM_group *fit_on_logical_row,
-        SRAM_group *max_req, SRAM_group *curr_oflow, SRAM_group *synth,
+        SRAM_group *max_req, SRAM_group *synth, SRAM_group *curr_oflow, SRAM_group *sel_oflow,
         safe_vector<LogicalRowUser> &lrus, int RAMs_avail) const;
     void determine_RAM_masks(safe_vector<LogicalRowUser> &lrus, int row, RAM_side_t side,
         int RAMs_available, bool is_synth_type) const;
