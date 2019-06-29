@@ -321,6 +321,7 @@ class BarefootBackend(BackendDriver):
                             ",allocate_parser_match_register:" + parde_verbosity + \
                             ",allocate_parser_checksum:" + parde_verbosity + \
                             ",lower_parser:" + parde_verbosity + \
+                            ",decaf*:" + parde_verbosity + \
                             ",characterize_parser.h:" + parde_verbosity
             bridge_logging = "bridged_metadata_packing:1"
             ixbar_logging = "ixbar_info:3"

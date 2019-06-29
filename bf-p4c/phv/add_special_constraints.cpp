@@ -1,32 +1,4 @@
-#include <regex>
 #include "bf-p4c/phv/add_special_constraints.h"
-
-bool AddSpecialConstraints::preorder(const IR::BFN::Deparser* deparser) {
-    for (auto prim : deparser->emits) {
-        if (auto ef = prim->to<IR::BFN::EmitField>()) {
-            auto field = phv_i.field(ef->source->field);
-            auto pov_bit = phv_i.field(ef->povBit->field);
-
-            std::string field_name(pov_bit->name);
-            std::smatch res;
-            std::regex regex(R"(_v[0-9]+\.\$valid)");
-
-            if (std::regex_search(field_name, res, regex)) {
-                if (field->size == 8) {
-                    field->set_no_pack(true);
-                } else if (field->size == 16) {
-                    pragmas_i.pa_container_sizes().add_constraint(
-                        field, { PHV::Size::b8, PHV::Size::b8 });
-                } else if (field->size == 32) {
-                    pragmas_i.pa_container_sizes().add_constraint(
-                        field, { PHV::Size::b16, PHV::Size::b16 });
-                }
-            }
-        }
-    }
-
-    return true;
-}
 
 bool AddSpecialConstraints::preorder(const IR::BFN::DeparserParameter* param) {
     auto field = phv_i.field(param->source->field);
@@ -61,6 +33,18 @@ bool AddSpecialConstraints::preorder(const IR::BFN::ChecksumGet* get) {
 }
 
 void AddSpecialConstraints::end_apply() {
+    // decaf constraint
+    for (auto f : decaf_i.rewrite_deparser.must_split_fields) {
+        auto field = phv_i.field(f);
+        if (field->size == 16) {
+            pragmas_i.pa_container_sizes().add_constraint(field,
+                                                   {PHV::Size::b8, PHV::Size::b8});
+        } else if (field->size == 32) {
+            pragmas_i.pa_container_sizes().add_constraint(field,
+                                                   {PHV::Size::b16, PHV::Size::b16});
+        }
+    }
+
     // Mirror metadata allocation constraint:
     for (auto gress : {INGRESS, EGRESS}) {
         auto* mirror_id = phv_i.field(

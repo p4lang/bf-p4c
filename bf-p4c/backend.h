@@ -7,6 +7,7 @@
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -26,6 +27,7 @@ class Backend : public PassManager {
     DependencyGraph deps;
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
+    DeparserCopyOpt decaf;
     CollectBridgedFields bridged_fields;
     /// Bridged fields that must be extracted together (result of bridged metadata packing).
     ordered_map<cstring, ordered_set<cstring>> extracted_together;

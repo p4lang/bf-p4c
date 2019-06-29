@@ -1875,7 +1875,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     void action_context_json(const IR::MAU::Action *act) {
         if (act->args.size() > 0) {
             size_t list_index = 0;
-            out << indent << "- p4_param_order: {";
+            out << indent << "- p4_param_order: { ";
             for (auto arg : act->args) {
                 out << arg->name << ": ";
                 out << arg->type->width_bits();
@@ -2763,7 +2763,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
 
         for (auto action : Values(tbl->actions)) {
             if (action->name.name == path->name) {
-                out << indent << "action_handle: " << action->handle << std::endl;
+                out << indent << "action_handle: 0x" << hex(action->handle) << std::endl;
                 break;
             }
         }

@@ -43,6 +43,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/update_checksum_9.p4
     )
 
+  p4c_add_xfail_reason("tofino2"
+   "jbay_test_harness CRASH"
+   extensions/p4_tests/p4_14/stf/decaf_8.p4
+   )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -56,6 +61,11 @@ p4c_add_xfail_reason("tofino2"
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
+
+p4c_add_xfail_reason("tofino2"
+  "Emitted field .* does not match expected slice .* in CLOT"
+  extensions/p4_tests/p4_14/stf/decaf_9.p4
+)
 
 p4c_add_xfail_reason("tofino2"
   "address too large for table"

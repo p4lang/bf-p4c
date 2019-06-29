@@ -2,6 +2,7 @@
 #define BF_P4C_PHV_ADD_SPECIAL_CONSTRAINTS_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
@@ -22,9 +23,10 @@ class AddSpecialConstraints : public Inspector {
  private:
     PhvInfo&                      phv_i;
     /// Pragma Object reference to set container size constraints.
-    PHV::Pragmas&           pragmas_i;
+    PHV::Pragmas&                 pragmas_i;
     /// ActionPhvConstraints reference, used to extract destinations of meter color.
     const ActionPhvConstraints&   actions_i;
+    const DeparserCopyOpt&        decaf_i;
 
     /// Checksum related fields can go either in an 8-bit container or a 16-bit container.
     /// Currently, we do not have the infrastructure to specify multiple options for
@@ -33,12 +35,6 @@ class AddSpecialConstraints : public Inspector {
     bool preorder(const IR::BFN::ChecksumVerify* verify) override;
     bool preorder(const IR::BFN::ChecksumGet* get) override;
 
-    /// Collect constraint induced by decaf.
-    /// Specifically, 16 and 32-bit container can not be repeated back-to-back in the FD.
-    /// Therefore we break 16 bit decaf'd field into two 8-bit container and 32-bit field
-    /// into two 16-bit containers to work around this constraint.
-    bool preorder(const IR::BFN::Deparser* dep) override;
-
     bool preorder(const IR::BFN::DeparserParameter* param) override;
 
     void end_apply() override;
@@ -46,8 +42,9 @@ class AddSpecialConstraints : public Inspector {
  public:
     explicit AddSpecialConstraints(PhvInfo& phv,
             PHV::Pragmas& pragmas,
-            const ActionPhvConstraints& actions)
-        : phv_i(phv), pragmas_i(pragmas), actions_i(actions) { }
+            const ActionPhvConstraints& actions,
+            const DeparserCopyOpt& decaf)
+        : phv_i(phv), pragmas_i(pragmas), actions_i(actions), decaf_i(decaf) { }
 };
 
 #endif  /*  BF_P4C_PHV_ADD_SPECIAL_CONSTRAINTS_H_    */

@@ -26,6 +26,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         const ClotInfo& clot,
         FieldDefUse &defuse,
         DependencyGraph &deps,
+        const DeparserCopyOpt &decaf,
         MauBacktracker& alloc)
     : Logging::PassManager("phv_allocation_"),
       table_alloc(alloc),
@@ -89,8 +90,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // This has to be the last pass in the analysis phase as it adds artificial constraints
             // to fields and uses results of some of the above passes (specifically
             // action_constraints).
-            new AddSpecialConstraints(phv, pragmas, action_constraints),
-
+            new AddSpecialConstraints(phv, pragmas, action_constraints, decaf),
             // build dominator tree for the program, also populates the flow graph internally.
             &domTree,
             &tableActionsMap,

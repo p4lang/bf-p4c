@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PARDE_DECAF_H_
 #define BF_P4C_PARDE_DECAF_H_
 
+#include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -95,10 +96,7 @@ struct Value {
 
     Value() {}
     explicit Value(const PHV::Field* f) : field(f) { }
-    explicit Value(const IR::Constant* c) : constant(c) {
-        if (!c->fitsUint64())
-            P4C_UNIMPLEMENTED("constant too large (than uint64)");
-    }
+    explicit Value(const IR::Constant* c) : constant(c) { }
 
     explicit Value(const Value& other)
         : field(other.field), constant(other.constant) {
@@ -177,39 +175,69 @@ class AssignChain : public std::vector<const Assign*> {
     }
 };
 
-struct FieldGroup : public ordered_set<const PHV::Field*> { };
+struct FieldGroup : public ordered_set<const PHV::Field*> {
+    FieldGroup() { }
+    explicit FieldGroup(int i) : id(i) { }
+    int id = -1;
+};
 
-inline std::string print(const FieldGroup& group) {
-    std::stringstream ss;
-    for (auto f : group)
-        ss << "    " << f->name << std::endl;
-    return ss.str();
-}
-
-inline std::string print(const std::vector<FieldGroup>& groups) {
-    std::stringstream ss;
-    for (unsigned i = 0; i < groups.size(); i++) {
-        ss << i << ":" << std::endl;
-        ss << print(groups[i]) << std::endl;
-    }
-    return ss.str();
-}
-
-struct CollectHeaderValidBits : public DeparserInspector {
+struct CollectHeaderValidity : public Inspector {
     const PhvInfo &phv;
-    std::map<const PHV::Field*, const IR::Expression*> field_to_valid_bit;
 
-    explicit CollectHeaderValidBits(const PhvInfo &phv) : phv(phv) { }
+    std::map<const PHV::Field*, const IR::Expression*> field_to_expr;
+
+    std::map<const PHV::Field*, const PHV::Field*> field_to_valid_bit;
+
+    std::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> validate_to_action;
+    std::map<const PHV::Field*, ordered_set<const IR::BFN::ParserState*>> validate_to_extract;
+    std::map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> invalidate_to_action;
+
+    explicit CollectHeaderValidity(const PhvInfo &phv) : phv(phv) { }
+
+    const IR::Expression* get_valid_bit_expr(const PHV::Field* f) const {
+        auto vld = field_to_valid_bit.at(f);
+        return field_to_expr.at(vld);
+    }
+
+    // bool preorder(const IR::BFN::Extract* extract) override {
+    //     // TODO
+    //     return false;
+    // }
+
+    bool preorder(const IR::MAU::Instruction* instr) override {
+        auto action = findContext<IR::MAU::Action>();
+
+        if (instr->operands.size() != 2)
+            return false;
+
+        auto dst = instr->operands[0];
+        auto f_dst = phv.field(dst);
+
+        if (f_dst && f_dst->pov) {
+            auto src = instr->operands[1];
+            auto c = src->to<IR::Constant>();
+            if (c) {
+                if (c->equiv(IR::Constant(IR::Type::Bits::get(1), 1)))
+                    validate_to_action[f_dst].insert(action);
+                else if (c->equiv(IR::Constant(IR::Type::Bits::get(1), 0)))
+                    invalidate_to_action[f_dst].insert(action);
+            }
+        }
+
+        return false;
+    }
 
     bool preorder(const IR::BFN::Emit* emit) override {
         auto pov_bit = emit->povBit->field;
+        auto f_pov_bit = phv.field(pov_bit);
+        field_to_expr[f_pov_bit] = pov_bit;
 
         if (auto ef = emit->to<IR::BFN::EmitField>()) {
             auto f = phv.field(ef->source->field);
-            field_to_valid_bit[f] = pov_bit;
+            field_to_valid_bit[f] = f_pov_bit;
         } else if (auto ec = emit->to<IR::BFN::EmitChecksum>()) {
             auto f = phv.field(ec->dest->field);
-            field_to_valid_bit[f] = pov_bit;
+            field_to_valid_bit[f] = f_pov_bit;
         } else {
             BUG("Unknown deparser emit type %1%", emit);
         }
@@ -218,13 +246,13 @@ struct CollectHeaderValidBits : public DeparserInspector {
     }
 
     void end_apply() override {
-        LOG3(*this);
-        LOG1("done collecting header validity bits");
+        LOG4(*this);
+        LOG1("=== DONE collecting header validity bits ===");
     }
 
     void dbprint(std::ostream &out) const {
         for (auto& kv : field_to_valid_bit)
-            out << kv.first->name << " : " << kv.second << std::endl;
+            out << kv.first->name << " : " << kv.second->name << std::endl;
     }
 };
 
@@ -233,7 +261,7 @@ struct CollectHeaderValidBits : public DeparserInspector {
 // data bus read, or other reasons (non packet defs, is part of a checksum update or
 // digest). The weak fields are, by exclusion, the ones that are not strong. Weak fields
 // also shall not have a transitive strong source. All weak fields are then decaf candidates.
-class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
+class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
     const PhvInfo &phv;
     const PhvUse &uses;
     const FieldDefUse &defuse;
@@ -282,13 +310,13 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
         ss << assign->print();
         ss << " : ";
         ss << print_assign_context(assign);
-        ss << std::endl;
         return ss.str();
     }
 
     void remove_weak_field(const PHV::Field* field) {
         field_to_weak_assigns.erase(field);
         read_only_weak_fields.erase(field);
+        // TODO remove constants for field
     }
 
     void dbprint(std::ostream &out) const;
@@ -307,7 +335,7 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
         strong_fields.insert(other.strong_fields.begin(), other.strong_fields.end());
 
         for (auto a : strong_fields)
-            elim_strong_field(a);
+            add_strong_field(a);
 
         for (auto& kv : other.instr_to_action)
             instr_to_action[kv.first] = kv.second;
@@ -339,10 +367,12 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
 
         elim_non_byte_aligned_fields();
 
+//        elim_if_too_few_weak_fields();
+
         get_all_constants();
 
         LOG3(*this);
-        LOG1("done collecting weak fields");
+        LOG1("=== DONE collecting weak fields ===");
     }
 
     void add_weak_assign(const PHV::Field* dst,
@@ -350,10 +380,15 @@ class CollectWeakFields : public Inspector, BFN::ControlFlowVisitor {
                          const IR::Constant* const_src,
                          const IR::MAU::Instruction* instr);
 
-    void elim_strong_field(const PHV::Field* f);
+    void add_strong_field(const PHV::Field* f, cstring reason = cstring());
 
     static bool other_elim_reason(const PHV::Field* f) {
-        return f->pov || f->metadata || f->is_digest() || f->is_intrinsic();
+        return !f->deparsed() ||  // we need the weak field's value to reach deparser
+                f->pov ||
+                f->metadata ||
+                f->bridged ||
+                f->is_digest() ||
+                f->is_intrinsic();
     }
 
     bool preorder(const IR::MAU::TableKey* ixbar) override;
@@ -391,51 +426,18 @@ class ComputeValuesAtDeparser : public Inspector {
 
     bool is_weak_assign(const IR::MAU::Instruction* instr) const;
 
-    std::string print_assign_chain(const AssignChain& chain) const {
-        std::stringstream ss;
-        for (auto assign : chain) {
-            ss << "    ";
-            ss << weak_fields.print_assign(assign);
-        }
-        return ss.str();
-    }
-
-    std::string print_assign_chains(const ordered_set<AssignChain>& chains) const {
-        std::stringstream ss;
-        unsigned i = 0;
-        for (auto& chain : chains) {
-            ss << i++ << ":" << std::endl;
-            ss << print_assign_chain(chain);
-        }
-        return ss.str();
-    }
-
-    std::string print_value_map(const FieldGroup& weak_field_group) const {
-        std::stringstream ss;
-        for (auto f : weak_field_group) {
-            ss << "field: " << f->name << std::endl;
-
-            if (weak_fields.read_only_weak_fields.count(f))
-                continue;
-
-            auto& value_map_for_field = value_to_chains.at(f);
-
-            ss << "values:" << value_map_for_field.size() << std::endl;
-            for (auto& kv : value_map_for_field) {
-                auto& value = kv.first;
-                auto& chains = kv.second;
-
-                ss << value.print();
-                ss << ":" << std::endl;
-                ss << "chains:" << std::endl;
-                ss << print_assign_chains(chains);
-            }
-        }
-        return ss.str();
-    }
+    std::string print_assign_chain(const AssignChain& chain) const;
+    std::string print_assign_chains(const ordered_set<AssignChain>& chains) const;
+    std::string print_value_map(const FieldGroup& weak_field_group,
+                     const ordered_set<AssignChain>& all_chains_in_group) const;
 
  private:
     Visitor::profile_t init_apply(const IR::Node* root) override;
+
+    std::set<const Value*> get_all_weak_srcs(const PHV::Field* field,
+                                      std::set<const PHV::Field*>& visited);
+
+    std::set<const Value*> get_all_weak_srcs(const PHV::Field* field);
 
     // Group fields that have transitive assignment to one another. Basically members
     // in a group can only take on the value of other members in the group, or constant.
@@ -457,39 +459,45 @@ class ComputeValuesAtDeparser : public Inspector {
     bool compute_all_reachable_values_at_deparser(const FieldGroup& weak_field_group);
 };
 
-struct InstructionMap {
-    ordered_map<const PHV::Field*,
-             ordered_map<Value, const IR::MAU::Instruction*>> value_to_instr;
+struct VersionMap {
+    ordered_map<const PHV::Field*, const IR::TempVar*> default_version;
 
-    ordered_map<const PHV::Field*, const IR::MAU::Instruction*> default_instr;
+    ordered_map<const PHV::Field*,
+                ordered_map<Value, const IR::TempVar*>> value_to_version;
+
+    ordered_set<const IR::TempVar*> get_all_version_bits() const {
+        ordered_set<const IR::TempVar*> rv;
+
+        for (auto v : default_version)
+            rv.insert(v.second);
+
+        for (auto& fvv : value_to_version) {
+            for (auto& vv : fvv.second)
+                rv.insert(vv.second);
+        }
+
+        return rv;
+    }
 };
 
 struct MatchAction {
     MatchAction(std::vector<const IR::Expression*> k,
-                ordered_map<unsigned, const IR::MAU::Action*> e) :
-        keys(k), entries(e) { }
+                ordered_set<const IR::TempVar*> o,
+                ordered_map<unsigned, unsigned> ma) :
+        keys(k), outputs(o), match_to_action_param(ma) { }
 
     std::vector<const IR::Expression*> keys;
-    ordered_map<unsigned, const IR::MAU::Action*> entries;
+    ordered_set<const IR::TempVar*> outputs;
+    ordered_map<unsigned, unsigned> match_to_action_param;
 
-    std::string print() const {
-        std::stringstream ss;
-        ss << "keys:" << std::endl;
-        for (auto k : keys)
-            ss << k << std::endl;
-
-        ss << "match : actions" << std::endl;
-        for (auto ma : entries)
-            ss << ma.first << " : " << ma.second << std::endl;
-        return ss.str();
-    }
+    std::string print() const;
 };
 
 // Given a set of weak fields, and their reaching values/action chains at
 // the deparser, we construct tables to synthesize the POV bits needed
 // to deparse the right version at runtime.
 class SynthesizePovEncoder : public MauTransform {
-    const CollectHeaderValidBits& pov_bits;
+    const CollectHeaderValidity& pov_bits;
     const CollectWeakFields& weak_fields;
     const ComputeValuesAtDeparser& values_at_deparser;
 
@@ -501,12 +509,13 @@ class SynthesizePovEncoder : public MauTransform {
     std::map<const FieldGroup*,
              std::vector<const IR::TempVar*>> group_to_ctl_bits;
 
-    std::map<const FieldGroup*, InstructionMap> group_to_instr_map;
+    std::map<const FieldGroup*, VersionMap> group_to_version_map;
 
     int action_cnt = 0;
 
  public:
     ordered_map<const IR::MAU::Action*, const IR::TempVar*> action_to_ctl_bit;
+    ordered_map<const IR::MAU::Instruction*, const IR::TempVar*> assign_to_version_bit;
 
     ordered_map<const PHV::Field*,
              ordered_map<Value, const IR::TempVar*>> value_to_pov_bit;
@@ -514,7 +523,7 @@ class SynthesizePovEncoder : public MauTransform {
     ordered_map<const PHV::Field*, const IR::TempVar*> default_pov_bit;
 
     explicit SynthesizePovEncoder(
-        const CollectHeaderValidBits& pov_bits,
+        const CollectHeaderValidity& pov_bits,
         const ComputeValuesAtDeparser& values_at_deparser) :
             pov_bits(pov_bits),
             weak_fields(values_at_deparser.weak_fields),
@@ -544,54 +553,58 @@ class SynthesizePovEncoder : public MauTransform {
 
     bool have_same_hdr_vld_bit(const PHV::Field* p, const PHV::Field* q);
 
-    const IR::MAU::Instruction*
-    find_equiv_valid_bit_instr_for_value(const PHV::Field* f,
-                                         unsigned version, const Value& value,
-                                         const InstructionMap& instr_map);
+    const IR::TempVar*
+    find_equiv_version_bit_for_value(const PHV::Field* f,
+                                     unsigned version, const Value& value,
+                                     const VersionMap& version_map);
 
-    const IR::MAU::Instruction*
-    find_equiv_valid_bit_instr_for_value(const PHV::Field* f,
-                                         const FieldGroup& group,
-                                         unsigned version, const Value& value);
-
-    const IR::MAU::Instruction*
-    create_valid_bit_instr_for_value(const PHV::Field* f,
+    const IR::TempVar*
+    find_equiv_version_bit_for_value(const PHV::Field* f,
                                      const FieldGroup& group,
                                      unsigned version, const Value& value);
 
-    InstructionMap create_instr_map(const FieldGroup& group);
+    const IR::TempVar*
+    create_version_bit_for_value(const PHV::Field* f,
+                                 const FieldGroup& group,
+                                 unsigned version, const Value& value);
 
-    unsigned
-    encode_valid_bits(const std::vector<const IR::Expression*>& subset,
-                      const std::vector<const IR::Expression*>& allset);
+    const VersionMap& create_version_map(const FieldGroup& group);
 
     unsigned
     encode_assign_chain(const AssignChain& chain,
                         const ordered_set<const IR::MAU::Action*>& all_actions);
 
     static const IR::Entry*
-    create_static_entry(unsigned key_size, unsigned key, const IR::MAU::Action* action);
+    create_static_entry(unsigned key_size,
+                        unsigned match,
+                        const IR::MAU::Action* action,
+                        const ordered_set<const IR::TempVar*>& params,
+                        unsigned action_param);
+
+    bool is_valid(const PHV::Field* f,
+                  const std::vector<const IR::Expression*>& vld_bits_onset);
 
     MatchAction* create_match_action(const FieldGroup& group);
 
     IR::MAU::Table* create_pov_encoder(gress_t gress, const MatchAction& match_action);
 
-    bool can_join(const MatchAction* a, const MatchAction* b);
-
-    IR::MAU::Action* join_actions(const IR::MAU::Action* a, const IR::MAU::Action* b);
-
-    MatchAction* join_match_actions(const MatchAction* a, const MatchAction* b);
-
-    std::vector<const MatchAction*>
-    join_match_actions(const std::vector<const MatchAction*>& match_actions);
-
     IR::MAU::TableSeq* preorder(IR::MAU::TableSeq* seq) override;
+
+    unsigned num_coalesced_match_bits(const FieldGroup& a, const FieldGroup& b);
+
+    bool is_trivial_group(const FieldGroup& group);
+
+    void resolve_trivial_group(const FieldGroup& group);
+
+    std::pair<std::map<gress_t, std::vector<FieldGroup>>,
+              std::map<gress_t, std::vector<FieldGroup>>> coalesce_weak_field_groups();
+
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
 
     void end_apply() override {
         LOG3(*this);
-        LOG1("done synthesizing pov encoder");
+        LOG1("=== DONE synthesizing decaf POV encoder ===");
     }
 };
 
@@ -614,6 +627,16 @@ class InsertParserConstExtracts : public ParserTransform {
 
     void dbprint(std::ostream& out) const;
 
+    bool is_inserted(const IR::TempVar* constant) const {
+        for (auto& kv : byte_to_temp_var) {
+            for (auto& bt : kv.second) {
+                if (bt.second == constant)
+                    return true;
+            }
+        }
+        return false;
+    }
+
  private:
     void create_temp_var_for_constant_bytes(gress_t gress,
                               const ordered_set<const IR::Constant*>& constants);
@@ -622,7 +645,7 @@ class InsertParserConstExtracts : public ParserTransform {
 
     void end_apply() override {
         LOG3(*this);
-        LOG1("done insert parser constants");
+        LOG1("=== DONE inserting parser constants ===");
     }
 
     void insert_init_consts_state(IR::BFN::Parser* parser);
@@ -649,7 +672,7 @@ class RewriteWeakFieldWrites : public MauTransform {
 
  private:
     void end_apply() override {
-        LOG1("done rewrite weak fields");
+        LOG1("=== DONE rewriting weak fields ===");
     }
 
     const IR::Node* preorder(IR::MAU::Action* action) override;
@@ -669,16 +692,18 @@ class RewriteDeparser : public DeparserModifier {
     const InsertParserConstExtracts& insert_parser_consts;
 
  public:
+    ordered_set<cstring> must_split_fields;
+
     RewriteDeparser(const PhvInfo& phv,
                     const SynthesizePovEncoder& synth_pov_encoder,
                     const InsertParserConstExtracts& insert_parser_consts)
         : phv(phv),
           synth_pov_encoder(synth_pov_encoder),
-          insert_parser_consts(insert_parser_consts)  { }
+          insert_parser_consts(insert_parser_consts) { }
 
  private:
     void end_apply() override {
-        LOG1("done rewrite deparser");
+        LOG1("=== DONE rewriting deparser ===");
     }
 
     void add_emit(IR::Vector<IR::BFN::Emit>& emits,
@@ -687,56 +712,65 @@ class RewriteDeparser : public DeparserModifier {
     const IR::Expression* find_emit_source(const PHV::Field* field,
                                            const IR::Vector<IR::BFN::Emit>& emits);
 
+    std::set<std::set<const IR::Expression*>> get_all_disjoint_pov_bit_sets();
+
+    std::vector<const IR::BFN::Emit*>
+    coalesce_disjoint_emits(const std::vector<const IR::BFN::Emit*>& disjoint_emits);
+
+    void coalesce_emits_for_packing(IR::BFN::Deparser* deparser,
+                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets);
+
+    void infer_deparser_no_repeat_constraint(IR::BFN::Deparser* deparser,
+                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets);
+
     bool preorder(IR::BFN::Deparser* deparser) override;
 };
 
-class DeparserCopyOpt : public PassManager {
+class DeparserCopyOpt : public Logging::PassManager {
+    CollectHeaderValidity     collect_hdr_valid_bits;
+    CollectWeakFields         collect_weak_fields;
+    ComputeValuesAtDeparser   values_at_deparser;
+    SynthesizePovEncoder      synth_pov_encoder;
+    InsertParserConstExtracts insert_parser_consts;
+    RewriteWeakFieldWrites    rewrite_weak_fields;
+
  public:
+    RewriteDeparser           rewrite_deparser;
+
     DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses,
-                    const FieldDefUse& defuse, const DependencyGraph& dg) {
-        auto collect_hdr_valid_bits = new CollectHeaderValidBits(phv);
-
-        auto collect_weak_fields = new CollectWeakFields(phv, uses, defuse, dg);
-
-        auto values_at_deparser = new ComputeValuesAtDeparser(*collect_weak_fields);
-
-        auto synth_pov_encoder =
-            new SynthesizePovEncoder(*collect_hdr_valid_bits, *values_at_deparser);
-
-        auto insert_parser_consts =
-            new InsertParserConstExtracts(*values_at_deparser);
-
-        auto rewrite_weak_fields =
-            new RewriteWeakFieldWrites(*values_at_deparser, *synth_pov_encoder);
-
-        auto rewrite_deparser =
-            new RewriteDeparser(phv, *synth_pov_encoder, *insert_parser_consts);
-
-        // TODO
-        //
-        // Tagalong containers, though abundant, are not unlimited. In addition, other resources
-        // also need to be managed. The list below is all resources need to be managed in the order
-        // of scarcity (most scarce to least). We need to make sure we don't over-fit any of these.
-        // Given a list of fields that can be decaf'd, we need to establish a partial order between
-        // any two fields such that one requires less resource than the other.
-        //
-        //   1. tagalong PHV space (2k bits, half of normal PHV)
-        //   2. POV bits (128 bits per gress)
-        //   3. Parser constant extract (each state has 4xB, 2xH, 2xW constant extract bandwidth)
-        //   4. Table resources (logical ID, memory)
-        //   5. FD entries (abundant)
-
+                    const FieldDefUse& defuse, const DependencyGraph& dg) :
+            Logging::PassManager("decaf", Logging::Mode::AUTO),
+            collect_hdr_valid_bits(phv),
+            collect_weak_fields(phv, uses, defuse, dg),
+            values_at_deparser(collect_weak_fields),
+            synth_pov_encoder(collect_hdr_valid_bits, values_at_deparser),
+            insert_parser_consts(values_at_deparser),
+            rewrite_weak_fields(values_at_deparser, synth_pov_encoder),
+            rewrite_deparser(phv, synth_pov_encoder, insert_parser_consts) {
         addPasses({
             &uses,
-            collect_hdr_valid_bits,
-            collect_weak_fields,
-            values_at_deparser,
-            synth_pov_encoder,     // mau-transform
-            insert_parser_consts,  // par-transform
-            rewrite_weak_fields,   // mau-transform
-            rewrite_deparser       // dep-modifier
+            &collect_hdr_valid_bits,
+            &collect_weak_fields,
+            &values_at_deparser,
+            &synth_pov_encoder,     // mau-transform
+            &insert_parser_consts,  // par-transform
+            &rewrite_weak_fields,   // mau-transform
+            &rewrite_deparser       // dep-modifier
         });
     }
 };
+// TODO
+//
+// Tagalong containers, though abundant, are not unlimited. In addition, other resources
+// also need to be managed. The list below is all resources need to be managed in the order
+// of scarcity (most scarce to least). We need to make sure we don't over-fit any of these.
+// Given a list of fields that can be decaf'd, we need to establish a partial order between
+// any two fields such that one requires less resource than the other.
+//
+//   1. tagalong PHV space (2k bits, half of normal PHV)
+//   2. POV bits (128 bits per gress)
+//   3. Parser constant extract (each state has 4xB, 2xH, 2xW constant extract bandwidth)
+//   4. Table resources (logical ID, memory)
+//   5. FD entries (abundant)
 
 #endif  /* BF_P4C_PARDE_DECAF_H_ */

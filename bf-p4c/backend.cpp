@@ -32,7 +32,6 @@
 #include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
-#include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
@@ -97,6 +96,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv),
+    decaf(phv, uses, defuse, deps),
     bridged_fields(phv),
     table_alloc(phv.field_mutex(), options.disable_init_metadata),
     table_summary(pipe_id, deps) {
@@ -130,7 +130,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new InstructionSelection(options, phv),
         new DumpPipe("After InstructionSelection"),
         new FindDependencyGraph(phv, deps, "program_graph", "After Instruction Selection"),
-        options.decaf ? new DeparserCopyOpt(phv, uses, defuse, deps) : nullptr,
+        options.decaf ? &decaf : nullptr,
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
 
@@ -185,7 +185,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
         // will clear the allocation.
         new DumpPipe("Before phv_analysis"),
-        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, table_alloc),
+        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, decaf, table_alloc),
         // Validate results of PHV allocation.
         new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
 

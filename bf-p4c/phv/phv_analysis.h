@@ -10,6 +10,7 @@
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
@@ -72,6 +73,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
             const ClotInfo &clot,
             FieldDefUse &defuse,
             DependencyGraph &deps,
+            const DeparserCopyOpt &decaf,
             MauBacktracker& alloc);
 };
 

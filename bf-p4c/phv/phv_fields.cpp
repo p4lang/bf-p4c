@@ -1365,6 +1365,17 @@ class MarkPaddingAsDeparsed : public Inspector {
 class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
+    bool preorder(const IR::BFN::Extract* extract) override {
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (lval) {
+            auto f = phv.field(lval->field);
+            f->set_parsed(true);
+            LOG3("\tMarking " << f->name << " as parsed");
+        }
+
+        return false;
+    }
+
     // If two fields in deparser are predicated by different POV bits,
     // we cannot pack them in the same container (deparser can only deparse whole
     // container, not byte in container).

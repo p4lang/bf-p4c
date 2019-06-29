@@ -1,6 +1,7 @@
 #ifndef _EXTENSIONS_BF_P4C_LOGGING_PASS_MANAGER_H_
 #define _EXTENSIONS_BF_P4C_LOGGING_PASS_MANAGER_H_
 
+#include "ir/ir.h"
 #include "ir/pass_manager.h"
 #include "lib/cstring.h"
 #include "bf-p4c/bf-p4c-options.h"

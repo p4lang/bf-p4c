@@ -1,4 +1,6 @@
-#include "bf-p4c/parde/decaf.h"
+#include "decaf.h"
+#include <bitset>
+#include "bf-p4c/common/table_printer.h"
 
 template <typename T>
 static std::vector<T> to_vector(const ordered_set<T>& data) {
@@ -26,6 +28,29 @@ static std::vector<std::vector<T>> enumerate_all_subsets(const std::vector<T>& i
     return rv;
 }
 
+std::string print_field_group(const FieldGroup& group) {
+    std::stringstream ss;
+    TablePrinter tp(ss, {"Group " + std::to_string(group.id), "Bits"}, TablePrinter::Align::LEFT);
+
+    unsigned total_field_bits = 0;
+    for (auto f : group) {
+        tp.addRow({std::string(f->name), std::to_string(f->size)});
+        total_field_bits += f->size;
+    }
+
+    tp.addSep();
+    tp.addRow({"Total", std::to_string(total_field_bits)});
+    tp.print();
+    return ss.str();
+}
+
+std::string print_field_groups(const std::vector<FieldGroup>& groups) {
+    std::stringstream ss;
+    for (auto& group : groups)
+        ss << print_field_group(group) << std::endl;
+    return ss.str();
+}
+
 void CollectWeakFields::add_weak_assign(const PHV::Field* dst,
                                         const PHV::Field* field_src,
                                         const IR::Constant* const_src,
@@ -44,18 +69,16 @@ void CollectWeakFields::add_weak_assign(const PHV::Field* dst,
     field_to_weak_assigns[dst].insert(assign);
 }
 
-void CollectWeakFields::elim_strong_field(const PHV::Field* f) {
+void CollectWeakFields::add_strong_field(const PHV::Field* f, cstring reason) {
     strong_fields.insert(f);
-
     field_to_weak_assigns.erase(f);
+    if (reason != cstring())
+        LOG2(f->name << " is not a candidate (" << reason << ")");
 }
 
 bool CollectWeakFields::preorder(const IR::MAU::TableKey* ixbar) {
     auto f = phv.field(ixbar->expr);
-    elim_strong_field(f);
-
-    LOG2(f->name << " is not a candidate (match)");
-
+    add_strong_field(f, "ixbar match");
     return false;
 }
 
@@ -78,13 +101,23 @@ bool CollectWeakFields::preorder(const IR::MAU::Instruction* instr) {
         return false;
     }
 
+    // "a = b ++ c", p4_16/stf/ixbar_expr3.p4
+    // "a" can still be weak, but need per slice weak field support TODO
+    if (dst->is<IR::Slice>()) {
+        add_strong_field(f_dst, "dst is slice");
+        return false;
+    }
+
+    if (!f_dst->deparsed()) {
+        add_strong_field(f_dst, "not deparsed");
+        return false;
+    }
+
     if (instr->name != "set") {
         for (auto op : instr->operands) {
             auto f_op = phv.field(op);
-            if (f_op) {
-                elim_strong_field(f_op);
-                LOG2(f_op->name << " is not a candidate (non-move instr)");
-            }
+            if (f_op)
+                add_strong_field(f_op, "non-move instr");
         }
         return false;
     }
@@ -92,9 +125,8 @@ bool CollectWeakFields::preorder(const IR::MAU::Instruction* instr) {
     auto src = instr->operands[1];
     auto f_src = phv.field(src);
 
-    if (src->is<IR::MAU::ActionArg>()) {
-        LOG2(f_dst->name << " is not a candidate (action param)");
-        elim_strong_field(f_dst);
+    if (!src->to<IR::Constant>() && (!f_src || src->is<IR::Slice>())) {
+        add_strong_field(f_dst, "non-PHV src|slice");
         return false;
     }
 
@@ -104,14 +136,17 @@ bool CollectWeakFields::preorder(const IR::MAU::Instruction* instr) {
     // value to reach the deparser in a normal container.
 
     if (f_dst->is_checksummed()) {
-        LOG2(f_dst->name << " is not a candidate (checksummed)");
-        elim_strong_field(f_dst);
+        add_strong_field(f_dst, "checksummed");
         return false;
     }
 
     if (other_elim_reason(f_dst) || (f_src && other_elim_reason(f_src))) {
-        LOG2(f_dst->name << " is not a candidate (pov|metadata|digest)");
-        elim_strong_field(f_dst);
+        add_strong_field(f_dst, "pov|metadata|digest");
+        return false;
+    }
+
+    if (f_src && !f_src->parsed()) {
+        add_strong_field(f_dst, "src not parsed");
         return false;
     }
 
@@ -151,8 +186,15 @@ bool CollectWeakFields::is_strong_by_transitivity(const PHV::Field* dst, const P
     if (read_only_weak_fields.count(src))
         return false;
 
+#if 0
+// This requires more work:
+// [x] stack_valid.p4
+// [x] simple_l3_mirror.p4
+// [v] decaf_4.p4
+
     if (all_defs_happen_before(src, dst))
         return false;
+#endif
 
     if (strong_fields.count(src))
         return true;
@@ -199,6 +241,8 @@ void CollectWeakFields::add_read_only_weak_fields() {
         if (other_elim_reason(f))
             continue;
 
+        LOG4("add read-only field " << f->name);
+
         read_only_weak_fields.insert(f);
     }
 }
@@ -235,10 +279,8 @@ void CollectWeakFields::elim_by_strong_transitivity() {
             to_delete.insert(f);
     }
 
-    for (auto f : to_delete) {
-        LOG2(f->name << " is not a candidate (has strong src)");
-        elim_strong_field(f);
-    }
+    for (auto f : to_delete)
+        add_strong_field(f, "has strong src");
 }
 
 void CollectWeakFields::elim_non_byte_aligned_fields() {
@@ -277,37 +319,42 @@ void CollectWeakFields::elim_non_byte_aligned_fields() {
 void CollectWeakFields::dbprint(std::ostream& out) const {
     unsigned total_field_bits = 0;
 
+    out << "\ndecaf candidate fields:" << std::endl;
+    TablePrinter tp(out, {"Field", "Bits", "Property"}, TablePrinter::Align::LEFT);
+
     for (auto f : read_only_weak_fields) {
         total_field_bits += f->size;
-
-        out << "\nfield: " << f->name << " : "
-                  << f->size << " (read-only)" << std::endl;
+        tp.addRow({std::string(f->name), std::to_string(f->size), "(read-only)"});
     }
 
     for (auto& kv : field_to_weak_assigns) {
         auto dst = kv.first;
-
         total_field_bits += dst->size;
+        tp.addRow({std::string(dst->name), std::to_string(dst->size), "(copy-assigned)"});
+    }
 
-        out << "\nfield: " << dst->name << " : " << dst->size << std::endl;
+    tp.addSep();
+    tp.addRow({"Total", std::to_string(total_field_bits), ""});
+    tp.print();
 
-        int id = 0;
-        for (auto& assign : kv.second) {
-            out << "     " << id++ << ": ";
-            print_assign(assign);
+    out << "\nconstants:" << std::endl;
+
+    if (all_constants.empty()) {
+        out << "-none-" << std::endl;
+        return;
+    }
+
+    TablePrinter tp2(out, {"#", "Const", "Gress"}, TablePrinter::Align::LEFT);
+
+    unsigned i = 0;
+    for (auto& kv : all_constants) {
+        for (auto c : kv.second) {
+            std::stringstream as_hex;
+            as_hex << "0x" << std::hex << c << std::dec;
+            tp2.addRow({std::to_string(i++), as_hex.str(), kv.first == INGRESS ? "I" : "E"});
         }
     }
-
-    out << "\ntotal weak field bits: " << total_field_bits << std::endl;
-
-    out << "\nall unique constants:" << std::endl;
-
-    for (auto& kv : all_constants) {
-        out << kv.first << ":" << std::endl;
-
-        for (auto c : kv.second)
-            out << "    0x" << std::hex << c << std::dec << std::endl;
-    }
+    tp2.print();
 }
 
 bool ComputeValuesAtDeparser::is_weak_assign(const IR::MAU::Instruction* instr) const {
@@ -321,6 +368,83 @@ bool ComputeValuesAtDeparser::is_weak_assign(const IR::MAU::Instruction* instr) 
     }
 
     return false;
+}
+
+std::string
+ComputeValuesAtDeparser::print_assign_chain(const AssignChain& chain) const {
+    std::stringstream ss;
+    for (auto assign : chain) {
+        ss << "    ";
+        ss << weak_fields.print_assign(assign);
+    }
+    return ss.str();
+}
+
+std::string
+ComputeValuesAtDeparser::print_assign_chains(const ordered_set<AssignChain>& chains) const {
+    std::stringstream ss;
+
+    TablePrinter tp(ss, {"#", "Assign Sequence"}, TablePrinter::Align::LEFT);
+
+    unsigned i = 0;
+    for (auto& chain : chains) {
+        tp.addBlank();
+
+        bool is_first = true;
+        for (auto assign : chain) {
+            tp.addRow({is_first ? std::to_string(i++) : "", weak_fields.print_assign(assign)});
+            is_first = false;
+        }
+    }
+    tp.print();
+    return ss.str();
+}
+
+unsigned
+get_chain_id(const AssignChain& chain, const ordered_set<AssignChain>& all_chains) {
+    unsigned id = 0;
+    for (auto c : all_chains) {
+        if (c == chain)
+            return id;
+        id++;
+    }
+    BUG("chain does not belong to group");
+    return id;
+}
+
+std::string
+ComputeValuesAtDeparser::print_value_map(const FieldGroup& weak_field_group,
+                                 const ordered_set<AssignChain>& all_chains_in_group) const {
+    std::stringstream ss;
+
+    TablePrinter tp(ss, {"Field", "Value at Deparser", "Chains"}, TablePrinter::Align::LEFT);
+
+    for (auto f : weak_field_group) {
+        if (weak_fields.read_only_weak_fields.count(f))
+            continue;
+
+        tp.addSep();
+
+        auto& value_map_for_field = value_to_chains.at(f);
+
+        bool is_first = true;
+        for (auto& kv : value_map_for_field) {
+            auto& value = kv.first;
+            auto& chains = kv.second;
+
+            std::stringstream chain_ids;
+            for (auto chain : chains) {
+                auto id = get_chain_id(chain, all_chains_in_group);
+                chain_ids << "#" << id << " ";
+            }
+
+            tp.addRow({is_first ? std::string(f->name) : "", value.print(), chain_ids.str()});
+            is_first = false;
+        }
+    }
+    tp.print();
+
+    return ss.str();
 }
 
 Visitor::profile_t
@@ -352,10 +476,55 @@ ComputeValuesAtDeparser::init_apply(const IR::Node* root) {
                                 weak_field_groups.end());
     }
 
+    for (auto& a : weak_field_groups) {
+        for (auto& b : weak_field_groups) {
+            if (a == b)
+                continue;
+
+            for (auto f : a) {
+                if (b.count(f))
+                    BUG("%1% gets included in two groups?", f->name);
+            }
+        }
+    }
+
     return rv;
 }
 
+std::set<const Value*>
+ComputeValuesAtDeparser::get_all_weak_srcs(const PHV::Field* field,
+                                           std::set<const PHV::Field*>& visited) {
+    std::set<const Value*> rv;
+
+    if (visited.count(field))
+        return rv;
+
+    visited.insert(field);
+
+    if (weak_fields.field_to_weak_assigns.count(field)) {
+        for (auto assign : weak_fields.field_to_weak_assigns.at(field)) {
+            rv.insert(assign->src);
+
+            if (auto src = assign->src->field) {
+                auto src_srcs = get_all_weak_srcs(src, visited);
+                for (auto s : src_srcs)
+                    rv.insert(s);
+            }
+        }
+    }
+
+    return rv;
+}
+
+std::set<const Value*>
+ComputeValuesAtDeparser::get_all_weak_srcs(const PHV::Field* field) {
+    std::set<const PHV::Field*> visited;
+    return get_all_weak_srcs(field, visited);
+}
+
 void ComputeValuesAtDeparser::group_weak_fields() {
+    unsigned gid = 0;
+
     for (auto& kv : weak_fields.field_to_weak_assigns) {
         auto f = kv.first;
 
@@ -370,9 +539,11 @@ void ComputeValuesAtDeparser::group_weak_fields() {
                 break;
             }
 
-            for (auto assign : kv.second) {
-                if (assign->src->field) {
-                    if (group.count(assign->src->field)) {
+            auto srcs = get_all_weak_srcs(f);
+
+            for (auto src : srcs) {
+                if (src->field) {
+                    if (group.count(src->field)) {
                         found_union = true;
                         group.insert(f);
                         break;
@@ -382,17 +553,18 @@ void ComputeValuesAtDeparser::group_weak_fields() {
         }
 
         if (!found_union) {
-            FieldGroup new_set;
+            FieldGroup new_group(gid++);
 
-            new_set.insert(f);
+            new_group.insert(f);
 
-            for (auto assign : kv.second) {
-                auto src = assign->src->field;
-                if (src && weak_fields.field_to_weak_assigns.count(src))
-                    new_set.insert(src);
+            auto srcs = get_all_weak_srcs(f);
+
+            for (auto src : srcs) {
+                if (src->field)
+                    new_group.insert(src->field);
             }
 
-            weak_field_groups.push_back(new_set);
+            weak_field_groups.push_back(new_group);
         }
     }
 
@@ -403,7 +575,7 @@ void ComputeValuesAtDeparser::group_weak_fields() {
     });
 
     LOG1("\ntotal weak field groups: " << weak_field_groups.size());
-    LOG1(print(weak_field_groups));
+    LOG1(print_field_groups(weak_field_groups));
 }
 
 std::vector<const IR::MAU::Table*>
@@ -489,8 +661,7 @@ ComputeValuesAtDeparser::propagate_value_on_assign_chain(const AssignChain& chai
 // deparser?
 bool ComputeValuesAtDeparser::compute_all_reachable_values_at_deparser(
         const FieldGroup& weak_field_group) {
-    LOG1("\ncompute all values for group:");
-    LOG1(print(weak_field_group));
+    LOG1("\ncompute all values for group " << weak_field_group.id << ":");
 
     ordered_map<const IR::MAU::Table*,
                 ordered_set<const Assign*>> table_to_assigns;
@@ -512,14 +683,20 @@ bool ComputeValuesAtDeparser::compute_all_reachable_values_at_deparser(
     // conversative assumption. A table can be predicated by another table;
 
     if (table_to_assigns.size() > 2) {
-        LOG2("\nmore than 2 tables involved for group, skip");
+        LOG2("\nmore than 2 tables involved for group " << weak_field_group.id << ", skip");
+
+        if (LOGGING(2)) {
+            for (auto& ta : table_to_assigns)
+                std::clog << ta.first->name << std::endl;
+        }
+
         return false;
     }
 
     auto first_table = (table_to_assigns.begin())->first;
     auto all_chains = enumerate_all_assign_chains(first_table, table_to_assigns);
 
-    LOG2("\ntotal assign chains: " << all_chains.size());
+    LOG2("\nTotal assign chains: " << all_chains.size());
     LOG2(print_assign_chains(all_chains));
 
     for (auto& chain : all_chains) {
@@ -535,7 +712,7 @@ bool ComputeValuesAtDeparser::compute_all_reachable_values_at_deparser(
     }
 
     LOG2("\ndeparser value map for group:");
-    LOG2(print_value_map(weak_field_group));
+    LOG2(print_value_map(weak_field_group, all_chains));
 
     return true;
 }
@@ -564,14 +741,15 @@ void SynthesizePovEncoder::dbprint(std::ostream& out) const {
             unique_value_pov_bits.insert(vb.second);
     }
 
+    out << std::endl;
+
     out << "unique value pov bits: " << unique_value_pov_bits.size() << std::endl;
     for (auto& kv : value_to_pov_bit) {
-        for (auto& vp : kv.second) {
-            out << kv.first->name << " : ";
-            vp.first.print();
-            out << " : " << vp.second << std::endl;
-        }
+        for (auto& vp : kv.second)
+            out << kv.first->name << " : " << vp.second << std::endl;
     }
+
+    out << std::endl;
 
     ordered_set<const IR::TempVar*> unique_default_pov_bits;
     for (auto vb : default_pov_bit)
@@ -587,8 +765,8 @@ SynthesizePovEncoder::get_valid_bits(const FieldGroup& group) {
     ordered_set<const IR::Expression*> valid_bits;
 
     for (auto f : group) {
-        auto pov_bit = pov_bits.field_to_valid_bit.at(f);
-        valid_bits.insert(pov_bit);
+        auto vld = pov_bits.get_valid_bit_expr(f);
+        valid_bits.insert(vld);
     }
 
     return to_vector(valid_bits);
@@ -608,7 +786,7 @@ SynthesizePovEncoder::get_all_actions(const FieldGroup& group) {
         }
     }
 
-    LOG2("all actions for group:");
+    LOG2("all actions for group " << group.id << ":");
     for (auto a : all_actions)
         LOG2("    " << a->name);
 
@@ -630,13 +808,17 @@ SynthesizePovEncoder::create_action_ctl_bits(const ordered_set<const IR::MAU::Ac
 }
 
 bool SynthesizePovEncoder::have_same_vld_ctl_bits(const FieldGroup* a, const FieldGroup* b) {
-    auto& a_ctl_bits = group_to_ctl_bits.at(a);
-    auto& a_vld_bits = group_to_vld_bits.at(a);
+    if (group_to_ctl_bits.count(a) && group_to_ctl_bits.count(b) &&
+        group_to_vld_bits.count(a) && group_to_vld_bits.count(b)) {
+        auto& a_ctl_bits = group_to_ctl_bits.at(a);
+        auto& a_vld_bits = group_to_vld_bits.at(a);
 
-    auto& b_ctl_bits = group_to_ctl_bits.at(b);
-    auto& b_vld_bits = group_to_vld_bits.at(b);
+        auto& b_ctl_bits = group_to_ctl_bits.at(b);
+        auto& b_vld_bits = group_to_vld_bits.at(b);
 
-    return a_ctl_bits == b_ctl_bits && a_vld_bits == b_vld_bits;
+        return a_ctl_bits == b_ctl_bits && a_vld_bits == b_vld_bits;
+    }
+    return false;
 }
 
 bool SynthesizePovEncoder::have_same_action_chain(const AssignChain& a, const AssignChain& b) {
@@ -662,8 +844,8 @@ bool SynthesizePovEncoder::have_same_assign_chains(const PHV::Field* p, const Va
     auto& pc = values_at_deparser.value_to_chains.at(p).at(pv);
     auto& qc = values_at_deparser.value_to_chains.at(q).at(qv);
 
-    LOG4("p chains\n" << values_at_deparser.print_assign_chains(pc));
-    LOG4("q chains\n" << values_at_deparser.print_assign_chains(qc));
+    LOG5("p chains\n" << values_at_deparser.print_assign_chains(pc));
+    LOG5("q chains\n" << values_at_deparser.print_assign_chains(qc));
 
     if (pc.size() != qc.size())
         return false;
@@ -673,33 +855,32 @@ bool SynthesizePovEncoder::have_same_assign_chains(const PHV::Field* p, const Va
 
     for (; it1 != pc.end() && it2 != qc.end(); ++it1, ++it2) {
         if (!have_same_action_chain(*it1, *it2)) {
-            LOG3("two chain sets are not equivalent");
+            LOG5("two chain sets are not equivalent");
             return false;
         }
     }
 
-    LOG3("two chain sets are equivalent");
+    LOG5("two chain sets are equivalent");
     return true;
 }
 
 bool SynthesizePovEncoder::have_same_hdr_vld_bit(const PHV::Field* p, const PHV::Field* q) {
-    auto pb = pov_bits.field_to_valid_bit.at(p);
-    auto qb = pov_bits.field_to_valid_bit.at(q);
+    auto pb = pov_bits.get_valid_bit_expr(p);
+    auto qb = pov_bits.get_valid_bit_expr(q);
 
     return pb->equiv(*qb);
 }
 
-const IR::MAU::Instruction*
-SynthesizePovEncoder::find_equiv_valid_bit_instr_for_value(const PHV::Field* f,
+const IR::TempVar*
+SynthesizePovEncoder::find_equiv_version_bit_for_value(const PHV::Field* f,
                                      unsigned version, const Value& value,
-                                     const InstructionMap& instr_map) {
+                                     const VersionMap& version_map) {
     if (version == 0) {  // 0 for default
-       for (auto& fi : instr_map.default_instr) {
-           if (have_same_hdr_vld_bit(f, fi.first))  // quantifier
-               return fi.second;
-       }
+        // two fields' default pov bits are equiv, if all their version bits
+        // are equiv TODO
+        return nullptr;
     } else {
-        for (auto& fv : instr_map.value_to_instr) {
+        for (auto& fv : version_map.value_to_version) {
             for (auto& vi : fv.second) {
                 if (have_same_hdr_vld_bit(f, fv.first)) {  // quantifier
                     if (have_same_assign_chains(f, value, fv.first, vi.first))
@@ -712,78 +893,106 @@ SynthesizePovEncoder::find_equiv_valid_bit_instr_for_value(const PHV::Field* f,
     return nullptr;
 }
 
-const IR::MAU::Instruction*
-SynthesizePovEncoder::find_equiv_valid_bit_instr_for_value(const PHV::Field* f,
+const IR::TempVar*
+SynthesizePovEncoder::find_equiv_version_bit_for_value(const PHV::Field* f,
                                      const FieldGroup& group,
                                      unsigned version, const Value& value) {
-    for (auto& gi : group_to_instr_map) {
+    for (auto& gi : group_to_version_map) {
         if (have_same_vld_ctl_bits(&group, gi.first)) {   // quantifier
-            if (auto equiv_instr =
-                find_equiv_valid_bit_instr_for_value(f, version, value, gi.second))
-                return equiv_instr;
+            if (auto equiv =
+                find_equiv_version_bit_for_value(f, version, value, gi.second))
+                return equiv;
         }
     }
 
     return nullptr;
 }
 
-const IR::MAU::Instruction*
-SynthesizePovEncoder::create_valid_bit_instr_for_value(const PHV::Field* f,
+const IR::TempVar*
+SynthesizePovEncoder::create_version_bit_for_value(const PHV::Field* f,
                                  const FieldGroup& group,
                                  unsigned version, const Value& value) {
-    auto equiv_instr = find_equiv_valid_bit_instr_for_value(f, group, version, value);
+    auto equiv = find_equiv_version_bit_for_value(f, group, version, value);
 
-    if (equiv_instr) {
-        LOG3(f->name << " v" << version << " has equivalent version bit with " << equiv_instr);
+    if (equiv) {
+        LOG3(f->name << " v" << version << " has equivalent version bit with " << equiv);
 
         if (version == 0)  // 0 for default
-            default_pov_bit[f] = equiv_instr->operands[0]->to<IR::TempVar>();
+            default_pov_bit[f] = equiv;
         else
-            value_to_pov_bit[f][value] = equiv_instr->operands[0]->to<IR::TempVar>();
+            value_to_pov_bit[f][value] = equiv;
 
-        return equiv_instr;
+        return equiv;
     }
 
     std::string pov_bit_name = f->name + "_v" + std::to_string(version) + ".$valid";
 
     auto pov_bit = create_bit(pov_bit_name.c_str(), true);
 
-    BUG_CHECK(!value_to_pov_bit[f].count(value), "value valid bit already exists?");
-
-    if (version == 0)  // 0 for default
+    if (version == 0) {  // 0 for default
+        BUG_CHECK(!default_pov_bit.count(f), "default valid bit already exists?");
         default_pov_bit[f] = pov_bit;
-    else
+    } else {
+        BUG_CHECK(!value_to_pov_bit[f].count(value), "value valid bit already exists?");
         value_to_pov_bit[f][value] = pov_bit;
+    }
 
-    auto instr = create_set_bit_instr(pov_bit);
-    return instr;
+    LOG5("created pov bit for " << f->name << " version " << version);
+
+    return pov_bit;
 }
 
-InstructionMap
-SynthesizePovEncoder::create_instr_map(const FieldGroup& group) {
-    InstructionMap instr_map;
-
+const VersionMap&
+SynthesizePovEncoder::create_version_map(const FieldGroup& group) {
     for (auto f : group) {
         if (weak_fields.read_only_weak_fields.count(f))
             continue;
 
-        unsigned id = 0;
+        LOG4("\ncreate version map for " << f->name << ":");
 
-        auto dflt_instr = create_valid_bit_instr_for_value(f, group, id++, Value());
-        instr_map.default_instr[f] = dflt_instr;
+        std::stringstream ss;
+        TablePrinter tp(ss, {"Value at Deparser", "POV bit"}, TablePrinter::Align::LEFT);
+
+        const IR::TempVar* dflt_version = nullptr;
+
+        if (f->parsed()) {
+            dflt_version = create_version_bit_for_value(f, group, 0x0, Value());
+            group_to_version_map[&group].default_version[f] = dflt_version;
+
+            std::stringstream tt;
+            tt << dflt_version;
+            tp.addRow({"(self)", tt.str()});
+        }
+
+        unsigned id = 1;
 
         for (auto& kv : values_at_deparser.value_to_chains.at(f)) {
-            auto instr = create_valid_bit_instr_for_value(f, group, id++, kv.first);
-            instr_map.value_to_instr[f][kv.first] = instr;
+            const IR::TempVar* version = nullptr;
+
+            if (kv.first.field == f) {
+                BUG_CHECK(dflt_version,
+                    "no default version bit of self reaching value for %1%?", f->name);
+                version = dflt_version;
+            } else {
+                version = create_version_bit_for_value(f, group, id++, kv.first);
+            }
+
+            group_to_version_map[&group].value_to_version[f][kv.first] = version;
+
+            std::stringstream tt;
+            tt << version;
+            tp.addRow({kv.first.print(), tt.str()});
         }
+
+        tp.print();
+        LOG4(ss.str());
     }
 
-    return instr_map;
+    return group_to_version_map[&group];
 }
 
-unsigned
-SynthesizePovEncoder::encode_valid_bits(const std::vector<const IR::Expression*>& subset,
-                  const std::vector<const IR::Expression*>& allset) {
+template <typename T>
+unsigned encode(const std::vector<T>& subset, const std::vector<T>& allset) {
     unsigned rv = 0;
 
     for (auto obj : subset) {
@@ -791,7 +1000,7 @@ SynthesizePovEncoder::encode_valid_bits(const std::vector<const IR::Expression*>
 
         BUG_CHECK(it != allset.end(), "valid bit not found in set?");
 
-        unsigned offset = it - allset.begin();
+        unsigned offset = allset.size() - (it - allset.begin()) - 1;
         rv |= 1 << offset;
     }
 
@@ -821,34 +1030,85 @@ SynthesizePovEncoder::encode_assign_chain(const AssignChain& chain,
 }
 
 /* static */ const IR::Entry*
-SynthesizePovEncoder::create_static_entry(unsigned key_size, unsigned key,
-                                          const IR::MAU::Action* action) {
+SynthesizePovEncoder::create_static_entry(unsigned key_size,
+                                          unsigned match,
+                                          const IR::MAU::Action* action,
+                                          const ordered_set<const IR::TempVar*>& outputs,
+                                          unsigned action_param) {
     IR::Vector<IR::Expression> components;
 
     for (unsigned i = 0; i < key_size; i++) {
-        auto bit_i = (key >> i) & 1;
+        auto bit_i = (match >> i) & 1;
         components.insert(components.begin(), new IR::Constant(bit_i));
     }
 
     auto keys = new IR::ListExpression(new IR::Type_Tuple, components);
 
-    auto method = new IR::PathExpression(new IR::Path(action->name));
+    auto params = new IR::ParameterList;
 
-    auto type_action = new IR::Type_Action(new IR::TypeParameters, new IR::ParameterList);
+    int i = 0;
+    for (auto o : outputs) {
+        std::string arg_name = "x" + std::to_string(i++);
+        auto p = new IR::Parameter(arg_name.c_str(), IR::Direction::In, o->type);
+        params->push_back(p);
+    }
 
-    auto call = new IR::MethodCallExpression(type_action, method);
+    auto type = new IR::Type_Action(new IR::TypeParameters, params);
 
+    auto args = new IR::Vector<IR::Argument>();
+    for (unsigned i = 0; i < outputs.size(); i++) {
+        auto bit_i = (action_param >> i) & 1;
+        auto a = new IR::Argument(new IR::Constant(bit_i));
+        args->push_back(a);
+    }
+
+    auto method = new IR::PathExpression(type, new IR::Path(action->name));
+    auto call = new IR::MethodCallExpression(type, method, args);
     auto entry = new IR::Entry(keys, call);
 
-    // XXX why are these still in frontend types? shouldn't these have been converted to
-    // IR::MAU::Action already?
     return entry;
+}
+
+std::string MatchAction::print() const {
+    std::stringstream ss;
+
+    ss << "keys:" << std::endl;
+    for (auto k : keys)
+        ss << k << std::endl;
+
+    ss << std::endl;
+
+    ss << "outputs:" << std::endl;
+    for (auto o : outputs)
+        ss << o << std::endl;
+
+    ss << std::endl;
+
+    for (auto ma : match_to_action_param) {
+        std::stringstream as_binary;
+        as_binary << std::bitset<32>(ma.first);;
+        ss << as_binary.str().substr(32 - keys.size()) << " -> ";
+
+        as_binary.str("");
+        as_binary << std::bitset<32>(ma.second);
+        ss << as_binary.str().substr(32 - outputs.size()) << std::endl;
+    }
+
+    ss << std::endl;
+    return ss.str();
+}
+
+bool
+SynthesizePovEncoder::is_valid(const PHV::Field* f,
+                               const std::vector<const IR::Expression*>& vld_bits_onset) {
+    auto vld = pov_bits.get_valid_bit_expr(f);
+    auto it = std::find(vld_bits_onset.begin(), vld_bits_onset.end(), vld);
+    return it != vld_bits_onset.end();
 }
 
 MatchAction*
 SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
-    LOG1("create match action for group");
-    LOG2(print(group));
+    LOG1("\ncreate match action for group " << group.id << ":");
 
     auto all_actions = get_all_actions(group);
 
@@ -856,114 +1116,128 @@ SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
 
     auto& ctl_bits = group_to_ctl_bits[&group] = create_action_ctl_bits(all_actions);
 
-    auto& instr_map = group_to_instr_map[&group] = create_instr_map(group);
+    auto& version_map = create_version_map(group);
 
     if (vld_bits.size() + ctl_bits.size() > 32) {
         P4C_UNIMPLEMENTED(
-              "decaf pov encoder can only accommodate match up to 32-bit currently");
+              "decaf POV encoder can only accommodate match up to 32-bit currently");
+        // TODO(zma) for match wider than 32-bit, we need a type wider than "unsigned"
     }
 
-    // TODO(zma) for match wider than 32-bit, we need a type wider than "unsigned"
+    auto all_version_bits = version_map.get_all_version_bits();
 
-    ordered_map<unsigned, ordered_set<const IR::MAU::Instruction*>> match_to_instrs;
+    if (all_version_bits.size() > 32) {
+        P4C_UNIMPLEMENTED(
+              "decaf POV encoder can only accommodate up to 32 unique version bits currently");
+        // TODO(zma) for more than 32-bit, we need a type wider than "unsigned"
+    }
 
-    // TODO(zma) some of the headers cannot be live at the same time, need to prune
-    // the vld bit onsets
+    ordered_map<unsigned, ordered_set<const IR::TempVar*>> match_to_versions;
+
+    // TODO(zma) prune possible vld sets
     auto vld_bits_all_onsets = enumerate_all_subsets(vld_bits);
 
+    // TODO(zma) prune possible ctl sets
+    auto ctl_bits_all_onsets = enumerate_all_subsets(ctl_bits);
+
     for (auto& vld_bits_onset : vld_bits_all_onsets) {
-        if (vld_bits_all_onsets.empty())
+        if (vld_bits_onset.empty())
             continue;
 
-        unsigned vld = encode_valid_bits(vld_bits_onset, vld_bits);
+        unsigned vld = encode(vld_bits_onset, vld_bits);
 
-        std::map<unsigned, std::set<const PHV::Field*>> on_set;
-
-        for (auto f : group) {
-            if (weak_fields.read_only_weak_fields.count(f))
+        for (auto& ctl_bits_onset : ctl_bits_all_onsets) {
+            if (ctl_bits_onset.empty())
                 continue;
 
-            auto vld_bit_f = pov_bits.field_to_valid_bit.at(f);
-            auto it = std::find(vld_bits_onset.begin(), vld_bits_onset.end(), vld_bit_f);
+            unsigned ctl = encode(ctl_bits_onset, ctl_bits);
 
-            if (it == vld_bits_onset.end())
-                continue;
-
-            auto& value_map_for_f = values_at_deparser.value_to_chains.at(f);
-
-            for (auto& kv : value_map_for_f) {
-                auto& value = kv.first;
-
-                for (auto& chain : kv.second) {
-                    unsigned key = encode_assign_chain(chain, all_actions);
-
-                    key |= vld << ctl_bits.size();
-
-                    auto instr = instr_map.value_to_instr.at(f).at(value);
-                    match_to_instrs[key].insert(instr);
-
-                    on_set[key].insert(f);
-                }
-            }
-
-            // miss action, default for all fields
-            auto instr = instr_map.default_instr.at(f);
-            match_to_instrs[vld << ctl_bits.size()].insert(instr);
-        }
-
-        for (auto& kv : on_set) {
-            auto key = kv.first;
-            auto& on_set_for_key = kv.second;
+            std::map<unsigned, std::set<const PHV::Field*>> on_set;
 
             for (auto f : group) {
                 if (weak_fields.read_only_weak_fields.count(f))
                     continue;
 
-                // field is default if not on
-                if (!on_set_for_key.count(f)) {
-                    auto instr = instr_map.default_instr.at(f);
-                    match_to_instrs[key].insert(instr);
+                if (!is_valid(f, vld_bits_onset))
+                    continue;
+
+                auto& value_map_for_f = values_at_deparser.value_to_chains.at(f);
+
+                for (auto& kv : value_map_for_f) {
+                    auto& value = kv.first;
+
+                    for (auto& chain : kv.second) {
+                        unsigned key = encode_assign_chain(chain, all_actions);
+
+                        if (key == ctl) {
+                            unsigned vld_ctl = vld << ctl_bits.size() | ctl;
+
+                            auto version = version_map.value_to_version.at(f).at(value);
+                            match_to_versions[vld_ctl].insert(version);
+
+                            on_set[vld_ctl].insert(f);
+                        }
+                    }
+                }
+
+                // miss action, default for all fields
+                if (version_map.default_version.count(f)) {
+                    auto dflt_version = version_map.default_version.at(f);
+                    match_to_versions[vld << ctl_bits.size()].insert(dflt_version);
                 }
             }
-        }
-    }
+
+            for (auto& kv : on_set) {
+                auto key = kv.first;
+                auto& on_set_for_key = kv.second;
+
+                for (auto f : group) {
+                    if (weak_fields.read_only_weak_fields.count(f))
+                        continue;
+
+                    if (!is_valid(f, vld_bits_onset))
+                        continue;
+
+                    // field is default if not on
+                    if (!on_set_for_key.count(f)) {
+                        if (version_map.default_version.count(f)) {
+                            auto instr = version_map.default_version.at(f);
+                            match_to_versions[key].insert(instr);
+                        }
+                    }
+                }
+            }
+        }  // for all ctl_bits_all_onsets
+    }  // for all vld_bits_all_onsets
 
     std::vector<const IR::Expression*> keys;
 
     keys.insert(keys.begin(), vld_bits.begin(), vld_bits.end());
     keys.insert(keys.end(), ctl_bits.begin(), ctl_bits.end());
 
-    ordered_map<unsigned, const IR::MAU::Action*> match_to_action;
+    ordered_map<unsigned, unsigned> match_to_action_param;
 
-    for (auto& ent : match_to_instrs) {
-        std::string action_name = "__act_" + std::to_string(action_cnt++);
-        auto action = new IR::MAU::Action(action_name.c_str());
+    for (auto& mv : match_to_versions) {
+        unsigned action_param = 0;
 
-        for (auto instr : ent.second)
-            action->action.push_back(instr);
+        unsigned idx = 0;
+        for (auto v : all_version_bits) {
+            if (mv.second.count(v))
+                action_param |= (1 << idx);
 
-        const IR::MAU::Action* equiv_action = nullptr;
-
-        for (auto& ma : match_to_action) {
-            if (action->action.equiv(ma.second->action))
-                equiv_action = ma.second;
+            idx++;
         }
 
-        if (equiv_action) {
-            match_to_action[ent.first] = equiv_action;
-            LOG3("action " << action->name << " is equivalent with " << equiv_action->name);
-        } else {
-            match_to_action[ent.first] = action;
-        }
+        match_to_action_param[mv.first] = action_param;
     }
 
-    auto ma = new MatchAction(keys, match_to_action);
+    auto ma = new MatchAction(keys, all_version_bits, match_to_action_param);
     return ma;
 }
 
 IR::MAU::Table*
 SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match_action) {
-    LOG1("create decaf pov encoder for match action");
+    LOG1("\ncreate decaf POV encoder for match action:");
     LOG3(match_action.print());
 
     static int id = 0;
@@ -974,6 +1248,8 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
 
     auto p4_name = table_name + "_" + cstring::to_cstring(gress);
     encoder->match_table = new IR::P4Table(p4_name.c_str(), new IR::TableProperties());
+
+    LOG1("created table " << table_name);
 
     int i = 0;
     for (auto in : match_action.keys) {
@@ -986,22 +1262,36 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
 
     IR::Vector<IR::Entry> static_entries;
 
-    for (auto& ent : match_action.entries) {
-        auto action = ent.second;
-        encoder->actions[action->name] = action;
+    auto soap = new IR::MAU::Action("__soap_");  // set output w/ action param
+    encoder->actions[soap->name] = soap;
 
-        auto static_entry = create_static_entry(key_size, ent.first, action);
+    i = 0;
+    for (auto o : match_action.outputs) {
+        std::string arg_name = "x" + std::to_string(i++);
+
+        auto arg = new IR::MAU::ActionArg(IR::Type::Bits::get(1), soap->name, arg_name.c_str());
+        auto instr = new IR::MAU::Instruction("set", {o, arg});
+
+        soap->action.push_back(instr);
+        soap->args.push_back(arg);
+    }
+
+    for (auto& ma : match_action.match_to_action_param) {
+        auto static_entry = create_static_entry(key_size,
+                                                ma.first,
+                                                soap,
+                                                match_action.outputs,
+                                                ma.second);
         static_entries.push_back(static_entry);
     }
 
     auto nop = new IR::MAU::Action("__nop_");
-    nop->default_allowed = nop->init_default = true;
-
     encoder->actions[nop->name] = nop;
+    nop->default_allowed = nop->init_default = true;
 
     encoder->entries_list = new IR::EntriesList(static_entries);
 
-    LOG3(encoder);
+    LOG5(encoder);
 
     // XXX(zma) depending how well this works, we might consider baking
     // this encoder (or multiple instances) into the silicon. Using SRAM/TCAM
@@ -1011,96 +1301,6 @@ SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match
     return encoder;
 }
 
-bool SynthesizePovEncoder::can_join(const MatchAction* a, const MatchAction* b) {
-    if (a->keys == b->keys)  // the trivial case, we can simply concat the actions of a and b
-        return true;
-
-    // If the key sets are different, we can still join two match actions, but at the cost
-    // of multiplying the number of entries. e.g. If the key sets differ in one bit, we need
-    // to replicate every match for the bit's on/off set, potentially doubling the number of
-    // entries. (TODO)
-
-    return false;
-}
-
-IR::MAU::Action*
-SynthesizePovEncoder::join_actions(const IR::MAU::Action* a, const IR::MAU::Action* b) {
-    ordered_set<const IR::Primitive*> all_instrs;
-
-    for (auto instr : a->action)
-        all_instrs.insert(instr);
-
-    for (auto instr : b->action)
-        all_instrs.insert(instr);
-
-    std::string action_name = "__act_" + std::to_string(action_cnt++);
-    auto joined = new IR::MAU::Action(action_name.c_str());
-
-    for (auto instr : all_instrs)
-        joined->action.push_back(instr);
-
-    LOG4("joined action " << a->name << " and " << b->name << " as " << joined->name);
-
-    return joined;
-}
-
-MatchAction*
-SynthesizePovEncoder::join_match_actions(const MatchAction* a, const MatchAction* b) {
-    ordered_map<unsigned, const IR::MAU::Action*> joined_actions;
-
-    // a's unique entries
-    for (auto kv : a->entries) {
-        if (!b->entries.count(kv.first))
-            joined_actions[kv.first] = kv.second;
-    }
-
-    // b's unique entries
-    for (auto kv : b->entries) {
-        if (!a->entries.count(kv.first))
-            joined_actions[kv.first] = kv.second;
-    }
-
-    for (auto kv : a->entries) {
-        if (b->entries.count(kv.first)) {
-            auto joined_action = join_actions(kv.second, b->entries.at(kv.first));
-            joined_actions[kv.first] = joined_action;
-        }
-    }
-
-    LOG3("joined match actions");
-
-    return new MatchAction(a->keys, joined_actions);
-}
-
-std::vector<const MatchAction*>
-SynthesizePovEncoder::join_match_actions(const std::vector<const MatchAction*>& match_actions) {
-    std::map<const MatchAction*, const MatchAction*> joined_match_actions;
-    std::vector<const MatchAction*> temp;
-
-    for (auto a : match_actions) {
-        if (joined_match_actions.count(a)) continue;
-
-        const MatchAction* joined = nullptr;
-
-        for (auto b : match_actions) {
-            if (a == b) continue;
-
-            if (can_join(a, b)) {
-                joined = join_match_actions(a, b);
-                joined_match_actions[a] = joined_match_actions[b] = joined;
-                break;
-            }
-        }
-
-        temp.push_back(joined ? joined : a);
-    }
-
-    if (temp == match_actions)  // nothing else to join, reached fix-point
-        return temp;
-
-    return join_match_actions(temp);  // recurse and continue
-}
-
 IR::MAU::TableSeq*
 SynthesizePovEncoder::preorder(IR::MAU::TableSeq* seq) {
     prune();
@@ -1108,7 +1308,7 @@ SynthesizePovEncoder::preorder(IR::MAU::TableSeq* seq) {
     gress_t gress = VisitingThread(this);
 
     if (tables_to_insert.count(gress)) {
-        LOG2(tables_to_insert.at(gress).size() << " tables to insert on " << gress);
+        LOG2("\n" << tables_to_insert.at(gress).size() << " tables to insert on " << gress);
 
         for (auto t : tables_to_insert.at(gress))
             seq->tables.push_back(t);
@@ -1117,17 +1317,174 @@ SynthesizePovEncoder::preorder(IR::MAU::TableSeq* seq) {
     return seq;
 }
 
+unsigned
+SynthesizePovEncoder::num_coalesced_match_bits(const FieldGroup& a, const FieldGroup& b) {
+    auto av = get_valid_bits(a);
+    auto aa = get_all_actions(a);
+    auto bv = get_valid_bits(b);
+    auto ba = get_all_actions(b);
+
+    std::set<const IR::Expression*> vs;
+    ordered_set<const IR::MAU::Action*> as;
+
+    for (auto x : av) vs.insert(x);
+    for (auto x : aa) as.insert(x);
+    for (auto x : bv) vs.insert(x);
+    for (auto x : ba) as.insert(x);
+
+    return as.size() + vs.size();
+}
+
+FieldGroup join(const FieldGroup& a, const FieldGroup& b, int id) {
+    FieldGroup joined(id);
+
+    for (auto x : a) joined.insert(x);
+    for (auto x : b) joined.insert(x);
+
+    LOG3("joined group " << a.id << " and " << b.id << " as group " << id);
+    LOG3(print_field_group(joined));
+
+    return joined;
+}
+
+bool
+SynthesizePovEncoder::is_trivial_group(const FieldGroup& group) {
+    if (group.size() != 1)
+        return false;
+
+    auto f = *(group.begin());
+    auto& value_map_for_field = values_at_deparser.value_to_chains.at(f);
+
+    for (auto& kv : value_map_for_field) {
+        auto& chains = kv.second;
+        for (auto& chain : chains) {
+            if (chain.size() > 1)
+                return false;
+
+            auto assign = chain.at(0);
+            auto action = weak_fields.get_action(assign);
+
+            auto vld_bit = pov_bits.field_to_valid_bit.at(f);
+            bool has_vld_bit_set = false;
+
+            // check if f is validated in the same action as the value assignment
+            if (pov_bits.validate_to_action.count(vld_bit)) {
+                if (pov_bits.validate_to_action.at(vld_bit).count(action))
+                    has_vld_bit_set = true;
+            }
+
+            if (!has_vld_bit_set)
+                return false;
+
+            // check f has no invalidation in the control flow
+            // *technically* we only need to make sure there is invalidation after
+            // all the value assignments to f, so this check is correct but too strict TODO
+            if (pov_bits.invalidate_to_action.count(vld_bit))
+                return false;
+        }
+    }
+
+    return true;
+}
+
+void
+SynthesizePovEncoder::resolve_trivial_group(const FieldGroup& group) {
+    BUG_CHECK(group.size() == 1, "trivial group has more than 1 fields?");
+    LOG1("\nresolve trivial group " << group.id << ":");
+
+    auto& version_map = create_version_map(group);
+
+    auto f = *(group.begin());
+    auto& value_map_for_field = values_at_deparser.value_to_chains.at(f);
+
+    for (auto& kv : value_map_for_field) {
+        const IR::TempVar* version_bit = nullptr;
+
+        if (kv.first.field && kv.first.field == f)
+            version_bit = version_map.default_version.at(f);
+        else
+            version_bit = version_map.value_to_version.at(f).at(kv.first);
+
+        auto& chains = kv.second;
+        for (auto& chain : chains) {
+            BUG_CHECK(chain.size() == 1, "trivial group cannot have chain depth greater than 1");
+
+            auto assign = chain.at(0);
+            assign_to_version_bit[assign->instr] = version_bit;
+        }
+    }
+}
+
+std::pair<std::map<gress_t, std::vector<FieldGroup>>,
+          std::map<gress_t, std::vector<FieldGroup>>>
+SynthesizePovEncoder::coalesce_weak_field_groups() {
+    std::map<gress_t, std::vector<FieldGroup>> trivial, coalesced;
+
+    int curr_id = values_at_deparser.weak_field_groups.size();
+
+    for (auto& group : values_at_deparser.weak_field_groups) {
+        auto gress = get_gress(group);
+
+        if (is_trivial_group(group)) {
+            trivial[gress].push_back(group);
+            LOG3("group " << group.id << " is trivial (no encoder needed)");
+        } else {
+            bool joined = false;
+            for (auto& coal : coalesced[gress]) {
+                // greedily join groups till match bits exceed 10 bits (single SRAM)
+                // could optimize by dynamic programming (knapsack problem) (TODO)
+
+                if (num_coalesced_match_bits(coal, group) <= 10) {
+                    coal = join(coal, group, curr_id++);
+                    joined = true;
+                    break;
+                }
+            }
+
+            if (!joined)
+                coalesced[gress].push_back(group);
+        }
+    }
+
+    return {trivial, coalesced};
+}
+
 Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
     auto rv = MauTransform::init_apply(root);
 
     tables_to_insert.clear();
     value_to_pov_bit.clear();
     action_to_ctl_bit.clear();
+    assign_to_version_bit.clear();
 
     // Also, within each table, we can compress the number of match entries
     // using don't care's (and use TCAM to implement table) -- this is classical
     // boolean optimization (TODO).
 
+#if 1
+    // coalesce weak groups to save logic IDs, and for better table placement
+    // locality (i.e. save stages)
+
+    std::map<gress_t, std::vector<FieldGroup>> trivial, coalesced;
+
+    std::tie(trivial, coalesced) = coalesce_weak_field_groups();
+
+    for (auto& gg : trivial) {
+        for (auto& group : gg.second)
+            resolve_trivial_group(group);
+    }
+
+    std::map<gress_t, std::vector<const MatchAction*>> match_actions;
+
+    for (auto& gg : coalesced) {
+        auto gress = gg.first;
+
+        for (auto& group : gg.second) {
+            auto match_action = create_match_action(group);
+            match_actions[gress].push_back(match_action);
+        }
+    }
+#else
     std::map<gress_t, std::vector<const MatchAction*>> match_actions;
 
     for (auto& group : values_at_deparser.weak_field_groups) {
@@ -1136,9 +1493,7 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
 
         match_actions[gress].push_back(match_action);
     }
-
-    for (auto& gm : match_actions)
-        gm.second = join_match_actions(gm.second);
+#endif
 
     for (auto& gm : match_actions) {
         for (auto& ma : gm.second) {
@@ -1154,11 +1509,18 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
 void InsertParserConstExtracts::create_temp_var_for_constant_bytes(gress_t gress,
                           const ordered_set<const IR::Constant*>& constants) {
     for (auto c : constants) {
-        // TODO support any large const_as_uint64
-        uint64_t const_as_uint64 = c->asUint64();
+        unsigned width = c->type->width_bits();
 
-        do {
-            uint8_t l_s_byte = const_as_uint64 & 0xffU;
+        // BUG_CHECK(width % 8 == 0, "constant not byte-aligned?");
+        // XXX this check too strict or program incorrect?
+        // p4_16/ptf/int_transit.p4
+
+        auto cc = *c;
+
+        while (width) {
+            auto x = cc & IR::Constant(IR::Type::Bits::get(c->type->width_bits()), 0xffU);
+            uint8_t l_s_byte = x.value.get_ui();
+
             const_to_bytes[gress][c].insert(
                 const_to_bytes[gress][c].begin(), l_s_byte);  // order is important
 
@@ -1168,12 +1530,13 @@ void InsertParserConstExtracts::create_temp_var_for_constant_bytes(gress_t gress
                 auto temp_var = create_temp_var(name.c_str(), 8);
                 byte_to_temp_var[gress][l_s_byte] = temp_var;
 
-                LOG3("created temp var " << name << " " << (void*)c
+                LOG4("created temp var " << name << " " << (void*)c
                      << " 0x" << std::hex << (unsigned)l_s_byte << std::dec);
             }
 
-            const_as_uint64 >>= 8;
-        } while (const_as_uint64 != 0);
+            cc = cc >> 8;
+            width -= 8;
+        }
     }
 }
 
@@ -1273,21 +1636,30 @@ bool RewriteWeakFieldWrites::cache_instr(const IR::MAU::Action* orig_action,
 const IR::Node* RewriteWeakFieldWrites::postorder(IR::MAU::Instruction* instr) {
     auto orig_instr = getOriginal<IR::MAU::Instruction>();
 
-    bool is_weak_assign = values_at_deparser.is_weak_assign(orig_instr);
+    if (synth_pov_encoder.assign_to_version_bit.count(orig_instr)) {
+        // trivial case, directly set version bit
 
-    if (is_weak_assign) {
-        auto action = findContext<IR::MAU::Action>();
-        auto orig_action = curr_to_orig.at(action);
+        auto version_bit = synth_pov_encoder.assign_to_version_bit.at(orig_instr);
+        auto rv = create_set_bit_instr(version_bit);
 
-        auto ctl_bit = synth_pov_encoder.action_to_ctl_bit.at(orig_action);
+        LOG3("rewrite " << instr << " as " << rv);
+        return rv;
+    } else {
+        bool is_weak_assign = values_at_deparser.is_weak_assign(orig_instr);
+        if (is_weak_assign) {
+            // non-trivial case, set ctl bit
 
-        auto set_ctl_bit = create_set_bit_instr(ctl_bit);
+            auto action = findContext<IR::MAU::Action>();
+            auto orig_action = curr_to_orig.at(action);
 
-        LOG3("rewrite " << instr << " as " << set_ctl_bit);
+            auto ctl_bit = synth_pov_encoder.action_to_ctl_bit.at(orig_action);
+            auto rv = create_set_bit_instr(ctl_bit);
 
-        bool cached = cache_instr(orig_action, set_ctl_bit);
+            LOG3("rewrite " << instr << " as " << rv);
 
-        return cached ? set_ctl_bit : nullptr;
+            bool cached = cache_instr(orig_action, rv);
+            return cached ? rv : nullptr;
+        }
     }
 
     return instr;
@@ -1313,6 +1685,183 @@ RewriteDeparser::find_emit_source(const PHV::Field* field,
     }
 
     return nullptr;
+}
+
+std::set<std::set<const IR::Expression*>>
+RewriteDeparser::get_all_disjoint_pov_bit_sets() {
+    std::set<std::set<const IR::Expression*>> rv;
+
+    auto& value_to_pov_bit = synth_pov_encoder.value_to_pov_bit;
+    auto& default_pov_bit = synth_pov_encoder.default_pov_bit;
+
+    for (auto& fb : default_pov_bit) {
+        std::set<const IR::Expression*> disjoint_set;
+        disjoint_set.insert(fb.second);
+
+        for (auto vb : value_to_pov_bit.at(fb.first))
+            disjoint_set.insert(vb.second);
+
+        rv.insert(disjoint_set);
+    }
+
+    if (LOGGING(4)) {
+        LOG4("total disjoint pov bit sets: " << rv.size());
+        for (auto& s : rv) {
+            for (auto e : s) LOG4(e);
+            LOG4("");
+        }
+    }
+
+    return rv;
+}
+
+std::vector<const IR::BFN::Emit*>
+RewriteDeparser::coalesce_disjoint_emits(const std::vector<const IR::BFN::Emit*>& emits) {
+    if (LOGGING(5)) {
+        LOG5("coalesce group:");
+        for (auto e : emits) LOG5(e);
+    }
+
+    ordered_set<const IR::Expression*> pov_bits;
+
+    for (auto emit : emits) {
+        auto pov_bit = emit->povBit->field;
+        pov_bits.insert(pov_bit);
+    }
+
+    std::vector<const IR::BFN::Emit*> rv;
+
+    for (auto pov_bit : pov_bits) {
+        for (auto emit : emits) {
+            if (pov_bit == emit->povBit->field)
+                rv.push_back(emit);
+        }
+    }
+
+    if (LOGGING(5)) {
+        LOG5("result:");
+        for (auto e : rv) LOG5(e);
+    }
+
+    return rv;
+}
+
+// check if emit belongs to a disjoint set
+static const std::set<const IR::Expression*>*
+belongs_to(const IR::BFN::EmitField* emit,
+        const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
+    const std::set<const IR::Expression*>* disjoint_set = nullptr;
+    auto pov_bit = emit->povBit->field;
+
+    for (auto& ds : disjoint_pov_sets) {
+        if (ds.count(pov_bit)) {
+            disjoint_set = &ds;
+            break;
+        }
+    }
+
+    return disjoint_set;
+}
+
+void RewriteDeparser::coalesce_emits_for_packing(IR::BFN::Deparser* deparser,
+                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
+    IR::Vector<IR::BFN::Emit> rv;
+
+    for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
+        auto prim = *it;
+
+        if (auto emit = prim->to<IR::BFN::EmitField>()) {
+            auto disjoint_set = belongs_to(emit, disjoint_pov_sets);
+
+            if (!disjoint_set) {
+                rv.push_back(prim);
+            } else {
+                // collect all emits in disjoint set
+                std::vector<const IR::BFN::Emit*> disjoint_emits;
+
+                auto jt = it;
+                for (; jt != deparser->emits.end(); jt++) {
+                    if (!disjoint_set->count((*jt)->povBit->field))
+                        break;
+
+                    disjoint_emits.push_back(*jt);
+                }
+
+                // coalesce and add to result vector
+                auto coalesced = coalesce_disjoint_emits(disjoint_emits);
+                for (auto e : coalesced)
+                    rv.push_back(e);
+
+                it = jt - 1;
+            }
+        } else {
+            rv.push_back(prim);
+        }
+    }
+
+    deparser->emits = rv;
+}
+
+void RewriteDeparser::infer_deparser_no_repeat_constraint(IR::BFN::Deparser* deparser,
+                       const std::set<std::set<const IR::Expression*>>& disjoint_pov_sets) {
+    for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
+        auto ei = (*it)->to<IR::BFN::EmitField>();
+        if (!ei) continue;
+
+        if (auto temp_var = ei->source->field->to<IR::TempVar>()) {
+            if (insert_parser_consts.is_inserted(temp_var))
+                continue;
+        }
+
+        for (auto jt = it + 1; jt != deparser->emits.end(); jt++) {
+            auto ej = (*jt)->to<IR::BFN::EmitField>();
+            if (!ej) continue;
+
+            if (ei->source->field == ej->source->field) {
+                auto dsi = belongs_to(ei, disjoint_pov_sets);
+                auto dsj = belongs_to(ej, disjoint_pov_sets);
+
+                if (dsi || dsj) {
+                    bool can_repeat = true;
+
+                    for (auto kt = it + 1; kt != jt; kt++) {
+                        if (auto ek = (*kt)->to<IR::BFN::EmitField>()) {
+                            if (ek->povBit->field == ej->povBit->field ||
+                                ek->povBit->field == ei->povBit->field) {
+                                can_repeat = false;
+                                break;
+                            }
+                        } else {
+                            can_repeat = false;
+                            break;
+                        }
+                    }
+
+                    if (can_repeat) {
+                        auto field = phv.field(ei->source->field);
+
+                        BUG_CHECK(field->size % 8 == 0, "non byte-aligned field gets decaf'd?");
+
+                        if (field->size == 16 || field->size == 32)
+                            must_split_fields.insert(field->name);
+                    }
+                }
+            }
+        }
+    }
+
+    if (LOGGING(5)) {
+        LOG5("fields can repeat in the FD:");
+        for (auto f : must_split_fields)
+            LOG5(f);
+    }
+}
+
+static void print_deparser(const IR::BFN::Deparser* deparser) {
+    if (LOGGING(4)) {
+        for (auto prim : deparser->emits)
+            LOG4(prim);
+    }
 }
 
 bool RewriteDeparser::preorder(IR::BFN::Deparser* deparser) {
@@ -1370,8 +1919,10 @@ bool RewriteDeparser::preorder(IR::BFN::Deparser* deparser) {
                     }
                 }
 
-                auto dflt_pov_bit = default_pov_bit.at(f);
-                add_emit(new_emits, emit->source->field, dflt_pov_bit);
+                if (default_pov_bit.count(f)) {
+                    auto dflt_pov_bit = default_pov_bit.at(f);
+                    add_emit(new_emits, emit->source->field, dflt_pov_bit);
+                }
 
                 continue;
             }
@@ -1381,6 +1932,18 @@ bool RewriteDeparser::preorder(IR::BFN::Deparser* deparser) {
     }
 
     deparser->emits = new_emits;
+
+    LOG4("deparser after rewrite:");
+    print_deparser(deparser);
+
+    auto disjoint_pov_sets = get_all_disjoint_pov_bit_sets();
+
+    coalesce_emits_for_packing(deparser, disjoint_pov_sets);
+
+    LOG4("deparser after coalescing:");
+    print_deparser(deparser);
+
+    infer_deparser_no_repeat_constraint(deparser, disjoint_pov_sets);
 
     return false;
 }

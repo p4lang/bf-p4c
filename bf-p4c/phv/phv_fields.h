@@ -286,6 +286,7 @@ class Field : public LiftLess<Field> {
     bool            flexible_i = false;
     bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
                                                        /// set by PHV_Field_Operations
+    bool            parsed_i = false;                  /// true if parsed field
     bool            deparsed_i = false;                /// true if deparsed field
     bool            no_pack_i = false;                 /// prevents field from being placed in a
                                                        /// container with any other field
@@ -387,6 +388,8 @@ class Field : public LiftLess<Field> {
     //
     bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
     void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
+    bool parsed() const                                    { return parsed_i; }
+    void set_parsed(bool b)                                { parsed_i = b; }
     bool deparsed() const                                  { return deparsed_i; }
     void set_deparsed(bool b)                              { deparsed_i = b; }
     bool no_pack() const                                   { return no_pack_i; }

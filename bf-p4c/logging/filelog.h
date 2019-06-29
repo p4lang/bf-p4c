@@ -37,6 +37,7 @@ class FileLog {
             {"flexible_packing", "parser"},
             {"parser.characterize", "parser"},
             {"parser", "parser"},
+            {"decaf", "parser"},
             {"phv_allocation", "phv"},
             {"table_", "mau"},
             {"ixbar", "mau"}

@@ -480,6 +480,9 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_mirror" ${CMAKE_CURRENT_SOURCE
 p4c_add_ptf_test_with_ptfdir ("tofino" "p4c_737" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.p4
      "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-737/oinked_0.ptf")
 
+p4c_add_ptf_test_with_ptfdir ("tofino" "decaf_10" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.p4
+     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.ptf")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "P4C-1021-1"
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/P4C-1021-1/P4C_1021_1.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/P4C-1021-1/P4C_1021_1.ptf")
