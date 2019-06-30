@@ -238,7 +238,7 @@ FlattenHeader::doFlattenStructInitializer(const IR::StructInitializerExpression*
     // removing nested StructInitailzierExpression
     auto no_nested_struct = new IR::IndexedVector<IR::NamedExpression>();
     flattenStructInitializer(e, no_nested_struct);
-    return new IR::StructInitializerExpression(e->name, *no_nested_struct, e->isHeader);
+    return new IR::StructInitializerExpression(e->srcInfo, e->typeName, *no_nested_struct);
 }
 
 IR::ListExpression* FlattenHeader::flatten_list(const IR::ListExpression* args) {
@@ -281,27 +281,24 @@ const IR::Node *EliminateEmitHeaders::preorder(IR::Argument *arg) {
     if (!type) return arg;
 
     cstring type_name;
-    bool isHeader;
     auto fieldList = IR::IndexedVector<IR::NamedExpression>();
     if (auto header = type->to<IR::Type_Header>()) {
         for (auto f : header->fields) {
             auto mem = new IR::Member(arg->expression, f->name);
             fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
         type_name = header->name;
-        isHeader = true;
     } else if (auto st = type->to<IR::Type_Struct>()) {
         for (auto f : st->fields) {
             auto mem = new IR::Member(arg->expression, f->name);
             fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
         type_name = st->name;
-        isHeader = false;
     } else {
         ::error(ErrorType::ERR_UNEXPECTED, " type as emit parameter %1%", arg);
     }
 
     if (fieldList.size() > 0)
         return new IR::Argument(arg->srcInfo,
-                new IR::StructInitializerExpression(type_name, fieldList, isHeader));
+                new IR::StructInitializerExpression(new IR::Type_Name(type_name), fieldList));
 
     return arg;
 }

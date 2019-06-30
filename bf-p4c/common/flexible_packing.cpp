@@ -1131,6 +1131,10 @@ RepackFlexHeaders::getPhvFieldToStructFieldMap(const IR::BFN::DigestFieldList* d
 }
 
 bool RepackFlexHeaders::isFlexibleHeader(const IR::HeaderOrMetadata* h) {
+    if (h->type->is<IR::BFN::Type_FixedSizeHeader>()) {
+        headerToFlexibleStructsMap.emplace(h);
+        return true;
+    }
     for (auto f : h->type->fields)
         if (f->getAnnotation("flexible"))
             headerToFlexibleStructsMap[h].insert(f);
@@ -1138,6 +1142,11 @@ bool RepackFlexHeaders::isFlexibleHeader(const IR::HeaderOrMetadata* h) {
 }
 
 bool RepackFlexHeaders::isFlexibleHeader(const IR::BFN::DigestFieldList* d) {
+    /// Type_FixedSizeHeader is resubmit or phase0 header.
+    if (d->type->is<IR::BFN::Type_FixedSizeHeader>()) {
+        digestToFlexibleStructsMap.emplace(d);
+        return true;
+    }
     /// empty field list does not have a header type.
     if (!d->type) return false;
     for (auto f : d->type->fields)
@@ -1210,6 +1219,9 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
 
     if (auto fh = h->type->to<IR::BFN::Type_FixedSizeHeader>()) {
         auto bits = getHeaderBits(h);
+        ERROR_CHECK(bits <= Device::pardeSpec().bitResubmitSize(),
+                "%1% digest limited to %2% bits", h->type->name,
+                Device::pardeSpec().bitResubmitSize());
         auto pad_size = fh->fixed_size - bits;
         if (pad_size != 0) {
             auto padding = getPaddingField(pad_size, padFieldId++);
@@ -1303,7 +1315,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
     LOG3("\t" << flexFields.size() << " flexible fields in header " << d->type->name);
     if (LOGGING(3))
         for (auto* f : flexFields)
-            LOG3("\tFlexible header type: " << f->name << "\n\t  " << f->type);
+            LOG3("\tFlexible field type: " << f->name << "\n\t  " << f->type);
 
     auto phvFieldToStructField = getPhvFieldToStructFieldMap(d);
 
@@ -1333,6 +1345,20 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
             LOG3("\tPushing padding field " << padding);
         }
     }
+
+    if (auto fh = d->type->to<IR::BFN::Type_FixedSizeHeader>()) {
+        auto bits = getHeaderBits(d);
+        ERROR_CHECK(bits <= Device::pardeSpec().bitResubmitSize(),
+                "%1% digest limited to %2% bits", d->type->name,
+                Device::pardeSpec().bitResubmitSize());
+        auto pad_size = fh->fixed_size - bits;
+        if (pad_size != 0) {
+            auto padding = getPaddingField(pad_size, padFieldId++);
+            fields.push_back(padding);
+            LOG1("Pushing field " << padding);
+        }
+    }
+
     auto* repackedHeaderType = new IR::Type_Header(d->type->name, d->type->annotations, fields);
     repackedTypes[d->type] = repackedHeaderType;
 
@@ -1437,6 +1463,8 @@ bool GatherParserStateToModify::processExtract(const IR::BFN::Extract* e) {
     if (!fieldLVal) return false;
     const PHV::Field* f = phv.field(fieldLVal->field);
     if (!f) BUG("Extract to a non-field type %1%", fieldLVal->field);
+    if (f->is_fixed_size_header())
+        return true;
     if (f->is_flexible()) {
         // extracting constant to bridge metadata field does not count as a flex
         // field use as it may be introduced by metadata initialization.

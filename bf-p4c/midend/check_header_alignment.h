@@ -55,7 +55,7 @@ class FindPaddingCandidate : public Inspector {
     HeaderTypeMap* all_header_types;
 
  public:
-    std::vector<cstring> find_headers_to_pad(P4::MethodInstance* mi);
+    std::vector<cstring> find_headers_to_pad(P4::MethodInstance* mi, bool resubmit);
     void check_mirror(P4::MethodInstance* mi);
     void check_digest(P4::MethodInstance* mi);
     void check_resubmit(P4::MethodInstance* mi);

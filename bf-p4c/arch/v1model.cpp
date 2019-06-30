@@ -884,8 +884,10 @@ class ConstructSymbolTable : public Inspector {
             int index = 0;
             for (auto t : *components) {
                 cstring fname = "__field_" + std::to_string(index);
-                auto *fieldAnnotations = new IR::Annotations({
-                        new IR::Annotation(IR::ID("flexible"), {})});
+                auto *fieldAnnotations = new IR::Annotations();
+                if (index != 0)
+                    fieldAnnotations->annotations.push_back(
+                            new IR::Annotation(IR::ID("flexible"), {}));
                 if (auto nestedTuple = t->to<IR::Type_Tuple>()) {
                     convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
                     cstring stName = prefix + fname + "_struct_t";
@@ -990,8 +992,8 @@ class ConstructSymbolTable : public Inspector {
             }
         }
         cstring headerTypeName = prefix + (isHeader ? "_header_t" : "_struct_t");
-        auto retv = new IR::StructInitializerExpression(headerTypeName, *initializer, isHeader);
-        return retv;
+        return new IR::StructInitializerExpression(new IR::Type_Name(headerTypeName),
+                                                   *initializer);
     }
 
     /*
@@ -1556,7 +1558,7 @@ class ConstructSymbolTable : public Inspector {
                         auto header_type = convertTupleTypeToHeaderType(
                                 generatedResubmitHeaderTypeName, components, true);
                         structure->type_declarations.emplace(header_type->name, header_type);
-                        LOG3("create header " << header_type->name);
+                        LOG3("create header " << header_type->name << " " << header_type);
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
                         for (auto elem : list->components) {

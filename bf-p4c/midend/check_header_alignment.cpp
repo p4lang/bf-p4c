@@ -32,19 +32,20 @@ bool CheckHeaderAlignment::preorder(const IR::Type_Header* header) {
 /**
  * Pad headers used in Mirror/Resubmit/Digest emit() method to byte boundaries.
  */
-std::vector<cstring> FindPaddingCandidate::find_headers_to_pad(P4::MethodInstance* mi) {
+std::vector<cstring> FindPaddingCandidate::find_headers_to_pad(P4::MethodInstance* mi,
+        bool resubmit = false) {
     std::vector<cstring> retval;
     for (auto p : *mi->substitution.getParametersInArgumentOrder()) {
         if (p->direction != IR::Direction::In)
             continue;
         auto paramType = typeMap->getType(p, true);
         if (auto hdr = paramType->to<IR::Type_Header>()) {
-            if (findFlexibleAnnotation(hdr)) {
+            if (findFlexibleAnnotation(hdr) || resubmit) {
                 LOG3("  found flexible annotation in " << hdr->name <<
                         ", add as padding candidate");
                 retval.push_back(hdr->name); }
         } else if (auto st = paramType->to<IR::Type_Struct>()) {
-            if (findFlexibleAnnotation(st)) {
+            if (findFlexibleAnnotation(st) || resubmit) {
                 LOG3("  found flexible annotation in " << st->name <<
                         ", add as padding candidate");
                 retval.push_back(st->name); }
@@ -60,11 +61,12 @@ void FindPaddingCandidate::check_mirror(P4::MethodInstance* mi) {
 }
 
 void FindPaddingCandidate::check_resubmit(P4::MethodInstance* mi) {
-    auto hdrs = find_headers_to_pad(mi);
+    auto hdrs = find_headers_to_pad(mi, true);
     for (auto v : hdrs)
         headers_to_pad->insert(v);
-    for (auto v : hdrs)
+    for (auto v : hdrs) {
         resubmit_headers->insert(v);
+    }
 }
 
 void FindPaddingCandidate::check_digest(P4::MethodInstance* mi) {
@@ -154,10 +156,11 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
      * We use a special IR node so that flexible_packing knows how to deal with
      * the packing of resubmit header in the backend.
      */
-    if (resubmit_headers->count(header->name))
+    if (resubmit_headers->count(header->name)) {
+        LOG3("rewrite resubmit header as fixed size");
         return new IR::BFN::Type_FixedSizeHeader(header->srcInfo, header->name,
                 header->annotations, structFields,
-                Device::pardeSpec().bitResubmitSize());
+                Device::pardeSpec().bitResubmitSize()); }
     auto retval = new IR::Type_Header(header->srcInfo, header->name,
             header->annotations, structFields);
     LOG6("rewrite flexible struct " << retval);
@@ -165,11 +168,18 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
 }
 
 const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) {
-    LOG3(" sti " << st << " " << st->type);
-    if (!st->isHeader)
+    auto origType = typeMap->getType(st->typeName)->to<IR::Type_Type>();
+    BUG_CHECK(origType, "Expected %1% to be a type", st->typeName);
+    if (!origType->type->is<IR::Type_Header>())
         return st;
-    if (!headers_to_pad->count(st->type->to<IR::Type_Header>()->name))
+
+    auto type = st->type->to<IR::Type_Header>();
+    BUG_CHECK(type, "Expected %1% to have a header type", st);
+
+    auto type_name = type->name;
+    if (!headers_to_pad->count(type_name))
         return st;
+
     LOG3(" start modifying ");
     IR::IndexedVector<IR::NamedExpression> components;
     // XXX(hanw): TypeChecking algorithm on IR::StructInitializerExpression
@@ -178,7 +188,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) 
     // as the original header type, but without the annotation on the fields.
     // We had to maintain a map of all header types outselves and look up the
     // origin header type to access the annotations inside the header type.
-    auto header = all_header_types->at(st->type->to<IR::Type_Header>()->name);
+    auto header = all_header_types->at(type_name);
     LOG3(" get header type " << header);
     int index = 0;
     int padFieldId = 0;
@@ -211,7 +221,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) 
         index++;
     }
 
-    auto retval = new IR::StructInitializerExpression(st->name, components, st->isHeader);
+    auto retval = new IR::StructInitializerExpression(st->srcInfo, st->typeName, components);
     LOG6("rewrite field list to " << retval);
     return retval;
 }

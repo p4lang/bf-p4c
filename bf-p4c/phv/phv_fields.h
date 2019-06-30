@@ -316,6 +316,9 @@ class Field : public LiftLess<Field> {
                                                        /// contain 0 and 64.
     bool            ignore_alloc_i = false;
 
+    // true if the field is part of Type_FixedSizeHeader, used to represent resubmit/phase0 data.
+    bool            fixed_size_i = false;
+
 
     /// Maximum size of container bytes this field can occupy. -1 if there is no constraint on this
     /// field.
@@ -382,6 +385,8 @@ class Field : public LiftLess<Field> {
     void set_padding(bool p)                               { padding = p; }
     bool is_overlayable() const                            { return overlayable; }
     void set_overlayable(bool p)                           { overlayable = p; }
+    bool is_fixed_size_header() const                      { return fixed_size_i; }
+    void set_fixed_size_header(bool f)                     { fixed_size_i = f; }
 
     //
     // constraints
@@ -1220,7 +1225,7 @@ class PhvInfo {
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
-             bool isOverlayable = false, bool isFlexible = false);
+             bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,

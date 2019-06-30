@@ -88,6 +88,7 @@ STR \".*\"
 0[xX][0-9a-fA-F*_]+ { return parse_match(&yylval, yytext+2, 4); }
 0[oO][0-7*_]+     { return parse_match(&yylval, yytext+2, 3); }
 0[bB][0-1*_]+     { return parse_match(&yylval, yytext+2, 1); }
+"*"               { return parse_match(&yylval, yytext, 0); }
 
 "#".*               ;
 "/*"              { BEGIN(COMMENT); }
@@ -211,6 +212,7 @@ int parse_num(YYSTYPE *val, const char *s, int base) {
 
 int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
     val->match.word0 = val->match.word1 = 0;
+    if (*s == '*' && bits_per_digit == 0) return MATCH;
     unsigned digit = 0, digit_mask = (1U << bits_per_digit) - 1;
     s--;
     while (*++s) {

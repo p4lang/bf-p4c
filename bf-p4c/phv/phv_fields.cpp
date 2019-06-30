@@ -96,7 +96,7 @@ void PhvInfo::clear() {
 
 void PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
-        bool bridged, bool pad, bool overlay, bool flex) {
+        bool bridged, bool pad, bool overlay, bool flex, bool fixed_size) {
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
@@ -104,7 +104,8 @@ void PhvInfo::add(
         LOG3("Already added field; skipping: " << name);
         return; }
     LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
-         name << " size " << size << " offset " << offset << (flex? " flexible" : ""));
+         name << " size " << size << " offset " << offset << (flex? " flexible" : "") <<
+         (fixed_size? " fixed_size" : ""));
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
@@ -117,6 +118,7 @@ void PhvInfo::add(
     info->padding = pad;
     info->overlayable = overlay;
     info->set_flexible(flex);
+    info->set_fixed_size_header(fixed_size);
     by_id.push_back(info);
 }
 
@@ -148,8 +150,9 @@ void PhvInfo::add_struct(
         bool isOverlayable = f->getAnnotations()->getSingle("overlayable") != nullptr;
         // "flexible" annotation indicates flexible fields
         bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
+        bool isFixedSizeHeader = type->is<IR::BFN::Type_FixedSizeHeader>();
         add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isOverlayable,
-            isFlexible);
+            isFlexible, isFixedSizeHeader);
     }
     if (!meta) {
         int end = by_id.size();

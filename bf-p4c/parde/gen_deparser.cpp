@@ -133,8 +133,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
                 components->append(list->components);
                 auto list_type = typeMap->getTypeType(mc->typeArguments->at(0), true);
                 auto mirror_field_list =
-                    new IR::StructInitializerExpression(list_type,
-                            list->name, *components, true);
+                    new IR::StructInitializerExpression(list_type, list->typeName, *components);
                 generateDigest(digests["mirror"], "mirror", mirror_field_list, mc);
             }
         } else if (em->actualExternType->getName() == "Resubmit") {

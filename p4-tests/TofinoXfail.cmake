@@ -403,11 +403,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected IDENTIFIER"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+  testdata/p4_16_samples/psa-resubmit-bmv2.p4
+  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
+  testdata/p4_16_samples/psa-multicast-basic-corrected-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "Field .* not supported on Tofino"
-  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
+  testdata/p4_16_samples/psa-top-level-assignments-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -471,7 +474,7 @@ p4c_add_xfail_reason("tofino"
 
   ba101_20-simple_l2
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  
+
   ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
   )
 
@@ -550,7 +553,7 @@ p4c_add_xfail_reason("tofino"
   )
 # resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).
 p4c_add_xfail_reason("tofino"
-  "resubmit digest limited to 8 bytes"
+  "__resubmit_header_t digest limited to 64 bits"
   extensions/p4_tests/p4_14/compile_only/13-ResubmitMetadataSize.p4
   )
 
@@ -771,7 +774,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1325-bmv2.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
   testdata/p4_16_samples/issue510-bmv2.p4
-  testdata/p4_16_samples/psa-multicast-basic-corrected-bmv2.p4
 )
 
 # P4C-1011
@@ -1392,11 +1394,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error:  Field .* of size 0 not supported on Tofino"
-  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
 )
@@ -1405,6 +1402,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
   ba101_07-simple_l3_ind_cntr
+)
+
+p4c_add_xfail_reason("tofino"
+  "Cannot unify bit<8> to int<8>"
+  extensions/p4_tests/p4_16/compile_only/brig-305.p4
 )
 
 p4c_add_xfail_reason("tofino"
