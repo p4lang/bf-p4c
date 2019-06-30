@@ -110,11 +110,12 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DA0_PROFILE -arch tna -bfrt -force-link")
+bfn_set_p4_build_flag("tofino" "smoketest_switch_16_compile_a0_profile" "-Xp4c=\"--disable-init-metadata --disable-power-check\"")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -arch
   tna -bfrt -force-link")
-bfn_set_p4_build_flag("tofino" "smoketest_switch_16_compile_b0_profile" "-Xp4c=\"--disable-power-check\"")
+bfn_set_p4_build_flag("tofino" "smoketest_switch_16_compile_b0_profile" "-Xp4c=\"--disable-init-metadata --disable-power-check\"")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -arch tna -bfrt -force-link")
