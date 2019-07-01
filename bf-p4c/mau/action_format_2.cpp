@@ -50,6 +50,15 @@ const Parameter *Argument::overlap(const Parameter *ad, bool,
     return rv;
 }
 
+bool Argument::is_next_bit_of_param(const Parameter *ad, bool) const {
+    if (!ad) return false;
+    if (size() != 1) return false;
+    if (!equiv_cond(ad)) return false;
+    const Argument *arg = ad->to<Argument>();
+    if (arg == nullptr) return false;
+    return arg->_name == _name && arg->_param_field.hi + 1 == _param_field.lo;
+}
+
 const Parameter *Constant::split(int lo, int hi) const {
     le_bitrange split_range = { lo, hi };
     BUG_CHECK(range().contains(split_range), "Illegally splitting a parameter, as the "
@@ -82,8 +91,7 @@ bool Constant::is_next_bit_of_param(const Parameter *ad, bool same_alias) const 
 /**
  * Appending a constant to another constant on the MSB
  */
-const Parameter *Constant::get_extended_param(uint32_t extension,
-        const Parameter *ad) const {
+const Parameter *Constant::get_extended_param(uint32_t extension, const Parameter *ad) const {
     auto con = ad->to<Constant>();
     BUG_CHECK(con != nullptr, "Cannot extend a non-constant on constant");
     BUG_CHECK(con->size() <= static_cast<int>(extension), "The extension constant is smaller "
@@ -306,7 +314,7 @@ const Parameter *RandomNumber::merge(const Parameter *ad) const {
  * Bits that are not headed directly to an ALU operation can be overlaid:
  *
  * action a1() {
- *     f1 = random1.get(); 
+ *     f1 = random1.get();
  *     f2 = random2.get();
  * }
  *
@@ -630,16 +638,6 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
 }
 
 /**
- * Could be non-contiguous due to phv_bits rotated around the container size due to
- * deposit-field
- */
-bitvec ALUParameter::slot_bits_bv(PHV::Container cont) const {
-    bitvec rv = bitvec(phv_bits.lo, phv_bits.size());
-    rv.rotate_right(0, right_shift, cont.size());
-    return rv;
-}
-
-/**
  * The bits used by this parameter in the action bus slot.  Due to wrapped rotations
  * in deposit-field, at most 2 ranges could be provided
  */
@@ -654,7 +652,10 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
             rv.push_back({right_shift, cont_size - 1});
         }
     } else {
-        for (auto br : bitranges(slot_bits_bv(cont))) {
+        bitvec slot_bits = bitvec(phv_bits.lo, phv_bits.size());
+        slot_bits.rotate_right(0, right_shift, cont.size());
+        LOG6("\t\tslot_bits_brs: " << slot_bits);
+        for (auto br : bitranges(slot_bits)) {
             rv.push_back({br.first, br.second});
         }
     }
@@ -726,12 +727,14 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
         if (_constraint == DEPOSIT_FIELD) {
             int shift = _phv_bits.min().index();
             rv = init_rv->can_rotate(shift, 0);
+            delete init_rv;
         } else {
             rv = init_rv;
         }
     } else {
         // Move to the right_shift, initially 0 on creation
         rv = init_rv->can_rotate(_right_shift, 0);
+        delete init_rv;
     }
     BUG_CHECK(rv != nullptr, "Cannot create a RAM section from an ALUOperation");
     BUG_CHECK(rv->alu_requirements.size() == 1, "Must have an alu requirement");
@@ -751,16 +754,20 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alia
     ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
     bool rotational_alias = false;
+    LOG6("\tadd_right_shift: params size = " << rv->_params.size());
     for (auto &param : rv->_params) {
+        LOG6("\t\tadd_right_shift: param (" << std::hex << param.param << ","
+             << param.phv_bits << "," << param.right_shift << ")");
         param.right_shift = right_shift;
         if (param.is_wrapped(_container))
             rotational_alias = true;
     }
-
+    LOG6("\tadd_right_shift: done with params");
     if (rotational_alias && rv->_alias.isNull() && rot_alias_idx) {
         rv->_alias = "$rot_data" + std::to_string(*rot_alias_idx);
         *rot_alias_idx = *rot_alias_idx + 1;
     }
+    LOG6("\tadd_right_shift: return");
     return rv;
 }
 
@@ -807,7 +814,7 @@ cstring ALUOperation::wrapped_constant() const {
  */
 const RamSection *RamSection::expand_to_size(size_t expand_size) const {
     if (size() >= expand_size)
-        return this;
+        return new RamSection(*this);
     BUG_CHECK(size() % expand_size, "Cannot expand this section into this size");
 
     PackingConstraint rv_pack_info = pack_info.expand(size(), expand_size);
@@ -855,7 +862,9 @@ ParameterPositions RamSection::parameter_positions(bool from_p4_program) const {
                 bit_pos = i;
             } else {
                 if (action_data_bits[i]->is_next_bit_of_param(next_entry, from_p4_program)) {
-                    next_entry = next_entry->get_extended_param(1, action_data_bits[i]);
+                    auto tmp = next_entry->get_extended_param(1, action_data_bits[i]);
+                    if (action_data_bits[bit_pos] != next_entry) delete next_entry;
+                    next_entry = tmp;
                 } else {
                     rv.emplace(bit_pos, next_entry);
                     next_entry = action_data_bits[i];
@@ -873,7 +882,8 @@ ParameterPositions RamSection::parameter_positions(bool from_p4_program) const {
  * Calculate the positions of the parameters that both RamSection
  */
 void RamSection::gather_shared_params(const RamSection *ad,
-        safe_vector<SharedParameter> &shared_params, bool only_one_overlap_solution) const {
+                                      safe_vector<SharedParameter> &shared_params,
+                                      bool only_one_overlap_solution) const {
     // Entries in the map will be lsb to msb in position
     for (auto a_param_loc_pair : parameter_positions()) {
         int a_start_bit = a_param_loc_pair.first;
@@ -987,8 +997,7 @@ const RamSection *RamSection::rotate_in_range(le_bitrange hole) const {
  * Returns a merged RamSection of two independent ranges, if the merge was possible.
  * For a constraint explanation, please look at PackingConstraint::merge
  */
-const RamSection *
-        RamSection::no_overlap_merge(const RamSection *ad) const {
+const RamSection *RamSection::no_overlap_merge(const RamSection *ad) const {
     safe_vector<le_bitrange> holes = open_holes();
     bitvec ad_bits_in_use = ad->bits_in_use();
     le_bitrange max_bit_diff = { ad_bits_in_use.min().index(), ad_bits_in_use.max().index() };
@@ -999,6 +1008,7 @@ const RamSection *
 
         if (rotated_ad != nullptr) {
             auto merged_ad = merge(rotated_ad);
+            delete rotated_ad;
             if (merged_ad)
                 return merged_ad;
             else
@@ -1044,6 +1054,7 @@ bool RamSection::is_better_merge_than(const RamSection *compare) const {
  *     4. Pick the best choice based on heuristics
  */
 const RamSection *RamSection::condense(const RamSection *ad) const {
+    if (ad == nullptr) return nullptr;
     size_t max_size = std::max(size(), ad->size());
     const RamSection *a = expand_to_size(max_size);
     const RamSection *b = ad->expand_to_size(max_size);
@@ -1059,6 +1070,7 @@ const RamSection *RamSection::condense(const RamSection *ad) const {
             auto *merged_ad = b->merge(a_rotated);
             if (merged_ad)
                 possible_rvs.push_back(merged_ad);
+            delete a_rotated;
         }
 
         auto *b_rotated = b->can_rotate(shared_param.b_start_bit, shared_param.a_start_bit);
@@ -1066,6 +1078,7 @@ const RamSection *RamSection::condense(const RamSection *ad) const {
             auto merged_ad = a->merge(b_rotated);
             if (merged_ad)
                 possible_rvs.push_back(merged_ad);
+            delete b_rotated;
         }
     }
 
@@ -1084,6 +1097,12 @@ const RamSection *RamSection::condense(const RamSection *ad) const {
         if (best == nullptr || !best->is_better_merge_than(choice))
             best = choice;
     }
+    // cleanup
+    for (auto choice : possible_rvs)
+        if (best != choice) delete choice;
+    delete a;
+    delete b;
+
     return best;
 }
 
@@ -1112,7 +1131,7 @@ bool RamSection::is_data_subset_of(const RamSection *ad) const {
  * Full Description: @seealso contains(const ALUOperation *)
  */
 bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
-        int *final_bit_pos) const {
+                          int *final_bit_pos) const {
     const RamSection *ad = ad_small->expand_to_size(size());
 
     safe_vector<SharedParameter> shared_params;
@@ -1127,10 +1146,14 @@ bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
                                                               shared_param.a_start_bit,
                                                               init_bit_pos);
                 }
+                delete ad_rotated;
+                delete ad;
                 return true;
             }
+            delete ad_rotated;
         }
     }
+    delete ad;
     return false;
 }
 
@@ -1139,7 +1162,7 @@ bool RamSection::contains(const RamSection *ad_small, int init_bit_pos,
  * Full Description: @seealso contains(const ALUOperation *)
  */
 bool RamSection::contains_any_rotation_from_0(const RamSection *ad_small,
-         int init_bit_pos, int *final_bit_pos) const {
+                                              int init_bit_pos, int *final_bit_pos) const {
     const RamSection *ad = ad_small->expand_to_size(size());
     for (size_t i = 0; i < size(); i++) {
         auto ad_rotated = ad->can_rotate(0, i);
@@ -1148,10 +1171,14 @@ bool RamSection::contains_any_rotation_from_0(const RamSection *ad_small,
                 if (final_bit_pos)
                     *final_bit_pos = ad->pack_info.bit_rotation_position(ad->size(), 0, i,
                                                                          init_bit_pos);
+                delete ad_rotated;
+                delete ad;
                 return true;
             }
+            delete ad_rotated;
         }
     }
+    delete ad;
     return false;
 }
 
@@ -1185,6 +1212,7 @@ bool RamSection::contains(const ALUOperation *ad_alu,
         rv = contains(ad, init_first_phv_bit_pos, final_first_phv_bit_pos);
     else
         rv = contains_any_rotation_from_0(ad, init_first_phv_bit_pos, final_first_phv_bit_pos);
+    delete ad;
     return rv;
 }
 
@@ -1478,7 +1506,7 @@ void Format::Use::determine_immediate_mask() {
 }
 
 /**
- * A map for coordinating conditional parameters to their associated position in the JSON 
+ * A map for coordinating conditional parameters to their associated position in the JSON
  * The key is a the name of the condition, the value is two bitvecs, one in action_data_table,
  * one in immediate, in which the bits are controlled by that condition
  *
@@ -1735,12 +1763,17 @@ bool Format::Use::is_rand_num(int byte_offset) const {
 const RamSection *Format::Use::build_locked_in_sect() const {
     const RamSection *rv = new RamSection(IMMEDIATE_BITS);
     for (auto &alu_pos : locked_in_all_actions_alu_positions) {
-        auto curr_ram_sect = alu_pos.alu_op->create_RamSection(false);
-        curr_ram_sect = curr_ram_sect->expand_to_size(IMMEDIATE_BITS);
-        curr_ram_sect = curr_ram_sect->can_rotate(0, alu_pos.start_byte * 8);
+        auto new_ram_sect = alu_pos.alu_op->create_RamSection(false);
+        auto exp_ram_sect = new_ram_sect->expand_to_size(IMMEDIATE_BITS);
+        auto curr_ram_sect = exp_ram_sect->can_rotate(0, alu_pos.start_byte * 8);
         BUG_CHECK(curr_ram_sect != nullptr, "Speciality argument cannot be built");
-        rv = rv->merge(curr_ram_sect);
+        auto tmp = rv->merge(curr_ram_sect);
+        delete rv;
+        rv = tmp;
         BUG_CHECK(rv != nullptr, "Merge of speciality argument cannot be built");
+        delete new_ram_sect;
+        delete exp_ram_sect;
+        delete curr_ram_sect;
     }
     return rv;
 }
@@ -2048,9 +2081,9 @@ void Format::incremental_possible_condenses(PossibleCondenses &condenses,
  * Though these heuristics are simple now, they still are better than the current round
  * and can always be improved by some kind of weighted score.
  */
-bool Format::is_better_condense(RamSec_vec_t &ram_sects, const RamSection *best,
-        size_t best_skip1, size_t best_skip2, const RamSection *comp, size_t comp_skip1,
-        size_t comp_skip2) {
+bool Format::is_better_condense(RamSec_vec_t &ram_sects,
+                                const RamSection *best, size_t best_skip1, size_t best_skip2,
+                                const RamSection *comp, size_t comp_skip1, size_t comp_skip2) {
     // First comparison is about total number of bits used, and whether one has a reduction
     // of bits over another due to good sharing
     size_t best_bits = best->bits_in_use().popcount();
@@ -2101,7 +2134,7 @@ bool Format::is_better_condense(RamSec_vec_t &ram_sects, const RamSection *best,
  *     2. Space in the PossibleCondenses to add for the calculation of new condenses
  */
 void Format::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_sects,
-        const RamSection *ad, size_t i_pos, size_t j_pos) {
+                                       const RamSection *ad, size_t i_pos, size_t j_pos) {
     size_t larger_pos = i_pos > j_pos ? i_pos : j_pos;
     size_t smaller_pos = larger_pos == i_pos ? j_pos : i_pos;
 
@@ -2801,10 +2834,14 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         // Validates that the right shift is calculated correctly, by shifting the
         // alu operation by that much, and determining if the ALU operation is
         // a subset of the original Ram Section
-        auto ram_sect_check = ad_alu->create_RamSection(false);
-        ram_sect_check = ram_sect_check->expand_to_size(ram_sect.section->size());
-        ram_sect_check = ram_sect_check->can_rotate(0, section_byte_offset * 8);
-        bool is_subset = ram_sect_check->is_data_subset_of(ram_sect.section);
+        auto ram_sect_check1 = ad_alu->create_RamSection(false);
+        auto ram_sect_check2 = ram_sect_check1->expand_to_size(ram_sect.section->size());
+        auto ram_sect_check  = ram_sect_check2->can_rotate(0, section_byte_offset * 8);
+        bool is_subset = ram_sect_check ? ram_sect_check->is_data_subset_of(ram_sect.section) :
+            false;
+        delete ram_sect_check1;
+        delete ram_sect_check2;
+        if (ram_sect_check) delete ram_sect_check;
         BUG_CHECK(is_subset, "Right shift not calculated correctly");
         int start_byte = section_byte_offset + ram_sect.byte_offset;
         int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2

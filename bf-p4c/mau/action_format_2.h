@@ -69,6 +69,7 @@ class Parameter {
 
  public:
     // virtual const Parameter *shared_param(const Parameter *, int &start_bit) = 0;
+    virtual ~Parameter() {}
     virtual int size() const = 0;
     virtual bool from_p4_program() const = 0;
     virtual cstring name() const = 0;
@@ -152,16 +153,10 @@ class Argument : public Parameter {
 
     bool only_one_overlap_solution() const override { return true; }
 
-    bool is_next_bit_of_param(const Parameter *ad, bool) const override {
-        if (size() != 1) return false;
-        if (!equiv_cond(ad)) return false;
-        const Argument *arg = ad->to<Argument>();
-        if (arg == nullptr) return false;
-        return arg->_name == _name && arg->_param_field.hi + 1 == _param_field.lo;
-    }
+    bool is_next_bit_of_param(const Parameter *ad, bool) const override;
 
     const Parameter *get_extended_param(uint32_t extension,
-             const Parameter *) const override {
+                                        const Parameter *) const override {
          auto rv = new Argument(*this);
          rv->_param_field.hi += extension;
          return rv;
@@ -330,8 +325,6 @@ struct ALUParameter {
     le_bitrange phv_bits;
     int right_shift;
 
-
-    bitvec slot_bits_bv(PHV::Container cont) const;
     safe_vector<le_bitrange> slot_bits_brs(PHV::Container cont) const;
     bool is_wrapped(PHV::Container cont) const {
         return slot_bits_brs(cont).size() > 1;
@@ -619,8 +612,7 @@ class RamSection {
     size_t byte_sz() const { return size() / 8; }
     ParameterPositions parameter_positions(bool same_alias = false) const;
     explicit RamSection(int s) : action_data_bits(s, nullptr) {}
-    RamSection(int s, PackingConstraint &pc)
-        : action_data_bits(s, nullptr), pack_info(pc) { }
+    RamSection(int s, PackingConstraint &pc) : action_data_bits(s, nullptr), pack_info(pc) {}
     void add_param(int bit, const Parameter *);
     void add_alu_req(const ALUOperation *rv) { alu_requirements.push_back(rv); }
     BusInputs bus_inputs() const;

@@ -1005,6 +1005,8 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     auto hge = new IR::MAU::HashGenExpression(sel->srcInfo,
             IR::Type::Bits::get(SelectorHashModBits(sel)), field_list, sel->algorithm);
     auto *hd = new IR::MAU::HashDist(sel->srcInfo, hge->type, hge);
+    if (sel->hash_mod != nullptr)
+        delete sel->hash_mod;
     sel->hash_mod = hd;
     return false;
 }
