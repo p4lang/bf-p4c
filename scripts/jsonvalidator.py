@@ -46,11 +46,21 @@ class JSONValidator:
                 print("Attempted validation against", schema_version, file=sys.stderr)
                 return False
 
-            jsonschema.validate(target_file, schema)
+            v = jsonschema.Draft4Validator(schema)
+            errors = sorted(v.iter_errors(target_file), key=lambda e: e.path)
 
-            if self._opts.debug:
-                print("successful validation")
-            return True
+            if errors:
+                print(pretty_name + " schema validation failed:")
+
+                for error in errors:
+                    print(error.message)
+
+                return False
+            else: 
+                if self._opts.debug:
+                    print("successful validation")
+
+                return True
 
         except Exception as e:
             print(e)
