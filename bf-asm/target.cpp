@@ -105,10 +105,12 @@ void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostr
         out << binout::tag('P') << binout::byte4(ig.first);
         ig.second->emit_binary(out, prsr_mem_base_addr); 
     }
+    prsr_regs_base_addr = pipe_regs_base_addr + 0x740000;
     for (auto eg : regs->parser_egress) {
         out << binout::tag('P') << binout::byte4(eg.first);
         eg.second->emit_binary(out, prsr_regs_base_addr); 
     }
+    prsr_mem_base_addr = (pipe_mem_base_addr + 0x1C800400000) >> 4;
     for (auto eg : regs->parser_memory[EGRESS]) {
         out << binout::tag('P') << binout::byte4(eg.first);
         eg.second->emit_binary(out, prsr_mem_base_addr); 
