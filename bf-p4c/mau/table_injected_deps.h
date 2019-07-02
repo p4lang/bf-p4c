@@ -47,34 +47,12 @@ class DominatorAnalysis : public MauInspector {
     }
 };
 
-
-using TablePathways = ordered_map<const IR::MAU::Table *,
-                                  safe_vector<safe_vector<const IR::Node *>>>;
-
-class GatherPathwaysToTable : public MauInspector {
-    TablePathways &table_pathways;
-
-    Visitor::profile_t init_apply(const IR::Node *node) override {
-        auto rv = MauInspector::init_apply(node);
-        table_pathways.clear();
-        return rv;
-    }
-    bool preorder(const IR::MAU::Table *) override;
-
- public:
-    explicit GatherPathwaysToTable(TablePathways &tp) : table_pathways(tp) {
-        visitDagOnce = false;
-    }
-};
-
-using InjectPoints = safe_vector<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>>;
-
 class InjectMetadataControlDependencies : public MauInspector {
     bool tables_placed = false;
     const PhvInfo &phv;
-    const TablePathways &table_pathways;
     DependencyGraph &dg;
     FlowGraph &fg;
+    const ControlPathwaysToTable &ctrl_paths;
     std::map<cstring, const IR::MAU::Table *> name_to_table;
 
     Visitor::profile_t init_apply(const IR::Node *node) override {
@@ -90,23 +68,21 @@ class InjectMetadataControlDependencies : public MauInspector {
         return true;
     }
     void end_apply() override;
-    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b);
 
  public:
-    InjectMetadataControlDependencies(const PhvInfo &p, const TablePathways &tp,
-                                      DependencyGraph &g, FlowGraph &f)
-        : phv(p), table_pathways(tp), dg(g), fg(f) {}
+    InjectMetadataControlDependencies(const PhvInfo &p, DependencyGraph &g, FlowGraph &f,
+            const ControlPathwaysToTable &cp)
+        : phv(p), dg(g), fg(f), ctrl_paths(cp) {}
 };
 
 class TableFindInjectedDependencies : public PassManager {
     const PhvInfo &phv;
     DependencyGraph &dg;
-    TablePathways tp;
     FlowGraph fg;
+    ControlPathwaysToTable ctrl_paths;
 
     profile_t init_apply(const IR::Node *root) override {
         auto rv = PassManager::init_apply(root);
-        tp.clear();
         fg.clear();
         return rv;
     }

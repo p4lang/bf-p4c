@@ -1350,7 +1350,7 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
-    EXPECT_EQ(dg.min_stage(c), 0);
+    EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 1);
 }
 
@@ -1470,6 +1470,9 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
  *    |
  *    V
  *    D
+ *
+ * Due to the next table propagation limitations, the ANTI dependency forces C to be placed
+ * after A, and thus B, which pushes C into stage 1.
  */
 TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     auto test = createTableDependencyGraphTestCase(
@@ -1558,6 +1561,114 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 2);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+}
+
+/**
+ * The graph is following for this program:
+ *
+ *         CONTROL
+ *    A ------------> B
+ *          DATA      |
+ *                    |
+ *                    | DATA
+ *                    |
+ *        CONTROL     V
+ *    C ------------> D
+ *
+ *          
+ * Through next table propagation, in Tofino (not Tofino2), an ANTI dependency exists between
+ * table A and C, (which is captured by the TableSeqDeps information)
+ */
+TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action noop() {}
+
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    table node_a {
+        actions = { set_f1; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f4; }
+        key = { headers.h1.f4 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f2; }
+        key = { headers.h1.f5 : exact; }
+    }
+
+    apply {
+        if (node_a.apply().hit) {
+            node_b.apply();
+        }
+
+        if (node_c.apply().hit) {
+            node_d.apply();
+        }
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 1);
+    EXPECT_EQ(dg.min_stage(d), 2);
+
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 2);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 0);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
 }
 
@@ -2016,6 +2127,189 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
             EXPECT_TRUE(hlam[(*it).first].count(d));
         }
     }
+}
+
+/**
+ * This is to verify the control pathways and next table pathways, which are eventually
+ * added into the dependency graph for correct chain lengths
+ *
+ * There are pathways down from the table, i.e. the control dominating set, and the
+ * tables that have control dependents
+ */
+TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f1(bit<8> f1) {
+        headers.h1.f1 = f1;
+    }
+    
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+    
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_e {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_f {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_g {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_h {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_i {
+        actions = { set_f1; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_j {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+
+    table node_k {
+        actions = { set_f2; }
+        key = { headers.h1.f3 : exact; }
+    }
+    
+    apply {
+        if (node_a.apply().hit) {
+            node_b.apply();
+            node_c.apply();
+        } else {
+            node_d.apply();
+        }
+
+        if (node_e.apply().hit) {
+            if (node_f.apply().hit) {
+                node_g.apply();
+            } else {
+                if (node_h.apply().hit) {
+                    node_i.apply();
+                }
+            }
+            node_j.apply();
+        }
+        node_k.apply();
+    })"));
+
+    ASSERT_TRUE(test);
+
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    const IR::MAU::Table *a, *b, *c, *d, *e, *f, *g, *h, *i, *j, *k;
+    a = b = c = d = e = f = g = h = i = j = nullptr;
+
+    CalculateNextTableProp ntp;
+    ControlPathwaysToTable ctrl_paths;
+    test->pipe = test->pipe->apply(ntp);
+    test->pipe = test->pipe->apply(ctrl_paths);
+
+    a = ntp.get_table("node_a_0");
+    b = ntp.get_table("node_b_0");
+    c = ntp.get_table("node_c_0");
+    d = ntp.get_table("node_d_0");
+    e = ntp.get_table("node_e_0");
+    f = ntp.get_table("node_f_0");
+    g = ntp.get_table("node_g_0");
+    h = ntp.get_table("node_h_0");
+    i = ntp.get_table("node_i_0");
+    j = ntp.get_table("node_j_0");
+    k = ntp.get_table("node_k_0");
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+    EXPECT_NE(e, nullptr);
+    EXPECT_NE(f, nullptr);
+    EXPECT_NE(g, nullptr);
+    EXPECT_NE(h, nullptr);
+    EXPECT_NE(i, nullptr);
+    EXPECT_NE(j, nullptr);
+    EXPECT_NE(k, nullptr);
+
+    auto a_ntl = ntp.next_table_leaves.at(a);
+    auto a_cds = ntp.control_dom_set.at(a);
+
+    EXPECT_EQ(a_ntl.size(), 3);
+    EXPECT_EQ(a_ntl.count(b), 1);
+    EXPECT_EQ(a_ntl.count(c), 1);
+    EXPECT_EQ(a_ntl.count(d), 1);
+    EXPECT_EQ(a_cds.size(), 4);
+    EXPECT_EQ(a_cds.count(a), 1);
+    EXPECT_EQ(a_cds.count(b), 1);
+    EXPECT_EQ(a_cds.count(c), 1);
+    EXPECT_EQ(a_cds.count(d), 1);
+
+    auto e_ntl = ntp.next_table_leaves.at(e);
+    auto e_cds = ntp.control_dom_set.at(e);
+
+    EXPECT_EQ(e_ntl.size(), 3);
+    EXPECT_EQ(e_ntl.count(g), 1);
+    EXPECT_EQ(e_ntl.count(i), 1);
+    EXPECT_EQ(e_ntl.count(j), 1);
+    EXPECT_EQ(e_cds.size(), 6);
+    EXPECT_EQ(e_cds.count(e), 1);
+    EXPECT_EQ(e_cds.count(f), 1);
+    EXPECT_EQ(e_cds.count(g), 1);
+    EXPECT_EQ(e_cds.count(h), 1);
+    EXPECT_EQ(e_cds.count(i), 1);
+    EXPECT_EQ(e_cds.count(j), 1);
+
+    auto inj_1 = ctrl_paths.get_inject_points(c, g);
+    EXPECT_EQ(inj_1.size(), 1);
+    EXPECT_EQ(inj_1.at(0).first, a);
+    EXPECT_EQ(inj_1.at(0).second, e);
+
+    auto inj_2 = ctrl_paths.get_inject_points(g, j);
+    EXPECT_EQ(inj_2.size(), 1);
+    EXPECT_EQ(inj_2.at(0).first, f);
+    EXPECT_EQ(inj_2.at(0).second, j);
+
+    auto inj_3 = ctrl_paths.get_inject_points(d, k);
+    EXPECT_EQ(inj_3.size(), 1);
+    EXPECT_EQ(inj_3.at(0).first, a);
+    EXPECT_EQ(inj_3.at(0).second, k);
+
+    auto inj_4 = ctrl_paths.get_inject_points(f, i);
+    EXPECT_EQ(inj_4.size(), 0);
+    auto inj_5 = ctrl_paths.get_inject_points(g, i);
+    EXPECT_EQ(inj_5.size(), 0);
 }
 
 }  // namespace Test

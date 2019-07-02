@@ -674,6 +674,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
  */
 void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
     bool empty_seq = true;
+    name_to_table[tbl->name] = tbl;
     for (auto seq : Values(tbl->next)) {
         empty_seq &= seq->tables.empty();
     }
@@ -693,13 +694,103 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
+bool ControlPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
+    const Context *ctxt = getContext();
+    safe_vector<const IR::Node *> pathway;
+    pathway.emplace_back(tbl);
+    while (ctxt) {
+        pathway.push_back(ctxt->node);
+        ctxt = ctxt->parent;
+    }
+    table_pathways[tbl].emplace_back(pathway);
+    return true;
+}
+
+/**
+ * This function walks up all possible control pathways from a table to the top of the pipe.
+ * The point in which two pathways differ is the point where next tables have to propagate
+ * through in Tofino.
+ *
+ * The propagation point is let's say table A and table B are in the same table sequence, i.e.
+ *
+ * apply {
+ *     switch (A.apply().action_run) {
+ *         ... (let's say C is here)
+ *     }
+ *     switch (B.apply().action_run) {
+ *         ... (let's say D is here)
+ *     }
+ * }
+ *
+ * Now due to the limitations of next table in Tofino, when A is placed, everything directly
+ * control dependent on A must also be placed before B can be placed.  This is in order to
+ * pass the next table pointer through the tables.  Thus if anything in A's control dominating
+ * set has either an ANTI or DATA dependency on anything in B's control dominating set, then
+ * A and it's control dependent set must logical be placed before B's.
+ *
+ * The goal for this function is when comparing two tables, i.e. C and D, to return to the point
+ * where this inherent next table propagation is found.
+ */
+ControlPathwaysToTable::InjectPoints
+        ControlPathwaysToTable::get_inject_points(const IR::MAU::Table *a,
+        const IR::MAU::Table *b) const {
+    InjectPoints rv;
+    for (safe_vector<const IR::Node *> a_path : table_pathways.at(a)) {
+        for (safe_vector<const IR::Node *> b_path : table_pathways.at(b)) {
+            // Attempting to find the first divergence
+            const IR::Node *a_first_div = nullptr;
+            const IR::Node *b_first_div = nullptr;
+
+            // If one table is within the next table pathway propagation pathway of another,
+            // then there is nothing to inject, as this is already control dependendent
+            if (std::find(a_path.begin(), a_path.end(), b) != a_path.end())
+                continue;
+            if (std::find(b_path.begin(), b_path.end(), a) != b_path.end())
+                continue;
+
+            auto a_path_it = a_path.rbegin();
+            auto b_path_it = b_path.rbegin();
+
+            // Start from the Pipe, and work down until the two pathways differ
+            while (a_path_it != a_path.rend() && b_path_it != b_path.rend()) {
+                if (*a_path_it == *b_path_it) {
+                    a_path_it++;
+                    b_path_it++;
+                    continue;
+                }
+
+                a_first_div = *a_path_it;
+                b_first_div = *b_path_it;
+                break;
+            }
+
+            if (a_first_div->is<IR::MAU::TableSeq>()) {
+                BUG_CHECK(b_first_div->is<IR::MAU::TableSeq>(), "The first divergence is not "
+                    "the same IR node, thus the IR tree is inconsistent");
+                continue;
+            }
+
+            auto a_dom = a_first_div->to<IR::MAU::Table>();
+            if (a_dom != nullptr) {
+                auto b_dom = b_first_div->to<IR::MAU::Table>();
+                BUG_CHECK(b_dom != nullptr, "The first divergence is not the same IR Node, thus "
+                          "the IR tree is inconsistent");
+                rv.emplace_back(a_dom, b_dom);
+                continue;
+            }
+            BUG("The Table IR structure has a non-recognizable Node");
+        }
+    }
+    return rv;
+}
+
 /**
  * Tofino specific (currently necessary for JBay until placement algorithm changes)
  *
  * Say we have the following program:
  *
  * if (t1.apply().hit) {
-       t2.apply();
+ *     t2.apply();
  * }
  * t3.apply();
  *
@@ -712,12 +803,27 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
  * t3 (given that t1 and t3 have a dependence).   By definition, t3 would have to follow
  * t2, if it would have to follow t1.
  *
+ *
+ * This also applies to data dependencies through control dependent tables:
+ *
+ * if (t1.apply().hit) {
+ *     t2.apply();
+ * } 
+ *
+ * if (t3.apply().hit) {
+ *     t4.apply();
+ * }
+ *
+ * Now if t2 and t4 have a data dependency or anti dependency as well, then t1 and t3 are ordered,
+ * and thus an ANTI dependency through next table belongs between any control leaves of t1 and
+ * the same tables in the sequence of t1, and this has to be reflected in the MIN STAGE analysis
+ *
  * The algorithm is based on the following:
  *    1. If t_b logical has to be placed after t_a, then t_b has to be logically placed after
  *       all next tables propagation of t_a.
  *    2. Thus if t_b is not directly next table propagation dependent of t_a, add a LOGICAL
- *       dependence on all next table paths out of t_a that are not mutually exclusive with
- *       t_b.
+ *       dependence on all next table paths out of t_a and the TableSeq control dependent of
+ *       t_b that are not mutually exclusive with t_b.
  */
 void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
@@ -738,10 +844,14 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
 
                 auto &table_nt_leaves = ntp.next_table_leaves.at(table);
                 auto &table_dom_set = ntp.control_dom_set.at(table);
+
                 if (table_dom_set.count(table_later)) continue;
+                auto inject_points = con_paths.get_inject_points(table, table_later);
                 for (auto frontier_leaf : table_nt_leaves) {
                     if (mutex(table_later, frontier_leaf)) continue;
-                    edges_to_add.insert(std::make_pair(frontier_leaf, table_later));
+                    for (auto table_seq_pair : inject_points) {
+                         edges_to_add.insert(std::make_pair(frontier_leaf, table_seq_pair.second));
+                    }
                 }
             }
         }
@@ -1045,6 +1155,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
     addPasses({
         &mutex,
         &ntp,
+        &con_paths,
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
         new FindDataDependencyGraph(phv, dg, red_info, mutex),

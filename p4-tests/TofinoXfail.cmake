@@ -216,7 +216,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   switch_l3_heavy_int_leaf
   switch_8.7_l3_heavy_int_leaf
 )
@@ -230,7 +229,6 @@ p4c_add_xfail_reason("tofino"
   switch_ent_fin_postcard
   switch_generic_int_leaf
   switch_8.7_generic_int_leaf
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -910,11 +908,12 @@ p4c_add_xfail_reason("tofino"
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*condition too complex|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"

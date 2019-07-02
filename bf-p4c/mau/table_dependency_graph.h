@@ -500,6 +500,7 @@ class CalculateNextTableProp : public MauInspector {
     using NextTableLeaves =
         ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>>;
     using ControlDominatingSet = NextTableLeaves;
+    std::map<cstring, const IR::MAU::Table *> name_to_table;
 
  public:
     NextTableLeaves next_table_leaves;
@@ -511,11 +512,38 @@ class CalculateNextTableProp : public MauInspector {
         auto rv = MauInspector::init_apply(node);
         next_table_leaves.clear();
         control_dom_set.clear();
+        name_to_table.clear();
         return rv;
     }
 
  public:
+    const IR::MAU::Table *get_table(cstring name) const {
+        if (name_to_table.count(name))
+            return name_to_table.at(name);
+        return nullptr;
+    }
     CalculateNextTableProp() { visitDagOnce = false; }
+};
+
+class ControlPathwaysToTable : public MauInspector {
+ public:
+    using TablePathways = ordered_map<const IR::MAU::Table *,
+                                       safe_vector<safe_vector<const IR::Node *>>>;
+    using InjectPoints = safe_vector<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>>;
+
+ private:
+    TablePathways table_pathways;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        table_pathways.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *) override;
+
+ public:
+    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
 };
 
 class PrintPipe : public MauInspector {
@@ -541,6 +569,7 @@ class FindDependencyGraph : public Logging::PassManager {
     TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
     ReductionOrInfo red_info;
+    ControlPathwaysToTable con_paths;
     CalculateNextTableProp ntp;
     cstring dotFile;
     cstring passContext;

@@ -164,7 +164,7 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
         const IR::MAU::Table* init) const {
     int use_stage = dg.min_stage(use);
     int init_stage = dg.min_stage(init);
-    int init_dep_tail = dg.dependence_tail_size(init);
+    int init_dep_tail = dg.dependence_tail_size_control_anti(init);
     LOG7("\t\tuse_stage: " << use_stage << ", init_stage: " << init_stage << ", init_dep_tail: " <<
          init_dep_tail);
     if (use_stage < init_stage) return false;

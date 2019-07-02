@@ -142,76 +142,6 @@ void InjectControlDependencies::end_apply() {
 }
 
 /**
- * Gathers all of the tables required to be placed through next table propagation before this
- * table.  Through separate apply statements, there might be more than one way to propagate
- * to another table.
- */
-bool GatherPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
-    const Context *ctxt = getContext();
-    safe_vector<const IR::Node *> pathway;
-    pathway.emplace_back(tbl);
-    while (ctxt) {
-        pathway.push_back(ctxt->node);
-        ctxt = ctxt->parent;
-    }
-    table_pathways[tbl].emplace_back(pathway);
-    return true;
-}
-
-InjectPoints InjectMetadataControlDependencies::get_inject_points(const IR::MAU::Table *a,
-        const IR::MAU::Table *b) {
-    InjectPoints rv;
-    for (safe_vector<const IR::Node *> a_path : table_pathways.at(a)) {
-        for (safe_vector<const IR::Node *> b_path : table_pathways.at(b)) {
-            // Attempting to find the first divergence
-            const IR::Node *a_first_div = nullptr;
-            const IR::Node *b_first_div = nullptr;
-
-            // If one table is within the next table pathway propagation pathway of another,
-            // then there is nothing to inject, as this is already control dependendent
-            if (std::find(a_path.begin(), a_path.end(), b) != a_path.end())
-                BUG("  A metadata use point is not in flow graph order for tables %1% and %2%",
-                    a->name, b->name);
-            if (std::find(b_path.begin(), b_path.end(), a) != b_path.end())
-                continue;
-
-            auto a_path_it = a_path.rbegin();
-            auto b_path_it = b_path.rbegin();
-
-            // Start from the Pipe, and work down until the two pathways differ
-            while (a_path_it != a_path.rend() && b_path_it != b_path.rend()) {
-                if (*a_path_it == *b_path_it) {
-                    a_path_it++;
-                    b_path_it++;
-                    continue;
-                }
-
-                a_first_div = *a_path_it;
-                b_first_div = *b_path_it;
-                break;
-            }
-
-            if (a_first_div->is<IR::MAU::TableSeq>()) {
-                BUG_CHECK(b_first_div->is<IR::MAU::TableSeq>(), "The first divergence is not "
-                    "the same IR node, thus the IR tree is inconsistent");
-                continue;
-            }
-
-            auto a_dom = a_first_div->to<IR::MAU::Table>();
-            if (a_dom != nullptr) {
-                auto b_dom = b_first_div->to<IR::MAU::Table>();
-                BUG_CHECK(b_dom != nullptr, "The first divergence is not the same IR Node, thus "
-                          "the IR tree is inconsistent");
-                rv.emplace_back(a_dom, b_dom);
-                continue;
-            }
-            BUG("The Table IR structure has a non-recognizable Node");
-        }
-    }
-    return rv;
-}
-
-/**
  * The purpose of this function is to add the extra control dependencies for metadata
  * initialization for Tofino.  Metadata initialization works in the following way:
  *
@@ -254,8 +184,8 @@ void InjectMetadataControlDependencies::end_apply() {
         for (cstring second_table : kv_pair.second) {
             BUG_CHECK(name_to_table.count(second_table), "Table %s has a metadata dependency, but "
                       "doesn't appear in the TableGraph?", second_table);
-            auto inject_points = get_inject_points(name_to_table.at(first_table),
-                                                   name_to_table.at(second_table));
+            auto inject_points = ctrl_paths.get_inject_points(name_to_table.at(first_table),
+                                                             name_to_table.at(second_table));
             BUG_CHECK(fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
                 "Metadata initialization analysis incorrect.  Live ranges between %s and %s "
                 "overlap", first_table, second_table);
@@ -286,8 +216,8 @@ TableFindInjectedDependencies
         new DominatorAnalysis(dg, dominators),
         new InjectControlDependencies(dg, dominators),
         new FindFlowGraph(fg),
-        new GatherPathwaysToTable(tp),
-        new InjectMetadataControlDependencies(phv, tp, dg, fg)
+        &ctrl_paths,
+        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths)
     });
 }
 
