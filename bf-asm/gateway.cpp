@@ -170,7 +170,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                         lb.key.i >= Target::LONG_BRANCH_TAGS())
                         error(lb.key.lineno, "Invalid long branch tag %s", value_desc(lb.key));
                     else if (long_branch.count(lb.key.i))
-                        error(lb.key.lineno, "Duplicate long branch tag %ld", lb.key.i);
+                        error(lb.key.lineno, "Duplicate long branch tag %" PRIi64, lb.key.i);
                     else
                         long_branch.emplace(lb.key.i, lb.value); } }
         } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||

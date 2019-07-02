@@ -32,15 +32,14 @@ namespace BFN {
  * packet headers, etc. These tagged fields are marked with the '@tag' annotation.
  */
 class CheckHeaderAlignment final : public Inspector {
-    P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 
  private:
     bool preorder(const IR::Type_Header* header) override;
 
  public:
-    explicit CheckHeaderAlignment(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
-        refMap(refMap), typeMap(typeMap) {}
+    explicit CheckHeaderAlignment(P4::ReferenceMap*, P4::TypeMap* typeMap) :
+        typeMap(typeMap) {}
 };
 
 using HeaderTypeMap = ordered_map<cstring, const IR::Type_Header*>;
@@ -71,18 +70,17 @@ class FindPaddingCandidate : public Inspector {
 };
 
 class AddPaddingFields : public Transform {
-    P4::ReferenceMap *refMap;
     P4::TypeMap* typeMap;
     HeaderToPad* headers_to_pad;
     ResubmitHeaders* resubmit_headers;
     HeaderTypeMap* all_header_types;
 
  public:
-    explicit AddPaddingFields(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+    explicit AddPaddingFields(P4::ReferenceMap*, P4::TypeMap* typeMap,
             HeaderToPad* headers_to_pad,
             ResubmitHeaders* resubmit_headers,
             HeaderTypeMap* all_header_types) :
-        refMap(refMap), typeMap(typeMap), headers_to_pad(headers_to_pad),
+        typeMap(typeMap), headers_to_pad(headers_to_pad),
         resubmit_headers(resubmit_headers),
         all_header_types(all_header_types) {}
 

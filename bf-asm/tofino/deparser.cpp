@@ -148,9 +148,10 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 // Entries used - (192 each in INGRESS & EGRESS for Tofino)
                 if (++row >= Target::Tofino::DEPARSER_MAX_FD_ENTRIES) {
                     error(ent.lineno, "Exceeded hardware limit for "
-                        "deparser field dictionary entries (%d). Using %d headers and %d containers."
-                        "Please reduce the number of headers and/or their length.",
-                        Target::Tofino::DEPARSER_MAX_FD_ENTRIES, total_headers, dict.size());
+                          "deparser field dictionary entries (%d). Using %d headers and %" PRIu64
+                          " containers. Please reduce the number of headers and/or their length.",
+                          Target::Tofino::DEPARSER_MAX_FD_ENTRIES, total_headers,
+                          uint64_t(dict.size()));
                     return;
                 }
                 fde_control[row].pov_sel = pov_bit;

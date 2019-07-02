@@ -1581,7 +1581,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     return root;
 }
 
-void ClotAdjuster::end_apply(const IR::Node* root) {
+void ClotAdjuster::end_apply(const IR::Node*) {
     Logging::FileLog::close(log);
     Visitor::end_apply();
 }

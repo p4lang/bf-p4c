@@ -682,6 +682,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         } else {
             ::fatal_error("Swap byte is out of input buffer in checksum operation %1%", csumOpt);
         }
+        return 0;
     }
 
     int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {

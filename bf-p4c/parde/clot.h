@@ -25,7 +25,7 @@ class JSONGenerator;
 class JSONLoader;
 class PhvInfo;
 
-class Clot : public LiftCompare<Clot> {
+class Clot final : public LiftCompare<Clot> {
     friend class ClotInfo;
     friend class GreedyClotAllocator;
 

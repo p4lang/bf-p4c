@@ -12,13 +12,12 @@ gress_t VisitingThread(const Visitor *v) {
         //  -------------------------------------------------------------
         auto num_ingress_indices = pipe->thread[INGRESS].parsers.size() + 2;
         auto num_egress_indices = pipe->thread[EGRESS].parsers.size() + 2;
-        if (ctxt->child_index < num_ingress_indices)
+        if (ctxt->child_index < int(num_ingress_indices))
             return INGRESS;
-        else if (ctxt->child_index < num_ingress_indices + num_egress_indices)
+        else if (ctxt->child_index < int(num_ingress_indices + num_egress_indices))
             return EGRESS;
         else
             return GHOST;
     }
     BUG("Not visiting a BFN::Pipe");
 }
-

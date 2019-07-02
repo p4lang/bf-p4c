@@ -16,25 +16,24 @@ namespace BFN {
  * The validity bits are represented with a special '$valid' name.
  */
 class DoCopyHeaders : public Transform {
-    P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 
  public:
-    explicit DoCopyHeaders(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
-            refMap(refMap), typeMap(typeMap)
-    { CHECK_NULL(refMap); CHECK_NULL(typeMap); setName("DoCopyHeaders"); }
+    explicit DoCopyHeaders(P4::TypeMap* typeMap) : typeMap(typeMap) {
+        CHECK_NULL(typeMap); setName("DoCopyHeaders");
+    }
     const IR::Node* postorder(IR::AssignmentStatement* statement) override;
     const IR::Node* postorder(IR::MethodCallStatement* mc) override;
 };
 
 class CopyHeaders : public PassRepeated {
  public:
-    CopyHeaders(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+    CopyHeaders(P4::ReferenceMap*, P4::TypeMap* typeMap,
                 P4::TypeChecking* typeChecking = nullptr) :
             PassManager({}) {
-        CHECK_NULL(refMap); CHECK_NULL(typeMap); setName("CopyHeaders");
+        CHECK_NULL(typeMap); setName("CopyHeaders");
         passes.emplace_back(typeChecking);
-        passes.emplace_back(new DoCopyHeaders(refMap, typeMap));
+        passes.emplace_back(new DoCopyHeaders(typeMap));
     }
 };
 
