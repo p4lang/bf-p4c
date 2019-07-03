@@ -239,7 +239,7 @@ struct tuple_2 {
 
 control SwitchIngressDeparser(packet_out pkt, inout header_t hdr, in ingress_metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
     bit<16> tmp_1;
-    @name("SwitchIngressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum_0;
+    @name("SwitchIngressDeparser.ipv4_checksum") Checksum(HashAlgorithm_t.CRC16) ipv4_checksum_0;
     @hidden action act_1() {
         tmp_1 = ipv4_checksum_0.update<tuple_2>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         hdr.ipv4.hdr_checksum = tmp_1;
@@ -280,7 +280,7 @@ control SwitchEgress(inout header_t hdr, inout egress_metadata_t eg_md, in egres
 
 control SwitchEgressDeparser(packet_out pkt, inout header_t hdr, in egress_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
     bit<16> tmp_2;
-    @name("SwitchEgressDeparser.ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum_1;
+    @name("SwitchEgressDeparser.ipv4_checksum") Checksum(HashAlgorithm_t.CRC16) ipv4_checksum_1;
     @hidden action act_2() {
         tmp_2 = ipv4_checksum_1.update<tuple_2>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         hdr.ipv4.hdr_checksum = tmp_2;

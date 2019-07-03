@@ -69,15 +69,11 @@ createChecksumDeclaration(ProgramStructure *structure,
     auto mc = csum->methodCall->to<IR::MethodCallExpression>();
 
     auto typeArgs = new IR::Vector<IR::Type>();
-    typeArgs->push_back(mc->arguments->at(2)->expression->type);
-    auto inst = new IR::Type_Specialized(new IR::Type_Name("Checksum"), typeArgs);
+    auto inst = new IR::Type_Name("Checksum");
 
     auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
     structure->unique_names.insert(csum_name);
     auto args = new IR::Vector<IR::Argument>();
-    auto hashAlgo = new IR::Member(
-            new IR::TypeNameExpression("ChecksumAlgorithm_t"), "CSUM16");
-    args->push_back(new IR::Argument(hashAlgo));
     auto decl = new IR::Declaration_Instance(csum_name, inst, args);
 
     return decl;

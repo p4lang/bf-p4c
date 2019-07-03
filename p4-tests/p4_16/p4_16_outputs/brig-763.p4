@@ -198,7 +198,7 @@ struct metadata_t {
 }
 
 parser SimplePacketParser(packet_in pkt, inout switch_header_t hdr) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
     state start {
         pkt.extract(hdr.ethernet);
         transition select(hdr.ethernet.ether_type) {
@@ -259,7 +259,7 @@ parser SwitchIngressParser(packet_in pkt, out switch_header_t hdr, out metadata_
 }
 
 control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in metadata_t ig_md, in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
     apply {
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         pkt.emit(hdr.pktgen_timer);
@@ -285,7 +285,7 @@ parser SwitchEgressParser(packet_in pkt, out switch_header_t hdr, out metadata_t
 }
 
 control SwitchEgressDeparser(packet_out pkt, inout switch_header_t hdr, in metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
     apply {
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.total_len, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.frag_offset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.src_addr, hdr.ipv4.dst_addr });
         pkt.emit(hdr.ethernet);

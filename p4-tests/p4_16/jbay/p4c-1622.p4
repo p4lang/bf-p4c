@@ -3664,7 +3664,7 @@ parser ParserUnderlayL2(
 //     inout switch_ingress_metadata_t ig_md,
 //     inout switch_header_t hdr) {
 //
-//     Checksum<bit<16>>(HashAlgorithm_t.CRC16) ipv4_checksum;
+//     Checksum(HashAlgorithm_t.CRC16) ipv4_checksum;
 //
 //     state start {
 //         pkt.extract(hdr.ipv4);
@@ -3805,8 +3805,8 @@ parser NpbIngressParser(
         out switch_ingress_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
 
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
 
  bit<16> ether_type;
  bit<16> inner_ether_type;
@@ -5025,8 +5025,8 @@ control SwitchEgressDeparser(
         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
     EgressMirror() egress_mirror;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
 
     apply {
         egress_mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);

@@ -138,7 +138,7 @@ parser IngressParser(
         out header_t hdr,
         out ingress_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
 
     state start {
         pkt.extract(ig_intr_md);

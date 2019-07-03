@@ -81,7 +81,7 @@ parser SwitchIngressParser(
         out switch_header_t hdr,
         out switch_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) udp_checksum;
+    Checksum() udp_checksum;
 
     state start {
         pkt.extract(ig_intr_md);

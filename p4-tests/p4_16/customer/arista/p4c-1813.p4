@@ -5101,8 +5101,8 @@ parser Portal(packet_in Calhan, out Belview Horns, out Beaverdam VanWert, out eg
 }
 
 control Rocky(packet_out Malmo, inout Belview WestGate, in Beaverdam Merritt, in egress_intrinsic_metadata_for_deparser_t Kahua) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) Hadley;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) Neubert;
+    Checksum() Hadley;
+    Checksum() Neubert;
     apply {
         WestGate.Ackley.Wetonka = Hadley.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ WestGate.Ackley.Lovewell, WestGate.Ackley.Dolores, WestGate.Ackley.Atoka, WestGate.Ackley.Panaca, WestGate.Ackley.Madera, WestGate.Ackley.Cardenas, WestGate.Ackley.LakeLure, WestGate.Ackley.Grassflat, WestGate.Ackley.Whitewood, WestGate.Ackley.Tilton, WestGate.Ackley.Lecompte, WestGate.Ackley.Lenexa });
         WestGate.Sunflower.Wetonka = Neubert.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ WestGate.Sunflower.Lovewell, WestGate.Sunflower.Dolores, WestGate.Sunflower.Atoka, WestGate.Sunflower.Panaca, WestGate.Sunflower.Madera, WestGate.Sunflower.Cardenas, WestGate.Sunflower.LakeLure, WestGate.Sunflower.Grassflat, WestGate.Sunflower.Whitewood, WestGate.Sunflower.Tilton, WestGate.Sunflower.Lecompte, WestGate.Sunflower.Lenexa });

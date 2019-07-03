@@ -3391,8 +3391,8 @@ parser SwitchIngressParser(
         out switch_header_t hdr,
         out switch_ingress_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
     value_set<bit<16>>(1) udp_port_vxlan;
     value_set<switch_cpu_port_value_set_t>(1) cpu_port;
 
@@ -4006,8 +4006,8 @@ control SwitchEgressDeparser(
         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
 
     EgressMirror() mirror;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
 
     apply {
         mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);

@@ -199,7 +199,7 @@ parser IngressParser(packet_in        pkt,
     /* Intrinsic */
     out ingress_intrinsic_metadata_t  ig_intr_md)
 {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
     
     /* This is a mandatory state, required by Tofino Architecture */
     state start {
@@ -731,7 +731,7 @@ control IngressDeparser(packet_out pkt,
     /* Intrinsic */
     in    ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md)
 {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) ipv4_checksum;
+    Checksum() ipv4_checksum;
     
     apply {
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({

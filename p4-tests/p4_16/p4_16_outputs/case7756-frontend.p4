@@ -622,8 +622,8 @@ parser UPFEgressParser(packet_in pkt, out headers hdr, out upf_egress_metadata_t
 control UPFEgressDeparser(packet_out pkt, inout headers hdr, in upf_egress_metadata_t eg_md, in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     bit<16> tmp_0;
     bit<16> tmp_1;
-    @name("UPFEgressDeparser.outer_ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) outer_ipv4_checksum_0;
-    @name("UPFEgressDeparser.inner_ipv4_checksum") Checksum<bit<16>>(HashAlgorithm_t.CRC16) inner_ipv4_checksum_0;
+    @name("UPFEgressDeparser.outer_ipv4_checksum") Checksum(HashAlgorithm_t.CRC16) outer_ipv4_checksum_0;
+    @name("UPFEgressDeparser.inner_ipv4_checksum") Checksum(HashAlgorithm_t.CRC16) inner_ipv4_checksum_0;
     apply {
         tmp_0 = outer_ipv4_checksum_0.update<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.outer_ipv4.version, hdr.outer_ipv4.ihl, hdr.outer_ipv4.diffserv, hdr.outer_ipv4.totalLen, hdr.outer_ipv4.identification, hdr.outer_ipv4.flags, hdr.outer_ipv4.fragOffset, hdr.outer_ipv4.ttl, hdr.outer_ipv4.protocol, hdr.outer_ipv4.srcAddr, hdr.outer_ipv4.dstAddr });
         hdr.outer_ipv4.hdrChecksum = tmp_0;

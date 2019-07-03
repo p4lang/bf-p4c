@@ -427,7 +427,6 @@ p4c_add_xfail_reason("tofino"
   "In checksum update list, fields before .* do not add up to a multiple of 8 bits. Total bits until .* : .*"
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mariano_0.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/but_0.p4
 )
 
@@ -1210,6 +1209,17 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
 )
 
+# checksum only support bit<16> output
+p4c_add_xfail_reason("tofino"
+  "Cannot unify .* to .*"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-1.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-5.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/gradations_0.p4
+  ../glass/testsuite/p4_tests/mau/galaxy_0.p4
+  P4C-1021-1
+)
+
 # p4lang/p4c #1724
 p4c_add_xfail_reason("tofino"
   "error: The following operation is not yet supported:"
@@ -1335,9 +1345,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Tofino does not support nested checksum updates"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/soured_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
-  ../glass/testsuite/p4_tests/mau/galaxy_0.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
 )
 

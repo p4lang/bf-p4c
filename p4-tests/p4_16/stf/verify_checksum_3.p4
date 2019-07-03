@@ -25,7 +25,7 @@ parser IgParser(packet_in packet,
                 out headers_t hdr,
                 out metadata_t meta,
                 out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(ChecksumAlgorithm_t.CSUM16) sample1_verification;
+    Checksum() sample1_verification;
 
     state start {
         packet.extract(ig_intr_md);

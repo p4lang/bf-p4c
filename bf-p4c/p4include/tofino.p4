@@ -71,11 +71,6 @@ enum HashAlgorithm_t {
     CRC64
 }
 
-enum ChecksumAlgorithm_t {
-    CSUM16,
-    CSUM16_UDP
-}
-
 match_kind {
     // exact,
     // ternary,
@@ -396,14 +391,12 @@ header ptp_metadata_t {
 // Tofino checksum engine can verify the checksums for header-only checksums
 // and calculate the residual (checksum minus the header field
 // contribution) for checksums that include the payload.
-// Checksum engine only supports 16-bit ones' complement checksums.
+// Checksum engine only supports 16-bit ones' complement checksums, also known
+// as csum16 or internet checksum.
 
-extern Checksum<W> {
+extern Checksum {
     /// Constructor.
-    /// @type_param W : Width of the calculated checksum. Only bit<16> is
-    /// supported.
-    /// @param algorithm : Only HashAlgorithm_t.CSUM16 is supported.
-    Checksum(ChecksumAlgorithm_t algorithm);
+    Checksum();
 
     /// Add data to checksum.
     /// @param data : List of fields to be added to checksum calculation. The
@@ -421,11 +414,13 @@ extern Checksum<W> {
 
     /// Get the calculated checksum value.
     /// @return : The calculated checksum value for added fields.
-    W get();
+    /// @param zeros_as_ones : encode all-zeros value as all-ones.
+    bit<16> get(@optional in bool zeros_as_ones);
 
     /// Calculate the checksum for a  given list of fields.
     /// @param data : List of fields contributing to the checksum value.
-    W update<T>(in T data);
+    /// @param zeros_as_ones : encode all-zeros value as all-ones.
+    bit<16> update<T>(in T data, @optional in bool zeros_as_ones);
 }
 
 // ----------------------------------------------------------------------------
