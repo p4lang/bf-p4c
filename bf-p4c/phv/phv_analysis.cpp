@@ -97,7 +97,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
-            Device::currentDevice() == Device::JBAY ? &dark_live_range : nullptr,
+            (Device::currentDevice() == Device::JBAY && !options.disable_dark_allocation)
+                ? &dark_live_range : nullptr,
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.
             &meta_init,

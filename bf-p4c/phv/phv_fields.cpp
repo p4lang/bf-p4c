@@ -623,7 +623,8 @@ bool PHV::Field::checkContext(
         }
 
     case AllocContext::Type::PARSER:
-        return slice.min_stage.first == -1;
+        return slice.min_stage.first == -1 || (slice.min_stage.first == 0 &&
+                slice.min_stage.second.isRead());
 
     case AllocContext::Type::DEPARSER:
         return slice.max_stage.first == PhvInfo::getDeparserStage();
@@ -633,8 +634,88 @@ bool PHV::Field::checkContext(
     }
 }
 
-// TODO(cole): Should really reimplement this to call foreach_alloc and then
-// iterate byte-by-byte through each alloc.
+const std::vector<PHV::Field::alloc_slice> PHV::Field::get_combined_alloc_bytes(
+        const PHV::AllocContext* ctxt,
+        const PHV::FieldUse* use) const {
+    std::vector<alloc_slice> slicesToProcess;
+    // Map of container to byte within the container to the set of alloc slices in that container
+    // byte.
+    ordered_map<PHV::Container, ordered_map<int, std::vector<alloc_slice>>> containerBytesMap;
+    foreach_byte(ctxt, use, [&](const alloc_slice& alloc) {
+        int byte = alloc.container_bit / 8;
+        containerBytesMap[alloc.container][byte].push_back(alloc);
+    });
+    for (auto container_and_byte : containerBytesMap) {
+        LOG3("  Container: " << container_and_byte.first);
+        for (auto byte_and_slices : container_and_byte.second) {
+            LOG3("    Byte: " << byte_and_slices.first);
+            if (byte_and_slices.second.size() == 1) {
+                slicesToProcess.push_back(*(byte_and_slices.second.begin()));
+                continue;
+            }
+            // If all the alloc slices within the same container are contiguous (both in terms of
+            // field slice range and container slice range), then combine all of them into a single
+            // alloc_slice that we return.
+            bitvec container_bits;
+            bitvec field_bits;
+            for (auto& slice : byte_and_slices.second) {
+                LOG3("\t  Slice: " << slice);
+                container_bits |= bitvec(slice.container_bit, slice.width);
+                field_bits |= bitvec(slice.field_bit, slice.width);
+            }
+            LOG3("\t\tContainer bits: " << container_bits << ", field bits: " << field_bits);
+            if (field_bits.is_contiguous() && container_bits.is_contiguous() &&
+                    container_bits.popcount() == field_bits.popcount()) {
+                alloc_slice* newCombinedSlice = new alloc_slice(this, container_and_byte.first,
+                        field_bits.min().index(), container_bits.min().index(),
+                        field_bits.popcount());
+                slicesToProcess.push_back(*newCombinedSlice);
+            } else {
+                for (auto& slice : byte_and_slices.second)
+                    slicesToProcess.push_back(slice);
+            }
+        }
+    }
+    return slicesToProcess;
+}
+
+const std::vector<PHV::Field::alloc_slice> PHV::Field::get_combined_alloc_slices(
+        le_bitrange bits,
+        const PHV::AllocContext* ctxt,
+        const PHV::FieldUse* use) const {
+    std::vector<alloc_slice> slicesToProcess;
+    // Map of container to set of alloc slices within that container.
+    ordered_map<PHV::Container, std::vector<alloc_slice>> containerToSlicesMap;
+    foreach_alloc(bits, ctxt, use, [&](const alloc_slice& alloc) {
+        containerToSlicesMap[alloc.container].push_back(alloc);
+    });
+    for (auto container_and_slices : containerToSlicesMap) {
+        LOG3("  Container: " << container_and_slices.first);
+        if (container_and_slices.second.size() == 1) {
+            slicesToProcess.push_back(*(container_and_slices.second.begin()));
+            continue;
+        }
+        bitvec container_bits;
+        bitvec field_bits;
+        for (auto& slice : container_and_slices.second) {
+            LOG3("\t  Slice: " << slice);
+            container_bits |= bitvec(slice.container_bit, slice.width);
+            field_bits |= bitvec(slice.field_bit, slice.width);
+        }
+        LOG3("\t\tContainer bits: " << container_bits << ", field_bits: " << field_bits);
+        if (field_bits.is_contiguous() && container_bits.is_contiguous() &&
+                container_bits.popcount() == field_bits.popcount()) {
+            alloc_slice* newCombinedSlice = new alloc_slice(this, container_and_slices.first,
+                    field_bits.min().index(), container_bits.min().index(), field_bits.popcount());
+            slicesToProcess.push_back(*newCombinedSlice);
+        } else {
+            for (auto& slice : container_and_slices.second)
+                slicesToProcess.push_back(slice);
+        }
+    }
+    return slicesToProcess;
+}
+
 void PHV::Field::foreach_byte(
         le_bitrange range,
         const PHV::AllocContext* ctxt,
@@ -1660,6 +1741,9 @@ void AddAliasAllocation::addAllocation(
         new_slice.init_points = alloc.init_points;
         new_slice.min_stage = alloc.min_stage;
         new_slice.max_stage = alloc.max_stage;
+        // Workaround to ensure only one of the aliased fields has an always run instruction in the
+        // last stage.
+        new_slice.shadowAlwaysRun = alloc.init_i.alwaysInitInLastMAUStage;
         LOG5("Adding allocation slice for aliased field: " << aliasSource << " " << new_slice);
         aliasSource->add_alloc(new_slice);
         phv.add_container_to_field_entry(alloc.container, aliasSource);
@@ -1790,9 +1874,19 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &slice) {
     out << slice.container << slice.container_bits() << " <-- " << PHV::FieldSlice(slice.field,
             slice.field_bits());
-    if (Device::currentDevice() == Device::JBAY)
+    if (Device::currentDevice() == Device::JBAY) {
         out << " live at [" << slice.min_stage.first << slice.min_stage.second << ", " <<
             slice.max_stage.first << slice.max_stage.second << "]";
+        if (!slice.init_i.empty) {
+            if (slice.init_i.nop)
+                out << " { NOP }";
+            else if (slice.init_i.alwaysInitInLastMAUStage)
+                out << " { always_run }";
+            else if (slice.init_i.init_actions.size() > 0)
+                out << " { " << slice.init_i.init_actions.size() << " actions }";
+        }
+    }
+
     return out;
 }
 

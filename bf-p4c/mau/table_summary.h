@@ -53,7 +53,7 @@ class TableSummary: public MauInspector {
     bool ingressDone;
     bool egressDone;
     /// Flag if we've found a placement problem that will require retrying
-    bool placementFailure;
+    ordered_set<const IR::MAU::Table*> failedPlacementTables;
 
     int pipe_id;
     const DependencyGraph& deps;

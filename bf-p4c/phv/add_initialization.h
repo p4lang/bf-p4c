@@ -4,6 +4,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/map_tables_to_actions.h"
+#include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 
@@ -128,8 +129,10 @@ class ComputeDarkInitialization : public Inspector {
   */
 class ComputeDependencies : public Inspector {
  private:
-    using StageFieldUse = ordered_map<const PHV::Field*, ordered_map<int, ordered_set<const
-        IR::MAU::Table*>>>;
+    using TableExprRanges = FinalizeStageAllocation::TableExprRanges;
+    using StageFieldEntry = FinalizeStageAllocation::StageFieldEntry;
+    using StageFieldUse = FinalizeStageAllocation::StageFieldUse;
+
     PhvInfo&                                    phv;
     const DependencyGraph&                      dg;
     const MapTablesToActions&                   actionsMap;
@@ -153,6 +156,13 @@ class ComputeDependencies : public Inspector {
             const StageFieldUse& fieldWrites,
             const StageFieldUse& fieldReads,
             bool checkBitsOverlap = true);
+    // Given a @min_stage, a @max_stage, and a map @uses of the uses/defs of slice @alloc,
+    // populate @tables with all the tables using that slice between the min and max stage
+    // range.
+    void accountUses(int min_stage, int max_stage,
+            const PHV::Field::alloc_slice& alloc,
+            const StageFieldUse& uses,
+            ordered_set<const IR::MAU::Table*>& tables) const;
     void summarizeDarkInits(StageFieldUse& fieldWrites, StageFieldUse& fieldReads);
 
  public:

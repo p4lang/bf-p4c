@@ -1119,10 +1119,18 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 }
 
 void FindDependencyGraph::calc_max_min_stage() {
-    for (const auto& kv : dg.stage_info)
-        if (kv.second.min_stage > dg.max_min_stage)
-            dg.max_min_stage = kv.second.min_stage;
-    LOG1("    Maximum stage number according to dependences: " << dg.max_min_stage);
+    for (const auto& kv : dg.stage_info) {
+        auto gress = kv.first->gress;
+        if (kv.second.min_stage > dg.max_min_stage_per_gress[gress])
+            dg.max_min_stage_per_gress[gress] = kv.second.min_stage;
+    }
+    dg.max_min_stage = (dg.max_min_stage_per_gress[0] > dg.max_min_stage_per_gress[1]) ?
+        dg.max_min_stage_per_gress[0] : dg.max_min_stage_per_gress[1];
+    dg.max_min_stage = (dg.max_min_stage > dg.max_min_stage_per_gress[2]) ? dg.max_min_stage :
+        dg.max_min_stage_per_gress[2];
+    LOG1("    Maximum stage number according to dependences: ");
+    LOG1("      INGRESS: " << dg.max_min_stage_per_gress[INGRESS]);
+    LOG1("      EGRESS: " << dg.max_min_stage_per_gress[EGRESS]);
 }
 
 void FindDependencyGraph::verify_dependence_graph() {

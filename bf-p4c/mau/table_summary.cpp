@@ -24,12 +24,12 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     action_data_bus.clear();
     imems.clear();
     tableAlloc.clear();
+    failedPlacementTables.clear();
     tableNames.clear();
     mergedGateways.clear();
     maxStage = 0;
     ingressDone = false;
     egressDone = false;
-    placementFailure = false;
     ++numInvoked[pipe_id];
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s)");
@@ -61,13 +61,8 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         memory[t->stage()].update(t->resources->memuse);
         action_data_bus[t->stage()].update(t);
         imems[t->stage()].update(t); }
-    if (t->match_table && t->get_provided_stage() >= 0 && t->stage() != t->get_provided_stage()) {
-        placementFailure = true;
-        // if this is pass 1 or pass 3, we will throw NoContainerConflictTrigger::failure to
-        // redo table placement, so don't flag this as a hard error.  Otherwise report it.
-        if (numInvoked[pipe_id] != 1 && numInvoked[pipe_id] != 3) {
-            error("The stage specified for %s is %d, but we could not place it until stage %d",
-                  t, t->get_provided_stage(), t->stage()); } }
+    if (t->match_table && t->get_provided_stage() >= 0 && t->stage() != t->get_provided_stage())
+        failedPlacementTables.insert(t);
     return true;
 }
 
@@ -88,6 +83,7 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
 void TableSummary::throwBacktrackException() {
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
+    bool placementFailure = (failedPlacementTables.size() > 0);
     for (auto entry : order) {
         int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
@@ -152,19 +148,18 @@ void TableSummary::throwBacktrackException() {
         // available physical stages, redo PHV allocation, while taking into account all the pack
         // conflicts produced by this table placement round, and also keeping metadata
         // initialization enabled.
-        if (!placementFailure && maxStage <= deviceStages)
+        if (maxStage <= deviceStages) {
             throw PHVTrigger::failure(tableAlloc, firstRoundFit);
-
-        // If there is not table placement failure and the number of stages without container
-        // conflicts are greater than the available physical stages, redo PHV allocation, while
-        // taking into account al the pack conflicts produced by this table placement round, and
-        // also disabling metadata initialization. This is because metadata initialization has been
-        // found to increase the dependency chain length occasionally.
-        if (!placementFailure && maxStage > deviceStages) {
+        } else {
+            // If there is not table placement failure and the number of stages without container
+            // conflicts are greater than the available physical stages, redo PHV allocation, while
+            // taking into account al the pack conflicts produced by this table placement round, and
+            // also disabling metadata initialization. This is because metadata initialization has
+            // been found to increase the dependency chain length occasionally.
             LOG1("Invoking table placement without metadata initialization because container "
                  "conflict-free table placement required " << maxStage << " stages.");
             throw PHVTrigger::failure(tableAlloc, firstRoundFit, false /* ignorePackConflicts */,
-                                      true /* metaInitDisable */);
+                    true /* metaInitDisable */);
         }
     }
 
@@ -179,6 +174,11 @@ void TableSummary::throwBacktrackException() {
              "table placement took " << maxStage << " stages.");
         throw NoContainerConflictTrigger::failure(true);
     }
+
+    if (placementFailure)
+        for (const auto* t : failedPlacementTables)
+            error("The stage specified for %s is %d, but we could not place it until stage %d",
+                    t, t->get_provided_stage(), t->stage());
 }
 
 const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {

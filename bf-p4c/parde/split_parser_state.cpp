@@ -131,9 +131,10 @@ struct SliceExtracts : public ParserModifier {
 
         // Keeps track of which bits have been allocated, for sanity checking.
         bitvec bits_allocated;
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
 
         // Slice according to the field's PHV allocation.
-        for (auto slice : phv.get_alloc(extract->dest->field)) {
+        for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
             auto lo = slice.field_bit;
             auto size = slice.width;
 
@@ -344,13 +345,15 @@ struct AllocateParserState : public ParserTransform {
             unsigned
             merge_const_source(const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 unsigned merged = 0;
+                PHV::FieldUse use(PHV::FieldUse::WRITE);
 
                 for (auto e : extracts) {
                     if (auto c = e->source->to<IR::BFN::ConstantRVal>()) {
                         if (!c->constant->fitsUint())
                             BUG("large constants should have already been sliced");
 
-                        auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+                        auto alloc_slices = sa.phv.get_alloc(e->dest->field,
+                                PHV::AllocContext::PARSER, &use);
 
                         BUG_CHECK(alloc_slices.size() == 1,
                             "extract allocator expects dest to be individual slice");
@@ -366,13 +369,16 @@ struct AllocateParserState : public ParserTransform {
                 std::map<size_t, unsigned> extractors_by_size;
 
                 unsigned constants = 0;
+                PHV::FieldUse use(PHV::FieldUse::WRITE);
 
                 // reserve extractor for checksum verification
                 for (auto c : sa.current_statements) {
                     if (auto v = c->to<IR::BFN::ChecksumVerify>()) {
                         if (v->dest) {
-                            auto f = sa.phv.field(v->dest->field);
-                            auto alloc_slices = sa.phv.get_alloc(f, nullptr);  // XXX(zma)
+                            le_bitrange bits;
+                            auto f = sa.phv.field(v->dest->field, &bits);
+                            auto alloc_slices = sa.phv.get_alloc(f, &bits,
+                                    PHV::AllocContext::PARSER, &use);  // XXX(zma)
 
                             BUG_CHECK(alloc_slices.size() == 1,
                                 "extract allocator expects dest to be individual slice");
@@ -454,8 +460,10 @@ struct AllocateParserState : public ParserTransform {
             }
 
             explicit ExtractAllocator(ParserStateAllocator& sa) : Allocator(sa) {
+                PHV::FieldUse use(PHV::FieldUse::WRITE);
                 for (auto e : sa.phv_extracts) {
-                    auto alloc_slices = sa.phv.get_alloc(e->dest->field);
+                    auto alloc_slices = sa.phv.get_alloc(e->dest->field, PHV::AllocContext::PARSER,
+                            &use);
 
                     BUG_CHECK(!alloc_slices.empty(), "No slices allocated for %1%", e);
                     BUG_CHECK(alloc_slices.size() == 1,
@@ -770,8 +778,10 @@ struct AllocateParserState : public ParserTransform {
             explicit GetMinExtractBufferPos(const PhvInfo& phv) : phv(phv) { }
 
             bool preorder(const IR::BFN::ExtractPhv* extract) override {
+                PHV::FieldUse use(PHV::FieldUse::WRITE);
                 if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
-                    auto alloc_slices = phv.get_alloc(extract->dest->field);
+                    auto alloc_slices = phv.get_alloc(extract->dest->field,
+                            PHV::AllocContext::PARSER, &use);
 
                     if (!alloc_slices.empty()) {
                         BUG_CHECK(alloc_slices.size() == 1,

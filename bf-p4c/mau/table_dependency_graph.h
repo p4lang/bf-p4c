@@ -177,6 +177,7 @@ struct DependencyGraph {
     /// The largest value of min_stage encountered when determining min_stage values for table,
     /// across all tables in the program. The minimum number of stages required by the program is
     /// 1 + max_min_stage (stage numbers start from 0, 1, ..., n-1)
+    int max_min_stage_per_gress[3] = {-1, -1, -1};
     int max_min_stage = -1;
 
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
@@ -196,6 +197,8 @@ struct DependencyGraph {
         labelToVertex.clear();
         stage_info.clear();
         min_stage_edges.clear();
+        for (unsigned i = 0; i < 3; i++)
+            max_min_stage_per_gress[i] = -1;
         display_min_edges = false;
     }
 

@@ -722,6 +722,12 @@ bool CoreAllocation::satisfies_constraints(
 
     // Check no pack for this field.
     const auto& slices = alloc.slicesByLiveness(c, slice);
+    std::vector<PHV::FieldSlice> liveFieldSlices;
+    ordered_set<PHV::FieldSlice> initFieldSlices;
+    for (auto& sl : slices)
+        liveFieldSlices.push_back(PHV::FieldSlice(sl.field(), sl.field_slice()));
+    for (auto& initSlice : initFields)
+        initFieldSlices.insert(PHV::FieldSlice(initSlice.field(), initSlice.field_slice()));
     if (slices.size() > 0 && slice.field()->no_pack()) {
         for (auto& sl : slices) {
             LOG5("\t\t\tChecking no-pack for live slice: " << sl);
@@ -746,12 +752,13 @@ bool CoreAllocation::satisfies_constraints(
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
     bool hasUninitializedRead = std::any_of(
-            slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+            liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {
         return s.field()->pov
-            || (defuse_i.hasUninitializedRead(s.field()->id) && !initFields.count(s));
+            || (defuse_i.hasUninitializedRead(s.field()->id) && !initFieldSlices.count(s));
     });
 
-    bool hasExtracted = std::any_of(slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+    bool hasExtracted = std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const
+                PHV::FieldSlice& s) {
         return !s.field()->pov && uses_i.is_extracted(s.field());
     });
 
@@ -760,7 +767,7 @@ bool CoreAllocation::satisfies_constraints(
             || (defuse_i.hasUninitializedRead(slice.field()->id) && !initFields.count(slice)));
 
     bool hasExtractedTogether = std::all_of(
-            slices.begin(), slices.end(), [&] (const PHV::AllocSlice& s) {
+            liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {
         return phv_i.are_bridged_extracted_together(slice.field(), s.field());
     });
 
@@ -1063,11 +1070,15 @@ CoreAllocation::tryAllocSliceList(
                         can_place = true;
                         LOG5("    ...found " << darkInitNodes->size() <<
                              " initialization points for dark containers.");
-                        for (auto& prim : *darkInitNodes) LOG5("\t\t" << prim);
+                        unsigned primNum = 0;
+                        for (auto& prim : *darkInitNodes) {
+                            LOG5("\t\t" << prim);
+                            if (primNum++ == 0) continue;
+                            metaInitSlices.insert(prim.getDestinationSlice());
+                        }
                         // Create initialization points for the dark container.
                         generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
                                 new_candidate_slices, perContainerAlloc);
-                        LOG5("Generated new alloc slices");
                     }
                 } else {
                     LOG5("    ...but " << c << " already contains slices at this position");
@@ -2846,7 +2857,10 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
         if (Device::currentDevice() == Device::JBAY) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
-                return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); } }
+                return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
+            if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
+                return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+        }
         if (Device::currentDevice() == Device::JBAY)
             if (has_pov.count(l) != has_pov.count(r))
                 return has_pov.count(l) > has_pov.count(r);
@@ -2865,9 +2879,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             if (l->slice_lists().size() != r->slice_lists().size()) {
                 return l->slice_lists().size() > r->slice_lists().size(); }
         } else {
-            // for metadata fields, prioritize pa_container size pragmas
-            if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
-                return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+            if (Device::currentDevice() == Device::JBAY) {
+                // for metadata fields, prioritize pa_container size pragmas
+                if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
+                    return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
+            }
             if  (Device::currentDevice() == Device::TOFINO)
                if (has_pov.count(l) != has_pov.count(r))
                    return has_pov.count(l) > has_pov.count(r);

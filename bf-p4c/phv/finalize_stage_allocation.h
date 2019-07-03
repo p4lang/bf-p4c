@@ -26,6 +26,8 @@ class CalcMaxPhysicalStages : public Inspector {
     }
 };
 
+class FinalizeStageAllocation;
+
 /** Until this point, the allocation of PHV slices to containers uses logical stages to denote
   * liveness. These logical stages are based on the static table dependency graph.
   *
@@ -65,6 +67,11 @@ class UpdateFieldAllocation : public Inspector {
 };
 
 class FinalizeStageAllocation : public PassManager {
+ public:
+     using TableExprRanges = ordered_map<const IR::MAU::Table*, ordered_set<le_bitrange>>;
+     using StageFieldEntry = ordered_map<int, TableExprRanges>;
+     using StageFieldUse = ordered_map<const PHV::Field*, StageFieldEntry>;
+
  private:
     CalcMaxPhysicalStages depStages;
 
@@ -73,7 +80,7 @@ class FinalizeStageAllocation : public PassManager {
             const PhvInfo& phv,
             const DependencyGraph& dg,
             const FieldDefUse::LocPairSet& refs,
-            ordered_map<int, ordered_set<const IR::MAU::Table*>>& stageToTables,
+            StageFieldEntry& stageToTables,
             bool& usedInParser,
             bool& usedInDeparser,
             bool usePhysicalStages = true);

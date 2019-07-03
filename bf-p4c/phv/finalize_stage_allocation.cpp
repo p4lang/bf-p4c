@@ -19,7 +19,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
         const PhvInfo& phv,
         const DependencyGraph& dg,
         const FieldDefUse::LocPairSet& refs,
-        ordered_map<int, ordered_set<const IR::MAU::Table*>>& stageToTables,
+        StageFieldEntry& stageToTables,
         bool& usedInParser,
         bool& usedInDeparser,
         bool usePhysicalStages) {
@@ -32,12 +32,20 @@ void FinalizeStageAllocation::summarizeUseDefs(
             LOG5("\tUsed in deparser");
         } else if (ref.first->is<IR::MAU::Table>()) {
             auto* t = ref.first->to<IR::MAU::Table>();
+            le_bitrange bits;
+            auto* f = phv.field(ref.second, &bits);
             if (usePhysicalStages) {
                 BUG_CHECK(t->logical_id != -1, "Table %1% is unallocated", t->name);
                 auto minStages = phv.minStage(TableSummary::getTableName(t));
-                for (auto stage : minStages) stageToTables[stage].insert(t);
+                for (auto stage : minStages) {
+                    stageToTables[stage][t].insert(bits);
+                    LOG5("\tUsed in table " << t->name << " (Stage " << stage << ") : " <<
+                         f->name << "[" << bits.hi << ":" << bits.lo << "]");
+                }
             } else {
-                stageToTables[dg.min_stage(t)].insert(t);
+                stageToTables[dg.min_stage(t)][t].insert(bits);
+                LOG5("\tUsed in table " << t->name << " (Stage " << dg.min_stage(t) << ") : " <<
+                     f->name << "[" << bits.hi << ":" << bits.lo << "]");
             }
         } else {
             BUG("Found a unit that is not the parser, deparser, or table");
@@ -49,8 +57,8 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     static PHV::FieldUse read(PHV::FieldUse::READ);
     static PHV::FieldUse write(PHV::FieldUse::WRITE);
     ordered_map<PHV::Container, std::vector<PHV::Field::alloc_slice>> containerToSlicesMap;
-    ordered_map<int, ordered_set<const IR::MAU::Table*>> readTables;
-    ordered_map<int, ordered_set<const IR::MAU::Table*>> writeTables;
+    FinalizeStageAllocation::StageFieldEntry readTables;
+    FinalizeStageAllocation::StageFieldEntry writeTables;
     bool usedInParser = false, usedInDeparser = false;
 
     LOG3("\tUpdating allocation for " << f);
@@ -60,6 +68,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     FinalizeStageAllocation::summarizeUseDefs(phv, dg, defuse.getAllUses(f->id), readTables,
             usedInParser, usedInDeparser);
     if (f->aliasSource != nullptr) {
+        LOG5("\t  Summarizing usedefs for alias source: " << f->aliasSource->name);
         FinalizeStageAllocation::summarizeUseDefs(phv, dg,
                 defuse.getAllDefs(f->aliasSource->id),
                 writeTables, usedInParser, usedInDeparser);
@@ -68,6 +77,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                 usedInDeparser);
     } else if (phv.getAliasMap().count(f)) {
         const PHV::Field* aliasDest = phv.getAliasMap().at(f);
+        LOG5("\t  Summarizing usedefs for alias dest: " << aliasDest->name);
         FinalizeStageAllocation::summarizeUseDefs(phv, dg, defuse.getAllDefs(aliasDest->id),
                 writeTables, usedInParser, usedInDeparser);
         FinalizeStageAllocation::summarizeUseDefs(phv, dg, defuse.getAllUses(aliasDest->id),
@@ -75,17 +85,19 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     }
 
     std::stringstream ss;
-    ss << "\t" << f->name << std::endl;
+    ss << "\t" << f->id << ": " << f->name << std::endl;
     ss << "\t Written by tables:" << std::endl;
     for (auto& kv : writeTables) {
         ss << "\t  " << kv.first << " : ";
-        for (const auto* t : kv.second) ss << t->name << " ";
+        for (auto& kv1 : kv.second)
+            ss << kv1.first->name << " ";
         ss << std::endl;
     }
     ss << "\t Read by tables:" << std::endl;
     for (auto& kv : readTables) {
         ss << "\t  " << kv.first << " : ";
-        for (const auto* t : kv.second) ss << t->name << " ";
+        for (auto& kv1 : kv.second)
+            ss << kv1.first->name << " ";
         ss << std::endl;
     }
     ordered_map<le_bitrange, PHV::StageAndAccess> minStageAccount;
@@ -110,10 +122,11 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             LOG5(ss.str() << "\tIgnoring field slice: " << alloc);
             continue;
         } else {
-            LOG1("\t\tNot ignoring for parserMin " << parserMin.first << parserMin.second <<
+            LOG3("\t  Slice: " << alloc);
+            LOG5("\t\tNot ignoring for parserMin " << parserMin.first << parserMin.second <<
                  " and deparserMax " << deparserMax.first << deparserMax.second);
-            LOG1("\t\talloc min: " << alloc.min_stage.first << alloc.min_stage.second);
-            LOG1("\t\talloc max: " << alloc.max_stage.first << alloc.max_stage.second);
+            LOG5("\t\talloc min: " << alloc.min_stage.first << alloc.min_stage.second);
+            LOG5("\t\talloc max: " << alloc.max_stage.first << alloc.max_stage.second);
         }
         bool includeParser = false;
         if (usedInParser) {
@@ -124,12 +137,16 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         }
         bool alwaysRunLastStageSlice = false;
         if (usedInDeparser) {
-            if (!alloc.init_i.empty && alloc.init_i.alwaysInitInLastMAUStage) {
+            LOG5("\t\t  used in deparser");
+            LOG5("\t\t  Alloc: " << alloc);
+            LOG5("\t\t  empty: " << alloc.init_i.empty << ", always init: " <<
+                    alloc.init_i.alwaysInitInLastMAUStage);
+            if ((!alloc.init_i.empty && (alloc.init_i.alwaysInitInLastMAUStage)) ||
+                    alloc.shadowAlwaysRun) {
                 alwaysRunLastStageSlice = true;
                 LOG4("\t\tDetected slice for always run in last stage");
             }
         }
-        LOG3(ss.str() << "\t  Slice: " << alloc);
         containerToSlicesMap[alloc.container].push_back(alloc);
         int minStageRead = (alloc.min_stage.second == read) ?
                             alloc.min_stage.first : (alloc.min_stage.first + 1);
@@ -147,9 +164,14 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         for (auto stage = minStageRead; stage <= maxStageRead; stage++) {
             LOG5("\t\t\tRead Stage: " << stage);
             if (readTables.count(stage)) {
-                for (const auto* t : readTables.at(stage)) {
-                    int stage = t->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
-                    LOG3("\t\t  Read table: " << t->name << ", stage: " << stage);
+                for (const auto& kv : readTables.at(stage)) {
+                    bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
+                            [&](le_bitrange range) {
+                        return alloc.field_bits().overlaps(range);
+                    });
+                    if (!foundFieldBits) continue;
+                    int stage = kv.first->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+                    LOG3("\t\t  Read table: " << kv.first->name << ", stage: " << stage);
                     if (minPhysicalRead == NOTSET && maxPhysicalRead == NOTSET) {
                         // Initial value not set.
                         minPhysicalRead = stage;
@@ -164,9 +186,20 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         for (auto stage = minStageWritten; stage <= maxStageWritten; stage++) {
             LOG5("\t\t\tWrite Stage: " << stage);
             if (writeTables.count(stage)) {
-                for (const auto* t : writeTables.at(stage)) {
-                    int stage = t->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
-                    LOG3("\t\t  Written table: " << t->name << ", stage: " << stage);
+                for (const auto& kv : writeTables.at(stage)) {
+                    // Check that the table is part of the valid stage.
+                    if (stage == alloc.max_stage.first && alloc.max_stage.second == read) {
+                        LOG3("\t\t  Ignoring written table: " << kv.first->name << ", stage: " <<
+                             stage);
+                        continue;
+                    }
+                    bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
+                            [&](le_bitrange range) {
+                        return alloc.field_bits().overlaps(range);
+                    });
+                    if (!foundFieldBits) continue;
+                    int stage = kv.first->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+                    LOG3("\t\t  Written table: " << kv.first->name << ", stage: " << stage);
                     if (minPhysicalWrite == NOTSET && maxPhysicalWrite == NOTSET) {
                         // Initial value not set, so this stage is both maximum and minimum.
                         minPhysicalWrite = stage;
@@ -184,6 +217,18 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         PHV::FieldUse new_min_use, new_max_use;
         bool readAbsent = ((minPhysicalRead == NOTSET) && (maxPhysicalRead == NOTSET));
         bool writeAbsent = ((minPhysicalWrite == NOTSET) && (maxPhysicalWrite == NOTSET));
+        if (includeParser && readAbsent && writeAbsent) {
+            new_min_stage = 0;
+            new_max_stage = 0;
+            new_min_use = read;
+            new_max_use = read;
+            LOG5("\t\t\tParser only setting.");
+            alloc.min_stage = std::make_pair(new_min_stage, new_min_use);
+            alloc.max_stage = std::make_pair(new_max_stage, new_max_use);
+            LOG3("\t  New min stage: " << alloc.min_stage.first << alloc.min_stage.second <<
+                    ", New max stage: " << alloc.max_stage.first << alloc.max_stage.second);
+            continue;
+        }
         // Make sure that there is some physical stage during which this slice is alive.
         // No need to check parser, because there will be at least one use from the parser extract.
         BUG_CHECK(!readAbsent || !writeAbsent || alwaysRunLastStageSlice,
@@ -228,6 +273,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             int dep_stage = depStages.getDeparserStage(f->gress);
             BUG_CHECK(dep_stage >= 0, "No tables detected in the program while finalizing "
                     "PHV allocation");
+            LOG5("Found deparser stage " << dep_stage << " for gress " << f->gress);
             new_min_stage = dep_stage - 1;
             new_max_stage = dep_stage;
         }
@@ -246,6 +292,13 @@ Visitor::profile_t UpdateFieldAllocation::init_apply(const IR::Node* root) {
     LOG1("Deparser logical stage: " << phv.getDeparserStage());
     parserMin = std::make_pair(-1, PHV::FieldUse(PHV::FieldUse::READ));
     deparserMax = std::make_pair(PhvInfo::getDeparserStage(), PHV::FieldUse(PHV::FieldUse::WRITE));
+    if (LOGGING(5)) {
+        for (auto& f : phv) {
+            LOG5("\tField: " << f.name);
+            for (const auto& slice : f.get_alloc())
+                LOG5("\t  Slice: " << slice);
+        }
+    }
     for (auto& f : phv) updateAllocation(&f);
     for (auto& f : phv) {
         LOG1("\tField: " << f.name);

@@ -44,6 +44,10 @@ Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
     LOG1("  Should pack conflicts be ignored? " << (ignorePackConflicts ? "YES" : "NO"));
     ++numInvoked;
     overlay.clear();
+    if (firstRoundFit) {
+        tables.clear();
+        prevRoundTables.clear();
+    }
     profile_t rv = Inspector::init_apply(root);
     return rv;
 }

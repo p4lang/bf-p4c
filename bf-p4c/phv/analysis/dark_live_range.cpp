@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/mau/memories.h"
 #include "bf-p4c/phv/analysis/dark_live_range.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/utils/liverange_opti_utils.h"
@@ -16,14 +17,25 @@ bool DarkLiveRange::overlaps(
         for (unsigned j : { READ, WRITE }) {
             StageAndAccess stageAndAccess = std::make_pair(i, PHV::FieldUse(j));
             if (range1.count(stageAndAccess)) {
-                f1Uses.setbit(index);
-                LOG5("\t\t  Setting f1 bit " << index << ", stage " << i << ": " <<
-                     PHV::FieldUse(j));
+                if (!range1.at(stageAndAccess).second) {
+                    // Ignore dark uses for the purposes of deciding overlay
+                    f1Uses.setbit(index);
+                    LOG5("\t\t  Setting f1 bit " << index << ", stage " << i << ": " <<
+                            PHV::FieldUse(j));
+                } else {
+                    LOG5("\t\t\tNot setting f1 bit " << index << ", stage " << i << ": " <<
+                         "DARK " << PHV::FieldUse(j));
+                }
             }
             if (range2.count(stageAndAccess)) {
-                f2Uses.setbit(index);
-                LOG5("\t\t  Setting f2 bit " << index << ", stage " << i << ": " <<
-                     PHV::FieldUse(j));
+                if (!range2.at(stageAndAccess).second) {
+                    f2Uses.setbit(index);
+                    LOG5("\t\t  Setting f2 bit " << index << ", stage " << i << ": " <<
+                            PHV::FieldUse(j));
+                } else {
+                    LOG5("\t\t\tNot setting f2 bit " << index << ", stage " << i << ": " <<
+                         "DARK " << PHV::FieldUse(j));
+                }
             }
             ++index;
         }
@@ -34,12 +46,32 @@ bool DarkLiveRange::overlaps(
     return (combo.popcount() != 0);
 }
 
+bool DarkLiveRange::increasesDependenceCriticalPath(
+        const IR::MAU::Table* use,
+        const IR::MAU::Table* init) const {
+    const int maxStages = dg.max_min_stage_per_gress[use->gress];
+    int use_stage = dg.min_stage(use);
+    int init_stage = dg.min_stage(init);
+    int init_dep_tail = dg.dependence_tail_size_control_anti(init);
+    LOG5("\t\tuse table: " << use->name << ", init table: " << init->name);
+    LOG5("\t\tuse_stage: " << use_stage << ", init_stage: " << init_stage << ", init_dep_tail: " <<
+         init_dep_tail);
+    if (use_stage < init_stage) return false;
+    int new_init_stage = use_stage + 1;
+    LOG5("\t\tnew_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
+    if (new_init_stage + init_dep_tail > maxStages)
+        return true;
+    return false;
+}
+
+
 Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     livemap.clear();
     overlay.clear();
     doNotInitActions.clear();
     fieldToUnitUseMap.clear();
     doNotInitToDark.clear();
+    doNotInitTables.clear();
     BUG_CHECK(dg.finalized, "Dependence graph is not populated.");
     LOG3("Printing dependency graph");
     LOG3(dg);
@@ -50,6 +82,27 @@ Visitor::profile_t DarkLiveRange::init_apply(const IR::Node* root) {
     livemap.setDeparserStageValue(DEPARSER);
     LOG1("Deparser is at " << DEPARSER << ", max stage: " << dg.max_min_stage);
     return Inspector::init_apply(root);
+}
+
+bool DarkLiveRange::preorder(const IR::MAU::Table* tbl) {
+    uint64_t totalKeySize = 0;
+    for (const auto* key : tbl->match_key) {
+        le_bitrange bits;
+        const auto* field = phv.field(key->expr, &bits);
+        if (!field) continue;
+        totalKeySize += bits.size();
+    }
+    if (!tbl->match_table) return true;
+    const auto* sz = tbl->match_table->getSizeProperty();
+    if (!sz) return true;
+    if (!sz->fitsUint64()) return true;
+    uint64_t tableSize = sz->asUint64();
+    uint64_t totalBits = totalKeySize * tableSize;
+    if (totalBits > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS * Memories::SRAM_DEPTH * 128) {
+        doNotInitTables.insert(tbl);
+        LOG4("\tDo not insert initialization in table: " << tbl->name);
+    }
+    return true;
 }
 
 bool DarkLiveRange::preorder(const IR::MAU::Action* act) {
@@ -159,8 +212,11 @@ void DarkLiveRange::end_apply() {
     for (const auto* f : fieldsConsidered) setFieldLiveMap(f);
     if (LOGGING(1)) LOG1(livemap.printDarkLiveRanges());
     for (const auto* f1 : fieldsConsidered) {
+        // Do not dark overlay ghost fields.
+        if (f1->isGhostField()) continue;
         for (const auto* f2 : fieldsConsidered) {
             if (f1 == f2) continue;
+            if (f2->isGhostField()) continue;
             // No overlay possible if fields are of different gresses.
             if (f1->gress != f2->gress) {
                 overlay(f1->id, f2->id) = false;
@@ -218,6 +274,36 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
     return std::make_pair(readField, writtenField);
 }
 
+bool DarkLiveRange::validateLiveness(const OrderedFieldSummary& rv) const {
+    const OrderedFieldInfo* lastSlice = nullptr;
+    static PHV::FieldUse read(READ);
+    static PHV::FieldUse write(WRITE);
+    for (auto& info : rv) {
+        if (lastSlice == nullptr) {
+            lastSlice = &info;
+            continue;
+        }
+        if (info.minStage.second == read) {
+            // If the min stage is a read, then the initialization must happen in the previous
+            // stage. Therefore, we need to calculate a real min stage that is 1 less than the min
+            // stage calculated earlier.
+            int realMinStage = info.minStage.first - 1;
+            if (lastSlice->maxStage.second == write && lastSlice->maxStage.first >= realMinStage) {
+                LOG5("\t\t  Found overlapping slices in terms of live range: ");
+                LOG5("\t\t\t" << lastSlice->field.field()->name << " [" << lastSlice->minStage.first
+                        << lastSlice->minStage.second << ", " << lastSlice->maxStage.first <<
+                        lastSlice->maxStage.second << "]");
+                LOG5("\t\t\t" << info.field.field()->name << " [" << lastSlice->minStage.first <<
+                        lastSlice->minStage.second << ", " << lastSlice->maxStage.first <<
+                        lastSlice->maxStage.second << "]");
+                return false;
+            }
+        }
+        lastSlice = &info;
+    }
+    return true;
+}
+
 boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsInOrder(
         const ordered_set<PHV::AllocSlice>& fields) const {
     OrderedFieldSummary rv;
@@ -258,6 +344,7 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
             ss << DBPrint::Brief << u << " ";
         LOG5(ss.str());
     }
+    if (!validateLiveness(rv)) return boost::none;
     return rv;
 }
 
@@ -285,20 +372,44 @@ bool DarkLiveRange::ignoreReachCondition(
 }
 
 bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
+        const OrderedFieldInfo& currentField,
         const ordered_set<const IR::BFN::Unit*>& doms,
         const IR::MAU::Table* groupDominator) const {
-    if (doms.size() == 1) {
+    bool singleDom = (doms.size() == 1);
+    for (const auto* u : doms) {
         // If there is only one dominator in the list of trimmed dominators, check that the
         // only strict dominator in there is the same as the group dominator. If it is, then it is
         // fine for the initialization point to be at the group dominator.
-        const auto* u = *(doms.begin());
         const auto* t = u->to<IR::MAU::Table>();
         if (!t) return false;
-        if (t != groupDominator) return false;
-        LOG5("\t\t\t\tOnly strict dominator same as group dominator. Initialization ok.");
-        return true;
+        LOG5("\t\t\t\t  Group dominator: " << groupDominator->name << ", dom: " << t->name);
+        if (singleDom && t == groupDominator) {
+            LOG5("\t\t\t\tOnly strict dominator same as group dominator. Initialization ok.");
+            return true;
+        }
+        if (dg.min_stage(groupDominator) > dg.min_stage(t)) {
+            LOG5("\t\t\t\tGroup dominator happens in same logical stage or later (stage " <<
+                 dg.min_stage(groupDominator) << ") than use table " << t->name << " (" <<
+                 dg.min_stage(t) << ")");
+            return false;
+        }
     }
-    return false;
+    // If group dominator stage is the same as the trimmed dominator, then we need to make sure
+    // that the trimmed dominator is a read (and not a write) because we would be inserting an
+    // initialization at the group dominator table. The check here makes sure that the group
+    // dominator will occur earlier than the min stage for the current field, which effectively
+    // implements the invariant above.
+    // XXX(Deep): This is too conservative. This check is necessary only if we actually need to
+    // initialize the field.
+    if (currentField.minStage.first == dg.min_stage(groupDominator) &&
+            currentField.minStage.second == PHV::FieldUse(PHV::FieldUse::READ)) {
+        LOG5("\t\t\t\tInitialization at group dominator will happen later than the first "
+                "use of currentField " << currentField.field);
+        return false;
+    }
+
+    // All the strict dominators are in later stages compared to the group dominator.
+    return true;
 }
 
 boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
@@ -345,7 +456,6 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             firstDarkInitEntry = new PHV::DarkInitEntry(dest);
             firstDarkInitEntry->setNop();
             LOG3("\t\t\tCreating dark init primitive (not pushed): " << *firstDarkInitEntry);
-            // rv.push_back(firstAllocSlice);
             ++idx;
             continue;
         }
@@ -473,32 +583,85 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 ((dg.min_stage(groupDominator) == lastField->maxStage.first) &&
                  lastField->maxStage.second == PHV::FieldUse(READ));
             bool groupDominatorBeforeFirstUseCurrentField =
-                isGroupDominatorEarlierThanFirstUseOfCurrentField(f_nodes, groupDominator);
+                isGroupDominatorEarlierThanFirstUseOfCurrentField(info, f_nodes, groupDominator);
 
             if (!groupDominatorAfterLastUsePrevField) {
                 LOG2("\t\tCannot find initialization point for previous field " << lastField->field
-                     << " because group dominator's stage is before the last use of the previous "
-                     "field");
+                     << " because group dominator's stage (" << dg.min_stage(groupDominator) <<
+                     ") is before the last use of the previous field (" << lastField->maxStage.first
+                     << lastField->maxStage.second << ")");
                 return boost::none;
             }
-            LOG2("\t\tTrying to initialize at table " << groupDominator->name << " (Stage " <<
-                 dg.min_stage(groupDominator) << ")");
-            auto darkInitPoints = getInitPointsForTable(group, c, groupDominator, *lastField, info,
-                    rv, moveCurrentToDark, initializeCurrentField, initializeFromDark, alloc);
-            if (!groupDominatorBeforeFirstUseCurrentField) {
-                // TODO: Relax by accounting for valid uses directly from dark containers.
-                LOG3("\t\tCannot initialize current field before its first use.");
-            } else if (!darkInitPoints) {
-                LOG3("\t\tDid not get any initialization points; need to move up in the flow "
-                     "graph.");
-            } else if (darkInitPoints) {
-                // Found initializations. Now set up the return vector accordingly.
-                LOG3("\t\t" << darkInitPoints->size() << " initializations found");
-                for (auto init : *darkInitPoints) {
-                    LOG3("\t\t  Adding to return vector: " << init);
-                    rv.push_back(init);
+
+
+            // Check that the initialization point cannot reach the units using the last field.
+            const IR::BFN::Unit* groupDominatorUnit = groupDominator->to<IR::BFN::Unit>();
+            auto reach_condition = canFUnitsReachGUnits({ groupDominatorUnit }, lastField->units,
+                    domTree.getFlowGraph());
+            if (reach_condition.size() > 0) {
+                bool ignoreReach = ignoreReachCondition(info, *lastField, reach_condition);
+                if (!ignoreReach) {
+                    LOG2("\t\tCannot find initialization point because group dominator can reach "
+                         "one of the uses of the last field " << lastField->field);
+                    return boost::none;
                 }
-                break;
+            }
+            // Check that units using the last field can reach the initialization point.
+            bool goToNextDominator = false;
+            for (auto* u : lastField->units) {
+                auto reach_condition = canFUnitsReachGUnits({ u }, { groupDominatorUnit },
+                        domTree.getFlowGraph());
+                if (reach_condition.size() == 0) {
+                    LOG2("\t\tUse unit " << DBPrint::Brief << u << " of previous field " <<
+                            lastField->field << " cannot reach initialization point " <<
+                            DBPrint::Brief << groupDominatorUnit);
+                    goToNextDominator = true;
+                }
+            }
+
+            // If we are initializing the current field, then make sure that the initialization
+            // point does not cause a lengthening of the critical path.
+            if (initializeCurrentField) {
+                for (auto* u : f_nodes) {
+                    const auto* t = u->to<IR::MAU::Table>();
+                    if (!t) continue;
+                    if (increasesDependenceCriticalPath(t, groupDominator)) {
+                        LOG2("\t\tCannot initialize at " << groupDominator->name << " because "
+                             "it would increase the critical path through the dependency graph "
+                             "(via use at " << DBPrint::Brief << u);
+                        goToNextDominator = true;
+                    }
+                }
+            }
+
+            if (doNotInitTables.count(groupDominator)) {
+                LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
+                     " Therefore, we will not initialize at that table.");
+                goToNextDominator = true;
+            }
+
+            // Only find initialization point if this group dominator is the right candidate.
+            if (!goToNextDominator) {
+                LOG2("\t\tTrying to initialize at table " << groupDominator->name << " (Stage " <<
+                        dg.min_stage(groupDominator) << ")");
+                auto darkInitPoints = getInitPointsForTable(group, c, groupDominator, *lastField,
+                        info, rv, moveCurrentToDark, initializeCurrentField, initializeFromDark,
+                        alloc);
+                if (!groupDominatorBeforeFirstUseCurrentField) {
+                    // TODO: Relax by accounting for valid uses directly from dark containers.
+                    LOG3("\t\tCannot initialize current field before its first use.");
+                } else if (!darkInitPoints) {
+                    LOG3("\t\tDid not get any initialization points; need to move up in the flow "
+                            "graph.");
+                } else if (darkInitPoints) {
+                    // Found initializations. Now set up the return vector accordingly.
+                    LOG3("\t\t" << darkInitPoints->size() << " initializations found");
+                    for (auto init : *darkInitPoints) {
+                        LOG3("\t\t  Adding to return vector: " << init);
+                        rv.push_back(init);
+                    }
+                    break;
+                }
             }
             auto newGroupDominator = domTree.getNonGatewayImmediateDominator(groupDominator,
                     groupDominator->thread());
@@ -569,6 +732,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         currentMutexSatisfied = mutexSatisfied(currentField, t);
 
     if (!lastMutexSatisfied || !currentMutexSatisfied) return boost::none;
+
     PHV::DarkInitEntry* prevSlice = nullptr;
 
     // Check if moving lastField to dark container (if required) is possible.

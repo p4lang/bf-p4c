@@ -1198,15 +1198,16 @@ bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
     le_bitrange bits = { 0, 0 };
     auto field = phv.field(ixbar_read->expr, &bits);
 
+    auto tbl = findContext<IR::MAU::Table>();
+
     int range_nibbles = 0;
-    field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
+    PHV::FieldUse use(PHV::FieldUse::READ);
+    field->foreach_byte(bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
         if ((sl.container_bit % 8) < 4)
             range_nibbles++;
         if ((sl.container_hi() % 8) > 3)
             range_nibbles++;
     });
-
-    auto tbl = findContext<IR::MAU::Table>();
 
     // FIXME: This is a limitation from Glass where glass requires all range matches to be on an
     // individual TCAM.  After looking at the hardware requirements and talking to the driver

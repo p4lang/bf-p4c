@@ -254,7 +254,8 @@ void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
             // foreach_byte over alloc_slices only works if the alloc_slice has been allocated
             // If we move PHV allocation back to after Table Placement, this will need to
             // change
-            field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
+            PHV::FieldUse use(PHV::FieldUse::READ);
+            field->foreach_byte(bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
                 cstring name = sl.container.toString();
                 int lo = (sl.container_bit / 8) * 8;
                 MatchByteKey mbk(name, lo, ixbar_multiplier, match_multiplier);

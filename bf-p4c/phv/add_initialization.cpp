@@ -1,5 +1,4 @@
 #include "bf-p4c/phv/add_initialization.h"
-#include "bf-p4c/phv/finalize_stage_allocation.h"
 
 bool MapFieldToExpr::preorder(const IR::Expression* expr) {
     if (expr->is<IR::Cast>() || expr->is<IR::Slice>())
@@ -345,12 +344,12 @@ void ComputeDependencies::summarizeDarkInits(
             }
             if (alloc.init_i.assignZeroToDestination) {
                 for (const auto* t : initTables)
-                    fieldWrites[&f][dg.min_stage(t)].insert(t);
+                    fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_bits());
             }
             if (alloc.init_i.source != nullptr) {
                 const PHV::Field* src = alloc.init_i.source->field;
                 for (const auto* t : initTables)
-                    fieldReads[src][dg.min_stage(t)].insert(t);
+                    fieldReads[src][dg.min_stage(t)][t].insert(alloc.field_bits());
             }
         });
     }
@@ -369,8 +368,8 @@ void ComputeDependencies::addDepsForDarkInitialization() {
     ordered_map<const PHV::Field*, std::vector<PHV::Field::alloc_slice>> fieldToSlicesMap;
     for (auto& f : phv) {
         LOG5("\t" << f.name);
-        fieldWrites[&f] = ordered_map<int, ordered_set<const IR::MAU::Table*>>();
-        fieldReads[&f] = ordered_map<int, ordered_set<const IR::MAU::Table*>>();
+        fieldWrites[&f] = StageFieldEntry();
+        fieldReads[&f] = StageFieldEntry();
         bool usedInParser = false, usedInDeparser = false;
         FinalizeStageAllocation::summarizeUseDefs(phv, dg, defuse.getAllDefs(f.id), fieldWrites[&f],
                 usedInParser, usedInDeparser, false /* usePhysicalStages */);
@@ -378,12 +377,12 @@ void ComputeDependencies::addDepsForDarkInitialization() {
                 usedInParser, usedInDeparser, false /* usePhysicalStages */);
         if (fieldWrites.at(&f).size() > 0) LOG5("\t  Write tables:");
         for (auto& kv : fieldWrites.at(&f))
-            for (auto* t : kv.second)
-                LOG5("\t\t" << kv.first << " : " << t->name);
+            for (auto& kv1 : kv.second)
+                LOG5("\t\t" << kv.first << " : " << kv1.first->name);
         if (fieldReads.at(&f).size() > 0) LOG5("\t Read tables:");
         for (auto& kv : fieldReads.at(&f))
-            for (auto* t : kv.second)
-                LOG5("\t\t" << kv.first << " : " << t->name);
+            for (auto& kv1 : kv.second)
+                LOG5("\t\t" << kv.first << " : " << kv1.first->name);
         f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             if (parserMin == alloc.min_stage && deparserMax == alloc.max_stage) return;
             containerToSlicesMap[alloc.container].push_back(alloc);
@@ -416,6 +415,24 @@ void ComputeDependencies::addDepsForDarkInitialization() {
     }
 }
 
+void ComputeDependencies::accountUses(
+        int min_stage,
+        int max_stage,
+        const PHV::Field::alloc_slice& alloc,
+        const StageFieldUse& uses,
+        ordered_set<const IR::MAU::Table*>& tables) const {
+    for (int stage = min_stage; stage <= max_stage; ++stage) {
+        if (!uses.at(alloc.field).count(stage)) continue;
+        for (const auto& kv : uses.at(alloc.field).at(stage)) {
+            bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
+                    [&](le_bitrange range) {
+                return alloc.field_bits().overlaps(range);
+            });
+            if (foundFieldBits) tables.insert(kv.first);
+        }
+    }
+}
+
 void ComputeDependencies::addDepsForSetsOfAllocSlices(
         const std::vector<PHV::Field::alloc_slice>& alloc_slices,
         const StageFieldUse& fieldWrites,
@@ -427,9 +444,8 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
     // C1[0] <-- f1 {1, 2}
     // C1[1] <-- f2 {1, 3}
     // C1 <-- f3 {3, 7}
-    for (unsigned i = 0; i < alloc_slices.size(); ++i) {
+    for (unsigned i = 0; i < alloc_slices.size() - 1; ++i) {
         const PHV::Field::alloc_slice& alloc = alloc_slices.at(i);
-        if (i + 1 == alloc_slices.size()) continue;
         if (!fieldWrites.count(alloc.field) && !fieldReads.count(alloc.field)) continue;
         ordered_set<const IR::MAU::Table*> allocUses;
         ordered_set<const IR::MAU::Table*> nextAllocUses;
@@ -437,21 +453,13 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
         if (fieldReads.count(alloc.field)) {
             int minStageRead = (alloc.min_stage.second == READ)
                 ? alloc.min_stage.first : (alloc.min_stage.first + 1);
-            for (auto stage = minStageRead; stage <= alloc.max_stage.first; ++stage) {
-                if (!fieldReads.at(alloc.field).count(stage)) continue;
-                for (const auto* t : fieldReads.at(alloc.field).at(stage))
-                    allocUses.insert(t);
-            }
+            accountUses(minStageRead, alloc.max_stage.first, alloc, fieldReads, allocUses);
         }
         if (fieldWrites.count(alloc.field)) {
             int maxStageWritten = (alloc.max_stage.second == WRITE)
                 ? alloc.max_stage.first
                 : (alloc.max_stage.first == 0 ? 0 : alloc.max_stage.first - 1);
-            for (auto stage = alloc.min_stage.first; stage <= maxStageWritten; ++stage) {
-                if (!fieldWrites.at(alloc.field).count(stage)) continue;
-                for (const auto* t : fieldWrites.at(alloc.field).at(stage))
-                    allocUses.insert(t);
-            }
+            accountUses(alloc.min_stage.first, maxStageWritten, alloc, fieldWrites, allocUses);
         }
         if (allocUses.size() > 0) {
             LOG5("\t\tInsert dependencies from following usedefs of " << alloc);
@@ -479,21 +487,15 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
             if (fieldReads.count(nextAlloc.field)) {
                 int minStageRead = (nextAlloc.min_stage.second == READ)
                     ? nextAlloc.min_stage.first : (nextAlloc.min_stage.first + 1);
-                for (auto stage = minStageRead; stage <= nextAlloc.max_stage.first; ++stage) {
-                    if (!fieldReads.at(nextAlloc.field).count(stage)) continue;
-                    for (const auto* t : fieldReads.at(nextAlloc.field).at(stage))
-                        nextAllocUses.insert(t);
-                }
+                accountUses(minStageRead, nextAlloc.max_stage.first, nextAlloc, fieldReads,
+                        nextAllocUses);
             }
             if (fieldWrites.count(nextAlloc.field)) {
                 int maxStageWritten = (nextAlloc.max_stage.second == WRITE)
                     ? nextAlloc.max_stage.first
                     : (nextAlloc.max_stage.first == 0 ? 0 : nextAlloc.max_stage.first - 1);
-                for (int stage = nextAlloc.min_stage.first; stage <= maxStageWritten; ++stage) {
-                    if (!fieldWrites.at(nextAlloc.field).count(stage)) continue;
-                    for (const auto* t : fieldWrites.at(nextAlloc.field).at(stage))
-                        nextAllocUses.insert(t);
-                }
+                accountUses(nextAlloc.min_stage.first, maxStageWritten, nextAlloc, fieldWrites,
+                        nextAllocUses);
             }
             for (const auto* t : nextAllocUses)
                 LOG5("\t\t\t" << t->name << " (Stage " << dg.min_stage(t) << ")");
@@ -517,6 +519,7 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
         for (const auto* fromDep : allocUses) {
             for (const auto* toDep : nextAllocUses) {
                 if (fromDep == toDep) continue;
+                LOG4("\t\tAdd dep from " << fromDep->name << " --> " << toDep->name);
                 phv.addMetadataDependency(fromDep, toDep);
                 LOG2("\t" << fromDep->name << " --> " << toDep->name);
             }

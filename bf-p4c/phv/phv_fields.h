@@ -218,6 +218,9 @@ class Field : public LiftLess<Field> {
         ordered_set<const IR::MAU::Action*> init_points;
         StageAndAccess         min_stage;
         StageAndAccess         max_stage;
+        // true if the alloc is copied from an alias destination alloc that requires an always run
+        // in the final stage.
+        bool shadowAlwaysRun = false;
 
         struct init_primitive {
             bool empty = true;
@@ -569,6 +572,22 @@ class Field : public LiftLess<Field> {
     void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
         foreach_byte(StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
     }
+
+    /// @returns a vector of alloc_slices, such that multiple alloc_slices within the same byte of
+    /// the same container are combined into the same new alloc_slice. This is necessary because
+    /// input crossbar allocation combines multiple slices of the same field in the same container
+    /// into a single Use object.
+    const std::vector<PHV::Field::alloc_slice> get_combined_alloc_bytes(
+            const PHV::AllocContext* ctxt,
+            const PHV::FieldUse* use) const;
+
+    /// @returns a vector of alloc_slices, such that multiple alloc_slices within the same container
+    /// are combined into the same new alloc_slice, if the ranges of the two alloc_slices are
+    /// contiguous. This is necessary because parser validation checks has this invariant.
+    const std::vector<PHV::Field::alloc_slice> get_combined_alloc_slices(
+            le_bitrange bits,
+            const PHV::AllocContext* ctxt,
+            const PHV::FieldUse* use) const;
 
     /// Apply @fn to each alloc_slice within the specified @ctxt to
     /// which @this has been allocated (if any).

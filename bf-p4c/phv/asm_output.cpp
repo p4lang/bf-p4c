@@ -109,6 +109,12 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
         if (kv.first.lo > 0 || kv.first.size() < field->size)
             out << '.' << kv.first.lo << '-' << kv.first.hi;
         out << ": ";
+        std::sort(kv.second.begin(), kv.second.end(),
+                [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
+            if (lhs.min_stage.first != rhs.min_stage.first)
+                return lhs.min_stage.first < rhs.min_stage.first;
+            return lhs.min_stage.second < rhs.min_stage.second;
+        });
         for (auto& alloc : kv.second) {
             ++alloc_num;
             int min_stage, max_stage;

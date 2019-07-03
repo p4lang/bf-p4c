@@ -132,6 +132,9 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-init-metadata", nullptr,
         [this](const char *) { disable_init_metadata = true; return true; },
         "Disable metadata initialization");
+    registerOption("--disable-dark-allocation", nullptr,
+        [this](const char *) { disable_dark_allocation = true; return true; },
+        "Disable allocation to dark containers");
     registerOption("--disable-parser-state-merging", nullptr,
         [this](const char *) { disable_parser_state_merging = true; return true; },
         "Disable parser state merging");

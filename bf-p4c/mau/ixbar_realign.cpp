@@ -25,7 +25,6 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
 void IXBarVerify::verify_format(const IXBar::Use &use) {
     BUG_CHECK(currentTable, "No table context found for input crossbar use");
     for (auto &byte : use.use) {
-        LOG4("Byte: " << byte);
         bitvec byte_use;
         PHV::Container container;
         size_t mod_4_offset = -1;
@@ -35,10 +34,11 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
             bool byte_found = false;
             bool single_byte = true;
             PHV::FieldUse use(PHV::FieldUse::READ);
-            field->foreach_byte(currentTable, &use, [&](const PHV::Field::alloc_slice &alloc) {
+            auto slicesToProcess =
+                field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use);
+            for (const auto& alloc : slicesToProcess) {
                 if (fi.lo < alloc.field_bit || fi.hi > alloc.field_hi())
-                    return;
-
+                    continue;
                 size_t potential_mod4_offset = alloc.container_bit / 8;
                 if (!container_set) {
                     container = alloc.container;
@@ -46,32 +46,30 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
                 } else if (container != alloc.container
                            || mod_4_offset != potential_mod4_offset) {
                     single_byte = false;
-                    return;
+                    continue;
                 }
 
                 int container_start = (alloc.container_bit % 8) + fi.lo - alloc.field_bit;
                 if (container_start != fi.cont_lo)
-                    return;
+                    continue;
                 byte_found = true;
                 BUG_CHECK((byte_use & fi.cont_loc()).empty(), "Overlapping field bit "
                           "information on an input xbar byte: %s", byte);
                 byte_use |= fi.cont_loc();
-            });
+            }
             if (!byte_found || !single_byte)
                 throw IXBar::failure(-1, byte.loc.group);
         }
 
         if (!use.ternary) {
-            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset) {
+            if ((byte.loc.byte % (container.size() / 8)) != mod_4_offset)
                 throw IXBar::failure(-1, byte.loc.group);
-            }
         } else {
             size_t byte_offset = byte.loc.group * IXBar::TERNARY_BYTES_PER_GROUP;
             byte_offset += (byte.loc.group + 1) / 2;
             byte_offset += byte.loc.byte;
-            if ((byte_offset % (container.size() / 8)) != mod_4_offset) {
+            if ((byte_offset % (container.size() / 8)) != mod_4_offset)
                 throw IXBar::failure(-1, byte.loc.group);
-            }
         }
     }
 }

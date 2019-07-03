@@ -35,6 +35,7 @@ class BFN_Options : public CompilerOptions {
     bool egress_intr_md_opt = false;
     bool disable_direct_exit = false;
     bool disable_long_branch = false;
+    bool disable_dark_allocation = false;
     std::set<cstring> disabled_pragmas;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source

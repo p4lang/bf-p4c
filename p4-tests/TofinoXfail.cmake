@@ -197,11 +197,14 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
+  switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1652.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+  ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -221,14 +224,17 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: The stage specified for .* could not place it until stage"
-  extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4  #P4C-1123
+  "error.*Ran out of parser match registers for"
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
-  switch_ent_fin_postcard
-  switch_generic_int_leaf
   switch_8.7_generic_int_leaf
+  switch_generic_int_leaf
+)
+
+# P4C-1400, P4C-1123
+p4c_add_xfail_reason("tofino"
+  "error: constant value.*too large for stateful alu"
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -246,6 +252,11 @@ p4c_add_xfail_reason("tofino"
   "error.*Power worst case estimated budget exceeded by*"
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "error.*Field is extracted in the parser into multiple containers"
+  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "Did not receive pkt on 2"
@@ -907,12 +918,12 @@ p4c_add_xfail_reason("tofino"
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error.*condition too complex|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -925,11 +936,6 @@ p4c_add_xfail_reason("tofino"
   # new xfail after flexible PR
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "error.*Field is extracted in the parser into multiple containers"
-  extensions/p4_tests/p4_16/customer/arista/p4c-1494.p4
-)
 
 # P4C-1375
 p4c_add_xfail_reason("tofino"
@@ -973,11 +979,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Expected 2 operands for execute"
   ../glass/testsuite/p4_tests/mau/test_config_411_neg_meter_no_idx.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: The stage specified for table .* is .*, but we could not place it until stage .*"
-  ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
   )
 
 # Valid XFAIL
@@ -1150,13 +1151,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1397
 p4c_add_xfail_reason("tofino"
   "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b|./p4c TIMEOUT"
-  )
-
-# P4C-1400
-p4c_add_xfail_reason("tofino"
-  "The stage specified for table .* is .*, but we could not place it until stage .*"
-  ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
   )
 
 # Valid XFAIL
@@ -1448,4 +1442,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Parser match register not allocated for .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
+)
+
+# P4C-1862
+p4c_add_xfail_reason("tofino"
+  "AttributeError.*Client instance has no attribute"
+  extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )

@@ -202,8 +202,10 @@ class DarkLiveRange : public Inspector {
         fieldToUnitUseMap;
     ordered_set<const PHV::Field*> doNotInitToDark;
     ordered_set<const IR::MAU::Action*> doNotInitActions;
+    ordered_set<const IR::MAU::Table*> doNotInitTables;
 
     profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::MAU::Table* tbl) override;
     bool preorder(const IR::MAU::Action* act) override;
     void end_apply() override;
 
@@ -217,10 +219,16 @@ class DarkLiveRange : public Inspector {
             const ordered_set<PHV::AllocSlice>& fields,
             const int stage) const;
 
+    bool validateLiveness(const OrderedFieldSummary& slices) const;
+
     const IR::MAU::Table* getGroupDominator(
             const PHV::Field* f,
             const ordered_set<const IR::BFN::Unit*>& f_units,
             gress_t gress) const;
+
+    bool increasesDependenceCriticalPath(
+            const IR::MAU::Table* use,
+            const IR::MAU::Table* init) const;
 
     boost::optional<PHV::Allocation::ActionSet> getInitActions(
             const PHV::Container& c,
@@ -291,6 +299,7 @@ class DarkLiveRange : public Inspector {
         const;
 
     bool isGroupDominatorEarlierThanFirstUseOfCurrentField(
+            const OrderedFieldInfo& currentField,
             const ordered_set<const IR::BFN::Unit*>& doms,
             const IR::MAU::Table* groupDominator) const;
 

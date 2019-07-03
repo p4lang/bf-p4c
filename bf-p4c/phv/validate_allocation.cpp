@@ -146,11 +146,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 if (!field.metadata && alreadyAssignedContainer)
                     for (auto& slice2 : allocations[slice.container])
                         if (slice2.container_bits().overlaps(slice.container_bits()) &&
-                                !slice2.isLiveRangeDisjoint(slice))
+                                !slice2.isLiveRangeDisjoint(slice) &&
+                                !phv.isFieldMutex(slice.field, slice2.field))
                             foundOverlappingSlices = true;
                 ERROR_CHECK(!foundOverlappingSlices,
-                            "Multiple slices in the same container are allocated "
-                            "to field %1%", cstring::to_cstring(field));
+                            "Multiple slices in the same container %2% are allocated "
+                            "to field %1%", cstring::to_cstring(field), slice.container);
             }
 
             assignedContainers[phvSpec.containerToId(slice.container)] = true;
@@ -637,7 +638,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             return;
         }
 
-        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
+        auto mergedFieldSlices = field->get_combined_alloc_slices(bits,
+                PHV::AllocContext::PARSER, &use);
+        for (auto& alloc : mergedFieldSlices) {
             nw_bitrange fieldSlice =
               alloc.field_bits().toOrder<Endian::Network>(field->size);
             nw_bitrange containerSlice =
@@ -661,7 +665,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                         "Field is extracted in the parser into multiple "
                         "containers, but the container slices after the first "
                         "aren't byte aligned: %1%", cstring::to_cstring(field));
-        });
+        }
     });
 
     if (throwPrivatizeException)

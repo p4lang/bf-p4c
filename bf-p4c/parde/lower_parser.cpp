@@ -180,7 +180,9 @@ struct ExtractSimplifier {
     }
 
     void add(const IR::BFN::ExtractPhv* extract) {
-        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field);
+        PHV::FieldUse use(PHV::FieldUse::WRITE);
+        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field,
+                PHV::AllocContext::PARSER, &use);
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
             return;
@@ -482,14 +484,15 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
         if (field->is_ignore_alloc())
             continue;
 
-        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+        PHV::FieldUse use(PHV::FieldUse::READ);
+        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field,
+                PHV::AllocContext::DEPARSER, &use);
 
         BUG_CHECK(!slices.empty(),
                   "Emitted field didn't receive a PHV allocation: %1%",
                   fieldRef->field);
 
         for (auto& slice : boost::adaptors::reverse(slices)) {
-            if (!slice.isUsedDeparser()) continue;
             BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
                       "an invalid PHV container: %1%", fieldRef->field);
 
@@ -759,7 +762,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // FIXME(zma) this code could use some cleanup, what a mess ...
         if (dest) {
             auto f = phv.field(dest->field);
-            slices = phv.get_alloc(f, nullptr);  // XXX(zma)
+            PHV::FieldUse use(PHV::FieldUse::WRITE);
+            slices = phv.get_alloc(f, nullptr, PHV::AllocContext::PARSER, &use);  // XXX(zma)
             BUG_CHECK(slices.size() == 1, "checksum error %1% is somehow allocated to "
                "multiple containers?", dest->field);
         }
@@ -1046,7 +1050,9 @@ computeControlPlaneFormat(const PhvInfo& phv,
     // FieldPacking that reflects its structure, with padding added where
     // necessary to reflect gaps between the fields.
     for (auto* fieldRef : fields) {
-        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field);
+        PHV::FieldUse use(PHV::FieldUse::READ);
+        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field,
+                PHV::AllocContext::DEPARSER, &use);
 
         // padding in digest list does not need phv allocation
         auto field = phv.field(fieldRef->field);
@@ -1301,7 +1307,9 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
     std::map<PHV::Container, unsigned> containerToSwap;
     for (auto &sourceToOffset : emitChecksum->source_index_to_offset) {
         auto* phv_field = phv.field(emitChecksum->sources[sourceToOffset.first]->field);
-        std::vector<alloc_slice> slices = phv.get_alloc(phv_field);
+        PHV::FieldUse use(PHV::FieldUse::READ);
+        std::vector<alloc_slice> slices = phv.get_alloc(phv_field, nullptr,
+                PHV::AllocContext::DEPARSER, &use);
         int offset = sourceToOffset.second;
         for (auto& slice : boost::adaptors::reverse(slices)) {
             unsigned swap = 0;
