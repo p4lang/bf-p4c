@@ -487,85 +487,101 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     // split the field in bytes. For normal match entire slice can be used
     // directly.
     auto *p = find_p4_param(name, "range");
-    unsigned field_bytes = p ? (field_width + 7)/8 : 1;
-    for (unsigned i = 0; i < field_bytes; i++) {
+    if (p) {
+        int lsb_lo = lsb_offset - TCAM_MATCH_BITS_START;
+        int lsb_hi = lsb_lo + field_width - 1;
+        /**
+         * For each byte of range match, the range match happens over either the lower
+         * nibble or higher nibble given the encoding scheme.  The nibble is transformed into
+         * an encoding over a byte.  This breaks up the range over each match nibble on a byte
+         * by byte boundary, and outputs the JSON for that nibble
+         *
+         * @seealso bf-p4c/mau/table_format.cpp comments on range
+         * @seealso bf-p4c/mau/resource_estimate.cpp comments on range
+         *
+         * The range context JSON encoding is the following:
+         *     - The lsb_mem_word_offset is always the beginning of the byte (as the encoding
+         *       takes the whole byte)
+         *     - The width is the width of the field in the nibble (up to 4 bits)
+         *     - The nibble_offset is where in the nibble the key starts in the ixbar byte
+         *
+         * A "is_duplicate" nibble is provided.The driver uses this for not double counting,
+         * maybe.  Henry and I both agree that is really doesn't make any sense and can be
+         * deleted, but remains in there now
+         */
+        for (int bit = (lsb_offset / 8) * 8; bit <= (lsb_hi / 8) * 8; bit += 8) {
+            int lsb_lo_bit_in_byte = std::max(lsb_lo, bit) % 8;
+            int lsb_hi_bit_in_byte = std::min(lsb_hi, bit + 7) % 8;
+            auto dirtcam_mode = get_dirtcam_mode(index, (bit / 8));
+            BUG_CHECK(dirtcam_mode == DIRTCAM_4B_LO || dirtcam_mode == DIRTCAM_4B_HI);
+            bitvec nibbles_of_range;
+            nibbles_of_range.setbit(lsb_lo_bit_in_byte / 4);
+            nibbles_of_range.setbit(lsb_hi_bit_in_byte / 4);
+            int range_start_bit = start_bit + slice_offset;
+            int range_width;
+            int nibble_offset;
+
+            // Determine which section of the byte based on which nibble is provided
+            if (dirtcam_mode == DIRTCAM_4B_LO) {
+                BUG_CHECK(nibbles_of_range.getbit(0));
+                // Add the difference from the first bit of this byte and the lowest bit
+                range_start_bit += bit + lsb_lo_bit_in_byte - lsb_lo;
+                range_width = std::min(static_cast<int>(field_width), 4 - lsb_lo_bit_in_byte);
+                nibble_offset = lsb_lo_bit_in_byte % 4;
+            } else {
+                BUG_CHECK(nibbles_of_range.getbit(1));
+                // Because the bit starts at the upper nibble, the start bit is either the
+                // beginning of the nibble or more
+                range_start_bit += bit + std::max(4, lsb_lo_bit_in_byte) - lsb_lo;
+                range_width = std::min(static_cast<int>(field_width), lsb_hi_bit_in_byte - 3);
+                nibble_offset = std::max(4, lsb_lo_bit_in_byte) % 4;
+            }
+
+            json::map entry;
+            entry["field_name"] = fix_name;
+            entry["lsb_mem_word_idx"] = lsb_idx;
+            entry["msb_mem_word_idx"] = msb_idx;
+            entry["source"] = "range";
+            // Shift start bit based on which nibble is used in range
+            entry["start_bit"] = range_start_bit;
+            entry["field_width"] = range_width;
+            entry["lsb_mem_word_offset"] = bit + TCAM_MATCH_BITS_START;
+            json::map &entry_range = entry["range"];
+            entry_range["type"] = 4;
+            entry_range["is_duplicate"] = false;
+            entry_range["nibble_offset"] = nibble_offset;
+            out.push_back(std::move(entry));
+
+            // Adding the duplicate entry
+            json::map entry_dup;
+            entry_dup["field_name"] = fix_name;
+            entry_dup["lsb_mem_word_idx"] = lsb_idx;
+            entry_dup["msb_mem_word_idx"] = msb_idx;
+            entry_dup["source"] = "range";
+            entry_dup["lsb_mem_word_offset"] = bit + TCAM_MATCH_BITS_START + 4;
+            entry_dup["start_bit"] = range_start_bit;
+            entry_dup["field_width"] = range_width;
+            json::map &entry_dup_range = entry_dup["range"];
+            entry_dup_range["type"] = 4;
+            entry_dup_range["is_duplicate"] = true;
+            entry_dup_range["nibble_offset"] = nibble_offset;
+            out.push_back(std::move(entry_dup));
+            tcam_bits.setrange(bit + TCAM_MATCH_BITS_START, 8);
+        }
+
+    } else {
         json::map entry;
         auto entry_pad_size = field_width;
-        auto lsb_mem_word_offset = lsb_offset;
         entry["field_name"] = fix_name;
-        entry["lsb_mem_word_offset"] = lsb_mem_word_offset;
+        entry["lsb_mem_word_offset"] = lsb_offset;
         entry["lsb_mem_word_idx"] = lsb_idx;
         entry["msb_mem_word_idx"] = msb_idx;
         entry["source"] = source;
         entry["start_bit"] = start_bit + slice_offset;
         entry["field_width"] = field_width;
-        auto dirtcam_mode = (name != "--unused--") ?
-            get_dirtcam_mode(index, (lsb_offset + i*8)/8) : TCAM_NORMAL;
-        // If field is a range match output the 'range' node only for 4bit hi/lo
-        // encodings (dirtcam = 2 (4bit lo), dirtcam = 3 (4bit hi)
-        if (p && ((dirtcam_mode == DIRTCAM_4B_LO) ||
-                    (dirtcam_mode == DIRTCAM_4B_HI))) {
-            // Range entries are broken into 4 bit nibbles but can be < 4 bits
-            // depending on how they eventually get allocated within a
-            // container. In such cases the field/field slice can
-            // be located anywhere in those 4 bits. We specify a nibble_offset
-            // to indicate where the field starts in the nibble, set the
-            // lsb_mem_word_offset to start of the nibble and ensure the
-            // field_width denotes the width of the field/slice in the nibble.
-            // While generating padding however we treat the entire nibble as a
-            // field and do not pad any bits within the nibble when they are
-            // unused by the field
-            bool has_nibble_offset = (field_width < 4)
-                || (((nibble_offset > 0) && (dirtcam_mode == DIRTCAM_4B_LO)));
-            auto range_field_width = has_nibble_offset ?
-                field_width > 4 ? 4 - nibble_offset : field_width : 4;
-            entry_pad_size = 4;
-            auto entry_start_bit = i * 8 + start_bit + (dirtcam_mode == DIRTCAM_4B_HI) * 4 + slice_offset;
-            lsb_offset = has_nibble_offset ? lsb_offset - nibble_offset : lsb_offset;
-            lsb_mem_word_offset = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_HI);
-            auto lsb_mem_word_offset_dup = lsb_offset + i*8 + 4*(dirtcam_mode == DIRTCAM_4B_LO);
-            if (!has_nibble_offset && nibble_offset > 0) {
-                entry_start_bit = nibble_offset <= 4 ? 4 - nibble_offset : 0;
-                lsb_mem_word_offset -= nibble_offset;
-                lsb_mem_word_offset_dup -= nibble_offset;
-            }
-
-            // Range Entry encoding
-            entry["source"] = "range";
-            // Shift start bit based on which nibble is used in range
-            entry["start_bit"] = entry_start_bit;
-            entry["field_width"] = range_field_width;
-            entry["lsb_mem_word_offset"] = lsb_mem_word_offset;
-            json::map &entry_range = entry["range"];
-            entry_range["type"] = 4;
-            entry_range["is_duplicate"] = false;
-            if (has_nibble_offset)
-                entry_range["nibble_offset"] = nibble_offset;
-
-            // Range Entry Duplicate encoding
-            // Add the duplicate entry as well. It is unclear why this entry is
-            // needed by the driver, as most of the information is duplicated
-            // and driver should only need to know where to place the actual
-            // nibble. But currently we see driver crash in the absence of this
-            // field in some situations, hence we add it here.
-            json::map entry_dup;
-            entry_dup["field_name"] = fix_name;
-            entry_dup["lsb_mem_word_offset"] = lsb_mem_word_offset_dup;
-            entry_dup["lsb_mem_word_idx"] = lsb_idx;
-            entry_dup["msb_mem_word_idx"] = msb_idx;
-            entry_dup["source"] = "range";
-            entry_dup["start_bit"] = entry_start_bit;
-            entry_dup["field_width"] = range_field_width;
-            json::map &entry_dup_range = entry_dup["range"];
-            entry_dup_range["type"] = 4;
-            entry_dup_range["is_duplicate"] = true;
-            if (has_nibble_offset)
-                entry_dup_range["nibble_offset"] = nibble_offset;
-            tcam_bits.setrange(lsb_mem_word_offset_dup, entry_pad_size);
-            out.push_back(std::move(entry_dup));
-        }
-        tcam_bits.setrange(lsb_mem_word_offset, entry_pad_size);
-        out.push_back(std::move(entry)); }
+        out.push_back(std::move(entry));
+        tcam_bits.setrange(lsb_offset, field_width);
+    }
 
 }
 
