@@ -9,11 +9,12 @@
 #include "lib/log.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/resolve_parser_values.h"
 #include "bf-p4c/parde/gen_deparser.h"
-#include "bf-p4c/common/utils.h"
 
 namespace BFN {
 
@@ -349,7 +350,7 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
     IR::BFN::ParserState* startState = getState(getStateName("start"));
     cstring pipeName = parser->pipeName;
     BlockInfoMapping* binfo = &arch->toBlockInfo;
-    if (binfo && (arch->hasMultipleParsers || arch->hasMultiplePipes)) {
+    if (binfo) {
         auto bitr = binfo->begin();
         while (bitr != binfo->end()) {
             auto b = *bitr;
@@ -375,8 +376,7 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
         // in the pipe name
         if ((BackendOptions().arch != "v1model") && (!arch->hasMultipleParsers))
             phase0->tableName = parser->name + "." + phase0->tableName;
-        if (!pipeName.isNullOrEmpty())
-            phase0->tableName = pipeName + "." + phase0->tableName;
+        phase0->tableName = gen_p4_name(pipeName, phase0->tableName);
     }
     return new IR::BFN::Parser(parser->thread, startState, parser->name,
             pipeName, phase0, parser->portmap);

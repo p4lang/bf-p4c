@@ -920,6 +920,8 @@ struct ReplaceParserIR : public Transform {
         // ingress_parser<n> and egress_parser<n>
         static std::vector<cstring> gressName = {"ingress", "egress", "ghost"};
         cstring parserName = parser->name.toString();
+        if (!parser->pipeName.isNullOrEmpty())
+            parserName = parser->pipeName + "." + parserName;
         auto pipe = findOrigCtxt<IR::BFN::Pipe>();
         auto parsers = pipe->thread[parser->gress].parsers;
         auto it = std::find_if(parsers.begin(), parsers.end(),

@@ -501,6 +501,7 @@ p4c_add_xfail_reason("tofino"
   "Tofino does not support conditional checksum verification"
   testdata/p4_16_samples/issue1739-bmv2.p4
   testdata/p4_16_samples/v1model-special-ops-bmv2.p4
+  testdata/p4_16_samples/issue1739-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1077,6 +1078,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-837/comp_837_2.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
+  testdata/p4_16_samples/issue1768-bmv2.p4
   # EliminateTypeDef pass does not work properly?
   testdata/p4_16_samples/issue677-bmv2.p4
   # We fail to translate `generate_digest()`.

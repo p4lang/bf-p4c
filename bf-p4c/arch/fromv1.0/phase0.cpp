@@ -734,7 +734,6 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     auto size = Device::numMaxChannels();
     cstring tableName = (parser->pipeName.isNullOrEmpty()) ?
                         parser->name.toString() : parser->pipeName;
-    // tableName = tableName + ".$PORT_METADATA";
     tableName = "$PORT_METADATA";
     auto actionName = "set_port_metadata";
 

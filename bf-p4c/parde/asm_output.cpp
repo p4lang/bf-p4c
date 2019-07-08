@@ -1,11 +1,13 @@
 #include <algorithm>
+
+#include "lib/cstring.h"
+#include "lib/indent.h"
+
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/phase0.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
-#include "lib/cstring.h"
-#include "lib/indent.h"
 
 std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
     if (p0 == nullptr) return out;

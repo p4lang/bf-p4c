@@ -141,3 +141,15 @@ safe_vector<Slice> Slice::split(const safe_vector<Slice> &vec,
     }
     return rv;
 }
+
+// Pipe prefixes are enabled by default only for P4-16 and TNA/T2NA. For
+// backward compatibility with p4-14 (switch and other programs) we disable this
+// generation for p4-14 and v1model programs
+cstring gen_p4_name(const cstring pipe, const cstring name) {
+    auto p4Name = cstring::to_cstring(canon_name(name));
+    if ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14)
+        || (BackendOptions().arch == "v1model"))
+        return p4Name;
+    p4Name = (pipe == "") ? p4Name : pipe + "." + p4Name;
+    return p4Name;
+}

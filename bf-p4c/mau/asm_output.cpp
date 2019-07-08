@@ -1,12 +1,13 @@
-#include "bf-p4c/mau/asm_output.h"
 #include <regex>
 #include <string>
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
+#include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/phase0.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "lib/algorithm.h"
@@ -2513,7 +2514,10 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
 
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
-    out << indent << "p4: { name: " << canon_name(tbl->match_table->externalName());
+    auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
+    auto pipeName = pipe->name.toString();
+    p4Name = gen_p4_name(pipeName, p4Name);
+    out << indent << "p4: { name: " << p4Name;
     if (auto k = tbl->match_table->getConstantProperty("size"))
         out << ", size: " << k->asInt();
     if (tbl->layout.pre_classifier || tbl->layout.alpm)

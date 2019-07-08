@@ -97,7 +97,7 @@ parser IgCPUParser2(
 }
 
 parser EgCPUParser(
-    packet_in pkt, 
+    packet_in pkt,
     out headers_t hdr,
     out user_metadata_t md,
     out egress_intrinsic_metadata_t ig_intr_md) {
@@ -165,21 +165,22 @@ control SwitchEgressDeparser(
 }
 
 @default_portmap(17, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
-IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
+IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipeA;
 
 @default_portmap({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17})
-EgressParsers(EgCPUParser()) eg_pipe0;
+EgressParsers(EgCPUParser()) eg_pipeA;
 
 @default_portmap({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17})
-IngressParsers(IgCPUParser2()) ig_pipe1;
+IngressParsers(IgCPUParser2()) ig_pipeB;
 
 @default_portmap({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17})
-EgressParsers(EgCPUParser()) eg_pipe1;
+EgressParsers(EgCPUParser()) eg_pipeB;
 
-MultiParserPipeline(ig_pipe0, SwitchIngress(), SwitchIngressDeparser(),
-         	    eg_pipe0, SwitchEgress(), SwitchEgressDeparser()) pipe0;
+// Using pipeA & pipeB to differentiate from arch names pipe0 & pipe1
+MultiParserPipeline(ig_pipeA, SwitchIngress(), SwitchIngressDeparser(),
+         	    eg_pipeA, SwitchEgress(), SwitchEgressDeparser()) pipeA;
 
-MultiParserPipeline(ig_pipe1, SwitchIngress(), SwitchIngressDeparser(),
-         	    eg_pipe1, SwitchEgress(), SwitchEgressDeparser()) pipe1;
+MultiParserPipeline(ig_pipeB, SwitchIngress(), SwitchIngressDeparser(),
+         	    eg_pipeB, SwitchEgress(), SwitchEgressDeparser()) pipeB;
 
-MultiParserSwitch(pipe0, pipe1) main;
+MultiParserSwitch(pipeA, pipeB) main;

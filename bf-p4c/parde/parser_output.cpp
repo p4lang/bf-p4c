@@ -1,14 +1,15 @@
 #include <boost/optional/optional_io.hpp>
 
+#include "lib/match.h"
+#include "lib/log.h"
+#include "lib/range.h"
+
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/autoindent.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "lib/match.h"
-#include "lib/log.h"
-#include "lib/range.h"
 
 namespace {
 
@@ -339,3 +340,4 @@ std::ostream& operator<<(std::ostream& out, const ParserAsmOutput& parserOut) {
     }
     return out;
 }
+

@@ -7,6 +7,7 @@
 #include "lib/stringref.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 StringRef trim_asm_name(StringRef name);
 
@@ -30,7 +31,7 @@ class Slice {
 
  public:
     Slice() : field(0), lo(-1), hi(-2) {}   // hi = -2 to make width() = 0
-    Slice(const PHV::Field *f) : field(f), lo(0), hi(f->size-1) {}
+    explicit Slice(const PHV::Field *f) : field(f), lo(0), hi(f->size-1) {}
     Slice(const PHV::Field *f, int bit) : field(f), lo(bit), hi(bit) {}
     Slice(const PHV::Field *f, int l, int h) : field(f), lo(l), hi(h) {}
     Slice(const PHV::Field *f, le_bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
@@ -48,7 +49,7 @@ class Slice {
             field->name, lo, field->size);
         if (lo < 0) lo = 0;
         if (hi >= field->size) hi = field->size-1; }
-    Slice(PHV::Container r) : field(0), reg(r), lo(0), hi(r.size()-1) {}
+    explicit Slice(PHV::Container r) : field(0), reg(r), lo(0), hi(r.size()-1) {}
     Slice(PHV::Container r, int bit) : field(0), reg(r), lo(bit), hi(bit) {}
     Slice(PHV::Container r, int lo, int hi) : field(0), reg(r), lo(lo), hi(hi) {}
     Slice(const Slice &s, int bit)
@@ -103,6 +104,12 @@ class Slice {
     }
 };
 
+// Generate the p4 name which gets eventually output in the context.json. In
+// multipipe scenarios (P4-16) we want the table names to be fully qualified
+// i.e. prefixed with pipe names. This is required to match the names generated
+// in bf-rt.json for bf runtime.
+cstring gen_p4_name(const cstring pipe, const cstring name);
+
 /* The rest of this is pretty generic formatting stuff -- should be in lib somewhere? */
 
 template<class K, class V> std::ostream &operator<<(std::ostream &out, const std::map<K, V> &m) {
@@ -154,6 +161,5 @@ template<class T> inline auto operator<<(std::ostream &out, const T *obj) ->
     else
         out << "<null>";
     return out; }
-
 
 #endif /* BF_P4C_COMMON_ASM_OUTPUT_H_ */

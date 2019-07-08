@@ -32,6 +32,7 @@ show_help () {
     echo >&2 "   --p4c-cpp-flags <x>    add <x> to CPPFLAGS for p4c build"
     echo >&2 "   --small-config         only builds the compiler and testing"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
+    echo >&2 "   --disable-unified      disable unified build"
 }
 
 

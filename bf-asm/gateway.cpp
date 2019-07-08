@@ -559,7 +559,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     LOG3("### Gateway table " << gwName << " gen_tbl_cfg");
     json::map gTable;
     gTable["direction"] = P4Table::direction_name(gress);
-    gTable["attached_to"] = match_table ? match_table->name() : "-" ;
+    gTable["attached_to"] = match_table ? match_table->p4_name() : "-" ;
     gTable["handle"] = gateway_handle++;
     gTable["name"] = gwName;
     gTable["table_type"] = "condition";

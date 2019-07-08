@@ -17,6 +17,17 @@ struct ParserAsmOutput {
     std::vector<const IR::BFN::LoweredParser*> parsers;
 };
 
+/// Helper that can generate phase0 assembly and write it to an output stream.
+struct Phase0AsmOutput {
+    const IR::BFN::Pipe *pipe;
+    const IR::BFN::Phase0 *phase0;
+    Phase0AsmOutput(const IR::BFN::Pipe* pipe, const IR::BFN::Phase0* phase0)
+        : pipe(pipe), phase0(phase0) {}
+
+ private:
+    friend std::ostream& operator<<(std::ostream&, const Phase0AsmOutput&);
+};
+
 /// Helper that can generate deparser assembly and write it to an output stream.
 struct DeparserAsmOutput {
     DeparserAsmOutput(const IR::BFN::Pipe* pipe, const PhvInfo &phv, const ClotInfo &clot,

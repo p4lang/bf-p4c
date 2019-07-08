@@ -365,8 +365,8 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/lower_parser.cpp
   parde/merge_parser_state.cpp
   parde/parser_output.cpp
-  parde/infer_payload_offset.cpp
   parde/phase0.cpp
+  parde/infer_payload_offset.cpp
   parde/resolve_parser_values.cpp
   parde/split_parser_state.cpp
   parde/p4i/gen_parser_json.cpp

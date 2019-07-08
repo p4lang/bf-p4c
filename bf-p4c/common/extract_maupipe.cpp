@@ -1401,20 +1401,28 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
         ::error("Multiple main declarations in the program");
         return nullptr; }
     auto decl = mainDecls->at(0);
-    auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(index)->expression;
-    if (!expr->is<IR::PathExpression>()) {
-        ::error("Anonymous instantiation of Pipeline block in 'main' is not supported");
-        return nullptr; }
-    auto path = expr->to<IR::PathExpression>();
-    auto name = path->path->name;
-    return name;
+    if (auto di = decl->to<IR::Declaration_Instance>()) {
+        if (auto expr = di->arguments->at(index)->expression) {
+            if (auto path = expr->to<IR::PathExpression>()) {
+                auto name = path->path->name;
+                return name;
+            }
+        }
+    }
+    // If no declaration found (anonymous instantiation) we get the pipe name
+    // from arch definition
+    auto main = toplevel->getMain();
+    auto cparams = main->getConstructorParameters();
+    auto idxParam = cparams->getParameter(index);
+    BUG_CHECK(idxParam, "No constructor parameter found for index %d in main", index);
+    return idxParam->name;
 }
 
 void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
     auto main = toplevel->getMain();
     DeclarationConversions converted;
     StatefulSelectors stateful_selectors;
-    toplevel->getMain()->apply(*arch);
+    main->apply(*arch);
 
     auto bindings = new ParamBinding(typeMap,
             options.langVersion == CompilerOptions::FrontendVersion::P4_14);

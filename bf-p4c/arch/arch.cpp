@@ -35,17 +35,32 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
 // parse tna pipeline with single parser.
 void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned index) {
     auto thread_i = new IR::BFN::P4Thread();
-    auto pipe = block->node->to<IR::Declaration_Instance>()->Name();
     bool isMultiParserProgram = (block->type->name == "MultiParserPipeline");
+    cstring pipe = "";
+    auto decl = block->node->to<IR::Declaration_Instance>();
+    // If no declaration found (anonymous instantiation) get the pipe name from arch definition
+    if (decl) {
+        pipe = decl->Name();
+    } else {
+        auto cparams = mainBlock->getConstructorParameters();
+        auto idxParam = cparams->getParameter(index);
+        pipe = idxParam->name;
+    }
+    BUG_CHECK(!pipe.isNullOrEmpty(),
+        "Cannot determine pipe name for pipe block at index %d", index);
+
     if (isMultiParserProgram) {
-        auto ingress_parser = block->getParameterValue("ig_prsr");
-        auto parsers = ingress_parser->to<IR::PackageBlock>();
-        parseMultipleParserInstances(parsers, pipe, thread_i, INGRESS);
+        auto ingress_parsers = block->getParameterValue("ig_prsr");
+        BUG_CHECK(ingress_parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+        parseMultipleParserInstances(ingress_parsers->to<IR::PackageBlock>(),
+                                                        pipe, thread_i, INGRESS);
     } else {
         auto ingress_parser = block->getParameterValue("ingress_parser");
         BlockInfo ip(index, pipe, INGRESS, PARSER);
+        BUG_CHECK(ingress_parser->is<IR::ParserBlock>(), "Expected ParserBlock");
         thread_i->parsers.push_back(ingress_parser->to<IR::ParserBlock>()->container);
-        toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, ip); }
+        toBlockInfo.emplace(ingress_parser->to<IR::ParserBlock>()->container, ip);
+    }
 
     auto ingress = block->getParameterValue("ingress");
     BlockInfo ig(index, pipe, INGRESS, MAU);
@@ -90,7 +105,6 @@ void ParseTna::parseSingleParserPipeline(const IR::PackageBlock* block, unsigned
         toBlockInfo.emplace(ghost_cb, BlockInfo(index, pipe, GHOST, MAU));
     }
 }
-
 
 void ParseTna::parsePortMapAnnotation(const IR::PackageBlock* block, DefaultPortMap& map) {
     if (auto anno = block->node->getAnnotation("default_portmap")) {
@@ -137,6 +151,7 @@ void ParseTna::parseMultipleParserInstances(const IR::PackageBlock* block,
 }
 
 bool ParseTna::preorder(const IR::PackageBlock* block) {
+    mainBlock = block;
     auto pos = 0;
     for (auto param : block->constantValue) {
         if (!param.second) continue;
@@ -182,13 +197,13 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) 
         auto rv = new IR::BFN::TnaControl(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo.gress);
+                node->body, {}, binfo.gress, binfo.pipe);
         return rv;
     } else if (binfo.type == ArchBlock_t::DEPARSER) {
         auto rv = new IR::BFN::TnaDeparser(
                 node->srcInfo, node->name, node->type,
                 node->constructorParams, node->controlLocals,
-                node->body, {}, binfo.gress);
+                node->body, {}, binfo.gress, binfo.pipe);
         return rv;
     }
     block_info->erase(binfoItr.first);

@@ -122,12 +122,19 @@ using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 using DefaultPortMap = std::map<int, std::vector<int>>;
 
 class ParseTna : public Inspector {
+    const IR::PackageBlock*   mainBlock;
  public:
     ParseTna() { }
+
+    // parse tna pipeline with single parser.
     void parseSingleParserPipeline(const IR::PackageBlock* block, unsigned index);
-    void parsePortMapAnnotation(const IR::PackageBlock* block, DefaultPortMap& map);
+
+    // parse tna pipeline with multiple parser.
     void parseMultipleParserInstances(const IR::PackageBlock* block,
-                            cstring pipe, IR::BFN::P4Thread *thread, gress_t gress);
+            cstring pipe, IR::BFN::P4Thread *thread, gress_t gress);
+
+    void parsePortMapAnnotation(const IR::PackageBlock* block, DefaultPortMap& map);
+
     bool preorder(const IR::PackageBlock* block) override;
 
  public:

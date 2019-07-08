@@ -14,7 +14,6 @@
 #include "mau/input_xbar.h"
 #include "mau/instruction_memory.h"
 #include "mau/memories.h"
-#include "parde/phase0.h"
 
 namespace BFN {
 
