@@ -1,4 +1,4 @@
-@pragma command_line --decaf
+//@pragma command_line --decaf
 
 header_type data_t {
     fields {
