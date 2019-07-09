@@ -1766,7 +1766,7 @@ void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resou
             indirect_resource["value"] = addr_arg.value();
         } else { continue; }
         indirect_resource["resource_name"] = att->p4_name();
-        
+
         // Check if indirect resource already exists. For tables spanning
         // multiple stages, the same resource gets added as an attached resource
         // for every stage. To avoid duplication only add when not present in
@@ -2243,6 +2243,15 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
                 = mtr->color_mapram_addr == MeterTable::IDLE_MAP_ADDR ? "idle" : "stats";
 
         table_refs.push_back(std::move(table_ref)); }
+}
+
+bool Table::is_directly_referenced(const Table::Call& c) const {
+    if (c) {
+        std::string hr = c->to<AttachedTable>()->how_referenced();
+        if (hr.empty()) {
+            if (c->to<AttachedTable>()->is_direct())
+                return true; } }
+    return false;
 }
 
 json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) const {

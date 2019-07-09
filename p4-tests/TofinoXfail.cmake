@@ -824,6 +824,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/too_many_ternary_match_key_bits.p4
 )
 
+# Negative test. Directly attached resources (other than action data)
+# are not allowed for ATCAM tables.
+p4c_add_xfail_reason("tofino"
+  "error.*The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported.*"
+  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino.|./p4c TIMEOUT"
 # Investigate this

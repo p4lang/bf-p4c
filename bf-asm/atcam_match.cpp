@@ -126,7 +126,7 @@ void AlgTcamMatchTable::setup_column_priority() {
  * the entries in the ATCAM pack format are in priority order for the driver.
  */
 void AlgTcamMatchTable::verify_entry_priority() {
-    int result_bus_word = -1; 
+    int result_bus_word = -1;
     for (int i = 0; i < (int)group_info.size(); i++) {
         BUG_CHECK(group_info[i].result_bus_word >= 0);
         if (result_bus_word == -1) {
@@ -173,7 +173,7 @@ void AlgTcamMatchTable::setup_nibble_mask(Table::Format::Field *match, int group
         // Determining the nibbles dedicated to s0q1 or s1q0
         int start_bit = bit;
         int end_bit = start_bit + el.width - 1;
-        int start_nibble = start_bit / 4U; 
+        int start_nibble = start_bit / 4U;
         int end_nibble = end_bit / 4U;
         mask.setrange(start_nibble, end_nibble - start_nibble + 1);
     }
@@ -189,7 +189,7 @@ void AlgTcamMatchTable::find_tcam_match() {
         if (phv_p == nullptr) {
             BUG();
             continue;
-        } 
+        }
         auto phv_ref = *phv_p;
         auto sl = *phv_ref;
         if (!sl) continue;
@@ -218,7 +218,7 @@ void AlgTcamMatchTable::find_tcam_match() {
     /* for the tcam pairs, treat first as s0q1 and second as s1q0 */
     for (auto &el : Values(tcam)) {
         s0q1[el.first.offset] = el.first;
-        s1q0[el.second.offset] = el.second; 
+        s1q0[el.second.offset] = el.second;
     }
     /* now find the bits in each group that match with the tcam pairs, ensure that they
      * are nibble-aligned, and setup the nibble masks */
@@ -347,6 +347,25 @@ void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     units.push_back(std::move(tbl));
 }
 
+
+bool AlgTcamMatchTable::has_directly_attached_synth2port() const {
+    auto mt = this;
+    if (auto a = mt->get_attached()) {
+        if (a->selector && is_directly_referenced(a->selector))
+            return true;
+        for (auto &m : a->meters) {
+            if (is_directly_referenced(m))
+                return true; }
+        for (auto &s : a->stats) {
+            if (is_directly_referenced(s))
+                return true; }
+        for (auto &s : a->statefuls) {
+            if (is_directly_referenced(s))
+                return true; }
+    }
+    return false;
+}
+
 void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map *atcam_tbl_ptr;
     unsigned number_entries = get_number_entries();
@@ -401,6 +420,10 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) const {
     match_attributes["number_partitions"] = number_partitions;
     match_attributes["partition_field_name"] = partition_field_name;
     add_all_reference_tables(tbl);
+    if (units.size() > 1 && has_directly_attached_synth2port())
+        error(lineno, "The ability to split directly addressed counters/meters/stateful "
+              "resources across multiple logical tables of an algorithmic tcam match table "
+              "is not currently supported.");
     // Empty stage table node in atcam. These are moved inside the
     // units->MatchTable->stage_table node
     match_attributes["stage_tables"] = json::vector();

@@ -670,6 +670,7 @@ public:
     virtual Actions *get_actions() const { return actions; }
     virtual const std::vector<NextTables> &get_hit_next() const { return hit_next; }
     virtual const NextTables &get_miss_next() const { return miss_next; }
+    virtual bool is_directly_referenced(const Table::Call& c) const;
     virtual void add_reference_table(json::vector &table_refs, const Table::Call& c) const;
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1) const;
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
@@ -1037,6 +1038,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     // interpretation of the table is that the partition index is an identity hash function.
     // Potentially this could change at some point
     void add_hash_functions(json::map &stage_tbl) const override {}
+    bool has_directly_attached_synth2port() const;
     std::string get_lpm_field_name() const {
         std::string lpm = "lpm";
         if(auto *p = find_p4_param_type(lpm))
