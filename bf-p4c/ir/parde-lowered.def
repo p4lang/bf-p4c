@@ -170,8 +170,11 @@ class LoweredSelect {
     explicit LoweredSelect(const ordered_set<MatchRegister>& regs)
         : regs(regs) { }
 
-    /// The register match against.
+    /// The registers to match against.
     ordered_set<MatchRegister> regs;
+
+    /// The counter output (is_zero, is_negative) to match against.
+    std::vector<const IR::BFN::ParserCounterRVal*> counters;
 
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level select operation.
@@ -235,6 +238,9 @@ class LoweredParserMatch {
     /// Checksum calculations
     inline Vector<LoweredParserChecksum> checksums;
 
+    /// Counter instructions
+    inline Vector<ParserCounterPrimitive> counters;
+
     /// Priority set
     NullOK ParserPrioritySet priority;
 
@@ -245,6 +251,10 @@ class LoweredParserMatch {
 
     /// Next state to transition to (null means terminal state)
     NullOK LoweredParserState next;
+
+#emit
+    cstring loop;
+#end
 
 #emit
     /// Debugging information about the high-level parser states that were used

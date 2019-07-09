@@ -110,8 +110,8 @@ parser SwitchIngressParser(
     state parse_ipv6_srh_segment_list {
         pkt.extract(hdr.ipv6_srh_segment_list.next);
         counter.decrement(0x01);
-        transition select(counter.get()) {
-            0 : accept;
+        transition select(counter.is_zero()) {
+            true : accept;
             default : parse_ipv6_srh_segment_list;
         }
     }

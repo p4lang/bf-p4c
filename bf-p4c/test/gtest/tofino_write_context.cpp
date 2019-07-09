@@ -19,10 +19,6 @@ class TestRead : public Inspector, TofinoWriteContext {
             EXPECT_TRUE(isRead());
             EXPECT_FALSE(isWrite());
             return true; }
-        if (findContext<IR::BFN::Extract>()) {
-            EXPECT_TRUE(isRead());
-            EXPECT_TRUE(isWrite());
-            return true; }
         if ((findContext<IR::MAU::Instruction>() && p == one) ||
             (findContext<IR::MAU::TypedPrimitive>() && p == zero)) {
             EXPECT_TRUE(isRead());
@@ -47,14 +43,9 @@ TEST(TofinoWriteContext, Read) {
     IR::Vector<IR::BFN::ParserPrimitive> statements = {
         new IR::BFN::Extract(zeroLVal, new IR::BFN::PacketRVal(StartLen(0, 1))),
         new IR::BFN::Extract(oneLVal, new IR::BFN::PacketRVal(StartLen(1, 2))),
-        new IR::BFN::Extract(zeroLVal, new IR::BFN::MetadataRVal(StartLen(256, 1))),
-        new IR::BFN::Extract(zeroLVal, new IR::BFN::SavedRVal(zero)),
-        new IR::BFN::Extract(oneLVal, new IR::BFN::SavedRVal(one))
+        new IR::BFN::Extract(zeroLVal, new IR::BFN::MetadataRVal(StartLen(256, 1)))
     };
-    auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, {
-        new IR::BFN::Select(new IR::BFN::SavedRVal(zero)),
-        new IR::BFN::Select(new IR::BFN::SavedRVal(one))
-    }, { });
+    auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, { }, { });
 
     state->apply(TestRead());
 

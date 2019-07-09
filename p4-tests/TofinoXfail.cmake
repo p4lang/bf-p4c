@@ -180,11 +180,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Expression for parser counter is not supported"
-  extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "the following .* not written in .* will be overwritten illegally"
   switch_msdc_l3
   switch_8.7_msdc_l3
@@ -734,6 +729,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -804,14 +800,15 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "parser counter is currently unsupported"
-  extensions/p4_tests/p4_16/compile_only/ipv6_tlv.p4
-# P4C-590
+  "Parser match register not allocated for"
   ../glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-667/itch.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Parser counter only supports 1-bit match"
   ../glass/testsuite/p4_tests/parde/COMPILER-760/test_config_377_parser_counter.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
-  )
+)
 
 # test program error
 p4c_add_xfail_reason("tofino"
@@ -866,7 +863,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
-  extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
 )
 
@@ -878,9 +874,8 @@ p4c_add_xfail_reason("tofino"
 # Also P4C-1446
 # Bug with handling sub-parser.
 p4c_add_xfail_reason("tofino"
-  "Inferred valid container ranges"
+  "Extracting from offset before the start of the input buffer"
   extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
-  extensions/p4_tests/p4_16/compile_only/serializer.p4
   extensions/p4_tests/p4_16/compile_only/serializer2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
 )
@@ -919,7 +914,7 @@ p4c_add_xfail_reason("tofino"
 # Inferred valid container ranges N[0..2147483646]b and N[0..-113]b for field
 # ingress::m.ingress_port which cannot both be satisfied for a field of size 9b"
 p4c_add_xfail_reason("tofino"
-  "Inferred valid container ranges"
+  "Extracting from offset before the start of the input buffer"
   ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
   )
 
@@ -1154,6 +1149,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
+  extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
   )
 
 # P4C-1396
@@ -1254,8 +1250,9 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "1 expected packet on port 0 not seen"
+  ".* expected packet on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_4.p4
 )
 
 # P4C-1753
@@ -1345,10 +1342,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue355-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Some fields cannot be allocated because of unsatisfiable constraints"
   testdata/p4_16_samples/issue1607-bmv2.p4
 )
 

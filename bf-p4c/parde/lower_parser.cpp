@@ -21,6 +21,7 @@
 #include "bf-p4c/parde/allocate_parser_match_register.h"
 #include "bf-p4c/parde/characterize_parser.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/dump_parser.h"
@@ -671,21 +672,17 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         return loweredChecksums;
     }
-    unsigned int getChecksumSwap(const IR::BFN::PacketRVal* range,
-                                 const IR::BFN::ParserChecksumPrimitive* csumOpt) {
-        auto low = range->range.loByte();
+    unsigned int getChecksumSwap(const IR::BFN::PacketRVal* range) {
+        auto lo = range->range.loByte();
         auto hi = range->range.hiByte();
         unsigned swap = 0;
-        for (int byte = low; byte <= hi; ++byte) {
+
+        for (int byte = lo; byte <= hi; ++byte)
             swap |= (1 << byte/2);
-        }
+
         // swap register is 17 bit long
-        if (swap <= ((1 << 17) - 1)) {
-            return swap;
-        } else {
-            ::fatal_error("Swap byte is out of input buffer in checksum operation %1%", csumOpt);
-        }
-        return 0;
+        BUG_CHECK(swap <= ((1 << 17) - 1), "checksum swap byte is out of input buffer");
+        return swap;
     }
 
     int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {
@@ -726,16 +723,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
                     masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
-                    if (add->swap) {
-                        swap |= getChecksumSwap(v, add);
-                    }
+                    if (add->swap)
+                        swap |= getChecksumSwap(v);
                 }
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
                 if (auto v = sub->source->to<IR::BFN::PacketRVal>()) {
                     masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
-                    if (sub->swap) {
-                        swap |= getChecksumSwap(v, sub);
-                    }
+                    if (sub->swap)
+                        swap |= getChecksumSwap(v);
                 }
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
@@ -805,6 +800,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
 
+        IR::Vector<IR::BFN::ParserCounterPrimitive> counters;
+
         const IR::BFN::ParserPrioritySet* priority = nullptr;
         const IR::BFN::HdrLenIncStop* stopper = nullptr;
 
@@ -817,6 +814,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 simplifier.add(extract);
             } else if (auto* csum = prim->to<IR::BFN::ParserChecksumPrimitive>()) {
                 checksums.push_back(csum);
+            } else if (auto* cntr = prim->to<IR::BFN::ParserCounterPrimitive>()) {
+                counters.push_back(cntr);
             } else if (auto* prio = prim->to<IR::BFN::ParserPrioritySet>()) {
                 BUG_CHECK(!priority,
                           "more than one parser priority set in %1%?", state->name);
@@ -834,20 +833,20 @@ struct ComputeLoweredParserIR : public ParserInspector {
         auto loweredChecksums = lowerParserChecksums(parser, state, checksums);
 
         auto loweredExtracts = simplifier.lowerExtracts(clotTagToCsumUnit);
+
         /// Convert multiple select into one.
         auto* loweredSelect = new IR::BFN::LoweredSelect();
-        forAllMatching<IR::BFN::Select>(&state->selects,
-                      [&](const IR::BFN::Select* select) {
-            // Load match register from previous result.
-            for (auto rs : select->reg_slices)
-                loweredSelect->regs.insert(rs.first);
 
-            if (auto* bufferSource = select->source->to<IR::BFN::InputBufferRVal>()) {
-                const auto bufferRange =
-                    bufferSource->range.toUnit<RangeUnit::Byte>();
-                loweredSelect->debug.info.push_back(debugInfoFor(select, bufferRange)); }
-            return;
-        });
+        for (auto select : state->selects) {
+            if (auto ctr = select->source->to<IR::BFN::ParserCounterRVal>())
+                loweredSelect->counters.push_back(ctr);
+
+            if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+                for (auto rs : saved->reg_slices)
+                    loweredSelect->regs.insert(rs.first);
+            }
+        }
+
         loweredState->select = loweredSelect;
 
         for (auto* transition : state->transitions) {
@@ -879,8 +878,12 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     loweredExtracts,
                     saves,
                     loweredChecksums,
+                    counters,
                     priority,
                     loweredStates[transition->next]);
+
+            if (transition->loop)
+                loweredMatch->loop = transition->loop;
 
             if (stopper) {
                 auto last = stopper->source->range.toUnit<RangeUnit::Byte>();
@@ -1016,6 +1019,7 @@ struct LowerParserIR : public PassManager {
         addPasses({
             LOGGING(4) ? new DumpParser("before_parser_lowering") : nullptr,
             new ResolveParserConstants(phv, clotInfo),
+            new ParserCopyProp(phv),
             new SplitParserState(phv, clotInfo),
             new AllocateParserMatchRegisters(phv),
             allocateParserChecksums,

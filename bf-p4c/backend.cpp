@@ -32,11 +32,12 @@
 #include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
+#include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
-#include "bf-p4c/parde/resolve_parser_values.h"
+#include "bf-p4c/parde/resolve_parser_stack_index.h"
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/check_unallocated.h"
@@ -157,7 +158,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new CollectPhvInfo(phv),
-        new ResolveParserValues,
+        new ParserCopyProp(phv),
         new CollectPhvInfo(phv),
         (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?
             new InferPayloadOffset(phv, defuse) : nullptr,

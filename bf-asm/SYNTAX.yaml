@@ -88,8 +88,13 @@ parser [<thread>] [<port_use>, ...]:
                 # this is a tcam priority match, so only the first match triggers
                 buf_req: <constant>
                     # number bytes that must be in the input buffer to not stall
-                counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
+                counter: inc <constant> | dec <constant> | load <constant> |
                     # modification of the counter
+                    src: <matcher>     # matcher to load counter from
+                    max: <constant>    # max value of the counter
+                    rotate: <constant> # number of bits to circular right rotate
+                    mask: <constant>   # mask of rotated value
+                    add: <constant>    # immediate to add to masked value
                 checksum <int>:
                     # modification of checksum unit <int>
                     type: VERIFY | RESIDUAL | CLOT
@@ -136,9 +141,6 @@ parser [<thread>] [<port_use>, ...]:
             # if there is no 'default' tag in a state, anything that is not
             # recognized as a valid state tag is treated as part of an implicit
             # default
-    counter_init:
-        - { add: <int>, max: <int>, mask: <int>, src: <matcher>, rot: <int> }
-        # intial values for the counter init ram
     hdr_len_adj: <constant>
         # value for the hdr_len_adj register
     init_zero: [ <phv_location>,... ]

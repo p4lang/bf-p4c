@@ -709,7 +709,7 @@ const char *PragmaStage::help = "@pragma stage 5\n"
 
 const char *PragmaTerminateParsing::name = "terminate_parsing";
 const char *PragmaTerminateParsing::description =
-    "Unconditionally terminate parsing in the annotated state.";
+    "Unconditionally terminate parsing in the annotated parser state.";
 const char *PragmaTerminateParsing::help = "@pragma terminate_parsing ingress/egress\n"
     "+ attached to to a parser state.\n"
     "\n"
@@ -719,6 +719,15 @@ const char *PragmaTerminateParsing::help = "@pragma terminate_parsing ingress/eg
     "extracted in this state are not considered for PHV allocation unless "
     "they are used in other states. It is the programmer’s responsibility "
     "to ensure that these fields are not used in the MAU pipeline.";
+
+const char *PragmaDontUnroll::name = "dont_unroll";
+const char *PragmaDontUnroll::description =
+    "do not unroll the annotated parser state (if in a loop).";
+const char *PragmaDontUnroll::help = "@pragma dont_unroll\n"
+    "+ attached to to a parser state.\n"
+    "\n"
+    "By default, the compiler unrolls parser loops. "
+    "Use this pragma to keep the parser loops.";
 
 const char *PragmaTernary::name = "ternary";
 const char *PragmaTernary::description = "Forces the use of TCAM memories for the table.";

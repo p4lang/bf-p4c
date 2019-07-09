@@ -88,6 +88,19 @@ class ParserGraphImpl : public DirectedGraph {
         return {};
     }
 
+    std::map<std::pair<const State*, cstring>, std::set<const Transition*>> loopbacks() const {
+        return _loopbacks;
+    }
+
+    const State* get_state(cstring name) const {
+        for (auto s : states()) {
+            if (name == s->name)
+                return s;
+        }
+
+        return nullptr;
+    }
+
  private:
     /// Memoization table.
     mutable std::map<const State*, std::map<const State*, bool>> is_ancestor_;
@@ -199,14 +212,16 @@ class ParserGraphImpl : public DirectedGraph {
     }
 
     void add_transition(const State* state, const Transition* t) {
+        add_state(state);
+
         if (t->next) {
-            add_state(state);
             add_state(t->next);
             _succs[state].insert(t->next);
             _preds[t->next].insert(state);
             _transitions[{state, t->next}].insert(t);
+        } else if (t->loop) {
+            _loopbacks[{state, t->loop}].insert(t);
         } else {
-            add_state(state);
             _to_pipe[state].insert(t);
         }
     }
@@ -239,6 +254,9 @@ class ParserGraphImpl : public DirectedGraph {
 
     std::map<std::pair<const State*, const State*>,
              std::set<const Transition*>> _transitions;
+
+    std::map<std::pair<const State*, cstring>,
+             std::set<const Transition*>> _loopbacks;
 
     std::map<const State*,
              std::set<const Transition*>> _to_pipe;

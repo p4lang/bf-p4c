@@ -53,7 +53,7 @@ class UnresolvedStackLast : UnresolvedStackRef {
 
 /// A value that can *conceptually* be read from in the parser. This is a
 /// superset of the values that can actually be read from on the hardware.
-abstract ParserRVal { }
+abstract ParserRVal : Expression { }
 
 /// An r-value that represents a read from a range of bits in the input buffer.
 /// The coordinate system used will depend on the specific type of
@@ -97,10 +97,22 @@ class ConstantRVal : ParserRVal {
 
 /// An r-value which is saved from input buffer to the match register.
 class SavedRVal : ParserRVal {
-    dbprint { out << "saved value " << source; }
+    dbprint {
+        out << "[ ";
+        if (reg_slices.empty()) {
+            out << source;
+        } else {
+            for (const auto& rs : reg_slices)
+                out << " " << rs.first << " : " << rs.second;
+        }
+        out << " ]";
+    }
 
     /// An expression which should evaluate to an r-value usable in the parser.
     Expression source;
+
+    /// The registers to match on.
+    optional std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
 }
 
 /// Common base class for parser write destination
@@ -198,7 +210,53 @@ class SaveToRegister : ParserPrimitive {
 
     /// The register this save writes to.
     MatchRegister dest;
-};
+}
+
+abstract ParserCounterPrimitive : ParserPrimitive {
+    cstring declName;
+}
+
+class ParserCounterLoadImm : ParserCounterPrimitive {
+    dbprint { out << "parser counter load imm " << imm; }
+    int imm = 0;
+}
+
+class ParserCounterLoadPkt : ParserCounterPrimitive {
+#noconstructor
+    ParserCounterLoadPkt(cstring n, const SavedRVal* s) :
+        ParserCounterPrimitive(n), source(s) { }
+
+    dbprint { out << "parser counter set " << source; }
+
+    SavedRVal source;
+
+    boost::optional<int> max;
+    boost::optional<int> rotate;
+    boost::optional<int> mask;
+    boost::optional<int> add;
+}
+
+class ParserCounterIncrement : ParserCounterPrimitive {
+    dbprint { out << "parser counter inc " << value; }
+    int value = 0;
+}
+
+class ParserCounterDecrement : ParserCounterPrimitive {
+    dbprint { out << "parser counter dec " << value; }
+    int value = 0;
+}
+
+abstract ParserCounterRVal : ParserRVal {
+    cstring declName;
+}
+
+class ParserCounterIsZero : ParserCounterRVal {
+    dbprint { out << "parser counter is zero? "; }
+}
+
+class ParserCounterIsNegative : ParserCounterRVal {
+    dbprint { out << "parser counter is negative? "; }
+}
 
 class ParserPrioritySet : ParserPrimitive {
     dbprint { out << "priority set " << val; }
@@ -289,6 +347,12 @@ class Phase0 {
 
 /// The high-level representation of a parser state transition.
 class Transition {
+    validate {
+        if (next && loop) {
+            BUG("Transition cannot have both loop and non-loop next states");
+        }
+    }
+
 #emit
     Transition(match_t v)
         : value(new ParserConstMatchValue(v)), next(nullptr) { }
@@ -308,6 +372,10 @@ class Transition {
     /// ...and transition to this state (or, if null, end the parser program).
     NullOK ParserState             next;
 
+#emit
+    cstring loop;
+#end
+
     /// The save to registers need to perform for this transition.
     optional inline Vector<SaveToRegister>  saves;
 }
@@ -317,13 +385,17 @@ class Transition {
 /// next state to transition to.
 class Select {
     Select(ParserRVal source, Expression p4Source)
-        : source(source), p4Source(p4Source) { }
+	        : source(source), p4Source(p4Source) { }
+
+    validate {
+        CHECK_NULL(source);
+        BUG_CHECK(source->is<IR::BFN::SavedRVal>() ||
+                  source->is<IR::BFN::ParserCounterRVal>(),
+                  "Select source can only be match register or parser counter: %1%", select);
+    }
 
     /// The value to match against.
     ParserRVal source;
-
-    /// The registers to match on.
-    optional std::vector<std::pair<MatchRegister, nw_bitrange>> reg_slices;
 
 #emit
     /// Original p4 source.

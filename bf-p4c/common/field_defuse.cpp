@@ -5,7 +5,7 @@
 #include "lib/range.h"
 
 static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {
-    return out << *loc.second << " [" << loc.second->id << " in " << *loc.first << "]";
+    return out << *loc.second << " in " << *loc.first;
 }
 
 class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
@@ -66,8 +66,7 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
                        const IR::Expression *e, bool needsIXBar) {
     if (!f) return;
     auto &info = field(f);
-    LOG3("FieldDefUse (" << (void *)this << "): " << DBPrint::Brief << *unit <<
-         " reading " << f->name << " [" << e->id << "]");
+    LOG3("defuse: " << DBPrint::Brief << *unit << " reading " << f->name);
     info.use.clear();
     locpair use(unit, e);
     info.use.emplace(use);
@@ -77,7 +76,6 @@ void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
         LOG4("  " << use << " uses " << def);
         uses[def].emplace(use);
         defs[use].emplace(def); }
-    LOG3("  Found " << (needsIXBar ? "IXBar " : "dark ") << "use.");
     non_dark_refs[use] |= needsIXBar;
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
@@ -93,8 +91,8 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
                         const IR::Expression *e, bool needsIXBar, bool partial) {
     if (!f) return;
     auto &info = field(f);
-    LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
-         " writing " << f->name << " [" << e->id << "]" << (partial ? " (partial)" : ""));
+    LOG3("defuse: " << DBPrint::Brief << *unit <<
+         " writing " << f->name << (partial ? " (partial)" : ""));
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
@@ -111,15 +109,14 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         info.use.emplace(unit, e);
         check_conflicts(info, unit->stage());
         for (auto def : info.def)
-            LOG4("  " << e << " [" << e->id << "]" << " in " << *unit << " combines with " <<
-                 def.second << " from " << *def.first << " [" << def.first->id << "]");
+            LOG4("  " << e << " in " << *unit << " combines with " <<
+                 def.second << " from " << *def.first);
     } else if (!partial) {
         info.def.clear(); }
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
     locpair def(unit, e);
     non_dark_refs[def] |= needsIXBar;
-    LOG3("  Found " << (needsIXBar ? "IXBar " : "dark ") << "use.");
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                         const IR::Expression *e, bool needsIXBar) {
@@ -240,7 +237,6 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
 
 void FieldDefUse::flow_merge(Visitor &a_) {
     FieldDefUse &a = dynamic_cast<FieldDefUse &>(a_);
-    LOG3("FieldDefUse(" << (void *)this << "): merging " << (void *)&a);
     for (auto &i : Values(a.defuse)) {
         auto &info = field(i.field);
         BUG_CHECK(&info != &i, "same object in FieldDefUse::flow_merge");

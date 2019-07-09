@@ -89,6 +89,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaSelectorEnableScramble, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaStage, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaTerminateParsing, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaDontUnroll,  PARSE_EMPTY, intPragma);
+
         BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it
         BFN_PARSE(PragmaUseHashAction, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);

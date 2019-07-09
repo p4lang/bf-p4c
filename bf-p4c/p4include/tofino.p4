@@ -424,7 +424,7 @@ extern Checksum {
 }
 
 // ----------------------------------------------------------------------------
-// PARSER COUNTER/PRIORITY
+// PARSER COUNTER
 // ----------------------------------------------------------------------------
 // Tofino parser counter can be used to extract header stacks or headers with
 // variable length. Tofino has a single 8-bit signed counter that can be
@@ -432,28 +432,27 @@ extern Checksum {
 
 extern ParserCounter<W> {
     /// Constructor
-    /// @type_param W : Width of counter. Only 8-bit counter is supported.
     ParserCounter();
 
     /// Load the counter with an immediate value or a header field.
-    void set(in W value);
+    void set<T>(in T value);
 
-    /// Load the counter with an immediate value or a header field.
+    /// Load the counter with a header field.
     /// @param max : Maximum permitted value for counter (pre rotate/mask/add).
-    /// @param rotate : Rotate the source field right by this number of bits.
+    /// @param rotate : Right rotate (circular) the source field by this number of bits.
     /// @param mask : Mask the rotated source field by 2**(MASK+1) - 1.
     /// @param add : Constant to add to the rotated and masked lookup field.
-    void set(in W value,
-             in W max,
-             in W rotate,
-             in W mask,
-             in W add);
+    void set<T>(in T field,
+                in W max,
+                in W rotate,
+                in W mask,
+                in W add);
 
-    /// Get the parser counter value. Can only be used in the select expression
-    /// in a parser state and can only checks if the counter is zero or
-    /// negative.
-    /// @return : parser counter value.
-    W get();
+    /// @return true if counter value is zero.
+    bool is_zero();
+
+    /// @return true if counter value is negative.
+    bool is_negative();
 
     /// Add an immediate value to the parser counter.
     /// @param value : Constant to add to the counter.
@@ -464,6 +463,9 @@ extern ParserCounter<W> {
     void decrement(in W value);
 }
 
+// ----------------------------------------------------------------------------
+// PARSER PRIORITY
+// ----------------------------------------------------------------------------
 // Tofino ingress parser compare the priority with a configurable!!! threshold
 // to determine to whether drop the packet if the input buffer is congested.
 // Egress parser does not perform any dropping.

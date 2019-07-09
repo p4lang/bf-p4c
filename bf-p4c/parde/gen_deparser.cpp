@@ -1,4 +1,3 @@
-
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/ir_utils.h"
@@ -8,19 +7,55 @@
 
 namespace BFN {
 
-template <typename Func>
-void generateEmits(const IR::Expression* expression, Func func) {
-    auto* header = expression->to<IR::HeaderRef>();
+bool ExtractDeparser::preorder(const IR::Annotation* annot) {
+    if (annot->name == "header_ordering") {
+        auto ordering = new ordered_set<cstring>;
+
+        for (auto expr : annot->expr) {
+            if (auto str = expr->to<IR::StringLiteral>()) {
+                for (auto& o : userEnforcedHeaderOrdering) {
+                    if (o->count(str->value))
+                        ::fatal_error("%1% is repeated on %2%", str->value, annot);
+                }
+
+                ordering->insert(str->value);
+            } else {
+                ::fatal_error("@pragma header_ordering expects strings as arguments %1%", annot);
+            }
+        }
+
+        userEnforcedHeaderOrdering.insert(ordering);
+    }
+
+    return false;
+}
+
+void ExtractDeparser::generateEmits(const IR::MethodCallExpression* mc) {
+    auto expr = (*mc->arguments)[0]->expression;
+
+    auto* header = expr->to<IR::HeaderRef>();
+
     BUG_CHECK(header != nullptr,
-              "Emitting something other than a header: %1%", expression);
+              "Emitting something other than a header: %1%", expr);
     auto* headerType = header->type->to<IR::Type_StructLike>();
     BUG_CHECK(headerType != nullptr,
               "Emitting header with non-structlike type: %1%", headerType);
 
     auto* povBit = new IR::Member(IR::Type::Bits::get(1), header, "$valid");
-    for (auto* field : headerType->fields) {
-        IR::Expression* fieldRef = new IR::Member(field->type, header, field->name);
-        func(fieldRef, povBit);
+    for (auto* f : headerType->fields) {
+        auto* field = new IR::Member(f->type, header, f->name);
+        auto* emit = new IR::BFN::EmitField(mc->srcInfo, field, povBit);
+
+        if (auto concrete = header->to<IR::ConcreteHeaderRef>()) {
+            headerToEmits[concrete->ref->name].push_back(emit);
+        } else if (auto stack = header->to<IR::HeaderStackItemRef>()) {
+            if (auto ref = stack->base_->to<IR::V1InstanceRef>())
+                headerToEmits[ref->name].push_back(emit);
+            else if (auto ref = stack->base_->to<IR::InstanceRef>())
+                headerToEmits[ref->name].push_back(emit);
+            else
+                BUG("Unknown header stack type: %1%", header);
+        }
     }
 }
 
@@ -117,9 +152,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
     if (em->method->name == "emit") {
         if (em->actualExternType->getName() == "packet_out") {
             if (pred) error("Conditional emit %s not supported", mc);
-            generateEmits((*mc->arguments)[0]->expression,
-                [&](const IR::Expression* field, const IR::Expression* povBit) {
-                dprsr->emits.push_back(new IR::BFN::EmitField(mc->srcInfo, field, povBit)); });
+            generateEmits(mc);
         } else if (em->actualExternType->getName() == "Mirror") {
             if (mc->arguments->size() != 2) {
                generateDigest(digests["mirror"], "mirror", nullptr, mc);
@@ -244,6 +277,46 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         digest->fieldLists.push_back(fieldList);
     } else {
         BUG("Unexpected expression as digest field list ", expr);
+    }
+}
+
+void ExtractDeparser::enforceHeaderOrdering() {
+    ordered_map<cstring, std::vector<const IR::BFN::EmitField*>> reordered;
+
+    for (auto& kv : headerToEmits) {
+        auto header = kv.first;
+
+        bool inserted = false;
+
+        for (auto& ordering : userEnforcedHeaderOrdering) {
+            if (ordering->count(header)) {
+                for (auto hdr : *ordering) {
+                    if (!reordered.count(hdr)) {
+                        reordered[hdr] = headerToEmits[hdr];
+                        LOG3("reordered header " << hdr << " because of @pragma header_ordering");
+                    }
+                }
+
+                inserted = true;
+            }
+        }
+
+        if (!inserted)
+            reordered[header] = kv.second;
+    }
+
+    headerToEmits = reordered;
+}
+
+void ExtractDeparser::end_apply() {
+    if (!userEnforcedHeaderOrdering.empty())
+        enforceHeaderOrdering();
+
+    for (auto& kv : headerToEmits) {
+        for (auto emit : kv.second) {
+            dprsr->emits.push_back(emit);
+            LOG3("add " << emit << " to " << dprsr->gress << " deparser");
+        }
     }
 }
 

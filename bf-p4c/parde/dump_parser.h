@@ -140,6 +140,19 @@ class DotDumper {
                 out << " ]" << std::endl;
             }
         }
+
+        for (auto &kv : graph.loopbacks()) {
+            auto next = graph.get_state(kv.first.second);
+
+            for (auto t : kv.second) {
+                out << to_label("State", kv.first.first) << " -> "
+                    << to_label("State", next) << " [ ";
+
+                dump(t);
+
+                out << " ]" << std::endl;
+            }
+        }
     }
 
     void dump(const IR::BFN::LoweredParserState* state) {
@@ -209,9 +222,22 @@ class DotDumper {
                 if (m->next) {
                     out << to_label("Match", m) << " -> "
                         << to_label("State", m->next) << std::endl;
+                } else if (m->loop) {
+                    // handled below
                 } else {
                     out << to_label("Match", m) << " -> "
                         << to_label(::toString(gress) + "_pipe") << std::endl;
+                }
+            }
+        }
+
+        // loopback edges
+        for (auto s : graph.states()) {
+            for (auto m : s->transitions) {
+                if (m->loop) {
+                    auto next = graph.get_state(m->loop);
+                    out << to_label("Match", m) << " -> "
+                        << to_label("State", next) << std::endl;
                 }
             }
         }

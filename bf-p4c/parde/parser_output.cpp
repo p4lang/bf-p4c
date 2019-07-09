@@ -135,13 +135,20 @@ struct ParserAsmSerializer : public ParserInspector {
 
         out << std::endl;
 
-        if (!state->select->regs.empty()) {
+        if (!state->select->regs.empty() || !state->select->counters.empty()) {
             AutoIndent indentSelect(indent);
 
             out << indent << "match: ";
             const char *sep = "[ ";
             for (const auto& r : state->select->regs) {
                 out << sep << r;
+                sep = ", ";
+            }
+            for (const auto& c : state->select->counters) {
+                if (c->is<IR::BFN::ParserCounterIsZero>())
+                    out << sep << "ctr_zero";
+                else if (c->is<IR::BFN::ParserCounterIsNegative>())
+                    out << sep << "ctr_neg";
                 sep = ", ";
             }
             out << " ]" << std::endl;
@@ -192,10 +199,11 @@ struct ParserAsmSerializer : public ParserInspector {
         if (match->priority)
             out << indent << "priority: " << match->priority->val << std::endl;
 
-        for (auto* ck : match->checksums) {
-            if (auto* csum = ck->to<IR::BFN::LoweredParserChecksum>())
-                outputChecksum(csum);
-        }
+        for (auto* csum : match->checksums)
+            outputChecksum(csum);
+
+        for (auto* cntr : match->counters)
+            outputCounter(cntr);
 
         for (auto* stmt : match->extracts) {
             if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
@@ -220,6 +228,8 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "next: ";
         if (match->next)
             out << canon_name(match->next->name);
+        else if (match->loop)
+            out << canon_name(match->loop);
         else
             out << "end";
 
@@ -314,6 +324,48 @@ struct ParserAsmSerializer : public ParserInspector {
 
             if (csum->type == IR::BFN::ChecksumMode::RESIDUAL)
                 out << indent << "end_pos: " << csum->end_pos  << std::endl;
+        }
+    }
+
+    void outputCounter(const IR::BFN::ParserCounterPrimitive* cntr) {
+        if (auto* init = cntr->to<IR::BFN::ParserCounterLoadImm>()) {
+            out << indent << "counter: load " << init->imm << std::endl;
+        } else if (auto* load = cntr->to<IR::BFN::ParserCounterLoadPkt>()) {
+            out << indent << "counter:" << std::endl;
+
+            BUG_CHECK(load->source->reg_slices.size() == 1,
+                      "counter load allocated to more than 1 registers");
+
+            auto reg = load->source->reg_slices[0].first;
+            auto slice = load->source->reg_slices[0].second.toOrder<Endian::Little>(reg.size * 8);
+
+            BUG_CHECK(slice.size() <= 8, "parser counter load more than 8 bits");
+
+            indent++;
+            out << indent << "src: " << reg.name;
+
+            if (reg.size == 2)
+                out << (slice.lo ? "_hi" : "_lo");
+
+            out << std::endl;
+
+            if (load->max)
+                out << indent << "max: " << *(load->max) << std::endl;
+
+            if (load->rotate)
+                out << indent << "rotate: " << *(load->rotate) << std::endl;
+
+            if (load->mask)
+                out << indent << "mask: " << *(load->mask) << std::endl;
+
+            if (load->add)
+                out << indent << "add: " << *(load->add) << std::endl;
+
+            indent--;
+        } else if (auto* inc = cntr->to<IR::BFN::ParserCounterIncrement>()) {
+            out << indent << "counter: inc " << inc->value << std::endl;
+        } else if (auto* inc = cntr->to<IR::BFN::ParserCounterDecrement>()) {
+            out << indent << "counter: dec " << inc->value << std::endl;
         }
     }
 

@@ -100,16 +100,15 @@ class AddMetadataFields : public Transform {
         // data. This state checks the resubmit flag and branches accordingly.
         auto igIntrMd = parser->tnaParams.at("ig_intr_md");
         IR::Vector<IR::Expression> selectOn = {
-            new IR::Cast(IR::Type::Bits::get(8),
                          new IR::Member(new IR::PathExpression(igIntrMd),
-                                        "resubmit_flag"))
+                                        "resubmit_flag")
         };
         auto *checkResubmitState =
             ParserUtils::createGeneratedParserState(
                 "check_resubmit", {},
                 new IR::SelectExpression(new IR::ListExpression(selectOn), {
-                    ParserUtils::createSelectCase(8, 0, 0x80, phase0State),
-                    ParserUtils::createSelectCase(8, 0x80, 0x80, resubmitState)
+                    ParserUtils::createSelectCase(1, 0x0, 0x1, phase0State),
+                    ParserUtils::createSelectCase(1, 0x1, 0x1, resubmitState)
                 }));
         parser->states.push_back(checkResubmitState);
 

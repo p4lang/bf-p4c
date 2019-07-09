@@ -227,11 +227,12 @@ struct AllocateParserState : public ParserTransform {
                     phv_extracts.push_back(e);
                 else if (auto e = p->to<IR::BFN::ExtractClot>())
                     clot_extracts.push_back(e);
-                else if (auto e = p->to<IR::BFN::Extract>())
-                    BUG("Unexpected extract encountered during state-splitting: "
-                      "%1%", e);
                 else if (auto c = p->to<IR::BFN::ParserChecksumPrimitive>())
                     checksums.push_back(c);
+                else if (auto pc = p->to<IR::BFN::ParserCounterPrimitive>())
+                    counters.push_back(pc);
+                else if (auto e = p->to<IR::BFN::Extract>())
+                    BUG("Unexpected extract encountered during state-splitting: %1%", e);
                 else
                     others.push_back(p);
             }
@@ -645,6 +646,36 @@ struct AllocateParserState : public ParserTransform {
             }
         };
 
+        struct CounterAllocator : Allocator {
+            void allocate() override {
+                std::map<cstring,
+                         std::vector<const IR::BFN::ParserCounterPrimitive*>> decl_to_counters;
+
+                for (auto c : sa.counters)
+                    decl_to_counters[c->declName].push_back(c);
+
+                // HW only allows one counter primitive per state
+                // If successive primitives are add/sub, can constant-fold them
+                // into single primitive? TODO
+
+                for (auto& kv : decl_to_counters) {
+                    for (auto c : kv.second) {
+                        if (current.empty() && within_buffer(c)) {
+                            current.push_back(c);
+                        } else {
+                            spilled.push_back(c);
+                            LOG3("spill " << c);
+                        }
+                    }
+                }
+            }
+
+            explicit CounterAllocator(ParserStateAllocator& sa) : Allocator(sa) {
+                allocate();
+                add_to_result();
+            }
+        };
+
         struct ClotAllocator : Allocator {
             const IR::BFN::ExtractClot*
             create_extract(const IR::BFN::FieldLVal* dest, const IR::BFN::PacketRVal* rval) {
@@ -735,7 +766,7 @@ struct AllocateParserState : public ParserTransform {
         void allocate() {
             sort_state_primitives();
 
-            ChecksumAllocator ca(*this);
+            ChecksumAllocator csum(*this);
 
             if (Device::currentDevice() == Device::TOFINO) {
                 TofinoExtractAllocator tea(*this);
@@ -746,6 +777,8 @@ struct AllocateParserState : public ParserTransform {
                 BUG("Unknown device");
             }
 
+            CounterAllocator cntr(*this);
+
             for (auto o : others) {
                 if (within_buffer(o)) {
                     current_statements.push_back(o);
@@ -755,19 +788,34 @@ struct AllocateParserState : public ParserTransform {
                 }
             }
 
-            bool select_oob = false;
-
             // If any of the selects is oob, we need to spill all selects
             for (auto s : state->selects) {
                 if (!within_buffer(s)) {
                     LOG3(state->name << " has out of buffer select");
-                    select_oob = true;
+                    spill_selects = true;
                     break;
                 }
             }
 
-            if (select_oob)
-                spill_selects = true;
+            // If select on counter and state already has counter primitive
+            for (auto s : state->selects) {
+                if (s->source->is<IR::BFN::ParserCounterRVal>()) {
+                    bool has_counter_prim = false;
+
+                    for (auto s : current_statements) {
+                        if (s->is<IR::BFN::ParserCounterPrimitive>()) {
+                            has_counter_prim = true;
+                            break;
+                        }
+                    }
+
+                    if (has_counter_prim) {
+                        LOG3(state->name << " spill counter select");
+                        spill_selects = true;
+                        break;
+                    }
+                }
+            }
         }
 
         struct GetMinExtractBufferPos : Inspector {
@@ -844,6 +892,7 @@ struct AllocateParserState : public ParserTransform {
         std::vector<const IR::BFN::ExtractPhv*> phv_extracts;
         std::vector<const IR::BFN::ExtractClot*> clot_extracts;
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
+        std::vector<const IR::BFN::ParserCounterPrimitive*> counters;
         std::vector<const IR::BFN::ParserPrimitive*> others;
 
         IR::Vector<IR::BFN::ParserPrimitive> current_statements, spilled_statements;
@@ -1039,6 +1088,56 @@ struct AllocateParserState : public ParserTransform {
     }
 };
 
+/// The counter zero and negative flags are always zero in the cycle immediately following
+/// a load via the Counter Initialization RAM. Therefore the compiler needs to insert a
+/// stall state if is_zero/is_negative is used in the cycle immediately following the load.
+struct InsertParserCounterStall : public ParserTransform {
+    void insert_stall_state(IR::BFN::Transition* t) {
+        auto src = findContext<IR::BFN::ParserState>();
+
+        cstring name = src->name + ".$stall";
+        auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
+
+        LOG2("created stall state for counter select on "
+              << src->name << " -> " << t->next->name);
+
+        auto to_dst = new IR::BFN::Transition(match_t(), 0, t->next);
+        stall->transitions.push_back(to_dst);
+        t->next = stall;
+    }
+
+    bool has_counter_select(const IR::BFN::ParserState* state) {
+        for (auto s : state->selects) {
+            if (s->source->is<IR::BFN::ParserCounterRVal>())
+                return true;
+        }
+
+        return false;
+    }
+
+    bool has_counter_load(const IR::BFN::ParserState* state) {
+        for (auto s : state->statements) {
+            if (s->is<IR::BFN::ParserCounterLoadImm>() ||
+                s->is<IR::BFN::ParserCounterLoadPkt>()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
+        auto state = findContext<IR::BFN::ParserState>();
+
+        if (has_counter_load(state)) {
+            if (t->next && has_counter_select(t->next))
+                insert_stall_state(t);
+        }
+
+        return t;
+    }
+};
+
 /// If after state splitting, if the transition to end of parsing shifts more
 /// than 32 bytes (input buffer size), we can safely clip the shift amount to
 /// 32, as the remaining amount will not contribute to header length.
@@ -1060,6 +1159,8 @@ SplitParserState::SplitParserState(const PhvInfo& phv, ClotInfo& clot) {
         LOGGING(4) ? new DumpParser("after_slice_extracts") : nullptr,
         new AllocateParserState(phv, clot),
         LOGGING(4) ? new DumpParser("after_alloc_state_prims") : nullptr,
+        new InsertParserCounterStall,
+        LOGGING(4) ? new DumpParser("after_insert_counter_stall") : nullptr,
         new ClipTerminalTransition,
         LOGGING(4) ? new DumpParser("after_split_parser_states") : nullptr
     });

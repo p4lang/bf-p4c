@@ -1,6 +1,7 @@
 #include "elim_unused.h"
 #include <string.h>
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/log.h"
 
@@ -150,10 +151,13 @@ class ElimUnused::Headers : public PardeTransform {
 };
 
 ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defuse(defuse) {
-    addPasses({ new PassRepeated({
-        new Instructions(*this),
-        &defuse,
-        new Headers(*this),
-        &defuse
-    })});
+    addPasses({
+        LOGGING(4) ? new DumpParser("before_elim_unused") : nullptr,
+        new PassRepeated({
+            new Instructions(*this),
+            &defuse,
+            new Headers(*this),
+            &defuse}),
+        LOGGING(4) ? new DumpParser("after_elim_unused") : nullptr
+    });
 }

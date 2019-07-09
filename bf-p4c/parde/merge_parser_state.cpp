@@ -62,9 +62,13 @@ class ComputeMergeableState : public ParserInspector {
             return;
 
         // TODO(zma) this could use more thoughts
-        for (const auto* select : next_state->selects) {
-            if (select->source->is<IR::BFN::PacketRVal>())
-                    return;
+        if (!next_state->selects.empty())
+            return;
+
+        // TODO(zma) more thoughts can be given to this
+        for (auto stmt : next_state->statements) {
+            if (stmt->is<IR::BFN::ParserCounterLoadPkt>())
+                return;
         }
 
         std::vector<const State*> state_chain = getStateChain(next_state);

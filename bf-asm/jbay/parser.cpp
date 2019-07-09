@@ -279,8 +279,23 @@ template<> void Parser::State::Match::Clot::write_config(
 
 template<> void Parser::State::Match::write_counter_config(
     Target::JBay::parser_regs::_memory::_ml_ea_row &ea_row) const {
-    ea_row.ctr_amt_idx = counter;
-    // FIXME -- counter stack config
+
+    if (ctr_load) {
+        switch (ctr_ld_src) {
+            case 0: ea_row.ctr_op = 2; break;
+            case 1: ea_row.ctr_op = 3; break;
+            default: error(lineno, "Unsupported parser counter load instruction (JBay)");
+        } 
+    } else {  // add
+        ea_row.ctr_op = 0;
+    }
+
+    ea_row.ctr_amt_idx = ctr_amt_idx;
+
+    // TODO -- counter stack config
+    // ea_row.ctr_op = 1; (load ctr from stack top and add imm)
+    // ea_row.ctr_stack_push = ?
+    // ea_row.ctr_stack_upd_w_top = ?
 }
 
 template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json, bool single_parser) {

@@ -92,8 +92,8 @@ class MatcherAllocator : public Visitor {
              std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
 
     // The register slices that this select should match against.
-    std::map<const IR::BFN::Select*,
-             std::vector<std::pair<MatchRegister, nw_bitrange>>> select_reg_slices;
+    std::map<const IR::BFN::SavedRVal*,
+             std::vector<std::pair<MatchRegister, nw_bitrange>>> save_reg_slices;
 
  private:
     /// Represents a group of select fields that can be coalesced into
@@ -672,8 +672,8 @@ class MatcherAllocator : public Visitor {
         for (auto use : group->members) {
             auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
 
-            if (select_reg_slices.count(use->select)) {
-                bool eq = equiv(select_reg_slices.at(use->select), reg_slices);
+            if (save_reg_slices.count(use->save)) {
+                bool eq = equiv(save_reg_slices.at(use->save), reg_slices);
 
                 BUG_CHECK(eq, "select has different allocations based on the use context: %1%",
                           use->print());
@@ -683,7 +683,7 @@ class MatcherAllocator : public Visitor {
                 // The thing is I'm not really sure how the subsequent Modifier can
                 // perform a context based revisit on the IR::BFN::Select node.
             } else {
-                select_reg_slices[use->select] = reg_slices;
+                save_reg_slices[use->save] = reg_slices;
             }
         }
     }
@@ -781,10 +781,13 @@ struct InsertSaveAndSelect : public ParserModifier {
         }
     }
 
-    void postorder(IR::BFN::Select* select) override {
-        auto* original_select = getOriginal<IR::BFN::Select>();
-        if (rst.select_reg_slices.count(original_select)) {
-            select->reg_slices = rst.select_reg_slices.at(original_select);
+    void postorder(IR::BFN::SavedRVal* save) override {
+        auto* orig = getOriginal<IR::BFN::SavedRVal>();
+        if (rst.save_reg_slices.count(orig)) {
+            save->reg_slices = rst.save_reg_slices.at(orig);
+        } else {
+            auto select = findContext<IR::BFN::Select>();
+            BUG("Parser match register not allocated for %1%", select->p4Source);
         }
     }
 
@@ -792,11 +795,12 @@ struct InsertSaveAndSelect : public ParserModifier {
 };
 
 /// Adjust the match constant according to the select field's
-/// alignment in the match register(s)
-class MatchRegisterLayout {
+/// alignment in the match register(s) and/or counter reads
+class MatchLayout {
  private:
-    std::vector<MatchRegister> all_regs;
-    std::map<MatchRegister, match_t> values;
+    std::vector<cstring> sources;
+    std::map<cstring, match_t> values;
+    std::map<cstring, size_t> sizes;
     size_t total_size;
 
     match_t shiftRight(match_t val, int n) {
@@ -821,7 +825,7 @@ class MatchRegisterLayout {
         return match_t(word0, word1);
     }
 
-    match_t setWild(match_t a) {
+    match_t setDontCare(match_t a) {
         auto word0 = a.word0;
         auto word1 = a.word1;
         auto wilds = (~(word0 ^ word1)) & (~((~uintmax_t(0)) << total_size));
@@ -838,73 +842,60 @@ class MatchRegisterLayout {
         return shiftRight(match_t(trim_left_word0, trim_left_word1), sz - start - len);
     }
 
- public:
-    explicit MatchRegisterLayout(ordered_set<MatchRegister> used_regs)
-        : total_size(0) {
-        for (const auto& r : used_regs) {
-            total_size += r.size * 8;
-            all_regs.push_back(r);
-            values[r] = match_t(0, 0); }
-    }
-
     void writeValue(const IR::BFN::Select* select, match_t val) {
-        auto& reg_slices = select->reg_slices;
+        if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+            auto& reg_slices = saved->reg_slices;
+            int val_size = 0;
+            int val_shifted = 0;
 
-        int val_size = 0;
-        int val_shifted = 0;
+            for (auto rs : reg_slices)
+                val_size += rs.second.size();
 
-        for (auto rs : reg_slices)
-            val_size += rs.second.size();
+            for (auto& slice : reg_slices) {
+                auto& reg = slice.first;
+                auto& reg_sub_range = slice.second;
 
-        for (auto& slice : reg_slices) {
-            auto& reg = slice.first;
-            auto& reg_sub_range = slice.second;
+                nw_bitrange reg_range(0, reg.size * 8 - 1);
+                BUG_CHECK(reg_range.contains(reg_sub_range),
+                          "range not part of parser match register?");
 
-            nw_bitrange reg_range(0, reg.size * 8 - 1);
-            BUG_CHECK(reg_range.contains(reg_sub_range),
-                      "range not part of parser match register?");
+                match_t slice_val = getSubValue(val, val_size, val_shifted, reg_sub_range.size());
+                match_t val_to_or = shiftLeft(slice_val, reg.size * 8 - reg_sub_range.hi - 1);
 
-            match_t slice_val = getSubValue(val, val_size, val_shifted, reg_sub_range.size());
-            match_t val_to_or = shiftLeft(slice_val, reg.size * 8 - reg_sub_range.hi - 1);
+                values[reg.name] = orTwo(values[reg.name], val_to_or);
+                val_shifted += reg_sub_range.size();
+            }
 
-            values[reg] = orTwo(values[reg], val_to_or);
-            val_shifted += reg_sub_range.size();
-        }
-
-        BUG_CHECK(val_shifted == val_size, "value not entirely shifted?");
-    }
-
-    match_t getMatchValue() {
-        int shift = 0;
-        match_t rtn(0, 0);
-        for (const auto& r : boost::adaptors::reverse(all_regs)) {
-            rtn = orTwo(rtn, shiftLeft(values[r], shift));
-            shift += r.size * 8;
-        }
-        return setWild(rtn);
-    }
-};
-
-struct AdjustMatchValue : public ParserModifier {
-    void postorder(IR::BFN::Transition* transition) override {
-        if (transition->value->is<IR::BFN::ParserConstMatchValue>()) {
-            adjustConstValue(transition);
-        } else if (transition->value->is<IR::BFN::ParserPvsMatchValue>()) {
-            adjustPvsValue(transition);
+            BUG_CHECK(val_shifted == val_size, "value not entirely shifted?");
+        } else if (auto cntr = select->source->to<IR::BFN::ParserCounterRVal>()) {
+            BUG_CHECK(!values[cntr->declName], "value aleady exists for %1%", cntr->declName);
+            values[cntr->declName] = val;
         } else {
-            BUG("Unknown match value: %1%", transition->value);
+            BUG("Unknown parser select source");
         }
     }
 
-    /// Adjust the transition value to a match_t that:
-    ///   1. match_t value's size = sum of size of all used registers.
-    ///   2. values are placed into their `slot` in match_t value.
-    void adjustConstValue(IR::BFN::Transition* transition) {
-        auto* state = findContext<IR::BFN::ParserState>();
-        ordered_set<MatchRegister> used_registers;
+ public:
+    explicit MatchLayout(const IR::BFN::ParserState* state,
+                         const IR::BFN::Transition* transition) : total_size(0) {
         for (const auto* select : state->selects) {
-            for (const auto& rs : select->reg_slices) {
-                used_registers.insert(rs.first); } }
+            if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+                for (const auto& rs : saved->reg_slices) {
+                    auto reg = rs.first;
+                    if (!values.count(reg.name)) {
+                        sources.push_back(reg.name);
+                        values[reg.name] = match_t();
+                        sizes[reg.name] = reg.size * 8;
+                        total_size += reg.size * 8;
+                    }
+                }
+            } else if (auto cntr = select->source->to<IR::BFN::ParserCounterRVal>()) {
+                sources.push_back(cntr->declName);
+                values[cntr->declName] = match_t();
+                sizes[cntr->declName] = 1;
+                total_size += 1;
+            }
+        }
 
         // Pop out value for each select.
         auto const_val = transition->value->to<IR::BFN::ParserConstMatchValue>()->value;
@@ -921,18 +912,54 @@ struct AdjustMatchValue : public ParserModifier {
         std::map<const IR::BFN::Select*, match_t> select_values;
         for (const auto* select : boost::adaptors::reverse(state->selects)) {
             int value_size = 0;
-            for (auto rs : select->reg_slices) {
-                auto mask = rs.second;
-                value_size += mask.size();
+            if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+                for (auto rs : saved->reg_slices) {
+                    auto mask = rs.second;
+                    value_size += mask.size();
+                }
+                select_values[select] = shiftOut(value_size);
+            } else if (select->source->is<IR::BFN::ParserCounterRVal>()) {
+                select_values[select] = shiftOut(1);
             }
-            select_values[select] = shiftOut(value_size);
         }
 
-        MatchRegisterLayout layout(used_registers);
         for (const auto* select : state->selects) {
-            layout.writeValue(select, select_values[select]);
+            if (select->source->is<IR::BFN::SavedRVal>() ||
+                select->source->is<IR::BFN::ParserCounterRVal>())
+                writeValue(select, select_values[select]);
         }
-        transition->value = new IR::BFN::ParserConstMatchValue(layout.getMatchValue());
+    }
+
+    match_t getMatchValue() {
+        int shift = 0;
+        match_t rv;
+        for (const auto& src : boost::adaptors::reverse(sources)) {
+            rv = orTwo(rv, shiftLeft(values[src], shift));
+            shift += sizes.at(src);
+        }
+        rv = setDontCare(rv);
+        return rv;
+    }
+};
+
+struct AdjustMatchValue : public ParserModifier {
+    void postorder(IR::BFN::Transition* transition) override {
+        if (transition->value->is<IR::BFN::ParserConstMatchValue>())
+            adjustConstValue(transition);
+        else if (transition->value->is<IR::BFN::ParserPvsMatchValue>())
+            adjustPvsValue(transition);
+        else
+            BUG("Unknown match value: %1%", transition->value);
+    }
+
+    /// Adjust the transition value to a match_t that:
+    ///   1. match_t value's size = sum of size of all used registers.
+    ///   2. values are placed into their `slot` in match_t value.
+    void adjustConstValue(IR::BFN::Transition* transition) {
+        auto* state = findContext<IR::BFN::ParserState>();
+        MatchLayout layout(state, transition);
+        auto value = layout.getMatchValue();
+        transition->value = new IR::BFN::ParserConstMatchValue(value);
     }
 
     /// Build a mapping from fieldslice to matcher slice by checking the field
@@ -943,32 +970,26 @@ struct AdjustMatchValue : public ParserModifier {
         auto* adjusted = new IR::BFN::ParserPvsMatchValue(old_value->name, old_value->size);
 
         for (const auto* select : state->selects) {
-            cstring field_name = select->p4Source->toString();
-
+            cstring field_name = stripThreadPrefix(select->p4Source->toString());
             int field_start = 0;
-            for (const auto& rs : boost::adaptors::reverse(select->reg_slices)) {
-                auto reg = rs.first;
-                auto reg_slice = rs.second.toOrder<Endian::Little>(reg.size * 8);
 
-                nw_bitrange field_slice(StartLen(field_start, reg_slice.size()));
-                adjusted->mapping[{field_name, field_slice}] =  {reg, reg_slice};
+            if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
+                for (const auto& rs : boost::adaptors::reverse(saved->reg_slices)) {
+                    auto reg = rs.first;
+                    auto reg_slice = rs.second.toOrder<Endian::Little>(reg.size * 8);
 
-                LOG2("add PVS mapping: " << field_name << field_slice << " -> "
-                     << reg << " : " << reg_slice);
+                    nw_bitrange field_slice(StartLen(field_start, reg_slice.size()));
+                    adjusted->mapping[{field_name, field_slice}] =  {reg, reg_slice};
 
-                field_start += field_slice.size();
+                    LOG2("add PVS mapping: " << field_name << field_slice << " -> "
+                         << reg << " : " << reg_slice);
+
+                    field_start += field_slice.size();
+                }
             }
         }
 
         transition->value = adjusted;
-    }
-};
-
-struct CheckAllocation : public Inspector {
-    bool preorder(const IR::BFN::Select* select) override {
-        BUG_CHECK(select->reg_slices.size() > 0,
-            "Parser match register not allocated for %1%", select->p4Source);
-        return false;
     }
 };
 
@@ -986,7 +1007,6 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         allocator,
         new InsertSaveAndSelect(*allocator),
         new AdjustMatchValue,
-        new CheckAllocation,
         LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr
     });
 }

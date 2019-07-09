@@ -1,5 +1,5 @@
-#ifndef BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_
-#define BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_
+#ifndef BF_P4C_PARDE_RESOLVE_PARSER_STACK_INDEX_H_
+#define BF_P4C_PARDE_RESOLVE_PARSER_STACK_INDEX_H_
 
 #include "ir/ir.h"
 #include "bf-p4c/logging/pass_manager.h"
@@ -53,4 +53,4 @@ class ResolveHeaderStackValues : public Logging::PassManager {
     ResolveHeaderStackValues();
 };
 
-#endif /* BF_P4C_PARDE_RESOLVE_PARSER_VALUES_H_ */
+#endif /* BF_P4C_PARDE_RESOLVE_PARSER_STACK_INDEX_H_ */

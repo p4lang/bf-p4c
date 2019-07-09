@@ -46,14 +46,14 @@ class Parser {
         template <typename ROW> void write_row_config(ROW &row_regs);
     };
     struct CounterInit {
-        int             lineno = -1, offset = -1;
-        int             add = 0, mask = 7, rot = 0, max = 255, src = -1;
-        CounterInit(value_t &data);
-        bool parse(value_t &exp, int what = 0);
+        gress_t         gress;
+        int             lineno = -1, addr = -1;
+        int             add = 0, mask = 255, rot = 0, max = 255, src = -1;
+        CounterInit(gress_t, pair_t);
+        void pass1(Parser *) { }
+        void pass2(Parser *);
         template<class REGS> void write_config(REGS &, gress_t, int);
-        bool equiv(const CounterInit &a) const {
-            /* ignoring lineno and offset fields */
-            return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src; }
+        bool equiv(const CounterInit&) const;
     };
     struct PriorityUpdate {
         int             lineno = -1, offset = -1, shift = -1, mask = -1;
@@ -113,13 +113,14 @@ class Parser {
             std::string value_set_name;
             int         value_set_size = 0;
             int         value_set_handle = -1;
-            int         counter = 0, offset = 0, shift = 0, buf_req = -1;
-            bool        counter_load = false, counter_reset = false, offset_reset = false;
-            CounterInit *counter_exp;
+            int         offset = 0, shift = 0, buf_req = -1;
+            bool        offset_reset = false;
+
+            int ctr_amt_idx = 0, ctr_ld_src = 0, ctr_load = 0;
+            CounterInit* ctr_instr = nullptr;
+
             PriorityUpdate      priority;
 
-            //int         load_offset = -1, load_unit = -1, load_add = 0, load_shift = 0,
-            //            load_mask = 0xff, load_max = 0xff;
             Ref         next;
             MatchKey    future;
 

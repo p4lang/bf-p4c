@@ -52,9 +52,16 @@ class ControlConverter : public Transform {
  public:
     explicit ControlConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::MethodCallStatement* node) override;
-    const IR::Node* postorder(IR::Declaration_Instance* node) override;
-    const IR::Node* postorder(IR::Property* node) override;
+
+    const IR::Node* postorder(IR::Declaration_Instance* node) {
+        return substitute<IR::Declaration_Instance>(node); }
+
+    const IR::Node* postorder(IR::MethodCallStatement* node) {
+        return substitute<IR::MethodCallStatement>(node); }
+
+    const IR::Node* postorder(IR::Property* node) {
+        return substitute<IR::Property>(node); }
+
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();
@@ -107,8 +114,16 @@ class ParserConverter : public Transform {
  public:
     explicit ParserConverter(ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::AssignmentStatement* node) override;
-    const IR::Node* postorder(IR::Member* node) override;
+
+    const IR::Node* postorder(IR::AssignmentStatement* node) {
+        return substitute<IR::AssignmentStatement>(node); }
+
+    const IR::Node* postorder(IR::SelectExpression* node) {
+        return substitute<IR::SelectExpression>(node); }
+
+    const IR::Node* postorder(IR::Member* node) {
+        return substitute<IR::Member>(node); }
+
     const IR::P4Parser* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Parser>();
@@ -230,17 +245,17 @@ class ParserPriorityConverter : public StatementConverter {
 };
 
 class ParserCounterConverter : public StatementConverter {
+    void cannotFit(const IR::AssignmentStatement* stmt, const char* what);
+
  public:
     explicit ParserCounterConverter(ProgramStructure *structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement *node) override;
 };
 
-class ParserCounterSelectionConverter : public StatementConverter {
+class ParserCounterSelectionConverter : public PassManager {
  public:
-    explicit ParserCounterSelectionConverter(ProgramStructure* structure)
-    : StatementConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::Member* node) override;
+    ParserCounterSelectionConverter();
 };
 
 }  // namespace V1

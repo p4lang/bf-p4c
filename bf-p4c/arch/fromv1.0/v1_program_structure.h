@@ -16,9 +16,6 @@ namespace V1 {
 /// Experimental implementation of programStructure to facilitate the
 /// translation between P4-16 program of different architecture.
 struct ProgramStructure : BFN::ProgramStructure {
-    // maintain symbol tables for program transformation
-    ChecksumSourceMap                            checksums;
-
     /// user program specific info
     cstring type_h;
     cstring type_m;

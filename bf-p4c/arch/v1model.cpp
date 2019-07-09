@@ -1818,9 +1818,9 @@ class ConstructSymbolTable : public Inspector {
                                 structure->_map.emplace(stmt, stmt->apply(cvt));
                             }
                         // handle parser counter in select() expression
-                        } else if (findContext<IR::SelectExpression>()) {
-                            ParserCounterSelectionConverter cvt(structure);
-                            structure->_map.emplace(node, node->apply(cvt));
+                        } else if (auto select = findOrigCtxt<IR::SelectExpression>()) {
+                            ParserCounterSelectionConverter cvt;
+                            structure->_map.emplace(select, select->apply(cvt));
                         } else {
                             BUG("Invalid expression for parser counter");
                         }

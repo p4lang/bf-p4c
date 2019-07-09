@@ -1,26 +1,12 @@
 #include "v1_converters.h"
 #include "v1_program_structure.h"
 #include "lib/ordered_map.h"
+#include "bf-p4c/common/utils.h"
 
 namespace BFN {
 
 namespace V1 {
 //////////////////////////////////////////////////////////////////////////////////////////////
-
-const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
-    return substitute<IR::Declaration_Instance>(node); }
-
-const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
-    return substitute<IR::MethodCallStatement>(node); }
-
-const IR::Node* ControlConverter::postorder(IR::Property* node) {
-    return substitute<IR::Property>(node); }
-
-const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
-    return substitute<IR::AssignmentStatement>(node); }
-
-const IR::Node* ParserConverter::postorder(IR::Member* node) {
-    return substitute<IR::Member>(node); }
 
 const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     auto params = node->type->getApplyParameters();
@@ -694,6 +680,43 @@ const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node
     return result;
 }
 
+static bool isParserCounter(const IR::Member* member) {
+    if (member->member == "parser_counter") {
+        if (auto path = member->expr->to<IR::PathExpression>()) {
+            if (path->path->name == "ig_prsr_ctrl")
+                return true;
+        }
+    }
+
+    return false;
+}
+
+static std::pair<unsigned, unsigned> getAlignLoHi(const IR::Member* member) {
+    auto header = member->expr->type->to<IR::Type_Header>();
+
+    CHECK_NULL(header);
+
+    unsigned bits = 0;
+
+    for (auto field : header->fields) {
+        auto size = field->type->width_bits();
+
+        if (size > 8)
+            ::fatal_error("Parser counter load field more than 8 bits: %1%", member);
+
+        if (field->name == member->member)
+            return {bits % 8, (bits + size - 1) % 8};
+
+        bits += size;
+    }
+
+    BUG("%1% not found in header?", member->member);
+}
+
+void ParserCounterConverter::cannotFit(const IR::AssignmentStatement* stmt, const char* what) {
+    ::error("Parser counter %1% amount cannot fit into 8-bit. %2%", what, stmt);
+}
+
 const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     auto stmt = getOriginal<IR::AssignmentStatement>();
     auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
@@ -707,43 +730,180 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     }
 
     IR::MethodCallStatement *methodCall = nullptr;
+
     if (right->to<IR::Constant>() || right->to<IR::Member>()) {
-        // Load operation
+        // Load operation (immediate or field)
         methodCall = new IR::MethodCallStatement(
             stmt->srcInfo, new IR::Member(parserCounter, "set"), { new IR::Argument(stmt->right) });
     } else if (auto add = right->to<IR::Add>()) {
-        // Add operaton.
         auto member = add->left->to<IR::Member>();
-        BUG_CHECK(member != nullptr, "Expression for parser counter is not supported %1%",
-                  stmt->srcInfo);
 
-        auto pathExpr = member->expr->to<IR::PathExpression>();
-        if (pathExpr) {
-            auto path = pathExpr->path->to<IR::Path>();
-            if (path->name == "ig_prsr_ctrl" && member->member == "parser_counter")
-                return new IR::MethodCallStatement(
-                    stmt->srcInfo, new IR::Member(parserCounter, "increment"),
-                    { new IR::Argument(add->right) });
+        auto counterWidth = IR::Type::Bits::get(8);
+        auto max = new IR::Constant(counterWidth, 255);  // How does user specify the max in P4-14?
+
+        // Add operaton
+        if (member && isParserCounter(member)) {
+            methodCall = new IR::MethodCallStatement(
+                stmt->srcInfo, new IR::Member(parserCounter, "increment"),
+                { new IR::Argument(add->right) });
+        } else {
+            if (auto* amt = add->right->to<IR::Constant>()) {
+                // Load operation (expression of field)
+                if (member) {
+                    auto shr = new IR::Constant(counterWidth, 0);
+                    auto mask = new IR::Constant(counterWidth, 255);
+                    auto add = new IR::Constant(counterWidth, amt->asUnsigned());
+
+                    methodCall = new IR::MethodCallStatement(
+                                stmt->srcInfo,
+                                new IR::Member(parserCounter, "set"),
+                                { new IR::Argument(member),
+                                  new IR::Argument(max),
+                                  new IR::Argument(shr),
+                                  new IR::Argument(mask),
+                                  new IR::Argument(add) });
+                } else if (auto* shl = add->left->to<IR::Shl>()) {
+                    if (auto* rot = shl->right->to<IR::Constant>()) {
+                        if (auto* field = shl->left->to<IR::Member>()) {
+                            if (!rot->fitsUint() || rot->asUnsigned() >> 8)
+                                cannotFit(stmt, "multiply");
+
+                            if (!amt->fitsUint() || amt->asUnsigned() >> 8)
+                                cannotFit(stmt, "immediate");
+
+                            unsigned lo = 0, hi = 7;
+                            std::tie(lo, hi) = getAlignLoHi(field);
+
+                            auto shr = new IR::Constant(counterWidth, 8 - rot->asUnsigned() - lo);
+                            auto mask = new IR::Constant(counterWidth, (1 << (hi + 1)) - 1);
+                            auto add = new IR::Constant(counterWidth, amt->asUnsigned());
+
+                            methodCall = new IR::MethodCallStatement(
+                                stmt->srcInfo,
+                                new IR::Member(parserCounter, "set"),
+                                { new IR::Argument(field),
+                                  new IR::Argument(max),
+                                  new IR::Argument(shr),
+                                  new IR::Argument(mask),
+                                  new IR::Argument(add) });
+                        }
+                    }
+                }
+            }
         }
-
-        methodCall =  new IR::MethodCallStatement(
-                stmt->srcInfo,
-                new IR::Member(parserCounter, "set"),
-                { new IR::Argument(new IR::Cast(IR::Type::Bits::get(8), right)) });
     }
+
+    if (!methodCall)
+        ::error("Unsupported syntax for parser counter: %1%", stmt);
 
     return methodCall;
 }
 
-const IR::Node* ParserCounterSelectionConverter::postorder(IR::Member* node) {
-    auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
-    auto methodCall =  new IR::MethodCallExpression(
-        node->srcInfo, new IR::Member(parserCounter, "get"), new IR::Vector<IR::Argument>());
-    return methodCall;
+struct ParserCounterSelectExprConverter : Transform {
+    bool& needsCast;
+    explicit ParserCounterSelectExprConverter(bool& nc) : needsCast(nc) {}
+
+    const IR::Node* postorder(IR::Member* node) {
+        if (isParserCounter(node)) {
+            auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
+            auto isZero = new IR::Member(parserCounter, "is_zero");
+
+            const IR::Expression* methodCall =  new IR::MethodCallExpression(node->srcInfo, isZero,
+                new IR::Vector<IR::Argument>());
+
+            if (needsCast)
+                methodCall = new IR::Cast(IR::Type::Bits::get(1), methodCall);
+
+            return methodCall;
+        }
+
+        return node;
+    }
+};
+
+struct ParserCounterSelectCaseConverter : Transform {
+    bool needsCast = false;
+    int counterIdx = -1;
+
+    const IR::Node* preorder(IR::SelectExpression* node) {
+        for (unsigned i = 0; i < node->select->components.size(); i++) {
+            auto select = node->select->components[i];
+
+            if (auto member = select->to<IR::Member>()) {
+                if (isParserCounter(member)) {
+                    if (counterIdx >= 0)
+                        ::error("Multiple selects on parser counter in %1%", node);
+                    counterIdx = i;
+                }
+            }
+        }
+
+        return node;
+    }
+
+    struct RewriteSelectCase : Transform {
+        bool needsCast = false;
+
+        const IR::Expression* convert(const IR::Constant* c,
+                                      bool toBool = true, bool check = true) {
+            auto val = c->asUnsigned();
+
+            if (check && val >> 1)
+                ::error("Parser counter only supports 1-bit match (is zero?).");
+
+            if (toBool)
+                return new IR::BoolLiteral(~val);
+            else
+                return new IR::Constant(IR::Type::Bits::get(1), ~val & 1);
+        }
+
+        const IR::Node* preorder(IR::Mask* mask) override {
+            prune();
+
+            mask->left = convert(mask->left->to<IR::Constant>(), false);
+            mask->right = convert(mask->right->to<IR::Constant>(), false, false);
+
+            needsCast = true;
+
+            return mask;
+        }
+
+        const IR::Node* preorder(IR::Constant* c) override {
+            return convert(c);
+        }
+    };
+
+    const IR::Node* preorder(IR::SelectCase* node) {
+        RewriteSelectCase rewrite;
+
+        if (auto list = node->keyset->to<IR::ListExpression>()) {
+            auto newList = list->clone();
+
+            for (unsigned i = 0; i < newList->components.size(); i++) {
+                if (i == counterIdx) {
+                    newList->components[i] = newList->components[i]->apply(rewrite);
+                    break;
+                }
+            }
+
+            node->keyset = newList;
+        } else {
+            node->keyset = node->keyset->apply(rewrite);
+        }
+
+        needsCast = rewrite.needsCast;
+
+        return node;
+    }
+};
+
+ParserCounterSelectionConverter::ParserCounterSelectionConverter() {
+    auto convertSelectCase = new ParserCounterSelectCaseConverter;
+    auto convertSelectExpr = new ParserCounterSelectExprConverter(convertSelectCase->needsCast);
+
+    addPasses({convertSelectCase, convertSelectExpr});
 }
 
 }  // namespace V1
-
-
 
 }  // namespace BFN

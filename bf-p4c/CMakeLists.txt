@@ -367,7 +367,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/infer_payload_offset.cpp
-  parde/resolve_parser_values.cpp
+  parde/resolve_parser_stack_index.cpp
   parde/split_parser_state.cpp
   parde/p4i/gen_parser_json.cpp
   )
@@ -397,7 +397,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/parde_spec.h
   parde/infer_payload_offset.h
   parde/phase0.h
-  parde/resolve_parser_values.h
+  parde/resolve_parser_stack_index.h
   parde/parde_utils.h
   parde/parser_info.h
   parde/split_parser_state.h
@@ -909,7 +909,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/path_linearizer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/resolve_parser_values.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_mutex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp

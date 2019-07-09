@@ -33,6 +33,11 @@ class ExtractDeparser : public DeparserInspector {
     ordered_map<cstring, IR::BFN::Digest *>     digests;
     ordered_map<cstring, cstring>               nameMap;
 
+    ordered_map<cstring, std::vector<const IR::BFN::EmitField*>> headerToEmits;
+
+    std::set<ordered_set<cstring>*>             userEnforcedHeaderOrdering;
+
+    void generateEmits(const IR::MethodCallExpression* mc);
     void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list,
                         const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr);
     void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr);
@@ -40,9 +45,14 @@ class ExtractDeparser : public DeparserInspector {
     void fixup_mirror_digest(const IR::MethodCallExpression*,
             IR::IndexedVector<IR::NamedExpression>*);
 
+    void enforceHeaderOrdering();
+
+    bool preorder(const IR::Annotation* annot) override;
     bool preorder(const IR::Declaration_Instance *decl) override;
     bool preorder(const IR::IfStatement *ifstmt) override;
     bool preorder(const IR::MethodCallExpression* mc) override;
+
+    void end_apply() override;
 
  public:
     explicit ExtractDeparser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe *rv) :

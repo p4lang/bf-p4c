@@ -13,7 +13,7 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/resolve_parser_values.h"
+#include "bf-p4c/parde/resolve_parser_stack_index.h"
 #include "bf-p4c/parde/gen_deparser.h"
 
 namespace BFN {
@@ -89,10 +89,15 @@ struct ParserPragmas : public Inspector {
                 return false;
             }
 
-            ::warning("@pragma %1% will at most be unrolled to %2% "
-                      "states due to max_loop_depth pragma.", ps->name, max_loop->asInt());
+            ::warning("Parser state %1% will be unrolled up to %2% "
+                      "times due to @pragma max_loop_depth.", ps->name, max_loop->asInt());
 
             max_loop_depth[ps] = max_loop->asInt();
+        } else if (pragma_name == "dont_unroll") {
+            ::warning("Parser state %1% will not be unrolled because of @pragma dont_unroll",
+                       ps->name);
+
+            dont_unroll.insert(ps->name);
         }
 
         return false;
@@ -101,6 +106,8 @@ struct ParserPragmas : public Inspector {
     std::set<const IR::ParserState*> terminate_parsing;
     std::map<const IR::ParserState*, unsigned> force_shift;
     std::map<const IR::ParserState*, unsigned> max_loop_depth;
+
+    std::set<cstring> dont_unroll;
 };
 
 /// A helper type that represents a transition in the parse graph that led to
@@ -278,6 +285,20 @@ rewriteLookahead(P4::TypeMap* typeMap,
     return rval;
 }
 
+static bool isExtern(const IR::Member* method, cstring externName) {
+    if (auto pe = method->expr->to<IR::PathExpression>()) {
+        if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
+            if (auto baseType = type->baseType->to<IR::Type_Extern>())
+                if (baseType->name == externName)
+                    return true;
+        } else if (auto type = pe->type->to<IR::Type_Extern>()) {
+            if (type->name == externName)
+                return true;
+        }
+    }
+    return false;
+}
+
 class GetBackendParser {
  public:
     explicit GetBackendParser(P4::TypeMap *typeMap,
@@ -291,7 +312,7 @@ class GetBackendParser {
                        const IR::P4ValueSet* valueSet = nullptr);
 
  private:
-    IR::BFN::ParserState* getState(cstring name);
+    IR::BFN::ParserState* getState(cstring name, bool& isLoopState);
 
     // For v1model, compiler may insert parser states, e.g. if @pragma packet_entry is specified.
     // Therefore, the program "start" state may not be the true start state.
@@ -315,6 +336,10 @@ class GetBackendParser {
             return p4Name;
         }
     }
+
+    const IR::Node* rewriteLookaheadExpr(const IR::MethodCallExpression* call,
+                                         const IR::Slice* slice,
+                                         int bitShift, nw_bitrange& bitrange);
 
     const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                       nw_bitrange& bitrange);
@@ -342,12 +367,14 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
           new IR::BFN::ParserState(state,
                                    createThreadName(parser->thread, stateName),
                                    parser->thread);
-        if (parserPragmas.max_loop_depth.count(state)) {
-            max_loop_depth[stateName] = parserPragmas.max_loop_depth.at(state); }
+        if (parserPragmas.max_loop_depth.count(state))
+            max_loop_depth[stateName] = parserPragmas.max_loop_depth.at(state);
         return true;
     });
 
-    IR::BFN::ParserState* startState = getState(getStateName("start"));
+    bool isLoopState = false;
+    IR::BFN::ParserState* startState = getState(getStateName("start"), isLoopState);
+
     cstring pipeName = parser->pipeName;
     BlockInfoMapping* binfo = &arch->toBlockInfo;
     if (binfo) {
@@ -399,16 +426,24 @@ bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
     }
     auto* transition = new IR::BFN::Transition(match_value_ir, shift, nullptr);
-    state->transitions.push_back(transition);
 
     AutoPushTransition newTransition(transitionStack, state, transition);
     if (newTransition.isValid) {
-        transition->next = getState(getStateName(nextState));
-    } else {
-        return false;  // One bad transition means the whole state's bad.
+        bool isLoopState = false;
+
+        auto next = getState(getStateName(nextState), isLoopState);
+
+        if (isLoopState)
+            transition->loop = next->name;
+        else
+            transition->next = next;
+
+        state->transitions.push_back(transition);
+
+        return true;
     }
 
-    return true;
+    return false;  // One bad transition means the whole state's bad.
 }
 
 struct RewriteParserStatements : public Transform {
@@ -628,20 +663,6 @@ struct RewriteParserStatements : public Transform {
         return rv;
     }
 
-    static bool isExtern(const IR::Member* method, cstring externName) {
-        if (auto pe = method->expr->to<IR::PathExpression>()) {
-            if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
-                if (auto baseType = type->baseType->to<IR::Type_Extern>())
-                    if (baseType->name == externName)
-                        return true;
-            } else if (auto type = pe->type->to<IR::Type_Extern>()) {
-                if (type->name == externName)
-                    return true;
-            }
-        }
-        return false;
-    }
-
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumCall(IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
@@ -653,9 +674,71 @@ struct RewriteParserStatements : public Transform {
             return rewriteChecksumVerify(call);
         }
 
-        ::error("Unexpected method call in checksum: %1%", method);
         return nullptr;
     }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteParserCounterCall(IR::MethodCallStatement* statement) {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+
+        if (method->member == "set") {
+            if ((*call->arguments).size() == 1) {
+                if (auto* imm = (*call->arguments)[0]->expression->to<IR::Constant>()) {
+                    // load immediate
+                    auto* init = new IR::BFN::ParserCounterLoadImm(declName);
+                    init->imm = imm->asInt();
+
+                    rv->push_back(init);
+                } else if (auto* field = (*call->arguments)[0]->expression->to<IR::Member>()) {
+                    // load field (from match register)
+                    auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                                   new IR::BFN::SavedRVal(field));
+                    rv->push_back(load);
+                } else {
+                    ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
+                }
+            } else if ((*call->arguments).size() == 5) {  // load field (from match register)
+                auto* field = (*call->arguments)[0]->expression->to<IR::Member>();
+                auto* max = (*call->arguments)[1]->expression->to<IR::Constant>();
+                auto* rotate = (*call->arguments)[2]->expression->to<IR::Constant>();
+                auto* mask = (*call->arguments)[3]->expression->to<IR::Constant>();
+                auto* add = (*call->arguments)[4]->expression->to<IR::Constant>();
+
+                if (field && max && rotate && mask && add) {
+                    auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                                   new IR::BFN::SavedRVal(field));
+
+                    load->max = max->asInt();
+                    load->rotate = rotate->asInt();
+                    load->mask = mask->asInt();
+                    load->add = add->asInt();
+
+                    rv->push_back(load);
+                } else {
+                    ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
+                }
+            }
+        } else if (method->member == "increment") {
+            auto* value = (*call->arguments)[0]->expression->to<IR::Constant>();
+            auto* inc = new IR::BFN::ParserCounterIncrement(declName);
+            inc->value = value->asInt();
+            rv->push_back(inc);
+        } else if (method->member == "decrement") {
+            auto value = (*call->arguments)[0]->expression->to<IR::Constant>();
+            auto* dec = new IR::BFN::ParserCounterDecrement(declName);
+            dec->value = value->asInt();
+            rv->push_back(dec);
+        }
+
+        return rv;
+    }
+
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteParserPriorityCall(IR::MethodCallStatement* statement) {
@@ -679,8 +762,7 @@ struct RewriteParserStatements : public Transform {
             if (isExtern(method, "Checksum")) {
                 return rewriteChecksumCall(statement);
             } else if (isExtern(method, "ParserCounter")) {
-                P4C_UNIMPLEMENTED("parser counter is currently unsupported in the backend");
-                return nullptr;
+                return rewriteParserCounterCall(statement);
             } else if (isExtern(method, "ParserPriority")) {
                 return rewriteParserPriorityCall(statement);
             } else if (method->member == "extract") {
@@ -696,7 +778,7 @@ struct RewriteParserStatements : public Transform {
             }
         }
 
-        ::error("Unexpected method call in parser%s", statement->srcInfo);
+        ::fatal_error("Unexpected method call in parser %s", statement);
         return nullptr;
     }
 
@@ -843,7 +925,7 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
                           const IR::Vector<IR::Expression> &selectExprs) {
     LOG3("key: " << key);
     if (key->is<IR::DefaultExpression>())
-        return match_t();
+        return match_t::dont_care(match_size);
     else if (auto k = key->to<IR::Constant>())
         return match_t(match_size, k->asUnsigned(), ~((~uintmax_t(0)) << match_size));
     else if (auto mask = key->to<IR::Mask>())
@@ -857,8 +939,40 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
 }
 
 const IR::Node*
+GetBackendParser::rewriteLookaheadExpr(const IR::MethodCallExpression* call,
+                                       const IR::Slice* slice,
+                                       int bitShift, nw_bitrange& bitrange) {
+    auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
+    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
+    bitrange = rval->range;
+    return select;
+}
+
+const IR::Node*
 GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                     nw_bitrange& bitrange) {
+    if (auto* cast = selectExpr->to<IR::Cast>()) {
+        // cast->type  TODO
+        if (auto* call = cast->expr->to<IR::MethodCallExpression>()) {
+            if (auto* method = call->method->to<IR::Member>()) {
+                if (isExtern(method, "ParserCounter")) {
+                    auto* path = method->expr->to<IR::PathExpression>()->path;
+                    cstring declName = path->name;
+
+                    if (method->member == "is_zero") {
+                        return new IR::BFN::Select(
+                            new IR::BFN::ParserCounterIsZero(declName), call);
+                    } else if (method->member == "is_negative") {
+                        return new IR::BFN::Select(
+                            new IR::BFN::ParserCounterIsNegative(declName), call);
+                    } else {
+                        ::error("illegal parser counter expr in select");
+                    }
+                }
+            }
+        }
+    }
+
     // We can transform a lookahead expression immediately to a concrete select
     // on bits in the input buffer.
     if (auto* slice = selectExpr->to<IR::Slice>()) {
@@ -866,7 +980,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
             if (auto* mem = call->method->to<IR::Member>()) {
                 if (mem->member == "lookahead") {
                     auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
-                    auto select = new IR::BFN::Select(rval, call);
+                    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
                     bitrange = rval->range;
                     return select;
                 }
@@ -876,12 +990,13 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
         if (auto* mem = call->method->to<IR::Member>()) {
             if (mem->member == "lookahead") {
                 auto rval = rewriteLookahead(typeMap, call, nullptr, bitShift);
-                auto select = new IR::BFN::Select(rval, call);
+                auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
                 bitrange = rval->range;
                 return select;
             }
         }
     }
+
     BUG_CHECK(!selectExpr->is<IR::Constant>(), "%1% constant selection expression %2% "
                                                "should have been eliminated by now.",
                                                selectExpr->srcInfo, selectExpr);
@@ -896,12 +1011,11 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
         return rv;
     }
 
-    // For anything else, we'll have to resolve it later.
-    // FIXME(zma) alright, I believe you have a good reason for that ...
+    // SavedRVal will need to receive a register allocation
     return new IR::BFN::Select(new IR::BFN::SavedRVal(selectExpr), selectExpr);
 }
 
-IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
+IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState) {
     if (states.count(name) == 0) {
         if (name != "accept" && name != "reject")
             ::error("No definition for parser state %1%", name);
@@ -912,11 +1026,18 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
     // sure that the resulting loop is legal.
     auto* state = states[name];
     if (transitionStack.alreadyVisited(state)) {
+        LOG2("parser state " << name << " is in a loop");
+
+        if (parserPragmas.dont_unroll.count(name)) {
+            isLoopState = true;
+            return state;
+        }
+
         if (max_loop_depth.count(name)) {
             max_loop_depth[name]--;
             // no more loop is allowed
-            if (max_loop_depth.at(name) == 0) {
-                return nullptr; }
+            if (max_loop_depth.at(name) == 0)
+                return nullptr;
         }
         // We're inside a loop. We don't want loops in the actual IR graph, so
         // we'll unroll the loop by creating a new, empty instance of this
@@ -1003,7 +1124,8 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name) {
             auto decl = refMap->getDeclaration(path->path, true);
             auto pvs = decl->to<IR::P4ValueSet>();
             CHECK_NULL(pvs);
-            addTransition(state, match_t(), shift, selectCase->state->path->name, pvs);
+            addTransition(state, match_t::dont_care(matchSize),
+                          shift, selectCase->state->path->name, pvs);
         } else {
             auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
             bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);

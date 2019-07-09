@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 #define EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
 
@@ -25,19 +27,19 @@ struct Def {
 
 struct Use {
     const IR::BFN::ParserState* state = nullptr;
-    const IR::BFN::Select* select = nullptr;
+    const IR::BFN::SavedRVal* save = nullptr;
 
     Use(const IR::BFN::ParserState* s,
-        const IR::BFN::Select* select) : state(s), select(select) { }
+        const IR::BFN::SavedRVal* save) : state(s), save(save) { }
 
     bool equiv(const Use* other) const {
         if (this == other) return true;
-        return (state->name == other->state->name) && (select->equiv(*other->select));
+        return (state->name == other->state->name) && (save->equiv(*other->save));
     }
 
     std::string print() const {
         std::stringstream ss;
-        ss << " [ " << state->name << " : " << select->p4Source << " ]";
+        ss << " [ " << state->name << " : " << save->source << " ]";
         return ss.str();
     }
 };
@@ -52,8 +54,8 @@ struct UseDef {
     }
 
     const Use*
-    get_use(const IR::BFN::ParserState* state, const IR::BFN::Select* select) const {
-        auto temp = new Use(state, select);
+    get_use(const IR::BFN::ParserState* state, const IR::BFN::SavedRVal* save) const {
+        auto temp = new Use(state, save);
         for (auto& kv : use_to_defs)
             if (kv.first->equiv(temp))
                 return kv.first;
@@ -88,18 +90,73 @@ struct UseDef {
 
 struct ParserUseDef : std::map<const IR::BFN::Parser*, UseDef> { };
 
+struct ResolveExtractSaves : Modifier {
+    const PhvInfo& phv;
+
+    explicit ResolveExtractSaves(const PhvInfo& phv) : phv(phv) { }
+
+    struct FindRVal : Inspector {
+        const PhvInfo& phv;
+        const IR::Expression* expr;
+        const IR::BFN::InputBufferRVal* rv = nullptr;
+
+        FindRVal(const PhvInfo& phv, const IR::Expression* f) : phv(phv), expr(f) { }
+
+        bool preorder(const IR::BFN::Extract* extract) override {
+            le_bitrange f_bits, x_bits;
+
+            auto f = phv.field(extract->dest->field, &f_bits);
+            auto x = phv.field(expr, &x_bits);
+
+            if (f == x) {
+                if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                    auto clone = rval->clone();
+
+                    clone->range.lo -= f_bits.lo;
+                    clone->range.hi += f->size - f_bits.hi - 1;
+
+                    clone->range.lo += x_bits.lo;
+                    clone->range.hi -= f->size - x_bits.hi - 1;
+
+                    rv = clone;
+                }
+            }
+
+            return false;
+        }
+    };
+
+    bool preorder(IR::BFN::Extract* extract) override {
+        if (auto save = extract->source->to<IR::BFN::SavedRVal>()) {
+            if (auto rval = save->source->to<IR::BFN::InputBufferRVal>()) {
+                extract->source = rval;
+            } else {
+                auto state = findOrigCtxt<IR::BFN::ParserState>();
+
+                FindRVal find_rval(phv, save->source);
+                state->apply(find_rval);
+
+                if (find_rval.rv)
+                    extract->source = find_rval.rv;
+            }
+        }
+
+        return false;
+    }
+};
+
 /// Collect Use-Def for all select fields
 ///   Def: In which states are the select fields extracted?
 ///   Use: In which state are the select fields matched on?
 struct CollectParserUseDef : PassManager {
-    struct CollectDefs : Inspector {
+    struct CollectDefs : ParserInspector {
         CollectDefs() { visitDagOnce = false; }
 
         std::map<const IR::BFN::ParserState*,
                  std::set<const IR::BFN::InputBufferRVal*>> state_to_rvals;
 
         std::map<const IR::BFN::InputBufferRVal*,
-                 const IR::Expression*> rval_to_lval;
+                 std::set<const IR::Expression*>> rval_to_lvals;
 
         bool preorder(const IR::BFN::ParserState *) override {
             visitOnce();  // only visit once, regardless of how many predecessors
@@ -113,7 +170,7 @@ struct CollectParserUseDef : PassManager {
 
             if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
                 state_to_rvals[state].insert(rval);
-                rval_to_lval[rval] = extract->dest->field;
+                rval_to_lvals[rval].insert(extract->dest->field);
 
                 LOG4(state->name << " " << rval << " -> " << extract->dest->field);
             }
@@ -122,7 +179,7 @@ struct CollectParserUseDef : PassManager {
         }
     };
 
-    struct MapToUse : Inspector {
+    struct MapToUse : ParserInspector {
         const PhvInfo& phv;
         const CollectParserInfo& parser_info;
         const CollectDefs& defs;
@@ -130,18 +187,23 @@ struct CollectParserUseDef : PassManager {
         ParserUseDef& parser_use_def;
 
         MapToUse(const PhvInfo& phv,
-                    const CollectParserInfo& pi,
-                    const CollectDefs& d,
-                    ParserUseDef& parser_use_def) :
+                 const CollectParserInfo& pi,
+                 const CollectDefs& d,
+                 ParserUseDef& parser_use_def) :
             phv(phv), parser_info(pi), defs(d), parser_use_def(parser_use_def) {
                 visitDagOnce = false;
             }
 
-        // defs have absoluate offsets from current state
+        Visitor::profile_t init_apply(const IR::Node* root) override {
+            parser_use_def.clear();
+            return ParserInspector::init_apply(root);
+        }
+
+        // defs have absolute offsets from current state
         ordered_set<Def*>
         find_defs(const IR::BFN::InputBufferRVal* rval,
-                 const IR::BFN::ParserGraph& graph,
-                 const IR::BFN::ParserState* state) {
+                  const IR::BFN::ParserGraph& graph,
+                  const IR::BFN::ParserState* state) {
             ordered_set<Def*> rv;
 
             if (rval->range.lo < 0) {  // def is in an earlier state
@@ -173,7 +235,7 @@ struct CollectParserUseDef : PassManager {
 
         // multiple defs in earlier states with no absolute offsets from current state
         ordered_set<Def*>
-        find_defs(const IR::BFN::SavedRVal* saved,
+        find_defs(const IR::Expression* saved,
                   const IR::BFN::ParserGraph& graph,
                   const IR::BFN::ParserState* state) {
             ordered_set<Def*> rv;
@@ -181,24 +243,25 @@ struct CollectParserUseDef : PassManager {
             for (auto& kv : defs.state_to_rvals) {
                 auto def_state = kv.first;
 
-                if (graph.is_ancestor(def_state, state)) {
+                if (def_state == state || graph.is_ancestor(def_state, state)) {
                     for (auto rval : kv.second) {
-                        auto lval = defs.rval_to_lval.at(rval);
+                        for (auto lval : defs.rval_to_lvals.at(rval)) {
+                            le_bitrange bits;
+                            auto f = phv.field(lval);
+                            auto s = phv.field(saved, &bits);
 
-                        le_bitrange bits;
-                        auto f = phv.field(lval, &bits);
-                        auto s = phv.field(saved->source);
-
-                        if (f == s) {
-                            if (bits.size() == f->size) {
-                                auto def = new Def(def_state, rval);
-                                rv.insert(def);
-                            } else {
-                                auto full_rval = rval->clone();
-                                full_rval->range.lo = rval->range.lo - bits.lo;
-                                full_rval->range.hi = rval->range.hi + f->size - bits.hi - 1;
-                                auto def = new Def(def_state, full_rval);
-                                rv.insert(def);
+                            if (f == s) {
+                                if (bits.size() == f->size) {
+                                    auto def = new Def(def_state, rval);
+                                    rv.insert(def);
+                                } else {
+                                    nw_bitrange nw_bits = bits.toOrder<Endian::Network>(f->size);
+                                    auto slice_rval = rval->clone();
+                                    slice_rval->range.lo = rval->range.lo + nw_bits.lo;
+                                    slice_rval->range.hi = rval->range.lo + nw_bits.hi;
+                                    auto def = new Def(def_state, slice_rval);
+                                    rv.insert(def);
+                                }
                             }
                         }
                     }
@@ -211,28 +274,25 @@ struct CollectParserUseDef : PassManager {
         bool preorder(const IR::BFN::Parser *) override { revisit_visited(); return true; }
         bool preorder(const IR::BFN::ParserState *) override { visitOnce(); return true; }
 
-        bool preorder(const IR::BFN::Select* select) override {
-            auto parser = findContext<IR::BFN::Parser>();
-            auto state = findContext<IR::BFN::ParserState>();
-
+        bool preorder(const IR::BFN::SavedRVal* save) override {
+            auto parser = findOrigCtxt<IR::BFN::Parser>();
+            auto state = findOrigCtxt<IR::BFN::ParserState>();
             auto& graph = parser_info.graph(parser);
 
-            auto use = parser_use_def[parser].get_use(state, select);
+            auto use = parser_use_def[parser].get_use(state, save);
 
-            if (auto buf = select->source->to<IR::BFN::InputBufferRVal>()) {
-                auto defs = find_defs(buf, graph, state);
-                for (auto def : defs)
-                    parser_use_def[parser].add_def(use, def);
-            } else if (auto save = select->source->to<IR::BFN::SavedRVal>()) {
-                auto defs = find_defs(save, graph, state);
-                for (auto def : defs)
-                    parser_use_def[parser].add_def(use, def);
-            } else {
-                BUG("Unknown select expression %1%", select->source);
-            }
+            ordered_set<Def*> defs;
 
-            BUG_CHECK(parser_use_def[parser].use_to_defs.count(use),
-                      "No reaching def found for select %1%", use->print());
+            if (auto buf = save->source->to<IR::BFN::InputBufferRVal>())
+                defs = find_defs(buf, graph, state);
+            else
+                defs = find_defs(save->source, graph, state);
+
+            for (auto def : defs)
+                parser_use_def[parser].add_def(use, def);
+
+            if (!parser_use_def[parser].use_to_defs.count(use))
+                ::fatal_error("Select on uninitialized value %1%", use->print());
 
             LOG4(parser_use_def[parser].print(use));
 
@@ -254,6 +314,73 @@ struct CollectParserUseDef : PassManager {
     }
 
     ParserUseDef parser_use_def;
+};
+
+struct CopyPropParserDef : public ParserModifier {
+    const CollectParserInfo& parser_info;
+    const ParserUseDef& parser_use_def;
+
+    CopyPropParserDef(const CollectParserInfo& pi, const ParserUseDef& ud) :
+        parser_info(pi), parser_use_def(ud) { }
+
+    const IR::BFN::InputBufferRVal*
+    get_absolute_def(const IR::BFN::SavedRVal* save) {
+        auto parser = findOrigCtxt<IR::BFN::Parser>();
+        auto state = findOrigCtxt<IR::BFN::ParserState>();
+
+        auto use = parser_use_def.at(parser).get_use(state, save);
+        auto defs = parser_use_def.at(parser).use_to_defs.at(use);
+
+        if (defs.size() == 1) {
+            auto def = *defs.begin();
+            auto shifts = parser_info.get_all_shift_amounts(def->state, state);
+
+            // if has single def of absolute offset, propagate to use
+            if (shifts->size() == 1) {
+                auto rval = def->rval->clone();
+
+                if (rval->is<IR::BFN::PacketRVal>()) {
+                    auto shift = *shifts->begin();
+                    rval->range = rval->range.shiftedByBits(-shift);
+                }
+
+                return rval;
+            }
+        }
+
+        return nullptr;
+    }
+
+    bool preorder(IR::BFN::SavedRVal* save) override {
+        if (save->source->is<IR::BFN::InputBufferRVal>())
+            return false;
+
+        auto orig = getOriginal<IR::BFN::SavedRVal>();
+
+        if (auto def = get_absolute_def(orig)) {
+            LOG4("propagate " << def << " to " << save->source);
+            save->source = def;
+        }
+
+        return false;
+    }
+};
+
+struct ParserCopyProp : public PassManager {
+    explicit ParserCopyProp(const PhvInfo& phv) {
+        auto* parserInfo = new CollectParserInfo;
+        auto* collectUseDef = new CollectParserUseDef(phv, *parserInfo);
+        auto* copyPropDef = new CopyPropParserDef(*parserInfo, collectUseDef->parser_use_def);
+
+        addPasses({
+            LOGGING(4) ? new DumpParser("before_parser_copy_prop") : nullptr,
+            new ResolveExtractSaves(phv),
+            parserInfo,
+            collectUseDef,
+            copyPropDef,
+            LOGGING(4) ? new DumpParser("after_parser_copy_prop") : nullptr
+        });
+    }
 };
 
 #endif  /* EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_ */

@@ -323,9 +323,9 @@ template<> void Parser::State::Match::Clot::write_config(
 
 template<> void Parser::State::Match::write_counter_config(
     Target::Tofino::parser_regs::_memory::_ml_ea_row &ea_row) const {
-    ea_row.ctr_amt_idx = counter;
-    ea_row.ctr_ld_src = counter_load;
-    ea_row.ctr_load = counter_reset;
+    ea_row.ctr_amt_idx = ctr_amt_idx;
+    ea_row.ctr_ld_src = ctr_ld_src;
+    ea_row.ctr_load = ctr_load;
 }
 
 template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t gress) {

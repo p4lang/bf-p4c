@@ -173,26 +173,6 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 } else
                     parser_error = Phv::Ref(gress, 0, kv.value);
                 continue; }
-            if (kv.key == "counter_init") {
-                if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
-                if (kv.value.type == tVEC) {
-                    int i = 0;
-                    for (auto &v : kv.value.vec) {
-                        if (i >= PARSER_CTRINIT_ROWS) {
-                            error(v.lineno, "too many counter init rows");
-                            break; }
-                        counter_init[i++] = new CounterInit(v); }
-                    continue; }
-                for (auto &el : kv.value.map) {
-                    if (!CHECKTYPE(el.key, tINT)) continue;
-                    if (el.key.i < 0 || el.key.i >= PARSER_CTRINIT_ROWS)
-                        error(el.key.lineno, "invalid counter init row");
-                    else if (auto *old = counter_init[el.key.i]) {
-                        error(el.key.lineno, "duplicate counter init row");
-                        warning(old->lineno, "previous counter init row");
-                    } else
-                        counter_init[el.key.i] = new CounterInit(el.value); }
-                continue; }
             if (kv.key == "multi_write") {
                 if (kv.value.type == tVEC)
                     for (auto &el : kv.value.vec)
@@ -418,7 +398,7 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
         if ((unit = data.key[1].i) >= Target::PARSER_CHECKSUM_UNITS())
             error(lineno, "Ran out of %sgress parser checksum units (%d available)",
                   gress ? "e" : "in", Target::PARSER_CHECKSUM_UNITS());
-     } else { error(data.key.lineno, "Syntax error"); }
+    } else { error(data.key.lineno, "Syntax error"); }
     for (auto &kv : MapIterChecked(data.value.map, true)) {
         if (kv.key == "type") {
             if (CHECKTYPE(kv.value, tSTR)) {
@@ -493,8 +473,7 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
 
 void Parser::Checksum::pass1(Parser *parser) {
     if (parser->checksum_use.empty())
-        for (auto i = 0; i < Target::PARSER_CHECKSUM_UNITS(); i++)
-            parser->checksum_use.emplace_back();
+        parser->checksum_use.resize(Target::PARSER_CHECKSUM_UNITS());
     if (addr >= 0) {
         if (addr >= PARSER_CHECKSUM_ROWS)
             error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);
@@ -513,13 +492,12 @@ void Parser::Checksum::pass1(Parser *parser) {
         if (dest->lo != dest->hi)
             error(dest.lineno, "checksum verification destination must be single bit");
         else dst_bit_hdr_end_pos = dest->lo;
-#if HAVE_JBAY
         if (options.target == JBAY && dest->reg.size == 8 && dest->reg.deparser_id() % 2)
             dst_bit_hdr_end_pos += 8;
-#endif // HAVE_JBAY
     } else if (type == 1 && dest && dest.size() != dest->reg.size) {
         error(dest.lineno, "residual checksum must write whole container"); }
 }
+
 void Parser::Checksum::pass2(Parser *parser) {
     if (addr < 0) {
         int avail = -1;
@@ -527,16 +505,20 @@ void Parser::Checksum::pass2(Parser *parser) {
             if (parser->checksum_use[unit][i]) {
                 if (equiv(*parser->checksum_use[unit][i])) {
                     addr = i;
-                    break; }
+                    break;
+                }
             } else if (avail < 0)
-                avail = i; }
+                avail = i;
+        }
         if (addr < 0) {
             if (avail >= 0)
                 parser->checksum_use[unit][addr = avail] = this;
             else
                 error(lineno, "Ran out of room in parser checksum control RAM of"
                         " %sgress unit %d (%d rows available)",
-                      gress ? "e" : "in", unit, PARSER_CHECKSUM_ROWS); } }
+                      gress ? "e" : "in", unit, PARSER_CHECKSUM_ROWS);
+        }
+    }
 }
 
 template<class ROW>
@@ -557,120 +539,91 @@ void Parser::Checksum::write_row_config(ROW &row) {
     row.type = type;
 }
 
-Parser::CounterInit::CounterInit(value_t &data) : lineno(data.lineno) {
-    if (data.type != tMAP) {
-        if (!parse(data))
-            error(lineno, "synatx error in parser counter expression");
-    } else {
-        for (auto &kv : MapIterChecked(data.map)) {
-            if (kv.key == "add") {
-                if (CHECKTYPE(kv.value, tINT))
-                    if ((add = kv.value.i) < 0 || add > 255 )
-                        error(kv.value.lineno, "counter add value out of range");
-            } else if (kv.key == "max") {
-                if (CHECKTYPE(kv.value, tINT))
-                    if ((max = kv.value.i) < 0 || max > 255)
-                        error(kv.value.lineno, "counter max value out of range");
-            } else if (kv.key == "mask") {
-                if (CHECKTYPE(kv.value, tINT)) {
-                    if (kv.value.i <= 0 || (kv.value.i & (kv.value.i + 1)))
-                        error(kv.value.lineno, "counter mask must be one less than a power of 2");
-                    else if ((max = bitcount(kv.value.i) - 1) > 7)
-                        error(kv.value.lineno, "counter mask value out of range"); }
-            } else if (kv.key == "src" || kv.key == "source") {
-                if (kv.value.type == tINT && kv.value.i >= 0 && kv.value.i < 4) src = kv.value.i;
-                else if (kv.value == "half" && kv.value.type == tCMD && kv.value.vec.size == 2) {
-                    if (kv.value[1] == "lo") src = 0;
-                    else if (kv.value[1] == "hi") src = 1;
-                    else error(kv.value.lineno, "unknown counter source");
-                } else if (kv.value == "half_lo") src = 0;
-                else if (kv.value == "half_hi") src = 1;
-                else if (kv.value == "byte0") src = 2;
-                else if (kv.value == "byte1") src = 3;
-                else error(kv.value.lineno, "unknown counter source");
-            } else if (kv.key == "rot" || kv.key == "rotate") {
-                if (CHECKTYPE(kv.value, tINT))
-                    if ((rot = kv.value.i) < 0 || rot > 7)
-                        error(kv.value.lineno, "counter rotate value out of range");
-            } else {
-                error(kv.key.lineno, "Unknown field %s in counter", kv.key.s); } } }
+Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.lineno), gress(gress) {
+    if (!CHECKTYPE2(data.key, tSTR, tCMD)) return;
+    if (!CHECKTYPE(data.value, tMAP)) return;
+
+    if (options.target == TOFINO) mask = 7;
+
+    for (auto &kv : MapIterChecked(data.value.map, true)) {
+        if (kv.key == "add" && CHECKTYPE(kv.value, tINT)) {
+            add = kv.value.i;
+            if (add > 255)
+                error(lineno, "Parser counter add value out of range (0-255)");
+        } else if (kv.key == "max" && CHECKTYPE(kv.value, tINT)) {
+            max = kv.value.i;
+            if (max > 255)
+                error(lineno, "Parser counter max value out of range (0-255)");
+        } else if (kv.key == "rotate" && CHECKTYPE(kv.value, tINT)) {
+            rot = kv.value.i;
+            if (rot > 7)
+                error(lineno, "Parser counter rotate value out of range (0-7)");
+        } else if (kv.key == "mask" && CHECKTYPE(kv.value, tINT)) {
+            mask = kv.value.i;
+            if (options.target == TOFINO) {
+                if (bitcount(mask + 1) > 1)
+                    error(lineno, "Parser counter mask value is invalid");
+
+                mask = floor_log2(kv.value.i);
+
+                if (mask > 7)
+                    error(lineno, "Parser counter mask value out of range (0-7)");
+            } else if (options.target == JBAY && mask > 255) {
+                error(lineno, "Parser counter mask value out of range (0-255)");
+            }
+        } else if (kv.key == "src") {
+            if (CHECKTYPE(kv.value, tSTR)) {
+                if (options.target == TOFINO) {
+                         if (kv.value == "half_lo") src = 0;
+                    else if (kv.value == "half_hi") src = 1;
+                    else if (kv.value == "byte0")   src = 2;
+                    else if (kv.value == "byte1")   src = 3;
+                    else error(lineno, "Unexpected counter load source");
+                } else if (options.target == JBAY) {
+                         if (kv.value == "byte0") src = 0;
+                    else if (kv.value == "byte1") src = 1;
+                    else if (kv.value == "byte2") src = 2;
+                    else if (kv.value == "byte3") src = 3;
+                    else error(lineno, "Unexpected counter load source");
+                } 
+            }
+        } else {
+            error(lineno, "Syntax error in parser counter init expression");
+        }
+    }
 }
 
-bool Parser::CounterInit::parse(value_t &exp, int what) {
-    enum { START, OFFSET, RSHIFT, LSHIFT, MASK, ADD };
-    if (exp.type == tCMD) {
-        if (what == START) {
-            for (int i = exp[0] == "load"; i < exp.vec.size; i++) {
-                if (exp[i] == "max") {
-                    if (++i >= exp.vec.size || exp[i].type != tINT)
-                        return false;
-                    max = exp[2].i;
-                } else if (exp[i] == "half_lo") {
-                    if (src >= 0 || offset >= 0) return false;
-                    src = 1;
-                } else if (exp[i] == "half_hi") {
-                    if (src >= 0 || offset >= 0) return false;
-                    src = 1;
-                } else if (exp[i] == "byte0") {
-                    if (src >= 0 || offset >= 0) return false;
-                    src = 2;
-                } else if (exp[i] == "byte1") {
-                    if (src >= 0 || offset >= 0) return false;
-                    src = 3;
-                } else if (exp[i] == "half") {
-                    if (src >= 0 || offset >= 0 || ++i >= exp.vec.size) return false;
-                    if (exp[i] == "lo") src = 0;
-                    if (exp[i] == "hi") src = 1;
-                    else return false;
-                } else {
-                    if (!parse(exp[i], OFFSET))
-                        return false; } }
-            return true; }
-        if (what == OFFSET && exp[0] == ">>") {
-            if (exp.vec.size != 3) return false;
-            return parse(exp[1], what) && parse(exp[2], RSHIFT); }
-        if (what == OFFSET && exp[0] == "<<") {
-            if (exp.vec.size != 3) return false;
-            return parse(exp[1], what) && parse(exp[2], LSHIFT); }
-        if (what == OFFSET && exp[0] == "&") {
-            if (exp.vec.size != 3) return false;
-            return parse(exp[1], what) && parse(exp[2], MASK); }
-        if (what == OFFSET && exp[0] == "+") {
-            if (exp.vec.size != 3) return false;
-            return parse(exp[1], what) && parse(exp[2], ADD); }
-    } else if (exp.type == tINT) {
-        switch (what) {
-        case OFFSET:
-            if (offset >= 0 || src >= 0) return false;
-            offset = exp.i;
-            return true;
-        case RSHIFT:
-            if (rot) return false;
-            rot = exp.i & 7;
-            return true;
-        case LSHIFT:
-            if (rot) return false;
-            rot = -exp.i & 7;
-            return true;
-        case MASK:
-            if (mask != 7) return false;
-            mask = bitcount(exp.i) - 1;
-            if ((exp.i & (exp.i + 1)) || mask < 0 || mask > 7) {
-                error(lineno, "mask must one less than a power of 2");
-                return false; }
-            return true;
-        case ADD:
-            if (add) return false;
-            add = exp.i;
-            return true;
-        default: return false; } }
-    return false;
+bool Parser::CounterInit::equiv(const CounterInit &a) const {
+    return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src;
+}
+
+void Parser::CounterInit::pass2(Parser *parser) {
+    if (addr < 0) {
+        int avail = -1;
+        for (int i = 0; i < PARSER_CTRINIT_ROWS; ++i) {
+            if (parser->counter_init[i]) {
+                if (equiv(*parser->counter_init[i])) {
+                    addr = i;
+                    break;
+                }
+            } else if (avail < 0)
+                avail = i;
+        }
+        if (addr < 0) {
+            if (avail >= 0)
+                parser->counter_init[addr = avail] = this;
+            else
+                error(lineno, "Ran out of room in parser counter init RAM of"
+                        " %sgress (%d rows available)",
+                      gress ? "e" : "in", PARSER_CTRINIT_ROWS);
+        }
+    }
 }
 
 Parser::PriorityUpdate::PriorityUpdate(const value_t &exp) {
     lineno = exp.lineno;
     if (!parse(exp))
-        error(lineno, "syntax error in priority expression");
+        error(lineno, "Syntax error in priority expression");
 }
 
 bool Parser::PriorityUpdate::parse(const value_t &exp, int what) {
@@ -757,13 +710,11 @@ const char* Parser::match_key_loc_name(int loc) {
         if (loc == 0 || loc == 1) return "half";
         if (loc == 2) return "byte0";
         if (loc == 3) return "byte1";
-#if HAVE_JBAY
     } else if (options.isJBayTarget()) {
-        if (loc == 0) return "byte2";
-        if (loc == 1) return "byte3";
-        if (loc == 2) return "byte0";
-        if (loc == 3) return "byte1";
-#endif // HAVE_JBAY
+        if (loc == 0) return "byte0";
+        if (loc == 1) return "byte1";
+        if (loc == 2) return "byte2";
+        if (loc == 3) return "byte3";
     }
 
     error(-1, "Invalid match key loc");
@@ -783,13 +734,11 @@ int Parser::match_key_loc(const char* key) {
         if (!strcmp(key, "half") || !strcmp(key, "half0")) return 0;
         if (!strcmp(key, "byte0")) return 2;
         if (!strcmp(key, "byte1")) return 3;
-#if HAVE_JBAY
     } else if (options.isJBayTarget()) {
-        if (!strcmp(key, "byte0")) return 2;
-        if (!strcmp(key, "byte1")) return 3;
-        if (!strcmp(key, "byte2")) return 0;
-        if (!strcmp(key, "byte3")) return 1;
-#endif // HAVE_JBAY
+        if (!strcmp(key, "byte0")) return 0;
+        if (!strcmp(key, "byte1")) return 1;
+        if (!strcmp(key, "byte2")) return 2;
+        if (!strcmp(key, "byte3")) return 3;
     }
 
     error(-1, "Invalid match key %s", key);
@@ -927,43 +876,26 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
 {
     for (auto &kv : data) {
         if (kv.key == "counter") {
-            if (counter || counter_reset)
-                error(kv.key.lineno, "Multiple counter settings in match");
-            if (!CHECKTYPE2M(kv.value, tINT, tCMD, "set, inc or dec value"))
-                continue;
-            if (kv.value.type == tINT) {
-                counter = kv.value.i;
-                counter_reset = true;
-            } else if (kv.value[0] == "load") {
-                counter_load = true;
-                if (kv.value.vec.size == 3 && kv.value[1] == "@" && kv.value[2].type == tINT)
-                    counter = kv.value[2].i;
-                else
-                    counter_exp = new CounterInit(kv.value);
-            } else if (CHECKTYPEM(kv.value[1], tINT, "set, inc or dec value")) {
-                counter = kv.value.i;
-                counter_reset = false;
-                if (kv.value[0] == "dec" || kv.value[0] == "decrement")
-                    counter = -counter;
-                else if (kv.value[0] == "set")
-                    counter_reset = true;
-                else if (kv.value[0] != "inc" && kv.value[0] != "increment")
-                    error(kv.value.lineno, "Syntax error, expecting set, inc or dec value"); }
-        } else if (kv.key == "offset") {
-            if (offset || offset_reset)
-                error(kv.key.lineno, "Multiple offset settings in match");
-            if (!CHECKTYPE2M(kv.value, tINT, tCMD, "set or inc value"))
-                continue;
-            if (kv.value.type == tINT) {
-                offset = kv.value.i;
-                offset_reset = true;
-            } else if (CHECKTYPEM(kv.value[1], tINT, "set or inc value")) {
-                offset = kv.value.i;
-                offset_reset = false;
-                if (kv.value[0] == "set")
-                    offset_reset = true;
-                else if (kv.value[0] != "inc" && kv.value[0] != "increment")
-                    error(kv.value.lineno, "Syntax error, expecting set or inc value"); }
+            if (kv.value.type == tMAP) {
+                ctr_ld_src = 1;
+                ctr_load = 1;
+                ctr_instr = new CounterInit(gress, kv);
+            } else if (kv.value.type == tCMD) {
+                if (kv.value[0] == "inc" || kv.value[0] == "increment") {
+                    if (CHECKTYPE(kv.value[1], tINT))
+                        ctr_amt_idx = kv.value[1].i;
+                } else if (kv.value[0] == "dec" || kv.value[0] == "decrement") {
+                    if (CHECKTYPE(kv.value[1], tINT))
+                        ctr_amt_idx = ~kv.value[1].i + 1;
+                } else if (kv.value[0] == "load") {
+                    if (CHECKTYPE(kv.value[1], tINT)) {
+                        ctr_load = 1;
+                        ctr_amt_idx = kv.value[1].i;
+                    }
+                }
+            } else {
+                error(kv.value.lineno, "Syntax error for parser counter");
+            }
         } else if (kv.key == "hdr_len_inc_stop") {
             if (options.target != JBAY)
                 error(kv.key.lineno, "Target does not support hdr_len_inc_stop");
@@ -1031,8 +963,8 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
 Parser::State::Match::Match(int l, gress_t gress, State *n) : lineno(l)
 {
     /* build a default match for a synthetic start state */
-    counter = offset = shift = 0;
-    counter_reset = offset_reset = true;
+    offset = shift = 0;
+    offset_reset = true;
     next.name = n->name;
     next.ptr.push_back(n);
 }
@@ -1443,23 +1375,10 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
 void Parser::State::Match::pass2(Parser *pa, State *state) {
     for (auto &c : csum)
         c.pass2(pa);
-    if (counter < 0 && counter_exp) {
-        if (counter_exp->src < 0)
-            error(counter_exp->lineno, "can't allocate match unit for counter load"
-                  " (unimplemented)");
-        else {
-            int i = 0, free = -1;
-            for (auto init : pa->counter_init) {
-                if (init && init->equiv(*counter_exp)) {
-                    counter = i;
-                    break; }
-                if (free < 0 && !init) free = i;
-                ++i; }
-            if (counter < 0) {
-                if (free >= 0)
-                    pa->counter_init[counter = free] = counter_exp;
-                else
-                    error(counter_exp->lineno, "no space left in counter init ram"); } } }
+
+    if (ctr_instr)
+        ctr_instr->pass2(pa);
+
     if (clots.size() > 0) {
         if (options.target == TOFINO)
             error(clots[0]->lineno, "clots not supported on tofino");
@@ -1568,7 +1487,7 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    if (counter | counter_reset | counter_load)
+    if (ctr_instr || ctr_load || ctr_amt_idx)
         write_counter_config(ea_row);
     else if (def)
         def->write_counter_config(ea_row);

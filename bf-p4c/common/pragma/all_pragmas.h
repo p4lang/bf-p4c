@@ -62,6 +62,7 @@ DEFINE_PRAGMA_CLASS(PragmaSelectorNumMaxGroups);
 DEFINE_PRAGMA_CLASS(PragmaSelectorEnableScramble);
 DEFINE_PRAGMA_CLASS(PragmaStage);
 DEFINE_PRAGMA_CLASS(PragmaTerminateParsing);
+DEFINE_PRAGMA_CLASS(PragmaDontUnroll);
 DEFINE_PRAGMA_CLASS(PragmaTernary);
 DEFINE_PRAGMA_CLASS(PragmaUseHashAction);
 DEFINE_PRAGMA_CLASS(PragmaWays);

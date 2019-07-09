@@ -201,10 +201,12 @@ class CharacterizeParser : public Inspector {
 
             if (next != path.end()) {
                 auto matches = cgl.graphs().at(parser)->transitions(*it, *next);
-                total_user_header_bits += (*matches.begin())->shift;
+                if (!matches.empty())
+                    total_user_header_bits += (*matches.begin())->shift;
             } else {
                 auto matches = cgl.graphs().at(parser)->to_pipe(*it);
-                total_user_header_bits += (*matches.begin())->shift;
+                if (!matches.empty())
+                    total_user_header_bits += (*matches.begin())->shift;
             }
         }
 
