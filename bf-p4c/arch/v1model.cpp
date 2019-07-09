@@ -753,6 +753,14 @@ class AnalyzeProgram : public Inspector {
         structure->global_instances.emplace(node->name, node);
     }
 
+    // instantiation - program -- check validity
+    bool preorder(const IR::P4Program *) override {
+        auto main = structure->toplevel->getMain();
+        ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
+                    "program: does not instantiate `main`", "");
+        return true;
+    }
+
     // instantiation - program
     void postorder(const IR::P4Program *) override {
         auto params = structure->toplevel->getMain()->getConstructorParameters();

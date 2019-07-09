@@ -511,8 +511,6 @@ class SynthesizePovEncoder : public MauTransform {
 
     std::map<const FieldGroup*, VersionMap> group_to_version_map;
 
-    int action_cnt = 0;
-
  public:
     ordered_map<const IR::MAU::Action*, const IR::TempVar*> action_to_ctl_bit;
     ordered_map<const IR::MAU::Instruction*, const IR::TempVar*> assign_to_version_bit;

@@ -566,6 +566,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/13-ResubmitMetadataSize.p4
   )
 
+# # Negative tests -- these do not get included because they lack main!!
+# p4c_add_xfail_reason("tofino"
+#   "error: : Invalid program: does not instantiate `main`"
+#   extensions/p4_tests/p4_16/compile_only/p4c-1863-tna-neg.p4
+#   extensions/p4_tests/p4_16/compile_only/p4c-1863-v1model-neg.p4
+#   )
+
 # END: XFAILs with translation
 
 p4c_add_xfail_reason("tofino"

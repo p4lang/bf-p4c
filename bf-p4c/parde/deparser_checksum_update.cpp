@@ -75,7 +75,7 @@ using ParserStateChecksumMap = std::map<const IR::ParserState*,
 static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment) {
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
-    if (!methodCall || !methodCall->method)
+    if (!destField || !methodCall || !methodCall->method)
         return false;
 
     auto member = methodCall->method->to<IR::Member>();
@@ -94,6 +94,11 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
         return false;
     }
     LOG4("checksum update field: " << destField);
+
+    if (methodCall->arguments->size() == 0) {
+        ::error("Insufficient argumentst to method %1%", methodCall);
+        return false;
+    }
 
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
@@ -272,6 +277,8 @@ struct CollectUpdateChecksums : public Inspector {
     ChecksumUpdateInfo* csum;
     bool preorder(const IR::AssignmentStatement* assignment) {
         auto dest = assignment->left->to<IR::Member>();
+        if (!dest)
+            return false;  // TODO(apatil): program error?
         if (checksums.count(dest->toString())) {
             csum = checksums[dest->toString()];
         } else {

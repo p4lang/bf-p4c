@@ -172,7 +172,10 @@ struct RewriteControlAndParserBlocks : public PassManager {
         passes.push_back(evaluator);
         passes.push_back(new VisitFunctor([evaluator, parseTna]() {
             auto toplevel = evaluator->getToplevelBlock();
-            toplevel->getMain()->apply(*parseTna);
+            auto main = toplevel->getMain();
+            ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
+                        "program: does not instantiate `main`", "");
+            main->apply(*parseTna);
         }));
         passes.push_back(
             new DoRewriteControlAndParserBlocks(&parseTna->toBlockInfo));
