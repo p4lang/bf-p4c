@@ -55,6 +55,10 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}
 set (testExtraArgs "${testExtraArgs} -tofino2")
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c_873" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873/p4c_873.p4"
+    "${testExtraArgs} -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873")
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585")
 
