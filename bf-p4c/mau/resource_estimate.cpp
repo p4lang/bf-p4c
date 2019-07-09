@@ -23,9 +23,14 @@ int CounterPerWord(const IR::MAU::Counter *ctr) {
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
     case IR::MAU::DataAggregation::BOTH:
-        if (ctr->min_width <= 64) return 2;
-        if (ctr->min_width > 128)
-            error("%s: Maximum width for counter %s is 128 bits", ctr->srcInfo, ctr->name);
+        // min_width refers to the byte counter at a given index.
+        // 1 "packet_and_byte" entry gives 64-bit packet counter and 64-bit byte counter.
+        // 2 "packet_and_byte" entries gives 28-bit packet counter and 36-bit byte counter.
+        // Hardware also supports 3-entries, but compiler does not (harder to assign VPNs).
+        // 3 "packet_and_byte" entries gives 17-bit packet counter and 25-bit byte counter.
+        if (ctr->min_width <= 36) return 2;
+        if (ctr->min_width > 64)
+            error("%s: Maximum width for byte counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 1;
     default:
         error("%s: No counter type for %s", ctr->srcInfo, ctr->name);
@@ -41,7 +46,8 @@ int CounterWidth(const IR::MAU::Counter *cntr) {
         if (cntr->min_width <= 32) return 32;
         return 64;
     case IR::MAU::DataAggregation::BOTH:
-        if (cntr->min_width <= 64) return 36;
+        // The min_width attribute is with respect to the byte counter.
+        if (cntr->min_width <= 36) return 36;
         return 64;
     default:
         error("%s: No counter type for %s", cntr->srcInfo, cntr->name);
@@ -240,7 +246,7 @@ static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
  *          hash bits
  *      simul_lookups - simultaneous lookups can use the same hash bits, an optimization
  *          supported only in Brig.  Really, one can think of this as making an
- *          individual way deeper 
+ *          individual way deeper
  *
  * simul_lookups is only supported internally at this point, and is necessary to make progress
  * on power.p4

@@ -1066,7 +1066,7 @@ p4c_add_xfail_reason("tofino"
 
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
-  "Maximum width for counter .* is 128 bits"
+  "Maximum width for byte counter .* is 64 bits"
   ../glass/testsuite/p4_tests/mau/COMPILER-1108/comp_1108.p4
   )
 

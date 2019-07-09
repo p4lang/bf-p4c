@@ -83,18 +83,15 @@ void CounterTable::pass1() {
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
     Synth2Port::pass1();
+    int update_interval_bits = 29;
+    // Tofino didn't have enough bits to cover all possible values of
+    // the update interval.  The compiler should have saturated it to
+    // the max value.  Check that has been done here.
+    if (options.target == TOFINO)
+        update_interval_bits = 28;
     for (auto &l : lrt) {
-        if (l.threshold > MAX_LRT_THRESHOLD)
-            error(l.lineno, "lrt threshold too large");
-        else if ((l.threshold & 0xf) != 0)
-            error(l.lineno, "lrt threshold must be a mulitple of 16");
-        if (type & BYTES) {
-            if (static_cast<uint64_t>(l.interval) > MAX_LRT_BYTE_INTERVAL)
-                error(l.lineno, "lrt interval too large");
-            else if ((l.interval & 0xff) != 0)
-                error(l.lineno, "lrt interval must be a mulitple of 256 when measuring bytes");
-        } else if (l.interval > MAX_LRT_PACKET_INTERVAL)
-            error(l.lineno, "lrt interval too large"); }
+        if (l.interval >= (1 << update_interval_bits))
+            error(l.lineno, "lrt update interval too large"); }
     if (lrt.size() > MAX_LRT_ENTRIES)
         error(lrt[0].lineno, "Too many lrt entries (max %d)", MAX_LRT_ENTRIES);
 }
@@ -211,15 +208,15 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
             stat_ctl.stats_entries_per_word = format->groups();
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
             if (type & PACKETS) stat_ctl.stats_process_packets = 1;
+            // The configuration values for threshold and interval are passed
+            // in directly to the assembler.  Any adjustment required based
+            // on the counter type has already been done.
             if (lrt.size() > 0) {
                 stat_ctl.lrt_enable = 1;
                 int idx = 0;
                 for (auto &l : lrt) {
-                    stats.lrt_threshold[idx] = l.threshold / 16U;
-                    if (type & BYTES)
-                        stats.lrt_update_interval[idx] = l.interval / 256U;
-                    else
-                        stats.lrt_update_interval[idx] = l.interval;
+                    stats.lrt_threshold[idx] = l.threshold;
+                    stats.lrt_update_interval[idx] = l.interval;
                     ++idx; } }
             stat_ctl.stats_alu_egress = gress;
             stat_ctl.stats_bytecount_adjust = 0; // TODO

@@ -97,7 +97,7 @@ enum {
     SELECTOR_VHXBAR_HASH_BUS_INDEX = 3,
     SELECTOR_LENGTH_MOD_BITS = 5,
     STAT_ADDRESS_BITS = 19,
-    STAT_FULL_ADDRESS_BITS = STAT_ADDRESS_BITS + PER_FLOW_ENABLE_BITS,  
+    STAT_FULL_ADDRESS_BITS = STAT_ADDRESS_BITS + PER_FLOW_ENABLE_BITS,
     STAT_ADDRESS_ZERO_PAD = 7,
     STAT_METER_COLOR_LOWER_HUFFMAN_BITS = 3,
     STATISTICS_PER_FLOW_ENABLE_START_BIT = 19,
@@ -111,18 +111,9 @@ enum {
     ACTION_DATA_HUFFMAN_BITS = ACTION_DATA_LOWER_HUFFMAN_BITS + ACTION_DATA_UPPER_HUFFMAN_BITS,
     ACTION_DATA_HUFFMAN_DIFFERENCE = 10,
     MAX_PORTS = 288,
-    // LRT params should per target specific?  Currently tofino and jbay look to be the same
-    MAX_LRT_PACKET_INTERVAL = 0xfffffff,
     MAX_LRT_ENTRIES = 3,
     UPPER_MATCH_CENTRAL_FIRST_ROW = SRAM_ROWS / 2,
     UPPER_MATCH_CENTRAL_FIRST_LOGICAL_ROW = UPPER_MATCH_CENTRAL_FIRST_ROW * 2,
-};
-
-enum {
-    // global large constants in a separate enum, so as to not make the above
-    // constants long instead of int
-    MAX_LRT_BYTE_INTERVAL = 0xfffffff00,
-    MAX_LRT_THRESHOLD = 0xffffffff0,
 };
 
 enum METER_ACCESS_TYPE {

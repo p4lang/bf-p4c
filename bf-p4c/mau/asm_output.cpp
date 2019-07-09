@@ -3443,8 +3443,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
     if (counter->threshold != -1) {
-        out << indent << "lrt: { threshold: " << counter->threshold <<
-             ", interval: " << counter->interval << " }" << std::endl;
+        // 3 indicies to populate, all with same value for "simple LR(t)"
+        out << indent << "lrt:" << std::endl;
+        for (int e = 0; e < 3; e++) {
+            out << indent << "- { threshold: " << counter->threshold <<
+                 ", interval: " << counter->interval << " }" << std::endl; }
     }
     return false;
 }

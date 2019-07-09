@@ -849,7 +849,7 @@ control Rainelle(packet_out Paulding, inout Belview Millston, in Beaverdam HillT
             Emida.pack({ HillTop.Brinkman.Fabens, HillTop.Brinkman.CeeVee, 4w0,
                     HillTop.Brinkman.Haugan, 12w0, HillTop.Brinkman.Paisano });
         }
-        else 
+        else
             if (Dateland.digest_type == 3w3) {
                 Sopris.pack({ HillTop.Brinkman.Haugan, Millston.Juneau.Morstein, Millston.Juneau.Waubun, Millston.Ackley.Lecompte, Millston.Knoke.Ipava, Millston.Kalkaska.Minto, Millston.SourLake.Satolah, Millston.SourLake.RedElm });
             }
@@ -3903,7 +3903,7 @@ control Parmele(inout Belview Easley, inout Beaverdam Rawson) {
 }
 
 control Switzer(inout Belview Patchogue, inout Beaverdam BigBay, in egress_intrinsic_metadata_t Flats, in egress_intrinsic_metadata_from_parser_t Kenyon) {
-    Counter<bit<128>, bit<12>>(32w4096, CounterType_t.PACKETS_AND_BYTES) Sigsbee;
+    Counter<bit<64>, bit<12>>(32w4096, CounterType_t.PACKETS_AND_BYTES) Sigsbee;
     Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Hawthorne;
     action Sturgeon() {
         {
@@ -4589,7 +4589,7 @@ control Parmalee(inout Belview Donnelly, inout Beaverdam Welch, in egress_intrin
 }
 
 control Seguin(inout Belview Cloverly, inout Beaverdam Palmdale) {
-    DirectCounter<bit<128>>(CounterType_t.PACKETS_AND_BYTES) Calumet;
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) Calumet;
     action Speedway() {
         Calumet.count();
         ;
@@ -5130,4 +5130,3 @@ control Rocky(packet_out Malmo, inout Belview WestGate, in Beaverdam Merritt, in
 Pipeline<Belview, Beaverdam, Belview, Beaverdam>(Cutten(), RushCity(), Rainelle(), Portal(), Coconut(), Rocky()) Correo;
 
 Switch<Belview, Beaverdam, Belview, Beaverdam, _, _, _, _, _, _, _, _, _, _, _, _>(Correo) main;
-

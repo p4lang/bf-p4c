@@ -1025,10 +1025,11 @@ static bool tol(double b, double maxVal, int num_counters) {
     return false;
 }
 
-void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Counter *cntr) {
+void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
+      const IR::MAU::Table *tbl, IR::MAU::Counter *cntr) {
     if (cntr->threshold != -1) return; /* calculated already? */
     auto annot = cntr->annotations;
-    bool lrt_enabled = false;
+    bool lrt_enabled = CounterWidth(cntr) < 64;
     if (auto s = annot->getSingle("lrt_enable")) {
         ERROR_CHECK(s->expr.size() >= 1, ErrorType::ERR_INVALID,
                     "lrt_enable pragma on counter. Does not have a value.", cntr, cntr->name);
@@ -1056,26 +1057,46 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
     int lrt_scale = 1;
     if (lrt_enabled) {
         auto s = annot->getSingle("lrt_scale");
-        auto lrt_val = s->expr.at(0)->to<IR::Constant>();
-        if (lrt_val == nullptr) {
-            ::error(ErrorType::ERR_INVALID,
-                    "lrt_scale value on counter %2%. It is not a constant.", cntr, cntr->name);
-            return;
-        }
-        lrt_scale = lrt_val->asInt();
-        if (lrt_scale <= 0) {
-            ::error(ErrorType::ERR_INVALID,
-                    "lrt_scale value on counter %2%.", cntr, cntr->name);
-            return;
+        if (s) {
+            auto lrt_val = s->expr.at(0)->to<IR::Constant>();
+            if (lrt_val == nullptr) {
+                ::error(ErrorType::ERR_INVALID,
+                        "lrt_scale value on counter %2%. It is not a constant.", cntr, cntr->name);
+                return;
+            }
+            lrt_scale = lrt_val->asInt();
+            if (lrt_scale <= 0) {
+                ::error(ErrorType::ERR_INVALID,
+                        "lrt_scale value on counter %2%.", cntr, cntr->name);
+                return;
+            }
         }
     }
 
     if (!lrt_enabled) return;
 
-    auto &mem = tbl->resources->memuse.at(tbl->unique_id(cntr));
     int rams = 0;
-    for (auto &row : mem.row)
-        rams += row.col.size();
+    UniqueId lookup = tbl->unique_id(cntr);
+    if (self_.totalCounterRams.find(lookup) != self_.totalCounterRams.end()) {
+        rams = self_.totalCounterRams.at(lookup);
+    } else {  // when counter is shared by multiple tables
+        for (auto &use : tbl->resources->memuse) {
+            auto &mem = use.second;
+            if (mem.type == Memories::Use::EXACT || mem.type == Memories::Use::ATCAM ||
+                mem.type == Memories::Use::TERNARY) {
+                if (mem.unattached_tables.find(lookup) != mem.unattached_tables.end()) {
+                    lookup = mem.unattached_tables.at(lookup);
+                    if (self_.totalCounterRams.find(lookup) != self_.totalCounterRams.end())
+                        rams = self_.totalCounterRams.at(lookup);
+                } } }
+    }
+    if (rams == 0) {
+        ::error(ErrorType::ERR_NOT_FOUND,
+                "Unable to find memory allocation for counter %1% that was "
+                "accessed by %2%", cntr->name, tbl->externalName());
+        return;
+    }
+
     auto num_counters = (rams-1) * 1024 * CounterPerWord(cntr);
     auto width = CounterWidth(cntr);
     if (width == 1) return;
@@ -1128,8 +1149,12 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
     if (cntr->type != IR::MAU::DataAggregation::PACKETS)
         interval = static_cast<unsigned long>(b_cur) >> 8;
 
-    if (interval >= pow(2, 28)) {
-        interval = pow(2, 28) - 1;
+    // Tofino register is only 28 bits, so have to use the largest value
+    // This only occurs for packet counters that are 32-bits.
+    // Expanded to necessary 29 bits for Tofino2.
+    if (Device::currentDevice() == Device::TOFINO) {
+        if (interval >= (1 << 28))
+            interval = (1 << 28) - 256;  // Largest value, multiple of 256
     }
 
 #define roundUp(n, b) ( ( ((n)+(b)-1) - (((n)-1)%(b)) ) )
@@ -1144,9 +1169,23 @@ void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl, IR::MAU::Co
 #undef roundUp
 }
 
-bool FinalTableLayout::preorder(IR::MAU::Counter *cntr) {
+bool AssignCounterLRTValues::ComputeLRT::preorder(IR::MAU::Counter *cntr) {
     calculate_lrt_threshold_and_interval(findContext<IR::MAU::Table>(), cntr);
-    return false;
+    return true;
+}
+
+bool AssignCounterLRTValues::FindCounterRams::preorder(const IR::MAU::Table *t) {
+    for (auto &use : t->resources->memuse) {
+        auto &mem = use.second;
+        if (mem.type == Memories::Use::COUNTER) {
+            int allRams = 0;
+            for (auto &r : mem.row) {
+                allRams += r.col.size();
+            }
+            self_.totalCounterRams.emplace(use.first, allRams);
+        }
+    }
+    return true;
 }
 
 /**

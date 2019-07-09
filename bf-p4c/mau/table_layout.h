@@ -255,12 +255,44 @@ class TableLayout : public PassManager {
     TableLayout(const PhvInfo &p, LayoutChoices &l);
 };
 
-/// Run after TablePlacement to fix up anything needed in the layout as a result
-class FinalTableLayout : public MauModifier {
-    bool preorder(IR::MAU::Counter *cntr) override;
+/// Run after TablePlacement to assign LR(t) values for counters.
+/// Collect RAMs used by each counter in each stage.
+/// For each counter in each stage, calculate LR(t) values (if necessary).
+class AssignCounterLRTValues : public PassManager {
+ private:
+  std::map<UniqueId, int> totalCounterRams = {};
 
  public:
-    explicit FinalTableLayout(const PhvInfo &, LayoutChoices &) {}
+  Visitor::profile_t init_apply(const IR::Node *root) override {
+    auto rv = PassManager::init_apply(root);
+    totalCounterRams.clear();
+    return rv;
+  }
+
+  class FindCounterRams : public MauInspector {
+   private:
+    AssignCounterLRTValues &self_;
+   public:
+    bool preorder(const IR::MAU::Table *table) override;
+    explicit FindCounterRams(AssignCounterLRTValues &self) : self_(self) { }
+  };
+
+  class ComputeLRT : public MauModifier {
+   private:
+    AssignCounterLRTValues &self_;
+    void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl,
+                                              IR::MAU::Counter *cntr);
+   public:
+    bool preorder(IR::MAU::Counter *cntr) override;
+    explicit ComputeLRT(AssignCounterLRTValues &self) : self_(self) { }
+  };
+
+  AssignCounterLRTValues() {
+    addPasses({
+      new FindCounterRams(*this),
+      new ComputeLRT(*this)
+    });
+  }
 };
 
 #endif /* BF_P4C_MAU_TABLE_LAYOUT_H_ */
