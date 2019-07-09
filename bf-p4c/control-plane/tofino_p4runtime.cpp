@@ -172,13 +172,31 @@ class SymbolType final : public P4RuntimeSymbolType {
 /// serialized representation.
 struct ActionProfile {
     const cstring name;  // The fully qualified external name of this action profile.
-    const P4RuntimeSymbolType type;  // ACTION_PROFILE or ACTION_SELECTOR
     const int64_t size;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this action
                                         // profile declaration.
 
     p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols) const {
-        return symbols.getId(type, name);
+        return symbols.getId(SymbolType::ACTION_PROFILE(), name);
+    }
+};
+
+/// The information about an action profile which is necessary to generate its
+/// serialized representation.
+struct ActionSelector {
+    const cstring name;  // The fully qualified external name of this action selector.
+    const boost::optional<cstring> action_profile_name;  // If not known, we will generate
+                         // an action profile instance.
+    const int64_t max_group_size;
+    const int64_t num_groups;
+    const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this action
+                                        // profile declaration.
+
+    p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols) const {
+        std::string selectorName(name + "_sel");
+        if (action_profile_name)
+            return symbols.getId(SymbolType::ACTION_SELECTOR(), name);
+        return symbols.getId(SymbolType::ACTION_SELECTOR(), selectorName);
     }
 };
 
@@ -707,7 +725,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 } else if (instance->type->name == "ActionProfile" && isConstructedInPlace) {
                     symbols->add(SymbolType::ACTION_PROFILE(), tableName);
                 } else if (instance->type->name == "ActionSelector" && isConstructedInPlace) {
-                    symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
+                    if (instance->substitution.lookupByName("size")) {
+                        std::string selectorName(tableName + "_sel");
+                        symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
+                        symbols->add(SymbolType::ACTION_PROFILE(), tableName);
+                    } else {
+                        symbols->add(SymbolType::ACTION_SELECTOR(), tableName);
+                    }
                 }
             }
         }
@@ -742,7 +766,13 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         } else if (externBlock->type->name == "ActionProfile") {
             symbols->add(SymbolType::ACTION_PROFILE(), decl);
         } else if (externBlock->type->name == "ActionSelector") {
-            symbols->add(SymbolType::ACTION_SELECTOR(), decl);
+            if (externBlock->findParameterValue("size")) {
+                std::string selectorName(decl->controlPlaneName() + "_sel");
+                symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
+                symbols->add(SymbolType::ACTION_PROFILE(), decl->controlPlaneName());
+            } else {
+                symbols->add(SymbolType::ACTION_SELECTOR(), decl);
+            }
         } else if (externBlock->type->name == "Digest") {
             symbols->add(SymbolType::DIGEST(), decl);
         } else if (externBlock->type->name == "Register") {
@@ -1024,25 +1054,39 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         auto p4RtTypeInfo = p4info->mutable_type_info();
 
-        auto implementation = getActionProfile(this, tableBlock, refMap, typeMap);
-        auto directCounter =
-            Helpers::getDirectCounterlike<CounterExtern>(tableDeclaration, refMap, typeMap);
-        auto directMeter =
-            Helpers::getDirectCounterlike<MeterExtern>(tableDeclaration, refMap, typeMap);
-        auto directRegister =
-            getDirectRegister(this, tableBlock, refMap, typeMap, p4RtTypeInfo);
-        auto directLpf = getDirectLpf(this, tableBlock, refMap, typeMap);
-        auto directWred = getDirectWred(this, tableBlock, refMap, typeMap);
+        auto actionProfile = getActionProfile(tableDeclaration, refMap, typeMap);
+        auto actionSelector = getActionSelector(tableDeclaration, refMap, typeMap);
+        auto directCounter = Helpers::getDirectCounterlike<CounterExtern>(
+            tableDeclaration, refMap, typeMap);
+        auto directMeter = Helpers::getDirectCounterlike<MeterExtern>(
+            tableDeclaration, refMap, typeMap);
+        auto directRegister = getDirectRegister(
+            tableDeclaration, refMap, typeMap, p4RtTypeInfo);
+        auto directLpf = getDirectLpf(tableDeclaration, refMap, typeMap);
+        auto directWred = getDirectWred(tableDeclaration, refMap, typeMap);
         auto supportsTimeout = getSupportsTimeout(tableDeclaration);
 
-        if (implementation) {
-            auto id = implementation->getId(symbols);
+        if (actionProfile) {
+            auto id = actionProfile->getId(symbols);
             table->set_implementation_id(id);
             if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
-                if (implementation->type == SymbolType::ACTION_PROFILE())
-                    addActionProfile(symbols, p4info, *implementation);
-                else
-                    addActionSelector(symbols, p4info, *implementation);
+                addActionProfile(symbols, p4info, *actionProfile, blockPrefix);
+            }
+        }
+
+        if (actionSelector) {
+            if (actionSelector->action_profile_name) {
+                auto id = actionSelector->getId(symbols);
+                table->set_implementation_id(id);
+                if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
+                    addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
+                }
+            } else {
+                auto id = actionSelector->getId(symbols);
+                table->set_implementation_id(id);
+                if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
+                    addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
+                }
             }
         }
 
@@ -1115,13 +1159,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// @return the direct register associated with @table, if it has one, or
     /// boost::none otherwise.
     static boost::optional<Register> getDirectRegister(
-        P4RuntimeArchHandlerIface* archHandler,
-        const IR::TableBlock* tableBlock,
+        const IR::P4Table* table,
         ReferenceMap* refMap,
         TypeMap* typeMap,
         p4configv1::P4TypeInfo* p4RtTypeInfo) {
-        auto table = tableBlock->container;
-        CHECK_NULL(table);
         auto directRegisterInstance = Helpers::getExternInstanceFromProperty(
             table, "registers", refMap, typeMap);
         if (!directRegisterInstance) return boost::none;
@@ -1133,12 +1174,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     /// one, or boost::none otherwise. Used as a helper for getDirectLpf and
     /// getDirectWred.
     template <typename T>
-    static boost::optional<T> getDirectFilter(P4RuntimeArchHandlerIface* archHandler,
-                                              const IR::TableBlock* tableBlock,
+    static boost::optional<T> getDirectFilter(const IR::P4Table *table,
                                               ReferenceMap* refMap,
                                               TypeMap* typeMap,
                                               cstring filterType) {
-        const IR::P4Table *table = tableBlock->container;
         auto directFilterInstance = Helpers::getExternInstanceFromProperty(
             table, "filters", refMap, typeMap);
         if (!directFilterInstance) return boost::none;
@@ -1149,20 +1188,18 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     /// @return the direct Lpf instance associated with @table, if it has one,
     /// or boost::none otherwise.
-    static boost::optional<Lpf> getDirectLpf(P4RuntimeArchHandlerIface* archHandler,
-                                             const IR::TableBlock* tableBlock,
+    static boost::optional<Lpf> getDirectLpf(const IR::P4Table *table,
                                              ReferenceMap* refMap,
                                              TypeMap* typeMap) {
-        return getDirectFilter<Lpf>(archHandler, tableBlock, refMap, typeMap, "DirectLpf");
+        return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf");
     }
 
     /// @return the direct Wred instance associated with @table, if it has one,
     /// or boost::none otherwise.
-    static boost::optional<Wred> getDirectWred(P4RuntimeArchHandlerIface* archHandler,
-                                               const IR::TableBlock* tableBlock,
+    static boost::optional<Wred> getDirectWred(const IR::P4Table *table,
                                                ReferenceMap* refMap,
                                                TypeMap* typeMap) {
-        return getDirectFilter<Wred>(archHandler, tableBlock, refMap, typeMap, "DirectWred");
+        return getDirectFilter<Wred>(table, refMap, typeMap, "DirectWred");
     }
 
     void addExternInstance(const P4RuntimeSymbolTableIface& symbols,
@@ -1186,14 +1223,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto actionProfile = getActionProfile(externBlock);
             if (actionProfile) addActionProfile(symbols, p4info, *actionProfile, pipeName);
         } else if (externBlock->type->name == "ActionSelector") {
-            auto actionSelector = getActionProfile(externBlock);
+            auto actionSelector = getActionSelector(externBlock);
             if (actionSelector) addActionSelector(symbols, p4info, *actionSelector, pipeName);
         } else if (externBlock->type->name == "Counter") {
             auto counter = Counterlike<CounterExtern>::from(externBlock);
-            if (counter) addCounter(symbols, p4info, *counter);
+            if (counter) addCounter(symbols, p4info, *counter, pipeName);
         } else if (externBlock->type->name == "Meter") {
             auto meter = Counterlike<MeterExtern>::from(externBlock);
-            if (meter) addMeter(symbols, p4info, *meter);
+            if (meter) addMeter(symbols, p4info, *meter, pipeName);
         } else if (externBlock->type->name == "Digest") {
             auto digest = getDigest(decl, p4RtTypeInfo, externName);
             if (digest) addDigest(symbols, p4info, *digest);
@@ -1202,10 +1239,10 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             if (register_) addRegister(symbols, p4info, *register_);
         } else if (externBlock->type->name == "Lpf") {
             auto lpf = Lpf::from(externBlock, externName);
-            if (lpf) addLpf(symbols, p4info, *lpf);
+            if (lpf) addLpf(symbols, p4info, *lpf, pipeName);
         } else if (externBlock->type->name == "Wred") {
             auto wred = Wred::from(externBlock, externName);
-            if (wred) addWred(symbols, p4info, *wred);
+            if (wred) addWred(symbols, p4info, *wred, pipeName);
         } else if (externBlock->type->name == "Hash") {
             auto dynHash = getDynHash(decl, p4RtTypeInfo, externName);
             if (dynHash) addDynHash(symbols, p4info, *dynHash);
@@ -1384,39 +1421,21 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         return boost::none;
     }
 
-    static boost::optional<ActionProfile>
-    getActionProfile(cstring name,
-                     const IR::Type_Extern* type,
-                     int64_t size,
-                     const IR::IAnnotated* annotations) {
-        auto actionProfileType = SymbolType::ACTION_PROFILE();
-        if (type->name == "ActionSelector") {
-            actionProfileType = SymbolType::ACTION_SELECTOR();
-        } else if (type->name == "ActionProfile") {
-            actionProfileType = SymbolType::ACTION_PROFILE();
-        } else {
-            return boost::none;
-        }
-
-        return ActionProfile{name, actionProfileType, size, annotations};
-    }
-
     /// @return the action profile referenced in @table's implementation
     /// property, if it has one, or boost::none otherwise.
     static boost::optional<ActionProfile>
-    getActionProfile(P4RuntimeArchHandlerIface* archHandler,
-            const IR::TableBlock* tableBlock, ReferenceMap* refMap, TypeMap* typeMap) {
+    getActionProfile(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
         using Helpers::getExternInstanceFromProperty;
-        const IR::P4Table* table = tableBlock->container;
         auto instance = getExternInstanceFromProperty(
                 table, "implementation", refMap, typeMap);
         if (!instance) return boost::none;
+        if (instance->type->name != "ActionProfile") return boost::none;
         auto size = instance->substitution.lookupByName("size")->expression;
         // size is a bit<32> compile-time value
         BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-        return getActionProfile(*instance->name, instance->type,
-                                size->to<IR::Constant>()->asInt(),
-                                getTableImplementationAnnotations(table, refMap));
+        return ActionProfile{*instance->name,
+                             size->to<IR::Constant>()->asInt(),
+                             getTableImplementationAnnotations(table, refMap)};
     }
 
     /// @return the action profile corresponding to @instance.
@@ -1425,10 +1444,67 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto decl = instance->node->to<IR::IDeclaration>();
         auto size = instance->getParameterValue("size");
         BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-        return getActionProfile(decl->controlPlaneName() /*externName*/,
-                                instance->type,
-                                size->to<IR::Constant>()->asInt(),
-                                decl->to<IR::IAnnotated>());
+        return ActionProfile{decl->controlPlaneName(),
+                             size->to<IR::Constant>()->asInt(),
+                             decl->to<IR::IAnnotated>()};
+    }
+
+    /// @return the action profile referenced in @table's implementation
+    /// property, if it has one, or boost::none otherwise.
+    static boost::optional<ActionSelector>
+    getActionSelector(const IR::P4Table* table, ReferenceMap* refMap, TypeMap* typeMap) {
+        using Helpers::getExternInstanceFromProperty;
+        auto instance =
+            getExternInstanceFromProperty(table, "implementation", refMap, typeMap);
+        if (!instance) return boost::none;
+        if (instance->type->name != "ActionSelector") return boost::none;
+        // used to support deprecated ActionSelector constructor.
+        if (instance->substitution.lookupByName("size")) {
+            auto size = instance->substitution.lookupByName("size")->expression;
+            BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
+            return ActionSelector{*instance->name,
+                                  boost::none,
+                                  size->to<IR::Constant>()->asInt(),
+                                  size->to<IR::Constant>()->asInt(),
+                                  getTableImplementationAnnotations(table, refMap)};
+        }
+        auto max_group_size = instance->substitution.lookupByName("max_group_size")->expression;
+        auto num_groups = instance->substitution.lookupByName("num_groups")->expression;
+        // size is a bit<32> compile-time value
+        BUG_CHECK(max_group_size->is<IR::Constant>(), "Non-constant max_group_size");
+        BUG_CHECK(num_groups->is<IR::Constant>(), "Non-constant num_groups");
+        return ActionSelector{*instance->name,
+                              *instance->name,
+                              max_group_size->to<IR::Constant>()->asInt(),
+                              num_groups->to<IR::Constant>()->asInt(),
+                              getTableImplementationAnnotations(table, refMap)};
+    }
+
+    static boost::optional<ActionSelector>
+    getActionSelector(const IR::ExternBlock* instance) {
+        auto action_sel_decl = instance->node->to<IR::IDeclaration>();
+        // to be deleted, used to support deprecated ActionSelector constructor.
+        if (instance->findParameterValue("size")) {
+            auto size = instance->getParameterValue("size");
+            BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
+            return ActionSelector{action_sel_decl->controlPlaneName(),
+                                  boost::none,
+                                  size->to<IR::Constant>()->asInt(),
+                                  size->to<IR::Constant>()->asInt(),
+                                  action_sel_decl->to<IR::IAnnotated>()};
+        }
+        auto max_group_size = instance->getParameterValue("max_group_size");
+        auto num_groups = instance->getParameterValue("num_groups");
+        BUG_CHECK(max_group_size->is<IR::Constant>(), "Non-constant max_group_size");
+        BUG_CHECK(num_groups->is<IR::Constant>(), "Non-constant num_groups");
+        auto action_profile = instance->getParameterValue("action_profile");
+        auto action_profile_decl =
+            action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
+        return ActionSelector{action_sel_decl->controlPlaneName(),
+            cstring::to_cstring(action_profile_decl->controlPlaneName()),
+            max_group_size->to<IR::Constant>()->asInt(),
+            num_groups->to<IR::Constant>()->asInt(),
+            action_sel_decl->to<IR::IAnnotated>()};
     }
 
     static p4configv1::Extern* getP4InfoExtern(P4RuntimeSymbolType typeId,
@@ -1570,7 +1646,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addCounter(const P4RuntimeSymbolTableIface& symbols,
                     p4configv1::P4Info* p4Info,
                     const Helpers::Counterlike<CounterExtern>& counterInstance,
-                    const cstring blockPrefix = "") {
+                    const cstring blockPrefix) {
         if (counterInstance.table) {
             ::barefoot::DirectCounter counter;
             setCounterCommon(&counter, counterInstance);
@@ -1612,7 +1688,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addMeter(const P4RuntimeSymbolTableIface& symbols,
                   p4configv1::P4Info* p4Info,
                   const Helpers::Counterlike<MeterExtern>& meterInstance,
-                  const cstring blockPrefix = "") {
+                  const cstring blockPrefix) {
         if (meterInstance.table) {
             ::barefoot::DirectMeter meter;
             setMeterCommon(&meter, meterInstance);
@@ -1639,7 +1715,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addLpf(const P4RuntimeSymbolTableIface& symbols,
                 p4configv1::P4Info* p4Info,
                 const Lpf& lpfInstance,
-                const cstring blockPrefix = "") {
+                const cstring blockPrefix) {
         if (lpfInstance.table) {
             ::barefoot::DirectLpf lpf;
             auto tableName = blockPrefix + "." + *lpfInstance.table;
@@ -1671,7 +1747,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addWred(const P4RuntimeSymbolTableIface& symbols,
                  p4configv1::P4Info* p4Info,
                  const Wred& wredInstance,
-                 const cstring blockPrefix = "") {
+                 const cstring blockPrefix) {
         if (wredInstance.table) {
             ::barefoot::DirectWred wred;
             setWredCommon(&wred, wredInstance);
@@ -1696,15 +1772,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addActionProfile(const P4RuntimeSymbolTableIface& symbols,
                           p4configv1::P4Info* p4Info,
                           const ActionProfile& actionProfile,
-                          cstring pipePrefix = "") {
+                          cstring blockPrefix) {
         ::barefoot::ActionProfile profile;
         profile.set_size(actionProfile.size);
         auto tablesIt = actionProfilesRefs.find(actionProfile.name);
         if (tablesIt != actionProfilesRefs.end()) {
             for (const auto& table : tablesIt->second) {
                 cstring tableName = table;
-                if (!pipePrefix.isNullOrEmpty())
-                    tableName = pipePrefix + "." + tableName;
+                if (!blockPrefix.isNullOrEmpty())
+                    tableName = blockPrefix + "." + tableName;
                 profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
             }
         }
@@ -1715,22 +1791,40 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void addActionSelector(const P4RuntimeSymbolTableIface& symbols,
                           p4configv1::P4Info* p4Info,
-                          const ActionProfile& actionSelector,
-                          cstring pipePrefix = "") {
+                          const ActionSelector& actionSelector,
+                          cstring blockPrefix) {
         ::barefoot::ActionSelector selector;
-        selector.set_size(actionSelector.size);
-        auto tablesIt = actionProfilesRefs.find(actionSelector.name);
-        if (tablesIt != actionProfilesRefs.end()) {
-            for (const auto& table : tablesIt->second) {
-                cstring tableName = table;
-                if (!pipePrefix.isNullOrEmpty())
-                    tableName = pipePrefix + "." + tableName;
-                selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
+        selector.set_max_group_size(actionSelector.max_group_size);
+        selector.set_num_groups(actionSelector.num_groups);
+        if (actionSelector.action_profile_name) {
+            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
+            if (tablesIt != actionProfilesRefs.end()) {
+                for (const auto& table : tablesIt->second) {
+                    cstring tableName = blockPrefix + "." + table;
+                    selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
+                }
             }
+            addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
+                    actionSelector.name, actionSelector.annotations, selector,
+                    p4Info);
+        } else {
+            ::barefoot::ActionProfile profile;
+            profile.set_size(actionSelector.max_group_size);
+            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
+            if (tablesIt != actionProfilesRefs.end()) {
+                for (const auto& table : tablesIt->second) {
+                    cstring tableName = blockPrefix + "." + table;
+                    profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
+                }
+            }
+            addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
+                    actionSelector.name, actionSelector.annotations, profile,
+                    p4Info);
+            std::string selectorName(actionSelector.name + "_sel");
+            addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
+                    selectorName, actionSelector.annotations, selector,
+                    p4Info);
         }
-        addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                                actionSelector.name, actionSelector.annotations, selector,
-                                p4Info);
     }
 
  private:

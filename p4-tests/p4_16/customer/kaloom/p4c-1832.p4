@@ -4002,8 +4002,8 @@ control FabricRouting(
     }
 
     Hash<bit<16>>(HashAlgorithm_t.CRC16) selector_hash;
-    ActionSelector(ecmp_selection_table_size, selector_hash,
-            SelectorMode_t.FAIR, port_failover_reg) ecmp_selector;
+    ActionProfile(ecmp_selection_table_size) ecmp_profile;
+    ActionSelector(ecmp_profile, selector_hash, SelectorMode_t.FAIR, port_failover_reg, 32w120, 32w16) ecmp_selector;
 
     /* The host is accessible via another router */
     action ecmp_routing_nh_hit(ipv6_addr_t nexthop_ipv6) {

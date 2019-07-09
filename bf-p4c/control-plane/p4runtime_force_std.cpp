@@ -101,14 +101,10 @@ class P4RuntimeStdConverter {
         P4Id idBase = preIn.id() & 0xffffff;
         P4Id id;
         // Convert the Tofino P4Info id to the Standard P4Info id. Most of the
-        // time, this just means doing the correct prefix substitution. The only
-        // exception at the moment is for action profiles / selectors. The
-        // Tofino P4Info uses 2 different id prefixes for profiles & selectors
-        // (because they are 2 different extern types in tofino.p4), but
-        // Standard P4Info uses a single id prefix. This can create collisions
-        // between an action profile and an action selector which have the same
-        // "base" id (i.e. id stripped of the prefix). To handle such a
-        // collision, we maintain a set of allocated ids.
+        // time, this just means doing the correct prefix substitution. But
+        // there can be some subtle differences between the 2, which may cause
+        // id collisions. We therefore add some logic to handle these
+        // collisions, to be safe and future-proof.
         do {
           id = makeStdId(idBase++, stdPrefix);
         } while (allocatedIds.count(id) > 0);
@@ -127,18 +123,22 @@ class P4RuntimeStdConverter {
         setPreamble(externInstance, p4configv1::P4Ids::ACTION_PROFILE, actionProfileStd);
         actionProfileStd->mutable_table_ids()->CopyFrom(actionProfile.table_ids());
         actionProfileStd->set_size(actionProfile.size());
-        actionProfileStd->set_with_selector(false);
+        actionProfileStd->set_with_selector(actionProfile.selector_id() != 0);
     }
 
     void convertActionSelector(p4configv1::P4Info* p4info,
                                const p4configv1::ExternInstance& externInstance) {
-        ::barefoot::ActionSelector actionSelector;
-        unpackExternInstance(externInstance, &actionSelector);
-        auto* actionSelectorStd = p4info->add_action_profiles();
-        setPreamble(externInstance, p4configv1::P4Ids::ACTION_PROFILE, actionSelectorStd);
-        actionSelectorStd->mutable_table_ids()->CopyFrom(actionSelector.table_ids());
-        actionSelectorStd->set_size(actionSelector.size());
-        actionSelectorStd->set_with_selector(true);
+        // The standard P4Info only has one message (ActionProfile) whereas the
+        // Tofino-specific P4Info defines one message for action profiles
+        // (ActionProfile) and one for action selectors (ActionSelector). When
+        // visiting the Tofino-specific ActionProfile messages (in
+        // convertActionProfile), we generate the appropriate standard
+        // ActionProfile message (in particular we set the selector_id field)
+        // to the appropriate value, which means we have nothing to do for
+        // Tofino-specific ActionSelector messages (which is why this function
+        // is empty). Note that by definition, each ActionSelector message in
+        // the Tofino-specific P4Info must have a corresponding ActionProfile
+        // message (no selector table without action data table).
     }
 
     static void setCounterSpec(const ::barefoot::CounterSpec& specIn,

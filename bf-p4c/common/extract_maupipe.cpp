@@ -7,6 +7,7 @@
 #include "frontends/p4-14/inline_control_flow.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
+#include "frontends/p4/externInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
@@ -405,7 +406,8 @@ static int getSingleAnnotationValue(const cstring name, const IR::MAU::Table *ta
 
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const P4::ParameterSubstitution* substitution,
-        const IR::Annotations *annot, const P4::ReferenceMap *refMap,
+        const IR::Annotations *annot, P4::ReferenceMap *refMap,
+        P4::TypeMap* typeMap,
         StatefulSelectors &stateful_selectors,
         const IR::MAU::AttachedMemory **created_ap = nullptr,
         const IR::MAU::Table *match_table = nullptr) {
@@ -454,11 +456,11 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 } else {
                   ::error("%s: The selector_enable_scramble pragma value on table %s is "
                           "only allowed to be 0 or 1.", match_table->srcInfo,
-                           match_table->name); } } }
+                           match_table->name);
+                }
+            }
+        }
 
-        sel->num_pools = num_groups;
-        sel->max_pool_size = max_group_size;
-        sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
         sel->sps_scramble = sps_scramble;
 
         // processing ActionSelector constructor parameters.
@@ -476,18 +478,49 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
                 if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
                     BUG("invalid algorithm %s", decl->arguments->at(0)->expression);
-            } else if (p->name == "size") {
-                auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
-                ap->direct = false;
-                ap->size = getConstant(arg);
-                // FIXME Need to reconstruct the field list from the table key?
-                *created_ap = ap;
             } else if (p->name == "reg") {
                 auto regpath = arg->expression->to<IR::PathExpression>()->path;
                 auto reg = refMap->getDeclaration(regpath)->to<IR::Declaration_Instance>();
                 if (stateful_selectors.count(reg))
                     error("%1% bound to both %2% and %3%", reg, stateful_selectors.at(reg), sel);
-                stateful_selectors.emplace(reg, sel); } }
+                stateful_selectors.emplace(reg, sel);
+            } else if (p->name == "max_group_size") {
+                int max_group_size = getConstant(arg);
+                // max ram words is 992, max members per word is 120
+                if (max_group_size < 1 || max_group_size > (992*120)) {
+                    ::error("%s: The max_group_size value on ActionSelector %s is "
+                            "not between %d and %d.", srcInfo, name, 1, 992*120); }
+            } else if (p->name == "num_groups") {
+                num_groups = getConstant(arg);
+                if (num_groups < 1) {
+                    ::error("%s: The selector_num_max_groups pragma value on table %s is "
+                            "not greater than or equal to 1.", srcInfo, name); }
+            } else if (p->name == "action_profile") {
+                if (auto path = arg->expression->to<IR::PathExpression>()) {
+                    auto af = P4::ExternInstance::resolve(path, refMap, typeMap);
+                    if (!af) {
+                        ::error("Expected %1% for ActionSelector %2% to resolve to an "
+                                "ActionProfile extern instance", arg, name); }
+                    auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+                    ap->direct = false;
+                    ap->size = getConstant(af->arguments->at(0));
+                    // FIXME Need to reconstruct the field list from the table key?
+                    *created_ap = ap;
+                }
+            } else if (p->name == "size") {
+                // XXX(hanw): used to support the deprecated ActionSelector API.
+                // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+                // Remove once the deprecated API is removed from
+                auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+                ap->direct = false;
+                ap->size = getConstant(arg);
+                // FIXME Need to reconstruct the field list from the table key?
+                *created_ap = ap; }
+        }
+
+        sel->num_pools = num_groups;
+        sel->max_pool_size = max_group_size;
+        sel->size = (sel->max_pool_size + 119) / 120 * sel->num_pools;
         return sel;
     } else if (tname == "ActionProfile") {
         auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name), annot);
@@ -713,7 +746,7 @@ class FixP4Table : public Inspector {
                 P4::ConstructorCall* ccd = P4::ConstructorCall::resolve(cc, refMap, typeMap);
                 obj = createAttached(cc->srcInfo, prop->externalName(tname),
                                      baseType, &ccd->substitution, prop->annotations,
-                                     refMap, stateful_selectors, &side_obj, tt);
+                                     refMap, typeMap, stateful_selectors, &side_obj, tt);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 // The algorithm saves action selectors in the large map, rather than the action
@@ -723,7 +756,8 @@ class FixP4Table : public Inspector {
                 if (converted.count(&d) == 0) {
                     LOG3("Create attached " << d.externalName());
                     obj = createAttached(d.srcInfo, d.externalName(), d.type, &inst->substitution,
-                                         d.annotations, refMap, stateful_selectors, &side_obj, tt);
+                                         d.annotations, refMap, typeMap, stateful_selectors,
+                                         &side_obj, tt);
                     converted[&d] = obj;
                     if (side_obj)
                         assoc_profiles[&d] = side_obj;
@@ -1000,8 +1034,8 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             obj = self.converted.at(di);
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
-                                             di->type, &inst->substitution, di->annotations,
-                                             refMap, self.stateful_selectors, nullptr, nullptr)) {
+                                             di->type, &inst->substitution, di->annotations, refMap,
+                                             typeMap, self.stateful_selectors, nullptr, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;

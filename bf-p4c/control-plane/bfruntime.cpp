@@ -156,6 +156,7 @@ class BfRtSchemaGenerator {
     /// Common action profile / selector representation between PSA and Tofino
     /// architectures
     struct ActionProf;
+    struct ActionSelector;
     /// Common digest representation between PSA and Tofino architectures
     struct Digest;
     /// Common register representation between PSA and Tofino architectures
@@ -192,6 +193,8 @@ class BfRtSchemaGenerator {
     void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
     void addRegisterCommon(Util::JsonArray* tablesJson, const Register& meter) const;
     void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
+    void addActionSelectorCommon(Util::JsonArray* tablesJson,
+                                 const ActionSelector& actionProf) const;
     void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
     void addPortMetadata(Util::JsonArray* tablesJson, const PortMetadata& portMetadata) const;
     void addDynHash(Util::JsonArray* tablesJson, const DynHash& dynHash) const;
@@ -697,54 +700,74 @@ struct BfRtSchemaGenerator::Meter {
     }
 };
 
-/// Common action profile / selector representation between PSA and Tofino
-/// architectures
-struct BfRtSchemaGenerator::ActionProf {
-    struct Selector {
-        std::string name;
-        P4Id id;
-        int64_t size;
-        int64_t max_group_size;
-    };
+template <typename It>
+static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
+                                         const It& first, const It& last) {
+    std::vector<P4Id> tableIds;
+    for (auto it = first; it != last; it++) {
+        auto* table = Standard::findTable(p4info, *it);
+        if (table == nullptr) {
+            ::error("Invalid table id '%1%'", *it);
+            continue;
+        }
+        tableIds.push_back(*it);
+    }
+    return tableIds;
+}
 
+struct BfRtSchemaGenerator::ActionSelector {
     std::string name;
     P4Id id;
     int64_t size;
     std::vector<P4Id> tableIds;
-    boost::optional<Selector> selector;
+    Util::JsonArray* annotations;
+
+    static boost::optional<ActionSelector> from(const p4configv1::P4Info& p4info,
+                                            const p4configv1::ActionProfile& actionProfile) {
+        const auto& pre = actionProfile.preamble();
+        if (!actionProfile.with_selector())
+            return boost::none;
+        auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
+        auto tableIds = collectTableIds(
+            p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
+        return ActionSelector{pre.name(), selectorId, actionProfile.size(), tableIds,
+            transformAnnotations(pre)};
+    }
+
+    static boost::optional<ActionSelector> fromTofinoActionSelector(
+        const p4configv1::P4Info& p4info, const p4configv1::ExternInstance& externInstance) {
+        const auto& pre = externInstance.preamble();
+        ::barefoot::ActionSelector actionSelector;
+        if (!externInstance.info().UnpackTo(&actionSelector)) {
+            ::error("Extern instance %1% does not pack an ActionSelector object", pre.name());
+            return boost::none;
+        }
+        auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
+        auto tableIds = collectTableIds(
+            p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
+        return ActionSelector{pre.name(), selectorId, actionSelector.num_groups(), tableIds,
+            transformAnnotations(pre)};
+    }
+};
+
+/// Common action profile / selector representation between PSA and Tofino
+/// architectures
+struct BfRtSchemaGenerator::ActionProf {
+    std::string name;
+    P4Id id;
+    int64_t size;
+    std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
     static constexpr int selectorHugeGroupSize = 120;
-
-    template <typename It>
-    static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
-                                             const It& first, const It& last) {
-        std::vector<P4Id> tableIds;
-        for (auto it = first; it != last; it++) {
-            auto* table = Standard::findTable(p4info, *it);
-            if (table == nullptr) {
-                ::error("Invalid table id '%1%'", *it);
-                continue;
-            }
-            tableIds.push_back(*it);
-        }
-        return tableIds;
-    }
 
     static boost::optional<ActionProf> from(const p4configv1::P4Info& p4info,
                                             const p4configv1::ActionProfile& actionProfile) {
         const auto& pre = actionProfile.preamble();
         auto profileId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_PROFILE);
-        boost::optional<Selector> selector = boost::none;
-        if (actionProfile.with_selector()) {
-            std::string selectorName(pre.name() + "_sel");
-            auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
-            selector = Selector{
-              selectorName, selectorId, actionProfile.size(), selectorHugeGroupSize};
-        }
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionProf{pre.name(), profileId, actionProfile.size(), tableIds, selector,
+        return ActionProf{pre.name(), profileId, actionProfile.size(), tableIds,
                           transformAnnotations(pre)};
     }
 
@@ -758,25 +781,7 @@ struct BfRtSchemaGenerator::ActionProf {
         }
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionProf{pre.name(), pre.id(), actionProfile.size(), tableIds, boost::none,
-                          transformAnnotations(pre)};
-    }
-
-    static boost::optional<ActionProf> fromTofinoActionSelector(
-        const p4configv1::P4Info& p4info, const p4configv1::ExternInstance& externInstance) {
-        const auto& pre = externInstance.preamble();
-        ::barefoot::ActionSelector actionSelector;
-        if (!externInstance.info().UnpackTo(&actionSelector)) {
-            ::error("Extern instance %1% does not pack an ActionSelector object", pre.name());
-            return boost::none;
-        }
-        auto profileId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_PROFILE);
-        std::string selectorName(pre.name() + "_sel");
-        auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
-        Selector selector{selectorName, selectorId, actionSelector.size(), selectorHugeGroupSize};
-        auto tableIds = collectTableIds(
-            p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
-        return ActionProf{pre.name(), profileId, actionSelector.size(), tableIds, selector,
+        return ActionProf{pre.name(), pre.id(), actionProfile.size(), tableIds,
                           transformAnnotations(pre)};
     }
 };
@@ -1427,50 +1432,52 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
     tableJson->emplace("attributes", new Util::JsonArray());
 
     tablesJson->append(tableJson);
+}
 
-    if (actionProf.selector != boost::none) {
-        auto* tableJson = new Util::JsonObject();
+void
+BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
+                                             const ActionSelector& actionSelector) const {
+    auto* tableJson = new Util::JsonObject();
 
-        // TODO(antonin): formalize ID allocation for selector tables
-        tableJson->emplace("name", actionProf.selector->name);
-        tableJson->emplace("id", actionProf.selector->id);
-        tableJson->emplace("table_type", "Selector");
-        tableJson->emplace("size", actionProf.selector->size);
-        // repeat same annotations as for action table
-        tableJson->emplace("annotations", actionProf.annotations);
+    // TODO(antonin): formalize ID allocation for selector tables
+    tableJson->emplace("name", actionSelector.name);
+    tableJson->emplace("id", actionSelector.id);
+    tableJson->emplace("table_type", "Selector");
+    tableJson->emplace("size", actionSelector.size);
+    tableJson->emplace("annotations", actionSelector.annotations);
 
-        auto* keyJson = new Util::JsonArray();
-        addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
-                    true /* mandatory */, "Exact", makeTypeInt("uint32"));
-        tableJson->emplace("key", keyJson);
+    auto* keyJson = new Util::JsonArray();
+    addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
+            true /* mandatory */, "Exact", makeTypeInt("uint32"));
+    tableJson->emplace("key", keyJson);
 
-        auto* dataJson = new Util::JsonArray();
-        {
-            auto* f = makeCommonDataField(
+    auto* dataJson = new Util::JsonArray();
+    {
+        auto* f = makeCommonDataField(
                 BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
                 makeTypeInt("uint32"), true /* repeated */);
-            addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-        }
-        {
-            auto* f = makeCommonDataField(
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
                 BF_RT_DATA_ACTION_MEMBER_STATUS, "$ACTION_MEMBER_STATUS",
                 makeTypeBool(), true /* repeated */);
-            addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-        }
-        {
-            auto* f = makeCommonDataField(
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+    {
+        auto* f = makeCommonDataField(
                 BF_RT_DATA_MAX_GROUP_SIZE, "$MAX_GROUP_SIZE",
                 makeTypeInt("uint32", 120), false /* repeated */);
-            addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
-        }
-        tableJson->emplace("data", dataJson);
-
-        tableJson->emplace("supported_operations", new Util::JsonArray());
-        tableJson->emplace("attributes", new Util::JsonArray());
-
-        tablesJson->append(tableJson);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
+    tableJson->emplace("data", dataJson);
+
+    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes", new Util::JsonArray());
+
+    tablesJson->append(tableJson);
 }
+
 
 void
 BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
@@ -2212,6 +2219,10 @@ BfRtSchemaGenerator::addActionProfs(Util::JsonArray* tablesJson) const {
         auto actionProfInstance = ActionProf::from(p4info, actionProf);
         if (actionProfInstance == boost::none) continue;
         addActionProfCommon(tablesJson, *actionProfInstance);
+
+        auto actionSelectorInstance = ActionSelector::from(p4info, actionProf);
+        if (actionSelectorInstance == boost::none) continue;
+        addActionSelectorCommon(tablesJson, *actionSelectorInstance);
     }
 }
 
@@ -2254,8 +2265,10 @@ BfRtSchemaGenerator::addTofinoExterns(Util::JsonArray* tablesJson,
             }
         } else if (externTypeId == ::barefoot::P4Ids::ACTION_SELECTOR) {
             for (const auto& externInstance : externType.instances()) {
-                auto actionProf = ActionProf::fromTofinoActionSelector(p4info, externInstance);
-                if (actionProf != boost::none) addActionProfCommon(tablesJson, *actionProf);
+                auto actionSelector =
+                    ActionSelector::fromTofinoActionSelector(p4info, externInstance);
+                if (actionSelector != boost::none)
+                    addActionSelectorCommon(tablesJson, *actionSelector);
             }
         } else if (externTypeId == ::barefoot::P4Ids::COUNTER) {
             for (const auto& externInstance : externType.instances()) {

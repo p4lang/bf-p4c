@@ -706,20 +706,30 @@ extern DirectRegisterAction<T, U> {
     U predicate(); /* return the 4-bit predicate value */
 }
 
-extern ActionSelector {
-    /// Construct an action selector of 'size' entries
-    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
-
-    /// Stateful action selector.
-    ActionSelector(bit<32> size,
-                   Hash<_> hash,
-                   SelectorMode_t mode,
-                   Register<bit<1>, _> reg);
-}
-
 extern ActionProfile {
     /// Construct an action profile of 'size' entries.
     ActionProfile(bit<32> size);
+}
+
+extern ActionSelector {
+    /// Construct a selection table for a given ActionProfile.
+    ActionSelector(ActionProfile action_profile,
+                   Hash<_> hash,
+                   SelectorMode_t mode,
+                   bit<32> max_group_size,
+                   bit<32> num_groups);
+
+    /// Stateful action selector.
+    ActionSelector(ActionProfile action_profile,
+                   Hash<_> hash,
+                   SelectorMode_t mode,
+                   Register<bit<1>, _> reg,
+                   bit<32> max_group_size,
+                   bit<32> num_groups);
+
+    /// Construct a selection table for action profile of 'size' entries.
+    @deprecated("ActionSelector must be specified with an associated ActionProfile")
+    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
 }
 
 // Tofino supports mirroring both at the ingress and egress. Ingress deparser

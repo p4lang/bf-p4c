@@ -28,7 +28,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     Hash<bit<16>>(HashAlgorithm_t.CRC16) hash_fn;
     Register<bit<1>, _>(1024) sel_register;
-    ActionSelector(1024, hash_fn, SelectorMode_t.FAIR, sel_register) sel_profile;
+    ActionProfile(1024) ap;
+    ActionSelector(ap, hash_fn, SelectorMode_t.FAIR, sel_register, 120, 1) sel_profile;
     RegisterAction<bit<1>,_,bit<1>>(sel_register) port_down = {
         void apply(inout bit<1> value) {
             bit<1> in_value;
