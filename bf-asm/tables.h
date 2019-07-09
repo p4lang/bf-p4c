@@ -704,16 +704,18 @@ public:
     virtual void set_pred();
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
-    const p4_param *find_p4_param(std::string s) const {
+    const p4_param *find_p4_param(std::string s, std::string t = "", int start_bit = -1, int width = -1) const {
         remove_name_tail_range(s);
-        for (auto &p : p4_params_list)
-            if ((p.name == s) || (p.alias == s)) return &p;
-        return nullptr; }
-    const p4_param *find_p4_param(std::string s, std::string t) const {
-        remove_name_tail_range(s);
-        for (auto &p : p4_params_list)
-            if (((p.name == s) || (p.alias == s))
-                    && (p.type == t)) return &p;
+        for (auto &p : p4_params_list) {
+            if ((p.name == s) || (p.alias == s)) {
+                if (!t.empty() && (p.type != t)) continue;
+                if ((start_bit > -1) &&
+                    (start_bit < p.start_bit)) continue;
+                if ((width > -1) &&
+                    (p.start_bit + p.bit_width < start_bit + width)) continue;
+                return &p;
+            }
+        }
         return nullptr; }
     const p4_param *find_p4_param_type(std::string &s) const {
         for (auto &p : p4_params_list)

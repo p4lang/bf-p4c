@@ -56,14 +56,6 @@ bool check_zero_string(const std::string& s);
 // Get filename
 std::string get_filename(const char *s);
 
-/** Remove augmented names, like the ".$valid" suffix for header validity
- * fields.  These don't exist in the user program but instead mark
- * something about a name to the assembler.
- *
- * @warn mutates @name.
- */
-bool remove_aug_names(std::string& name);
-
 /** Given a p4 name, eg. "inst.field", write "inst" to @instname and "field" to
  * @fieldname.  If @fullname cannot be split, writes @fullname to @instname and
  * "" to @fieldname.

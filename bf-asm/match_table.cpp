@@ -158,10 +158,12 @@ void MatchTable::pass1() {
             // in p4 program.
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
-            remove_aug_names(p.key_name);
-            bool found = remove_aug_names(p.name);
-            if (found)
-                p.is_valid = true; } }
+
+            std::size_t found = p.name.find(".$valid");
+            if (found != std::string::npos)
+               p.is_valid = true;
+        }
+    }
     if (idletime) {
         idletime->logical_id = logical_id;
         idletime->pass1(); }
@@ -224,7 +226,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         actions = result->action && result->action->actions ? result->action->actions
                                                             : result->actions;
         for (auto &row : result->layout) {
-            
+
             if (row.result_bus < 0)
                 continue;
             int r_bus = row.row*2 | (row.result_bus & 1);
@@ -509,9 +511,6 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name = ref.name();
 
-                // FIXME -- if field_name is a raw register name, should lookup in PHV for alias?
-                // Make names compatible with PD Gen API
-                remove_aug_names(field_name);
                 auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
 
                 // Look up this field in the param list to get a custom key
@@ -523,7 +522,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                             "for table %s", field_name.c_str(), name());
                 } else if (p && !p->key_name.empty()) {
                     key_name = p->key_name;
-                    remove_aug_names(key_name); }
+                }
                 // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
 
                 bits_to_xor->push_back(json::map{

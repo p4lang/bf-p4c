@@ -20,7 +20,8 @@ std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
 
     // Write out the p4 parameter, which (for phase0) is always
     // For P4-14 = 'ig_intr_md.ingress_port'
-    // For P4-16 = '$PORT' - consistent with bf-rt.json
+    // For P4-16 = '<ingress_intrisic_metadata_t param name>.ingress_port'
+    //             must be consistent with bf-rt.json
     out <<   indent << "p4_param_order:" << std::endl;
     if (p0->keyName.isNullOrEmpty())
         out << ++indent << "ig_intr_md.ingress_port:";

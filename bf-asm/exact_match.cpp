@@ -116,7 +116,6 @@ void ExactMatchTable::determine_ghost_bits() {
             bool found = false;
             for (auto ms : match) {
                 std::string field_name = ms->name();
-                remove_aug_names(field_name);
                 int field_bit_lo = remove_name_tail_range(field_name) + ms->fieldlobit();
                 int field_bit_hi = field_bit_lo + ms->size() - 1;
                 if (field_name == p4_param.name && field_bit_lo <= bit && field_bit_hi >= bit) {
@@ -149,7 +148,6 @@ void ExactMatchTable::determine_ghost_bits() {
                 for (const auto &input_bit : hash_col.data) {
                     if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, input_bit)) {
                         std::string field_name = ref.name();
-                        remove_aug_names(field_name);
                         int field_bit = remove_name_tail_range(field_name) + ref.fieldlobit();
                         auto key = std::make_pair(field_name, field_bit);
                         auto ghost_bit_it = ghost_bits.find(key);
@@ -160,7 +158,7 @@ void ExactMatchTable::determine_ghost_bits() {
                         // in the hash column, as an even number of appearances would
                         // xor each other out, and cancel the hash out.  This check
                         // should be done on all hash bits
-			if (ghost_bit_impact[key].getbit(hash_bit)) {
+			            if (ghost_bit_impact[key].getbit(hash_bit)) {
                             error(input_xbar->lineno, "Ghost bit %s:%d appears multiple times "
                                   "in the same hash col %d", key.first.c_str(), key.second,
                                   way_index);

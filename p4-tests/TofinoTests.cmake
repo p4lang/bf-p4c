@@ -629,6 +629,7 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_dkm
   tna_dyn_hashing
   tna_exact_match
+  tna_field_slice
   tna_idletimeout
   tna_lpm_match
   tna_meter_bytecount_adjust

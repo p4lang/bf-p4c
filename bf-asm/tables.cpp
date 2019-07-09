@@ -2008,8 +2008,18 @@ std::ostream &operator<<(std::ostream &out, const Table::Actions::Action &a) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Table::p4_param &p) {
-    out << p.name << "[ w =" << p.bit_width << ", w_full =" << p.bit_width_full
-        << " type =" << p.type << "]";
+    out << p.name
+        << "[ w =" << p.bit_width
+        << ", w_full =" << p.bit_width_full
+        << ", start_bit =" << p.start_bit
+        << ", position =" << p.position
+        << ", default_value =" << p.default_value
+        << ", defaulted =" << p.defaulted
+        << ", is_valid =" << p.is_valid
+        << ", type =" << p.type
+        << ", alias =" << p.alias
+        << ", key_name =" << p.key_name
+        << "]";
     return out;
 }
 
@@ -2608,14 +2618,23 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             if (p.key_name.empty()) {
                 param["name"] = name;
             } else {
+                // Presence of key name indicates the field has a name
+                // annotation. If the name annotation is on a field slice, then
+                // the slice is treated as a field with the key_name as its
+                // "name". The field output will have the same bit_width and
+                // bit_width_full indicating its not treated as a slice.  We
+                // also provide the original p4 name as the "global_name" to
+                // allow driver to use it as a lookup up against the snapshot
+                // fields published in context.json. These fields will all have
+                // original p4 field names.
                 param["name"] = p.key_name;
                 param["global_name"] = p.name;
             }
-            param["position"] = p.position;
-            param["match_type"] = p.type;
             param["start_bit"] = p.start_bit;
             param["bit_width"] = p.bit_width;
             param["bit_width_full"] = p.bit_width_full;
+            param["position"] = p.position;
+            param["match_type"] = p.type;
             param["is_valid"] = p.is_valid;
             /* BRIG-288 */
             std::string fieldname, instname;

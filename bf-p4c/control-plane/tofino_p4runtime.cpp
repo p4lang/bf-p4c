@@ -486,7 +486,7 @@ class SnapshotFieldFinder : public Inspector {
     bool preorder(const IR::Type_Header* type) override {
         auto flattenedType = P4::ControlPlaneAPI::FlattenHeader::flatten(typeMap, type);
         if (includeValid) {
-            prefixList.push_back("$valid$");
+            prefixList.push_back("$valid");
             addField(1);  // valid field (POV) has bitwidth of 1
             prefixList.pop_back();
         }

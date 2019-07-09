@@ -22,6 +22,17 @@ namespace BFN {
 
 namespace {
 
+cstring getPhase0TableKeyName(const IR::ParameterList *params) {
+    cstring keyName = "phase0_data";
+    for (auto p : *params) {
+        if (p->type->toString() == "ingress_intrinsic_metadata_t") {
+            keyName = p->name;
+            break;
+        }
+    }
+    return keyName;
+}
+
 /// A helper type used to generate extracts in the phase 0 parser. Represents a
 /// statement in the phase 0 table's action that writes an action parameter into a
 /// metadata field.
@@ -659,11 +670,8 @@ bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
                             "Multiple Phase0 Externs "
                             "(%1%) not allowed on a parser",
                             BFN::ExternPortMetadataUnpackString);
-                cstring keyName = "";
-                if (auto stmt = findOrigCtxt<IR::AssignmentStatement>())
-                    keyName = stmt->left->toString();
                 if (auto fields =  extFuncExpr->type->to<IR::Type_StructLike>()) {
-                    (*phase0_calls)[parser] = std::make_pair(keyName, fields);
+                    (*phase0_calls)[parser] = fields;
                     LOG4("Found phase0 extern in parser");
                 }
             }
@@ -738,34 +746,26 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     auto actionName = "set_port_metadata";
 
     auto *params = parser->getApplyParameters();
-    cstring keyName = "phase0_data";
-    for (auto p : *params) {
-        if (p->type->toString() == "ingress_intrinsic_metadata_t") {
-            keyName = p->name;
-            break;
-        }
-    }
+    cstring keyName = getPhase0TableKeyName(params);
     cstring hdrName = "__phase0_header" + std::to_string(phase0_count);
     auto handle = 0x20 << 24 | phase0_count++ << 16;
 
-    // If no extern is specified inject phase0 in parser
-    auto* fields = new IR::IndexedVector<IR::StructField>();
+    IR::IndexedVector<IR::StructField>* packedFields;
     int phase0Size = Device::pardeSpec().bitPhase0Size();
-    fields->push_back(new IR::StructField(keyName, IR::Type::Bits::get(phase0Size)));
-    auto *packedFields = canPackDataIntoPhase0(fields, phase0Size);
-
     // If extern present update phase0 with extern info
     if (phase0_calls && phase0_calls->count(origParser)) {
-        auto pmdHeader = (*phase0_calls)[origParser];
-        if (auto *pmdFields = pmdHeader.second) {
-            keyName = pmdHeader.first;
-            hdrName = pmdFields->name.toString();
-            packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
-        }
+        auto pmdFields = (*phase0_calls)[origParser];
+        hdrName = pmdFields->name.toString();
+        packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
+    } else {
+        // If no extern is specified inject phase0 in parser
+        auto* fields = new IR::IndexedVector<IR::StructField>();
+        fields->push_back(new IR::StructField(keyName, IR::Type::Bits::get(phase0Size)));
+        packedFields = canPackDataIntoPhase0(fields, phase0Size);
     }
 
-    parser->phase0 =
-            new IR::BFN::Phase0(packedFields, size, handle, tableName, actionName, keyName);
+    parser->phase0 = new IR::BFN::Phase0(packedFields, size,
+                            handle, tableName, actionName, keyName);
 
     // The parser header needs the total phase0 bit to be extracted/skipped.
     // We check if there is any additional ingress padding for port metadata

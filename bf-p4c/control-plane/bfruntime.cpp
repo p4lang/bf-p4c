@@ -2077,20 +2077,30 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             CHECK_NULL(annotations);
             // Add isFieldSlice annotation if the match key is a field slice
             // e.g. hdr[23:16] where hdr is a 32 bit field
-            {
-                std::string s(mf.name());
-                std::smatch sm;
-                std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
-                std::regex_search(s, sm, sliceRegex);
-                if (sm.size() == 3) {
-                    auto *isFieldSliceAnnot = new Util::JsonObject();
-                    isFieldSliceAnnot->emplace("name", "isFieldSlice");
-                    isFieldSliceAnnot->emplace("value", "true");
-                    annotations->append(isFieldSliceAnnot);
-                }
+            std::string s(mf.name());
+            std::smatch sm;
+            std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+            std::regex_search(s, sm, sliceRegex);
+            if (sm.size() == 3) {
+                auto *isFieldSliceAnnot = new Util::JsonObject();
+                isFieldSliceAnnot->emplace("name", "isFieldSlice");
+                isFieldSliceAnnot->emplace("value", "true");
+                annotations->append(isFieldSliceAnnot);
             }
 
-            addKeyField(keyJson, mf.id(), mf.name(),
+            // P4_14-->P4_16 translation names valid matches with a
+            // "$valid$" suffix (note the trailing "$").  However, Brig
+            // and pdgen use "$valid".
+            auto keyName = mf.name();
+            auto found = keyName.find(".$valid");
+            if (found != std::string::npos) keyName.pop_back();
+
+            // Replace header stack indices hdr[<index>] with hdr$<index>. This
+            // is output in the context.json
+            std::regex hdrStackRegex(R"(\[([0-9]+)\]\.)");
+            keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1.");
+
+            addKeyField(keyJson, mf.id(), keyName,
                         true /* mandatory */, *matchType,
                         makeTypeBytes(mf.bitwidth(), boost::none),
                         annotations);

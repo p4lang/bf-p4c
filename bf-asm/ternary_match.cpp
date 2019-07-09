@@ -19,7 +19,7 @@ Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
         if (auto call = get_action()) {
             rv = call->lookup_field(n, act);
         }
-    } 
+    }
     return rv;
 }
 
@@ -468,7 +468,11 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width, \
         unsigned index, bitvec &tcam_bits, unsigned nibble_offset = 0) const {
-    remove_aug_names(name);
+    LOG3("Adding entry to Ternary Table : name: " << name << " lsb_offset: " << lsb_offset
+            << " lsb_idx: " << lsb_idx << " msb_idx: " << msb_idx << " source: " << source
+            << " start_bit: " << start_bit << " field_width: " << field_width
+            << " index: " << index << " tcam_bits: " << tcam_bits << " nibble_offset: " << nibble_offset);
+    bool uses_range = false;
     std::string fix_name(name);
 
     // If the name has a slice in it, remove it and add the lo bit of
@@ -476,12 +480,17 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     // canon_field_list(), rather than extracting the slice component
     // of the field name, if present, and appending it to the key name.
     int slice_offset = remove_name_tail_range(fix_name);
+    LOG4("    Fix Name: " << fix_name << " slice_offset: " << slice_offset);
 
     // Get the key name, if any.
-    if (auto *param = find_p4_param(fix_name)) {
+    auto *param = find_p4_param(fix_name, "", slice_offset + start_bit, field_width);
+    if (param) {
         if (!param->key_name.empty()) {
+            LOG4("    Found param : " << *param);
             fix_name = param->key_name;
-            remove_aug_names(fix_name); } }
+        }
+        uses_range = true;
+    }
 
     // For range match we need bytes to decide which nibble is being used, hence
     // split the field in bytes. For normal match entire slice can be used
@@ -667,7 +676,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
             if (word < 0) continue;
             std::string source = "spec";
             std::string field_name = field.second.what.name();
-            remove_aug_names(field_name);
             unsigned lsb_mem_word_offset = 0;
             if (field.second.hi > 40) {
                 // FIXME -- no longer needed if we always convert these to Group::BYTE?
@@ -715,7 +723,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                 if (match[word].byte_group != field.first.index) continue;
                 std::string source = "spec";
                 std::string field_name = field.second.what.name();
-                remove_aug_names(field_name);
                 int byte_lo = field.second.lo;
                 int field_lo = field.second.what.lobit();
                 int width = field.second.what.size();

@@ -37,8 +37,7 @@ struct TranslatePhase0 : public PassManager {
     TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
 
-typedef std::map<const IR::BFN::TnaParser*,
-        std::pair<cstring, const IR::Type_StructLike*>> Phase0CallMap;
+typedef std::map<const IR::BFN::TnaParser*, const IR::Type_StructLike*> Phase0CallMap;
 
 /* Check if phase0 extern - port_metadata_unpack - is used in the program.
  * Since we can have multiple ingress parsers, we create a map of parser -

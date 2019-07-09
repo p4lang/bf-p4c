@@ -43,20 +43,6 @@ std::string get_filename(const char* s) {
     return fname;
 }
 
-/* Remove augmented names - These don't exist in user program and serve to say
- * something special about a name to the assembler. The right way to handle this
- * is to attach attributes to names. We should do that if this list gets longer
- */
-bool remove_aug_names(std::string  &name) {
-    std::string dollarValid = ".$valid";
-    std::size_t found = name.find(dollarValid);
-    if (found != std::string::npos) {
-        name.erase(found, dollarValid.length());
-        return true;
-    }
-    return false;
-}
-
 /* Given a p4 name, split into instance and field names if possible
  *  - else return a copy of the original name */
 void gen_instfield_name(const std::string &fullname, std::string &instname,

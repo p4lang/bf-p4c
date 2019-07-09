@@ -2577,6 +2577,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             continue;
         auto *expr = ixbar_read->expr;
         std::map<int, int> slices;
+        bool isSlice = false;
         if (auto slice = expr->to<IR::Slice>()) {
             expr = slice->e0;
             auto hi = slice->e1->to<IR::Constant>();
@@ -2591,10 +2592,10 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             BUG_CHECK(v_lo <= v_hi, "Invalid match key slice range %1% %2%", v_lo, v_hi);
 
             slices.emplace(v_lo, v_hi - v_lo + 1);
+            isSlice = true;
         }
 
         auto phv_field = phv.field(expr);
-        auto is_intrinsic_metadata = phv_field->metadata && phv_field->is_intrinsic();
         // Replace any alias nodes with their original sources, in order to
         // ensure the original names are emitted.
         auto full_size = phv_field->size;
@@ -2629,6 +2630,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                           "%1%: Table key name not supported.  "
                           "Replacing \"%2%\" with \"%3%\".", tbl, annName, newAnnName);
                 annName = newAnnName;
+                isSlice = true;
             }
 
             LOG3(ann << ": setting external annName of key " << ixbar_read
@@ -2643,19 +2645,24 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             out << indent << canon_name(name) << ": ";
             out << "{ type: " << ixbar_read->match_type.name << ", ";
             out << "size: " << sl.second << ", ";
-            // if (!annName.isNullOrEmpty() && annName.find('.'))
-            bool setKeyName = (cstring::to_cstring(canon_name(name))
+            // Slices are used in keys (only) in p4-16, while masks are used
+            // (only) in p4-14. For BF-RT, we consider a slice with an
+            // annotation  as a separate field and set the size and full_size to
+            // be the same value. The key name carries the annotated name.
+            bool setKeyName = false;
+            if (!annName.isNullOrEmpty()) {
+                setKeyName = (cstring::to_cstring(canon_name(name))
                         != cstring::to_cstring(canon_name(annName)));
-            // Intrinsic metadata are remapped and always have name annotations,
-            // if they are masked they will appear as a slice and must have
-            // variable size & full_size
-            out << "full_size: " << ((setKeyName && !is_intrinsic_metadata)
-                                    ? sl.second : full_size);
-            if (!annName.isNullOrEmpty() && setKeyName) {
-                out << ", key_name: \"" << canon_name(annName) << "\"";
             }
-            // Output start bit only for slices
-            if (sl.second != full_size) out << ", start_bit: " << sl.first;
+            auto start_bit = sl.first;
+            // if (isSlice && setKeyName) {
+            //     full_size = sl.second;
+            // }
+            out << "full_size: " << full_size;
+            if (setKeyName)
+                out << ", key_name: \"" << canon_name(annName) << "\"";
+            if (start_bit > 0)
+                out << ", start_bit: " << start_bit;
             out << " }" << std::endl;
         }
 
@@ -2714,16 +2721,10 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 }
                 match_key_name = annName;
             }
-            // Remove trailing $valid's. These are removed from match_key_fields
-            // by the assembler and since this output goes directly in the
-            // context.json we should remove them here.
-            std::vector<cstring> trails = { ".$valid", ".$valid$" };
-            for (auto t : trails) {
-                if (match_key_name.endsWith(t)) {
-                    match_key_name = match_key_name.replace(t, "");
-                    break;
-                }
-            }
+            // Remove trailing `$` from $valid$'s. These are removed from match_key_fields
+            // to be consistent with PD Gen which expects only $valid suffix.
+            if (match_key_name.endsWith("$valid$"))
+                match_key_name = match_key_name.substr(0, match_key_name.size() - 1);
             out << indent++ << "- field_name: " << canon_name(match_key_name) << std::endl;
             if (auto b = key->to<IR::BoolLiteral>()) {
                 out << indent << "value: \"0x" << (b->value ? 1 : 0) << "\"" <<  std::endl;

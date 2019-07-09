@@ -365,7 +365,6 @@ void Phv::output(json::map &ctxt_json) {
                     json::map pov_header;
                     pov_header["bit_index"] = phv_lsb;
                     pov_header["position_offset"] = get_position_offset(gress, field_name);
-                    remove_aug_names(field_name);
                     pov_header["header_name"] = field_name;
                     // FIXME: Checks for reserved POV bits, not supported?
                     pov_header["hidden"] = false;;

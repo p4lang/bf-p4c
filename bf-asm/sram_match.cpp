@@ -1039,7 +1039,6 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
             std::string match_mode;
             if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
                 std::string field_name = mw->second->name();
-                remove_aug_names(field_name);
                 // If the name has a slice in it, remove it and add the lo bit of
                 // the slice to field_bit.  This takes the place of
                 // canon_field_list(), rather than extracting the slice component
@@ -1052,7 +1051,6 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                             "for table %s", field_name.c_str(), this->name());
                 } else if (p && !p->key_name.empty()) {
                     key_name = p->key_name;
-                    remove_aug_names(key_name);
                 }
                 match_mode = get_match_mode(*phv_p, mw->first);
                 start_bit = lo + slice_offset + mw->second->fieldlobit();
