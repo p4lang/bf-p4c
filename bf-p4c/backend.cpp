@@ -23,7 +23,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_info.h"
 #include "bf-p4c/mau/ixbar_realign.h"
-#include "bf-p4c/mau/long_branch.h"
+#include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/selector_update.h"
 #include "bf-p4c/mau/split_alpm.h"
@@ -101,6 +101,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     table_alloc(phv.field_mutex(), options.disable_init_metadata),
     table_summary(pipe_id, deps) {
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
+    // Collect next table info if we're using LBs
+    nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
+        ? new NextTableProp : nullptr;
     addPasses({
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
@@ -207,8 +210,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectIXBarInfo(phv),
         phvLoggingInfo,
         new InstructionAdjustment(phv, primNode),
-        Device::numLongBranchTags() > 0 && !options.disable_long_branch
-            ? new LongBranchAlloc : nullptr,
+        nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
         new CheckForUnallocatedTemps(phv, uses, clot),
 

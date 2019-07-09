@@ -8,6 +8,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/parde/asm_output.h"
+#include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/phase0.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "lib/algorithm.h"
@@ -1756,15 +1757,37 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
     if (!tbl->next.count(what))
         what = "$default";
     if (tbl->next.count(what)) {
-        if (tbl->next.at(what) && Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
+        // Jbay specific
+        if (tbl->next.at(what) && nxt_tbl) {
+            // We want to build this set according to the NextTableProp
+            BUG_CHECK(nxt_tbl != nullptr,
+                      "LB supported and enabled, but NextTableProp hasn't been calculated!");
             NextTableSet rv;
-            for (auto *tbl1 : tbl->next.at(what)->tables)
-                rv.insert(tbl1->unique_id());
-            return rv; }
-        if (tbl->next.at(what) && !tbl->next.at(what)->empty())
-            return tbl->next.at(what)->front(); }
-    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
-        return NextTableSet();
+
+            // Add tables according to next table propagation (if it has an entry in the map)
+            if (nxt_tbl->props.count(tbl->unique_id())) {
+                auto prop = nxt_tbl->props.at(tbl->unique_id());
+                for (auto nt : prop[what])
+                    rv.insert(nt.id);
+                // Add the run_if_ran set
+                for (auto always_nt : prop["$run_if_ran"])
+                    rv.insert(always_nt.id);
+                return rv;
+            }
+        }
+        if (tbl->next.at(what) && !tbl->next.at(what)->empty())  // Tofino specific
+            return tbl->next.at(what)->front();
+    }
+    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
+        // Always add run_if_ran set
+        NextTableSet rv;
+        if (nxt_tbl->props.count(tbl->unique_id())) {
+            auto prop = nxt_tbl->props.at(tbl->unique_id());
+            for (auto always_nt : prop["$run_if_ran"])
+                rv.insert(always_nt.id);
+        }
+        return rv;
+    }
     return default_next.next_in_thread_uniq_id(tbl);
 }
 
@@ -2978,17 +3001,41 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         }
     }
 
-    if (!tbl->long_branch.empty()) {
-        out << indent++ << "long_branch:" << std::endl;
-        for (auto &lb : tbl->long_branch) {
-            out << indent << lb.first << ": [";
-            const char *sep = " ";
-            for (auto *t : tbl->next.at(lb.second)->tables) {
-                if (t->stage() > tbl->stage() + 1) {
-                    out << sep << t->unique_id().build_name();
-                    sep = ", "; } }
-            out << (sep+1) << "]" << std::endl; }
-        --indent; }
+    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch
+        && nxt_tbl->props.count(tbl->unique_id())) {
+        // Whether we've printed the first line of the long branch or not
+        bool printed_start = false;
+        // Check for long branches off of this table
+        for (auto ts : nxt_tbl->props.at(tbl->unique_id())) {
+            // Iterate through the tables in the sequence and collect all of the LBs
+            std::map<int, std::set<NextTableProp::NextTable>> lbs;
+            for (auto nt : ts.second)
+                if (nt.type == NextTableProp::LONG_BRANCH) lbs[nt.lb.tag].insert(nt);
+
+            // Now, add the long branch
+            if (lbs.empty()) continue;
+            if (!printed_start) {
+                // Add the first line for this table if we haven't already
+                out << indent++ << "long_branch:" << std::endl;
+                // But never do it again for this table
+                printed_start = true;
+            }
+
+            // Now, print for this tag sequence
+            for (auto tag : lbs) {
+                out << indent << tag.first << ": [";
+                const char *sep = " ";
+                for (auto nt : tag.second) {
+                    out << sep << nt.id.build_name();
+                    sep = ", ";
+                }
+                out << (sep+1) << "]" << std::endl;
+            }
+        }
+        // Reset the indent if we printed any lbs
+        if (printed_start)
+            --indent;
+    }
 
     if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {
         indent_t gw_indent = indent;

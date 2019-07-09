@@ -12,6 +12,7 @@
 #include "bf-asm/version.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/asm_output.h"
@@ -28,6 +29,7 @@ class AsmOutput : public Inspector {
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
+    const NextTableProp *nxt_tbl;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
@@ -41,9 +43,11 @@ class AsmOutput : public Inspector {
     AsmOutput(const PhvInfo &phv,
               const ClotInfo &clot,
               const FieldDefUse& defuse,
+              const NextTableProp* nxts,
               const BFN_Options &opts,
               bool success)
-        : phv(phv), clot(clot), defuse(defuse), options(opts), _successfulCompile(success) {}
+            : phv(phv), clot(clot), defuse(defuse), nxt_tbl(nxts),
+          options(opts), _successfulCompile(success) {}
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
         LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
@@ -54,7 +58,7 @@ class AsmOutput : public Inspector {
             cstring outputFile = outputDir + "/" + options.programName + ".bfa";
             std::ofstream out(outputFile, std::ios_base::out);
 
-            MauAsmOutput mauasm(phv, pipe, options);
+            MauAsmOutput mauasm(phv, pipe, nxt_tbl, options);
             pipe->apply(mauasm);
 
             out << "version:" << std::endl

@@ -62,10 +62,11 @@ p4c_add_xfail_reason("tofino2"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-p4c_add_xfail_reason("tofino2"
-  "Emitted field .* does not match expected slice .* in CLOT"
-  extensions/p4_tests/p4_14/stf/decaf_9.p4
-)
+# Remove this test as it is no longer hit by this version of the compiler
+# p4c_add_xfail_reason("tofino2"
+#   "Emitted field .* does not match expected slice .* in CLOT"
+#   extensions/p4_tests/p4_14/stf/decaf_9.p4
+# )
 
 p4c_add_xfail_reason("tofino2"
   "address too large for table"

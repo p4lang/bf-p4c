@@ -64,7 +64,6 @@ class Table : BFN::Unit {
     // on this table
     bool                                        is_compiler_generated = false;  // ignored for ==?
     bool                                        always_run = false;
-    inline std::map<int, cstring>               long_branch;  // tag -> "next" key
 
 
     class IndirectAddress {

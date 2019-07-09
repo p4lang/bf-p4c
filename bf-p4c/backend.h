@@ -13,6 +13,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/mau/jbay_next_table.h"
 
 class FieldDefUse;
 struct CollectPhvLoggingInfo;
@@ -45,13 +46,15 @@ class Backend : public PassManager {
     Util::JsonObject dynHashNode;
 
     CollectPhvLoggingInfo *phvLoggingInfo;
+    NextTableProp *nextTblProp;
 
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
 
-    const PhvInfo       &get_phv()    const { return phv; }
-    const ClotInfo      &get_clot()   const { return clot; }
-    const FieldDefUse   &get_defuse() const { return defuse; }
+    const PhvInfo       &get_phv()     const { return phv; }
+    const ClotInfo      &get_clot()    const { return clot; }
+    const FieldDefUse   &get_defuse()  const { return defuse; }
+    const NextTableProp *get_nxt_tbl() const { return nextTblProp; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }

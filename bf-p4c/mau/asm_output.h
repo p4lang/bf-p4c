@@ -9,6 +9,7 @@
 #include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/safe_vector.h"
@@ -19,6 +20,7 @@ class MauAsmOutput : public MauInspector {
  protected:
     const PhvInfo       &phv;
     const IR::BFN::Pipe *pipe;
+    const NextTableProp *nxt_tbl;
     const BFN_Options   &options;
 
  private:
@@ -151,8 +153,9 @@ class MauAsmOutput : public MauInspector {
     class EmitHashExpression;
 
  public:
-    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const BFN_Options &options)
-    : phv(phv), pipe(pipe), options(options) {}
+    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const NextTableProp *nxts,
+                 const BFN_Options &options)
+            : phv(phv), pipe(pipe), nxt_tbl(nxts), options(options) { }
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

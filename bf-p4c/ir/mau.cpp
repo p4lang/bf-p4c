@@ -16,7 +16,6 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
            next == a.next &&
            match_key == a.match_key &&
            always_run == a.always_run &&
-           long_branch == a.long_branch &&
            layout == a.layout &&
            ways == a.ways &&
            resources == a.resources;
