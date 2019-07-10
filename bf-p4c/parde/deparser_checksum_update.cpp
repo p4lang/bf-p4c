@@ -91,7 +91,6 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     auto member = methodCall->method->to<IR::Member>();
     if (!member || member->member != "update")
         return false;
-
     if (!destField || !destField->expr->is<IR::HeaderRef>()) {
         ::error("Destination of checksum calculation must be a header field: %1%",
                 destField);
@@ -289,6 +288,20 @@ analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
     updateConditions.push_back(getUpdateCondition(condition));
     return updateConditions;
 }
+
+struct ChecksumMethodCheck : public Inspector {
+    bool preorder(const IR::MethodCallExpression* methodCall) {
+        auto* member = methodCall->method->to<IR::Member>();
+        auto* expr = member->expr->to<IR::PathExpression>();
+        auto* type = expr->type->to<IR::Type_Extern>();
+        if (type && type->name == "Checksum" && member->member != "update") {
+            ::fatal_error(ErrorType::ERR_UNSUPPORTED, "checksum operation."
+            " Only checksum update() operation is supported for checksum calculations"
+            " in the deparser. %1%", member->srcInfo);
+        }
+        return false;
+    }
+};
 
 struct CollectUpdateChecksums : public Inspector {
     ChecksumUpdateInfoMap checksums;
@@ -770,8 +783,8 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
 
     auto gress = deparser->thread;
 
+    deparser->apply(ChecksumMethodCheck());
     CollectUpdateChecksums collectChecksums;
-
     deparser->apply(collectChecksums);
     auto checksums = collectChecksums.checksums;
 
