@@ -1,5 +1,4 @@
 #include "bf-p4c/parde/deparser_checksum_update.h"
-
 #include <map>
 
 #include "ir/ir.h"
@@ -8,9 +7,23 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/parde/create_pov_encoder.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "logging/filelog.h"
+
 namespace {
+/// Represent update condition
+struct UpdateConditionInfo {
+    UpdateConditionInfo(const IR::Member* field, bool conditionNegated) :
+                 field(field), conditionNegated(conditionNegated) { }
+    // single-bit update condition field
+    const IR::Member* field = nullptr;
+
+    // Indicated if condition is negated
+    //     true  -> cond == 0
+    //     false -> cond == 1
+    bool conditionNegated = false;
+};
 
 /// Represents a checksum field list
 struct FieldListInfo {
@@ -23,11 +36,8 @@ struct FieldListInfo {
     // Maps each field's index in the list above to its bit offset in the field list
     std::map<int, int> fieldsToOffset;
 
-    // Each field list may have multiple single-bit update conditions,
-    // the bool indicates that whether the condition is negated
-    //     true  -> cond == 0
-    //     false -> cond == 1
-    std::vector<std::pair<const IR::Member*, bool>> updateConditions;
+    // Information regarding update conditions
+    std::vector<UpdateConditionInfo*> updateConditions;
 
     // The compiler synthesized pov bit for this field list
     const IR::TempVar* deparseUpdated = nullptr;
@@ -218,58 +228,66 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
         ::fatal_error("%1%", msg.str());
     }
     LOG2("Validated computed checksum for field: " << destField);
-    for (auto* listInfo : csum->fieldListInfos) {
-        if (listInfo->fields->equiv(*fields))
-            return listInfo;
-    }
     auto listInfo = new FieldListInfo(fields, fieldsToOffset);
     csum->fieldListInfos.insert(listInfo);
     return (listInfo);
 }
-static std::pair<const IR::Member*, bool>
-analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
+static UpdateConditionInfo*
+getUpdateCondition(const IR::Expression* condition) {
     bool leftOk = false, rightOk = false, updateConditionNegated = false;
-    if (!ifstmt->ifTrue || ifstmt->ifFalse) {
-        return std::make_pair(nullptr, false);
-    }
-    auto* condition = ifstmt->condition;
     Pattern::Match<IR::Member> field;
     Pattern::Match<IR::Constant> constant;
-    if (condition) {
-       if (auto* eq = condition->to<IR::Equ>()) {
-           if ((field == constant).match(eq)) {
-              if (constant->type->width_bits() == 1) {
-                  rightOk = true;
-                  if (constant->value != 0) {
-                      updateConditionNegated = false;
-                  } else {
-                      updateConditionNegated = true;
-                  }
-              }
-              if (field->type->width_bits() == 1) {
-                  leftOk = true;
-              }
-           }
-           if (leftOk && rightOk)
-              return std::make_pair(eq->left->to<IR::Member>(), updateConditionNegated);
-       } else {
-            if (auto* NotCondition = condition->to<IR::LNot>()) {
-                condition = NotCondition->expr;
-                updateConditionNegated = true;
-            }
-            if (auto* condMember = condition->to<IR::Member>()) {
-               if (condMember->type->is<IR::Type_Boolean>()) {
-                   return std::make_pair(condMember, updateConditionNegated);
-               }
-            }
-       }
-       std::stringstream msg;
-       msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
-           << "Please move the update condition into the control flow";
-
-       ::error("%1%: %2%", msg.str(), condition);
+    if (auto neq = condition->to<IR::LNot>()) {
+           condition = neq->expr;
+           updateConditionNegated = true;
     }
-    return std::make_pair(nullptr, updateConditionNegated);
+    if (auto* condMember = condition->to<IR::Member>()) {
+        if (condMember->type->is<IR::Type_Boolean>()) {
+            return new UpdateConditionInfo(condMember, updateConditionNegated);
+        }
+    }
+    if (auto* eq = condition->to<IR::Equ>()) {
+        if ((field == constant).match(eq)) {
+           if (constant->type->width_bits() == 1) {
+               rightOk = true;
+               if (constant->value != 0) {
+                   updateConditionNegated |= false;
+               } else {
+                   updateConditionNegated |= true;
+               }
+           }
+           if (field->type->width_bits() == 1) {
+               leftOk = true;
+           }
+        }
+        if (leftOk && rightOk) {
+           return new UpdateConditionInfo(eq->left->to<IR::Member>(),
+                                               updateConditionNegated);
+        }
+    }
+    std::stringstream msg;
+    msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
+        << "Please move the update condition into the control flow";
+
+    ::error("%1%: %2%", msg.str(), condition);
+}
+
+static std::vector<UpdateConditionInfo*>
+analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
+    std::vector<UpdateConditionInfo*> updateConditions;
+    if (!ifstmt->ifTrue || ifstmt->ifFalse) {
+        return updateConditions;
+    }
+    auto* condition = ifstmt->condition;
+    while (auto andCondition = condition->to<IR::LAnd>()) {
+        updateConditions.push_back(getUpdateCondition(andCondition->right));
+        if (auto leftEquation =  andCondition->left->to<IR::Equ>()) {
+            updateConditions.push_back(getUpdateCondition(leftEquation));
+        }
+       condition = andCondition->left;
+    }
+    updateConditions.push_back(getUpdateCondition(condition));
+    return updateConditions;
 }
 
 struct CollectUpdateChecksums : public Inspector {
@@ -289,21 +307,23 @@ struct CollectUpdateChecksums : public Inspector {
         if (listInfo) {
             auto ifStmt = findContext<IR::IfStatement>();
             if (ifStmt) {
-                auto updateCondition = analyzeUpdateChecksumCondition(ifStmt);
-                if (updateCondition.first && !csum->isUnconditional) {
-                    bool updateCondExists = false;
-                    for (auto cond : listInfo->updateConditions) {
-                        if (cond.first->equiv(*updateCondition.first)) {
-                            updateCondExists = true;
-                            break;
+                auto updateConditions = analyzeUpdateChecksumCondition(ifStmt);
+                for (auto updateCondition : updateConditions) {
+                    if (updateCondition && !csum->isUnconditional) {
+                        bool updateCondExists = false;
+                        for (auto cond : listInfo->updateConditions) {
+                            if (cond->field->equiv(*updateCondition->field)) {
+                                updateCondExists = true;
+                                break;
+                            }
                         }
-                    }
-                    if (!updateCondExists) {
-                        listInfo->updateConditions.push_back(updateCondition);
-                    }
+                        if (!updateCondExists) {
+                            listInfo->updateConditions.push_back(updateCondition);
+                        }
 
-                } else {
-                    csum->fieldListInfos.erase(listInfo);
+                    } else {
+                        csum->fieldListInfos.erase(listInfo);
+                    }
                 }
             } else {
                 // There exists an unconditional checksum. Delete the conditional checksum
@@ -352,7 +372,7 @@ struct GetChecksumPovBits : public Inspector {
             // unconditional checksum. Deleting all other conditional checksum.
 
                 for (auto uc : listInfo->updateConditions) {
-                    if (equiv(csum->povBit->field, uc.first)) {
+                    if (equiv(csum->povBit->field, uc->field)) {
                         uncondFieldList = listInfo;
                     }
                 }
@@ -541,139 +561,61 @@ struct InsertChecksumConditions : public Transform {
             auto csumInfo = csum.second;
             if (csumInfo->isUnconditional)
                 continue;
-            FieldListInfo* csumList0 = nullptr;
-            FieldListInfo* csumList1 = nullptr;
-            int cond_idx = 0;
-            for (auto listInfo : csumInfo->fieldListInfos) {
-                listInfo->deparseUpdated = new IR::TempVar(IR::Type::Bits::get(1), true,
-                        csumInfo->dest + ".$deparse_updated_csum_" + std::to_string(cond_idx++));
-                if (csumList0)
-                    csumList1 = listInfo;
-                else
-                    csumList0 = listInfo;
+            cstring tableName = csumInfo->dest + "_encode_update_condition_";
+            cstring actionName = "_set_checksum_update_";
+
+            // Get matchkeys
+            std::vector<const IR::Expression*> keys;
+            keys.push_back(csumInfo->povBit->field);
+            for (auto fieldListInfo : csumInfo->fieldListInfos) {
+                for (auto updateCond : fieldListInfo->updateConditions) {
+                    if (std::find(keys.begin(), keys.end(), updateCond->field) == keys.end()) {
+                        keys.push_back(updateCond->field);
+                    }
+                }
             }
-            int numUpdCond = csumList0->updateConditions.size();
-            if (csumList1)
-                numUpdCond += csumList1->updateConditions.size();
-            if ((numUpdCond) > 2) {
-                std::stringstream msg;
-                msg << csumInfo->dest << " has more than two update conditions. "
-                    << "The compiler currently can only support up to two conditions on"
-                    << " each calculated field.";
 
-                ::error("%1%", msg.str());
-
-                // The ALU can only source two inputs, therefore we can only implement
-                // two input function using the ALU.
-                // TODO(zma) To support more than 2 conditions, we need to use static
-                // entries to implement the truth table of a multi-input function.
-            }
-            LOG2("insert checksum update condition for " << csumInfo->dest);
-
-            auto action = new IR::MAU::Action("__checksum_update_condition__");
-            action->default_allowed = action->init_default = true;
-
+            // Get Match Outputs
             csumInfo->deparseOriginal = new IR::TempVar(IR::Type::Bits::get(1), true,
                                      csumInfo->dest + ".$deparse_original_csum");
-
-            cstring setdu0_op, setdu1_op, setdo_op;
-
-            // if one list exists, only one pov bit $deparse_updated_0 will be created
-            //         $deparse_updated_0 = cond0
-            //         $deparse_updated_0 = cond0 | cond1
-            //         $deparse_original = !cond0 | !cond1
-            // if two lists exists then each list get its own pov bit
-            //         $deparse_updated_0 = cond0
-            //         $deparse_updated_1 = !cond0 & cond1
-            //         $deparse_original = !cond0 & !cond1
-
-            if (csumList0->updateConditions.size() == 1) {
-                // This action is created when only one list exists with only one update
-                // condition or if 2 lists exists. If 2 lists exists, each list can have only one
-                // update condition
-                setdu0_op = csumList0->updateConditions[0].second ? "not" : "set";
-                auto setdu0 = new IR::MAU::Instruction(setdu0_op, {
-                csumList0->deparseUpdated, csumList0->updateConditions[0].first});
-                action->action.push_back(setdu0);
-                if (!csumList1) {
-                    setdo_op =  csumList0->updateConditions[0].second ? "set" : "not";
-                    auto setdo = new IR::MAU::Instruction(setdo_op,
-                               { csumInfo->deparseOriginal, csumList0->updateConditions[0].first});
-                    action->action.push_back(setdo);
+            ordered_set<const IR::TempVar*> outputs;
+            outputs.insert(csumInfo->deparseOriginal);
+            ordered_map<unsigned, unsigned> match_to_action_param;
+            int id = 0;
+            for (auto fieldListInfo : csumInfo->fieldListInfos) {
+                unsigned action_param = 0;
+                fieldListInfo->deparseUpdated = new IR::TempVar(IR::Type::Bits::get(1), true,
+                           csumInfo->dest + ".$deparse_updated_csum_" + std::to_string(id++));
+                outputs.insert(fieldListInfo->deparseUpdated);
+                action_param |= 1 << (outputs.size() - 1);
+                unsigned match = 1 << (keys.size() - 1);   // match for valid bit
+                int dontCareBits = INT_MAX;
+                for (auto updateCond : fieldListInfo->updateConditions) {
+                    int keyDiff = keys.size() - std::distance(keys.begin(),
+                    (std::find(keys.begin(), keys.end(), updateCond->field))) - 1;
+                    if (keyDiff < dontCareBits) dontCareBits = keyDiff;
+                    if (!updateCond->conditionNegated) {
+                        match |= (1 << (keyDiff));
+                    }
                 }
-            } else if (!csumList1 &&  csumList0->updateConditions.size() > 1) {
-               // This action is created when only one list exists but has 2 update conditions
-               if (!csumList0->updateConditions[0].second &&
-                   !csumList0->updateConditions[1].second) {
-                   setdu1_op = "or";
-                   setdo_op = "nor";
-               } else if (!csumList0->updateConditions[0].second &&
-                          csumList0->updateConditions[1].second) {
-                   setdu1_op = "orca";
-                   setdo_op = "andcb";
-               } else if (csumList0->updateConditions[0].second &&
-                          !csumList0->updateConditions[1].second) {
-                   setdu1_op = "orcb";
-                   setdo_op = "andca";
-               } else {
-                   setdu1_op = "nand";
-                   setdo_op = "and";
-               }
-               auto setdu1 = new IR::MAU::Instruction(setdu1_op,
-                       { csumList0->deparseUpdated, csumList0->updateConditions[0].first,
-                       csumList0->updateConditions[1].first});
-               auto setdo = new IR::MAU::Instruction(setdo_op,
-                       { csumInfo->deparseOriginal, csumList0->updateConditions[0].first,
-                       csumList0->updateConditions[1].first});
-               action->action.push_back(setdu1);
-               action->action.push_back(setdo);
+                // Some tables might have more matchkeys than the ones required to calculate
+                // checksum from the particular field list. "dontCareBits" is the number of
+                // the excess keys we do not care about.
+                // Map all possible combination of dont care bits to the same action parameter
+                for (int i = 0; i < (1 << dontCareBits); i++) {
+                    match_to_action_param[match | i] = action_param;
+                }
             }
-            if (csumList0 && csumList1) {
-              // These actions are created when 2 checksum list exists
-                if (!csumList0->updateConditions[0].second &&
-                    !csumList1->updateConditions[0].second) {
-                    setdu1_op = "andca";
-                    setdo_op = "nor";
-                } else if (!csumList0->updateConditions[0].second &&
-                           csumList1->updateConditions[0].second) {
-                    setdu1_op = "andcb";
-                    setdo_op = "and";
-                } else if (csumList0->updateConditions[0].second &&
-                           !csumList1->updateConditions[0].second) {
-                    setdu1_op = "and";
-                    setdo_op = "andcb";
-                } else {
-                    setdu1_op = "nor";
-                    setdo_op = "andca";
-                }
-                auto setdu1 = new IR::MAU::Instruction(setdu1_op,
-                        { csumList1->deparseUpdated, csumList0->updateConditions[0].first,
-                          csumList1->updateConditions[0].first});
-                auto setdo = new IR::MAU::Instruction(setdo_op,
-                             { csumInfo->deparseOriginal, csumList0->updateConditions[0].first,
-                               csumList1->updateConditions[0].first});
-
-                action->action.push_back(setdu1);
-                action->action.push_back(setdo);
-           }
-           cstring tableName = csumInfo->dest + "_encode_update_condition_" +
-                             toString(gress);
-
-            auto gw = new IR::MAU::Table(tableName + "_gw", gress, csumInfo->povBit->field);
-            gw->is_compiler_generated = true;
-
-            auto condTable = new IR::MAU::Table(tableName, gress);
-            condTable->is_compiler_generated = true;
-            condTable->actions[action->name] = action;
-
-            gw->next.emplace("$true", new IR::MAU::TableSeq(condTable));
-
-            auto p4Name = tableName + "_" + cstring::to_cstring(gress);
-            condTable->match_table = new IR::P4Table(p4Name.c_str(), new IR::TableProperties());
-
-            tableSeq->tables.push_back(gw);
+            for (unsigned match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
+                if (!match_to_action_param.count(match))
+                    match_to_action_param[match] = 1;
+            }
+            auto ma = new MatchAction(keys, outputs, match_to_action_param);
+            tableSeq->tables.push_back(create_compiler_generated_table(gress, tableName,
+                                                                       actionName, *ma));
+            LOG3("Created table " << tableName << " in " << gress << " for match action:");
+            LOG5(ma->print());
         }
-
         return tableSeq;
     }
 
@@ -696,12 +638,13 @@ struct CollectFieldToState : public Inspector {
 struct CheckNestedChecksumUpdates : public Inspector {
     const IR::BFN::ParserGraph& graph;
     const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state;
-
+    ChecksumUpdateInfoMap checksumsMap;
     std::set<const IR::BFN::EmitChecksum*> visited;
 
     explicit CheckNestedChecksumUpdates(const IR::BFN::ParserGraph& graph,
-            const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state) :
-        graph(graph), field_to_state(field_to_state) { }
+            const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state,
+             ChecksumUpdateInfoMap checksumsMap) :
+        graph(graph), field_to_state(field_to_state), checksumsMap(checksumsMap) { }
 
     void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {
         if (Device::currentDevice() == Device::TOFINO) {
@@ -749,19 +692,58 @@ struct CheckNestedChecksumUpdates : public Inspector {
         return false;
     }
 
+    std::vector<UpdateConditionInfo*> findUpdateCondition(const IR::BFN::EmitChecksum* checksum) {
+        auto checksumInfo = checksumsMap[checksum->dest->field->toString()];
+
+        if (checksumInfo->isUnconditional)
+            return {};
+        for (auto fieldListInfo : checksumInfo->fieldListInfos) {
+            if (checksum->sources.equiv(*fieldListInfo->fields))
+                 return fieldListInfo->updateConditions;
+        }
+        return {};
+    }
+
+    bool findIfConditionsMutex(const IR::BFN::EmitChecksum* checksum1,
+                               const IR::BFN::EmitChecksum* checksum2) {
+        auto updateCondition1 = findUpdateCondition(checksum1);
+        auto updateCondition2 = findUpdateCondition(checksum2);
+
+        if (updateCondition1.empty() || updateCondition2.empty())
+            return false;
+        // Find if one update condition bit exists which should be true for one checksum
+        // to allow update and false for the other or vice versa
+        for (auto* uc1 : updateCondition1) {
+            for (auto* uc2 : updateCondition2) {
+                if (uc1->field->equiv(*uc2->field) &&
+                    uc1->conditionNegated != uc2->conditionNegated) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     bool preorder(const IR::BFN::EmitChecksum* checksum) override {
         for (auto c : visited) {
             if (!can_be_on_same_parse_path(c->dest->field, checksum->dest->field))
                 continue;
-
+            // Nested checkums are allowed if both the checksums are conditional and
+            // have mutually exclusive conditions
             for (auto s : checksum->sources) {
-                if (c->dest->field->equiv(*s->field))
-                    print_error(checksum, c);
+                if (c->dest->field->equiv(*s->field)) {
+                   // Check if the conditions are mutually exclusive
+                   if (!findIfConditionsMutex(checksum, c))
+                        print_error(checksum, c);
+                }
             }
 
             for (auto s : c->sources) {
-                if (checksum->dest->field->equiv(*s->field))
-                    print_error(checksum, c);
+                if (checksum->dest->field->equiv(*s->field)) {
+                   // Check if conditions are mutually exclusive
+                   if (!findIfConditionsMutex(checksum, c))
+                        print_error(checksum, c);
+                }
             }
         }
 
@@ -815,7 +797,8 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
         parser->apply(cfs);
 
         auto graph = cg.graphs().at(parser->to<IR::BFN::Parser>());
-        CheckNestedChecksumUpdates checkNestedChecksumUpdates(*graph, cfs.field_to_state);
+        CheckNestedChecksumUpdates checkNestedChecksumUpdates(*graph, cfs.field_to_state,
+        checksums);
 
         pipe->thread[gress].deparser->apply(checkNestedChecksumUpdates);
     }

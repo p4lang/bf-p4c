@@ -356,6 +356,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/allocate_parser_checksum.cpp
   parde/allocate_parser_match_register.cpp
   parde/clot_info.cpp
+  parde/create_pov_encoder.cpp
   parde/decaf.cpp
   parde/deparser_checksum_update.cpp
   parde/deparser_output.cpp
@@ -383,6 +384,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/characterize_parser.h
   parde/clot_info.h
   parde/collect_parser_usedef.h
+  parde/create_pov_encoder.h
   parde/decaf.h
   parde/deparser_checksum_update.h
   parde/dump_parser.h

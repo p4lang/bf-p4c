@@ -1,7 +1,6 @@
 #include "decaf.h"
 #include <bitset>
 #include "bf-p4c/common/table_printer.h"
-
 template <typename T>
 static std::vector<T> to_vector(const ordered_set<T>& data) {
     std::vector<T> vec;
@@ -1029,46 +1028,6 @@ SynthesizePovEncoder::encode_assign_chain(const AssignChain& chain,
     return encoded;
 }
 
-/* static */ const IR::Entry*
-SynthesizePovEncoder::create_static_entry(unsigned key_size,
-                                          unsigned match,
-                                          const IR::MAU::Action* action,
-                                          const ordered_set<const IR::TempVar*>& outputs,
-                                          unsigned action_param) {
-    IR::Vector<IR::Expression> components;
-
-    for (unsigned i = 0; i < key_size; i++) {
-        auto bit_i = (match >> i) & 1;
-        components.insert(components.begin(), new IR::Constant(bit_i));
-    }
-
-    auto keys = new IR::ListExpression(new IR::Type_Tuple, components);
-
-    auto params = new IR::ParameterList;
-
-    int i = 0;
-    for (auto o : outputs) {
-        std::string arg_name = "x" + std::to_string(i++);
-        auto p = new IR::Parameter(arg_name.c_str(), IR::Direction::In, o->type);
-        params->push_back(p);
-    }
-
-    auto type = new IR::Type_Action(new IR::TypeParameters, params);
-
-    auto args = new IR::Vector<IR::Argument>();
-    for (unsigned i = 0; i < outputs.size(); i++) {
-        auto bit_i = (action_param >> i) & 1;
-        auto a = new IR::Argument(new IR::Constant(bit_i));
-        args->push_back(a);
-    }
-
-    auto method = new IR::PathExpression(type, new IR::Path(action->name));
-    auto call = new IR::MethodCallExpression(type, method, args);
-    auto entry = new IR::Entry(keys, call);
-
-    return entry;
-}
-
 std::string MatchAction::print() const {
     std::stringstream ss;
 
@@ -1233,72 +1192,6 @@ SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
 
     auto ma = new MatchAction(keys, all_version_bits, match_to_action_param);
     return ma;
-}
-
-IR::MAU::Table*
-SynthesizePovEncoder::create_pov_encoder(gress_t gress, const MatchAction& match_action) {
-    LOG1("\ncreate decaf POV encoder for match action:");
-    LOG3(match_action.print());
-
-    static int id = 0;
-    std::string table_name = toString(gress) + "_decaf_pov_encoder_" + std::to_string(id++);
-
-    auto encoder = new IR::MAU::Table(table_name.c_str(), gress);
-    encoder->is_compiler_generated = true;
-
-    auto p4_name = table_name + "_" + cstring::to_cstring(gress);
-    encoder->match_table = new IR::P4Table(p4_name.c_str(), new IR::TableProperties());
-
-    LOG1("created table " << table_name);
-
-    int i = 0;
-    for (auto in : match_action.keys) {
-        auto ixbar_read = new IR::MAU::TableKey(in, IR::ID("exact"));
-        ixbar_read->p4_param_order = i++;
-        encoder->match_key.push_back(ixbar_read);
-    }
-
-    unsigned key_size = match_action.keys.size();
-
-    IR::Vector<IR::Entry> static_entries;
-
-    auto soap = new IR::MAU::Action("__soap_");  // set output w/ action param
-    encoder->actions[soap->name] = soap;
-
-    i = 0;
-    for (auto o : match_action.outputs) {
-        std::string arg_name = "x" + std::to_string(i++);
-
-        auto arg = new IR::MAU::ActionArg(IR::Type::Bits::get(1), soap->name, arg_name.c_str());
-        auto instr = new IR::MAU::Instruction("set", {o, arg});
-
-        soap->action.push_back(instr);
-        soap->args.push_back(arg);
-    }
-
-    for (auto& ma : match_action.match_to_action_param) {
-        auto static_entry = create_static_entry(key_size,
-                                                ma.first,
-                                                soap,
-                                                match_action.outputs,
-                                                ma.second);
-        static_entries.push_back(static_entry);
-    }
-
-    auto nop = new IR::MAU::Action("__nop_");
-    encoder->actions[nop->name] = nop;
-    nop->default_allowed = nop->init_default = true;
-
-    encoder->entries_list = new IR::EntriesList(static_entries);
-
-    LOG5(encoder);
-
-    // XXX(zma) depending how well this works, we might consider baking
-    // this encoder (or multiple instances) into the silicon. Using SRAM/TCAM
-    // seems under-utilizing the memory since most of these encoders only
-    // have small number of entries.
-
-    return encoder;
 }
 
 IR::MAU::TableSeq*
@@ -1497,7 +1390,9 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
 
     for (auto& gm : match_actions) {
         for (auto& ma : gm.second) {
-            auto table = create_pov_encoder(gm.first, *ma);
+            cstring table_name = "_decaf_pov_encoder_";
+            cstring action_name = "__soap__";
+            auto table = create_compiler_generated_table(gm.first, table_name, action_name, *ma);
 
             tables_to_insert[table->gress].push_back(table);
         }

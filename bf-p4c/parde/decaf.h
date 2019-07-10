@@ -3,10 +3,10 @@
 
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/parde/create_pov_encoder.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
-
 /*********************************************************************************
  *
  *  decaf : a deparser optimization of copy assigned fields
@@ -480,18 +480,6 @@ struct VersionMap {
     }
 };
 
-struct MatchAction {
-    MatchAction(std::vector<const IR::Expression*> k,
-                ordered_set<const IR::TempVar*> o,
-                ordered_map<unsigned, unsigned> ma) :
-        keys(k), outputs(o), match_to_action_param(ma) { }
-
-    std::vector<const IR::Expression*> keys;
-    ordered_set<const IR::TempVar*> outputs;
-    ordered_map<unsigned, unsigned> match_to_action_param;
-
-    std::string print() const;
-};
 
 // Given a set of weak fields, and their reaching values/action chains at
 // the deparser, we construct tables to synthesize the POV bits needed
@@ -571,20 +559,10 @@ class SynthesizePovEncoder : public MauTransform {
     unsigned
     encode_assign_chain(const AssignChain& chain,
                         const ordered_set<const IR::MAU::Action*>& all_actions);
-
-    static const IR::Entry*
-    create_static_entry(unsigned key_size,
-                        unsigned match,
-                        const IR::MAU::Action* action,
-                        const ordered_set<const IR::TempVar*>& params,
-                        unsigned action_param);
-
     bool is_valid(const PHV::Field* f,
                   const std::vector<const IR::Expression*>& vld_bits_onset);
 
     MatchAction* create_match_action(const FieldGroup& group);
-
-    IR::MAU::Table* create_pov_encoder(gress_t gress, const MatchAction& match_action);
 
     IR::MAU::TableSeq* preorder(IR::MAU::TableSeq* seq) override;
 
