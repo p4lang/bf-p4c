@@ -12,7 +12,7 @@
 import os, sys
 from jsonvalidator import JSONValidator
 
-MYPATH = os.path.dirname(__file__)
+MYPATH = os.path.dirname(os.path.realpath(__file__))
 GEN_SCHEMA_PATH=os.path.join(MYPATH, "../compiler_interfaces")
 sys.path.append(GEN_SCHEMA_PATH)
 

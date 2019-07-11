@@ -86,7 +86,8 @@ int GenerateParserP4iJson::getStateId(const IR::BFN::LoweredParserState* state) 
 /// Assign a tcam id for this match, higher the number, higher the priority.
 int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress) {
     if (!tcam_ids[gress].count(match)) {
-        tcam_ids[gress][match] = Device::pardeSpec().numTcamRows() - tcam_ids[gress].size();
+        int id = Device::pardeSpec().numTcamRows() - tcam_ids[gress].size() - 1;
+        tcam_ids[gress][match] = id;
     }
     return tcam_ids[gress].at(match);
 }
