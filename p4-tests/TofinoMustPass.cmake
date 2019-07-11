@@ -93,6 +93,7 @@ set (TOFINO_MUST_PASS_TESTS
   smoketest_switch_16_compile
 
   # Customer profiles
+  extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
