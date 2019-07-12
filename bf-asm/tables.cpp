@@ -1958,6 +1958,14 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
         action_format_per_action["vliw_instruction"] = act.code;
         action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
 
+        json::vector &next_tables = action_format_per_action["next_tables"] = json::vector();
+        for (auto n : act.next_table_ref) {
+            next_tables.push_back(json::map {
+                    { "next_table_name", json::string(n->p4_name()) },
+                    { "next_table_logical_id", json::number(n->logical_id) },
+                    { "next_table_stage_no", json::number(n->stage->stageno) }
+            });
+        }
         json::vector &action_format_per_action_imm_fields =
           action_format_per_action["immediate_fields"] = json::vector();
         for (auto &a : act.alias) {

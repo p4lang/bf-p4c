@@ -40,13 +40,29 @@ struct P4iParserExtract : ToJsonObject {
     }
 };
 
+struct P4iParserClotField : ToJsonObject {
+    cstring name;
+    int field_msb;
+    int field_lsb;
+    int clot_offset;
+
+    Util::JsonObject* toJson() const override {
+        auto* rst = new Util::JsonObject();
+        rst->emplace("name", new Util::JsonValue(name));
+        rst->emplace("field_msb", new Util::JsonValue(field_msb));
+        rst->emplace("field_lsb", new Util::JsonValue(field_lsb));
+        rst->emplace("clot_offset", new Util::JsonValue(clot_offset));
+        return rst;
+    }
+};
+
 struct P4iParserClot : ToJsonObject {
     cstring issue_state;
     int offset;
     unsigned tag;
     int length;
     bool has_checksum;
-    std::vector<std::vector<cstring>> field_lists;
+    std::vector<std::vector<P4iParserClotField>> field_lists;
 
     Util::JsonObject* toJson() const override {
         auto* rst = new Util::JsonObject();
@@ -54,7 +70,7 @@ struct P4iParserClot : ToJsonObject {
         for (auto field_list : field_lists) {
             auto fl = new Util::JsonArray();
             for (auto f : field_list)
-                fl->append(new Util::JsonValue(f));
+                fl->append(f.toJson());
             fls->append(fl);
         }
         rst->emplace("field_lists", fls);

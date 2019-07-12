@@ -17,7 +17,7 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
-const std::string SCHEMA_VERSION = "1.8.0";
+const std::string SCHEMA_VERSION = "1.8.2";
 
 option_t options = {
     .binary = PIPE0,

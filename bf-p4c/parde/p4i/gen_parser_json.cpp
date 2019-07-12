@@ -128,14 +128,16 @@ GenerateParserP4iJson::generateExtractClot(const IR::BFN::LoweredExtractClot* ex
     if (clot_tag_to_checksum_unit.count(extract->dest.tag))
         clot.has_checksum = true;
     if (auto c = clotInfo.parser_state_to_clot(state, clot.tag)) {
-        // TODO: Clot can contain multiple field lists due to overlay. Add once
-        // support is availabe in Clot structure.
-        std::vector<cstring> fl;
+        std::vector<P4iParserClotField> fl;
+        int clot_offset = 0;
         for (auto *f : c->all_slices()) {
-            std::stringstream out;
-            out << canon_name(f->field()->name);
-            if (!f->is_whole_field()) out << f->range().formatAsSlice(f->field()->size);
-            fl.push_back(cstring::to_cstring(out.str()));
+            P4iParserClotField cf;
+            cf.name = canon_name(f->field()->name);
+            cf.field_msb = f->range().hi;
+            cf.field_lsb = f->range().lo;
+            cf.clot_offset = clot_offset;
+            clot_offset += f->field()->size;
+            fl.push_back(cf);
         }
         clot.field_lists.push_back(fl);
     }

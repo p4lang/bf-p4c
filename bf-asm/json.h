@@ -216,6 +216,8 @@ public:
     void push_back(unsigned int n) { push_back((int64_t)n); }
     void push_back(uint64_t n) { push_back((int64_t)n); }
     void push_back(const char *s) { push_back(mkuniq<string>(string(s))); }
+    void push_back(std::string s) { push_back(mkuniq<string>(string(s))); }
+    void push_back(string s) { push_back(mkuniq<string>(s)); }
     void push_back(vector &&v) { push_back(mkuniq<vector>(std::move(v))); }
     void push_back(json::map &&);
     vector *as_vector() override { return this; }
