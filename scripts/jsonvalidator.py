@@ -54,6 +54,8 @@ class JSONValidator:
 
                 for error in errors:
                     print(error.message)
+                    print("error path:")
+                    print(list(error.path))
 
                 return False
             else: 
