@@ -102,23 +102,22 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 set_tests_properties("tofino/switch_${SWITCH_VERSION}_ent_dc_general" PROPERTIES TIMEOUT 1200)
 
 # Switch P4-16
-set (SWITCH_P4_16 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/p4src/switch-tofino/switch.p4)
-set (SWITCH_P4_16_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16/ptf/api)
+set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
+set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
+set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch.p4)
+set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
-p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DA0_PROFILE -arch tna -bfrt -force-link")
-bfn_set_p4_build_flag("tofino" "smoketest_switch_16_compile_a0_profile" "-Xp4c=\"--disable-init-metadata --disable-power-check\"")
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DA0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -arch
-  tna -bfrt -force-link")
-bfn_set_p4_build_flag("tofino" "smoketest_switch_16_compile_b0_profile" "-Xp4c=\"--disable-init-metadata --disable-power-check\"")
+  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -arch tna -bfrt -force-link")
+  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}

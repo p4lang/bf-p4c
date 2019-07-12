@@ -46,7 +46,7 @@ node ('compiler || compiler-svr4') {
                             sh "git submodule update --init --recursive"
                             // Update switch.p4-16 to the latest known working refpoint
                             switch_16_repo = 'p4-tests/p4_16/switch_16'
-                            switch_16_branch = 'field_slices'
+                            switch_16_branch = 'p4c/working-top'
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
@@ -88,8 +88,8 @@ node ('compiler-svr1 || master') {
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
                     // TODO: Add a MUST PASS tag to extract customer programs automatically from
                     // ctest
-                    sh "echo 'Running customer must passes that may timeout on Travis'"
-                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'arista/p4c-1813.p4'"
+                    sh "echo 'Running some customer must passes that are excluded in Travis jobs'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -L 'CUST_MUST_PASS'"
                     sh "echo 'Running switch-14 and switch-16 tests for METRICS'"
                     withCredentials([usernamePassword(
                         credentialsId: "bfndocker",

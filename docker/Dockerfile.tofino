@@ -1,4 +1,4 @@
-FROM barefootnetworks/model:tofino_debug
+FROM barefootnetworks/model:tofino_master
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 ENV DEBIAN_FRONTEND noninteractive

@@ -4,8 +4,8 @@ switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,"-DENT_DC_GENERAL_P
 switch_dc_basic,p4-tests/p4_14/switch/p4src/switch.p4,,"-DDC_BASIC_PROFILE",tofino,p4-14,v1model,skip_Glass
 switch_msdc_ipv4,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_IPV4_PROFILE",tofino,p4-14,v1model,skip_Glass
 switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_SPINE_DTEL_INT_PROFILE",tofino,p4-14,v1model,skip_Glass
-switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,,tofino,p4-16,tna,skip_Glass
-switch_16_a0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4, -Xp4c=\"--disable-init-metadata --disable-power-check\","-DA0_PROFILE",tofino,p4-16,tna,skip_Glass
-switch_16_b0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4, -Xp4c=\"--disable-init-metadata --disable-power-check\","-DB0_PROFILE",tofino,p4-16,tna,skip_Glass
-switch_16_l0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,,"-DL0_PROFILE",tofino,p4-16,tna,skip_Glass
+switch_16_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,,tofino,p4-16,tna,skip_Glass
+switch_16_a0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,-DA0_PROFILE -Xp4c=\"--disable-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
+switch_16_b0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,-DB0_PROFILE -Xp4c=\"--disable-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
+switch_16_l0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,"-DL0_PROFILE",tofino,p4-16,tna,skip_Glass
 static_entries_const_prop,p4-tests/p4_16/compile_only/static_entries_const_prop.p4,,,tofino,p4-16,tna,skip_Glass
