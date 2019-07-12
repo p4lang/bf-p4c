@@ -671,6 +671,17 @@ const char *PragmaSelectorEnableScramble::help = "@pragma selector_enable_scramb
     "SPS scrambling logic.  A value of 0 disables the scramble logic.  A value "
     "of 1 enables the scramble logic.  By default, scrambling is enabled.";
 
+const char *PragmaSymmetric::name = "symmetric";
+const char *PragmaSymmetric::description =
+    "Specifies the symmetric hash fields.";
+const char *PragmaSymmetric::help = "@pragma symmetric field_1, field_2 0\n"
+    "+attached to P4 hash extern\n"
+    "\n"
+    "Specifies that the two fields specified are to be considered symmetric "
+    "when computing a hash result.  This pragma is only available in the "
+    "context of field list hash calculations.  All other usages are silently "
+    "ignored.  It is an error if the two fields are not the same bit width.";
+
 const char *PragmaStage::name = "stage";
 const char *PragmaStage::description =
     "Specifies the stage for a table.";
