@@ -159,7 +159,6 @@ struct DependencyGraph {
              std::pair<ordered_set<const IR::MAU::Action*>,
              ordered_set<const IR::MAU::Action*>>>> data_annotations;
 
-
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
@@ -168,7 +167,7 @@ struct DependencyGraph {
         dep_stages_control_anti;
     };
 
-    std::map<const IR::MAU::Table*, StageInfo> stage_info;
+    ordered_map<const IR::MAU::Table*, StageInfo> stage_info;
 
     using MinEdgeInfo = std::pair<const IR::MAU::Table *, dependencies_t>;
     bool display_min_edges = false;
@@ -271,6 +270,15 @@ struct DependencyGraph {
             return false; }
     }
 
+    bool happens_phys_after(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed.");
+        if (happens_phys_after_map.count(t1)) {
+            return happens_phys_after_map.at(t1).count(t2);
+        } else {
+            return false; }
+    }
+
     // returns true if any table in s or control dependent on a table in s is data dependent on t1
     bool happens_phys_before_recursive(const IR::MAU::Table* t1, const IR::MAU::TableSeq* s) const {
         if (!finalized)
@@ -306,6 +314,15 @@ struct DependencyGraph {
             BUG("Dependence graph used before being fully constructed");
         if (happens_logi_before_map.count(t1))
             return happens_logi_before_map.at(t1).count(t2);
+        else
+            return false;
+    }
+
+    bool happens_logi_after(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+        if (!finalized)
+            BUG("Dependence graph used before being fully constructed");
+        if (happens_logi_after_map.count(t1))
+            return happens_logi_after_map.at(t1).count(t2);
         else
             return false;
     }

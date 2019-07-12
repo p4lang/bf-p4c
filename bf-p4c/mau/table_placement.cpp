@@ -401,15 +401,23 @@ TablePlacement::GatewayMergeChoices
 
     // Now, use the same criteria as gateway_merge to find viable tables
     for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
-        if (this->seqInfo.at(it->second).refs.size() > 1) continue;
+        if (seqInfo.at(it->second).refs.size() > 1) continue;
         int idx = -1;
         for (auto t : it->second->tables) {
             bool should_skip = false;
             ++idx;
+
             if (it->second->deps[idx]) continue;
+
+            // The TableSeqDeps does not currently capture dependencies like injected
+            // control dependencies and metadata/dark initialization.  These have been folded
+            // into the TableDependencyGraph and can be checked.
+            // One could possibly fold this into TableSeqDeps, but only if initialization
+            // happens in flow order, as the TableSeqDeps works with a LTBitMatrix
             for (auto t2 : it->second->tables) {
-                if (this->deps->happens_before_control(t, t2)) should_skip = true;
+                if (deps->happens_logi_before(t2, t)) should_skip = true;
             }
+
             // If we have dependence ordering problems
             if (should_skip) continue;
             // if (deps->happens_before_control)
@@ -421,11 +429,12 @@ TablePlacement::GatewayMergeChoices
             // multiple tables.  Not supported yet during allocation
             if (t->for_dleft()) continue;
             // Liveness problems
-            if (!this->phv.darkLivenessOkay(table, t)) {
+            if (!phv.darkLivenessOkay(table, t)) {
                 LOG2("\tCannot merge " << table->name << " with " << t->name << " because of "
                      "liveness check");
                 continue;
             }
+
             // Check if we have already seen this table
             if (rv.count(t))
                 continue;
@@ -1512,6 +1521,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         should_skip = true;
                         break; } }
                 // Find potential tables this table can be merged with (if it's a gateway)
+
                 auto gmc = TablePlacement::gateway_merge_choices(t);
                 // Prune these choices according to happens after
                 std::vector<const IR::MAU::Table*> to_erase;
