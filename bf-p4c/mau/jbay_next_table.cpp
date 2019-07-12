@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "device.h"
+#include "lib/error.h"
+#include "bf-p4c/common/table_printer.h"
 
 /* This function calculates how the next table sequence ~next~ will be propagated from the table ~t~
  * through the 3 available methods in JBay: LOCAL_EXEC, GLOBAL_EXEC, LONG_BRANCH. Since the
@@ -96,15 +98,22 @@ void NextTableProp::add_table_seq(
 
         // Allocate long branch if need be
         if (ty == LONG_BRANCH) {
+            BUG_CHECK(prev_t->stage() + 1 < rep->stage(),
+                      "LB used between %s in stage %d and %s in stage %d!",
+                      prev_t->name, prev_t->stage(), rep->name, rep->stage());
             alloc(nt, prev_st);
             if (nt.lb.tag >= Device::numLongBranchTags())
-                error(ErrorType::ERR_OVERLIMIT, "too many long branches", rep);
+                ::error(ErrorType::ERR_OVERLIMIT, "too many long branches %1%", rep);
+            // Add the tables to pretty printer
+            lb_pp[nt.lb.tag][prev_t->stage()] =
+                std::pair<const IR::MAU::Table*, const IR::MAU::Table*>(prev_t, rep);
         }
 
         // Add the representative table for this stage to prev's set
         LOG3("Adding " << rep->name << " to " << branch
-             << (prev_st == i-1 ? " GLOBAL_EXEC" : " LONG_BRANCH")
-             << " of table " << prev_t->name);
+             << (ty == LONG_BRANCH ? " LONG_BRANCH" : " GLOBAL_EXEC") << " of table "
+             << prev_t->name << " from stage " << prev_st << " to stage " << i
+             << (ty == LONG_BRANCH ? " on tag " + std::to_string(nt.lb.tag) : ""));
         props[prev_t->unique_id()][branch].insert(nt);
 
         // Update previous
@@ -150,4 +159,56 @@ bool NextTableProp::preorder(IR::MAU::Table* t) {
     for (auto ts : t->next)
         add_table_seq(t, ts);
     return true;
+}
+
+void NextTableProp::end_apply() {
+    // Pretty print long branch usage
+    LOG3(pretty_print());
+}
+
+std::stringstream NextTableProp::pretty_print() {
+    std::stringstream ss;
+    std::vector<std::string> header;
+    header.push_back("Tag #");
+    int ns = Device::numStages();
+    for (int i = 0; i < ns; ++i)
+        header.push_back("Stage " + std::to_string(i));
+
+    TablePrinter* tp = new TablePrinter(ss, header, TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    // Print each tag
+    for (unsigned i = 0; i < lb_pp.size(); ++i) {
+        std::vector<std::string> row;
+        row.push_back(std::to_string(i));
+        auto tag_use = lb_pp[i];
+        // Iterate through the stages
+        for (int j = 0; j < ns; ++j) {
+            // If the tag has an entry at this stage
+            if (tag_use.count(j)) {
+                // Get the tables
+                auto src_dest = tag_use.at(j);
+                // Add the first table and increment j accordingly.
+                std::string nm = src_dest.first->name + "";
+                row.push_back(nm);
+                ++j;
+                // Add fillers
+                int k = j;
+                for (; k < src_dest.second->stage()-1; ++k)
+                    row.push_back("--");
+                row.push_back("->");
+                // Update j to reflect fillers
+                j = k + 1;
+                // Finally, add the dest name
+                nm = src_dest.second->name + "";
+                row.push_back(nm);
+            } else {  // Otherwise, add an empty string
+                row.push_back("");
+            }
+        }
+        tp->addRow(row);
+    }
+    tp->print();
+    ss << std::endl;
+    return ss;
 }

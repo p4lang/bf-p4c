@@ -61,6 +61,11 @@ class NextTableProp : public MauModifier {
     dyn_vector<bitvec>                  stage_use;
     /* track usage of stages x tags */
     // dyn_vector<dyn_vector<LBInfo*>>      use;
+
+    // Capture information for pretty printing long branches (tag # -> src stage # -> src,dest)
+    std::map<int, std::map<int, std::pair<const IR::MAU::Table*, const IR::MAU::Table*>>> lb_pp;
+    std::stringstream pretty_print();
+
     // Allocates a long_branch according to global use of lb tags
     void alloc(NextTable& nt, int first_stage);
 
@@ -72,6 +77,8 @@ class NextTableProp : public MauModifier {
         props.clear();
         return MauModifier::init_apply(root);
     }
+
+    void end_apply() override;
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_ */
