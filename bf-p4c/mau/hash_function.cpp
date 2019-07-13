@@ -457,9 +457,9 @@ bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     std::advance(it, 1);
     extend = (*it)->expression->to<IR::BoolLiteral>()->value;
     std::advance(it, 1);
-    init = (*it)->expression->to<IR::Constant>()->asInt();
+    init = (*it)->expression->to<IR::Constant>()->asUint64();
     std::advance(it, 1);
-    final_xor = (*it)->expression->to<IR::Constant>()->asInt();
+    final_xor = (*it)->expression->to<IR::Constant>()->asUint64();
     return true;
 }
 

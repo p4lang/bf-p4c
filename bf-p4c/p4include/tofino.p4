@@ -68,7 +68,8 @@ enum HashAlgorithm_t {
     CRC8,
     CRC16,
     CRC32,
-    CRC64
+    CRC64,
+    CUSTOM
 }
 
 match_kind {

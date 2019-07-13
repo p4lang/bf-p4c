@@ -73,9 +73,11 @@ enum SelectorMode_t { FAIR, RESILIENT }
 enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
+    CRC8,
     CRC16,
     CRC32,
-    CSUM16
+    CRC64,
+    CUSTOM
 }
 
 match_kind {

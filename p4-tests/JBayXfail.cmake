@@ -158,7 +158,6 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "The method call of read and write on a Register is currently not supported in p4c"
-  testdata/p4_14_samples/issue894.p4
   testdata/p4_14_samples/register.p4
 )
 
@@ -291,6 +290,11 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "The table.*with no key cannot have the action"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "HashAlgorithm_t.CSUM16: Invalid enum tag"
+  testdata/p4_14_samples/issue894.p4
 )
 
 # P4C-1445, DRV-2667

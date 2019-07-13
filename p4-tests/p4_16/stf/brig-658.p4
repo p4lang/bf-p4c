@@ -41,7 +41,7 @@ control IngressP(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     CRCPolynomial<bit<16>>(0x589, false, false, false, 1, 1) crc_poly;
-    Hash<bit<16>>(HashAlgorithm_t.CRC16, crc_poly) Cistern;
+    Hash<bit<16>>(HashAlgorithm_t.CUSTOM, crc_poly) Cistern;
 
 
 

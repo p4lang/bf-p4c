@@ -86,21 +86,20 @@ class ConvertMethodCalls : public MauTransform {
     P4::TypeMap             *typeMap;
 
     void append_extern_constructor_param(const IR::Declaration_Instance *decl,
-            IR::Vector<IR::Expression>& constructor_params) {
-        if (auto inst = decl->to<IR::Declaration_Instance>()) {
-            // only for Hash extern for now.
-            if (inst->name != "Hash")
-                return;
-            if (inst->arguments == nullptr)
-                return;
-            for (auto arg : *inst->arguments) {
-                if (!arg->expression->is<IR::PathExpression>())
-                    continue;
-                auto path = arg->expression->to<IR::PathExpression>();
-                auto param = refMap->getDeclaration(path->path, false);
-                if (auto d = param->to<IR::Declaration_Instance>())
-                    constructor_params.push_back(new IR::GlobalRef(typeMap->getType(d), d));
-            } } }
+            cstring externType, IR::Vector<IR::Expression>& constructor_params) {
+        // only for Hash extern for now.
+        if (externType != "Hash")
+            return;
+        if (decl->arguments == nullptr)
+            return;
+        for (auto arg : *decl->arguments) {
+            if (!arg->expression->is<IR::PathExpression>())
+                continue;
+            auto path = arg->expression->to<IR::PathExpression>();
+            auto param = refMap->getDeclaration(path->path, false);
+            if (auto d = param->to<IR::Declaration_Instance>())
+                constructor_params.push_back(new IR::GlobalRef(typeMap->getType(d), d));
+        } }
 
     const IR::Expression *preorder(IR::MethodCallExpression *mc) {
         auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
@@ -131,6 +130,7 @@ class ConvertMethodCalls : public MauTransform {
                 // e.g., Hash takes CRC_Polynomial as an argument.
                 if (n->is<IR::Declaration_Instance>())
                     append_extern_constructor_param(n->to<IR::Declaration_Instance>(),
+                            em->actualExternType->name,
                             constructor_params);
             }
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
@@ -404,6 +404,34 @@ static int getSingleAnnotationValue(const cstring name, const IR::MAU::Table *ta
     return -1;
 }
 
+static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
+        IR::MAU::HashFunction& hashFunc) {
+    if (instance.type->name != "CRCPolynomial") {
+        ::error("Expected CRCPolynomial extern instance %1%", instance.type->name);
+        return; }
+    auto coeffValue = instance.substitution.lookupByName("coeff")->expression;
+    BUG_CHECK(coeffValue->to<IR::Constant>(), "Non-constant coeff");
+    auto reverseValue = instance.substitution.lookupByName("reversed")->expression;
+    BUG_CHECK(reverseValue->to<IR::BoolLiteral>(), "Non-boolean reversed");
+    auto msbValue = instance.substitution.lookupByName("msb")->expression;
+    BUG_CHECK(msbValue->to<IR::BoolLiteral>(), "Non-boolean msb");
+    auto initValue = instance.substitution.lookupByName("init")->expression;
+    BUG_CHECK(initValue->to<IR::Constant>(), "Non-constant init");
+    auto extendValue = instance.substitution.lookupByName("extended")->expression;
+    BUG_CHECK(extendValue->to<IR::BoolLiteral>(), "Non-boolean extend");
+    auto xorValue = instance.substitution.lookupByName("xor")->expression;
+    BUG_CHECK(xorValue->to<IR::Constant>(), "Non-constant xor");
+
+    hashFunc.msb = msbValue->to<IR::BoolLiteral>()->value;
+    hashFunc.extend = extendValue->to<IR::BoolLiteral>()->value;
+    hashFunc.reverse = reverseValue->to<IR::BoolLiteral>()->value;
+    hashFunc.poly = coeffValue->to<IR::Constant>()->asUint64();
+    hashFunc.size = coeffValue->to<IR::Constant>()->type->width_bits() - 1;
+    hashFunc.init = initValue->to<IR::Constant>()->asUint64();
+    hashFunc.final_xor = xorValue->to<IR::Constant>()->asUint64();
+    hashFunc.type = IR::MAU::HashFunction::CRC;
+}
+
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const P4::ParameterSubstitution* substitution,
         const IR::Annotations *annot, P4::ReferenceMap *refMap,
@@ -474,10 +502,20 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 else
                     sel->mode = IR::ID("resilient");
             } else if (p->name == "hash") {
-                auto path = arg->expression->to<IR::PathExpression>()->path;
-                auto decl = refMap->getDeclaration(path)->to<IR::Declaration_Instance>();
-                if (!sel->algorithm.setup(decl->arguments->at(0)->expression))
-                    BUG("invalid algorithm %s", decl->arguments->at(0)->expression);
+                auto inst = P4::ExternInstance::resolve(arg->expression, refMap, typeMap);
+                if (inst != boost::none) {
+                    if (inst->arguments->size() == 1) {
+                        if (!sel->algorithm.setup(inst->arguments->at(0)->expression))
+                            BUG("invalid algorithm %s", inst->arguments->at(0)->expression);
+                    } else if (inst->arguments->size() == 2) {
+                        LOG3("get crc from hash inst " << p);
+                        auto crc_poly = P4::ExternInstance::resolve(
+                                inst->arguments->at(1)->expression, refMap, typeMap);
+                        if (crc_poly == boost::none)
+                            continue;
+                        getCRCPolynomialFromExtern(*crc_poly, sel->algorithm);
+                    }
+                }
             } else if (p->name == "reg") {
                 auto regpath = arg->expression->to<IR::PathExpression>()->path;
                 auto reg = refMap->getDeclaration(regpath)->to<IR::Declaration_Instance>();

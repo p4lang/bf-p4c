@@ -25,8 +25,8 @@ typedef bit<128>  ipv6_addr_t;
 
 typedef bit<16>   nexthop_id_t;
 
-/* 
- * This is common code that will be useful to the modules to decide 
+/*
+ * This is common code that will be useful to the modules to decide
  * how much hash to calculate
  */
 #if defined(RESILIENT_SELECTION)
@@ -48,7 +48,7 @@ typedef bit<16>   nexthop_id_t;
   #endif
 
 #else /* ! RESILIENT_SLECTION */
- 
+
   const SelectorMode_t SELECTION_MODE = SelectorMode_t.FAIR;
 
   #if MAX_GROUP_SIZE <= 120
@@ -153,7 +153,7 @@ header udp_h {
 /*************************************************************************
  **************  I N G R E S S   P R O C E S S I N G   *******************
  *************************************************************************/
- 
+
     /***********************  H E A D E R S  ************************/
 
 struct my_ingress_headers_t {
@@ -200,7 +200,7 @@ parser IngressParser(packet_in        pkt,
     out ingress_intrinsic_metadata_t  ig_intr_md)
 {
     Checksum() ipv4_checksum;
-    
+
     /* This is a mandatory state, required by Tofino Architecture */
     state start {
         pkt.extract(ig_intr_md);
@@ -213,7 +213,7 @@ parser IngressParser(packet_in        pkt,
         meta.l4_lookup         = { 0, 0 };
         meta.first_frag        = 0;
         meta.ipv4_checksum_err = 0;
-        
+
         transition parse_ethernet;
     }
 
@@ -240,7 +240,7 @@ parser IngressParser(packet_in        pkt,
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
         ipv4_checksum.add(hdr.ipv4);
-        
+
         transition select(hdr.ipv4.ihl) {
              5 : parse_ipv4_no_options;
              6 : parse_ipv4_options_1;
@@ -440,7 +440,7 @@ parser IngressParser(packet_in        pkt,
     state parse_ipv4_no_options {
         /* Checksum Verification */
         meta.ipv4_checksum_err = (bit<1>)ipv4_checksum.verify();
-        
+
         meta.l4_lookup = pkt.lookahead<l4_lookup_t>();
 
         transition select(hdr.ipv4.frag_offset, hdr.ipv4.protocol) {
@@ -465,7 +465,7 @@ parser IngressParser(packet_in        pkt,
             default : parse_first_fragment;
         }
     }
-    
+
     state parse_first_fragment {
         meta.first_frag = 1;
         transition accept;
@@ -475,18 +475,18 @@ parser IngressParser(packet_in        pkt,
         pkt.extract(hdr.icmp);
         transition parse_first_fragment;
     }
-    
+
     state parse_igmp {
         pkt.extract(hdr.igmp);
         meta.first_frag = 1;
         transition parse_first_fragment;
     }
-    
+
     state parse_tcp {
         pkt.extract(hdr.tcp);
         transition parse_first_fragment;
     }
-    
+
     state parse_udp {
         pkt.extract(hdr.udp);
         transition parse_first_fragment;
@@ -500,7 +500,7 @@ struct selector_hashes_t {
 #if HASH_WIDTH > 32
     bit<32> hash2;
 #endif
-#if HASH_WIDTH > 64    
+#if HASH_WIDTH > 64
     bit<32> hash3;
 #endif
 }
@@ -519,29 +519,29 @@ control calc_ipv4_hash(
     out selector_hashes_t     hash)
 {
     CRCPolynomial<bit<32>>(
-        0x104C11DB7, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32;
+        0x04C11DB7, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash1;
-    
+
 #if HASH_WIDTH > 32
     CRCPolynomial<bit<32>>(
-        0x11EDC6F41, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32c;
+        0x1EDC6F41, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32c;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash2;
 #endif
-    
+
 #if HASH_WIDTH > 64
     CRCPolynomial<bit<32>>(
-        0x1A833982B, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32d;
+        0xA833982B, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32d;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash3;
 #endif
 
-    bit<8> protocol = (bit<8>)hdr.ipv4.protocol;    
+    bit<8> protocol = (bit<8>)hdr.ipv4.protocol;
 
     apply {
         hash.hash1 = hash1.get(IPV4_HASH_FIELDS);
 #if HASH_WIDTH > 32
         hash.hash2 = hash2.get(IPV4_HASH_FIELDS);
 #endif
-        
+
 #if HASH_WIDTH > 64
         hash.hash3 = hash3.get(IPV4_HASH_FIELDS);
 #endif
@@ -562,29 +562,29 @@ control calc_ipv6_hash(
     out selector_hashes_t     hash)
 {
     CRCPolynomial<bit<32>>(
-        0x104C11DB7, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32;
+        0x04C11DB7, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash1;
-    
+
 #if HASH_WIDTH > 32
     CRCPolynomial<bit<32>>(
-        0x11EDC6F41, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32c;
+        0x1EDC6F41, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32c;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash2;
 #endif
-    
+
 #if HASH_WIDTH > 64
     CRCPolynomial<bit<32>>(
-        0x1A833982B, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32d;
+        0xA833982B, true, false, false, 32w0xFFFFFFFF, 32w0xFFFFFFFF) crc32d;
     Hash<bit<32>>(HashAlgorithm_t.CRC32, crc32) hash3;
 #endif
 
     bit<8> protocol = (bit<8>)hdr.ipv6.next_hdr;
-    
+
     apply {
         hash.hash1 = hash1.get(IPV6_HASH_FIELDS);
 #if HASH_WIDTH > 32
         hash.hash2 = hash2.get(IPV6_HASH_FIELDS);
 #endif
-        
+
 #if HASH_WIDTH > 64
         hash.hash3 = hash3.get(IPV6_HASH_FIELDS);
 #endif
@@ -627,13 +627,13 @@ control Ingress(
         hdr.ethernet.src_addr = new_mac_sa;
         ttl_dec = 1;
         ig_tm_md.ucast_egress_port = port;
-        
+
     }
 
     action set_nexthop(nexthop_id_t nexthop) {
         nexthop_id = nexthop;
     }
-    
+
     table ipv4_host {
         key = { hdr.ipv4.dst_addr : exact; }
         actions = {
@@ -647,7 +647,7 @@ control Ingress(
     table ipv4_lpm {
         key     = { hdr.ipv4.dst_addr : lpm; }
         actions = { set_nexthop; }
-        
+
         default_action = set_nexthop(0);
         size           = 12288;
     }
@@ -665,7 +665,7 @@ control Ingress(
     table ipv6_lpm {
         key     = { hdr.ipv6.dst_addr : lpm; }
         actions = { set_nexthop; }
-        
+
         default_action = set_nexthop(0);
         size           = 4096;
     }
@@ -676,7 +676,7 @@ control Ingress(
     table nexthop {
         key = {
             nexthop_id : exact;
-           
+
             hash.hash1 : selector;
             #if HASH_WIDTH > 32
             hash.hash2 : selector;
@@ -732,7 +732,7 @@ control IngressDeparser(packet_out pkt,
     in    ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md)
 {
     Checksum() ipv4_checksum;
-    
+
     apply {
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({
                 hdr.ipv4.version,
@@ -798,7 +798,7 @@ control Egress(
     /* User */
     inout my_egress_headers_t                          hdr,
     inout my_egress_metadata_t                         meta,
-    /* Intrinsic */    
+    /* Intrinsic */
     in    egress_intrinsic_metadata_t                  eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t      eg_prsr_md,
     inout egress_intrinsic_metadata_for_deparser_t     eg_dprsr_md,
