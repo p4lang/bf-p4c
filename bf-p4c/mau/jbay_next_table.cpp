@@ -163,7 +163,7 @@ bool NextTableProp::preorder(IR::MAU::Table* t) {
 
 void NextTableProp::end_apply() {
     // Pretty print long branch usage
-    LOG3(pretty_print());
+    LOG3(pretty_print().str());
 }
 
 std::stringstream NextTableProp::pretty_print() {
