@@ -192,7 +192,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  switch_ent_fin_postcard
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
@@ -213,13 +212,13 @@ p4c_add_xfail_reason("tofino"
   "error.*Can't split table.*with indirect attached"
   ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  switch_l3_heavy_int_leaf
-  switch_8.7_l3_heavy_int_leaf
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
+  ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
+  switch_8.7_l3_heavy_int_leaf
+  switch_l3_heavy_int_leaf
   switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
   switch_8.7_generic_int_leaf

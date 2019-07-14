@@ -214,7 +214,17 @@ bool FindInitializationNode::mayViolatePackConflict(
                 LOG4("\t\tInitialization table " << initTable->name << " and def table " << t->name
                      << " of " << slice << " are in the same stage, and therefore there is a pack "
                      "conflict.");
-                return true; } } }
+                return true;
+            }
+            if (dg.min_stage(initTable) == dg.min_stage(t) && !tableMutex(initTable, t)) {
+                LOG4("\t\tInitialization table " << initTable->name << " and def table " << t->name
+                     << " of " << slice << " have the same potential stage in the dependency graph."
+                     << " This would introduce a container conflict. Therefore, initialization at "
+                     << initTable->name << " is not possible.");
+                return true;
+            }
+        }
+    }
 
     // Check that the def tables of the field being initialized are not in the same stage as the
     // initialization tables for slices already allocated in this container. If they are, this would
@@ -229,6 +239,13 @@ bool FindInitializationNode::mayViolatePackConflict(
                 LOG4("\t\tInitialization table " << t->name << " and def table " << d->name <<
                      " of " << initField->name << " are in the same stage, and therefore there is "
                      "a pack conflict.");
+                return true;
+            }
+            if (dg.min_stage(t) == dg.min_stage(d) && !tableMutex(t, d)) {
+                LOG4("\t\tInitialization table " << t->name << " and def table " << d->name <<
+                     " have the same potential stage based on the dependency graph. This would "
+                     "introduce a container conflict. Therefore, initialization at " <<
+                     initTable->name << " is not possible.");
                 return true;
             }
         }
