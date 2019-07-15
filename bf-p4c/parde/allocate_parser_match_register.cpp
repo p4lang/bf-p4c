@@ -1002,6 +1002,44 @@ struct AdjustMatchValue : public ParserModifier {
     }
 };
 
+// After match register allocation, if the start state is empty and its
+// transition to the next state contains no writes to the match register,
+// we can safely remove this empty state.
+struct RemoveEmptyStartState : public ParserTransform {
+    const IR::BFN::ParserState*
+    is_empty(const IR::BFN::ParserState* state) {
+        if (!state->statements.empty())
+            return nullptr;
+
+        if (!state->selects.empty())
+            return nullptr;
+
+        if (state->transitions.size() != 1)
+            return nullptr;
+
+        auto t = state->transitions[0];
+
+        if (!t->saves.empty())
+            return nullptr;
+
+        if (t->shift && *t->shift == 0)
+            return t->next;
+
+        return nullptr;
+    }
+
+    IR::BFN::Parser* preorder(IR::BFN::Parser* parser) {
+        if (parser->start) {
+            if (auto next = is_empty(parser->start)) {
+                parser->start = next;
+                LOG4("removed empty parser start state on " << parser->gress);
+            }
+        }
+
+        return parser;
+    }
+};
+
 AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
     auto* parserInfo = new CollectParserInfo;
     auto* collectUseDef = new CollectParserUseDef(phv, *parserInfo);
@@ -1016,6 +1054,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         allocator,
         new InsertSaveAndSelect(*allocator),
         new AdjustMatchValue,
+        new RemoveEmptyStartState,
         LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr
     });
 }
