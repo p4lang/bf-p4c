@@ -497,7 +497,7 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         int min_entries) {
     auto t = next->table;
     if (t->for_dleft()) {
-        ::error("Cannot currently split dleft hash tables");
+        ::error("Table %1%: cannot split dleft hash tables", t);
         return false;
     }
 
@@ -513,7 +513,7 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
                                                next->attached_entries); }
 
     if (next->entries < min_entries) {
-        ERROR("Couldn't place mininum entries within a table");
+        LOG5("Couldn't place minimum entries within table " << t->name);
         return false;
     }
     if (!t->layout.ternary)
@@ -524,13 +524,13 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
     LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
     bool ixbar_fit = try_alloc_ixbar(next, done, resources);
     if (!ixbar_fit) {
-        ERROR("IXBar Allocation error after previous allocation?");
+        LOG5("IXBar Allocation error after previous allocation? Table" << t->name);
         return false;
     }
 
     bool table_format_fit = try_alloc_format(next, resources, next->gw);
     if (!table_format_fit) {
-        ERROR("Table Format didn't fit after previous allocation");
+        LOG5("Table format for " << t->name << " didn't fit after previous allocation");
         return false;
     }
     return true;
