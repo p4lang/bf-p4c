@@ -485,6 +485,9 @@ class ChecksumUnitConfig {
 
     /// clot inputs
     optional inline Vector<ChecksumClotInput> clots;
+
+    /// To indicate is zeros_as_ones feature is used
+    bool zeros_as_ones = false;
 }
 
 /// The lowered representation of the deparser. This representation is

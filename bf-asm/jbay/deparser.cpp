@@ -429,10 +429,10 @@ void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
 
 template<class CSUM, class POV, class ENTRIES>
 void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, int unit,
-        std::vector<Deparser::ChecksumVal> &data, ordered_map<const Phv::Register *, unsigned> &pov) {
+        Deparser::ChecksumUnit &data, ordered_map<const Phv::Register *, unsigned> &pov) {
     std::map<unsigned, unsigned>        pov_map;
     unsigned byte = 0, mapped[4];
-    for (auto &val : data) {
+    for (auto &val : data.entries) {
         if (!val.pov) {
             error(val.val.lineno, "POV bit required for Tofino2");
             continue; }
@@ -450,7 +450,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
         pov_cfg.byte_sel[byte++] = bit/8U; }
 
     unsigned tag_idx = 0;
-    for (auto &val : data) {
+    for (auto &val : data.entries) {
         if (!val.pov) continue;
         int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
         if (val.is_clot()) {
@@ -480,7 +480,9 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     csum.phv_entry[unit].pov = pov_map.begin()->second;
     csum.phv_entry[unit].vld = 1;
 
-    // FIXME -- use/set csum.csum_constant and csum.zeros_as_ones?
+    csum.zeros_as_ones.en = data.zeros_as_ones_en;
+
+    // FIXME -- use/set csum.csum_constant?
 }
 
 template<class CONS>
@@ -514,19 +516,19 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         write_jbay_constant_config(r.her.h.hdr_xbar_const.value, constants[EGRESS]);
 
     for (int i = 0; i < Target::JBay::DEPARSER_CHECKSUM_UNITS; i++) {
-        if (!checksum[INGRESS][i].empty()) {
+        if (!checksum_unit[INGRESS][i].entries.empty()) {
             regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = INGRESS;
             write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
                 regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[INGRESS][i], pov[INGRESS]);
-            if (!checksum[EGRESS][i].empty()) {
-                error(checksum[INGRESS][i][0].lineno, "checksum %d used in both ingress", i);
-                error(checksum[EGRESS][i][0].lineno, "...and egress"); }
-        } else if (!checksum[EGRESS][i].empty()) {
+                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[INGRESS][i], pov[INGRESS]);
+            if (!checksum_unit[EGRESS][i].entries.empty()) {
+                error(checksum_unit[INGRESS][i].entries[0].lineno, "checksum %d used in both ingress", i);
+                error(checksum_unit[EGRESS][i].entries[0].lineno, "...and egress"); }
+        } else if (!checksum_unit[EGRESS][i].entries.empty()) {
             regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = EGRESS;
             write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
-               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[EGRESS][i], pov[EGRESS]); } }
+               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[EGRESS][i], pov[EGRESS]); } }
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);

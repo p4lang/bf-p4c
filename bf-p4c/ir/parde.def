@@ -565,6 +565,9 @@ class EmitChecksum : Emit {
     /// Each index corresponds to an offset of the FieldVal in the checksum list.
     optional std::map<int, int> source_index_to_offset;
 
+    // Indicate if zeros_as_ones feature is active
+    bool zeros_as_ones = false;
+
     ChecksumLVal dest;
 }
 

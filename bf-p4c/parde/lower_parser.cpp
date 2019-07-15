@@ -1386,6 +1386,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             auto* input = new IR::BFN::ChecksumClotInput(source, loweredPovBit);
             unitConfig->clots.push_back(input);
         }
+        unitConfig->zeros_as_ones = emitChecksum->zeros_as_ones;
         return unitConfig;
     }
 

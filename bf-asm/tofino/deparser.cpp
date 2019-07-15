@@ -291,18 +291,19 @@ void init_tofino_checksum_entry(ENTRIES &entry) {
 template<typename IPO, typename HPO> static
 void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
                            checked_array_base<HPO> &tagalong_csum_units,
-                           gress_t gress, std::vector<Deparser::ChecksumVal> checksum[]) {
+                           gress_t gress, Deparser::ChecksumUnit checksum_unit[]) {
     BUG_CHECK(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
+        auto &tagalong_unit_zeros_as_ones =  tagalong_csum_units[i].zeros_as_ones;
         for (auto &ent : main_unit)
             init_tofino_checksum_entry(ent);
         for (auto &ent : tagalong_unit)
             init_tofino_checksum_entry(ent);
-        if (checksum[i].empty())
+        if (checksum_unit[i].entries.empty())
             continue;
-        for (auto &reg : checksum[i]) {
+        for (auto &reg : checksum_unit[i].entries) {
             int mask = reg.mask;
             int swap = reg.swap;
             int idx = reg->reg.deparser_id();
@@ -326,22 +327,24 @@ void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
         // Thread non-tagalong checksum results through the tagalong unit
         int idx = i + TAGALONG_THREAD_BASE + gress * Target::Tofino::DEPARSER_CHECKSUM_UNITS;
         write_checksum_entry(tagalong_unit[idx], 0x3, 0x0, i);
+        // Setting Zeros_As_Ones enable
+        tagalong_unit_zeros_as_ones.en = checksum_unit[i].zeros_as_ones_en;
         main_unit.set_modified();
         tagalong_unit.set_modified(); }
 }
 
 static
 void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
-                           std::vector<Deparser::ChecksumVal> checksum[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
+                           Deparser::ChecksumUnit checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS]) {
     for (unsigned id = 2; id < MAX_DEPARSER_CHECKSUM_UNITS; id++) {
-        if (!checksum[0][id].empty() && !checksum[1][id].empty())
+        if (!checksum_unit[0][id].entries.empty() && !checksum_unit[1][id].entries.empty())
             error(-1, "deparser checksum unit %d used in both ingress and egress", id);
     }
 
     tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
-                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
+                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum_unit[INGRESS]);
     tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
-                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
+                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum_unit[EGRESS]);
 
     // make sure shared units are configured identically
     for (unsigned id = 2; id < Target::Tofino::DEPARSER_CHECKSUM_UNITS; id++) {
@@ -351,10 +354,10 @@ void tofino_checksum_units(Target::Tofino::deparser_regs &regs,
         auto& eg_tphv_unit = regs.header.hem.he_tphv_csum.csum_cfg[id].csum_cfg_entry;
         auto& ig_tphv_unit = regs.header.him.hi_tphv_csum.csum_cfg[id].csum_cfg_entry;
 
-        if (!checksum[0][id].empty()) {
+        if (!checksum_unit[0][id].entries.empty()) {
             copy_csum_cfg_entry(eg_main_unit, ig_main_unit);
             copy_csum_cfg_entry(eg_tphv_unit, ig_tphv_unit);
-        } else if (!checksum[1][id].empty()) {
+        } else if (!checksum_unit[1][id].entries.empty()) {
             copy_csum_cfg_entry(ig_main_unit, eg_main_unit);
             copy_csum_cfg_entry(ig_tphv_unit, eg_tphv_unit);
         }
@@ -367,7 +370,7 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.header.hem.he_edf_cfg.disable();
     regs.header.him.hi_edf_cfg.disable();
 
-    tofino_checksum_units(regs, checksum);
+    tofino_checksum_units(regs, checksum_unit);
 
     tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
                             regs.input.iir.main_i.pov.phvs, pov_order[INGRESS],

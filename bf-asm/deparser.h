@@ -85,12 +85,15 @@ public:
             return Val::check();
         }
     };
+    struct ChecksumUnit {
+        std::vector<ChecksumVal> entries;
+        bool zeros_as_ones_en = false;
+    };
 
     struct FDEntry;
-
+    ChecksumUnit                                    checksum_unit[2][MAX_DEPARSER_CHECKSUM_UNITS];
     int                                             lineno[2];
     std::vector<FDEntry>                            dictionary[2];
-    std::vector<ChecksumVal>                        checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];
     bitvec                                          phv_use[2];

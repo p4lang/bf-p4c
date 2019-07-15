@@ -274,11 +274,15 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
                     collapse_list_of_maps(kv.value);
                     int unit = kv.key[1].i;
+                    if (unit < 0) error(kv.key.lineno, "Invalid checksum unit %d", unit);
                     for (auto &ent : kv.value.map) {
-                        if (ent.key == "clot")
-                            checksum[gress][unit].emplace_back(gress, ent.key[1].i, ent.value);
-                        else
-                            checksum[gress][unit].emplace_back(gress, ent.key, ent.value);
+                        if (ent.key == "zeros_as_ones") {
+                           checksum_unit[gress][unit].zeros_as_ones_en = ent.value.i;
+                        } else if (ent.key == "clot") {
+                            checksum_unit[gress][unit].entries.emplace_back(gress, ent.key[1].i, ent.value);
+                        } else {
+                            checksum_unit[gress][unit].entries.emplace_back(gress, ent.key, ent.value);
+                        }
                     }
                 }
             } else if (auto *itype = ::get(Intrinsic::Type::all[Target::register_set()][gress],
@@ -321,7 +325,7 @@ void Deparser::process() {
                     pov_order[gress].emplace_back(ent.pov->reg, gress);
                     pov_use[gress][ent.pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
-            for (auto &ent : checksum[gress][i])
+            for (auto &ent : checksum_unit[gress][i].entries)
                 if (!ent.check())
                     error(ent.lineno, "Invalid checksum entry"); }
     for (auto &intrin : intrinsics) {

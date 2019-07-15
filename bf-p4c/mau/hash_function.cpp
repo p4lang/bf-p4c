@@ -184,7 +184,7 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
         new IR::Argument(new IR::BoolLiteral(extend))
     });
 
-    if (alg_name == "xor16" || alg_name == "csum16") {
+    if (alg_name == "xor16" || alg_name == "csum16" || alg_name == "csum16_udp") {
         if (on_hash_matrix)
             *on_hash_matrix = false;
         return new IR::Member(new IR::TypeNameExpression("HashAlgorithm"), algorithm);

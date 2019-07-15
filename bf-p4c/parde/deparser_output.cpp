@@ -134,6 +134,8 @@ struct OutputChecksums : public Inspector {
         out << indent << "checksum " << checksum->unit << ":" << std::endl;
 
         AutoIndent checksumIndent(indent);
+        if (checksum->zeros_as_ones)
+            out << indent << "- " << "zeros_as_ones: " << checksum->zeros_as_ones << std::endl;
         for (auto* input : checksum->phvs) {
             out << indent << "- " << input->source;
             out << ": {";

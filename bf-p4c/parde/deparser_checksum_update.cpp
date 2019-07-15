@@ -40,6 +40,9 @@ struct FieldListInfo {
     // Information regarding update conditions
     std::vector<UpdateConditionInfo*> updateConditions;
 
+    // To indicate zeros_as_ones feature is activated
+    bool zerosAsOnes = false;
+
     // The compiler synthesized pov bit for this field list
     const IR::TempVar* deparseUpdated = nullptr;
 };
@@ -160,9 +163,14 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
 
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
-
+    auto method =  methodCall->method->to<IR::Member>();
+    auto path = method->expr->to<IR::PathExpression>()->path->name;
+    bool zerosAsOnes = false;
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
+    if ((*methodCall->arguments).size() == 2) {
+         zerosAsOnes = (*methodCall->arguments)[1]->expression->to<IR::BoolLiteral>()->value;
+    }
     const IR::HeaderOrMetadata* currentFieldHeaderRef = nullptr;
     const IR::HeaderOrMetadata* lastFieldHeaderRef = nullptr;
     std::map<int, int> fieldsToOffset;
@@ -229,6 +237,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     }
     LOG2("Validated computed checksum for field: " << destField);
     auto listInfo = new FieldListInfo(fields, fieldsToOffset);
+    listInfo->zerosAsOnes = zerosAsOnes;
     csum->fieldListInfos.insert(listInfo);
     return (listInfo);
 }
@@ -464,6 +473,7 @@ struct SubstituteUpdateChecksums : public Transform {
                        *(listInfo->fields),
                        new IR::BFN::ChecksumLVal(source));
                 emitUpdatedChecksum->source_index_to_offset = listInfo->fieldsToOffset;
+                emitUpdatedChecksum->zeros_as_ones = listInfo->zerosAsOnes;
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
 
@@ -479,6 +489,7 @@ struct SubstituteUpdateChecksums : public Transform {
                         *(listInfo->fields),
                         new IR::BFN::ChecksumLVal(source));
                 emitUpdatedChecksum->source_index_to_offset = listInfo->fieldsToOffset;
+                emitUpdatedChecksum->zeros_as_ones = listInfo->zerosAsOnes;
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
         }

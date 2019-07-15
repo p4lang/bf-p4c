@@ -415,8 +415,7 @@ extern Checksum {
 
     /// Get the calculated checksum value.
     /// @return : The calculated checksum value for added fields.
-    /// @param zeros_as_ones : encode all-zeros value as all-ones.
-    bit<16> get(@optional in bool zeros_as_ones);
+    bit<16> get();
 
     /// Calculate the checksum for a  given list of fields.
     /// @param data : List of fields contributing to the checksum value.
