@@ -700,6 +700,16 @@ struct RewriteParserStatements : public Transform {
                     auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
                                                                    new IR::BFN::SavedRVal(field));
                     rv->push_back(load);
+                } else if (auto* concat = (*call->arguments)[0]->expression->to<IR::Concat>()) {
+                    auto* ext = concat->left->to<IR::Constant>();
+                    if (ext && ext->asInt() == 0) {
+                        if (auto* field = concat->right->to<IR::Member>()) {
+                            // load field (from match register)
+                            auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                                new IR::BFN::SavedRVal(field));
+                            rv->push_back(load);
+                        }
+                    }
                 } else {
                     ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
                 }
@@ -952,7 +962,6 @@ const IR::Node*
 GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                     nw_bitrange& bitrange) {
     if (auto* cast = selectExpr->to<IR::Cast>()) {
-        // cast->type  TODO
         if (auto* call = cast->expr->to<IR::MethodCallExpression>()) {
             if (auto* method = call->method->to<IR::Member>()) {
                 if (isExtern(method, "ParserCounter")) {

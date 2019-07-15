@@ -70,7 +70,7 @@ parser SwitchIngressParser(
         out switch_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
 
-    ParserCounter<bit<8>>() counter;
+    ParserCounter() counter;
 
     state start {
         pkt.extract(ig_intr_md);

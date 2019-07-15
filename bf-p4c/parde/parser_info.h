@@ -134,10 +134,26 @@ class ParserGraphImpl : public DirectedGraph {
         return is_ancestor(dst, src);
     }
 
+    bool is_loop_reachable(const State* src, const State* dst) const {
+        for (auto &kv : _loopbacks) {
+            if (kv.first.first == src) {
+                auto loop_state = get_state(kv.first.second);
+                if (loop_state == dst || is_ancestor(loop_state, dst))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     /// Determines whether @arg src and @arg dst are mutually exclusive states on all paths through
     /// the parser graph.
     bool is_mutex(const State* src, const State* dst) const {
-        return src != dst && !is_ancestor(src, dst) && !is_ancestor(dst, src);
+        return src != dst &&
+               !is_ancestor(src, dst) &&
+               !is_ancestor(dst, src) &&
+               !is_loop_reachable(src, dst) &&
+               !is_loop_reachable(dst, src);
     }
 
     std::set<const State*>

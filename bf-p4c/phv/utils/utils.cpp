@@ -550,16 +550,17 @@ PHV::Allocation::getTagalongCollectionsUsed() const {
     return rv;
 }
 
-const ordered_map<cstring, std::set<PHV::Container>>&
-PHV::Allocation::getParserStateToContainers(const PhvInfo& phv) const {
+const ordered_map<const IR::BFN::ParserState*, std::set<PHV::Container>>&
+PHV::Allocation::getParserStateToContainers(const PhvInfo& phv,
+        const MapFieldToParserStates& field_to_parser_states) const {
     if (state_to_containers_i.empty()) {
         for (const auto& kv : field_status_i) {
             const auto& field = kv.first;
             const auto& container_slices = kv.second;
 
             for (auto slice : container_slices) {
-                if (phv.field_to_parser_states.count(field->name)) {
-                    for (auto state : phv.field_to_parser_states.at(field->name))
+                if (field_to_parser_states.field_to_parser_states.count(field)) {
+                    for (auto state : field_to_parser_states.field_to_parser_states.at(field))
                         state_to_containers_i[state].insert(slice.container());
                 }
             }

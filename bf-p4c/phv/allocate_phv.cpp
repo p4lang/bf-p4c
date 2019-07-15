@@ -238,6 +238,7 @@ AllocScore::AllocScore(
         const PhvInfo& phv,
         const ClotInfo& clot,
         const PhvUse& uses,
+        const MapFieldToParserStates& field_to_parser_states,
         const CalcParserCriticalPath& parser_critical_path,
         const int bitmasks) {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
@@ -380,18 +381,20 @@ AllocScore::AllocScore(
     if (Device::currentDevice() == Device::TOFINO) {
         // This only matters for Tofino.
         // For JBay, all extractors are of same size (16-bit).
-        calcParserExtractorBalanceScore(alloc, phv, parser_critical_path);
+        calcParserExtractorBalanceScore(alloc, phv, field_to_parser_states, parser_critical_path);
     }
 }
 
 void AllocScore::calcParserExtractorBalanceScore(const PHV::Transaction& alloc, const PhvInfo& phv,
-                                             const CalcParserCriticalPath& parser_critical_path) {
+        const MapFieldToParserStates& field_to_parser_states,
+        const CalcParserCriticalPath& parser_critical_path) {
     const auto* parent = alloc.getParent();
 
-    ordered_map<cstring, std::set<PHV::Container>> critical_state_to_containers;
+    ordered_map<const IR::BFN::ParserState*, std::set<PHV::Container>> critical_state_to_containers;
 
-    auto& my_state_to_containers = alloc.getParserStateToContainers(phv);
-    auto& parent_state_to_containers = parent->getParserStateToContainers(phv);
+    auto& my_state_to_containers = alloc.getParserStateToContainers(phv, field_to_parser_states);
+    auto& parent_state_to_containers =
+        parent->getParserStateToContainers(phv, field_to_parser_states);
 
     // If program has user specified critical states, we will only compute score for those.
     //
@@ -1417,7 +1420,8 @@ CoreAllocation::tryAllocSliceList(
 
         // auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i,
         auto score = AllocScore(perContainerAlloc, phv_i, clot_i, uses_i,
-                                parser_critical_path_i, num_bitmasks);
+                                field_to_parser_states_i, parser_critical_path_i,
+                                num_bitmasks);
         LOG5("    ...SLICE LIST score for container " << c << ": " << score);
 
         // update the best
@@ -1662,7 +1666,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 }  // for slices
 
                 if (failed) continue;
-                auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i, parser_critical_path_i);
+                auto score = AllocScore(this_alloc, phv_i, clot_i, uses_i,
+                                        field_to_parser_states_i,
+                                        parser_critical_path_i);
                 if (!best_alloc || score > best_score) {
                     best_alloc = std::move(this_alloc);
                     best_score = score; } }
@@ -2992,6 +2998,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                 bridgedFieldsWithAlignmentConflicts)) {
                         AllocScore score = AllocScore(*partial_alloc,
                                 core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                                core_alloc_i.field_to_parser_states(),
                                 core_alloc_i.parser_critical_path());
                         LOG4("    ...SUPERCLUSTER score: " << score);
                         if (!best_slice_alloc || score > best_slice_score) {
@@ -3011,6 +3018,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
             // If allocation succeeded, check the score.
             auto slicing_score = AllocScore(slicing_alloc,
                                             core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                                            core_alloc_i.field_to_parser_states(),
                                             core_alloc_i.parser_critical_path());
             if (LOGGING(4)) {
                 LOG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);

@@ -10,11 +10,10 @@ header_type data_t {
 header data_t a;
 header data_t b;
 header data_t c;
-header data_t d;
 
 parser start {
     extract(a);
-    set_metadata(ig_prsr_ctrl.parser_counter, latest.f);   // load from ctr ctrl ram
+    set_metadata(ig_prsr_ctrl.parser_counter, 0x4);
     return select(a.n) {
         0xb : parse_b;
         default : ingress;
@@ -23,7 +22,7 @@ parser start {
 
 parser parse_b {
     extract(b);
-    set_metadata(ig_prsr_ctrl.parser_counter, ig_prsr_ctrl.parser_counter - 1);
+    set_metadata(ig_prsr_ctrl.parser_counter, ig_prsr_ctrl.parser_counter - 10);
     return select(b.n) {
         0xc : parse_c;
         default : ingress;
@@ -32,14 +31,8 @@ parser parse_b {
 
 parser parse_c {
     extract(c);
-    set_metadata(ig_prsr_ctrl.parser_counter, ig_prsr_ctrl.parser_counter - 3);
-    return parse_d;
-}
-
-parser parse_d {
-    extract(d);
     return select(ig_prsr_ctrl.parser_counter) {
-        0x0 : parse_port;
+        255 : parse_port;    // this should translate to "is_negative()" in P4-16
         default : ingress;
     }
 }

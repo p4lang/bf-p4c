@@ -560,14 +560,8 @@ Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.l
                 error(lineno, "Parser counter rotate value out of range (0-7)");
         } else if (kv.key == "mask" && CHECKTYPE(kv.value, tINT)) {
             mask = kv.value.i;
-            if (options.target == TOFINO) {
-                if (bitcount(mask + 1) > 1)
-                    error(lineno, "Parser counter mask value is invalid");
-
-                mask = floor_log2(kv.value.i);
-
-                if (mask > 7)
-                    error(lineno, "Parser counter mask value out of range (0-7)");
+            if (options.target == TOFINO && mask > 7) {
+                error(lineno, "Parser counter mask value out of range (0-7)");
             } else if (options.target == JBAY && mask > 255) {
                 error(lineno, "Parser counter mask value out of range (0-255)");
             }

@@ -332,7 +332,8 @@ class Allocation {
     /// been added.
     mutable ordered_map<const IR::MAU::Action*, ordered_set<const PHV::Field*>> init_writes_i;
     /// parser state to containers
-    mutable ordered_map<cstring, std::set<PHV::Container>> state_to_containers_i;
+    mutable ordered_map<const IR::BFN::ParserState*,
+                        std::set<PHV::Container>> state_to_containers_i;
     /** Dark containers allocated in this allocation mapped to the stages that they are allocated
      *  to. The read map captures the allocation from the perspective of a read of that container
      *  while the write map captures the allocation from the perspective of a write to that
@@ -414,8 +415,9 @@ class Allocation {
     const ordered_set<unsigned> getTagalongCollectionsUsed() const;
 
     /// @returns map from parser state to containers
-    const ordered_map<cstring, std::set<PHV::Container>>&
-    getParserStateToContainers(const PhvInfo& phv) const;
+    const ordered_map<const IR::BFN::ParserState*, std::set<PHV::Container>>&
+    getParserStateToContainers(const PhvInfo& phv,
+                               const MapFieldToParserStates& field_to_parser_states) const;
 
     /// @returns all the slices allocated to @c.
     ordered_set<AllocSlice> slices(PHV::Container c) const;

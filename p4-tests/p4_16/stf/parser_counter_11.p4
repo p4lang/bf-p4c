@@ -35,7 +35,7 @@ parser ParserImpl(packet_in pkt,
                   out headers hdr,
                   out metadata meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
-    ParserCounter<bit<8>>() pctr;
+    ParserCounter() pctr;
 
     state start {
         pkt.extract(ig_intr_md);
@@ -46,7 +46,11 @@ parser ParserImpl(packet_in pkt,
         meta.seq_no = hdr.tcp.seq_no;
         meta.ack_no = hdr.tcp.ack_no;
 
+#if __TARGET_TOFINO__ == 2
         pctr.set(hdr.tcp.data_offset, 15 << 4, 2, 0xff, -20);  // (max, rot, mask, add)
+#else
+        pctr.set(hdr.tcp.data_offset, 15 << 4, 2, 0x7, -20);  // (max, rot, mask, add)
+#endif
 
         transition next_option;
     }

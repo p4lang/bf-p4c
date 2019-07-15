@@ -21,7 +21,7 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr,
                   out metadata meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
-    ParserCounter<bit<8>>() pctr;
+    ParserCounter() pctr;
 
     state start {
         packet.extract(ig_intr_md);
@@ -47,7 +47,7 @@ parser ParserImpl(packet_in packet, out headers hdr,
 
     state parse_c {
         packet.extract(hdr.c);
-        transition select((bit<1>)pctr.is_negative()) {
+        transition select((bit<1>)pctr.is_negative()) {  // test ctr_neg
             1w1: parse_d;
             default: accept;
         }

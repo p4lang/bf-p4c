@@ -14,7 +14,7 @@ header data_t d;
 
 parser start {
     extract(a);
-    set_metadata(ig_prsr_ctrl.parser_counter, 0x4);
+    set_metadata(ig_prsr_ctrl.parser_counter, 0x4);  // load immediate
     return select(a.n) {
         0xb : parse_b;
         default : ingress;

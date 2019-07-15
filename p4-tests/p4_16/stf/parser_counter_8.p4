@@ -20,7 +20,7 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr,
                   out metadata meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
-    ParserCounter<bit<8>>() pctr;
+    ParserCounter() pctr;
 
     state start {
         packet.extract(ig_intr_md);

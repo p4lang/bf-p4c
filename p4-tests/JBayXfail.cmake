@@ -29,6 +29,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
+
+    # frontend p4-14 to 16 translation bug?
     extensions/p4_tests/p4_14/stf/parser_counter_4.p4
   )
 
@@ -42,6 +44,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
     extensions/p4_tests/p4_14/stf/update_checksum_9.p4
+
+    # header in loop state cannot be in CLOT (no static ordering)
+    extensions/p4_tests/p4_16/stf/parser_counter_12.p4
     )
 
   p4c_add_xfail_reason("tofino2"
@@ -393,9 +398,3 @@ p4c_add_xfail_reason("tofino2"
   "Unsupported on target Cannot specify .* as the default action, as it requires the hash distribution unit"
   p4_16_internal_p4_16_hwlrn
 )
-
-p4c_add_xfail_reason("tofino2"
-  "An error occured while the compiler was allocating parser match registers"
-  extensions/p4_tests/p4_16/stf/parser_counter_11.p4
-)
-

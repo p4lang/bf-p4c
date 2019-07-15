@@ -14,7 +14,7 @@ header data_t d;
 
 parser start {
     extract(a);
-    set_metadata(ig_prsr_ctrl.parser_counter, latest.f * 4 - 10);
+    set_metadata(ig_prsr_ctrl.parser_counter, latest.f * 4 - 10);   // load from ctrl ram
     return select(a.n) {
         0xb : parse_b;
         default : ingress;

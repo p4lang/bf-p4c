@@ -22,14 +22,18 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr,
                   out metadata meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
-    ParserCounter<bit<8>>() pctr;
+    ParserCounter() pctr;
 
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.a);
 
+#if __TARGET_TOFINO__ == 2
         pctr.set(hdr.a.f, 0xff, 0, 0x0f, 0);  // (max, rot, mask, add)
+#else
+        pctr.set(hdr.a.f, 0xff, 0, 0x3, 0);  // (max, rot, mask, add)
+#endif
 
         transition select(hdr.a.n) {
             8w0xb: parse_b;

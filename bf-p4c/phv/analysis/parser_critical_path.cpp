@@ -10,32 +10,35 @@ std::ostream& operator<<(std::ostream& out, const ParserCriticalPathResult& rst)
     return out;
 }
 
-bool CalcParserCriticalPath::is_on_critical_path(cstring state,
+bool CalcParserCriticalPath::is_on_critical_path(
+        const IR::BFN::ParserState* state,
         const ParserCriticalPathResult& result) {
     for (auto& kv : result.path) {
-        if (kv.first->name == state)
+        if (kv.first->name == state->name)
             return true;
     }
 
     return false;
 }
 
-bool CalcParserCriticalPath::is_on_critical_path(cstring state) const {
+bool CalcParserCriticalPath::is_on_critical_path(const IR::BFN::ParserState* state) const {
     return is_on_critical_path(state, ingress_result) ||
            is_on_critical_path(state, egress_result);
 }
 
-bool CalcParserCriticalPath::is_user_specified_critical_state(cstring state,
-             const ordered_set<const IR::BFN::ParserState*>& result) {
+bool CalcParserCriticalPath::is_user_specified_critical_state(
+        const IR::BFN::ParserState* state,
+        const ordered_set<const IR::BFN::ParserState*>& result) {
     for (auto s : result) {
-        if (s->name == state)
+        if (s->name == state->name)
             return true;
     }
 
     return false;
 }
 
-bool CalcParserCriticalPath::is_user_specified_critical_state(cstring state) const {
+bool CalcParserCriticalPath::is_user_specified_critical_state(
+        const IR::BFN::ParserState* state) const {
     return is_user_specified_critical_state(state, ingress_user_critical_states) ||
            is_user_specified_critical_state(state, egress_user_critical_states);
 }

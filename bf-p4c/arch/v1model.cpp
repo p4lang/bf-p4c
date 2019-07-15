@@ -814,9 +814,7 @@ class AnalyzeProgram : public Inspector {
 
         // Add an instance of parser counter
         {
-            auto typeArgs = new IR::Vector<IR::Type>({IR::Type::Bits::get(8)});
-            auto type = new IR::Type_Specialized(
-                new IR::Type_Name("ParserCounter"), typeArgs);
+            auto type = new IR::Type_Name("ParserCounter");
             auto decl = new IR::Declaration_Instance(
                 "ig_prsr_ctrl_parser_counter", type,
                 new IR::Vector<IR::Argument>());

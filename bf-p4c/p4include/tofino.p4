@@ -430,7 +430,7 @@ extern Checksum {
 // variable length. Tofino has a single 8-bit signed counter that can be
 // initialized with an immediate value or a header field.
 
-extern ParserCounter<W> {
+extern ParserCounter {
     /// Constructor
     ParserCounter();
 
@@ -440,13 +440,13 @@ extern ParserCounter<W> {
     /// Load the counter with a header field.
     /// @param max : Maximum permitted value for counter (pre rotate/mask/add).
     /// @param rotate : Right rotate (circular) the source field by this number of bits.
-    /// @param mask : Mask the rotated source field by 2**(MASK+1) - 1.
+    /// @param mask : Mask the rotated source field by 2 ^ (mask + 1) - 1.
     /// @param add : Constant to add to the rotated and masked lookup field.
     void set<T>(in T field,
-                in W max,
-                in W rotate,
-                in W mask,
-                in W add);
+                in bit<8> max,
+                in bit<8> rotate,
+                in bit<3> mask,
+                in bit<8> add);
 
     /// @return true if counter value is zero.
     bool is_zero();
@@ -456,11 +456,11 @@ extern ParserCounter<W> {
 
     /// Add an immediate value to the parser counter.
     /// @param value : Constant to add to the counter.
-    void increment(in W value);
+    void increment(in bit<8> value);
 
     /// Subtract an immediate value from the parser counter.
     /// @param value : Constant to subtract from the counter.
-    void decrement(in W value);
+    void decrement(in bit<8> value);
 }
 
 // ----------------------------------------------------------------------------

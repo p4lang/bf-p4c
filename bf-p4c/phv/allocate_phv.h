@@ -130,6 +130,7 @@ struct AllocScore {
             const PhvInfo& phv,
             const ClotInfo& clot,
             const PhvUse& uses,
+            const MapFieldToParserStates& field_to_parser_states,
             const CalcParserCriticalPath& parser_critical_path,
             const int bitmasks = 0);
 
@@ -149,6 +150,7 @@ struct AllocScore {
                         const ordered_set<PHV::AllocSlice>& slices);
 
     void calcParserExtractorBalanceScore(const PHV::Transaction& alloc, const PhvInfo& phv,
+                                         const MapFieldToParserStates& field_to_parser_states,
                                          const CalcParserCriticalPath& parser_critical_path);
 };
 
@@ -176,6 +178,8 @@ class CoreAllocation {
 
     // Table allocation information from the previous round.
     bool disableMetadataInit;
+
+    const MapFieldToParserStates& field_to_parser_states_i;
     const CalcParserCriticalPath& parser_critical_path_i;
 
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
@@ -204,11 +208,13 @@ class CoreAllocation {
                    ActionPhvConstraints& actions,
                    LiveRangeShrinking& meta,
                    DarkOverlay& dark,
+                   const MapFieldToParserStates& field_to_parser_states,
                    const CalcParserCriticalPath& parser_critical_path,
                    const MauBacktracker& alloc)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
           clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
           dark_init_i(dark), disableMetadataInit(alloc.disableMetadataInitialization()),
+          field_to_parser_states_i(field_to_parser_states),
           parser_critical_path_i(parser_critical_path) { }
 
     /// @returns true if @f can overlay all fields in @slices.
@@ -336,6 +342,8 @@ class CoreAllocation {
     const FieldDefUse& defuse() const                     { return defuse_i; }
     const ActionPhvConstraints& actionConstraints() const { return actions_i; }
     PHV::Pragmas& pragmas() const                         { return pragmas_i; }
+    const MapFieldToParserStates& field_to_parser_states() const {
+        return field_to_parser_states_i; }
     const CalcParserCriticalPath& parser_critical_path() const { return parser_critical_path_i; }
 };
 
@@ -583,6 +591,7 @@ class AllocatePHV : public Inspector {
                 PHV::Pragmas& pragmas,
                 PhvInfo& phv,
                 ActionPhvConstraints& actions,
+                const MapFieldToParserStates& field_to_parser_states,
                 const CalcParserCriticalPath& parser_critical_path,
                 const CalcCriticalPathClusters& critical_cluster,
                 const MauBacktracker& alloc,
@@ -590,7 +599,7 @@ class AllocatePHV : public Inspector {
                 DarkOverlay& dark,
                 const MapTablesToIDs& t)
         : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
-                meta_init, dark, parser_critical_path, alloc),
+                meta_init, dark, field_to_parser_states, parser_critical_path, alloc),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.field_mutex()), pragmas_i(pragmas),

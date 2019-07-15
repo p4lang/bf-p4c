@@ -10,7 +10,7 @@
 
 // Insert a stall state on transition whose next state requires
 // branch word that is out of the input buffer of the current state.
-struct ResolveOutOfBufferSelects : public ParserTransform {
+struct ResolveOutOfBufferSaves : public ParserTransform {
     CollectParserInfo parser_info;
 
     profile_t init_apply(const IR::Node* root) override {
@@ -28,7 +28,7 @@ struct ResolveOutOfBufferSelects : public ParserTransform {
     // keep track of number stall states from orig_state
     std::map<cstring, unsigned> orig_state_to_stall_cnt;
 
-    void insert_stall_state_for_oob_select(IR::BFN::Transition* t) {
+    void insert_stall_state_for_oob_save(IR::BFN::Transition* t) {
         auto orig = getOriginal<IR::BFN::Transition>();
         auto src = parser_info.graph(parser).get_src(orig);
 
@@ -44,22 +44,31 @@ struct ResolveOutOfBufferSelects : public ParserTransform {
         t->next = stall;
     }
 
-    bool has_oob_select(const IR::BFN::Transition* t) {
+    struct GetMaxSavedRVal : Inspector {
+        int rv = -1;
+
+        bool preorder(const IR::BFN::SavedRVal* save) override {
+            if (auto buf = save->source->to<IR::BFN::PacketRVal>())
+                rv = std::max(buf->range.hi, rv);
+            return false;
+        }
+    };
+
+    bool has_oob_save(const IR::BFN::Transition* t) {
         if (!t->next)
             return false;
 
-        if (t->next->selects.empty())
-            return false;
+        GetMaxSavedRVal max_save;
 
-        GetMaxBufferPos max_select;
-        t->next->selects.apply(max_select);
+        t->next->selects.apply(max_save);
+        t->next->statements.apply(max_save);
 
-        return (*t->shift + (max_select.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
+        return (*t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
     }
 
     IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
-        if (has_oob_select(t))
-            insert_stall_state_for_oob_select(t);
+        if (has_oob_save(t))
+            insert_stall_state_for_oob_save(t);
 
         return t;
     }
@@ -1000,8 +1009,8 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_parser_match_alloc") : nullptr,
-        new ResolveOutOfBufferSelects,
-        LOGGING(4) ? new DumpParser("after_resolve_oob_selects") : nullptr,
+        new ResolveOutOfBufferSaves,
+        LOGGING(4) ? new DumpParser("after_resolve_oob_saves") : nullptr,
         parserInfo,
         collectUseDef,
         allocator,

@@ -2,6 +2,7 @@
 #include "v1_program_structure.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/device.h"
 
 namespace BFN {
 
@@ -739,6 +740,7 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
         auto member = add->left->to<IR::Member>();
 
         auto counterWidth = IR::Type::Bits::get(8);
+        auto maskWidth = IR::Type::Bits::get(Device::currentDevice() == Device::TOFINO ? 3 : 8);
         auto max = new IR::Constant(counterWidth, 255);  // How does user specify the max in P4-14?
 
         // Add operaton
@@ -751,7 +753,8 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
                 // Load operation (expression of field)
                 if (member) {
                     auto shr = new IR::Constant(counterWidth, 0);
-                    auto mask = new IR::Constant(counterWidth, 255);
+                    auto mask = new IR::Constant(maskWidth,
+                                    Device::currentDevice() == Device::TOFINO ? 7 : 255);
                     auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
                     methodCall = new IR::MethodCallStatement(
@@ -775,7 +778,8 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
                             std::tie(lo, hi) = getAlignLoHi(field);
 
                             auto shr = new IR::Constant(counterWidth, 8 - rot->asUnsigned() - lo);
-                            auto mask = new IR::Constant(counterWidth, (1 << (hi + 1)) - 1);
+                            auto mask = new IR::Constant(maskWidth,
+                              Device::currentDevice() == Device::TOFINO ? hi : (1 << (hi + 1)) - 1);
                             auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
                             methodCall = new IR::MethodCallStatement(
@@ -799,29 +803,8 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     return methodCall;
 }
 
-struct ParserCounterSelectExprConverter : Transform {
-    bool& needsCast;
-    explicit ParserCounterSelectExprConverter(bool& nc) : needsCast(nc) {}
-
-    const IR::Node* postorder(IR::Member* node) {
-        if (isParserCounter(node)) {
-            auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
-            auto isZero = new IR::Member(parserCounter, "is_zero");
-
-            const IR::Expression* methodCall =  new IR::MethodCallExpression(node->srcInfo, isZero,
-                new IR::Vector<IR::Argument>());
-
-            if (needsCast)
-                methodCall = new IR::Cast(IR::Type::Bits::get(1), methodCall);
-
-            return methodCall;
-        }
-
-        return node;
-    }
-};
-
 struct ParserCounterSelectCaseConverter : Transform {
+    bool isNegative = false;
     bool needsCast = false;
     int counterIdx = -1;
 
@@ -842,14 +825,20 @@ struct ParserCounterSelectCaseConverter : Transform {
     }
 
     struct RewriteSelectCase : Transform {
+        bool isNegative = false;
         bool needsCast = false;
 
         const IR::Expression* convert(const IR::Constant* c,
                                       bool toBool = true, bool check = true) {
             auto val = c->asUnsigned();
 
-            if (check && val >> 1)
-                ::error("Parser counter only supports 1-bit match (is zero?).");
+            if (check) {
+                if (val & 0x80) {
+                    isNegative = true;
+                } else if (val) {
+                    ::error("Parser counter only supports test of value being zero or negative.");
+                }
+            }
 
             if (toBool)
                 return new IR::BoolLiteral(~val);
@@ -891,7 +880,33 @@ struct ParserCounterSelectCaseConverter : Transform {
             node->keyset = node->keyset->apply(rewrite);
         }
 
-        needsCast = rewrite.needsCast;
+        isNegative |= rewrite.isNegative;
+        needsCast |= rewrite.needsCast;
+
+        return node;
+    }
+};
+
+struct ParserCounterSelectExprConverter : Transform {
+    const ParserCounterSelectCaseConverter& caseConverter;
+
+    explicit ParserCounterSelectExprConverter(const ParserCounterSelectCaseConverter& cc)
+        : caseConverter(cc) {}
+
+    const IR::Node* postorder(IR::Member* node) {
+        if (isParserCounter(node)) {
+            auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
+            auto testExpr = new IR::Member(parserCounter,
+                                           caseConverter.isNegative ? "is_negative" : "is_zero");
+
+            const IR::Expression* methodCall = new IR::MethodCallExpression(node->srcInfo, testExpr,
+                new IR::Vector<IR::Argument>());
+
+            if (caseConverter.needsCast)
+                methodCall = new IR::Cast(IR::Type::Bits::get(1), methodCall);
+
+            return methodCall;
+        }
 
         return node;
     }
@@ -899,7 +914,7 @@ struct ParserCounterSelectCaseConverter : Transform {
 
 ParserCounterSelectionConverter::ParserCounterSelectionConverter() {
     auto convertSelectCase = new ParserCounterSelectCaseConverter;
-    auto convertSelectExpr = new ParserCounterSelectExprConverter(convertSelectCase->needsCast);
+    auto convertSelectExpr = new ParserCounterSelectExprConverter(*convertSelectCase);
 
     addPasses({convertSelectCase, convertSelectExpr});
 }

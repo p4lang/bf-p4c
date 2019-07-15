@@ -1195,10 +1195,6 @@ class PhvInfo {
     /// name.
     ordered_map<cstring, PHV::Field*> externalNameMap;
 
- public:
-    ///
-    ordered_map<cstring, ordered_set<cstring>> field_to_parser_states;
-
  private:
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
@@ -1552,6 +1548,39 @@ class GatherExternalNames : public Inspector {
 
  public:
     explicit GatherExternalNames(PhvInfo& phv) : phv_i(phv) { }
+};
+
+// Map field to the parser states in which they are extracted
+struct MapFieldToParserStates : public Inspector {
+    const PhvInfo& phv_i;
+
+    ordered_map<const PHV::Field*,
+                ordered_set<const IR::BFN::ParserState*>> field_to_parser_states;
+
+    std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> state_to_parser;
+
+    explicit MapFieldToParserStates(const PhvInfo& phv) : phv_i(phv) { }
+
+    profile_t init_apply(const IR::Node* root) override {
+        field_to_parser_states.clear();
+        state_to_parser.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::Extract* extract) override {
+        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        if (!lval) return true;
+
+        if (auto* f = phv_i.field(lval->field)) {
+            auto state = findContext<IR::BFN::ParserState>();
+            auto parser = findContext<IR::BFN::Parser>();
+
+            field_to_parser_states[f].insert(state);
+            state_to_parser[state] = parser;
+        }
+
+        return true;
+    }
 };
 
 void dump(const PhvInfo *);

@@ -17,6 +17,48 @@ Visitor::profile_t BuildParserOverlay::init_apply(const IR::Node* root) {
     return rv;
 }
 
+// Given the sets of parser states, k, v, in which two fields can be extracted
+// respectively, return true if any state in k is in a loop with any state in v.
+bool
+ExcludeParserLoopReachableFields::is_loop_reachable(
+        const ordered_set<const IR::BFN::ParserState*>& k,
+        const ordered_set<const IR::BFN::ParserState*>& v) {
+    for (auto i : k) {
+        for (auto j : v) {
+            if (i != j) {
+                auto p = fieldToStates.state_to_parser.at(i);
+                auto q = fieldToStates.state_to_parser.at(j);
+                if (p == q) {
+                    if (parserInfo.graph(p).is_loop_reachable(i, j) ||
+                        parserInfo.graph(p).is_loop_reachable(j, i)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+const IR::Node*
+ExcludeParserLoopReachableFields::apply_visitor(const IR::Node *root, const char *) {
+    for (auto &kv : fieldToStates.field_to_parser_states) {
+        for (auto &xk : fieldToStates.field_to_parser_states) {
+            if (kv.first == xk.first || kv.first->gress != xk.first->gress)
+                continue;
+
+           if (is_loop_reachable(kv.second, xk.second)) {
+               phv.removeFieldMutex(kv.first, xk.first);
+               LOG3("Mark " << kv.first->name << " and " << xk.first->name
+                            << " as non mutually exclusive (parser loop reachable)");
+           }
+       }
+    }
+
+    return root;
+}
+
 Visitor::profile_t BuildMetadataOverlay::init_apply(const IR::Node* root) {
     auto rv = BuildMutex::init_apply(root);
     LOG4("Beginning BuildMetadataOverlay");

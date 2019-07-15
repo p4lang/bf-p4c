@@ -136,13 +136,15 @@ class CalcParserCriticalPath : public PassManager {
     const ordered_set<const IR::BFN::ParserState*>&
     get_egress_user_critical_states() const { return egress_user_critical_states; }
 
-    bool is_on_critical_path(cstring state) const;
-    bool is_user_specified_critical_state(cstring state) const;
+    bool is_on_critical_path(const IR::BFN::ParserState* state) const;
+    bool is_user_specified_critical_state(const IR::BFN::ParserState* state) const;
 
  private:
-    static bool is_on_critical_path(cstring state, const ParserCriticalPathResult& result);
-    static bool is_user_specified_critical_state(cstring state,
-             const ordered_set<const IR::BFN::ParserState*>& result);
+    static bool is_on_critical_path(const IR::BFN::ParserState* state,
+                                    const ParserCriticalPathResult& result);
+
+    static bool is_user_specified_critical_state(const IR::BFN::ParserState* state,
+                            const ordered_set<const IR::BFN::ParserState*>& result);
 
     ordered_set<const PHV::Field *>
     calc_critical_fields(const ParserCriticalPathResult& critical_path) const;

@@ -31,6 +31,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     : Logging::PassManager("phv_allocation_"),
       table_alloc(alloc),
       pragmas(phv, options),
+      field_to_parser_states(phv),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
       pack_conflicts(phv, deps, table_mutex, alloc, action_mutex),
@@ -63,6 +64,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
             // Produce pairs of mutually exclusive header fields, e.g. (arpSrc, ipSrc)
             new MutexOverlay(phv, pragmas),
+            // map fields to parser states
+            &field_to_parser_states,
             // calculate ingress/egress parser's critical path
             &parser_critical_path,
             // Refresh dependency graph for live range analysis
@@ -111,8 +114,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             &table_ids,
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
-                    parser_critical_path, critical_path_clusters, table_alloc, meta_init,
-                    dark_live_range, table_ids),
+                    field_to_parser_states, parser_critical_path, critical_path_clusters,
+                    table_alloc, meta_init, dark_live_range, table_ids),
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse
         }); }

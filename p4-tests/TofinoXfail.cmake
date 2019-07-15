@@ -804,11 +804,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Parser counter only supports 1-bit match"
-  ../glass/testsuite/p4_tests/parde/COMPILER-760/test_config_377_parser_counter.p4
-)
-
 # test program error
 p4c_add_xfail_reason("tofino"
   "The random declaration .* min size must be zero"
@@ -1250,7 +1245,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_4.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_4.p4  # frontend p4-14 to 16 translation bug?
 )
 
 # P4C-1753

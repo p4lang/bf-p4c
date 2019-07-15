@@ -33,6 +33,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     MauBacktracker& table_alloc;
     /// PHV related pragma information.
     PHV::Pragmas pragmas;
+    /// Fields to parser states in which they are extracted
+    MapFieldToParserStates field_to_parser_states;
     /// Parser critical path of both ingress/egress.
     CalcParserCriticalPath parser_critical_path;
     /// Critical clusters.

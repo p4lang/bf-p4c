@@ -10,6 +10,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
@@ -55,7 +56,7 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
  public:
     using FieldFilter_t = std::function<bool(const PHV::Field* f)>;
 
- private:
+ protected:
     PhvInfo&      phv;
     const bitvec&       neverOverlay;
 
@@ -98,7 +99,6 @@ class BuildMutex : public BFN::ControlFlowVisitor, public Inspector {
  * same packet.  @see BuildMutex.
  */
 class BuildParserOverlay : public BuildMutex {
- private:
     /// Ignore non-header fields.
     static bool ignore_field(const PHV::Field* f) {
         return !f || f->pov || f->metadata;
@@ -109,8 +109,28 @@ class BuildParserOverlay : public BuildMutex {
     bool preorder(const IR::BFN::Deparser*) override { return false; }
 
  public:
-    BuildParserOverlay(PhvInfo& phv, const bitvec& neverOverlay)
+    BuildParserOverlay(PhvInfo& phv,
+                       const bitvec& neverOverlay)
         : BuildMutex(phv, neverOverlay, ignore_field) { }
+};
+
+class ExcludeParserLoopReachableFields : public Visitor {
+    PhvInfo&      phv;
+    const MapFieldToParserStates&  fieldToStates;
+    const CollectParserInfo&       parserInfo;
+
+ private:
+    const IR::Node *apply_visitor(const IR::Node *root, const char *) override;
+
+    bool is_loop_reachable(
+        const ordered_set<const IR::BFN::ParserState*>& k,
+        const ordered_set<const IR::BFN::ParserState*>& v);
+
+ public:
+    ExcludeParserLoopReachableFields(PhvInfo& phv,
+                       const MapFieldToParserStates& fs,
+                       const CollectParserInfo& pi)
+        : phv(phv), fieldToStates(fs), parserInfo(pi) { }
 };
 
 /* Produces a SymBitMatrix where keys are PHV::Field ids and values indicate
@@ -270,12 +290,14 @@ class MutexOverlay : public PassManager {
     /// Field IDs of fields that cannot be overlaid.
     bitvec                  neverOverlay;
     FindAddedHeaderFields   addedFields;
+    CollectParserInfo       parserInfo;
+    MapFieldToParserStates  fieldToParserStates;
 
  public:
     MutexOverlay(
             PhvInfo& phv,
             const PHV::Pragmas& pragmas)
-    : addedFields(phv) {
+    : addedFields(phv), fieldToParserStates(phv) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
             new ExcludePragmaNoOverlayFields(neverOverlay, pragmas.pa_no_overlay()),
@@ -283,6 +305,9 @@ class MutexOverlay : public PassManager {
             new ExcludeAliasedHeaderFields(phv, neverOverlay),
             new BuildParserOverlay(phv, neverOverlay),
             new BuildMetadataOverlay(phv, neverOverlay),
+            &parserInfo,
+            &fieldToParserStates,
+            new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),
             new ExcludeMAUOverlays(phv, addedFields),
             new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())
         });
