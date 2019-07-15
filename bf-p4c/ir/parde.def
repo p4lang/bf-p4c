@@ -534,6 +534,14 @@ class EmitField : Emit {
     FieldLVal source;
 }
 
+class EmitConstant : Emit {
+    dbprint {
+        out << "emit " << constant << " if " << povBit->field->toString();
+    }
+
+    Constant constant;
+}
+
 /// A deparser emit operation, representing a copy by the deparser of the
 /// contents of some location (ultimately backed by a CLOT) to the
 /// output packet.

@@ -12,6 +12,7 @@
 #include "logging/filelog.h"
 
 namespace {
+
 /// Represent update condition
 struct UpdateConditionInfo {
     UpdateConditionInfo(const IR::Member* field, bool conditionNegated) :
@@ -264,11 +265,10 @@ getUpdateCondition(const IR::Expression* condition) {
                                                updateConditionNegated);
         }
     }
-    std::stringstream msg;
-    msg << "Tofino only supports 1-bit checksum update condition in the deparser; "
-        << "Please move the update condition into the control flow";
-
-    ::error("%1%: %2%", msg.str(), condition);
+    ::error("Tofino only supports 1-bit checksum update condition in the deparser, "
+            " in the form of \"cond == 1\" or \"cond == 0\". "
+            "Please move the update condition into the control flow: %1%", condition);
+    return nullptr;
 }
 
 static std::vector<UpdateConditionInfo*>
@@ -624,8 +624,10 @@ struct InsertChecksumConditions : public Transform {
                     match_to_action_param[match] = 1;
             }
             auto ma = new MatchAction(keys, outputs, match_to_action_param);
-            tableSeq->tables.push_back(create_compiler_generated_table(gress, tableName,
-                                                                       actionName, *ma));
+            auto encoder = create_pov_encoder(gress, tableName, actionName, *ma);
+
+            tableSeq->tables.push_back(encoder);
+
             LOG3("Created table " << tableName << " in " << gress << " for match action:");
             LOG5(ma->print());
         }

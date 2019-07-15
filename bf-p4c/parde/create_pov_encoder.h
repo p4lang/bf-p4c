@@ -16,7 +16,7 @@ struct MatchAction {
 };
 
 IR::MAU::Table*
-create_compiler_generated_table(gress_t gress, cstring tableName, cstring action_name,
-                                const MatchAction& match_action);
+create_pov_encoder(gress_t gress, cstring tableName, cstring action_name,
+                   const MatchAction& match_action);
 
 #endif /*BF_P4C_PARDE_CREATE_POV_ENCODER_H_*/

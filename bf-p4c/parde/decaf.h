@@ -7,6 +7,7 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+
 /*********************************************************************************
  *
  *  decaf : a deparser optimization of copy assigned fields
@@ -587,7 +588,7 @@ class SynthesizePovEncoder : public MauTransform {
 // Certain weak fields may have constant values. These constants need to be extracted
 // by the parser in Tofino. In JBay, the deparser comes with 8 bytes of constants we
 // can use, the rest still need to be extracted in the parser.
-class InsertParserConstExtracts : public ParserTransform {
+class CreateConstants : public PardeTransform {
     const ComputeValuesAtDeparser& values_at_deparser;
     unsigned cid = 0;
 
@@ -595,10 +596,14 @@ class InsertParserConstExtracts : public ParserTransform {
     std::map<gress_t,
              ordered_map<const IR::Constant*, std::vector<uint8_t>>> const_to_bytes;
 
+    // these need to be written from the parser
     std::map<gress_t,
              ordered_map<uint8_t, const IR::TempVar*>> byte_to_temp_var;
 
-    explicit InsertParserConstExtracts(const ComputeValuesAtDeparser& values_at_deparser)
+    // these can be directly be sourced from the deparser
+    std::map<gress_t, ordered_set<uint8_t>> deparser_bytes;
+
+    explicit CreateConstants(const ComputeValuesAtDeparser& values_at_deparser)
         : values_at_deparser(values_at_deparser) { }
 
     void dbprint(std::ostream& out) const;
@@ -614,7 +619,7 @@ class InsertParserConstExtracts : public ParserTransform {
     }
 
  private:
-    void create_temp_var_for_constant_bytes(gress_t gress,
+    void create_temp_var_for_parser_constant_bytes(gress_t gress,
                               const ordered_set<const IR::Constant*>& constants);
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
@@ -665,17 +670,17 @@ class RewriteWeakFieldWrites : public MauTransform {
 class RewriteDeparser : public DeparserModifier {
     const PhvInfo& phv;
     const SynthesizePovEncoder& synth_pov_encoder;
-    const InsertParserConstExtracts& insert_parser_consts;
+    const CreateConstants& create_consts;
 
  public:
     ordered_set<cstring> must_split_fields;
 
     RewriteDeparser(const PhvInfo& phv,
                     const SynthesizePovEncoder& synth_pov_encoder,
-                    const InsertParserConstExtracts& insert_parser_consts)
+                    const CreateConstants& create_consts)
         : phv(phv),
           synth_pov_encoder(synth_pov_encoder),
-          insert_parser_consts(insert_parser_consts) { }
+          create_consts(create_consts) { }
 
  private:
     void end_apply() override {
@@ -684,6 +689,9 @@ class RewriteDeparser : public DeparserModifier {
 
     void add_emit(IR::Vector<IR::BFN::Emit>& emits,
                   const IR::Expression* source, const IR::TempVar* pov_bit);
+
+    void add_emit(IR::Vector<IR::BFN::Emit>& emits,
+                  uint8_t value, const IR::TempVar* pov_bit);
 
     const IR::Expression* find_emit_source(const PHV::Field* field,
                                            const IR::Vector<IR::BFN::Emit>& emits);
@@ -707,7 +715,7 @@ class DeparserCopyOpt : public Logging::PassManager {
     CollectWeakFields         collect_weak_fields;
     ComputeValuesAtDeparser   values_at_deparser;
     SynthesizePovEncoder      synth_pov_encoder;
-    InsertParserConstExtracts insert_parser_consts;
+    CreateConstants           create_consts;
     RewriteWeakFieldWrites    rewrite_weak_fields;
 
  public:
@@ -720,16 +728,16 @@ class DeparserCopyOpt : public Logging::PassManager {
             collect_weak_fields(phv, uses, defuse, dg),
             values_at_deparser(collect_weak_fields),
             synth_pov_encoder(collect_hdr_valid_bits, values_at_deparser),
-            insert_parser_consts(values_at_deparser),
+            create_consts(values_at_deparser),
             rewrite_weak_fields(values_at_deparser, synth_pov_encoder),
-            rewrite_deparser(phv, synth_pov_encoder, insert_parser_consts) {
+            rewrite_deparser(phv, synth_pov_encoder, create_consts) {
         addPasses({
             &uses,
             &collect_hdr_valid_bits,
             &collect_weak_fields,
             &values_at_deparser,
             &synth_pov_encoder,     // mau-transform
-            &insert_parser_consts,  // par-transform
+            &create_consts,         // parde-transform
             &rewrite_weak_fields,   // mau-transform
             &rewrite_deparser       // dep-modifier
         });

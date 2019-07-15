@@ -336,6 +336,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             }
 
             povFieldSource = emitChecksum->povBit;
+        } else if (auto* emitConstant = prim->to<IR::BFN::EmitConstant>()) {
+            povFieldSource = emitConstant->povBit;
         } else {
             BUG("Unexpected deparser primitive");
         }

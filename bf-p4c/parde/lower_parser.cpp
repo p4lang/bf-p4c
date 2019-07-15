@@ -1126,17 +1126,27 @@ struct RewriteEmitClot : public DeparserModifier {
 
         for (auto emit : deparser->emits) {
             auto irPovBit = emit->povBit;
+
             le_bitrange slice;
             auto phvPovBitField = phv.field(irPovBit->field, &slice);
+
             BUG_CHECK(phvPovBitField, "No PHV field for %1%", irPovBit);
             PHV::FieldSlice* phvPovBit = new PHV::FieldSlice(phvPovBitField, slice);
 
             const IR::Expression* source = nullptr;
 
-            if (auto ef = emit->to<IR::BFN::EmitField>())
+            if (auto ef = emit->to<IR::BFN::EmitField>()) {
                 source = ef->source->field;
-            else if (auto ec = emit->to<IR::BFN::EmitChecksum>())
+            } else if (auto ec = emit->to<IR::BFN::EmitChecksum>()) {
                 source = ec->dest->field;
+            } else if (auto cc = emit->to<IR::BFN::EmitConstant>()) {
+                newEmits.pushBackOrAppend(cc);
+
+                // we disallow CLOTs from being overwritten by deparser constants
+                BUG_CHECK(expectedNextSlices.empty(), "CLOT slices not re-written?");
+
+                continue;
+            }
 
             BUG_CHECK(source, "No emit source for %1%", emit);
 
@@ -1412,25 +1422,11 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // emit-like primitives by POV bit and CLOT tag.
         LOG5("Grouping deparser primitives:");
         for (auto* prim : deparser->emits) {
-            // Some complex emit primitives exist which can't be merged with
-            // other primitives. We place this kind of primitive in a group by
-            // itself. (At this point, EmitChecksum is the only thing in this
-            // category, but one can imagine that future hardware may introduce
-            // others.)
             if (!prim->is<IR::BFN::EmitField>()) {
-                if (prim->is<IR::BFN::EmitChecksum>()) {
-                    LOG5(" - Placing complex emit in its own group: " << prim);
-                    groupedEmits.emplace_back(1, prim);
-                } else if (prim->is<IR::BFN::EmitClot>()) {
-                    groupedEmits.emplace_back(1, prim);
-                } else {
-                    BUG("Found a complex emit of an unexpected type: %1%", prim);
-                }
-
+                groupedEmits.emplace_back(1, prim);
                 lastSimpleEmit = boost::none;
                 continue;
             }
-
 
             // Gather the POV bit and CLOT tag associated with this emit.
             auto* emit = prim->to<IR::BFN::EmitField>();
@@ -1502,6 +1498,27 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 loweredDeparser->emits.push_back(loweredEmit);
 
                 nextChecksumUnit++;
+
+                continue;
+            }
+
+            if (auto* emitConstant = group.back()->to<IR::BFN::EmitConstant>()) {
+                auto* loweredPovBit = lowerSingleBit(phv,
+                                                     emitConstant->povBit,
+                                                     PHV::AllocContext::DEPARSER);
+
+                BUG_CHECK(emitConstant->constant->fitsUint(), "Emit constant too large");
+
+                // TODO cut large constant into bytes
+
+                auto value = emitConstant->constant->asUnsigned();
+
+                BUG_CHECK(value >> 8 == 0, "Deparser constants must in bytes");
+
+                auto* loweredEmit =
+                  new IR::BFN::LoweredEmitConstant(loweredPovBit, value);
+
+                loweredDeparser->emits.push_back(loweredEmit);
 
                 continue;
             }

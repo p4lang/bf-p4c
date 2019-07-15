@@ -15,15 +15,12 @@ header sample_h{
 
 struct headers_t{
    sample_h sample;
-
 }
 
 struct metadata_t{
     bool csum1;
     bool csum2;
 }
-
-
 
 parser IgParser(packet_in packet, out headers_t hdr, out metadata_t meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
@@ -56,14 +53,21 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
    }
 }
 
-control IgDeparser(packet_out packet, inout headers_t hdr,in metadata_t meta, in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {
+control IgDeparser(packet_out packet, inout headers_t hdr, in metadata_t meta,
+                   in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {
     Checksum() deparser_checksum1;
     Checksum() deparser_checksum2;
+
     apply {
         if (meta.csum1) {
-            hdr.sample.csum1 = deparser_checksum1.update({hdr.sample.a, hdr.sample.b, hdr.sample.c});
+            hdr.sample.csum1 = deparser_checksum1.update({ hdr.sample.a,
+                                                           hdr.sample.b,
+                                                           hdr.sample.c });
         } else if (meta.csum2) {
-            hdr.sample.csum2 = deparser_checksum2.update({hdr.sample.a, hdr.sample.b, hdr.sample.c, hdr.sample.csum1 });
+            hdr.sample.csum2 = deparser_checksum2.update({ hdr.sample.a,
+                                                           hdr.sample.b,
+                                                           hdr.sample.c,
+                                                           hdr.sample.csum1 });
         }
         packet.emit(hdr.sample);
     }

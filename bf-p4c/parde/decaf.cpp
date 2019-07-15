@@ -1,6 +1,8 @@
 #include "decaf.h"
 #include <bitset>
 #include "bf-p4c/common/table_printer.h"
+#include "bf-p4c/device.h"
+
 template <typename T>
 static std::vector<T> to_vector(const ordered_set<T>& data) {
     std::vector<T> vec;
@@ -1392,7 +1394,7 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
         for (auto& ma : gm.second) {
             cstring table_name = "_decaf_pov_encoder_";
             cstring action_name = "__soap__";
-            auto table = create_compiler_generated_table(gm.first, table_name, action_name, *ma);
+            auto table = create_pov_encoder(gm.first, table_name, action_name, *ma);
 
             tables_to_insert[table->gress].push_back(table);
         }
@@ -1401,7 +1403,7 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
     return rv;
 }
 
-void InsertParserConstExtracts::create_temp_var_for_constant_bytes(gress_t gress,
+void CreateConstants::create_temp_var_for_parser_constant_bytes(gress_t gress,
                           const ordered_set<const IR::Constant*>& constants) {
     for (auto c : constants) {
         unsigned width = c->type->width_bits();
@@ -1419,7 +1421,9 @@ void InsertParserConstExtracts::create_temp_var_for_constant_bytes(gress_t gress
             const_to_bytes[gress][c].insert(
                 const_to_bytes[gress][c].begin(), l_s_byte);  // order is important
 
-            if (!byte_to_temp_var[gress].count(l_s_byte)) {
+            if (deparser_bytes[gress].size() < Device::pardeSpec().numDeparserConstantBytes()) {
+                deparser_bytes[gress].insert(l_s_byte);
+            } else if (!byte_to_temp_var[gress].count(l_s_byte)) {
                 std::string name = "$constant_" + std::to_string(cid++);
 
                 auto temp_var = create_temp_var(name.c_str(), 8);
@@ -1435,7 +1439,7 @@ void InsertParserConstExtracts::create_temp_var_for_constant_bytes(gress_t gress
     }
 }
 
-void InsertParserConstExtracts::dbprint(std::ostream& out) const {
+void CreateConstants::dbprint(std::ostream& out) const {
     for (auto& kv : byte_to_temp_var) {
         auto gress = kv.first;
 
@@ -1451,20 +1455,21 @@ void InsertParserConstExtracts::dbprint(std::ostream& out) const {
     }
 }
 
-Visitor::profile_t InsertParserConstExtracts::init_apply(const IR::Node* root) {
-    auto rv = ParserTransform::init_apply(root);
+Visitor::profile_t CreateConstants::init_apply(const IR::Node* root) {
+    auto rv = PardeTransform::init_apply(root);
 
     cid = 0;
     const_to_bytes.clear();
     byte_to_temp_var.clear();
+    deparser_bytes.clear();
 
     for (auto& kv : values_at_deparser.weak_fields.all_constants)
-        create_temp_var_for_constant_bytes(kv.first, kv.second);
+        create_temp_var_for_parser_constant_bytes(kv.first, kv.second);
 
     return rv;
 }
 
-void InsertParserConstExtracts::insert_init_consts_state(IR::BFN::Parser* parser) {
+void CreateConstants::insert_init_consts_state(IR::BFN::Parser* parser) {
     auto transition = new IR::BFN::Transition(match_t(), 0, parser->start);
 
     auto init_consts = new IR::BFN::ParserState(
@@ -1473,20 +1478,22 @@ void InsertParserConstExtracts::insert_init_consts_state(IR::BFN::Parser* parser
 
     for (auto& kv : const_to_bytes[parser->gress]) {
         for (auto byte : kv.second) {
-            auto temp_var = byte_to_temp_var.at(parser->gress).at(byte);
+            if (byte_to_temp_var[parser->gress].count(byte)) {
+                auto temp_var = byte_to_temp_var.at(parser->gress).at(byte);
 
-            auto rval = new IR::BFN::ConstantRVal(IR::Type::Bits::get(8), byte);
-            auto extract = new IR::BFN::Extract(temp_var, rval);
+                auto rval = new IR::BFN::ConstantRVal(IR::Type::Bits::get(8), byte);
+                auto extract = new IR::BFN::Extract(temp_var, rval);
 
-            init_consts->statements.push_back(extract);
-            LOG3("add " << extract << " to " << init_consts->name);
+                init_consts->statements.push_back(extract);
+                LOG3("add " << extract << " to " << init_consts->name);
+            }
         }
     }
 
     parser->start = init_consts;
 }
 
-IR::BFN::Parser* InsertParserConstExtracts::preorder(IR::BFN::Parser* parser) {
+IR::BFN::Parser* CreateConstants::preorder(IR::BFN::Parser* parser) {
     /*
       We choose to insert the constants at the beginning of the parser,
       but it doesn't have to be the case -- there are states throughout the
@@ -1562,10 +1569,19 @@ const IR::Node* RewriteWeakFieldWrites::postorder(IR::MAU::Instruction* instr) {
 
 void RewriteDeparser::add_emit(IR::Vector<IR::BFN::Emit>& emits,
               const IR::Expression* source, const IR::TempVar* pov_bit) {
-    auto emit_value = new IR::BFN::EmitField(source, pov_bit);
-    emits.push_back(emit_value);
+    auto e = new IR::BFN::EmitField(source, pov_bit);
+    emits.push_back(e);
 
-    LOG3(emit_value);
+    LOG3(e);
+}
+
+void RewriteDeparser::add_emit(IR::Vector<IR::BFN::Emit>& emits,
+              uint8_t value, const IR::TempVar* pov_bit) {
+    auto c = new IR::Constant(IR::Type::Bits::get(8), value);
+    auto e = new IR::BFN::EmitConstant(new IR::BFN::FieldLVal(pov_bit), c);
+    emits.push_back(e);
+
+    LOG3(e);
 }
 
 const IR::Expression*
@@ -1704,7 +1720,7 @@ void RewriteDeparser::infer_deparser_no_repeat_constraint(IR::BFN::Deparser* dep
         if (!ei) continue;
 
         if (auto temp_var = ei->source->field->to<IR::TempVar>()) {
-            if (insert_parser_consts.is_inserted(temp_var))
+            if (create_consts.is_inserted(temp_var))
                 continue;
         }
 
@@ -1767,13 +1783,16 @@ bool RewriteDeparser::preorder(IR::BFN::Deparser* deparser) {
 
     ordered_map<const IR::Constant*, std::vector<uint8_t>> const_to_bytes;
     ordered_map<uint8_t, const IR::TempVar*> byte_to_temp_var;
+    ordered_set<uint8_t> deparser_bytes;
 
-    auto& c2b = insert_parser_consts.const_to_bytes;
-    auto& b2t = insert_parser_consts.byte_to_temp_var;
+    auto& c2b = create_consts.const_to_bytes;
+    auto& b2t = create_consts.byte_to_temp_var;
+    auto& db = create_consts.deparser_bytes;
 
     if (c2b.count(deparser->gress)) {
         const_to_bytes = c2b.at(deparser->gress);
         byte_to_temp_var = b2t.at(deparser->gress);
+        deparser_bytes = db.at(deparser->gress);
     }
 
     for (auto prim : deparser->emits) {
@@ -1808,8 +1827,14 @@ bool RewriteDeparser::preorder(IR::BFN::Deparser* deparser) {
                                   "Constant %1% not extracted in parser?", value.constant);
 
                         for (auto byte : bytes) {
-                            const IR::Expression* emit_source = byte_to_temp_var.at(byte);
-                            add_emit(new_emits, emit_source, pov_bit);
+                            if (deparser_bytes.count(byte)) {
+                                add_emit(new_emits, byte, pov_bit);
+                            } else if (byte_to_temp_var.count(byte)) {
+                                auto source = byte_to_temp_var.at(byte);
+                                add_emit(new_emits, source, pov_bit);
+                            } else {
+                                BUG("decaf constant source not found?");
+                            }
                         }
                     }
                 }

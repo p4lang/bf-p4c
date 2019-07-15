@@ -45,8 +45,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     )
 
   p4c_add_xfail_reason("tofino2"
-   "jbay_test_harness CRASH"
-   extensions/p4_tests/p4_14/stf/decaf_8.p4
+    "Assertion .* failed"  # model asserts
+   extensions/p4_tests/p4_14/stf/decaf_8.p4 # clot?
+   extensions/p4_tests/p4_14/stf/decaf_1.p4 # 16-bit container repeated in FD
    )
 
 endif() # HARLYN_STF

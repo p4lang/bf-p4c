@@ -5,6 +5,7 @@
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/device.h"
+#include "lib/hex.h"
 
 namespace {
 
@@ -79,6 +80,12 @@ struct OutputDictionary : public Inspector {
 
     bool preorder(const IR::BFN::LoweredEmitClot* emit) override {
         return preorder(emit->clot);
+    }
+
+    bool preorder(const IR::BFN::LoweredEmitConstant* emit) override {
+        AutoIndent emitIndent(indent);
+        out << indent << "0x" << hex(emit->constant) << ": " << emit->povBit << std::endl;
+        return false;
     }
 
     bool preorder(const IR::BFN::EmitClot* emit) override {

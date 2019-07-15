@@ -16,7 +16,7 @@ parser start {
 }
 
 action a1() {
-    modify_field(data.f, 0x5AA5BCCBDEADBEEFBABEFACE1BADCAFE);
+    modify_field(data.f, 0xDECAFFCBDEADBEEFBABEFACE1BADCAFE);
 }
 
 table t1 {

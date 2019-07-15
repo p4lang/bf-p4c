@@ -1,6 +1,6 @@
 add t1 data.k:0x0101 a1()
 
-expect 2 0101 5AA5BCCBDEADBEEFBABEFACE1BADCAFE 
+expect 2 0101 DECAFFCBDEADBEEFBABEFACE1BADCAFE 
 packet 0 0101 ffffffffffffffffffffffffffffffff 
 
 expect 2 0202 ffffffffffffffffffffffffffffffff

@@ -372,6 +372,17 @@ class LoweredEmitClot : LoweredEmit {
     EmitClot clot;
 }
 
+class LoweredEmitConstant : LoweredEmit {
+    dbprint {
+        out << "emit " << (unsigned)constant << " if " << povBit;
+    }
+
+    /// The POV bit the emit is predicated on
+    BFN::ContainerBitRef povBit;
+
+    uint8_t constant;
+}
+
 /// Configures the container whose value will be used to set an intrinsic
 /// deparser parameter.
 class LoweredDeparserParameter {

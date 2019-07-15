@@ -39,10 +39,10 @@ static const IR::Entry* create_static_entry(unsigned key_size,
     return entry;
 }
 
-IR::MAU::Table* create_compiler_generated_table(gress_t gress,
-                                                cstring tableName,
-                                                cstring action_name,
-                                                const MatchAction& match_action) {
+IR::MAU::Table* create_pov_encoder(gress_t gress,
+                                   cstring tableName,
+                                   cstring action_name,
+                                   const MatchAction& match_action) {
     static int id = 0;
     std::string table_name = toString(gress) + tableName+ std::to_string(id++);
     LOG1("\ncreating a table " << table_name << " for match action:");

@@ -568,22 +568,39 @@ class CollectClotInfo : public Inspector {
 
         for (auto emit : deparser->emits) {
             const PHV::Field* cur_field = nullptr;
+
             if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
                 cur_field = phv.field(emit_field->source->field);
             } else if (auto emit_checksum = emit->to<IR::BFN::EmitChecksum>()) {
                 cur_field = phv.field(emit_checksum->dest->field);
+            } else if (emit->is<IR::BFN::EmitConstant>()) {
+                // exclude from pseudoheader (below)
+                // can potentially combine constants and fields with same
+                // pov bit sets to create bigger pseudoheader? TODO
             } else {
                 BUG("Unexpected deparser emit: %1%", emit);
             }
 
-            auto pov_bits = fields_to_pov_bits.at(cur_field);
-            if (cur_pov_bits != pov_bits) {
-                add_pseudoheader(cur_pov_bits, cur_fields, allocated);
-                cur_pov_bits = pov_bits;
-                cur_fields.clear();
-            }
+            if (!cur_field) {
+                // if current emit is constant, create pseudoheader with current set of fields
+                if (!cur_fields.empty()) {
+                    add_pseudoheader(cur_pov_bits, cur_fields, allocated);
+                    cur_pov_bits.clear();
+                    cur_fields.clear();
+                }
+            } else {
+                // if current emit is field, create pseudoheader if its pov set is different from
+                // previous field
+                auto pov_bits = fields_to_pov_bits.at(cur_field);
 
-            cur_fields.push_back(cur_field);
+                if (cur_pov_bits != pov_bits) {
+                    add_pseudoheader(cur_pov_bits, cur_fields, allocated);
+                    cur_pov_bits = pov_bits;
+                    cur_fields.clear();
+                }
+
+                cur_fields.push_back(cur_field);
+            }
         }
 
         add_pseudoheader(cur_pov_bits, cur_fields, allocated);
