@@ -601,6 +601,20 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                 int len = regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].len;
                 if (len == 0) continue; // Allow empty param list
 
+                // Fix for TF2LAB-37s:
+                // This fixes a hardware limitation where the container following 
+                // the last PHV used cannot be the same non 8 bit container as the last entry.
+                // E.g. For len = 5, (active entries start at index 47)
+                // Used   - PHV[47] ... PHV[43] = 0; 
+                // Unused - PHV[42] ... PHV[0] = 0; // Defaults to 0
+                // This causes issues in hardware as container 0 is used. 
+                // We fix by setting the default as 64 an 8 - bit container. It can be any
+                // other 8 bit container value.
+                // The hardware does not cause any issues for 8 bit conatiners.
+                for (int i = 47 - len; i >= 0; i--)
+                    regs.dprsrreg.inp.ipp.ingr.learn_tbl[id].phvs[i] = 64;
+                // Fix for TF2LAB-37 end
+
                 // Create a bitvec of all phv masks stacked up next to each
                 // other in big-endian. 'setregs' above stacks the digest fields
                 // in a similar manner to setup the phvs per byte on learn_tbl
