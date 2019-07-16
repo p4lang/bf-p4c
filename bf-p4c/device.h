@@ -150,11 +150,13 @@ class JBayDevice : public Device {
 
 /// Tofino2 variants. The only difference between them is the number of
 /// stages.
+#if BAREFOOT_INTERNAL
 class JBayHDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 6; }
     cstring get_name() const override { return "Tofino2H"; }
 };
+#endif  /* BAREFOOT_INTERNAL */
 
 class JBayMDevice : public JBayDevice {
  public:

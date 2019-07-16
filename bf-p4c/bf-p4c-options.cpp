@@ -209,8 +209,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
   #endif  /* BAREFOOT_INTERNAL */
         {"tofino2", "tna"},
         {"tofino2", "t2na"},
+  #if BAREFOOT_INTERNAL
         {"tofino2h", "tna"},
         {"tofino2h", "t2na"},
+  #endif  /* BAREFOOT_INTERNAL */
         {"tofino2m", "tna"},
         {"tofino2m", "t2na"},
         {"tofino2u", "tna"},

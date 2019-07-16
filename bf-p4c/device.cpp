@@ -11,16 +11,16 @@ void Device::init(cstring name) {
 
     if (lower_name == "tofino")
         instance_ = new TofinoDevice();
-#if HAVE_JBAY
     else if (lower_name == "tofino2")
         instance_ = new JBayDevice();
+#if BAREFOOT_INTERNAL
     else if (lower_name == "tofino2h")
         instance_ = new JBayHDevice();
+#endif  /* BAREFOOT_INTERNAL */
     else if (lower_name == "tofino2m")
         instance_ = new JBayMDevice();
     else if (lower_name == "tofino2u")
         instance_ = new JBayUDevice();
-#endif /* HAVE_JBAY */
     else
         BUG("Unknown device %s", name);
 }
