@@ -57,7 +57,7 @@ bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which
         ::error("Tofino does not support conditional checksum verification: %1%", destField);
 
     auto algorithm = (*methodCall->arguments)[3]->expression->to<IR::Member>();
-    if (!algorithm || (algorithm->member != "csum16" && algorithm->member != "csum16_udp"))
+    if (!algorithm || (algorithm->member != "csum16"))
         ::error("Tofino only supports \"csum16\" for checksum calculation: %1%", destField);
 
     return true;

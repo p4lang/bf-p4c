@@ -1689,7 +1689,6 @@ class ConstructSymbolTable : public Inspector {
         auto condition = mc->arguments->at(0)->expression;
         auto fieldlist = mc->arguments->at(1)->expression;
         auto destfield = mc->arguments->at(2)->expression;
-        auto hashAlgo = mc->arguments->at(3)->expression->to<IR::Member>();
 
         for (auto location : deparserUpdateLocations) {
             IR::Declaration_Instance* decl = createChecksumDeclaration(structure, uc);
@@ -1722,10 +1721,6 @@ class ConstructSymbolTable : public Inspector {
             IR::ListExpression* list = new IR::ListExpression(exprs);
             auto arguments = new IR::Vector<IR::Argument>;
             arguments->push_back(new IR::Argument(list));
-            if (hashAlgo->member == "csum16_udp") {
-                auto zerosAsOnes = new IR::BoolLiteral(1);
-                arguments->push_back(new IR::Argument(zerosAsOnes));
-            }
             auto updateCall = new IR::MethodCallExpression(
                               mc->srcInfo,
                               new IR::Member(new IR::PathExpression(decl->name), "update"),
