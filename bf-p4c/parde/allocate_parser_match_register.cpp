@@ -115,7 +115,7 @@ class MatcherAllocator : public Visitor {
         std::map<const IR::BFN::Transition*,
                  const IR::BFN::ParserState*> def_transition_to_state;
 
-        unsigned bits_in_group = 0, bytes_in_group = 0;
+        unsigned bits_in_group = 0;
 
         explicit UseGroup(const UseDef& s) : use_def(s) { }
 
@@ -210,9 +210,7 @@ class MatcherAllocator : public Visitor {
                 members.push_back(cand);
 
                 auto& defs = use_def.use_to_defs.at(cand);
-
                 bits_in_group = defs.at(0)->rval->range.size();
-                bytes_in_group = (bits_in_group + 7) / 8;
 
                 return true;
             }
@@ -239,17 +237,20 @@ class MatcherAllocator : public Visitor {
             }
 
             members.push_back(cand);
-
             bits_in_group += cand_defs.at(0)->rval->range.size();
 
-            auto head_defs = use_def.use_to_defs.at(members.front());
-
-            auto lo = head_defs.at(0)->rval->range.lo;
-            auto hi = cand_defs.at(0)->rval->range.hi;
-
-            bytes_in_group = (hi - lo) / 8 + 1;
-
             return true;
+        }
+
+        unsigned bytes_in_group() const {
+            auto head_defs = use_def.use_to_defs.at(members.front());
+            auto tail_defs = use_def.use_to_defs.at(members.back());
+
+            auto lo = head_defs.at(0)->rval->range.lo / 8;
+            auto hi = tail_defs.at(0)->rval->range.hi / 8;
+
+            auto bytes = hi - lo + 1;
+            return bytes;
         }
 
         bool have_same_defs(const Use* a, const Use* b) const {
@@ -549,7 +550,7 @@ class MatcherAllocator : public Visitor {
     /// set of registers that will cover all select fields.
     std::vector<MatchRegister>
     allocate(const UseGroup* group, std::vector<MatchRegister> avail_regs) {
-        auto select_bytes = group->bytes_in_group;
+        auto select_bytes = group->bytes_in_group();
 
         unsigned total_reg_bytes = 0;
         for (auto reg : avail_regs)
