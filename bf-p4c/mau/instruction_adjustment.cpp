@@ -1373,7 +1373,10 @@ void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
 
 bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     auto tname = tbl->match_table ? tbl->match_table->externalName() : tbl->name;
-    LOG3("Table: " << canon_name(tname));
+    auto *pipe = findContext<IR::BFN::Pipe>();
+    if (pipe) tname = gen_p4_name(pipe->name, tname);
+    LOG3("Generating primitive info for table: " << tname);
+
     bool alpm_preclassifier = tbl->name.endsWith("preclassifier");
 
     if (tbl->actions.empty()) return true;
@@ -1388,7 +1391,7 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
         _actions->append(_action);
     }
 
-    _table->emplace("name", canon_name(tname));
+    _table->emplace("name", tname);
     if (alpm_preclassifier) {
         auto _match_attr = new Util::JsonObject();
         auto _pre_classifier = new Util::JsonObject();
