@@ -48,6 +48,8 @@ void NextTableProp::add_table_seq(
         // Update last stage
         last_stage = st > last_stage ? st : last_stage;
         // Add to the correct vector
+        if (size_t(st) >= stages.size())
+            stages.resize(st+1);
         stages[st].push_back(nt);
     }
 
