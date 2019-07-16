@@ -450,7 +450,7 @@ struct ActionFormat {
         }
 
         bool is_immed_speciality_in_use() const {
-            return meter_reserved;
+            return false;
         }
     };
 

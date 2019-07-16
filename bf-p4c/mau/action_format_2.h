@@ -111,6 +111,9 @@ class Parameter {
     bool equiv_cond(const Parameter *p) const {
         return _cond_type == p->_cond_type && _cond_name == p->_cond_name;
     }
+
+    bool can_overlap_ranges(le_bitrange my_range, le_bitrange ad_range, le_bitrange &overlap,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const;
 };
 
 /**
@@ -320,6 +323,40 @@ class RandomNumber : public Parameter {
     }
 };
 
+/**
+ * A Meter Color Map RAM outputs an 8-bit color to bits 24..31 of immediate.  Only one meter
+ * can currently be connected to a single table's logical table (though perhaps later maybe
+ * more than one meter can be accessed).  Similar to random number, the entire 8-bits of
+ * output is used by the meter color, thus nothing else can be allocated to those 8 bits.
+ *
+ * However, unlike Random, because only one meter can exist per logical table, there is no
+ * need to complicate the merge and subset functions
+ */
+class MeterColor : public Parameter {
+    cstring _meter_name;
+    le_bitrange _range;
+
+ public:
+    le_bitrange range() const { return _range; }
+    int size() const override { return _range.size(); }
+    bool from_p4_program() const override { return true; }
+    cstring name() const override { return _meter_name; }
+    const Parameter *split(int lo, int hi) const override;
+    bool only_one_overlap_solution() const { return true; }
+    bool is_next_bit_of_param(const Parameter *, bool same_alias) const override;
+    const Parameter *get_extended_param(uint32_t extension, const Parameter *) const override;
+    const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
+    void dbprint(std::ostream &out) const override { out << _meter_name << _range; }
+    bool equiv_value(const Parameter *, bool check_cond = true) const override;
+    bool is_padding() const { return _meter_name == "$padding"; }
+
+    bool is_subset_of(const Parameter *ad) const override;
+    bool can_merge(const Parameter *ad) const override;
+    const Parameter *merge(const Parameter *ad) const override;
+    MeterColor(cstring mn, le_bitrange r) : _meter_name(mn), _range(r) {}
+};
+
 struct ALUParameter {
     const Parameter *param;
     le_bitrange phv_bits;
@@ -375,6 +412,7 @@ class ALUOperation {
     bitvec _phv_bits;
     // The amount to barrel-shift right the phv_bits in order to know the associated slot_bits
     int _right_shift;
+    bool _right_shift_set = false;
     PHV::Container _container;
     // Information on how the data is used, in order to potentially pack in RAM space other
     // ALUOperations
@@ -388,6 +426,7 @@ class ALUOperation {
     bitvec _mask_bits;
     // Explicitly needed for action parameters shared between actions, i.e. hash, rng
     cstring _action_name;
+
 
  public:
     void add_param(ALUParameter &ap) {
@@ -423,6 +462,7 @@ class ALUOperation {
 
     ALUOperation(PHV::Container cont, ALUOPConstraint_t cons)
         : _right_shift(0), _container(cont), _constraint(cons) { }
+
     const RamSection *create_RamSection(bool shift_to_lsb) const;
     const ALUOperation *add_right_shift(int right_shift, int *rot_alias_idx) const;
     cstring alias() const { return _alias; }
@@ -435,6 +475,13 @@ class ALUOperation {
     const ALUParameter *find_param_alloc(UniqueLocationKey &key) const;
     ParameterPositions parameter_positions() const;
     cstring wrapped_constant() const;
+
+    ///> @seealso comments on create_meter_color_RamSection
+    bool has_meter_color() const;
+    int meter_color_right_shift() const;
+    const RamSection *create_meter_color_RamSection() const;
+    bool is_right_shift_from_hw() const { return has_meter_color(); }
+    bool right_shift_set() const { return _right_shift_set; }
 };
 
 struct SharedParameter {
@@ -734,6 +781,8 @@ class Format {
  public:
     static constexpr int IMMEDIATE_BITS = 32;
     static constexpr int ACTION_RAM_BYTES = 16;
+    static constexpr int METER_COLOR_SIZE = 8;
+    static constexpr int METER_COLOR_START_BIT = IMMEDIATE_BITS - METER_COLOR_SIZE;
 
     struct Use {
         std::map<cstring, safe_vector<ALUPosition>> alu_positions;
@@ -742,10 +791,6 @@ class Format {
         std::array<BusInputs, AD_LOCATIONS> bus_inputs
             = {{ {{ bitvec(), bitvec(), bitvec() }}, {{ bitvec(), bitvec(), bitvec() }} }};
         std::array<int, AD_LOCATIONS> bytes_per_loc = {{ 0, 0 }};
-        ///> The allocation for all HashDist/RandomNumber/Meter Color information, as this
-        ///> is not yet handled by this Action Format allocation.  Eventually this will be
-        ///> obsoleted
-        ActionFormat::Use speciality_use;
         ///> A contiguous bits of action data in match overhead.  Could be calculated directly
         ///> from alu_positions
         bitvec immediate_mask;
@@ -778,14 +823,34 @@ class Format {
                 {{ {{ bitvec(), bitvec(), bitvec() }}, {{ bitvec(), bitvec(), bitvec() }} }};
             immediate_mask.clear();
             full_words_bitmasked.clear();
-            speciality_use.clear();
             mod_cond_values.clear();
             locked_in_all_actions_alu_positions.clear();
             locked_in_all_actions_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
         }
 
-        bool is_hash_dist(int byte_offset) const;
-        bool is_rand_num(int byte_offset) const;
+        // For templated methods, the declaration has to be in the same location as the
+        // implementation?  C++ is weird
+        template<typename T> bool is_byte_offset(int byte_offset) const {
+            bool found = false;
+            bool is_template = false;
+            for (auto &alu_position : locked_in_all_actions_alu_positions) {
+                if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
+                    continue;
+                auto param_positions = alu_position.alu_op->parameter_positions();
+                for (auto &param_pos : param_positions) {
+                    bool template_param = param_pos.second->is<T>();
+                    if (!found) {
+                        found = true;
+                        is_template = template_param;
+                    } else {
+                        BUG_CHECK(is_template == template_param, "A special parameter, i.e. "
+                                  "HashDist, shares its packing with a different speciality");
+                    }
+                }
+            }
+            return is_template;
+        }
+
         const RamSection *build_locked_in_sect() const;
     };
 
@@ -793,7 +858,6 @@ class Format {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
     safe_vector<Use> &uses;
-    ActionFormat::Use speciality_use;
     int calc_max_size = 0;
     std::map<cstring, RamSec_vec_t> init_ram_sections;
 
@@ -817,6 +881,8 @@ class Format {
     void create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, cstring action_name);
     void create_random_padding(ALUOperation &alu, le_bitrange padding_bits, cstring action_name);
+    void create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits);
     void create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
@@ -859,6 +925,11 @@ class Format {
          BusInputs &total_inputs, int max_bytes_needed);
     void assign_RamSections_to_bytes();
 
+    const ALUOperation *finalize_locked_shift_alu_operation(const RamSection *ram_sect,
+        const ALUOperation *init_ad_alu, int right_shift);
+    const ALUOperation *finalize_alu_operation(const RamSection *ram_sect,
+        const ALUOperation *init_ad_alu, int right_shift, int section_byte_offset,
+        int *rot_alias_idx);
     void build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, int *rot_alias_idx);
     void build_locked_in_format(Use &use);
@@ -867,9 +938,8 @@ class Format {
 
  public:
     void allocate_format(bool immediate_forced);
-    Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u,
-        ActionFormat::Use sp_use)
-        : phv(p), tbl(t), uses(u), speciality_use(sp_use) {}
+    Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u)
+        : phv(p), tbl(t), uses(u) {}
 };
 
 }  // namespace ActionData

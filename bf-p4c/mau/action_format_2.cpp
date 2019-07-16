@@ -10,6 +10,29 @@ size_t slot_type_to_bits(SlotType_t slot_type) {
     BUG_CHECK(slot_type != SECT_TYPES, "Invalid call of slot_type_to_bits");
     return 1U << (static_cast<int>(slot_type) + 3);
 }
+
+bool Parameter::can_overlap_ranges(le_bitrange my_range, le_bitrange ad_range,
+        le_bitrange &overlap, le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
+    auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                        (my_range.intersectWith(ad_range));
+    if (boost_sl == boost::none) return false;
+    overlap = *boost_sl;
+    if (my_overlap) {
+        auto ov_boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                           (my_range.intersectWith(overlap));
+        *my_overlap = *ov_boost_sl;
+        *my_overlap = my_overlap->shiftedByBits(-1 * my_range.lo);
+    }
+
+    if (ad_overlap) {
+        auto ov_boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
+                           (ad_range.intersectWith(overlap));
+        *ad_overlap = *ov_boost_sl;
+        *ad_overlap = ad_overlap->shiftedByBits(-1 * ad_range.lo);
+    }
+    return true;
+}
+
 /**
  * Returns an Argument if the two Arguments have some equivalency overlap, i.e.:
  *     param1[8:15]
@@ -346,6 +369,75 @@ const Parameter *RandomNumber::overlap(const Parameter *ad, bool only_one_overla
     return rv;
 }
 
+const Parameter *MeterColor::split(int lo, int hi) const {
+    le_bitrange split_range = { lo, hi };
+    split_range = split_range.shiftedByBits(_range.lo);
+    BUG_CHECK(_range.contains(split_range), "Illegally splitting a meter color, as the split "
+        "contains bits outside of the range");
+    auto rv = new MeterColor(_meter_name, split_range);
+    rv->set_cond(this);
+    return rv;
+}
+
+bool MeterColor::is_next_bit_of_param(const Parameter *ad, bool) const {
+    if (size() != 1) return false;
+    auto mc = ad->to<MeterColor>();
+    if (mc == nullptr) return false;
+    return mc->_range.lo == _range.hi + 1;
+}
+
+const Parameter *MeterColor::get_extended_param(uint32_t extension, const Parameter *) const {
+    BUG_CHECK(size() + extension < Format::METER_COLOR_SIZE, "Cannot make %1% color argument more "
+        "than %2% bits", _meter_name, Format::METER_COLOR_SIZE);
+    auto rv = new MeterColor(*this);
+    rv->_range.hi += extension;
+    return rv;
+}
+
+const Parameter *MeterColor::overlap(const Parameter *ad, bool, le_bitrange *my_overlap,
+         le_bitrange *ad_overlap) const {
+    const MeterColor *mc = ad->to<MeterColor>();
+    if (mc == nullptr) return nullptr;
+    if (_meter_name != mc->_meter_name) return nullptr;
+    if (!equiv_cond(ad)) return nullptr;
+    le_bitrange overlap = { 0, 0 };
+    if (!can_overlap_ranges(_range, mc->_range, overlap, my_overlap, ad_overlap))
+        return nullptr;
+    auto rv = new MeterColor(_meter_name, overlap);
+    return rv;
+}
+
+bool MeterColor::equiv_value(const Parameter *ad, bool check_cond) const {
+    auto mc = ad->to<MeterColor>();
+    if (mc == nullptr) return false;
+    if (check_cond && !equiv_cond(ad)) return false;
+    return _meter_name == mc->_meter_name && _range == mc->_range;
+}
+
+bool MeterColor::is_subset_of(const Parameter *ad) const {
+    const MeterColor *mc = ad->to<MeterColor>();
+    if (mc == nullptr) return false;
+    if (!equiv_cond(ad)) return false;
+    if (range() != mc->range()) return false;
+    return is_padding() || _meter_name == mc->_meter_name;
+}
+
+bool MeterColor::can_merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return true;
+    const MeterColor *mc = ad->to<MeterColor>();
+    if (mc == nullptr)
+        return false;
+    return is_subset_of(mc) || mc->is_subset_of(this);
+}
+
+const Parameter *MeterColor::merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return this;
+    const MeterColor *mc = ad->to<MeterColor>();
+    BUG_CHECK(mc != nullptr, "Attempting to merge a meter color with a non meter color");
+    return is_padding() ? mc : this;
+}
 
 LocalPacking LocalPacking::split(int first_bit, int sz) const {
     BUG_CHECK(sz < bit_width && ((bit_width % sz) == 0), "Cannot split a LocalPacking evenly");
@@ -665,9 +757,12 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
 /**
  * This function creates from a RamSection with it's isolated ALU information.  This is
  * the initial state from which the RamSections can be condensed and determined
- * where the are in RAM.
+ * where the are in RAM. 
  */
 const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
+    if (has_meter_color())
+        return create_meter_color_RamSection();
+
     size_t sec_size = size();
     // Because of Action Data Bus constraints, bitmasked-set information must be packed as
     // a two container wide RamSection
@@ -801,6 +896,82 @@ cstring ALUOperation::wrapped_constant() const {
         rv = con->alias();
         break;
     }
+    return rv;
+}
+
+bool ALUOperation::has_meter_color() const {
+    for (auto param : _params) {
+        if (param.param->is<MeterColor>())
+            return true;
+    }
+    return false;
+}
+
+int ALUOperation::meter_color_right_shift() const {
+    int calculated_right_shift = -1;
+    for (auto param : _params) {
+        auto mc = param.param->to<MeterColor>();
+        BUG_CHECK(mc, "If an instruction uses meter color, it can only use meter color");
+        int slot_lo = mc->range().lo;
+        int potential_right_shift = param.phv_bits.lo - slot_lo;
+        if (potential_right_shift < 0)
+            potential_right_shift += _container.size();
+        if (calculated_right_shift < 0)
+            calculated_right_shift = potential_right_shift;
+        else
+            BUG_CHECK(calculated_right_shift == potential_right_shift, "Cannot calculate right "
+                "shift correctly in a meter color operation?");
+    }
+    return calculated_right_shift;
+}
+
+/**
+ * Meter Color is always output to bits 24..31 of immediate.  There are multiple implications
+ * of this hardware limitation for this algorithm.
+ *
+ * 1. For standard ALU operations, when a RAMSection is created, it is the size of the operation,
+ *    or 2 x size of the ALU operation.  However, because this is always in the upper section,
+ *    this creates a 32 bit RamSection size that cannot be rotated.
+ *
+ * 2. Because the parameter is locked into a position, the right shift (i.e. the rotation from
+ *    the phv_bits), is locked in before allocation, vs. other operations which can rotate
+ *    during the allocation
+ */
+const RamSection *ALUOperation::create_meter_color_RamSection() const {
+    int calculated_right_shift = meter_color_right_shift();
+    if (right_shift_set())
+        BUG_CHECK(calculated_right_shift == _right_shift, "Right shift for a meter color "
+            "operation has not been calculated correctly");
+
+
+    bitvec meter_bits_in_use;
+    PackingConstraint pc;
+    size_t sec_size = Format::IMMEDIATE_BITS;
+    RamSection *rv = new RamSection(sec_size, pc);
+    cstring meter_name;
+    for (auto param : _params) {
+        auto mc = param.param->to<MeterColor>();
+        BUG_CHECK(mc, "If an instruction uses meter color, it can only use meter color");
+        meter_name = mc->name();
+        int slot_lo = mc->range().lo;
+        meter_bits_in_use.setrange(mc->range().lo, mc->range().size());
+        rv->add_param(slot_lo + Format::METER_COLOR_START_BIT, mc);
+    }
+
+    if (calculated_right_shift != 0 && _constraint != DEPOSIT_FIELD)
+        ::error("Meter color from %1% in action %2% requires a stricter alignment with its "
+                "destination", meter_name, _action_name);
+
+    // Padding the unused bits rest with all meter color padding
+    for (auto br : bitranges(bitvec(0, Format::METER_COLOR_SIZE) - meter_bits_in_use)) {
+        le_bitrange pad_range = { br.first, br.second };
+        MeterColor *mc_padding = new MeterColor("$padding", pad_range);
+        rv->add_param(pad_range.lo + Format::METER_COLOR_START_BIT, mc_padding);
+    }
+
+    rv->add_alu_req(this);
+    BUG_CHECK(rv != nullptr, "Cannot create a RAM section from an ALUOperation");
+    BUG_CHECK(rv->alu_requirements.size() == 1, "Must have an alu requirement");
     return rv;
 }
 
@@ -1208,6 +1379,13 @@ bool RamSection::contains(const ALUOperation *ad_alu,
     auto ad = ad_alu->create_RamSection(false);
     bool rv = false;
     int init_first_phv_bit_pos = ad_alu->phv_bits().min().index();
+    // Adding the shift into the program, @seealso meter color shift
+    if (ad_alu->is_right_shift_from_hw()) {
+        init_first_phv_bit_pos += ad_alu->size() - ad_alu->meter_color_right_shift();
+        init_first_phv_bit_pos %= ad_alu->size();
+    }
+    if (ad_alu->has_meter_color())
+        init_first_phv_bit_pos += (Format::METER_COLOR_START_BIT / ad_alu->size()) * ad_alu->size();
     if (ad_alu->contains_only_one_overlap_solution())
         rv = contains(ad, init_first_phv_bit_pos, final_first_phv_bit_pos);
     else
@@ -1689,83 +1867,16 @@ cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int b
     return rv;
 }
 
-/**
- * Given a particular start byte in immediate, return true if that byte offset is used
- * by a hash dist.  Will be more necessary as other parameters will be added to the
- * locked_in_all_actions parameters
- */
-bool Format::Use::is_hash_dist(int byte_offset) const {
-    bool found = false;
-    bool hash_dist = false;
-    for (auto &alu_position : locked_in_all_actions_alu_positions) {
-        if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
-            continue;
-        auto param_positions = alu_position.alu_op->parameter_positions();
-        for (auto &param_pos : param_positions) {
-            if (param_pos.second->is<Hash>()) {
-                if (!found) {
-                    found = true;
-                    hash_dist = true;
-                } else {
-                    BUG_CHECK(hash_dist, "A hash dist and non hash dist share the same packing "
-                              "byte");
-                }
-            } else {
-                if (!found) {
-                    found = true;
-                    hash_dist = false;
-                } else {
-                    BUG_CHECK(!hash_dist, "A hash dist and non hash dist share the same "
-                                          "packing byte");
-                }
-            }
-        }
-    }
-    return hash_dist;
-}
-
-/**
- * Given a particular start byte in immediate, return true if that byte offset is used
- * by a random number
- * FIXME: Could be Templated with is_hash_dist as well.  C++ ability is not strong enough
- * without consulting Chris
- */
-bool Format::Use::is_rand_num(int byte_offset) const {
-    bool found = false;
-    bool rand_num = false;
-    for (auto &alu_position : locked_in_all_actions_alu_positions) {
-        if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
-            continue;
-        auto param_positions = alu_position.alu_op->parameter_positions();
-        for (auto &param_pos : param_positions) {
-            if (param_pos.second->is<RandomNumber>()) {
-                if (!found) {
-                    found = true;
-                    rand_num = true;
-                } else {
-                    BUG_CHECK(rand_num, "A random number and non random number share the "
-                                        "same packing byte");
-                }
-            } else {
-                if (!found) {
-                    found = true;
-                    rand_num = false;
-                } else {
-                    BUG_CHECK(!rand_num, "A random number and non random number share the "
-                                         "same packing byte");
-                }
-            }
-        }
-    }
-    return rand_num;
-}
-
 const RamSection *Format::Use::build_locked_in_sect() const {
     const RamSection *rv = new RamSection(IMMEDIATE_BITS);
     for (auto &alu_pos : locked_in_all_actions_alu_positions) {
         auto new_ram_sect = alu_pos.alu_op->create_RamSection(false);
         auto exp_ram_sect = new_ram_sect->expand_to_size(IMMEDIATE_BITS);
         auto curr_ram_sect = exp_ram_sect->can_rotate(0, alu_pos.start_byte * 8);
+        if (!alu_pos.alu_op->is_right_shift_from_hw())
+            curr_ram_sect = exp_ram_sect->can_rotate(0, alu_pos.start_byte * 8);
+        else
+            curr_ram_sect = new RamSection(*exp_ram_sect);
         BUG_CHECK(curr_ram_sect != nullptr, "Speciality argument cannot be built");
         auto tmp = rv->merge(curr_ram_sect);
         delete rv;
@@ -1883,6 +1994,22 @@ void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits
 }
 
 /**
+ * Creates a MeterColor parameter, associated with an AttachedOutput
+ */
+void Format::create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &read,
+        le_bitrange container_bits) {
+    auto ir_ao = read.unsliced_expr()->to<IR::MAU::AttachedOutput>();
+    BUG_CHECK(ir_ao != nullptr, "Cannot create meter color");
+    auto meter_name = ir_ao->attached->name;
+    auto range = read.range();
+    BUG_CHECK(range.hi < METER_COLOR_SIZE, "Meter color of %1% parameter is greater than %2% "
+        "bits", ir_ao, METER_COLOR_SIZE);
+    MeterColor *mc = new MeterColor(meter_name, range);
+    ALUParameter ap(mc, container_bits);
+    alu.add_param(ap);
+}
+
+/**
  * Creates a conditional argument, i.e. a bunch of 1 bit parameters that are the width
  * of the argument to be set conditionally
  */
@@ -1967,6 +2094,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
             for (auto &read : field_action.reads) {
                 if (!(read.speciality == ActionAnalysis::ActionParam::HASH_DIST ||
                       read.speciality == ActionAnalysis::ActionParam::RANDOM ||
+                      read.speciality == ActionAnalysis::ActionParam::METER_COLOR ||
                       read.speciality == ActionAnalysis::ActionParam::NO_SPECIAL)) {
                     continue;
                 }
@@ -1977,6 +2105,12 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
                 } else if (read.speciality == ActionAnalysis::ActionParam::RANDOM) {
                     create_random_number(*alu, read, container_bits, action_name);
                     rand_num_write_bits.setrange(container_bits.lo, container_bits.size());
+                    contains_speciality = true;
+                } else if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
+                    // Currently the action bus handling in assembly forces this
+                    ERROR_CHECK(container.size() == 8, "Currently PHVs with ALU operations "
+                        "on meter color are only able to be allocated to 8 bit containers");
+                    create_meter_color(*alu, read, container_bits);
                     contains_speciality = true;
                 } else if (read.is_conditional) {
                     create_mask_argument(*alu, read, container_bits);
@@ -2431,17 +2565,11 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
             break; }
     }
 
-    bool imm_path1 = speciality_use.is_immed_speciality_in_use();
-    bool imm_path2 = locked_in_all_actions_sects.size() > 0;
+    bool imm_path_used = locked_in_all_actions_sects.size() > 0;
 
-    go_imm &= !(imm_path1 || imm_path2);
-    if (imm_path1 && imm_path2) {
-        fatal_error("%1%: The current action data packing algorithm in p4c can only have "
-            "Hash, RNG, or a Meter Color in a single table, and not yet all three.  Please "
-            "separate this into multiple logical tables from %2%", tbl, tbl->name);
-    }
+    go_imm &= !(imm_path_used);
 
-    if (speciality_use.is_immed_speciality_in_use())
+    if (imm_path_used)
         go_imm = false;
 
     if (bytes_per_loc[ACTION_DATA_TABLE] == 0)
@@ -2817,11 +2945,57 @@ void Format::assign_RamSections_to_bytes() {
         Format::IMMEDIATE_BITS / 8);
 }
 
+/**
+ * Any ALU operation that right shift is locked before allocation, specifically right now only
+ * MeterColor, which cannot be rotated to, as the rotation doesn't work for locked in shifts
+ */
+const ALUOperation *Format::finalize_locked_shift_alu_operation(const RamSection *ram_sect,
+        const ALUOperation *init_ad_alu, int right_shift) {
+    BUG_CHECK(init_ad_alu->has_meter_color(), "Locked shift alu operation must contain "
+              "MeterColor");
+    int right_shift_validate = init_ad_alu->meter_color_right_shift();
+    BUG_CHECK(right_shift == right_shift_validate, "Meter Color right shift miscalculated");
+    auto ad_alu = init_ad_alu->add_right_shift(right_shift, nullptr);
+    // Validates that the right shift is calculated correctly, by shifting the
+    // alu operation by that much, and determining if the ALU operation is
+    // a subset of the original Ram Section
+    auto ram_sect_check = ad_alu->create_RamSection(false);
+    bool is_subset = ram_sect_check->is_data_subset_of(ram_sect);
+    delete ram_sect_check;
+    BUG_CHECK(is_subset, "Right shift not calculated correctly");
+    return ad_alu;
+}
+
+const ALUOperation *Format::finalize_alu_operation(const RamSection *ram_sect,
+        const ALUOperation *init_ad_alu, int right_shift, int section_byte_offset,
+        int *rot_alias_idx) {
+    auto ad_alu = init_ad_alu->add_right_shift(right_shift, rot_alias_idx);
+    // Validates that the right shift is calculated correctly, by shifting the
+    // alu operation by that much, and determining if the ALU operation is
+    // a subset of the original Ram Section
+    // Cannot safely rotate meter color, as the packing constraints of meter color do
+    // not allow it.  With the constraints on meter color location, the rotation is already
+    // built into the RamSection
+    auto ram_sect_check1 = ad_alu->create_RamSection(false);
+    auto ram_sect_check2 = ram_sect_check1->expand_to_size(ram_sect->size());
+    auto ram_sect_check  = ram_sect_check2->can_rotate(0, section_byte_offset * 8);
+    BUG_CHECK(ram_sect_check != nullptr, "Finalize ALU operation has unsafe rotation");
+
+    bool is_subset = ram_sect_check->is_data_subset_of(ram_sect);
+    BUG_CHECK(is_subset, "Right shift not calculated correctly");
+
+    delete ram_sect_check1;
+    delete ram_sect_check2;
+    delete ram_sect_check;
+    return ad_alu;
+}
+
 
 void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         safe_vector<ALUPosition> &alu_positions, BusInputs &verify_inputs, int *rot_alias_idx) {
     for (auto *init_ad_alu : ram_sect.section->alu_requirements) {
-        // Determines the right shift of each ALUOperation
+        const ALUOperation *ad_alu = nullptr;
+        // Determines right shift of each ALU operation
         int first_phv_bit_pos = 0;
         bool does_contain = ram_sect.section->contains(init_ad_alu, &first_phv_bit_pos);
         BUG_CHECK(does_contain, "ALU object is not in container");
@@ -2830,19 +3004,12 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         first_phv_bit_pos = first_phv_bit_pos % init_ad_alu->size();
         int right_shift = init_ad_alu->phv_bits().min().index() - first_phv_bit_pos;
         right_shift = (right_shift + init_ad_alu->size()) % init_ad_alu->size();
-        auto ad_alu = init_ad_alu->add_right_shift(right_shift, rot_alias_idx);
-        // Validates that the right shift is calculated correctly, by shifting the
-        // alu operation by that much, and determining if the ALU operation is
-        // a subset of the original Ram Section
-        auto ram_sect_check1 = ad_alu->create_RamSection(false);
-        auto ram_sect_check2 = ram_sect_check1->expand_to_size(ram_sect.section->size());
-        auto ram_sect_check  = ram_sect_check2->can_rotate(0, section_byte_offset * 8);
-        bool is_subset = ram_sect_check ? ram_sect_check->is_data_subset_of(ram_sect.section) :
-            false;
-        delete ram_sect_check1;
-        delete ram_sect_check2;
-        if (ram_sect_check) delete ram_sect_check;
-        BUG_CHECK(is_subset, "Right shift not calculated correctly");
+        if (init_ad_alu->is_right_shift_from_hw())
+            ad_alu = finalize_locked_shift_alu_operation(ram_sect.section, init_ad_alu,
+                                                         right_shift);
+        else
+            ad_alu = finalize_alu_operation(ram_sect.section, init_ad_alu, right_shift,
+                                            section_byte_offset, rot_alias_idx);
         int start_byte = section_byte_offset + ram_sect.byte_offset;
         int byte_sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2
                                                             : ad_alu->size();
@@ -2924,7 +3091,6 @@ void Format::build_potential_format(bool immediate_forced) {
         loc_i++;
     }
     build_locked_in_format(use);
-    use.speciality_use = speciality_use;
     use.bytes_per_loc = bytes_per_loc;
     use.determine_immediate_mask();
     use.determine_mod_cond_maps();

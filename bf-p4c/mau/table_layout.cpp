@@ -407,8 +407,6 @@ void DoTableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU
  */
 void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
-    safe_vector<ActionFormat::Use> uses;
-    ActionFormat af(tbl, phv, alloc_done);
     bool immediate_allowed = true;
     bool immediate_forced = tbl->is_force_immediate();
     // Action Profiles cannot have any immediate data
@@ -427,12 +425,15 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
                   "number results.", tbl, tbl->externalName());
     }
 
-    af.allocate_format(uses, immediate_allowed);
-    safe_vector<ActionData::Format::Use> uses_2;
-    ActionData::Format af2(phv, tbl, uses_2, uses[0]);
-    af2.allocate_format(immediate_forced);
-    lc.total_action_formats[tbl->name] = uses_2;
-    tbl->layout.action_data_bytes = af.action_data_bytes;
+    safe_vector<ActionData::Format::Use> uses;
+    ActionData::Format af(phv, tbl, uses);
+    af.allocate_format(immediate_forced);
+    lc.total_action_formats[tbl->name] = uses;
+    if (uses.size() > 0) {
+        tbl->layout.action_data_bytes =
+            uses[0].bytes_per_loc[ActionData::ACTION_DATA_TABLE] +
+            uses[0].bytes_per_loc[ActionData::IMMEDIATE];
+    }
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate

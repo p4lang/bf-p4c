@@ -1443,7 +1443,6 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, bitvec source) const {
     auto &action_data_xbar = tbl->resources->action_data_xbar;
     auto &format = tbl->resources->action_format;
-    auto &speciality_use = format.speciality_use;
     auto &meter_xbar = tbl->resources->meter_xbar;
     auto &meter_use = tbl->resources->meter_format;
     size_t max_total = 0;
@@ -1480,7 +1479,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         auto emit_adt = source.getbit(ActionData::ACTION_DATA_TABLE)
                         && (rs.source == ActionData::ACTION_DATA_TABLE);
         if (!emit_immed && !emit_adt) continue;
-        auto immed = (rs.source == ActionData::IMMEDIATE);
+        auto source_is_immed = (rs.source == ActionData::IMMEDIATE);
         bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
         int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
         out << rs.location.byte;
@@ -1491,8 +1490,8 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         // For emitting hash distribution sections on the action_bus directly.  Must find
         // which slices of hash distribution are to go to which bytes, requiring coordination
         // from the input xbar and action format allocation
-        if (emit_immed && rs.source == ActionData::IMMEDIATE
-            && format.is_hash_dist(rs.byte_offset)) {
+        if (emit_immed && source_is_immed
+            && format.is_byte_offset<ActionData::Hash>(rs.byte_offset)) {
             safe_vector<int> all_hash_dist_units = tbl->resources->hash_dist_immed_units();
             bitvec slot_hash_dist_units;
             int immed_lo = rs.byte_offset * 8;
@@ -1530,13 +1529,15 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ", " << lo_hi;
             }
             out << ")";
-        } else if (emit_immed && format.is_rand_num(rs.byte_offset)) {
+        } else if (emit_immed && source_is_immed
+                   && format.is_byte_offset<ActionData::RandomNumber>(rs.byte_offset)) {
             int rng_unit = tbl->resources->rng_unit();
             out << "rng(" << rng_unit << ", ";
             int lo = rs.byte_offset * 8;
             int hi = lo + byte_sz * 8 - 1;
             out << lo << ".." << hi << ")";
-        } else if (speciality_use.is_meter_color(rs.byte_offset, immed)) {
+        } else if (emit_immed && source_is_immed
+                   && format.is_byte_offset<ActionData::MeterColor>(rs.byte_offset)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
@@ -1749,7 +1750,6 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
     if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
         BUG_CHECK(!Device::numLongBranchTags() || options.disable_long_branch,
                   "long branch incompatible with exit action");
-        LOG1("  next for exit action");
         NextTableSet rv;
         rv.insert(UniqueId("END"));
         return rv;
@@ -1835,17 +1835,14 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << indent << "- next_table: ";
         if (table->action_chain()) {
             int ntb = table->resources->table_format.next_table_bits();
-            LOG1("  next table bits " << ntb);
             if (ntb == 0) {
                 out << mem_code;
             } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
                 safe_vector<NextTableSet> next_table_map;
                 self.next_table_non_action_map(table, next_table_map);
                 for (auto entry : next_table_map) {
-                    LOG1("  next table entry : " << entry);
                 }
                 cstring act_next_for = self.next_for(table, act->name.originalName);
-                LOG1("  act next for " << act_next_for);
                 auto it = std::find(next_table_map.begin(), next_table_map.end(), act_next_for);
                 BUG_CHECK(it != next_table_map.end(), "Next table cannot be associated");
                 out << (it - next_table_map.begin());

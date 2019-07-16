@@ -991,19 +991,13 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
          << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
 
     auto &ad_xbar = alloc.action_data_xbar;
-    const ActionFormat::Use *special_use = &use->speciality_use;
 
     // Immediate allocation
     // bitvec immed_layouts[ActionData::SLOT_TYPES];
     ActionData::BusInputs immed_layouts = use->bus_inputs[ActionData::IMMEDIATE];
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
         immed_layouts[i] |= use->locked_in_all_actions_bus_inputs[i];
-        // immed_layouts[i] |= special_use->hash_dist_layouts[i];
-        // immed_layouts[i] |= special_use->rand_num_layouts[i];
     }
-    // Known limitation of the action data packing
-    if (special_use->meter_reserved)
-        immed_layouts[ActionData::BYTE].setbit(3);
 
     bool allocated = alloc_immediate(immed_layouts, ad_xbar, tbl->name);
     if (!allocated) return false;
