@@ -163,10 +163,10 @@ bool NextTableProp::preorder(IR::MAU::Table* t) {
 
 void NextTableProp::end_apply() {
     // Pretty print long branch usage
-    LOG3(pretty_print().str());
+    LOG3(pretty_print());
 }
 
-std::stringstream NextTableProp::pretty_print() {
+std::string NextTableProp::pretty_print() {
     std::stringstream ss;
     std::vector<std::string> header;
     header.push_back("Tag #");
@@ -210,5 +210,5 @@ std::stringstream NextTableProp::pretty_print() {
     }
     tp->print();
     ss << std::endl;
-    return ss;
+    return ss.str();
 }

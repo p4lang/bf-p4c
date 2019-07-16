@@ -64,7 +64,7 @@ class NextTableProp : public MauModifier {
 
     // Capture information for pretty printing long branches (tag # -> src stage # -> src,dest)
     std::map<int, std::map<int, std::pair<const IR::MAU::Table*, const IR::MAU::Table*>>> lb_pp;
-    std::stringstream pretty_print();
+    std::string pretty_print();
 
     // Allocates a long_branch according to global use of lb tags
     void alloc(NextTable& nt, int first_stage);
