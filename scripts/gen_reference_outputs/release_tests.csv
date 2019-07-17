@@ -1,0 +1,26 @@
+# p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
+# switch-14 rel_8_8
+# switch-14 rel_8_9
+switch_msdc,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_PROFILE -DP4_WRED_DEBUG",tofino,p4-14,v1model,skip_Glass
+switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,"-DENT_DC_GENERAL_PROFILE",tofino,p4-14,v1model,skip_Glass
+switch_dc_basic,p4-tests/p4_14/switch/p4src/switch.p4,,"-DDC_BASIC_PROFILE",tofino,p4-14,v1model,skip_Glass
+switch_msdc_ipv4,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_IPV4_PROFILE",tofino,p4-14,v1model,skip_Glass
+switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_SPINE_DTEL_INT_PROFILE",tofino,p4-14,v1model,skip_Glass
+# switch-16 rel_8_9 (tofino)
+# switch-16 rel_8_9 (tofino2)
+# switch-16 p4c/working-top (tofino)
+switch_16_tofino_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,,tofino,p4-16,tna,skip_Glass
+switch_16_tofino_a0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_a0.p4,p4-tests/p4_16/switch_16/p4src/shared,-DA0_PROFILE -Xp4c=\"--disable-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
+switch_16_tofino_b0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_b0.p4,p4-tests/p4_16/switch_16/p4src/shared,-DB0_PROFILE -Xp4c=\"--disable-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
+switch_16_tofino_l0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_profile_l0.p4,p4-tests/p4_16/switch_16/p4src/shared,"-DL0_PROFILE",tofino,p4-16,tna,skip_Glass
+# switch-16 p4c/working-top (tofino2)
+switch_16_tofino2_default,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch.p4,p4-tests/p4_16/switch_16/p4src/shared,,tofino2,p4-16,t2na,skip_Glass
+switch_16_tofino2_c0,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_c0.p4,p4-tests/p4_16/switch_16/p4src/shared,"-DC0_PROFILE",tofino2,p4-16,t2na,skip_Glass
+switch_16_tofino2_d0,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_d0.p4,p4-tests/p4_16/switch_16/p4src/shared,"-DD0_PROFILE",tofino2,p4-16,t2na,skip_Glass
+switch_16_tofino2_l0,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_profile_l0.p4,p4-tests/p4_16/switch_16/p4src/shared,"-DL0_PROFILE",tofino2,p4-16,t2na,skip_Glass
+# customer
+arista_1214,p4-tests/p4_16/customer/arista/p4c-1214.p4,,,tofino,p4-16,tna,skip_Glass
+arista_1813,p4-tests/p4_16/customer/arista/p4c-1813.p4,,,tofino,p4-16,tna,skip_Glass
+kaloom_1832,p4-tests/p4_16/customer/kaloom/p4c-1832.p4,,,tofino,p4-16,tna,skip_Glass
+extreme_1802,p4-tests/p4_16/customer/extreme/p4c-1802.p4,,,tofino,p4-16,tna,skip_Glass
+extreme_1809,p4-tests/p4_16/customer/extreme/p4c-1809.p4,,,tofino,p4-16,tna,skip_Glass

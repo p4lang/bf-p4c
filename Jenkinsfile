@@ -46,7 +46,7 @@ node ('compiler || compiler-svr4') {
                             sh "git submodule update --init --recursive"
                             // Update switch.p4-16 to the latest known working refpoint
                             switch_16_repo = 'p4-tests/p4_16/switch_16'
-                            switch_16_branch = 'p4c/working-top'
+                            switch_16_branch = 'master'
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
@@ -97,11 +97,11 @@ node ('compiler-svr1 || master') {
                         passwordVariable: "DOCKER_PASSWORD"
                     )]) {
                         sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
-                        sh "docker pull barefootnetworks/compiler_metrics:latest"
+                        sh "docker pull barefootnetworks/compiler_metrics:stage"
                     }
                     sh "mkdir -p metrics_store"
                     metrics_cid = sh (
-                        script: 'docker run --rm -t -d -w /bfn/compiler_metrics/database --entrypoint bash barefootnetworks/compiler_metrics:latest',
+                        script: 'docker run --rm -t -d -w /bfn/compiler_metrics/database --entrypoint bash barefootnetworks/compiler_metrics:stage',
                         returnStdout: true
                     ).trim()
                     sh "echo 'metrics cid: ' $metrics_cid"

@@ -398,3 +398,23 @@ p4c_add_xfail_reason("tofino2"
   "Unsupported on target Cannot specify .* as the default action, as it requires the hash distribution unit"
   p4_16_internal_p4_16_hwlrn
 )
+
+p4c_add_xfail_reason("tofino2"
+  "too many long branches table .*"
+  smoketest_switch_16_compile
+)
+
+p4c_add_xfail_reason("tofino2"
+  "PHV allocation was not successful"
+  smoketest_switch_16_compile_d0_profile
+)
+
+p4c_add_xfail_reason("tofino2"
+  "AssignmentStatement: Cannot unify bit<.*> to bit<.*>"
+  smoketest_switch_16_compile_l0_profile
+)
+
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expected packet was not received on device"
+  smoketest_switch_16_Tests
+)

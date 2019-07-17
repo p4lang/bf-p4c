@@ -457,7 +457,7 @@ def main():
     
     # bf_switch has a different context.json path
     if args.bfrt_test and 'switch_16' in compiler_out_dir:
-        cxt_json_path = os.path.join(compiler_out_dir, 'p4src/switch-tofino/switch/pipe/context.json')
+        cxt_json_path = os.path.join(compiler_out_dir, 'p4src/switch/pipe/context.json')
     else:
         cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
     if args.bfrt_test is None and not os.path.exists(cxt_json_path):

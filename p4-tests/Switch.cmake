@@ -104,24 +104,34 @@ set_tests_properties("tofino/switch_${SWITCH_VERSION}_ent_dc_general" PROPERTIES
 # Switch P4-16
 set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
 set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
-set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch.p4)
 set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
+
+set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch.p4)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
+
+set (SWITCH_P4_16_A0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_a0.p4)
+file (RELATIVE_PATH switch_p4_16_a0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_A0})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16} "${testExtraArgs}" "-DA0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
+  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16_a0} "${testExtraArgs}" "-DA0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
+
+set (SWITCH_P4_16_B0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_b0.p4)
+file (RELATIVE_PATH switch_p4_16_b0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_B0})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16} "${testExtraArgs}" "-DB0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
+  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16_b0} "${testExtraArgs}" "-DB0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -Xp4c=\"--disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
+
+set (SWITCH_P4_16_L0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_profile_l0.p4)
+file (RELATIVE_PATH switch_p4_16_l0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_L0})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
+  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16_l0} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
          "all
          ^switch_tests.L3SVITest
@@ -135,15 +145,15 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
          ^switch_hostif.HostIfRxTest
 	 ^switch_tests.L2LagTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
          "switch_hostif.HostIfPingTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
          "switch_hostif.HostIfRxTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
-   "${testExtraArgs} -bfrt -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
          "switch_tests.L2FloodTest
           switch_tests.IPv4MalformedPacketsTest
