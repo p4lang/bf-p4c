@@ -743,7 +743,7 @@ if (ENABLE_BAREFOOT_INTERNAL)
   add_custom_command(OUTPUT ${TOFINO_TARGET_CFG_FILE}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg ${TOFINO_TARGET_CFG_FILE}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
-    COMMENT "Copying Tofino2 config")
+    COMMENT "Copying Tofino config")
 else()
   # Remove support for production distributions
   add_custom_command(OUTPUT ${TOFINO_TARGET_CFG_FILE}
@@ -851,7 +851,7 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
-
+add_dependencies(linkp4cbarefoot remove_psa_for_tofino)
 
 
 # Set default target and architecture to tofino-tna

@@ -342,7 +342,7 @@ class MeterColor : public Parameter {
     bool from_p4_program() const override { return true; }
     cstring name() const override { return _meter_name; }
     const Parameter *split(int lo, int hi) const override;
-    bool only_one_overlap_solution() const { return true; }
+    bool only_one_overlap_solution() const override { return true; }
     bool is_next_bit_of_param(const Parameter *, bool same_alias) const override;
     const Parameter *get_extended_param(uint32_t extension, const Parameter *) const override;
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
