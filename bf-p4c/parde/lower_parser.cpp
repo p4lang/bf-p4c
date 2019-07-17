@@ -121,20 +121,6 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
     return cstring(info);
 }
 
-/// @return a string containing debugging info describing what a Select
-/// primitive is matching against.
-cstring debugInfoFor(const IR::BFN::Select* select, nw_byterange source) {
-    std::stringstream info;
-
-    info << "match " << source << ": ";
-    if (select->p4Source)
-        info << select->p4Source->toString();
-    else
-        info << "(buffer)";
-
-    return cstring(info);
-}
-
 /// Helper class that splits extract operations into multiple smaller extracts,
 /// such that each extract writes to exactly one PHV container.
 struct ExtractSimplifier {
@@ -850,20 +836,24 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredState->select = loweredSelect;
 
         for (auto* transition : state->transitions) {
-            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
-            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
-                                               state->name, *transition->shift);
+            BUG_CHECK(transition->shift <= Device::pardeSpec().byteInputBufferSize(),
+                      "State %1% has shift %2% more than buffer size?",
+                      state->name, transition->shift);
             BUG_CHECK(loweredStates.find(transition->next) != loweredStates.end(),
                       "Didn't already lower state %1%?",
                       transition->next ? transition->next->name : cstring("(null)"));
+
             IR::Vector<IR::BFN::LoweredSave> saves;
+
             for (const auto* save : transition->saves) {
                 saves.push_back(
                     new IR::BFN::LoweredSave(
                             save->dest,
                             save->source->range.toUnit<RangeUnit::Byte>()));
             }
+
             IR::BFN::LoweredMatchValue* match_value = nullptr;
+
             if (auto* const_value = transition->value->to<IR::BFN::ParserConstMatchValue>()) {
                 match_value = new IR::BFN::LoweredConstMatchValue(const_value->value);
             } else if (auto* pvs = transition->value->to<IR::BFN::ParserPvsMatchValue>()) {
@@ -872,9 +862,10 @@ struct ComputeLoweredParserIR : public ParserInspector {
             } else {
                 BUG("Unknown match value %1%", transition->value);
             }
+
             auto* loweredMatch = new IR::BFN::LoweredParserMatch(
                     match_value,
-                    *transition->shift,
+                    transition->shift,
                     loweredExtracts,
                     saves,
                     loweredChecksums,

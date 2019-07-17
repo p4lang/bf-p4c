@@ -212,9 +212,7 @@ struct CollectParserUseDef : PassManager {
                         for (auto t : graph.transitions(pred, state)) {
                             auto shift = t->shift;
 
-                            BUG_CHECK(shift, "transition has no shift?");
-
-                            auto shifted_rval = rval->apply(ShiftPacketRVal(-(*shift * 8), true));
+                            auto shifted_rval = rval->apply(ShiftPacketRVal(-(shift * 8), true));
                             auto defs = find_defs(shifted_rval->to<IR::BFN::InputBufferRVal>(),
                                                   graph, pred);
 

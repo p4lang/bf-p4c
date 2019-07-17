@@ -402,12 +402,9 @@ class CollectParserInfoImpl : public PardeInspector {
                       "Missing parser transition from %s to %s", src->name, succ->name);
 
             auto t = *(transitions.begin());
-            const auto& shift_bytes = t->shift;
-            BUG_CHECK(shift_bytes, "Missing parser shift amount in transition from %s to %s",
-                      src->name, succ->name);
 
             for (auto amount : *amounts)
-                result->insert(amount + *shift_bytes * 8);
+                result->insert(amount + t->shift * 8);
         }
 
         return all_shift_amounts_[src][dst] = result;

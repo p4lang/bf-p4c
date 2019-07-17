@@ -356,18 +356,18 @@ class Transition {
 #emit
     Transition(match_t v)
         : value(new ParserConstMatchValue(v)), next(nullptr) { }
-    Transition(match_t v, boost::optional<int> shift)
+    Transition(match_t v, unsigned shift)
         : value(new ParserConstMatchValue(v)), shift(shift), next(nullptr) { }
-    Transition(match_t v, boost::optional<int> shift, const ParserState* next)
+    Transition(match_t v, unsigned shift, const ParserState* next)
         : value(new ParserConstMatchValue(v)), shift(shift), next(next) { }
 #end
+
     /// The owning state's select expressions evaluate to a value which
     /// matches this...
     ParserMatchValue               value;
 
-    /// ...then shift the input buffer by this number of bytes (or boost::none
-    /// if we don't know how many bytes we need to shift by yet)...
-    boost::optional<int>           shift;
+    /// number of bytes to shift out of the input buffer
+    unsigned                       shift;
 
     /// ...and transition to this state (or, if null, end the parser program).
     NullOK ParserState             next;

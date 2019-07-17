@@ -1473,7 +1473,7 @@ void CreateConstants::insert_init_consts_state(IR::BFN::Parser* parser) {
     auto transition = new IR::BFN::Transition(match_t(), 0, parser->start);
 
     auto init_consts = new IR::BFN::ParserState(
-                             createThreadName(parser->gress, "$_init_consts"),
+                             createThreadName(parser->gress, "$init_consts"),
                              parser->gress, { }, { }, { transition });
 
     for (auto& kv : const_to_bytes[parser->gress]) {

@@ -63,7 +63,7 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         t->next->selects.apply(max_save);
         t->next->statements.apply(max_save);
 
-        return (*t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
+        return (t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
     }
 
     IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
@@ -642,7 +642,7 @@ class MatcherAllocator : public Visitor {
 
             if (src_state != def_state) {
                 BUG_CHECK(transition->next == def_state, "whoa");
-                auto shift = *(transition->shift);
+                auto shift = transition->shift;
                 group_range = group_range.shiftedByBytes(shift);
             }
 
@@ -1023,7 +1023,7 @@ struct RemoveEmptyStartState : public ParserTransform {
         if (!t->saves.empty())
             return nullptr;
 
-        if (t->shift && *t->shift == 0)
+        if (t->shift == 0)
             return t->next;
 
         return nullptr;

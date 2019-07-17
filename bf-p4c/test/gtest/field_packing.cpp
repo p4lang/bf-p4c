@@ -315,7 +315,7 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     EXPECT_EQ(finalState, extractionState->transitions[0]->next);
     EXPECT_TRUE(extractionState->transitions[0]->shift);
     EXPECT_EQ(static_cast<int>((packing.totalWidth / 8)),
-              *extractionState->transitions[0]->shift);
+              extractionState->transitions[0]->shift);
 
     // Verify that the state reproduces the packing and has the structure we
     // expect. Note that padding isn't represented as a separate IR object; it's

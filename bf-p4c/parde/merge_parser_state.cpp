@@ -138,7 +138,7 @@ class ComputeMergeableState : public ParserInspector {
                 is_first = false;
             }
 
-            shifted += *transition->shift;
+            shifted += transition->shift;
         }
 
         // FIXME(zma) shift using visitor
@@ -183,7 +183,7 @@ class ComputeMergeableState : public ParserInspector {
             saves.push_back(rightShiftSource(save, shifted)); }
         auto* rst = new IR::BFN::Transition(
                 prev_transition->value,
-                *prev_transition->shift + shifted,
+                prev_transition->shift + shifted,
                 prev_transition->next);
         rst->saves = saves;
         return rst;

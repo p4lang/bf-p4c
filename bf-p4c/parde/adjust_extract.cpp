@@ -108,10 +108,9 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
     IR::Vector<IR::BFN::Transition> adjusted_transitions;
     for (const auto* transition : state->transitions) {
         auto* adjusted_transition = transition->clone();
-        BUG_CHECK(transition->shift, "shift unknown for %1% in %2%", transition, state->name);
         BUG_CHECK(aggregated.back() % 8 == 0,
                   "newly added padding is not byte-sized? %1%", aggregated.back());
-        adjusted_transition->shift = *(transition->shift) + (aggregated.back() / 8);
+        adjusted_transition->shift = transition->shift + (aggregated.back() / 8);
 
         IR::Vector<IR::BFN::SaveToRegister> adjusted_saves;
         for (const auto* save : transition->saves) {

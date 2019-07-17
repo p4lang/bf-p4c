@@ -8,15 +8,6 @@
 
 namespace {
 
-class VerifyAssignedShifts : public ParserInspector {
-    bool preorder(const IR::BFN::Transition* transition) override {
-        BUG_CHECK(transition->shift,
-                  "Parser transition in state %1% was not assigned a shift",
-                  findContext<IR::BFN::ParserState>()->name);
-        return true;
-    }
-};
-
 // Need to ensure that every distinct UnresolvedStackRef is in fact a distinct Node,
 // but cannot clone any ParserState.
 // XXX(seth): You'd ideally do this when actually constructing the parser IR,
@@ -235,49 +226,6 @@ struct ResolveNextAndLast : public PassManager {
     }
 };
 
-/// Verify that every r-value referenced in the parser program only appears
-/// once. This is a requirement for the correctness of
-/// CopyPropagateParserValues.
-class VerifyParserRValsAreUnique : public ParserInspector {
-    profile_t init_apply(const IR::Node* root) override {
-        visitedParserRVals.clear();
-        return Inspector::init_apply(root);
-    }
-    bool preorder(const IR::BFN::ParserRVal* value) override {
-        BUG_CHECK(visitedParserRVals.find(value) == visitedParserRVals.end(),
-                  "Parser r-value appears in more than one place: %1%", value);
-        visitedParserRVals.insert(value);
-        return false;
-    }
-
-    std::set<const IR::BFN::ParserRVal*> visitedParserRVals;
-};
-
-/// Verify that every parser state have unique name.
-/// This is a requirement for the correctness from CopyPropagateParserValues to
-/// AllocateParserMatchRegisters, as state name is used to check equalilty between state*.
-class VerifyStateNamessAreUnique : public ParserInspector {
-    profile_t init_apply(const IR::Node* root) override {
-        visitedNames.clear();
-        return Inspector::init_apply(root);
-    }
-    bool preorder(const IR::BFN::Parser *parser) override {
-        visitedNames.clear();  // each parser is independent and CANNOT share states
-        LOG4("VerifyStateNamessAreUnique for "<< parser->toString()
-               << " start=" << parser->start->name);
-        return true; }
-
-    bool preorder(const IR::BFN::ParserState* state) override {
-        cstring name = cstring::to_cstring(state->gress) + state->name;
-        BUG_CHECK(visitedNames.count(name) == 0,
-                  "Duplicated parser state name appears: %1%", name);
-        visitedNames.insert(name);
-        return false;
-    }
-
-    std::set<cstring> visitedNames;
-};
-
 class CheckResolvedHeaderStackExpressions : public ParserInspector {
     bool preorder(const IR::BFN::UnresolvedStackRef* stackRef) {
         ::error("Couldn't resolve header stack reference in state %1%: %2%",
@@ -291,7 +239,6 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
 ResolveHeaderStackValues::ResolveHeaderStackValues() :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     addPasses({
-        new VerifyAssignedShifts,
         new ResolveNextAndLast,
         new CheckResolvedHeaderStackExpressions
     });

@@ -189,8 +189,8 @@ struct SliceExtracts : public ParserModifier {
     }
 };
 
-static boost::optional<int> get_state_shift(const IR::BFN::ParserState* state) {
-    boost::optional<int> state_shift;
+static unsigned get_state_shift(const IR::BFN::ParserState* state) {
+    unsigned state_shift = 0;
 
     for (unsigned i = 0; i < state->transitions.size(); i++) {
         auto t = state->transitions[i];
@@ -865,9 +865,7 @@ struct AllocateParserState : public ParserTransform {
             shift = std::min(shift, min_extracts.rv);
 
             auto state_shift = get_state_shift(state);
-
-            if (state_shift)
-                shift = std::min(shift, (*state_shift * 8));
+            shift = std::min(shift, static_cast<int>(state_shift * 8));
 
             BUG_CHECK(shift >= 0, "Computed negative shift");
 
@@ -927,13 +925,10 @@ struct AllocateParserState : public ParserTransform {
         IR::BFN::Transition*
         shift_transition(const IR::BFN::Transition* t, int shift_amt) {
              BUG_CHECK(shift_amt % 8 == 0, "Shift amount not byte-aligned?");
-             BUG_CHECK(t->shift, "Transition %1% has no shift?", t);
 
              auto c = t->clone();
 
-             auto new_shift = *(t->shift) - shift_amt / 8;
-             BUG_CHECK(new_shift >= 0, "Transition shifted to be negative?");
-
+             auto new_shift = t->shift - shift_amt / 8;
              c->shift = new_shift;
              c->saves = *(c->saves.apply(ShiftPacketRVal(shift_amt)));
 
@@ -981,31 +976,31 @@ struct AllocateParserState : public ParserTransform {
 
                 int total_shift = 0;
 
-                if (o_shift) total_shift += *o_shift;
-                if (s_shift) total_shift += *s_shift;
+                if (o_shift) total_shift += o_shift;
+                if (s_shift) total_shift += s_shift;
 
                 if (orig_shift)
-                    BUG_CHECK(*orig_shift == total_shift, "Shifts don't add up after split");
+                    BUG_CHECK(orig_shift == total_shift, "Shifts don't add up after split");
             }
         };
 
         IR::BFN::ParserState* insert_stall_if_needed(IR::BFN::ParserState* state) {
             auto shift = get_state_shift(state);
 
-            if (!shift || *shift <= Device::pardeSpec().byteInputBufferSize())
+            if (shift <= Device::pardeSpec().byteInputBufferSize())
                 return nullptr;
 
             cstring name = state->name + ".$stall";
             auto stall = new IR::BFN::ParserState(state->p4State, name, state->gress);
 
             auto stall_amt = Device::pardeSpec().byteInputBufferSize();
-            auto new_shift = *shift - Device::pardeSpec().byteInputBufferSize();
+            auto new_shift = shift - Device::pardeSpec().byteInputBufferSize();
 
             IR::Vector<IR::BFN::Transition> new_transitions;
 
             for (auto t : state->transitions) {
                 auto c = t->clone();
-                c->shift = boost::make_optional(new_shift);
+                c->shift = new_shift;
                 new_transitions.push_back(c);
             }
 
@@ -1144,8 +1139,8 @@ struct InsertParserCounterStall : public ParserTransform {
 struct ClipTerminalTransition : ParserModifier {
     bool preorder(IR::BFN::Transition* t) {
         if (t->next == nullptr &&
-            *(t->shift) > Device::pardeSpec().byteInputBufferSize()) {
-            t->shift = boost::make_optional(Device::pardeSpec().byteInputBufferSize());
+            t->shift > Device::pardeSpec().byteInputBufferSize()) {
+            t->shift = Device::pardeSpec().byteInputBufferSize();
         }
 
         return true;

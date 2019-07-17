@@ -147,10 +147,7 @@ void IR::BFN::Transition::dbprint(std::ostream &out) const {
     else
         out << "default: ";
 
-    if (shift)
-        out << "(shift=" << *shift << ')';
-    else
-        out << "(shift unknown)";
+    out << "(shift=" << shift << ')';
 
     for (const auto& save : saves) {
         out << endl << save; }
