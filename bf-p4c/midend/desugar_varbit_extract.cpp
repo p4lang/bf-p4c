@@ -287,69 +287,11 @@ create_varbit_header_type(cstring orig_header,
     return hdr;
 }
 
-Modifier::profile_t RewriteVarbitExtract::init_apply(const IR::Node* root) {
+Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
     for (auto& pv : cve.state_to_varbit_field)
         create_branches(pv.first, pv.second);
 
     return Modifier::init_apply(root);
-}
-
-bool RewriteVarbitExtract::preorder(IR::P4Program* program) {
-    for (auto& kv : varbit_field_to_header_types) {
-        for (auto& lt : kv.second)
-            program->objects.insert(program->objects.begin(), lt.second);
-    }
-
-    // TODO add these to the header decl section instead of
-    // prepending to beginning of program
-
-    return true;
-}
-
-bool RewriteVarbitExtract::contains_varbit_header(IR::Type_Struct* type_struct) {
-    for (auto field : type_struct->fields) {
-        if (auto path = field->type->to<IR::Type_Name>()) {
-            for (auto& kv : cve.header_type_to_varbit_field) {
-                if (kv.first->name == path->path->name)
-                    return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-bool RewriteVarbitExtract::preorder(IR::Type_Struct* type_struct) {
-    if (contains_varbit_header(type_struct)) {
-        for (auto& kv : varbit_field_to_header_types) {
-            for (auto& lt : kv.second) {
-                auto type = lt.second;
-                auto field = new IR::StructField(create_instance_name(type->name),
-                                     new IR::Type_Name(type->name));
-                type_struct->fields.push_back(field);
-            }
-        }
-    }
-
-    return true;
-}
-
-// TODO rewrite type at the end?
-bool RewriteVarbitExtract::preorder(IR::Type_Header* header) {
-    auto orig = getOriginal<IR::Type_Header>();
-
-    if (cve.header_type_to_varbit_field.count(orig)) {
-        IR::IndexedVector<IR::StructField> fields;
-
-        for (auto field : header->fields) {
-            if (!field->type->is<IR::Type::Varbits>())
-                fields.push_back(field);
-        }
-
-        header->fields = fields;
-    }
-
-    return true;
 }
 
 static IR::MethodCallStatement*
@@ -365,7 +307,7 @@ create_extract_statement(const IR::BFN::TnaParser* parser,
 }
 
 IR::ParserState*
-RewriteVarbitExtract::create_branch_state(const IR::BFN::TnaParser* parser,
+RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
         const IR::Expression* select, const IR::StructField* varbit_field, unsigned length) {
     IR::IndexedVector<IR::StatOrDecl> statements;
 
@@ -386,7 +328,7 @@ RewriteVarbitExtract::create_branch_state(const IR::BFN::TnaParser* parser,
     return branch_state;
 }
 
-void RewriteVarbitExtract::create_branches(const IR::ParserState* state,
+void RewriteVarbitUses::create_branches(const IR::ParserState* state,
                                          const IR::StructField* varbit_field) {
     ordered_map<unsigned, const IR::ParserState*> match_to_branch_state;
 
@@ -426,7 +368,7 @@ void RewriteVarbitExtract::create_branches(const IR::ParserState* state,
     state_to_branches[state] = match_to_branch_state;
 }
 
-bool RewriteVarbitExtract::preorder(IR::BFN::TnaParser* parser) {
+bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
     auto orig = getOriginal<IR::P4Parser>();
 
     bool has_varbit = false;
@@ -460,7 +402,7 @@ create_select_case(unsigned bitwidth, unsigned value, unsigned mask, cstring nex
     return new IR::SelectCase(new IR::Mask(value_expr, mask_expr), next_state_expr);
 }
 
-bool RewriteVarbitExtract::preorder(IR::ParserState* state) {
+bool RewriteVarbitUses::preorder(IR::ParserState* state) {
     auto orig = getOriginal<IR::ParserState>();
 
     if (!state_to_branches.count(orig))
@@ -507,7 +449,7 @@ bool RewriteVarbitExtract::preorder(IR::ParserState* state) {
     return true;
 }
 
-bool RewriteVarbitExtract::preorder(IR::MethodCallExpression* call) {
+bool RewriteVarbitUses::preorder(IR::MethodCallExpression* call) {
     auto state = findContext<IR::ParserState>();
     if (state) {
         if (auto method = call->method->to<IR::Member>()) {
@@ -534,7 +476,7 @@ create_emit_statement(const IR::Member* method, const IR::Expression* path, cstr
     return emit;
 }
 
-bool RewriteVarbitExtract::preorder(IR::BlockStatement* block) {
+bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     if (deparser) {
         IR::IndexedVector<IR::StatOrDecl> components;
@@ -571,35 +513,77 @@ bool RewriteVarbitExtract::preorder(IR::BlockStatement* block) {
     return true;
 }
 
-bool RewriteVarbitExtract::preorder(IR::ListExpression* list) {
+bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
     if (deparser) {
         IR::Vector<IR::Expression> components;
 
-        for (auto c : list->components) {
-            bool is_varbit = false;
+        bool has_varbit = false;
 
+        IR::Vector<IR::Type> varbit_types;
+
+        for (auto c : list->components) {
             if (auto member = c->to<IR::Member>()) {
                 if (member->type->is<IR::Type_Varbits>()) {
-                    is_varbit = true;
+                    if (has_varbit)
+                        ::error("More than one varbit expressions in %1%", list);
+
+                    has_varbit = true;
 
                     auto type = member->expr->type->to<IR::Type_Header>();
                     auto varbit_field = cve.header_type_to_varbit_field.at(type);
 
                     for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
                         auto path = member->expr->to<IR::Member>();
-                        auto member = new IR::Member(path->expr,
-                            create_instance_name(kv.second->name));
-                        components.push_back(member);
+                        auto hdr = kv.second;
+                        auto field = hdr->fields[0];
+
+                        varbit_types.push_back(field->type);
+
+                        auto member = new IR::Member(path->expr, create_instance_name(hdr->name));
+                        auto hdr_field = new IR::Member(member, "field");
+
+                        components.push_back(hdr_field);
                     }
                 }
             }
 
-            if (!is_varbit)
+            if (!has_varbit)
                 components.push_back(c);
         }
 
         list->components = components;
+
+        if (has_varbit) {
+            auto mc = findContext<IR::MethodCallExpression>();
+
+            if (auto tuple = list->type->to<IR::Type_Tuple>()) {
+                IR::Vector<IR::Type> types;
+
+                for (auto type : tuple->components) {
+                    if (type->is<IR::Type_Varbits>()) {
+                        for (auto vt : varbit_types)
+                            types.push_back(vt);
+                    } else {
+                        types.push_back(type);
+                    }
+                }
+
+                if (mc) {
+                    auto type_args = *(mc->typeArguments);
+
+                    if (type_args.size() == 1) {
+                        auto tuple_type = type_args[0];
+                        if (auto name = tuple_type->to<IR::Type_Name>()) {
+                            auto tuple_name = name->path->name;
+                            tuple_types_to_rewrite[tuple_name] = types;
+                        }
+                    } else if (type_args.size() > 1) {
+                        ::error("More than one type in type argument of %1%", list);
+                    }
+                }
+            }
+        }
     }
 
     return true;
@@ -630,4 +614,74 @@ IR::Node* RewriteParserVerify::preorder(IR::MethodCallStatement* stmt) {
     }
 
     return stmt;
+}
+
+bool RewriteVarbitTypes::preorder(IR::P4Program* program) {
+    for (auto& kv : rvu.varbit_field_to_header_types) {
+        for (auto& lt : kv.second)
+            program->objects.insert(program->objects.begin(), lt.second);
+    }
+
+    // TODO add these to the header decl section instead of
+    // prepending to beginning of program
+
+    return true;
+}
+
+bool RewriteVarbitTypes::contains_varbit_header(IR::Type_Struct* type_struct) {
+    for (auto field : type_struct->fields) {
+        if (auto path = field->type->to<IR::Type_Name>()) {
+            for (auto& kv : cve.header_type_to_varbit_field) {
+                if (kv.first->name == path->path->name)
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
+    if (contains_varbit_header(type_struct)) {
+        for (auto& kv : rvu.varbit_field_to_header_types) {
+            for (auto& lt : kv.second) {
+                auto type = lt.second;
+                auto field = new IR::StructField(create_instance_name(type->name),
+                                     new IR::Type_Name(type->name));
+                type_struct->fields.push_back(field);
+            }
+        }
+    } else {
+        for (auto& kv : rvu.tuple_types_to_rewrite) {
+            if (type_struct->name == kv.first) {
+                type_struct->fields = {};
+
+                int i = 0;
+                for (auto type : kv.second) {
+                    cstring name = kv.first + "_field_" + cstring::to_cstring(i++);
+                    auto field = new IR::StructField(name, type);
+                    type_struct->fields.push_back(field);
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool RewriteVarbitTypes::preorder(IR::Type_Header* header) {
+    auto orig = getOriginal<IR::Type_Header>();
+
+    if (cve.header_type_to_varbit_field.count(orig)) {
+        IR::IndexedVector<IR::StructField> fields;
+
+        for (auto field : header->fields) {
+            if (!field->type->is<IR::Type::Varbits>())
+                fields.push_back(field);
+        }
+
+        header->fields = fields;
+    }
+
+    return true;
 }

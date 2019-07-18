@@ -142,14 +142,17 @@ class CollectVarbitExtract : public Inspector {
         refMap(refMap), typeMap(typeMap) { }
 };
 
-class RewriteVarbitExtract : public Modifier {
+class RewriteVarbitUses : public Modifier {
     const CollectVarbitExtract& cve;
 
     std::map<const IR::ParserState*,
              ordered_map<unsigned, const IR::ParserState*>> state_to_branches;
 
+ public:
     std::map<const IR::StructField*,
              std::map<unsigned, IR::Type_Header*>> varbit_field_to_header_types;
+
+    std::map<cstring, IR::Vector<IR::Type>> tuple_types_to_rewrite;
 
  private:
     profile_t init_apply(const IR::Node* root) override;
@@ -161,12 +164,6 @@ class RewriteVarbitExtract : public Modifier {
 
     void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field);
 
-    bool contains_varbit_header(IR::Type_Struct*);
-
-    bool preorder(IR::P4Program*) override;
-    bool preorder(IR::Type_Struct*) override;
-    bool preorder(IR::Type_Header*) override;
-
     bool preorder(IR::BFN::TnaParser*) override;
     bool preorder(IR::ParserState*) override;
 
@@ -175,7 +172,22 @@ class RewriteVarbitExtract : public Modifier {
     bool preorder(IR::ListExpression* list) override;
 
  public:
-    explicit RewriteVarbitExtract(const CollectVarbitExtract& cve) : cve(cve) {}
+    explicit RewriteVarbitUses(const CollectVarbitExtract& cve) : cve(cve) {}
+};
+
+class RewriteVarbitTypes : public Modifier {
+    const CollectVarbitExtract& cve;
+    const RewriteVarbitUses& rvu;
+
+    bool contains_varbit_header(IR::Type_Struct*);
+
+    bool preorder(IR::P4Program*) override;
+    bool preorder(IR::Type_Struct*) override;
+    bool preorder(IR::Type_Header*) override;
+
+ public:
+    RewriteVarbitTypes(const CollectVarbitExtract& c,
+                       const RewriteVarbitUses& r) : cve(c), rvu(r) { }
 };
 
 class RewriteParserVerify : public Transform {
@@ -191,14 +203,17 @@ class DesugarVarbitExtract : public PassManager {
  public:
     explicit DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         auto collect_varbit_extract = new CollectVarbitExtract(refMap, typeMap);
-        auto rewrite_varbit_extract = new RewriteVarbitExtract(*collect_varbit_extract);
+        auto rewrite_varbit_uses = new RewriteVarbitUses(*collect_varbit_extract);
         auto rewrite_parser_verify = new RewriteParserVerify(*collect_varbit_extract);
+        auto rewrite_varbit_types = new RewriteVarbitTypes(*collect_varbit_extract,
+                                                           *rewrite_varbit_uses);
 
         addPasses({
             new CheckMauUse,
             collect_varbit_extract,
-            rewrite_varbit_extract,
+            rewrite_varbit_uses,
             rewrite_parser_verify,
+            rewrite_varbit_types,
             new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true)
         });
