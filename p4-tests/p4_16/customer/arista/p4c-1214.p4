@@ -1752,7 +1752,7 @@ control Hettinger(inout Wamesit Goodrich, inout Almedia BigRiver, inout ingress_
     }
     action Flomaton() {
         BigRiver.Levittown.Notus = BigRiver.Chardon.Shade;
-        Terlingua.copy_to_cpu = (bool)BigRiver.Chardon.Waitsburg;
+        Terlingua.copy_to_cpu = BigRiver.Chardon.Waitsburg;
         Terlingua.mcast_grp_a = (bit<16>)BigRiver.Levittown.Mabelvale;
     }
     action Caguas() {
@@ -1783,7 +1783,7 @@ control Hettinger(inout Wamesit Goodrich, inout Almedia BigRiver, inout ingress_
     action Tilton() {
         BigRiver.Chardon.Chatanika = (bit<1>)Aguila.execute();
         BigRiver.Levittown.Notus = BigRiver.Chardon.Shade;
-        Terlingua.copy_to_cpu = (bool)BigRiver.Chardon.Waitsburg;
+        Terlingua.copy_to_cpu = BigRiver.Chardon.Waitsburg;
         Terlingua.mcast_grp_a = (bit<16>)BigRiver.Levittown.Mabelvale;
     }
     action Midas() {
@@ -2592,7 +2592,7 @@ control Gardiner(inout Wamesit Verdigris, inout Almedia Onarga, inout ingress_in
         Onarga.Levittown.Marysvale = Telegraph;
     }
     action Cleta(bit<8> Bledsoe) {
-        Brumley.copy_to_cpu = (bool)1;
+        Brumley.copy_to_cpu = 1w1;
         Onarga.Levittown.Marysvale = Bledsoe;
     }
     action Ocoee() {
@@ -2606,7 +2606,7 @@ control Gardiner(inout Wamesit Verdigris, inout Almedia Onarga, inout ingress_in
     }
     action Ardenvoir(bit<8> Clintwood) {
         Dushore.count();
-        Brumley.copy_to_cpu = (bool)1;
+        Brumley.copy_to_cpu = 1w1;
         Onarga.Levittown.Marysvale = Clintwood;
     }
     action SnowLake() {
@@ -2826,7 +2826,7 @@ control GunnCity(inout Wamesit Mausdale, inout Almedia Ashburn, inout ingress_in
         Ashburn.Levittown.Butler = Grapevine;
         Ashburn.Levittown.Hobart = Brothers;
         Ashburn.Levittown.Margie = 3w5;
-        Ethete.disable_ucast_cutthru = (bool)1;
+        Ethete.disable_ucast_cutthru = 1w1;
     }
     @ways(1) table Coupland {
         actions = {
@@ -2883,29 +2883,29 @@ control Moorpark(inout Wamesit Parmerton, inout Almedia Bagwell, inout ingress_i
     action Millwood(bit<1> Tinaja) {
         Stonebank();
         Wyandanch.mcast_grp_a = Bagwell.Beaverdam.Nashoba;
-        Wyandanch.copy_to_cpu = (bool)(Tinaja | Bagwell.Beaverdam.Gamaliel);
+        Wyandanch.copy_to_cpu = Tinaja | Bagwell.Beaverdam.Gamaliel;
     }
     action Conda(bit<1> Alcoma) {
         Stonebank();
         Wyandanch.mcast_grp_a = Bagwell.Brinson.Wibaux;
-        Wyandanch.copy_to_cpu = (bool)(Alcoma | Bagwell.Brinson.Wharton);
+        Wyandanch.copy_to_cpu = Alcoma | Bagwell.Brinson.Wharton;
     }
     action Killen(bit<1> Bluford) {
         Stonebank();
         Wyandanch.mcast_grp_a = (bit<16>)Bagwell.Levittown.Mabelvale + 16w4096;
-        Wyandanch.copy_to_cpu = (bool)Bluford;
+        Wyandanch.copy_to_cpu = Bluford;
     }
     action Bedrock() {
         Bagwell.Chardon.Virgilina = 1w1;
     }
     action Simla(bit<1> Thawville) {
         Wyandanch.mcast_grp_a = 0;
-        Wyandanch.copy_to_cpu = (bool)Thawville;
+        Wyandanch.copy_to_cpu = Thawville;
     }
     action Archer(bit<1> Viroqua) {
         Stonebank();
         Wyandanch.mcast_grp_a = (bit<16>)Bagwell.Levittown.Mabelvale;
-        Wyandanch.copy_to_cpu = (bool)((bit<1>)Wyandanch.copy_to_cpu | Viroqua);
+        Wyandanch.copy_to_cpu = Wyandanch.copy_to_cpu | Viroqua;
     }
     table Cornudas {
         actions = {
@@ -3172,20 +3172,20 @@ control Aguada(inout Wamesit Bryan, inout Almedia Celada, in ingress_intrinsic_m
         ;
     }
     action Waukegan() {
-        Lordstown.copy_to_cpu = (bool)((bit<1>)Lordstown.copy_to_cpu | 0);
+        Lordstown.copy_to_cpu = Lordstown.copy_to_cpu | 0;
     }
     action Senatobia() {
-        Lordstown.copy_to_cpu = (bool)1;
+        Lordstown.copy_to_cpu = 1w1;
     }
     action Terrytown() {
         Dundee.drop_ctl = Dundee.drop_ctl | 3;
     }
     action Nisland() {
-        Lordstown.copy_to_cpu = (bool)((bit<1>)Lordstown.copy_to_cpu | 0);
+        Lordstown.copy_to_cpu = Lordstown.copy_to_cpu | 0;
         Terrytown();
     }
     action Kinards() {
-        Lordstown.copy_to_cpu = (bool)1;
+        Lordstown.copy_to_cpu = 1w1;
         Terrytown();
     }
     Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Kahua;
@@ -3220,20 +3220,20 @@ control Aguada(inout Wamesit Bryan, inout Almedia Celada, in ingress_intrinsic_m
     }
     action Madawaska() {
         Deering.count();
-        Lordstown.copy_to_cpu = (bool)((bit<1>)Lordstown.copy_to_cpu | 0);
+        Lordstown.copy_to_cpu = Lordstown.copy_to_cpu | 0;
     }
     action Kirwin() {
         Deering.count();
-        Lordstown.copy_to_cpu = (bool)1;
+        Lordstown.copy_to_cpu = 1w1;
     }
     action Dialville() {
         Deering.count();
-        Lordstown.copy_to_cpu = (bool)((bit<1>)Lordstown.copy_to_cpu | 0);
+        Lordstown.copy_to_cpu = Lordstown.copy_to_cpu | 0;
         Terrytown();
     }
     action Mingus() {
         Deering.count();
-        Lordstown.copy_to_cpu = (bool)1;
+        Lordstown.copy_to_cpu = 1w1;
         Terrytown();
     }
     action August() {

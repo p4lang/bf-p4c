@@ -31,7 +31,7 @@ parser SfcIngressParser(
     }
     //assume that all headers are started with ethernet and followed by ipv4
     //sfc ingress parser only parse ethernet header
-    
+
     state parse_sfc_ethernet {
         pkt.extract(hdr.sfc_ethernet);
         ig_md.controlCode = hdr.sfc_ethernet.controlCode;
@@ -51,11 +51,11 @@ control SfcIngress(inout sfc_header_t hdr,
                   in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
                   inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
                   inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm){
-                     
-    bit<9> outport_tmp = (bit<9>)ig_md.controlCode;        
+
+    bit<9> outport_tmp = (bit<9>)ig_md.controlCode;
     apply{
         if(ig_md.controlCode >0){//controlCode should be the output port, including CPU port
-            ig_intr_md_for_tm.bypass_egress = true;
+            ig_intr_md_for_tm.bypass_egress = 1w1;
             ig_intr_md_for_tm.ucast_egress_port = outport_tmp;
 
         }else{
@@ -68,9 +68,9 @@ control SfcIngress(inout sfc_header_t hdr,
                 ig_intr_md_for_tm.ucast_egress_port = ROUTER_PORT;
             }
             else ig_intr_md_for_dprsr.drop_ctl = 0x1; //drop packet, shouldn't reach here
-            
+
             hdr.sfc_ethernet.nf0 = hdr.sfc_ethernet.nf1;
-            hdr.sfc_ethernet.nf1 = hdr.sfc_ethernet.nf2;     
+            hdr.sfc_ethernet.nf1 = hdr.sfc_ethernet.nf2;
             hdr.sfc_ethernet.nf2 = hdr.sfc_ethernet.nf3;
             hdr.sfc_ethernet.nf3 = hdr.sfc_ethernet.nf4;
             hdr.sfc_ethernet.nf4 = 0;

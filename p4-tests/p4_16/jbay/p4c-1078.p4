@@ -137,12 +137,12 @@ control ingr(inout headers hdr, inout ing_metadata md,
   }
   action dmac_mc_hit(MulticastGroupId_t mc_index) {
     ig_intr_tm_md.mcast_grp_a          = mc_index;
-    ig_intr_tm_md.enable_mcast_cutthru = true;
+    ig_intr_tm_md.enable_mcast_cutthru = 1w1;
   }
   action dmac_uc_mc_hit(PortId_t egress_port, MulticastGroupId_t mc_index) {
     ig_intr_tm_md.ucast_egress_port    = egress_port;
     ig_intr_tm_md.mcast_grp_a          = mc_index;
-    ig_intr_tm_md.enable_mcast_cutthru = true;
+    ig_intr_tm_md.enable_mcast_cutthru = 1w1;
   }
   table dmac {
     key = { hdr.ethernet.dst : exact; }
@@ -163,7 +163,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
   action qos_hit_eg_bypass_no_mirror(QueueId_t qid, bit<2> color) {
     ig_intr_tm_md.ingress_cos = 1;
     ig_intr_tm_md.qid = qid;
-    ig_intr_tm_md.bypass_egress = true;
+    ig_intr_tm_md.bypass_egress = 1w1;
     ig_intr_tm_md.packet_color = color;
   }
 
@@ -176,7 +176,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
   action qos_hit_eg_bypass_i2e_mirror(QueueId_t qid, MirrorId_t mirror_id) {
     ig_intr_tm_md.ingress_cos = 1;
     ig_intr_tm_md.qid = qid;
-    ig_intr_tm_md.bypass_egress = true;
+    ig_intr_tm_md.bypass_egress = 1w1;
     ig_intr_dprsr_md.mirror_type = 15;
     ig_intr_dprsr_md.mirror_io_select = 0;
     md.mir_sid = mirror_id;
@@ -186,7 +186,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
   action qos_hit_eg_bypass_i2e_mirror_post_dprsr(QueueId_t qid, MirrorId_t mirror_id) {
     ig_intr_tm_md.ingress_cos = 1;
     ig_intr_tm_md.qid = qid;
-    ig_intr_tm_md.bypass_egress = true;
+    ig_intr_tm_md.bypass_egress = 1w1;
     ig_intr_dprsr_md.mirror_type = 15;
     ig_intr_dprsr_md.mirror_io_select = 1;
     md.mir_sid = mirror_id;
@@ -212,7 +212,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
     ig_intr_dprsr_md.resubmit_type = 7;
   }
   action do_deflect_on_drop() {
-    ig_intr_tm_md.deflect_on_drop = true;
+    ig_intr_tm_md.deflect_on_drop = 1w1;
   }
 
   action do_recirc() {
@@ -231,7 +231,7 @@ control ingr(inout headers hdr, inout ing_metadata md,
   apply {
     dmac.apply();
     ingress_qos.apply();
-    if (ig_intr_tm_md.bypass_egress != true) {
+    if (ig_intr_tm_md.bypass_egress != 1w1) {
       add_bridged_metadata();
     }
 #ifndef SINGLE_STAGE

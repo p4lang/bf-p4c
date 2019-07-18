@@ -490,6 +490,15 @@ const char *PragmaPack::help = "@pragma pack 2\n"
     "requirements of the match table, a large pack value may prevent the "
     "table from being placed.";
 
+const char *PragmaPadding::name = "padding";
+const char *PragmaPadding::description =
+    "Specifies the padding bits in header.";
+const char *PragmaPadding::help = "@pragma padding\n"
+    "+attached to header fields\n"
+    "\n"
+    "Specifies that the associated header field is padding field.";
+
+
 const char *PragmaPacketEntry::name = "packet_entry";
 const char *PragmaPacketEntry::description = "Specifies additional parser entry states.";
 const char *PragmaPacketEntry::help = "@pragma packet_entry\n"

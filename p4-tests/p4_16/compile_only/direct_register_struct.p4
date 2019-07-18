@@ -21,7 +21,7 @@ parser ParserI(packet_in b,
     }
 }
 
-struct pair {   
+struct pair {
     bit<32> first;
     bit<32> second;
 }
@@ -59,7 +59,7 @@ control IngressP(
 
     apply {
         reg_match_dir.apply();
-        ig_intr_tm_md.bypass_egress = true;
+        ig_intr_tm_md.bypass_egress = 1w1;
     }
 }
 

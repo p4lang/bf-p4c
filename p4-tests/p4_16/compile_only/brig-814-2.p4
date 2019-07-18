@@ -138,7 +138,7 @@ control IngressP(
     }
 
     @name(".bloom_filter_mark_sample") action bloom_filter_mark_sample() {
-        ig_intr_tm_md.copy_to_cpu = true;
+        ig_intr_tm_md.copy_to_cpu = 1w1;
     }
     @name(".bloom_filter_1") table bloom_filter_1_0 {
         actions = {

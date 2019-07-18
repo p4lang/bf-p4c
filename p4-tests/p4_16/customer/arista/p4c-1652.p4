@@ -734,7 +734,7 @@ control Maddock(packet_out Sublett, inout Tombstone Wisdom, in Level Cutten, in 
         if (Lewiston.digest_type == 3w2) {
             Naubinway.pack({ Cutten.Thayne.Fabens, Cutten.Thayne.CeeVee, Cutten.Thayne.Haugan, Cutten.Thayne.Paisano });
         }
-        else 
+        else
             if (Lewiston.digest_type == 3w3) {
                 Ovett.pack({ Cutten.Thayne.Haugan, Wisdom.Renick.Wilmore, Wisdom.Renick.Piperton, Wisdom.Staunton.Bennet, Wisdom.Lugert.Scarville, Wisdom.Marcus.Fairmount, Wisdom.RedElm.Blairsden, Wisdom.RedElm.Clover });
             }
@@ -1779,7 +1779,7 @@ control Luning(inout Tombstone Flippen, inout Level Cadwell, inout ingress_intri
     action Forepaugh() {
         Cadwell.Thayne.Selawik = (bit<1>)Tillson.execute();
         Cadwell.Kapalua.Dassel = Cadwell.Thayne.Ronan;
-        Boring.copy_to_cpu = (bool)Cadwell.Thayne.Shabbona;
+        Boring.copy_to_cpu = Cadwell.Thayne.Shabbona;
         Boring.mcast_grp_a = (bit<16>)Cadwell.Kapalua.Hoagland;
     }
     action Chewalla() {
@@ -2613,7 +2613,7 @@ control Ardenvoir(inout Tombstone Clinchco, inout Level Snook, inout ingress_int
     }
     action Ghent(bit<8> Protivin) {
         Havertown.count();
-        OjoFeliz.copy_to_cpu = true;
+        OjoFeliz.copy_to_cpu = 1w1;
         Snook.Kapalua.Norwood = Protivin;
     }
     action Medart() {
@@ -2845,7 +2845,7 @@ control Rolla(inout Tombstone Brookwood, inout Level Granville, inout ingress_in
         Granville.Kapalua.Loring = Parmelee;
         Granville.Kapalua.Ocoee = Moorman;
         Granville.Kapalua.Palatine = 3w5;
-        Council.disable_ucast_cutthru = true;
+        Council.disable_ucast_cutthru = 1w1;
     }
     @ways(1) table Bagwell {
         actions = {
@@ -2901,12 +2901,12 @@ control Comunas(inout Tombstone Alcoma, inout Level Kilbourne, inout ingress_int
     action Silvertip(bit<1> Thatcher) {
         Bedrock();
         Bluff.mcast_grp_a = Kilbourne.Elderon.Suttle;
-        Bluff.copy_to_cpu = (bool)(Thatcher | Kilbourne.Elderon.Ankeny);
+        Bluff.copy_to_cpu = Thatcher | Kilbourne.Elderon.Ankeny;
     }
     action Archer(bit<1> Virginia) {
         Bedrock();
         Bluff.mcast_grp_a = Kilbourne.Montross.Joslin;
-        Bluff.copy_to_cpu = (bool)(Virginia | Kilbourne.Montross.Powderly);
+        Bluff.copy_to_cpu = Virginia | Kilbourne.Montross.Powderly;
     }
     action Cornish(bit<1> Hatchel) {
         Bedrock();
@@ -2920,7 +2920,7 @@ control Comunas(inout Tombstone Alcoma, inout Level Kilbourne, inout ingress_int
     action Bigspring(bit<1> Advance) {
         Bedrock();
         Bluff.mcast_grp_a = (bit<16>)Kilbourne.Kapalua.Hoagland;
-        Bluff.copy_to_cpu = (bool)((bit<1>)Bluff.copy_to_cpu | Advance);
+        Bluff.copy_to_cpu = Bluff.copy_to_cpu | Advance;
     }
     table Rockfield {
         actions = {
@@ -3226,20 +3226,20 @@ control Boyes(inout Tombstone Renfroe, inout Level McCallum, in ingress_intrinsi
     }
     action August() {
         Kinard.count();
-        Selvin.copy_to_cpu = (bool)((bit<1>)Selvin.copy_to_cpu | 1w0);
+        Selvin.copy_to_cpu = Selvin.copy_to_cpu | 1w0;
     }
     action Kinston() {
         Kinard.count();
-        Selvin.copy_to_cpu = true;
+        Selvin.copy_to_cpu = 1w1;
     }
     action Chandalar() {
         Kinard.count();
-        Selvin.copy_to_cpu = (bool)((bit<1>)Selvin.copy_to_cpu | 1w0);
+        Selvin.copy_to_cpu = Selvin.copy_to_cpu | 1w0;
         Turney();
     }
     action Bosco() {
         Kinard.count();
-        Selvin.copy_to_cpu = true;
+        Selvin.copy_to_cpu = 1w1;
         Turney();
     }
     action Almeria() {

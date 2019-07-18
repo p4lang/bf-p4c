@@ -1382,7 +1382,7 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
                       inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
                       inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
 
-    eg_intr_md_for_oport.capture_tstamp_on_tx = eg_md.flags.capture_ts;
+    eg_intr_md_for_oport.capture_tstamp_on_tx = (bit<1>)eg_md.flags.capture_ts;
 
 
 
@@ -1993,7 +1993,7 @@ control IngressSystemAcl(
                        switch_copp_meter_id_t meter_id) {
         ig_intr_md_for_tm.qid = qid;
         // ig_intr_md_for_tm.ingress_cos = cos;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
 
         ig_intr_md_for_tm.packet_color = (bit<2>) copp_meter.execute(meter_id);
         copp_meter_id = meter_id;
@@ -2072,7 +2072,7 @@ control IngressSystemAcl(
     }
 
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
 
@@ -4638,7 +4638,7 @@ control IngressPortMapping(
         ig_md.port = (switch_port_t) hdr.cpu.port;
         ig_intr_md_for_tm.ucast_egress_port = (switch_port_t) hdr.cpu.port_or_group;
         ig_intr_md_for_tm.qid = (switch_qid_t) hdr.cpu.qid;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.flags[0:0];
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.flags[0:0];
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
 
@@ -7634,11 +7634,11 @@ control DeflectOnDrop(
         switch_uint32_t table_size=1024) {
 
     action enable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = true;
+        ig_intr_md_for_tm.deflect_on_drop = 1w1;
     }
 
     action disable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = false;
+        ig_intr_md_for_tm.deflect_on_drop = 1w0;
     }
 
     table config {
@@ -8150,7 +8150,7 @@ control SwitchIngress(
         dtel.apply(hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
 
         // Only add bridged metadata if we are NOT bypassing egress pipeline.
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md(hdr.bridged_md, ig_md);
         }
 

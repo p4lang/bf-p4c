@@ -220,14 +220,14 @@ control ingr(inout headers hdr,
   }
 
   action set_ctrl_info() {
-    intr_tm_md.bypass_egress = (bool)hdr.ctrl.bypass_egress;
-    intr_tm_md.deflect_on_drop = (bool)hdr.ctrl.dod;
+    intr_tm_md.bypass_egress = hdr.ctrl.bypass_egress;
+    intr_tm_md.deflect_on_drop = hdr.ctrl.dod;
     intr_tm_md.ingress_cos = hdr.ctrl.ingress_cos;
     intr_tm_md.qid = hdr.ctrl.qid;
     intr_tm_md.icos_for_copy_to_cpu = hdr.ctrl.c2c_cos;
     intr_tm_md.packet_color = hdr.ctrl.color;
-    intr_tm_md.disable_ucast_cutthru = (bool)hdr.ctrl.disable_uc_cut_through;
-    intr_tm_md.enable_mcast_cutthru = (bool)hdr.ctrl.mc_cut_through;
+    intr_tm_md.disable_ucast_cutthru = hdr.ctrl.disable_uc_cut_through;
+    intr_tm_md.enable_mcast_cutthru = hdr.ctrl.mc_cut_through;
 
   }
   action set_mir_info() {

@@ -2216,7 +2216,7 @@ control IngressSystemAcl(
                        switch_copp_meter_id_t meter_id) {
         ig_intr_md_for_tm.qid = qid;
         // ig_intr_md_for_tm.ingress_cos = cos;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
 
 
 
@@ -2296,7 +2296,7 @@ control IngressSystemAcl(
     }
 
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
 
@@ -5642,7 +5642,7 @@ control IngressPortMapping(
             (switch_port_t) hdr.fabric.dst_port_or_group;
         //XXX(msharif) : Fix this for Tofino2
         // ig_intr_md_for_tm.qid = hdr.cpu.egress_queue;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
 
@@ -10575,7 +10575,7 @@ control SwitchIngress(
 //          ig_md, lkp, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
 
         // Only add bridged metadata if we are NOT bypassing egress pipeline.
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md();
         }
 

@@ -148,7 +148,7 @@ control SwitchIngress(
 
     action set_port(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true; // bypass egress pipeline.
+        ig_intr_tm_md.bypass_egress = 1w1; // bypass egress pipeline.
     }
 
     action rewrite_(mac_addr_t smac) {

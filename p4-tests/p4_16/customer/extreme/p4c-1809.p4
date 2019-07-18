@@ -1315,7 +1315,7 @@ control IngressAcl(inout switch_lookup_fields_t lkp, inout switch_ingress_metada
             if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
                 ipv6_acl.apply(lkp, ig_md, stats_index);
             }
-            else 
+            else
                 if (!mac_acl_enable || lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
                     ipv4_acl.apply(lkp, ig_md, stats_index);
                 }
@@ -1503,7 +1503,7 @@ control IngressSystemAcl(inout switch_ingress_metadata_t ig_md, inout ingress_in
     }
     action copy_to_cpu(switch_cpu_reason_t reason_code, switch_qid_t qid, switch_copp_meter_id_t meter_id, bool disable_learning) {
         ig_md.qos.qid = qid;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
         ig_intr_md_for_dprsr.digest_type = (disable_learning ? SWITCH_DIGEST_TYPE_INVALID : ig_intr_md_for_dprsr.digest_type);
         ig_md.cpu_reason = reason_code;
     }
@@ -1556,7 +1556,7 @@ control IngressSystemAcl(inout switch_ingress_metadata_t ig_md, inout ingress_in
         size = table_size;
     }
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
     action copp_permit() {
@@ -1592,7 +1592,7 @@ control IngressSystemAcl(inout switch_ingress_metadata_t ig_md, inout ingress_in
         size = drop_stats_table_size;
     }
     apply {
-        if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_SYSTEM_ACL != 0)) 
+        if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_SYSTEM_ACL != 0))
             system_acl.apply();
         drop_stats.apply();
     }
@@ -1758,7 +1758,7 @@ control EgressSystemAcl(inout switch_header_t hdr, inout switch_egress_metadata_
         size = drop_stats_table_size;
     }
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SYSTEM_ACL != 0)) 
+        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_SYSTEM_ACL != 0))
             system_acl.apply();
         drop_stats.apply();
     }
@@ -2204,7 +2204,7 @@ control MTU(in switch_header_t hdr, in switch_egress_metadata_t eg_md, inout swi
         size = table_size;
     }
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_MTU != 0)) 
+        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_MTU != 0))
             mtu.apply();
     }
 }
@@ -2236,7 +2236,7 @@ control IngressUnicast(in switch_lookup_fields_t lkp, inout switch_ingress_metad
                 if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.unicast_enable) {
                     ipv4_fib.apply(lkp.ip_dst_addr[31:0], ig_md.vrf, ig_md.flags, ig_md.nexthop);
                 }
-                else 
+                else
                     if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.unicast_enable) {
                         ipv6_fib.apply(lkp.ip_dst_addr, ig_md.vrf, ig_md.flags, ig_md.nexthop);
                     }
@@ -3452,7 +3452,7 @@ control IngressPortMapping(inout switch_header_t hdr, inout switch_ingress_metad
     action terminate_cpu_packet() {
         ig_md.port = (switch_port_t)hdr.cpu.ingress_port;
         ig_intr_md_for_tm.ucast_egress_port = (switch_port_t)hdr.fabric.dst_port_or_group;
-        ig_intr_md_for_tm.bypass_egress = (bool)hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
     action set_cpu_port_properties(switch_port_lag_index_t port_lag_index, switch_port_lag_label_t port_lag_label, switch_yid_t exclusion_id, switch_qos_trust_mode_t trust_mode, switch_qos_group_t qos_group, switch_pkt_color_t color, switch_tc_t tc) {
@@ -3613,7 +3613,7 @@ control IngressPortMapping(inout switch_header_t hdr, inout switch_ingress_metad
             }
             set_port_properties: {
                 if (!port_vlan_to_bd_mapping.apply().hit) {
-                    if (hdr.vlan_tag[0].isValid()) 
+                    if (hdr.vlan_tag[0].isValid())
                         vlan_to_bd_mapping.apply();
                 }
             }
@@ -3941,7 +3941,7 @@ control PktValidation(in switch_header_t hdr, inout switch_ingress_flags_t flags
                             if (hdr.ipv4.isValid()) {
                                 validate_ipv4.apply();
                             }
-                            else 
+                            else
                                 if (hdr.ipv6.isValid()) {
                                     validate_ipv6.apply();
                                 }
@@ -3962,7 +3962,7 @@ control PktValidation(in switch_header_t hdr, inout switch_ingress_flags_t flags
                     if (hdr.ipv4.isValid()) {
                         validate_ipv4.apply();
                     }
-                    else 
+                    else
                         if (hdr.ipv6.isValid()) {
                             validate_ipv6.apply();
                         }
@@ -4111,7 +4111,7 @@ control InnerPktValidation(in switch_header_t hdr, inout switch_lookup_fields_t 
                 if (hdr.inner_ipv4.isValid()) {
                     validate_ipv4.apply();
                 }
-                else 
+                else
                     if (hdr.inner_ipv6.isValid()) {
                     }
                 validate_other.apply();
@@ -4338,7 +4338,7 @@ control IngressTunnel(in switch_header_t hdr, inout switch_ingress_metadata_t ig
                     }
 
                 }
-                else 
+                else
                     if (lkp_nsh.ip_type == SWITCH_IP_TYPE_IPV6) {
                     }
             }
@@ -4388,7 +4388,7 @@ control TunnelDecap(inout switch_header_t hdr, in switch_egress_metadata_t eg_md
         hdr.ipv4.dst_addr = hdr.inner_ipv4.dst_addr;
         if (mode == switch_tunnel_mode_t.UNIFORM) {
         }
-        else 
+        else
             if (mode == switch_tunnel_mode_t.PIPE) {
                 hdr.ipv4.ttl = hdr.inner_ipv4.ttl;
                 hdr.ipv4.diffserv = hdr.inner_ipv4.diffserv;
@@ -4405,7 +4405,7 @@ control TunnelDecap(inout switch_header_t hdr, in switch_egress_metadata_t eg_md
         hdr.ipv6.dst_addr = hdr.inner_ipv6.dst_addr;
         if (mode == switch_tunnel_mode_t.UNIFORM) {
         }
-        else 
+        else
             if (mode == switch_tunnel_mode_t.PIPE) {
                 hdr.ipv6.hop_limit = hdr.inner_ipv6.hop_limit;
                 hdr.ipv6.traffic_class = hdr.inner_ipv6.traffic_class;
@@ -4469,9 +4469,9 @@ control TunnelDecap(inout switch_header_t hdr, in switch_egress_metadata_t eg_md
 
     }
     apply {
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0) && eg_md.tunnel.terminate) 
+        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0) && eg_md.tunnel.terminate)
             decap_inner_ip.apply();
-        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0) && eg_md.tunnel.terminate) 
+        if (!(eg_md.bypass & SWITCH_EGRESS_BYPASS_REWRITE != 0) && eg_md.tunnel.terminate)
             decap_inner_l4.apply();
     }
 }
@@ -4570,11 +4570,11 @@ control TunnelRewrite(inout switch_header_t hdr, inout switch_egress_metadata_t 
         size = smac_rewrite_table_size;
     }
     apply {
-        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) 
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
             nexthop_rewrite.apply();
-        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) 
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
             egress_bd.apply(hdr, eg_md.bd, eg_md.pkt_type, bd_label, smac_index, eg_md.checks.mtu);
-        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) 
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE)
             src_addr_rewrite.apply();
         if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
             ipv4_dst_addr_rewrite.apply();
@@ -4714,7 +4714,7 @@ control TunnelEncap(inout switch_header_t hdr, inout switch_egress_metadata_t eg
         hdr.ipv4.protocol = proto;
         if (mode == switch_tunnel_mode_t.UNIFORM) {
         }
-        else 
+        else
             if (mode == switch_tunnel_mode_t.PIPE) {
                 hdr.ipv4.ttl = 8w64;
                 hdr.ipv4.diffserv = 0;
@@ -4727,7 +4727,7 @@ control TunnelEncap(inout switch_header_t hdr, inout switch_egress_metadata_t eg
         hdr.ipv6.next_hdr = proto;
         if (mode == switch_tunnel_mode_t.UNIFORM) {
         }
-        else 
+        else
             if (mode == switch_tunnel_mode_t.PIPE) {
                 hdr.ipv6.hop_limit = 8w64;
                 hdr.ipv6.traffic_class = 0;
@@ -4786,7 +4786,7 @@ control TunnelEncap(inout switch_header_t hdr, inout switch_egress_metadata_t eg
         const default_action = NoAction;
     }
     apply {
-        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE && eg_md.tunnel.id == 0) 
+        if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE && eg_md.tunnel.id == 0)
             bd_to_vni_mapping.apply();
         if (eg_md.tunnel.type != SWITCH_TUNNEL_TYPE_NONE) {
             encap_outer.apply();
@@ -5063,7 +5063,7 @@ control IngressMulticast(in switch_lookup_fields_t lkp, inout switch_ingress_met
         if (lkp.ip_type == SWITCH_IP_TYPE_IPV4 && ig_md.ipv4.multicast_enable) {
             ipv4_multicast_route.apply(lkp.ip_src_addr[31:0], lkp.ip_dst_addr[31:0], ig_md.vrf, ig_md.multicast, rpf_check, ig_md.multicast.id, multicast_hit);
         }
-        else 
+        else
             if (lkp.ip_type == SWITCH_IP_TYPE_IPV6 && ig_md.ipv6.multicast_enable) {
                 ipv6_multicast_route.apply(lkp.ip_src_addr, lkp.ip_dst_addr, ig_md.vrf, ig_md.multicast, rpf_check, ig_md.multicast.id, multicast_hit);
             }
@@ -5071,7 +5071,7 @@ control IngressMulticast(in switch_lookup_fields_t lkp, inout switch_ingress_met
             if (lkp.ip_type == SWITCH_IP_TYPE_IPV4) {
                 ipv4_multicast_bridge.apply(lkp.ip_src_addr[31:0], lkp.ip_dst_addr[31:0], ig_md.bd, ig_md.multicast.id, multicast_hit);
             }
-            else 
+            else
                 if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
                     ipv6_multicast_bridge.apply(lkp.ip_src_addr, lkp.ip_dst_addr, ig_md.bd, ig_md.multicast.id, multicast_hit);
                 }
@@ -5126,9 +5126,9 @@ control MulticastReplication(in switch_rid_t replication_id, in switch_port_t po
         const default_action = rid_miss;
     }
     apply {
-        if (replication_id != 0) 
+        if (replication_id != 0)
             rid.apply();
-        if (eg_md.checks.same_bd == 0) 
+        if (eg_md.checks.same_bd == 0)
             eg_md.flags.routed = false;
     }
 }
@@ -5657,10 +5657,10 @@ control Ipv6DtelAcl(in switch_lookup_fields_t lkp, in switch_ingress_metadata_t 
 
 control DeflectOnDrop(in switch_ingress_metadata_t ig_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm)(switch_uint32_t table_size=1024) {
     action enable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = true;
+        ig_intr_md_for_tm.deflect_on_drop = 1w1;
     }
     action disable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = false;
+        ig_intr_md_for_tm.deflect_on_drop = 1w0;
     }
     table config {
         key = {
@@ -5716,9 +5716,9 @@ control DropReport(in switch_dtel_metadata_t dtel_md, in bit<32> hash, inout bit
         }
     };
     apply {
-        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW) 
+        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
             flag[0:0] = filter1.execute(hash[16:0]);
-        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW) 
+        if (dtel_md.report_type & SWITCH_DTEL_REPORT_TYPE_FLOW == SWITCH_DTEL_REPORT_TYPE_FLOW)
             flag[1:1] = filter2.execute(hash[31:15]);
     }
 }
@@ -6221,7 +6221,7 @@ control npb_ing_sf_npb_basic_adv_top(inout switch_header_t hdr, inout switch_ing
         if (ig_md.lkp_nsh.ip_type == SWITCH_IP_TYPE_IPV4) {
             npb_ing_sf_policy_l34_v4.apply();
         }
-        else 
+        else
             if (ig_md.lkp_nsh.ip_type == SWITCH_IP_TYPE_IPV6) {
                 npb_ing_sf_policy_l34_v6.apply();
             }
@@ -6734,9 +6734,9 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_ingress_metadata_t
         ig_md.ipv6.multicast_snooping = ig_md.ipv6_nsh.multicast_snooping;
         ig_md.tunnel.terminate = ig_md.tunnel_nsh.terminate;
         racl.apply(ig_md.lkp, ig_md);
-        if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_NONE) 
+        if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_NONE)
             compute_non_ip_hash(ig_md.lkp, ig_md.hash);
-        else 
+        else
             compute_ip_hash(ig_md.lkp, ig_md.hash);
         nexthop.apply(ig_md.lkp, ig_md, ig_md.hash[15:0]);
         qos.apply(hdr, ig_md.lkp, ig_md);
@@ -6748,7 +6748,7 @@ control SwitchIngress(inout switch_header_t hdr, inout switch_ingress_metadata_t
             lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
         }
         dtel.apply(hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md(hdr.bridged_md, ig_md);
         }
         set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);

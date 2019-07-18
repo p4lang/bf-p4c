@@ -47,6 +47,7 @@ DEFINE_PRAGMA_CLASS(PragmaMode);
 DEFINE_PRAGMA_CLASS(PragmaNotExtractedInEgress);
 DEFINE_PRAGMA_CLASS(PragmaNoVersioning);
 DEFINE_PRAGMA_CLASS(PragmaPack);
+DEFINE_PRAGMA_CLASS(PragmaPadding);
 DEFINE_PRAGMA_CLASS(PragmaPacketEntry);
 DEFINE_PRAGMA_CLASS(PragmaPhase0);
 DEFINE_PRAGMA_CLASS(PragmaPlacementPriority);

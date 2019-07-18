@@ -1783,7 +1783,7 @@ control Vanoss(inout Ralls Potosi, inout Level Mulvane, inout ingress_intrinsic_
     }
     action Westview() {
         Mulvane.Kapalua.Dassel = Mulvane.Thayne.Ronan;
-        Luning.copy_to_cpu = (bool)Mulvane.Thayne.Shabbona;
+        Luning.copy_to_cpu = Mulvane.Thayne.Shabbona;
         Luning.mcast_grp_a = (bit<16>)Mulvane.Kapalua.Hoagland;
     }
     action Pimento() {
@@ -1814,7 +1814,7 @@ control Vanoss(inout Ralls Potosi, inout Level Mulvane, inout ingress_intrinsic_
     action Forepaugh() {
         Mulvane.Thayne.Selawik = (bit<1>)Cadwell.execute();
         Mulvane.Kapalua.Dassel = Mulvane.Thayne.Ronan;
-        Luning.copy_to_cpu = (bool)Mulvane.Thayne.Shabbona;
+        Luning.copy_to_cpu = Mulvane.Thayne.Shabbona;
         Luning.mcast_grp_a = (bit<16>)Mulvane.Kapalua.Hoagland;
     }
     action Chewalla() {
@@ -2645,7 +2645,7 @@ control Chambers(inout Ralls Ardenvoir, inout Level Clinchco, inout ingress_intr
         Clinchco.Kapalua.Norwood = Napanoch;
     }
     action Pearcy(bit<8> Ghent) {
-        Snook.copy_to_cpu = true;
+        Snook.copy_to_cpu = 1w1;
         Clinchco.Kapalua.Norwood = Ghent;
     }
     action Protivin() {
@@ -2659,7 +2659,7 @@ control Chambers(inout Ralls Ardenvoir, inout Level Clinchco, inout ingress_intr
     }
     action Haugen(bit<8> Goldsmith) {
         OjoFeliz.count();
-        Snook.copy_to_cpu = true;
+        Snook.copy_to_cpu = 1w1;
         Clinchco.Kapalua.Norwood = Goldsmith;
     }
     action Encinitas() {
@@ -2891,7 +2891,7 @@ control Capitola(inout Ralls Liberal, inout Level Doyline, inout ingress_intrins
         Doyline.Kapalua.Loring = Milltown;
         Doyline.Kapalua.Ocoee = Stone;
         Doyline.Kapalua.Palatine = 3w5;
-        Belcourt.disable_ucast_cutthru = true;
+        Belcourt.disable_ucast_cutthru = 1w1;
     }
     @ways(1) table TinCity {
         actions = {
@@ -2943,29 +2943,29 @@ control Bedrock(inout Ralls Silvertip, inout Level Thatcher, inout ingress_intri
     action Cornish(bit<1> Hatchel) {
         Virginia();
         Archer.mcast_grp_a = Thatcher.Elderon.Suttle;
-        Archer.copy_to_cpu = (bool)(Hatchel | Thatcher.Elderon.Ankeny);
+        Archer.copy_to_cpu = Hatchel | Thatcher.Elderon.Ankeny;
     }
     action Dougherty(bit<1> Pelican) {
         Virginia();
         Archer.mcast_grp_a = Thatcher.Montross.Joslin;
-        Archer.copy_to_cpu = (bool)(Pelican | Thatcher.Montross.Powderly);
+        Archer.copy_to_cpu = Pelican | Thatcher.Montross.Powderly;
     }
     action Unionvale(bit<1> Bigspring) {
         Virginia();
         Archer.mcast_grp_a = (bit<16>)Thatcher.Kapalua.Hoagland + 16w4096;
-        Archer.copy_to_cpu = (bool)Bigspring;
+        Archer.copy_to_cpu = Bigspring;
     }
     action Advance() {
         Thatcher.Thayne.Florin = 1w1;
     }
     action Rockfield(bit<1> Redfield) {
         Archer.mcast_grp_a = 16w0;
-        Archer.copy_to_cpu = (bool)Redfield;
+        Archer.copy_to_cpu = Redfield;
     }
     action Baskin(bit<1> Wakenda) {
         Virginia();
         Archer.mcast_grp_a = (bit<16>)Thatcher.Kapalua.Hoagland;
-        Archer.copy_to_cpu = (bool)((bit<1>)Archer.copy_to_cpu | Wakenda);
+        Archer.copy_to_cpu = Archer.copy_to_cpu | Wakenda;
     }
     table Mynard {
         actions = {
@@ -3243,20 +3243,20 @@ control Terry(inout Ralls Nipton, inout Level Kinard, in ingress_intrinsic_metad
         ;
     }
     action Macungie() {
-        Pendleton.copy_to_cpu = (bool)((bit<1>)Pendleton.copy_to_cpu | 1w0);
+        Pendleton.copy_to_cpu = Pendleton.copy_to_cpu | 1w0;
     }
     action Kiron() {
-        Pendleton.copy_to_cpu = true;
+        Pendleton.copy_to_cpu = 1w1;
     }
     action DewyRose() {
         Turney.drop_ctl = Turney.drop_ctl | 3w3;
     }
     action Minetto() {
-        Pendleton.copy_to_cpu = (bool)((bit<1>)Pendleton.copy_to_cpu | 1w0);
+        Pendleton.copy_to_cpu = Pendleton.copy_to_cpu | 1w0;
         DewyRose();
     }
     action August() {
-        Pendleton.copy_to_cpu = true;
+        Pendleton.copy_to_cpu = 1w1;
         DewyRose();
     }
     Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Kinston;
@@ -3291,20 +3291,20 @@ control Terry(inout Ralls Nipton, inout Level Kinard, in ingress_intrinsic_metad
     }
     action Talkeetna() {
         Fittstown.count();
-        Pendleton.copy_to_cpu = (bool)((bit<1>)Pendleton.copy_to_cpu | 1w0);
+        Pendleton.copy_to_cpu = Pendleton.copy_to_cpu | 1w0;
     }
     action Gorum() {
         Fittstown.count();
-        Pendleton.copy_to_cpu = true;
+        Pendleton.copy_to_cpu = 1w1;
     }
     action Quivero() {
         Fittstown.count();
-        Pendleton.copy_to_cpu = (bool)((bit<1>)Pendleton.copy_to_cpu | 1w0);
+        Pendleton.copy_to_cpu = Pendleton.copy_to_cpu | 1w0;
         DewyRose();
     }
     action Eucha() {
         Fittstown.count();
-        Pendleton.copy_to_cpu = true;
+        Pendleton.copy_to_cpu = 1w1;
         DewyRose();
     }
     action Holyoke() {

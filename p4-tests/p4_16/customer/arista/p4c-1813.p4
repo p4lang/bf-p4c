@@ -1897,7 +1897,7 @@ control Leland(inout Belview Aynor, inout Beaverdam McIntyre, inout ingress_intr
     action Waterman() {
         McIntyre.Brinkman.Selawik = (bit<1>)Earlham.execute();
         McIntyre.Elderon.Dassel = McIntyre.Brinkman.Ronan;
-        Millikin.copy_to_cpu = (bool)McIntyre.Brinkman.Shabbona;
+        Millikin.copy_to_cpu = McIntyre.Brinkman.Shabbona;
         Millikin.mcast_grp_a = (bit<16>)McIntyre.Elderon.Hoagland;
     }
     action Flynn() {
@@ -2743,7 +2743,7 @@ control Langford(inout Belview Cowley, inout Beaverdam Lackey, inout ingress_int
     }
     action Kevil(bit<8> Newland) {
         Baldridge.count();
-        Trion.copy_to_cpu = true;
+        Trion.copy_to_cpu = 1w1;
         Lackey.Elderon.Norwood = Newland;
     }
     action Waumandee() {
@@ -2975,7 +2975,7 @@ control Buras(inout Belview Mantee, inout Beaverdam Walland, inout ingress_intri
         Walland.Elderon.Loring = Twichell;
         Walland.Elderon.Ocoee = Chalco;
         Walland.Elderon.Palatine = 3w5;
-        Melrose.disable_ucast_cutthru = true;
+        Melrose.disable_ucast_cutthru = 1w1;
     }
     @ways(1) table Ferndale {
         actions = {
@@ -3031,29 +3031,29 @@ control Trail(inout Belview Magazine, inout Beaverdam McDougal, inout ingress_in
     action RedBay(bit<1> Tunis) {
         Dundee();
         Batchelor.mcast_grp_a = McDougal.Lordstown.Suttle;
-        Batchelor.copy_to_cpu = (bool)(Tunis | McDougal.Lordstown.Ankeny);
+        Batchelor.copy_to_cpu = Tunis | McDougal.Lordstown.Ankeny;
     }
     action Pound(bit<1> Oakley) {
         Dundee();
         Batchelor.mcast_grp_a = McDougal.Luzerne.Joslin;
-        Batchelor.copy_to_cpu = (bool)(Oakley | McDougal.Luzerne.Powderly);
+        Batchelor.copy_to_cpu = Oakley | McDougal.Luzerne.Powderly;
     }
     action Ontonagon(bit<1> Ickesburg) {
         Dundee();
         Batchelor.mcast_grp_a = (bit<16>)McDougal.Elderon.Hoagland + 16w4096;
-        Batchelor.copy_to_cpu = (bool)Ickesburg;
+        Batchelor.copy_to_cpu = Ickesburg;
     }
     action Tulalip() {
         McDougal.Brinkman.Florin = 1w1;
     }
     action Olivet(bit<1> Nordland) {
         Batchelor.mcast_grp_a = 16w0;
-        Batchelor.copy_to_cpu = (bool)Nordland;
+        Batchelor.copy_to_cpu = Nordland;
     }
     action Upalco(bit<1> Alnwick) {
         Dundee();
         Batchelor.mcast_grp_a = (bit<16>)McDougal.Elderon.Hoagland;
-        Batchelor.copy_to_cpu = (bool)((bit<1>)Batchelor.copy_to_cpu | Alnwick);
+        Batchelor.copy_to_cpu = Batchelor.copy_to_cpu | Alnwick;
     }
     table Osakis {
         actions = {
@@ -3367,20 +3367,20 @@ control Aquilla(inout Belview Sanatoga, inout Beaverdam Tocito, in ingress_intri
     }
     action Anthony() {
         Akhiok.count();
-        Okarche.copy_to_cpu = (bool)((bit<1>)Okarche.copy_to_cpu | 1w0);
+        Okarche.copy_to_cpu = Okarche.copy_to_cpu | 1w0;
     }
     action Waiehu() {
         Akhiok.count();
-        Okarche.copy_to_cpu = true;
+        Okarche.copy_to_cpu = 1w1;
     }
     action Stamford() {
         Akhiok.count();
-        Okarche.copy_to_cpu = (bool)((bit<1>)Okarche.copy_to_cpu | 1w0);
+        Okarche.copy_to_cpu = Okarche.copy_to_cpu | 1w0;
         Cisne();
     }
     action Tampa() {
         Akhiok.count();
-        Okarche.copy_to_cpu = true;
+        Okarche.copy_to_cpu = 1w1;
         Cisne();
     }
     action Pierson() {

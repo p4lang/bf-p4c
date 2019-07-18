@@ -129,7 +129,7 @@ control ingress(inout headers hdr, inout metadata md,
 
   action do_set_dest() {
     ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
-    ig_intr_tm_md.bypass_egress = true;
+    ig_intr_tm_md.bypass_egress = 1w1;
     md.port = ig_intr_md.ingress_port;
   }
   table set_dest {

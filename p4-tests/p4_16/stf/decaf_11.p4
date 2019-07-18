@@ -62,7 +62,7 @@ control IngressP(
     table add_header {
         key = {
             hdr.a.f : exact;
-        }        
+        }
 
         actions = {
             a0a0;
@@ -70,10 +70,10 @@ control IngressP(
             ffff;
         }
     }
-  
+
     action set_port(bit<9> port) {
         ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_tm_md.bypass_egress = true;
+        ig_intr_tm_md.bypass_egress = 1w1;
     }
 
     table set_egress_port {
@@ -104,7 +104,7 @@ parser ParserE(packet_in b,
                out egress_intrinsic_metadata_t eg_intr_md) {
     state start {
         transition accept;  // XXX can't have empty parser in P4-16
-    } 
+    }
 }
 
 control EgressP(

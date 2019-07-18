@@ -102,13 +102,13 @@ error {
 header ingress_intrinsic_metadata_t {
     bit<1> resubmit_flag;               // Flag distinguishing original packets
                                         // from resubmitted packets.
-    @hidden bit<1> _pad1;
+    @padding bit<1> _pad1;
 
     bit<2> packet_version;              // Read-only Packet version.
 
-    @hidden bit<3> _pad2;
+    @padding bit<3> _pad2;
 
-    PortId_t ingress_port;              // Ingress physical port id.
+    bit<9> ingress_port;                // Ingress physical port id.
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
@@ -116,13 +116,13 @@ header ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
-    PortId_t ucast_egress_port;         // Egress port for unicast packets. must
+    bit<9> ucast_egress_port;           // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
-    bool bypass_egress;                 // Request flag for the warp mode
+    bit<1> bypass_egress;               // Request flag for the warp mode
                                         // (egress bypass).
 
-    bool deflect_on_drop;               // Request for deflect on drop. must be
+    bit<1> deflect_on_drop;             // Request for deflect on drop. must be
                                         // presented to TM to enable deflection
                                         // upon drop.
 
@@ -130,23 +130,23 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // ingress admission control, PFC,
                                         // etc.
 
-    QueueId_t qid;                      // Egress (logical) queue id into which
+    bit<5> qid;                         // Egress (logical) queue id into which
                                         // this packet will be deposited.
 
     bit<3> icos_for_copy_to_cpu;        // Ingress cos for the copy to CPU. must
                                         // be presented to TM if copy_to_cpu ==
                                         // 1.
 
-    bool copy_to_cpu;                   // Request for copy to cpu.
+    bit<1> copy_to_cpu;                 // Request for copy to cpu.
 
     bit<2> packet_color;                // Packet color (G,Y,R) that is
                                         // typically derived from meters and
                                         // used for color-based tail dropping.
 
-    bool disable_ucast_cutthru;         // Disable cut-through forwarding for
+    bit<1> disable_ucast_cutthru;       // Disable cut-through forwarding for
                                         // unicast.
 
-    bool enable_mcast_cutthru;          // Enable cut-through forwarding for
+    bit<1> enable_mcast_cutthru;        // Enable cut-through forwarding for
                                         // multicast.
 
     MulticastGroupId_t  mcast_grp_a;    // 1st multicast group (i.e., tree) id;
@@ -176,7 +176,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // replication-tree level2. used for
                                         // pruning.
 
-    ReplicationId_t rid;                // L3 replication id for multicast.
+    bit<16> rid;                        // L3 replication id for multicast.
 }
 
 @__intrinsic_metadata
@@ -212,31 +212,31 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header egress_intrinsic_metadata_t {
-    @hidden bit<7> _pad0;
+    @padding bit<7> _pad0;
 
     bit<9> egress_port;                 // Egress port id.
                                         // this field is passed to the deparser
 
-    @hidden bit<5> _pad1;
+    @padding bit<5> _pad1;
 
     bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
                                         // time.
 
-    @hidden bit<6> _pad2;
+    @padding bit<6> _pad2;
 
     bit<2> enq_congest_stat;            // Queue congestion status at the packet
                                         // enqueue time.
 
-    @hidden bit<14> _pad3;
+    @padding bit<14> _pad3;
     bit<18> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
-    @hidden bit<5> _pad4;
+    @padding bit<5> _pad4;
 
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
 
-    @hidden bit<6> _pad5;
+    @padding bit<6> _pad5;
 
     bit<2> deq_congest_stat;            // Queue congestion status at the packet
                                         // dequeue time.
@@ -245,28 +245,28 @@ header egress_intrinsic_metadata_t {
                                         // congestion status. 2bits per
                                         // pool.
 
-    @hidden bit<14> _pad6;
+    @padding bit<14> _pad6;
     bit<18> deq_timedelta;              // Time delta between the packet's
                                         // enqueue and dequeue time.
 
-    ReplicationId_t egress_rid;         // L3 replication id for multicast
+    bit<16> egress_rid;                 // L3 replication id for multicast
                                         // packets.
 
-    @hidden bit<7> _pad7;
+    @padding bit<7> _pad7;
 
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    @hidden bit<3> _pad8;
+    @padding bit<3> _pad8;
 
-    QueueId_t egress_qid;               // Egress (physical) queue id via which
+    bit<5> egress_qid;                  // Egress (physical) queue id via which
                                         // this packet was served.
 
-    @hidden bit<5> _pad9;
+    @padding bit<5> _pad9;
 
     bit<3> egress_cos;                  // Egress cos (eCoS) value.
 
-    @hidden bit<7> _pad10;
+    @padding bit<7> _pad10;
 
     bit<1> deflection_flag;             // Flag indicating whether a packet is
                                         // deflected due to deflect_on_drop.
@@ -305,11 +305,11 @@ struct egress_intrinsic_metadata_for_deparser_t {
 
 @__intrinsic_metadata
 struct egress_intrinsic_metadata_for_output_port_t {
-    bool capture_tstamp_on_tx;          // Request for packet departure
+    bit<1> capture_tstamp_on_tx;        // Request for packet departure
                                         // timestamping at egress MAC for IEEE
                                         // 1588. consumed by h/w (egress MAC).
 
-    bool update_delay_on_tx;            // Request for PTP delay (elapsed time)
+    bit<1> update_delay_on_tx;          // Request for PTP delay (elapsed time)
                                         // update at egress MAC for IEEE 1588
                                         // Transparent Clock. consumed by h/w
                                         // (egress MAC). when this is enabled,
@@ -319,7 +319,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                         // elapsed time field (8), byte offset
                                         // for UDP checksum (8)> in front of the
                                         // Ethernet header.
-    bool force_tx_error;                // force a hardware transmission error
+    bit<1> force_tx_error;              // force a hardware transmission error
 }
 
 // -----------------------------------------------------------------------------
@@ -336,10 +336,10 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // A triggered event may generate programmable number of batches with
 // programmable number of packets per batch.
 header pktgen_timer_header_t {
-    @hidden bit<3> _pad1;
+    @padding bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
-    @hidden bit<8> _pad2;
+    @padding bit<8> _pad2;
 
     bit<16> batch_id;                   // Start at 0 and increment to a
                                         // programmed number
@@ -349,10 +349,10 @@ header pktgen_timer_header_t {
 }
 
 header pktgen_port_down_header_t {
-    @hidden bit<3> _pad1;
+    @padding bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
-    @hidden bit<15> _pad2;
+    @padding bit<15> _pad2;
     bit<9> port_num;                    // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
@@ -360,7 +360,7 @@ header pktgen_port_down_header_t {
 }
 
 header pktgen_recirc_header_t {
-    @hidden bit<3> _pad1;
+    @padding bit<3> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<3> app_id;                      // Application id
     bit<24> key;                        // Key from the recirculated packet

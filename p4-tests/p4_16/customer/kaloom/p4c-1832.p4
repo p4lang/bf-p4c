@@ -250,7 +250,7 @@ header postcard_header_t {
 control BypassAndExit(out ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
     action bypass_and_exit() {
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -1737,7 +1737,7 @@ control VnetMapping(
     action kvs_multicast_miss() {
         kvs_multicast_cntr.count();
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_intr_md_for_tm.bypass_egress = true;
+        ig_intr_md_for_tm.bypass_egress = 1w1;
         exit;
     }
 
@@ -2180,7 +2180,7 @@ control VnetDmac(
 
     action vnet_dmac_drop_() {
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_intr_md_for_tm.bypass_egress = true;
+        ig_intr_md_for_tm.bypass_egress = 1w1;
         exit;
     }
 
@@ -2190,7 +2190,7 @@ control VnetDmac(
      */
     action remote_redirect() {
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_intr_md_for_tm.bypass_egress = true;
+        ig_intr_md_for_tm.bypass_egress = 1w1;
         exit;
     }
 
@@ -3174,7 +3174,7 @@ control IngressVRouter(
     /* When ttl == 0 then drop the packet. */
     action end_ttl() {
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_intr_md_for_tm.bypass_egress = true;
+        ig_intr_md_for_tm.bypass_egress = 1w1;
         exit;
     }
 
@@ -3684,7 +3684,7 @@ control PortFailover(
 
     action drop_packet() {
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3742,7 +3742,7 @@ control PortFailover(
         /* Set packet_id to 0 to start deactivating entry from the beginning. */
         hdr.pktgen_port_down.packet_id = 0;
         ig_tm_md.ucast_egress_port = recirc_port;
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3774,7 +3774,7 @@ control PortFailover(
         hdr.pktgen_port_down.packet_id = hdr.pktgen_port_down.packet_id + 1;
         ig_tm_md.ucast_egress_port[8:7] = (bit<2>)(ig_intr_md.ingress_port >> 7);
         ig_tm_md.ucast_egress_port[6:0] = (bit<7>)RECIRC_PORT_PIPE_0;
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3822,7 +3822,7 @@ control L2Ingress(
     action l2_ingress_miss() {
         l2_ingress_cntr.count();
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3833,7 +3833,7 @@ control L2Ingress(
         hdr.dp_ctrl_hdr.port = (bit<16>)ig_intr_md.ingress_port;
         ig_tm_md.ucast_egress_port = fabric_meta.cpu_port;
         /* TODO: The p4-14 code does not bypass_egress - workaround for BF 8844 */
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3899,7 +3899,7 @@ control FabricRouting(
 
     action drop_packet() {
         ig_dprsr_md.drop_ctl = DROP_CTL_ALL;
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -3929,7 +3929,7 @@ control FabricRouting(
         hdr.dp_ctrl_hdr.port = (bit<16>)ig_intr_md.ingress_port;
         ig_tm_md.ucast_egress_port = fabric_meta.cpu_port;
         /* TODO: The p4-14 code does not bypass_egress - workaround for BF 8844 */
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
         exit;
     }
 
@@ -5130,7 +5130,7 @@ control SwitchIngress(
         }
 
         /* Only add bridged metadata if we are NOT bypassing egress pipeline. */
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md();
         }
     }

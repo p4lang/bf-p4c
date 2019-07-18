@@ -36,7 +36,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md,
                 in ghost_intrinsic_metadata_t gmd) {
     action trigger() {
-	ig_intr_dprsr_md.pktgen = true;
+	ig_intr_dprsr_md.pktgen = 1w1;
 	ig_intr_dprsr_md.pktgen_length = 10w512;
 	ig_intr_dprsr_md.pktgen_address = 14w400;
     }
@@ -54,7 +54,7 @@ control ingressDeparser(packet_out packet, inout headers hdr, in metadata meta,
                         in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprs) {
     Pktgen() pktgen;
     apply {
-	if (ig_intr_md_for_dprs.pktgen)
+	if (ig_intr_md_for_dprs.pktgen == 1w1)
 	    pktgen.emit<data_t>(hdr.data);
         packet.emit<data_t>(hdr.data);
     }
