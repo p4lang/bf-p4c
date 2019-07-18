@@ -1452,3 +1452,10 @@ p4c_add_xfail_reason("tofino"
   "AttributeError.*Client instance has no attribute"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )
+
+# P4C-1819
+p4c_add_xfail_reason("tofino"
+  "Unsupported on target"
+  extensions/p4_tests/p4_16/compile_only/p4c-1819-neg.p4
+)
+

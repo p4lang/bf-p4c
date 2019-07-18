@@ -618,6 +618,31 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
             }
         }
     }
+
+    // P4C-1819
+    // Compiler generates an invalid instruction here for saturated unsigned
+    // subtract with a constant value as src2 which is unsupported in
+    // Tofino/JBAY.
+    // P4:   hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
+    // BFA:  - ssubu hdr.ipv4.ttl, hdr.ipv4.ttl, 1
+    //
+    // Soln : Rewrite P4 by initializing the "1" through a field which makes it
+    // a PHV which is supported as src2
+    //
+    // Unsupported alternate solutions:
+    // 1. Use the ADD instruction: src1 (immediate -1) + src2 (unsigned PHV field)
+    //    and then detect underflow from 0 to 255 in a subsequent stage and map back to 0.
+    // 2. Instead of using an additional stage, use a table in this stage to detect TTL
+    //    value of 0 to conditionally execute the subtract or not
+    // Both these solutions require program transformations
+    if (bits && !bits->isSigned && eRight->to<IR::Constant>()) {
+        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\n"
+            "A saturated unsigned subtract (ssubu) cannot have the second operand\n "
+            "(value to be subtracted) as a constant value.\n"
+            "Try rewriting the relevant P4 by initializing the constant value "
+            "to be subtracted within a field.", e->srcInfo);
+    }
+
     return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type), eLeft, eRight);
 }
 

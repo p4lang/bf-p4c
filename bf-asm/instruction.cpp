@@ -1166,42 +1166,44 @@ bool ShiftOP::equiv(Instruction *a_) {
 }
 
 // lifted from MAU uArch 15.1.6
-
-static AluOP::Decode        opADD         ("add",           0x23e, true),
-                            opADDC        ("addc",          0x2be, true),
-                            opSUB         ("sub",           0x33e),
-                            opSUBC        ("subc",          0x3be),
-                            opSADDU       ("saddu",         0x03e, true),
-                            opSADDS       ("sadds",         0x07e, true),
-                            opSSUBU       ("ssubu",         0x0be, true),
-                            opSSUBS       ("ssubs",         0x0fe, true),
-                            opMINU        ("minu",          0x13e, true),
-                            opMINS        ("mins",          0x17e, true),
-                            opMAXU        ("maxu",          0x1be, true),
-                            opMAXS        ("maxs",          0x1fe, true),
-                            opSETZ        ("setz",          0x01e, true),
-                            opNOR         ("nor",           0x05e, true),
-                            opANDCA       ("andca",         0x09e),
-                            opNOTA        ("nota",          0x0de),
-                            opANDCB       ("andcb",         0x11e, &opANDCA),
-                            opNOTB        ("notb",          0x15e, &opNOTA, "not"),
-                            opXOR         ("xor",           0x19e, true),
-                            opNAND        ("nand",          0x1de, true),
-                            opAND         ("and",           0x21e, true),
-                            opXNOR        ("xnor",          0x25e, true),
-                            opB           ("alu_b",         0x29e),
-                            opORCA        ("orca",          0x2de),
-                            opA           ("alu_a",         0x31e, &opB),
-                            opORCB        ("orcb",          0x35e, &opORCA),
-                            opOR          ("or",            0x39e, true),
-                            opSETHI       ("sethi",         0x3de, true);
-static LoadConst::Decode    opLoadConst   ("load-const");
-static Set::Decode          opSet         ("set");
-static NulOP::Decode        opNoop        ("noop",          0x0);
-static ShiftOP::Decode      opSHL         ("shl",           0x0c, false),
-                            opSHRS        ("shrs",          0x1c, false),
-                            opSHRU        ("shru",          0x14, false),
-                            opFUNSHIFT    ("funnel-shift",  0x04, true);
+// If the operation is associative operand swap is enabled
+//                                      OPNAME           OPCODE      OPERAND SWAP
+//                                                                   (default = false)
+static AluOP::Decode     opADD         ("add",           0x23e,      true),
+                         opADDC        ("addc",          0x2be,      true),
+                         opSUB         ("sub",           0x33e),
+                         opSUBC        ("subc",          0x3be),
+                         opSADDU       ("saddu",         0x03e,      true),
+                         opSADDS       ("sadds",         0x07e,      true),
+                         opSSUBU       ("ssubu",         0x0be),
+                         opSSUBS       ("ssubs",         0x0fe),
+                         opMINU        ("minu",          0x13e,      true),
+                         opMINS        ("mins",          0x17e,      true),
+                         opMAXU        ("maxu",          0x1be,      true),
+                         opMAXS        ("maxs",          0x1fe,      true),
+                         opSETZ        ("setz",          0x01e,      true),
+                         opNOR         ("nor",           0x05e,      true),
+                         opANDCA       ("andca",         0x09e),
+                         opNOTA        ("nota",          0x0de),
+                         opANDCB       ("andcb",         0x11e,      &opANDCA),
+                         opNOTB        ("notb",          0x15e,      &opNOTA, "not"),
+                         opXOR         ("xor",           0x19e,      true),
+                         opNAND        ("nand",          0x1de,      true),
+                         opAND         ("and",           0x21e,      true),
+                         opXNOR        ("xnor",          0x25e,      true),
+                         opB           ("alu_b",         0x29e),
+                         opORCA        ("orca",          0x2de),
+                         opA           ("alu_a",         0x31e,      &opB),
+                         opORCB        ("orcb",          0x35e,      &opORCA),
+                         opOR          ("or",            0x39e,      true),
+                         opSETHI       ("sethi",         0x3de,      true);
+static LoadConst::Decode opLoadConst   ("load-const");
+static Set::Decode       opSet         ("set");
+static NulOP::Decode     opNoop        ("noop",          0x0);
+static ShiftOP::Decode   opSHL         ("shl",           0x0c,       false),
+                         opSHRS        ("shrs",          0x1c,       false),
+                         opSHRU        ("shru",          0x14,       false),
+                         opFUNSHIFT    ("funnel-shift",  0x04,       true);
 static DepositField::Decode opDepositField;
 
 AluOP::Decode* Set::opA = &VLIW::opA;
