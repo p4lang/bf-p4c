@@ -868,10 +868,11 @@ p4c_add_xfail_reason("tofino"
 # Also P4C-1446
 # Bug with handling sub-parser.
 p4c_add_xfail_reason("tofino"
-  "Extracting from offset before the start of the input buffer"
+  "Extraction source .* out of .* input buffer"
   extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
   extensions/p4_tests/p4_16/compile_only/serializer2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4  # P4C-1372
 )
 
 p4c_add_xfail_reason("tofino"
@@ -902,14 +903,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   ../glass/testsuite/p4_tests/phv/test_config_402_parser_sub.p4
-  )
-
-# P4C-1372
-# Inferred valid container ranges N[0..2147483646]b and N[0..-113]b for field
-# ingress::m.ingress_port which cannot both be satisfied for a field of size 9b"
-p4c_add_xfail_reason("tofino"
-  "Extracting from offset before the start of the input buffer"
-  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
   )
 
 # P4C-1299

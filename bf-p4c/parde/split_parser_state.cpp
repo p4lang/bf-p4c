@@ -1,4 +1,5 @@
 #include "split_parser_state.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/parde_utils.h"
 
 class DumpSplitStates : public DotDumper {
@@ -1137,13 +1138,35 @@ struct InsertParserCounterStall : public ParserTransform {
 /// than 32 bytes (input buffer size), we can safely clip the shift amount to
 /// 32, as the remaining amount will not contribute to header length.
 struct ClipTerminalTransition : ParserModifier {
-    bool preorder(IR::BFN::Transition* t) {
+    bool preorder(IR::BFN::Transition* t) override {
         if (t->next == nullptr &&
             t->shift > Device::pardeSpec().byteInputBufferSize()) {
             t->shift = Device::pardeSpec().byteInputBufferSize();
         }
 
         return true;
+    }
+};
+
+// If after state splitting, the extraction source is still out of current
+// state's input buffer, that means we cannot implement this program, i.e.
+// program error.
+struct CheckOutOfBufferExtracts : ParserInspector {
+    bool preorder(const IR::BFN::PacketRVal* rval) override {
+        if (auto extract = findContext<IR::BFN::Extract>()) {
+            if (rval->range.lo < 0 ||
+                rval->range.hi > Device::pardeSpec().byteInputBufferSize() * 8) {
+                auto state = findContext<IR::BFN::ParserState>();
+
+                ::fatal_error("Extraction source for %1% is out of state %2%'s input buffer"
+                               " (%3% bytes)",
+                               extract->dest->field,
+                               state->name,
+                               Device::pardeSpec().byteInputBufferSize());
+            }
+        }
+
+        return false;
     }
 };
 
@@ -1157,6 +1180,7 @@ SplitParserState::SplitParserState(const PhvInfo& phv, ClotInfo& clot) {
         new InsertParserCounterStall,
         LOGGING(4) ? new DumpParser("after_insert_counter_stall") : nullptr,
         new ClipTerminalTransition,
+        new CheckOutOfBufferExtracts,
         LOGGING(4) ? new DumpParser("after_split_parser_states") : nullptr
     });
 }

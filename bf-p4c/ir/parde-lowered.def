@@ -22,11 +22,6 @@ abstract LoweredParserRVal { }
 /// coordinate system used will depend on the specific type of
 /// `LoweredInputBufferRVal`.
 abstract LoweredInputBufferRVal : LoweredParserRVal {
-    validate {
-        BUG_CHECK(range.lo >= 0,
-                  "Extracting from offset before the start of the input buffer");
-    }
-
     /// @return this buffer range as a half-open range of bytes in network order.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
 
