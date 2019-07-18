@@ -10,7 +10,7 @@
 /** When backtracking, this class contains members that save the generated table placement (without
   * container conflicts) for use by the second round of PHV allocation
   */
-class MauBacktracker : public Inspector, Backtrack {
+class MauBacktracker : public Backtrack {
  private:
     static constexpr unsigned NUM_LOGICAL_TABLES_PER_STAGE = 16;
     /// To keep track of the number of times this pass has been invoked
@@ -40,8 +40,7 @@ class MauBacktracker : public Inspector, Backtrack {
     /// @true if PHV allocation and table placement both fit in round 1.
     bool firstRoundFit = false;
 
-    profile_t init_apply(const IR::Node *root) override;
-    void end_apply() override;
+    const IR::Node *apply_visitor(const IR::Node *root, const char *) override;
 
     /// This is the function that catches the backtracking exception from TableSummary. This should
     /// return true.

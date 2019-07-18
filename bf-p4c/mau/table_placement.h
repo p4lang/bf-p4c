@@ -20,7 +20,8 @@ class SharedIndirectAttachedAnalysis;
 class TablePlacement : public MauTransform, public Backtrack {
  public:
     TablePlacement(const BFN_Options &, const DependencyGraph *, const TablesMutuallyExclusive &,
-                   const PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &);
+                   const PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &,
+                   TableSummary &summary);
     struct GroupPlace;
     struct Placed;
     typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
@@ -119,6 +120,14 @@ class TablePlacement : public MauTransform, public Backtrack {
         const StageUseEstimate &current);
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
+
+    void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, int entries);
+
+    TableSummary &summary;
+    template <class... Args> void error(Args... args) {
+        auto &ctxt = BaseCompileContext::get();
+        summary.addPlacementError(ctxt.errorReporter().format_message(args...)); }
+    int errorCount() const { return ::errorCount() + summary.placementErrorCount(); }
 };
 
 #endif /* BF_P4C_MAU_TABLE_PLACEMENT_H_ */

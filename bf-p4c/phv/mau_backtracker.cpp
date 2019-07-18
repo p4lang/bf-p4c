@@ -38,7 +38,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
     return false;
 }
 
-Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
+const IR::Node *MauBacktracker::apply_visitor(const IR::Node* root, const char *) {
     LOG1("MauBacktracker called " << numInvoked << " time(s)");
     LOG1("  Is metadata initialization disabled? " << (metaInitDisable ? "YES" : "NO"));
     LOG1("  Should pack conflicts be ignored? " << (ignorePackConflicts ? "YES" : "NO"));
@@ -46,16 +46,10 @@ Visitor::profile_t MauBacktracker::init_apply(const IR::Node* root) {
     overlay.clear();
     if (firstRoundFit) {
         tables.clear();
-        prevRoundTables.clear();
-    }
-    profile_t rv = Inspector::init_apply(root);
-    return rv;
-}
-
-void MauBacktracker::end_apply() {
-    if (!LOGGING(4)) return;
-    if (numInvoked == 1) return;
-    printTableAlloc();
+        prevRoundTables.clear(); }
+    if (LOGGING(4) && numInvoked != 1)
+        printTableAlloc();
+    return root;
 }
 
 ordered_set<int>

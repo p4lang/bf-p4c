@@ -11,7 +11,8 @@
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/remove_noop_gateway.h"
 
-TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps)
+TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
+                               TableSummary &summary)
     : Logging::PassManager("table_placement_"), siaa(mutex) {
         addPasses({
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
@@ -28,7 +29,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             &mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),
-            new TablePlacement(options, &deps, mutex, phv, lc, siaa),
+            new TablePlacement(options, &deps, mutex, phv, lc, siaa, summary),
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),  // not needed?
             new AssignCounterLRTValues(),

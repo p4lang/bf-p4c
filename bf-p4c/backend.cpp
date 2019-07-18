@@ -202,7 +202,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
-        new TableAllocPass(options, phv, deps),
+        new TableAllocPass(options, phv, deps, table_summary),
         &table_summary,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.

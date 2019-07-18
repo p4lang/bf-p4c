@@ -79,8 +79,9 @@ template<class Container, class Pred> inline void erase_if(Container &c, Pred pr
 
 TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
                                const TablesMutuallyExclusive &m, const PhvInfo &p,
-                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s) {}
+                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
+                               TableSummary &summary_)
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), summary(summary_) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
     // If a table does not fit in the available stages, then TableSummary throws an exception.
@@ -100,6 +101,7 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
     placed_tables_for_dep_analysis.clear();
     placed_table_names.clear();
+    summary.clearPlacementErrors();
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
@@ -497,7 +499,7 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         int min_entries) {
     auto t = next->table;
     if (t->for_dleft()) {
-        ::error("Table %1%: cannot split dleft hash tables", t);
+        error("Table %1%: cannot split dleft hash tables", t);
         return false;
     }
 
@@ -1184,8 +1186,8 @@ const TablePlacement::Placed *
             auto *rv = new Placed(*this, t);
             rv = try_place_table(rv, t, last_placed, current);
             if (rv->stage != 0) {
-                ::error("No table in %s could be placed in stage 0, a requirement for Tofino",
-                        toString(current_gress));
+                error("No table in %s could be placed in stage 0, a requirement for Tofino",
+                      toString(current_gress));
                 return last_placed;
             }
             last_placed = rv;
@@ -1722,7 +1724,7 @@ IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     return pipe;
 }
 
-static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
+void TablePlacement::table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
     tbl->resources = resources;
     tbl->layout.entries = entries;

@@ -52,8 +52,10 @@ class TableSummary: public MauInspector {
     /// Booleans indicating whether traversal over ingress and egress pipes has happened
     bool ingressDone;
     bool egressDone;
-    /// Flag if we've found a placement problem that will require retrying
-    ordered_set<const IR::MAU::Table*> failedPlacementTables;
+    /// Flag if we've found a placement problem that will require retrying.  Strings are
+    // error messages to output if we can't backtrack.  Flag is true if the error should
+    // be output as an error and false if it should just be a warning
+    std::vector<std::pair<bool, cstring>> tablePlacementErrors;
 
     int pipe_id;
     const DependencyGraph& deps;
@@ -98,6 +100,12 @@ class TableSummary: public MauInspector {
     int maxStages(gress_t gress) const { return max_stages[gress]; }
 
     const ordered_map<cstring, ordered_set<int>>& getTableAlloc(void) const { return tableAlloc; }
+
+    // only called by TablePlacement
+    void addPlacementError(cstring msg) { tablePlacementErrors.emplace_back(true, msg); }
+    void addPlacementWarnError(cstring msg) { tablePlacementErrors.emplace_back(false, msg); }
+    void clearPlacementErrors() { tablePlacementErrors.clear(); }
+    int placementErrorCount() { return tablePlacementErrors.size(); }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

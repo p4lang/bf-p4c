@@ -8,6 +8,8 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_layout.h"
 
+class TableSummary;
+
 class TableAllocPass : public Logging::PassManager {
  private:
     TablesMutuallyExclusive mutex;
@@ -15,7 +17,7 @@ class TableAllocPass : public Logging::PassManager {
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps);
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps, TableSummary &);
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_MAU_ALLOC_H_ */

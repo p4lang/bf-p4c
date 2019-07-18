@@ -24,7 +24,6 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     action_data_bus.clear();
     imems.clear();
     tableAlloc.clear();
-    failedPlacementTables.clear();
     tableNames.clear();
     mergedGateways.clear();
     maxStage = 0;
@@ -61,8 +60,11 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         memory[t->stage()].update(t->resources->memuse);
         action_data_bus[t->stage()].update(t);
         imems[t->stage()].update(t); }
-    if (t->match_table && t->get_provided_stage() >= 0 && t->stage() != t->get_provided_stage())
-        failedPlacementTables.insert(t);
+    if (t->match_table && t->get_provided_stage() >= 0 && t->stage() != t->get_provided_stage()) {
+        // FIXME -- move to TablePlacement
+        addPlacementWarnError(BaseCompileContext::get().errorReporter().format_message(
+                "The stage specified for %s is %d, but we could not place it until stage %d",
+                t, t->get_provided_stage(), t->stage())); }
     return true;
 }
 
@@ -83,7 +85,7 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
 void TableSummary::throwBacktrackException() {
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
-    bool placementFailure = (failedPlacementTables.size() > 0);
+    bool placementFailure = (tablePlacementErrors.size() > 0);
     for (auto entry : order) {
         int stage = static_cast<int>(entry.first/NUM_LOGICAL_TABLES_PER_STAGE);
         maxStage = (maxStage < stage) ? stage : maxStage;
@@ -116,9 +118,11 @@ void TableSummary::throwBacktrackException() {
     // PHVs, 3 rounds of table placement with container conflicts, and 2 rounds of table placement
     // without container conflicts.
     if (numInvoked[pipe_id] >= 5) {
-        for (const auto* t : failedPlacementTables)
-            warning("The stage specified for %s is %d, but we could not place it until stage %d",
-                    t, t->get_provided_stage(), t->stage());
+        for (auto &msg : tablePlacementErrors)
+            if (msg.first)
+                error(msg.second);
+            else
+                warning(msg.second);
         return; }
 
     // First round.
