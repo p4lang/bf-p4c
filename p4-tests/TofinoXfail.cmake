@@ -1395,6 +1395,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "saturated unsigned subtract"
+  extensions/p4_tests/p4_16/compile_only/simple_l3_csum_varbit.p4
+)
+
 # P4C-1723
 p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
