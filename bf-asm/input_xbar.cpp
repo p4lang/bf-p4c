@@ -569,11 +569,12 @@ void InputXbar::pass2() {
 
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
+    LOG1("### Input xbar " << table->name() << " write_regs");
     auto &xbar = regs.dp.xbar_hash.xbar;
     auto gress = timing_thread(table->gress);
     for (auto &group : groups) {
         if (group.second.empty()) continue;
-        LOG1("  # Input xbar group " << group.first);
+        LOG1("  # Input xbar group " << group.first); 
         unsigned group_base = 0;
         unsigned half_byte = 0;
         unsigned bytes_used = 0;
@@ -589,6 +590,8 @@ void InputXbar::write_regs(REGS &regs) {
             break;
         case Group::BYTE:
             group_base = 133 + 11*group.first.index;
+            xbar.mau_match_input_xbar_ternary_match_enable[gress]
+                |= 1 << (group.first.index);
             break;
         default:
             BUG(); }

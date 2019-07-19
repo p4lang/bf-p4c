@@ -194,8 +194,8 @@ public:
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
     switch (gr.type) {
     case InputXbar::Group::EXACT: out << "exact"; break;
-    case InputXbar::Group::TERNARY: out << "exact"; break;
-    case InputXbar::Group::BYTE: out << "exact"; break;
+    case InputXbar::Group::TERNARY: out << "ternary"; break;
+    case InputXbar::Group::BYTE: out << "byte"; break;
     default: out << "<type=" << static_cast<int>(gr.type) << ">"; }
     return out << " ixbar group " << gr.index; }
 
