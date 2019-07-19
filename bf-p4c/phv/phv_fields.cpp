@@ -1,19 +1,13 @@
 #include "bf-p4c/phv/phv_fields.h"
 
-#include <boost/optional.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <boost/range/irange.hpp>
-#include <regex>
 #include <string>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/gateway.h"
-#include "frontends/p4/toP4/toP4.h"
 #include "lib/stringref.h"
 
 FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
@@ -855,13 +849,12 @@ void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
 
     // If there is an existing alignment, it must agree with this new one.
     // Otherwise the program is inconsistent and we can't compile it.
-    // XXX(seth): We actually could, in theory, handle such a situation by
-    // creating two different versions of the field with different alignments
-    // and copying between them as needed in the MAU. Not cheap, though.
-    ERROR_CHECK(*alignment == newAlignment,
-                "Inferred incompatible alignments for field %1%: %2% != %3%",
-                name, cstring::to_cstring(newAlignment),
-                cstring::to_cstring(*alignment));
+    if (*alignment != newAlignment) {
+        ::fatal_error("Inferred incompatible container alignments for field %1%:"
+                      " %2% != %3% (little endian)",
+                      name, cstring::to_cstring(newAlignment),
+                      cstring::to_cstring(*alignment));
+    }
 }
 
 void PHV::Field::setStartBits(PHV::Size size, bitvec startPositions) {
@@ -938,10 +931,8 @@ void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
 
     const auto intersection = validContainerRange_i.intersectWith(newValidRange);
     if (intersection.empty()) {
-        ::error("Inferred valid container ranges %1% and %2% for field %3% "
-                "which cannot both be satisfied for a field of size %4%b",
-                cstring::to_cstring(validContainerRange_i),
-                cstring::to_cstring(newValidRange), name, size);
+        ::fatal_error("Inferred container alignments for field %1%"
+                      " that are impossible to satisfy", name);
         return;
     }
 
