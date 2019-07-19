@@ -365,6 +365,13 @@ bool Memories::allocate_all() {
     return true;
 }
 
+bool Memories::allocate_all_dummies() {
+    for (auto ta : tables) {
+        gw_tables.push_back(ta);
+    }
+    return allocate_all_gw();
+}
+
 /* This class is responsible for filling in all of the particular lists with the corresponding
    twoport tables, as well as getting the sharing of indirect action tables and selectors correct
 */

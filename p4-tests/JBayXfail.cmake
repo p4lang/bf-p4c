@@ -400,11 +400,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "too many long branches table .*"
-  smoketest_switch_16_compile
-)
-
-p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
   smoketest_switch_16_compile_d0_profile
 )

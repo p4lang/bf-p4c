@@ -709,6 +709,7 @@ struct Memories {
 
  public:
     bool allocate_all();
+    bool allocate_all_dummies();
     void update(cstring table_name, const Use &alloc);
     void update(const std::map<UniqueId, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);
