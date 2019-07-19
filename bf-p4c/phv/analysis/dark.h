@@ -24,6 +24,7 @@ class CollectNonDarkUses : public MauInspector {
     bitvec            nonDarkMauUses;
 
     profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::MAU::Table*) override;
     bool preorder(const IR::Expression *) override;
     bool contextNeedsIXBar();
 

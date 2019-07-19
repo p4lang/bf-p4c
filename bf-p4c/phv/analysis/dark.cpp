@@ -22,6 +22,14 @@ bool CollectNonDarkUses::contextNeedsIXBar() {
     BUG("invalid context in CollectNonDarkUses");
 }
 
+bool CollectNonDarkUses::preorder(const IR::MAU::Table* table) {
+    // Ensure that we visit all expressions in the table, even if they have been previously visited
+    // in a different context.
+    auto result = Inspector::preorder(table);
+    revisit_visited();
+    return result;
+}
+
 bool CollectNonDarkUses::preorder(const IR::Expression *e) {
     if (auto *field = phv.field(e)) {
         if (contextNeedsIXBar()) {
