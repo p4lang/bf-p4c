@@ -48,6 +48,9 @@ extern std::string asmfile_name;
 
 int asm_parse_file(const char *name, FILE *in);
 
+void no_sections_error_exit();
+bool no_section_error(char* name);
+
 extern int error_count, warn_count;
 extern void error(int lineno, const char *fmt, va_list);
 void error(int lineno, const char *fmt, ...) __attribute__((format(printf, 2, 3)));

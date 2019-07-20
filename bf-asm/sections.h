@@ -9,10 +9,12 @@
 #include "bfas.h"
 
 /// A Section represents a top level section in assembly
-/// Current sections include: version, phv, parser, deparser, stage, and resource
+/// Current sections include: 
+/// version, phv, parser, deparser, stage, dynhash, primitives 
 class Section {
     static std::map<std::string, Section *>     *sections;
     std::string name;
+    bool isInput = false;
     static Section *get(const char *name) { return ::get(sections, name); }
 protected:
     Section(const char *name_) : name(name_) {
@@ -38,6 +40,7 @@ public:
     static int start_section(int lineno, char *name, VECTOR(value_t) args) {
         if (Section *sec = get(name)) {
             int prev_error_count = error_count;
+            sec->isInput = true;
             sec->start(lineno, args);
             return error_count > prev_error_count;
         } else {
@@ -59,6 +62,17 @@ public:
             if(s.count("primitives"))
                 s["primitives"]->output(ctxtJson);
         }
+    }
+    static bool no_sections_in_assembly() {
+        if (sections) {
+            for (auto &it : *sections) {
+                if (it.second->isInput) return false;
+            }
+        }
+        return true;
+    }
+    static bool section_in_assembly(char* name) {
+        return get(name)->isInput;
     }
 };
 

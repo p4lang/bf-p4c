@@ -333,8 +333,18 @@ int main(int ac, char **av) {
         error_count++; }
     if (error_count > 0)
         std::cerr << usage(av[0]) << std::endl;
-    if (error_count == 0)
+    if (error_count == 0) {
+        // Check if file has no sections
+        no_sections_error_exit();
+        // Check if mandatory sections are present in assembly
+        bool no_section = false;
+        no_section |= no_section_error("deparser");
+        no_section |= no_section_error("parser");
+        no_section |= no_section_error("phv");
+        no_section |= no_section_error("stage");
+        if (no_section) exit(1);
         Section::process_all();
+    }
     if (error_count == 0) {
         if (srcfiles == 1 && output_dir.empty()) {
             if (const char *p = strrchr(firstsrc, '/'))
@@ -353,6 +363,19 @@ int main(int ac, char **av) {
     if (log_error > 0)
         warning(0, "%d config errors in log file", log_error);
     return error_count > 0 || (options.werror && warn_count > 0) ? 1 : 0;
+}
+
+void no_sections_error_exit() {
+    if (Section::no_sections_in_assembly()) {
+        std::cerr << "No valid sections found in assembly file" << std::endl; exit(1); }
+}
+
+bool no_section_error(char* name) {
+    if (!Section::section_in_assembly(name)) {
+        std::cerr << "No '" << name << "' section found in assembly file" << std::endl;
+        return true;
+    }
+    return false;
 }
 
 class Version : public Section {

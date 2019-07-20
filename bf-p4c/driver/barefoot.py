@@ -416,9 +416,8 @@ class BarefootBackend(BackendDriver):
 
         # compilation failed and there is no manifest. An error should have been printed,
         # so we simply exit here
-        if not os.path.isfile(manifest_filename):
+        if not os.path.isfile(manifest_filename) or os.path.getsize(manifest_filename) == 0:
             self.exitWithError(None)
-
 
         with open(manifest_filename, "rb") as json_file:
             try:
@@ -507,7 +506,7 @@ class BarefootBackend(BackendDriver):
         """
         Set the compile_command in the manifest or context.json
         """
-        if self._dry_run or not os.path.exists(jsonFile):
+        if self._dry_run or not os.path.exists(jsonFile) or os.path.getsize(jsonFile) == 0:
             return
 
         jsonTree = None
