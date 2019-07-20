@@ -432,8 +432,14 @@ static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
     hashFunc.type = IR::MAU::HashFunction::CRC;
 }
 
+/**
+ * TODO(hanw): Pass ExternInstance* as a parameter, instead of srcInfo, name, type,
+ * substitution, annot.
+ * Gated by use in AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref)
+ */
 static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const P4::ParameterSubstitution* substitution,
+        const IR::Vector<IR::Type>* typeArgs,
         const IR::Annotations *annot, P4::ReferenceMap *refMap,
         P4::TypeMap* typeMap,
         StatefulSelectors &stateful_selectors,
@@ -508,7 +514,6 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                         if (!sel->algorithm.setup(inst->arguments->at(0)->expression))
                             BUG("invalid algorithm %s", inst->arguments->at(0)->expression);
                     } else if (inst->arguments->size() == 2) {
-                        LOG3("get crc from hash inst " << p);
                         auto crc_poly = P4::ExternInstance::resolve(
                                 inst->arguments->at(1)->expression, refMap, typeMap);
                         if (crc_poly == boost::none)
@@ -582,9 +587,12 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 ctr->size = getConstant(arg);
             } }
 
+        if (typeArgs != nullptr && typeArgs->size() != 0) {
+            ctr->min_width = typeArgs->at(0)->width_bits();
+        } else {
+            ctr->min_width = -1;
+        }
         /* min_width comes via Type_Specialized */
-        auto* t = type->to<IR::Type_Specialized>();
-        ctr->min_width = t ? t->arguments->at(0)->width_bits() : -1;
         for (auto anno : annot->annotations) {
             if (anno->name == "max_width")
                 ctr->max_width = getConstant(anno);
@@ -755,6 +763,50 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
     return nullptr;
 }
 
+/**
+ * Helper functions to extract extern instance from table properties.
+ * Originally implemented in as part of the control-plane repo.
+ */
+boost::optional<P4::ExternInstance>
+getExternInstanceFromProperty(const IR::P4Table* table,
+                              const cstring& propertyName,
+                              P4::ReferenceMap* refMap,
+                              P4::TypeMap* typeMap) {
+    auto property = table->properties->getProperty(propertyName);
+    if (property == nullptr) return boost::none;
+    if (!property->value->is<IR::ExpressionValue>()) {
+        ::error("Expected %1% property value for table %2% to be an expression: %3%",
+                propertyName, table->controlPlaneName(), property);
+        return boost::none;
+    }
+
+    auto expr = property->value->to<IR::ExpressionValue>()->expression;
+    auto name = property->controlPlaneName();
+    auto externInstance = P4::ExternInstance::resolve(expr, refMap, typeMap, name);
+    if (!externInstance) {
+        ::error("Expected %1% property value for table %2% to resolve to an "
+                "extern instance: %3%", propertyName, table->controlPlaneName(),
+                property);
+        return boost::none; }
+
+    return externInstance;
+}
+
+boost::optional<const IR::ExpressionValue*>
+getExpressionFromProperty(const IR::P4Table* table,
+                          const cstring& propertyName) {
+    auto property = table->properties->getProperty(propertyName);
+    if (property == nullptr) return boost::none;
+    if (!property->value->is<IR::ExpressionValue>()) {
+        ::error("Expected %1% property value for table %2% to be an expression: %3%",
+                propertyName, table->controlPlaneName(), property);
+        return boost::none;
+    }
+
+    auto expr = property->value->to<IR::ExpressionValue>();
+    return expr;
+}
+
 class FixP4Table : public Inspector {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
@@ -764,63 +816,123 @@ class FixP4Table : public Inspector {
     StatefulSelectors &stateful_selectors;
     DeclarationConversions &assoc_profiles;
 
-    bool preorder(const IR::P4Table *tc) override {
-        visit(tc->properties);  // just visiting properties
-        return false;
-    }
-    bool preorder(const IR::ExpressionValue *ev) override {
-        auto prop = findContext<IR::Property>();
-        if (prop->name == "counters" || prop->name == "meters" ||
-                   prop->name == "implementation") {
-            auto pval = ev->expression;
-            const IR::MAU::AttachedMemory *obj = nullptr;
-            const IR::MAU::AttachedMemory *side_obj = nullptr;
-            if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
-                auto baseType = getBaseType(cc->type);
-                auto tname = getTypeName(baseType);
-                unique_names.insert(tname);   // don't use the type name directly
-                tname = cstring::make_unique(unique_names, tname);
-                unique_names.insert(tname);
-                P4::ConstructorCall* ccd = P4::ConstructorCall::resolve(cc, refMap, typeMap);
-                obj = createAttached(cc->srcInfo, prop->externalName(tname),
-                                     baseType, &ccd->substitution, prop->annotations,
-                                     refMap, typeMap, stateful_selectors, &side_obj, tt);
-            } else if (auto pe = pval->to<IR::PathExpression>()) {
-                auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
-                // The algorithm saves action selectors in the large map, rather than the action
-                // profile, because no ActionProfile will appear as a declaration within an
-                // action.  Action selector will show up in a register SelectorAction
-                auto inst = P4::Instantiation::resolve(&d, refMap, typeMap);
-                if (converted.count(&d) == 0) {
-                    LOG3("Create attached " << d.externalName());
-                    obj = createAttached(d.srcInfo, d.externalName(), d.type, &inst->substitution,
-                                         d.annotations, refMap, typeMap, stateful_selectors,
-                                         &side_obj, tt);
-                    converted[&d] = obj;
-                    if (side_obj)
-                        assoc_profiles[&d] = side_obj;
-                } else {
-                    // Action Selectors and Action Profiles are implemented in the same property
-                    LOG3("Found relative attached " << d.externalName() << " "
-                         << assoc_profiles.size());
-                    obj = converted.at(&d);
-                    if (assoc_profiles.count(&d))
-                        side_obj = assoc_profiles.at(&d);
+    // XXX(hanw): this function only needs one parameter. RefMap and typeMap
+    // are passed in as a temporary workaround to avoid larger refactor.
+    void createAttachedTableFromTableProperty(P4::ExternInstance& instance,
+            P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        const IR::MAU::AttachedMemory *obj = nullptr;
+        const IR::MAU::AttachedMemory *side_obj = nullptr;
+        auto tname = cstring::make_unique(unique_names, *instance.name);
+        unique_names.insert(tname);
+        auto sub = instance.substitution;
+        obj = createAttached(instance.expression->srcInfo, tname,
+                instance.type, &instance.substitution,
+                instance.typeArguments,
+                instance.annotations->getAnnotations(),
+                refMap, typeMap, stateful_selectors, &side_obj, tt);
+
+        // XXX(hanw): workaround to populate DeclarationConversions and StatefulSelectors.
+        // The key to these maps should be ExternInstance, instead of Declaration_Instance,
+        // but that require a larger refactor, which can be done later.
+        {  // begin workaround
+            if (auto path = instance.expression->to<IR::PathExpression>()) {
+                auto decl = refMap->getDeclaration(path->path, true);
+                if (!decl->is<IR::Declaration_Instance>()) return;
+
+                auto inst = decl->to<IR::Declaration_Instance>();
+                auto type = typeMap->getType(inst);
+                if (!type) {
+                    BUG("Couldn't determine the type of expression: %1%", path);
                 }
-                LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 2)"); }
-            BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
-            LOG3("attaching " << obj->name << " to " << tt->name);
-            tt->attached.push_back(new IR::MAU::BackendAttached(obj->srcInfo, obj));
-            if (side_obj)
-                tt->attached.push_back(new IR::MAU::BackendAttached(side_obj->srcInfo, side_obj));
-        } else if (prop->name == "idle_timeout") {
-            auto bool_lit = ev->expression->to<IR::BoolLiteral>();
+                if (converted.count(inst) == 0) {
+                    converted[inst] = obj;
+                    if (side_obj)
+                        assoc_profiles[inst] = side_obj;
+                } else {
+                    obj = converted.at(inst);
+                    if (assoc_profiles.count(inst))
+                        side_obj = assoc_profiles.at(inst);
+                }
+            }
+        }  // end workaround
+        LOG3("attaching " << obj->name << " to " << tt->name);
+        tt->attached.push_back(new IR::MAU::BackendAttached(obj->srcInfo, obj));
+        if (side_obj)
+            tt->attached.push_back(new IR::MAU::BackendAttached(side_obj->srcInfo, side_obj));
+    }
+
+    bool preorder(const IR::P4Table *tc) override {
+        auto impl = getExternInstanceFromProperty(tc, "implementation", refMap, typeMap);
+        if (impl != boost::none) {
+            if (impl->type->name == "ActionProfile") {
+                createAttachedTableFromTableProperty(*impl, refMap, typeMap);
+            } else if (impl->type->name == "ActionSelector") {
+                createAttachedTableFromTableProperty(*impl, refMap, typeMap);
+            }
+        }
+
+        auto counters = getExternInstanceFromProperty(tc, "counters", refMap, typeMap);
+        if (counters != boost::none) {
+            if (counters->type->name == "DirectCounter") {
+                createAttachedTableFromTableProperty(*counters, refMap, typeMap);
+            }
+        }
+
+        auto meters = getExternInstanceFromProperty(tc, "meters", refMap, typeMap);
+        if (meters != boost::none) {
+            if (meters->type->name == "DirectMeter") {
+                createAttachedTableFromTableProperty(*meters, refMap, typeMap);
+            }
+        }
+
+        auto timeout = getExpressionFromProperty(tc, "idle_timeout");
+        if (timeout != boost::none) {
+            auto bool_lit = (*timeout)->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
                 return false;
-            auto table = findContext<IR::P4Table>();
-            auto annot = table->getAnnotations();
-            auto it = createIdleTime(table->name, annot);
+            auto annot = tc->getAnnotations();
+            auto it = createIdleTime(tc->name, annot);
             tt->attached.push_back(new IR::MAU::BackendAttached(it->srcInfo, it));
+        }
+
+        auto atcam = getExternInstanceFromProperty(tc, "atcam", refMap, typeMap);
+        if (atcam != boost::none) {
+            if (atcam->type->name == "Atcam") {
+                tt->layout.partition_count =
+                    atcam->arguments->at(0)->expression->to<IR::Constant>()->asInt();
+            }
+        }
+
+        auto alpm = getExternInstanceFromProperty(tc, "alpm", refMap, typeMap);
+        if (alpm != boost::none) {
+            if (alpm->type->name == "Alpm") {
+                tt->layout.partition_count =
+                    alpm->arguments->at(0)->expression->to<IR::Constant>()->asInt();
+                tt->layout.subtrees_per_partition =
+                    alpm->arguments->at(1)->expression->to<IR::Constant>()->asInt();
+            }
+        }
+
+        auto hash = getExternInstanceFromProperty(tc, "proxy_hash", refMap, typeMap);
+        if (hash != boost::none) {
+            if (hash->type->name == "Hash") {
+                tt->layout.proxy_hash = true;
+
+                tt->layout.proxy_hash_width =
+                    hash->typeArguments->at(0)->width_bits();
+                ERROR_CHECK(tt->layout.proxy_hash_width != 0, "ProxyHash width cannot be 0");
+
+                if (hash->arguments->size() == 1) {
+                    if (!tt->layout.proxy_hash_algorithm.setup(hash->arguments->at(0)->expression))
+                        BUG("invalid algorithm %s", hash->arguments->at(0)->expression);
+                } else if (hash->arguments->size() == 2) {
+                    auto crc_poly = P4::ExternInstance::resolve(
+                            hash->arguments->at(1)->expression, refMap, typeMap);
+                    if (crc_poly == boost::none)
+                        return false;
+                    getCRCPolynomialFromExtern(*crc_poly, tt->layout.proxy_hash_algorithm);
+                }
+            }
         }
         return false;
     }
@@ -1063,6 +1175,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
     // expressions might be in two actions (due to inlining), which need to
     // be visited independently
     visitAgain();
+
     if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
         auto tt = findContext<IR::MAU::Table>();
         BUG_CHECK(tt, "GlobalRef not in a table");
@@ -1072,8 +1185,10 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
             obj = self.converted.at(di);
             gref->obj = obj;
         } else if (auto att = createAttached(di->srcInfo, di->externalName(),
-                                             di->type, &inst->substitution, di->annotations, refMap,
-                                             typeMap, self.stateful_selectors, nullptr, nullptr)) {
+                                             di->type, &inst->substitution,
+                                             inst->typeArguments, di->annotations,
+                                             refMap, typeMap, self.stateful_selectors,
+                                             nullptr, nullptr)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;
@@ -1218,6 +1333,10 @@ class GetBackendTables : public MauInspector {
                 setup_match_mask(tt, mask, match_id, p4_param_order, ann, partition_index);
             } else if (auto *mask = key_expr->to<IR::Mask>()) {
                 setup_match_mask(tt, mask, match_id, p4_param_order, ann, partition_index);
+            } else if (match_id.name == "atcam_partition_index") {
+                auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
+                ixbar_read->partition_index = true;
+                tt->match_key.push_back(ixbar_read);
             } else {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
                 if (ixbar_read->for_match())
@@ -1231,7 +1350,8 @@ class GetBackendTables : public MauInspector {
                     ixbar_read->partition_index = true;
                 tt->match_key.push_back(ixbar_read);
             }
-            if (match_id.name != "selector" && match_id.name != "dleft_hash")
+            if (match_id.name != "selector" && match_id.name != "dleft_hash" &&
+                    match_id != "atcam_partition_index")
                 p4_param_order++;
         }
     }
@@ -1298,6 +1418,7 @@ class GetBackendTables : public MauInspector {
                         stateful_selectors, assoc_profiles))->to<IR::P4Table>();
             setup_tt_match(tt, table);
             setup_actions(tt, table);
+            LOG3("tt " << tt);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
         return true; }

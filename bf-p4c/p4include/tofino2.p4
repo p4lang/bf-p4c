@@ -1132,4 +1132,22 @@ extern Pktgen {
     void emit<T>(in T hdr);
 }
 
+// Algorithmic TCAM.
+// Specify the implementation of a table to be algorithmic TCAM by providing an
+// instance of the extern to the 'implementation' attribute of the table.  User
+// must also specify one of the table keys with 'atcam_partition_index'
+// match_kind.
+extern Atcam {
+    /// define the parameters for ATCAM table.
+    Atcam(@optional bit<32> number_partitions);
+}
+
+// Algorithmic LPM.
+// Specify the implementation of a table to be algorithmic LPM by providing an
+// instance of the extern to the 'implementation' attribute of the table.
+extern Alpm {
+    /// define the parameters for ALPM table.
+    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
+}
+
 #endif  /* _JBAY_P4_ */

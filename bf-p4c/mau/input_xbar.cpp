@@ -1815,6 +1815,9 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
             hash_function_found = true;
             alloc.proxy_hash_key_use.alg_name = pragma_val->value;
         }
+    } else if (tbl->layout.proxy_hash_algorithm.size != 0) {
+        hash_function_found = true;
+        alloc.proxy_hash_key_use.algorithm = tbl->layout.proxy_hash_algorithm;
     }
     if (!hash_function_found) {
         alloc.proxy_hash_key_use.algorithm = IR::MAU::HashFunction::random();
@@ -2238,6 +2241,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
         FieldManagement(&map_alloc, alloc.field_list_order, ixbar_read, &fields_needed,
                         phv, ki, tbl);
     }
+    LOG3("partition_bits " << tbl->layout.partition_bits);
     create_alloc(map_alloc, alloc);
     BUG_CHECK(alloc.use.size() > 0, "No partition index found for %1%", tbl);
 
@@ -3848,6 +3852,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         } else {
             fill_out_use(alloced, false);
         }
+        LOG3("atcam " << tbl->match_table->name << " " << tbl->layout.partition_count);
 
         if (!allocPartition(tbl, phv, alloc.match_ixbar, false)
             && !allocPartition(tbl, phv, alloc.match_ixbar, true)) {

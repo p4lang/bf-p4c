@@ -75,6 +75,12 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
+  "Field clone_spec is not a member of structure struct standard_metadata"
+  extensions/p4_tests/p4_16/compile_only/clone-bmv2.p4
+  extensions/p4_tests/p4_16/compile_only/clone-bmv2-i2e-and-e2e.p4
+)
+
+p4c_add_xfail_reason("tofino2"
   "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
 )
@@ -134,7 +140,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  ".* cannot be translated, you cannot use it in your program"
+  "standard_metadata.* is not accessible in the ingress pipe"
   testdata/p4_14_samples/p414-special-ops.p4
 )
 

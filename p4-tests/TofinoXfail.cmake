@@ -791,11 +791,18 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: standard_metadata.mcast_grp is not accessible in the egress pipe"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
+  testdata/p4_16_samples/ipv6-switch-ml-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "The random declaration .* max size must be a power of two"
   testdata/p4_16_samples/issue1517-bmv2.p4
+)
+
+# v1model translation issue
+p4c_add_xfail_reason("tofino"
+  "error: meter_color_t: Not found declaration"
+  testdata/p4_16_samples/issue1989-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1258,7 +1265,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  ".* cannot be translated, you cannot use it in your program"
+  "standard_metadata.* is not accessible in the ingress pipe"
   testdata/p4_14_samples/p414-special-ops.p4
 )
 
@@ -1330,6 +1337,17 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue355-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Field clone_spec is not a member of structure struct standard_metadata"
+  extensions/p4_tests/p4_16/compile_only/clone-bmv2.p4
+  extensions/p4_tests/p4_16/compile_only/clone-bmv2-i2e-and-e2e.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Assignment cannot be supported in the parser"
+  testdata/p4_16_samples/issue1937-2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1443,6 +1461,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Parser match register not allocated for .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
+)
+
+# support custom hash function for proxy hash
+p4c_add_xfail_reason("tofino"
+  "syntax error, unexpected"
+  extensions/p4_tests/p4_16/compile_only/proxy_hash.p4
 )
 
 # P4C-1862

@@ -1,9 +1,12 @@
 #ifndef BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 #define BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 
+#include <boost/optional.hpp>
+
 #include "ir/ir.h"
 #include "frontends/common/options.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/externInstance.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/midend/param_binding.h"
@@ -15,6 +18,18 @@ class BFN_Options;
 class CreateSaluInstruction;
 
 namespace BFN {
+
+/// @return an extern instance defined or referenced by the value of @table's
+/// @propertyName property, or boost::none if no extern was referenced.
+boost::optional<P4::ExternInstance>
+getExternInstanceFromProperty(const IR::P4Table* table,
+                              const cstring& propertyName,
+                              P4::ReferenceMap* refMap,
+                              P4::TypeMap* typeMap);
+
+boost::optional<const IR::ExpressionValue*>
+getExpressionFromProperty(const IR::P4Table* table,
+                          const cstring& propertyName);
 
 const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options);
 

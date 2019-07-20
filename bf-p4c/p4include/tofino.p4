@@ -77,7 +77,8 @@ match_kind {
     // ternary,
     // lpm,               // Longest-prefix match.
     range,
-    selector              // Used for implementing dynamic action selection
+    selector,             // Used for implementing dynamic action selection
+    atcam_partition_index // Used for implementing algorithmic tcam
 }
 
 error {
@@ -748,10 +749,10 @@ extern Mirror {
     void emit<T>(in MirrorId_t session_id, in T hdr);
 }
 
-/// Tofino supports packet resubmission at the end of ingress pipeline. When
-/// a packet is resubmitted, the original packet reference and some limited
-/// amount of metadata (64 bits) are passed back to the packet’s original
-/// ingress buffer, where the packet is enqueued again.
+// Tofino supports packet resubmission at the end of ingress pipeline. When
+// a packet is resubmitted, the original packet reference and some limited
+// amount of metadata (64 bits) are passed back to the packet’s original
+// ingress buffer, where the packet is enqueued again.
 extern Resubmit {
     /// Constructor
     Resubmit();
@@ -772,6 +773,24 @@ extern Digest<T> {
     /// Digest instances in the same deparser control block, and call the pack
     /// method once during a single execution of the control block
     void pack(in T data);
+}
+
+// Algorithmic TCAM.
+// Specify the implementation of a table to be algorithmic TCAM by providing an
+// instance of the extern to the 'implementation' attribute of the table.  User
+// must also specify one of the table keys with 'atcam_partition_index'
+// match_kind.
+extern Atcam {
+    /// define the parameters for ATCAM table.
+    Atcam(@optional bit<32> number_partitions);
+}
+
+// Algorithmic LPM.
+// Specify the implementation of a table to be algorithmic LPM by providing an
+// instance of the extern to the 'implementation' attribute of the table.
+extern Alpm {
+    /// define the parameters for ALPM table.
+    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
 }
 
 #endif  /* _TOFINO_P4_ */

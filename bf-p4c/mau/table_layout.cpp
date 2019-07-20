@@ -90,6 +90,7 @@ void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MA
                    "ignored because no partition index specified", tbl, tbl->externalName());
     }
 
+#if 0
     if (index_found) {
         if (tbl->gress == INGRESS)
             partition_index = "ingress::" + partition_index;
@@ -99,6 +100,7 @@ void DoTableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MA
                     "partition index %2% for table %3% in the PHV.",
                     tbl, partition_index, tbl->externalName());
     }
+#endif
 
     layout.atcam = (index_found);
     if (partitions_found)
@@ -236,9 +238,14 @@ void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
                     match_multiplier = 0;
                     is_partition = true;
                     partition_found = true;
-                    ERROR_CHECK(ixbar_read->match_type.name == "exact", ErrorType::ERR_INVALID,
+                    /* key should be exact type to support @atcam_partition_index annotation,
+                     * or atcam_partition_index type */
+                    ERROR_CHECK(ixbar_read->match_type.name == "atcam_partition_index" ||
+                                ixbar_read->match_type.name == "exact",
+                                ErrorType::ERR_INVALID,
                                 "partition index of algorithmic TCAM table %2%. Must"
-                                " be an exact field.", tbl, tbl->externalName());
+                                " be an atcam_partition_index field or an exact field.",
+                                tbl, tbl->externalName());
                 } else if (ixbar_read->match_type.name == "ternary" ||
                            ixbar_read->match_type.name == "lpm") {
                     match_multiplier = 2;
