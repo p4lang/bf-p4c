@@ -1412,6 +1412,31 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Tab
     return out;
 }
 
+/**
+ * In Tofino, a table that is split across multiple stages requires using the next table
+ * to advance tables, and thus cannot start anything else on the worklist until that table
+ * is fully finished.
+ *
+ * This does not matter when long branches are turned on, as the next table is no longer the
+ * limiting factor.
+ */
+bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
+        ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed) {
+     if (!(Device::numLongBranchTags() == 0 || options.disable_long_branch))
+         return true;
+
+    for (auto pp : partly_placed) {
+        if (pp == tbl || placed->is_match_placed(tbl))
+            continue;
+        if (!mutex(pp, tbl)) {
+            LOG3("  - skipping " << tbl->name << " as it is not mutually "
+                 "exclusive with partly placed " << pp->name);
+            return false;
+        }
+    }
+    return true;
+}
+
 
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     LOG1("table placement starting " << pipe->name);
@@ -1522,6 +1547,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         break; } }
                 // Find potential tables this table can be merged with (if it's a gateway)
 
+                if (!can_place_with_partly_placed(t, partly_placed, placed)) {
+                     done = false;
+                     continue;
+                }
+
                 auto gmc = TablePlacement::gateway_merge_choices(t);
                 // Prune these choices according to happens after
                 std::vector<const IR::MAU::Table*> to_erase;
@@ -1537,6 +1567,10 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                             to_erase.push_back(mc.first);
                             break;
                         }
+                    }
+
+                    if (!can_place_with_partly_placed(mc.first, partly_placed, placed)) {
+                        to_erase.push_back(mc.first);
                     }
                 }
                 // If we did have choices to merge but all of them are not ready yet, don't try to
@@ -1560,17 +1594,8 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 done = false;
                 for (auto pl : pl_vec) {
                     pl->group = grp;
-                    bool defer = false;
-                    for (auto t : partly_placed) {
-                        if (t == pl->table || pl->is_match_placed(t))
-                            continue;
-                        if (!mutex(t, pl->table)) {
-                            LOG3("  - skipping " << pl->name << " as it is not mutually "
-                                 "exclusive with partly placed " << t->name);
-                            defer = true;
-                            break; } }
-                    if (!defer) {
-                        trial.push_back(pl); } }
+                    trial.push_back(pl);
+                }
             }
             if (done) {
                 BUG_CHECK(!placed->is_fully_placed(grp->seq), "Can't find a table to place");
