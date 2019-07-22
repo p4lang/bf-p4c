@@ -8,6 +8,8 @@
 /** SplitInstructions */
 
 const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
+    auto act = findContext<IR::MAU::Action>();
+    auto tbl = findContext<IR::MAU::Table>();
     le_bitrange bits;
     auto* field = phv.field(inst->operands.at(0), &bits);
     if (!field) return inst;  // error?
@@ -338,7 +340,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
         if ((cont_action.error_code & error_mask) != 0) continue;
-        if (cont_action.field_actions.size() == 1) {
+        if (cont_action.operands() == cont_action.alignment_counts()) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)

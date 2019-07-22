@@ -312,8 +312,23 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                    + counts[ActionParam::CONSTANT];
         }
 
+        bool is_shift() const {
+            return name == "shru" || name == "shrs" || name == "shl";
+        }
+
+        /**
+         * Each alignment comes from an individual manipulation of alloc_slice or single
+         * contiguous slice of action format
+         */
+        int alignment_counts() const {
+            int rv = adi.alignment.indiv_alignments.size() + ci.alignment.indiv_alignments.size();
+            for (auto pa : phv_alignment)
+                rv += pa.second.indiv_alignments.size();
+            return rv;
+        }
+
         int operands() const {
-            if (name == "to-bitmasked-set")
+            if (name == "to-bitmasked-set" || is_shift())
                 return 1;
             if (field_actions.size() == 0)
                 BUG("Cannot call operands function on empty container process");
@@ -328,9 +343,6 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return ad_sources() + counts[ActionParam::PHV];
         }
 
-        bool is_shift() const {
-            return name == "shru" || name == "shrs" || name == "shl";
-        }
 
         bool is_from_set() const {
             return name == "set" || name == "to-bitmasked-set";
