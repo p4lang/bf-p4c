@@ -731,6 +731,9 @@ extern ActionSelector {
     /// Construct a selection table for action profile of 'size' entries.
     @deprecated("ActionSelector must be specified with an associated ActionProfile")
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+
+    @deprecated("ActionSelector must be specified with an associated ActionProfile")
+    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
 }
 
 // Tofino supports mirroring both at the ingress and egress. Ingress deparser
