@@ -1683,7 +1683,8 @@ class ConstructSymbolTable : public Inspector {
 
     void implementUpdateChecksum(const IR::MethodCallStatement* uc,
                                  cstring which,
-                                 std::vector<gress_t> deparserUpdateLocations) {
+                                 std::vector<gress_t> deparserUpdateLocations,
+                                 bool zerosAsOnes) {
         auto mc = uc->methodCall->to<IR::MethodCallExpression>();
 
         auto condition = mc->arguments->at(0)->expression;
@@ -1721,6 +1722,9 @@ class ConstructSymbolTable : public Inspector {
             IR::ListExpression* list = new IR::ListExpression(exprs);
             auto arguments = new IR::Vector<IR::Argument>;
             arguments->push_back(new IR::Argument(list));
+            if (zerosAsOnes) {
+                arguments->push_back(new IR::Argument(new IR::BoolLiteral(1)));
+            }
             auto updateCall = new IR::MethodCallExpression(
                               mc->srcInfo,
                               new IR::Member(new IR::PathExpression(decl->name), "update"),
@@ -1745,13 +1749,24 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
+    bool getZerosAsOnes(const IR::BlockStatement* block, const IR::MethodCallStatement *call) {
+        for (auto annot : block->annotations->annotations) {
+            if (annot->name.name == "zeros_as_ones") {
+                auto mc = call->methodCall->to<IR::MethodCallExpression>();
+                if (annot->expr[0]->equiv(*mc))
+                    return true;
+           }
+        }
+        return false;
+    }
+
     void cvtUpdateChecksum(const IR::MethodCallStatement *call, cstring which) {
         auto block = findContext<IR::BlockStatement>();
         std::vector<gress_t> deparserUpdateLocations =
             getChecksumUpdateLocations(block, "calculated_field_update_location");
-
+        bool zerosAsOnes = getZerosAsOnes(block, call);
         if (analyzeChecksumCall(call, which))
-            implementUpdateChecksum(call, which, deparserUpdateLocations);
+            implementUpdateChecksum(call, which, deparserUpdateLocations, zerosAsOnes);
     }
 
     /// build up a table for all metadata member that need to be translated.

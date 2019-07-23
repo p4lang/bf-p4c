@@ -1035,7 +1035,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unrecognized algorithm for a hash expression:"
   ../glass/testsuite/p4_tests/mau/test_config_408_xor_hashes.p4
-  ../glass/testsuite/p4_tests/parde/test_config_423_zeros_as_ones.p4
   )
 
 # P4C-1389
