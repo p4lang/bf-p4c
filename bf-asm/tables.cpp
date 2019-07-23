@@ -2663,5 +2663,8 @@ void Table::common_tbl_cfg(json::map &tbl) const {
 void Table::add_result_physical_buses(json::map &stage_tbl) const {
     json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
     for (auto l : layout) {
-        result_physical_buses.push_back(l.row * 2 + l.bus); }
+        if (!l.result_bus_used())
+            continue;
+        result_physical_buses.push_back(l.row * 2 + l.result_bus);
+    }
 }
