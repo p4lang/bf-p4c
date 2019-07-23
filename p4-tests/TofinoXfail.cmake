@@ -903,6 +903,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
   ../glass/testsuite/p4_tests/phv/test_config_227_set_meta_packing.p4
   ../glass/testsuite/p4_tests/phv/test_config_275_match_key_range.p4
+  extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   )
 
 # Valid XFAIL
@@ -1359,8 +1361,6 @@ p4c_add_xfail_reason("tofino"
 # Slicing issue
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slice point cannot be -1 at this point"
-  ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
-  extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1565-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4

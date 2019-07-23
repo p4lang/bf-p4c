@@ -1035,6 +1035,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
         while (!advance_to_next_stage &&
                (!(rv->use <= avail) ||
                (allocated = try_alloc_mem(rv, done, resources, prev_resources)) == false)) {
+            // If a table contains initialization for dark containers, it cannot be split into
+            // multiple stages.
+            if (t->has_dark_init) {
+                LOG3("    Table with dark initialization cannot be split");
+                advance_to_next_stage = true;
+                break;
+            }
             if (!shrink_estimate(rv, done, resources, srams_left, tcams_left,
                                  min_placed->entries)) {
                 advance_to_next_stage = true;

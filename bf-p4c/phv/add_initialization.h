@@ -140,6 +140,8 @@ class ComputeDependencies : public Inspector {
     const FieldDefUse&                          defuse;
     const MetadataLiveRange&                    liverange;
 
+    ordered_set<cstring>                        initTableNames;
+
     profile_t init_apply(const IR::Node* root) override;
     void end_apply() override;
 
@@ -174,6 +176,29 @@ class ComputeDependencies : public Inspector {
             const FieldDefUse& d,
             const MetadataLiveRange& r)
         : phv(p), dg(g), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
+
+    bool isInitTable(const IR::MAU::Table* tbl) const {
+        return initTableNames.count(tbl->name);
+    }
+};
+
+/** Mark all the tables which have actions containing initializations due to dark overlay. These
+  * tables cannot be split into multiple stages during TablePlacement.
+  * XXX(Deep): Remove after implementing always_run mechanism on non-last stages.
+  */
+class MarkDarkInitTables : public Transform {
+    const ComputeDependencies&  dep;
+
+    IR::Node* preorder(IR::MAU::Table* tbl) override {
+        if (dep.isInitTable(tbl)) {
+            tbl->has_dark_init = true;
+            LOG2("\tDark initialization table: " << tbl->name);
+        }
+        return tbl;
+    }
+
+ public:
+    explicit MarkDarkInitTables(const ComputeDependencies& d) : dep(d) { }
 };
 
 /** This is the pass manager, which takes the results of PHV allocation and then inserts the right

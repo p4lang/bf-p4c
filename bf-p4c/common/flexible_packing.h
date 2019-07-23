@@ -229,6 +229,11 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
       */
     ordered_map<cstring, const IR::HeaderOrMetadata*> repackedHeaders;
 
+    /** Map of field to all the fields that are required to be in the same supercluster.
+      * Transitive closure over MAU instructions.
+      */
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> clusterFields;
+
     /**
      * Reference to a map of header type to new header type produced after packing.
      *
@@ -273,12 +278,21 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
      */
     const ordered_set<const PHV::Field*> mkPhvFieldSet(const IR::BFN::DigestFieldList* d);
 
+    int getPackSize(const PHV::Field* f) const;
+
     /**
      * packPhvFieldSet : take a set of PHV::Field, pack the set and return the packing.
      */
     // using PhvFieldPacking = pair<std::vector<const PHV::Field*>, std::vector<int>>;
     const std::vector<const PHV::Field*>
         packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsToBePacked);
+
+    void determineClusterFields(const PHV::Field* f);
+
+    /** @repacks the fields by checking no pack conflicts in 32b chunks across the header.
+      */
+    const std::vector<const PHV::Field*>
+        verifyPackingAcrossBytes(const std::vector<const PHV::Field*>& fields) const;
 
     /** @returns true if header @h contains a flexible struct that can be reordered by the compiler.
       */
@@ -671,6 +685,7 @@ class FlexiblePacking : public Logging::PassManager {
 
  public:
     explicit FlexiblePacking(
+            const BFN_Options& o,
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,

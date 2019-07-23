@@ -178,8 +178,12 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (Device::currentDevice() == Device::JBAY)
         if (delta_overlay_bits != 0)
             return delta_overlay_bits > 0;
-    if (container_type_score != 0)
-        return container_type_score < 0;
+    if (container_type_score != 0) {
+        if (Device::currentDevice() == Device::TOFINO)
+            return container_type_score < 0;
+        else if (delta_inc_containers == 0)
+            return container_type_score < 0;
+    }
     if (Device::currentDevice() == Device::JBAY)
         if (delta_pov_bits_wasted != 0)
             return delta_pov_bits_wasted < 0;

@@ -63,6 +63,9 @@ class Table : BFN::Unit {
     // the assembly and context json as 'p4_hidden' to disable PD API generation
     // on this table
     bool                                        is_compiler_generated = false;  // ignored for ==?
+    // true, if we insert initialization to/from dark containers in this table. In that case, we
+    // cannot split these tables.
+    bool                                        has_dark_init = false;
     bool                                        always_run = false;
 
 

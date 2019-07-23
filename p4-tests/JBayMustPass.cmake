@@ -11,7 +11,7 @@ set (JBAY_MUST_PASS_TESTS
   extensions/p4_tests/p4-programs/programs/basic_switching/basic_switching.p4
   extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
   extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
+  # extensions/p4_tests/p4-programs/programs/ha/ha.p4
   extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
   extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
   extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4

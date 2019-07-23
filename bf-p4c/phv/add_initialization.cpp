@@ -249,6 +249,7 @@ void ComputeDependencies::noteDependencies(
 }
 
 Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
+    initTableNames.clear();
     const auto& fields = fieldsForInit.getComputeFieldsRequiringInit();
     const auto& livemap = liverange.getMetadataLiveMap();
     // Set of fields involved in metadata initialization whose usedef live ranges must be
@@ -341,6 +342,7 @@ void ComputeDependencies::summarizeDarkInits(
                 auto t = actionsMap.getTableForAction(action);
                 BUG_CHECK(t, "No table corresponding to action %1%", action->name);
                 initTables.insert(*t);
+                initTableNames.insert((*t)->name);
             }
             if (alloc.init_i.assignZeroToDestination) {
                 for (const auto* t : initTables)
@@ -558,6 +560,7 @@ AddSliceInitialization::AddSliceInitialization(
         Device::currentDevice() == Device::JBAY ? &computeDarkInit : nullptr,
         Device::currentDevice() == Device::JBAY
             ? new AddDarkInitialization(computeDarkInit) : nullptr,
-        &dep
+        &dep,
+        new MarkDarkInitTables(dep)
     });
 }

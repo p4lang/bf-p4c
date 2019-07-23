@@ -4,7 +4,11 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/lib/pad_alignment.h"
+#include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/pragma/pa_atomic.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
+#include "bf-p4c/phv/pragma/pa_solitary.h"
 #include "bf-p4c/common/table_printer.h"
 
 // XXX(Deep): BRIG-333
@@ -99,6 +103,7 @@ void RepackFlexHeaders::resetState() {
     originalHeaders.clear();
     paddingFieldNames.clear();
     digestFlexFields.clear();
+    clusterFields.clear();
 
     if (LOGGING(1))
         LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
@@ -455,6 +460,10 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
     int totalMustPackSize = field1->size;
     for (auto f : mustPackFields)
         totalMustPackSize += f->size;
+    if (alignment == 0 && totalMustPackSize == field1->size) {
+        rv[field1] = 0;
+        return rv;
+    }
     if (alignment == 0) return emptyMap;
     // trying to pack to the nearest byte boundary. In case there are must pack fields, try to pack
     // to the nearest byte boundary for the total size of the must pack set.
@@ -857,6 +866,33 @@ cstring RepackFlexHeaders::getFieldName(cstring hdr, const IR::StructField* fiel
     return name;
 }
 
+int RepackFlexHeaders::getPackSize(const PHV::Field* f) const {
+    bool no_split_found = false;
+    int max_split_size = -1;
+    if (!clusterFields.count(f)) return max_split_size;
+    for (const auto* clusterField : clusterFields.at(f)) {
+        LOG5("\t\t\t\tRelated field: " << clusterField);
+        if (clusterField->no_split()) {
+            no_split_found = true;
+            if (max_split_size < clusterField->size)
+                max_split_size = clusterField->size;
+        }
+    }
+    if (no_split_found) {
+        LOG4("\t\t  Found no-split cluster fields of maximum size " << max_split_size
+                << " for field " << f->name);
+        if (max_split_size <= 8)
+            return 8;
+        else if (max_split_size <= 16)
+            return 16;
+        else if (max_split_size <= 32)
+            return 32;
+        else
+            LOG4("\t\tHow can no split be greater than maximum container size?");
+    }
+    return -1;
+}
+
 /**
  * packPhvFieldSet : take a set of PHV::Field, pack the set and return the packing.
  */
@@ -865,9 +901,15 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
     std::vector<const PHV::Field*> packedFields;
     std::vector<const PHV::Field*> nonByteAlignedFields;
     for (auto f : fieldsToBePacked) {
-        if (f->size % 8 == 0) {
+        determineClusterFields(f);
+        int packSize = getPackSize(f);
+        if (f->size % 8 == 0 && (packSize == -1 || packSize == f->size)) {
+            LOG5("\t\t  Packed field: " << f);
             packedFields.push_back(f);
             continue; }
+        LOG5("\t\t  Non byte aligned field: " << f);
+        if (f->size % 8 == 0)
+            LOG5("\t\t\tpack size: " << packSize << ", field size: " << f->size);
         nonByteAlignedFields.push_back(f); }
 
     LOG4("Added " << packedFields.size() << " byte aligned fields.");
@@ -967,6 +1009,14 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
             }
         }
 
+        // If there are no-split fields that will need to go into the same supercluster, we may need
+        // to add more padding to this field.
+        for (auto kv : packingWithPositions) {
+            int max_split_size = getPackSize(kv.first);
+            if (max_split_size != -1 && max_split_size > totalPackSize)
+                totalPackSize = max_split_size;
+        }
+
         LOG3("\t\tTrying to pack " << totalAllocatedSize << " bits within " << totalPackSize <<
                                    " bits.");
         ordered_set<int> freeBits;
@@ -1045,6 +1095,133 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
         }
     }
     return packedFields;
+}
+
+void RepackFlexHeaders::determineClusterFields(const PHV::Field* f) {
+    LOG5("\tDetermining cluster fields for " << f->name);
+    if (clusterFields.count(f)) return;
+    LOG5("\t  New record found");
+    std::queue<const PHV::Field*> toProcessFields;
+    toProcessFields.push(f);
+    // At this point, the original field and the bridged version are separate. So, we need to
+    // combine the constraints across both of them.
+    if (fields.bridged_to_orig.count(f->name)) {
+        const auto* orig = phv.field(fields.bridged_to_orig.at(f->name));
+        if (orig) {
+            toProcessFields.push(orig);
+            LOG5("\t\t  Seeing original field: " << orig->name);
+        }
+    }
+    while (!toProcessFields.empty()) {
+        const auto* field = toProcessFields.front();
+        toProcessFields.pop();
+        LOG5("\t\tProcessing " << field->name);
+        for (const auto* source : actionConstraints.field_sources(field)) {
+            LOG5("\t\t  Seeing source: " << source->name);
+            if (source != f && (!clusterFields.count(f) ||
+                        (clusterFields.count(f) && !clusterFields[f].count(source)))) {
+                toProcessFields.push(source);
+                clusterFields[f].insert(source);
+                if (!fields.bridged_to_orig.count(source->name)) continue;
+                const auto* orig = phv.field(fields.bridged_to_orig.at(source->name));
+                if (!orig) continue;
+                if (!clusterFields[f].count(orig)) {
+                    toProcessFields.push(orig);
+                    clusterFields[f].insert(orig);
+                }
+            }
+        }
+        for (const auto* dest : actionConstraints.field_destinations(field)) {
+            LOG5("\t\t  Seeing destination: " << dest->name);
+            if (dest != f && (!clusterFields.count(f) ||
+                        (clusterFields.count(f) && !clusterFields[f].count(dest)))) {
+                toProcessFields.push(dest);
+                clusterFields[f].insert(dest);
+                if (!fields.bridged_to_orig.count(dest->name)) continue;
+                const auto* orig = phv.field(fields.bridged_to_orig.at(dest->name));
+                if (!orig) continue;
+                if (!clusterFields[f].count(orig)) {
+                    toProcessFields.push(orig);
+                    clusterFields[f].insert(orig);
+                }
+            }
+        }
+    }
+    if (clusterFields.count(f)) {
+        LOG5("\t  Bridged field: " << f->name);
+        for (const auto* related : clusterFields.at(f))
+            LOG5("\t\t" << related->name);
+    }
+}
+
+const std::vector<const PHV::Field*>
+RepackFlexHeaders::verifyPackingAcrossBytes(const std::vector<const PHV::Field*>& fields) const {
+    std::vector<const PHV::Field*> rv;
+    for (const auto* f : fields)
+        rv.push_back(f);
+
+    // Map of byte number in the header to the set of fields in that byte.
+    ordered_map<int, std::vector<const PHV::Field*>> bytesToFields;
+    // Map of field to its min and max byte offset within the flexible header.
+    ordered_map<const PHV::Field*, std::pair<int, int>> fieldOffsets;
+    // SymBitMatrix of bytes that have no pack conflicts between them.
+    SymBitMatrix noPack;
+
+    int headerSize = 0;
+    for (const auto* f : fields) {
+        int lower = headerSize / 8;
+        headerSize += f->size;
+        int upper = (headerSize % 8 == 0) ? (headerSize / 8 - 1) : (headerSize / 8);
+        fieldOffsets[f] = std::make_pair(lower, upper);
+        for (int i = lower; i <= upper; ++i)
+            bytesToFields[i].push_back(f);
+    }
+    headerSize /= 8;
+    LOG5("\tHeader size: " << headerSize << "B.");
+    for (const auto& kv : fieldOffsets)
+        LOG5("\t  " << kv.second.first << "\t" << kv.second.second << "\t" << kv.first->name <<
+             " <" << kv.first->size << ">");
+    for (const auto& kv : bytesToFields) {
+        LOG5("\tByte " << kv.first);
+        for (const auto* f : kv.second)
+            LOG5("\t  " << f->name);
+    }
+    for (int byte = 3; byte < headerSize; byte++) {
+        ordered_set<const PHV::Field*> fieldsIn32b;
+        LOG5("\t\t[" << byte - 3 << ", " <<  byte << "]");
+        for (int b1 = byte - 3; b1 <= byte; b1++)
+            for (const auto* f : bytesToFields.at(b1))
+                fieldsIn32b.insert(f);
+        bool foundConflict = false;
+        for (const auto* f1 : fieldsIn32b) {
+            for (const auto* f2 : fieldsIn32b) {
+                if (f1 == f2) continue;
+                if (actionConstraints.hasPackConflict(f1, f2)) {
+                    LOG5("\t\t  " << f1->name << " and " << f2->name << " have pack conflicts");
+                    foundConflict = true;
+                }
+            }
+        }
+        if (foundConflict) {
+            for (const auto* f : fieldsIn32b) {
+                if (!clusterFields.count(f)) continue;
+                ordered_set<const PHV::Field*> noPackFields;
+                ordered_set<const PHV::Field*> noSplitFields;
+                for (const auto* related : clusterFields.at(f)) {
+                    if (related->no_pack()) {
+                        noPackFields.insert(related);
+                        LOG5("\t\t\t" << related->name << " is no-pack.");
+                    }
+                    if (related->no_split()) {
+                        noSplitFields.insert(related);
+                        LOG5("\t\t\t" << related->name << " is no-split.");
+                    }
+                }
+            }
+        }
+    }
+
+    return rv;
 }
 
 /**
@@ -1194,12 +1371,14 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
 
     auto packedFields = packPhvFieldSet(fieldsToBePacked);
 
+    packedFields = verifyPackingAcrossBytes(packedFields);
+
     IR::IndexedVector<IR::StructField> fields;
     // Add the non flexible fields from the header.
     for (auto f : h->type->fields) {
         if (!f->getAnnotation("flexible") && !f->getAnnotation("hidden")) {
             fields.push_back(f);
-            LOG1("Pushing original field " << f);
+            LOG2("Pushing original field " << f);
             continue;
         }
     }
@@ -1209,16 +1388,16 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
         if (phvFieldToStructField.count(f)) {
             auto field = phvFieldToStructField.at(f);
             fields.push_back(field);
-            LOG1("Pushing field " << field);
+            LOG2("Pushing field " << field);
         } else {
             auto padding = getPaddingField(f->size, padFieldId++, f->overlayable);
             fields.push_back(padding);
-            LOG1("Pushing field " << padding << ", overlayable: " << f->overlayable);
+            LOG2("Pushing field " << padding << ", overlayable: " << f->overlayable);
         }
     }
 
     if (auto fh = h->type->to<IR::BFN::Type_FixedSizeHeader>()) {
-        auto bits = getHeaderBits(h);
+        size_t bits = static_cast<size_t>(getHeaderBits(h));
         ERROR_CHECK(bits <= Device::pardeSpec().bitResubmitSize(),
                 "%1% digest limited to %2% bits", h->type->name,
                 Device::pardeSpec().bitResubmitSize());
@@ -1226,7 +1405,7 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
         if (pad_size != 0) {
             auto padding = getPaddingField(pad_size, padFieldId++);
             fields.push_back(padding);
-            LOG1("Pushing field " << padding);
+            LOG2("Pushing field " << padding);
         }
     }
 
@@ -1347,7 +1526,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
     }
 
     if (auto fh = d->type->to<IR::BFN::Type_FixedSizeHeader>()) {
-        auto bits = getHeaderBits(d);
+        size_t bits = static_cast<size_t>(getHeaderBits(d));
         ERROR_CHECK(bits <= Device::pardeSpec().bitResubmitSize(),
                 "%1% digest limited to %2% bits", d->type->name,
                 Device::pardeSpec().bitResubmitSize());
@@ -1355,7 +1534,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
         if (pad_size != 0) {
             auto padding = getPaddingField(pad_size, padFieldId++);
             fields.push_back(padding);
-            LOG1("Pushing field " << padding);
+            LOG2("Pushing field " << padding);
         }
     }
 
@@ -1375,7 +1554,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
             continue; }
         repacked_field_indices.push_back(
                 std::make_pair(original_field_indices.at(f->name), f->type));
-        LOG1("\tRepacked field " << f->name); }
+        LOG2("\tRepacked field " << f->name); }
 
     if (LOGGING(3)) {
         for (auto i : repacked_field_indices) {
@@ -1954,6 +2133,7 @@ std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std:
 }
 
 FlexiblePacking::FlexiblePacking(
+        const BFN_Options& o,
         PhvInfo& p,
         const PhvUse& u,
         DependencyGraph& dg,
@@ -1979,6 +2159,10 @@ FlexiblePacking::FlexiblePacking(
                       new GatherParserStateToModify(p, parserStatesToModify),
                       new ReplaceOriginalFieldWithBridged(p, bridgedFields),
                       new FindDependencyGraph(p, dg),
+                      new PHV_Field_Operations(p),
+                      new PragmaContainerSize(p),
+                      new PragmaAtomic(p),
+                      o.use_pa_solitary ? new PragmaSolitary(p) : nullptr,
                       &tMutex,
                       &aMutex,
                       &packConflicts,

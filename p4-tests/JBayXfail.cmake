@@ -406,11 +406,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
-  smoketest_switch_16_compile_d0_profile
-)
-
-p4c_add_xfail_reason("tofino2"
   "AssignmentStatement: Cannot unify bit<.*> to bit<.*>"
   smoketest_switch_16_compile_l0_profile
 )
@@ -418,4 +413,9 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device"
   smoketest_switch_16_Tests
+)
+
+p4c_add_xfail_reason("tofino2"
+  "TTransportException: TSocket read 0 bytes"
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
