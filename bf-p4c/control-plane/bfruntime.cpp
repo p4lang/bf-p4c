@@ -517,13 +517,30 @@ class TypeSpecParser {
 
         auto addField = [&](P4Id id, const std::string& name,
                             const p4configv1::P4DataTypeSpec& fSpec) {
-            if (!fSpec.has_bitstring() || !fSpec.bitstring().has_bit()) {
+            Util::JsonObject* type = nullptr;
+            // Add support for required P4DataTypeSpec types here to generate
+            // the correct field width
+            if (fSpec.has_serializable_enum()) {
+                auto enums = typeInfo.serializable_enums();
+                auto e = fSpec.serializable_enum().name();
+                auto typeEnum = enums.find(e);
+                if (typeEnum == enums.end()) {
+                    ::error("Enum type '%1%' not found in typeInfo for '%2%' '%3%'",
+                            e, instanceType, instanceName);
+                    return;
+                }
+                type = makeTypeBytes(typeEnum->second.underlying_type().bitwidth());
+            } else if (fSpec.has_bitstring() && fSpec.bitstring().has_bit()) {
+                type = makeTypeBytes(fSpec.bitstring().bit().bitwidth());
+            }
+
+            if (!type) {
                 ::error("Error when generating BF-RT info for '%1%' '%2%': "
                         "packed type is too complex",
                         instanceType, instanceName);
                 return;
             }
-            auto* type = makeTypeBytes(fSpec.bitstring().bit().bitwidth());
+
             fields.push_back({prefix + name + suffix, id, type});
         };
 
