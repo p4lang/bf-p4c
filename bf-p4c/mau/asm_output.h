@@ -42,6 +42,14 @@ class MauAsmOutput : public MauInspector {
         auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
+    bool preorder(const IR::MAU::BackendAttached *) override {
+        // Same backend resource can be attached to a table split across
+        // multiple stages which means it must be visited for each table.
+        // In order to enable this, we need to set visitAgain on the common
+        // resource
+        visitAgain();
+        return true;
+    }
     void postorder(const IR::MAU::Selector *as) override {
         visitAgain();
         auto tbl = findContext<IR::MAU::Table>();

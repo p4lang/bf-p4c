@@ -3690,7 +3690,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << " }" << std::endl;
 
     if (salu->selector) {
-        auto &sel_info = self.selector_memory.at(std::make_pair(tbl->stage(), salu->selector));
+        auto sel_mem_index = std::make_pair(tbl->stage(), salu->selector);
+        BUG_CHECK(self.selector_memory.count(sel_mem_index),
+            "Stateful selector %s not found in selector memory map for stage %d on table %s",
+            salu->selector->name, tbl->stage(), tbl->unique_id());
+        auto &sel_info = self.selector_memory.at(sel_mem_index);
         out << indent << "selection_table: " << sel_info.first << std::endl;
         self.emit_memory(out, indent, *sel_info.second);
     } else {
