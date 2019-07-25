@@ -1576,7 +1576,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
 
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
     Logging::FileLog parserLog(pipe->id, "parser.log");
-    LOG2(clotInfo.print(&phv));
+    LOG1(clotInfo.print(&phv));
 
     return root;
 }
