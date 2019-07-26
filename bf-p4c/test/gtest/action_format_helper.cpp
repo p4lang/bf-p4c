@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/action_format_2.h"
+#include "bf-p4c/mau/action_format.h"
 #include "lib/log.h"
 #include "gtest/gtest.h"
 

@@ -4,7 +4,6 @@
 #include <set>
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
@@ -20,7 +19,7 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
 }
 
 bool DoTableLayout::backtrack(trigger &trig) {
-    return (trig.is<IXBar::failure>() || trig.is<ActionFormat::failure>()) && !alloc_done;
+    return trig.is<IXBar::failure>() && !alloc_done;
 }
 
 /** Algorithmic TCAM is a third type of table, in the same vein as ternary and exact.  An

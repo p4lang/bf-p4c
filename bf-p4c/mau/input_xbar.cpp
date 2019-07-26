@@ -3665,7 +3665,7 @@ void IXBar::XBarHashDist::build_action_data_req(const IR::MAU::HashDist *hd) {
 }
 
 /**
- * As the HashDist for immediate is done through the new action_format_2 based code, an
+ * As the HashDist for immediate is done through the new action_format based code, an
  * individual HashDist object in an instruction is no longer able to be linked.  Thus,
  * all parameters of the hash headed to immediate are done in a single operation.
  */

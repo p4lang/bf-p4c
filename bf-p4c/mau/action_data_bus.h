@@ -3,7 +3,6 @@
 
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/action_format_2.h"
 #include "lib/alloc.h"
 #include "lib/safe_vector.h"
 
@@ -216,7 +215,7 @@ struct ActionDataBus {
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionData::Format::Use *use,
                                TableResourceAlloc &alloc);
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterFormat::Use *use,
+    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterALU::Format::Use *use,
                                TableResourceAlloc &alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const Use::ReservedSpace &rs);

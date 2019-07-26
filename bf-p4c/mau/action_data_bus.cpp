@@ -1022,8 +1022,8 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
 /**
  * Implement the action data bus allocation logic here for meter alu output.
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterFormat::Use *use,
-        TableResourceAlloc &alloc) {
+bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+        const MeterALU::Format::Use *use, TableResourceAlloc &alloc) {
     const IR::MAU::AttachedMemory* am = nullptr;
     const IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
@@ -1067,14 +1067,10 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Meter
     auto &meter_xbar = alloc.meter_xbar;
 
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        LOG2(" Layout for type " << i << " is " << use->total_layouts[i]);
+        LOG2(" Layout for type " << i << " is " << use->meter_alu_bus_inputs[i]);
     }
 
-    ActionData::BusInputs total_layouts;
-    for (int i = 0; i < ActionData::SLOT_TYPES; i++)
-         total_layouts[i] = use->total_layouts[i];
-
-    bool allocated = alloc_meter_output(total_layouts, meter_xbar, tbl->name);
+    bool allocated = alloc_meter_output(use->meter_alu_bus_inputs, meter_xbar, tbl->name);
     if (!allocated) return false;
 
     LOG2(" Action data bus for " << tbl->name);

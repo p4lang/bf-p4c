@@ -270,7 +270,7 @@ void Visualization::add_hash_dist_usage(unsigned int stage, const IXBar::HashDis
 void Visualization::add_action_bus_bytes_usage(unsigned int stage, const ActionDataBus::Use &alloc,
                                                cstring tableName) {
     for (auto &rs : alloc.action_data_locs) {
-        int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+        int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
         for (auto i = 0; i < byte_sz; i++) {
             ActionBusByteResource abr;
             abr.add(USED_BY, tableName + "");

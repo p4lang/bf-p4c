@@ -2,7 +2,6 @@
 #define BF_P4C_MAU_TABLE_LAYOUT_H_
 
 #include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/action_format_2.h"
 #include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/safe_vector.h"
@@ -49,7 +48,7 @@ class LayoutChoices {
  public:
     ordered_map<cstring, safe_vector<LayoutOption>> total_layout_options;
     ordered_map<cstring, safe_vector<ActionData::Format::Use>> total_action_formats;
-    ordered_map<cstring /* table name */, MeterFormat::Use> total_meter_output_format;
+    ordered_map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
 
     safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
         safe_vector<LayoutOption> empty;
@@ -69,8 +68,8 @@ class LayoutChoices {
         return total_action_formats.at(t->name);
     }
 
-    MeterFormat::Use get_attached_formats(const IR::MAU::Table *t) const {
-        MeterFormat::Use empty;
+    MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t) const {
+        MeterALU::Format::Use empty;
         if (t == nullptr)
             return empty;
         else if (total_meter_output_format.find(t->name) == total_meter_output_format.end())

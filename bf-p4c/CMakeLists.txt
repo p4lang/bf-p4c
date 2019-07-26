@@ -262,7 +262,6 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
   mau/action_data_bus.cpp
   mau/action_format.cpp
-  mau/action_format_2.cpp
   mau/action_mutex.cpp
   mau/asm_output.cpp
   mau/attached_output.cpp
@@ -307,7 +306,6 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
   mau/action_format.h
-  mau/action_format_2.h
   mau/action_mutex.h
   mau/asm_output.h
   mau/attached_output.h

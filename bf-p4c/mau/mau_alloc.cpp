@@ -17,7 +17,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
             new TableLayout(phv, lc),
             new AssignActionHandle(phv),
-            new MeterOutputSetup(phv, lc),  // after TableLayout to be part of backtrack
+            new MeterALU::Format(phv, lc),
             new TableFindSeqDependencies(phv),
             new FindDependencyGraph(phv, deps),
             new SpreadGatewayAcrossSeq(phv),

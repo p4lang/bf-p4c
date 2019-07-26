@@ -328,8 +328,6 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     aa.set_container_actions_map(&container_actions_map);
     aa.set_verbose();
     act->apply(aa);
-    if (aa.misaligned_actiondata())
-        throw ActionFormat::failure(act->name);
 
     unsigned allowed_errors = ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE
                             | ActionAnalysis::ContainerAction::REFORMAT_CONSTANT

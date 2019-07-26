@@ -31,7 +31,7 @@ struct StageUseEstimate {
     safe_vector<LayoutOption> layout_options;
     // safe_vector<ActionFormat::Use> action_formats;
     safe_vector<ActionData::Format::Use> action_formats;
-    MeterFormat::Use meter_format;
+    MeterALU::Format::Use meter_format;
     size_t preferred_index;
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
@@ -89,7 +89,7 @@ struct StageUseEstimate {
         return &action_formats[option->action_format_index];
     }
 
-    const MeterFormat::Use *preferred_meter_format() const {
+    const MeterALU::Format::Use *preferred_meter_format() const {
         return &meter_format;
     }
 

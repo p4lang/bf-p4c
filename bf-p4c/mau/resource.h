@@ -20,7 +20,7 @@ struct TableResourceAlloc {
     TableFormat::Use                    table_format;
     std::map<UniqueId, Memories::Use>   memuse;
     ActionData::Format::Use             action_format;
-    MeterFormat::Use                    meter_format;
+    MeterALU::Format::Use               meter_format;
     ActionDataBus::Use                  action_data_xbar, meter_xbar;
     InstructionMemory::Use              instr_mem;
     TableResourceAlloc *clone_ixbar() const {
