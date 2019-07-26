@@ -1559,7 +1559,18 @@ bool Memories::allocate_all_atcam(mem_info &mi) {
     break_atcams_into_partitions();
     while (!atcam_partitions.empty()) {
         auto partition_mask = best_partition_side(mi);
-        if (!find_best_partition_for_atcam(partition_mask))
+        bool found = false;
+        for (int iteration = 0; iteration < RAM_SIDES; iteration++) {
+            // If the partition does not fit on what is classified as the better side, due
+            // to wide width requirements, to allocate on the worse side
+            if (iteration == 1)
+                partition_mask = side_mask(RAM_SIDES) & ~partition_mask;
+            if (find_best_partition_for_atcam(partition_mask)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
             return false;
     }
     compress_ways(true);
