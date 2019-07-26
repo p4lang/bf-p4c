@@ -211,7 +211,8 @@ void CharacterizePower::end_apply(const IR::Node *root) {
     }
 
       // Now that have table information need, can produce power.json file.
-      produce_json(root);
+      if (debug_info_)
+        produce_json(root);
 
       double eps = max_power_ / 104729.0;
       double total_power = ingress_worst_power_ + egress_worst_power_;

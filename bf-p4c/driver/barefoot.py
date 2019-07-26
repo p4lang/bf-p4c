@@ -196,8 +196,15 @@ class BarefootBackend(BackendDriver):
     def process_command_line_options(self, opts):
         BackendDriver.process_command_line_options(self, opts)
 
-        # set some more defaults: -g implies --verbose 1 and --create-graphs
-        # this ensures that logs and graphs are generated
+        # Set some defaults:
+        # --archive implies -g (debug_info)
+        # -g implies --verbose 1 and --create-graphs
+        if opts.archive is not None:
+            if not opts.debug_info:
+                self.add_command_option('compiler', '-g')
+            opts.debug_info = True
+        if opts.verbose > 0 and not opts.debug_info:
+            self.add_command_option('compiler', '-g')
         if opts.debug_info and opts.verbose == 0:
             opts.verbose = 1
         if opts.debug_info:

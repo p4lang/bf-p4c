@@ -225,6 +225,7 @@ class CharacterizePower: public MauInspector {
 #endif
   bool display_power_budget_;
   bool disable_power_check_ = false;
+  bool debug_info_ = false;
   std::string logFileName_;
 
   // First tables in the relevant control flow.
@@ -401,13 +402,15 @@ class CharacterizePower: public MauInspector {
                               bool no_power_check,
 #endif
                               bool display_power_budget,
-                              bool disable_power_check) :
+                              bool disable_power_check,
+                              bool debug_info) :
      dep_graph_(dep_graph),
 #if BAREFOOT_INTERNAL
      no_power_check_(no_power_check),
 #endif
      display_power_budget_(display_power_budget),
-     disable_power_check_(disable_power_check) {
+     disable_power_check_(disable_power_check),
+     debug_info_(debug_info) {
     if (Device::currentDevice() == Device::TOFINO) {
        double ram_scaling_factor = 1.88574;
        double tcam_scaling_factor = 0.62736;

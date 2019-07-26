@@ -234,7 +234,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
                               options.no_power_check,
 #endif
                               options.display_power_budget,
-                              options.disable_power_check),
+                              options.disable_power_check,
+                              options.debugInfo),
         // Call this at the end of the backend. This changes the logical stages used for PHV
         // allocation to physical stages based on actual table placement.
         Device::currentDevice() == Device::JBAY
