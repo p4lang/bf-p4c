@@ -115,7 +115,11 @@ void TableSummary::throwBacktrackException() {
     // Do not perform more than 5 rounds of table placement; this maximum would entail 3 rounds of
     // PHVs, 3 rounds of table placement with container conflicts, and 2 rounds of table placement
     // without container conflicts.
-    if (numInvoked[pipe_id] >= 5) return;
+    if (numInvoked[pipe_id] >= 5) {
+        for (const auto* t : failedPlacementTables)
+            warning("The stage specified for %s is %d, but we could not place it until stage %d",
+                    t, t->get_provided_stage(), t->stage());
+        return; }
 
     // First round.
     if (numInvoked[pipe_id] == 1) {
@@ -175,10 +179,7 @@ void TableSummary::throwBacktrackException() {
         throw NoContainerConflictTrigger::failure(true);
     }
 
-    if (placementFailure)
-        for (const auto* t : failedPlacementTables)
-            error("The stage specified for %s is %d, but we could not place it until stage %d",
-                    t, t->get_provided_stage(), t->stage());
+    BUG("TableSummary pass %d not handled", numInvoked[pipe_id]);
 }
 
 const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {
