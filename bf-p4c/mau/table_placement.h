@@ -105,7 +105,8 @@ class TablePlacement : public MauTransform, public Backtrack {
         safe_vector<TableResourceAlloc *> &prev_resources);
     bool try_alloc_adb(Placed *next, const Placed *done, TableResourceAlloc *resources);
     bool try_alloc_imem(Placed *next, const Placed *done, TableResourceAlloc *resources);
-    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources);
+    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources,
+        bool estimate_set);
     bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,
                          int &srams_left, int &tcams_left, int min_entries);
     bool can_duplicate(const IR::MAU::AttachedMemory *);
