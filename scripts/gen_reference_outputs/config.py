@@ -68,39 +68,3 @@ class Test(object):
         self.skip_opt = '' # choices: '', skip_Glass, skip_P4C, skip_Glass_P4C
         self.out_path = ''
         self.timestamp = ''
-
-class Metric():
-    def __init__(self):
-        self.normal_phv_bits_occupied = None
-        self.normal_phv_containers_occupied = None
-        self.tagalong_phv_bits_occupied = None
-        self.tagalong_phv_containers_occupied = None
-        self.mau_srams = None
-        self.mau_tcams = None
-        self.mau_logical_tables = None
-        self.parser_ingress_tcam_rows = None
-        self.parser_egress_tcam_rows = None
-
-    def display(self):
-        dt = PrettyTable(['Metric', 'Value'])
-        dt.add_row(['Normal PHV bits_occupied', self.normal_phv_bits_occupied])
-        dt.add_row(['Normal PHV containers_occupied', self.normal_phv_containers_occupied])
-        dt.add_row(['Tagalong PHV bits_occupied', self.tagalong_phv_bits_occupied])
-        dt.add_row(['Tagalong PHV containers_occupied', self.tagalong_phv_containers_occupied])
-        dt.add_row(['MAU srams', self.mau_srams])
-        dt.add_row(['MAU tcams', self.mau_tcams])
-        dt.add_row(['MAU logical_tables', self.mau_logical_tables])
-        dt.add_row(['Parser ingress tcam rows', self.parser_ingress_tcam_rows])
-        dt.add_row(['Parser egress tcam rows', self.parser_egress_tcam_rows])
-        print dt
-
-limits = Metric()
-limits.normal_phv_bits_occupied = 40
-limits.normal_phv_containers_occupied = 2
-limits.tagalong_phv_bits_occupied = 20
-limits.tagalong_phv_containers_occupied = 1
-limits.mau_srams = 10.0 # percentage
-limits.mau_tcams = 10.0 # percentage
-limits.mau_logical_tables = 10.0 # percentage
-limits.parser_ingress_tcam_rows = 10.0 # percentage
-limits.parser_egress_tcam_rows = 10.0 # percentage

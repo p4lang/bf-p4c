@@ -26,16 +26,34 @@ p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_d0_profile" ${switch_p4_16_d0} "${testExtraArgs}" "-DD0_PROFILE
   -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -tofino2 -arch t2na")
 
-# Running C0_PROFILE for switch-16 PTF tests
+# Running switch-16 PTF tests on default profile
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-  "${testExtraArgs} -DC0_PROFILE -tofino2 -arch t2na -bfrt -profile c0_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests"
         "all
         ^switch_tests.L3SVITest
         ^switch_tests.L2LagTest
         ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest")
+        ^switch_tests.L3MulticastTest
+        ^switch_tests.L3SnakeTest
+        ^switch_tests.ACLFieldsUnitTest
+        ^switch_tests.ACLTest")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_L3SnakeTest" ${SWITCH_P4_16}
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_L3SnakeTest"
+        "switch_tests.L3SnakeTest")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_ACLFieldsUnitTest" ${SWITCH_P4_16}
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_ACLFieldsUnitTest"
+        "switch_tests.ACLFieldsUnitTest")
+
+p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_ACLTest" ${SWITCH_P4_16}
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_ACLTest"
+        "switch_tests.ACLTest")
 
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
@@ -50,4 +68,6 @@ set_tests_properties("tofino2/smoketest_switch_16_compile_l0_profile" PROPERTIES
 set_tests_properties("tofino2/smoketest_switch_16_compile_c0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile_d0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
-
+set_tests_properties("tofino2/smoketest_switch_16_Tests_L3SnakeTest" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_16_Tests_ACLFieldsUnitTest" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_16_Tests_ACLTest" PROPERTIES TIMEOUT 3600)

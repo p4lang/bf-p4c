@@ -469,11 +469,10 @@ void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring 
  * potential layouts if the allocation can not fit within the pack format.
  */
 bool TablePlacement::pick_layout_option(TablePlacement::Placed *next,
-        const TablePlacement::Placed *done, TableResourceAlloc *resources, bool estimate_set) {
+        const TablePlacement::Placed *done, TableResourceAlloc *resources) {
     bool table_format = true;
-    if (!estimate_set)
-        next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
-                                     next->stage_split > 0);
+    next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
+                                 next->stage_split > 0);
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next, done, resources);
@@ -523,12 +522,17 @@ bool TablePlacement::shrink_estimate(Placed *next, const Placed *done,
         tcams_left--;
 
     LOG3("  - reducing to " << next->entries << " of " << t->name << " in stage " << next->stage);
-
-    if (!pick_layout_option(next, done, resources, true)) {
-        LOG5("IXBar Allocation/Table Format error after previous allocation? Table" << t->name);
+    bool ixbar_fit = try_alloc_ixbar(next, done, resources);
+    if (!ixbar_fit) {
+        LOG5("IXBar Allocation error after previous allocation? Table" << t->name);
         return false;
     }
 
+    bool table_format_fit = try_alloc_format(next, resources, next->gw);
+    if (!table_format_fit) {
+        LOG5("Table format for " << t->name << " didn't fit after previous allocation");
+        return false;
+    }
     return true;
 }
 
@@ -976,12 +980,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv, const IR::MA
 
         // FIXME: This is not the appropriate way to check if a table is a single gateway
 
-        if (!pick_layout_option(min_placed, done, min_resources, false)) {
+        if (!pick_layout_option(min_placed, done, min_resources)) {
             advance_to_next_stage = true;
             LOG3("    Min Use ixbar allocation did not fit");
         }
 
-        if (!pick_layout_option(rv, done, resources, false)) {
+        if (!pick_layout_option(rv, done, resources)) {
             advance_to_next_stage = true;
             LOG3("    Table Use ixbar allocation did not fit");
         }

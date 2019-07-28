@@ -6,6 +6,7 @@ import json
 import sqlite3
 import shutil
 import config
+import metrics
 sys.path.append("..")
 from runner import RunCmd
 from collections import OrderedDict
@@ -62,12 +63,17 @@ def get_metrics(metrics_outdir, ts):
         for prog in programs:
             for pipe in prog["pipes"]:
                 pipe_id = pipe['pipe_id']
-                metrics_files.append([pipe_id, os.path.join(output_directory, pipe['files']['metrics']['path'])])
+                try:
+                    metrics_info = pipe["files"]["metrics"]
+                    metrics_files.append([pipe_id, os.path.join(output_directory, metrics_info["path"])])
+                except:
+                    print 'metrics.json not found. Compilation might not have succeeded for', str(prog["program_name"])
+                    continue
     return metrics_files
 
 def copy_metrics(tests, metrics_outdir, ts):
     metrics_files = get_metrics(metrics_outdir, ts)
-    metrics = OrderedDictWithDict()
+    c_metrics = OrderedDictWithDict()
     for mTest in tests:
         metrics_out_path = os.path.join(mTest.out_path, 'P4C')
         metrics_dest = os.path.join(config.METRICS_DIR, mTest.p4, mTest.timestamp)
@@ -77,7 +83,7 @@ def copy_metrics(tests, metrics_outdir, ts):
         test_info['Compiler'] = 'P4C'
         test_info['Timestamp'] = ts
         test_info['Metrics_json'] = []
-        metrics[mTest.p4] = test_info
+        c_metrics[mTest.p4] = test_info
         metrics_dest = os.path.join(config.METRICS_DIR, mTest.p4, ts)
         if not os.path.exists(metrics_dest):
             os.makedirs(metrics_dest)
@@ -89,147 +95,35 @@ def copy_metrics(tests, metrics_outdir, ts):
                 shutil.copy2(mfile[1], os.path.join(metrics_dest, 'metrics_' + str(mfile[0]) + '.json'))
                 metrics_data[mfile[0]] = json.loads(metrics_json)
         for mdata in metrics_data:
-             metrics[mTest.p4]['Metrics_json'].append(metrics_data[mdata])
-    return metrics
-
-def get_cumulative_metric(metrics_info, metric):
-    cum_metric = 0
-    for sub_info in metrics_info:
-        cum_metric += sub_info[metric]
-    return cum_metric
-
-def process_metrics(dump):
-    j_info = config.Metric()
-    normal_phv_info = dump['phv']['normal']
-    tagalong_phv_info = dump['phv']['tagalong']
-    mau_info = dump['mau']
-    parser_info = dump['parser']
-    j_info.normal_phv_bits_occupied = get_cumulative_metric(normal_phv_info, 'bits_occupied')
-    j_info.normal_phv_containers_occupied = get_cumulative_metric(normal_phv_info, 'containers_occupied')
-    j_info.tagalong_phv_bits_occupied = get_cumulative_metric(tagalong_phv_info, 'bits_occupied')
-    j_info.tagalong_phv_containers_occupied = get_cumulative_metric(tagalong_phv_info, 'containers_occupied')
-    j_info.mau_srams = mau_info['srams']
-    j_info.mau_tcams = mau_info['tcams']
-    j_info.mau_logical_tables = mau_info['logical_tables']
-    j_info.parser_ingress_tcam_rows = parser_info['ingress']['tcam_rows']
-    j_info.parser_egress_tcam_rows = parser_info['egress']['tcam_rows']
-    return j_info
+             c_metrics[mTest.p4]['Metrics_json'].append(metrics_data[mdata])
+    return c_metrics
 
 def extract_info(m_info):
     json_info = []
     json_dumps = m_info['Metrics_json']
     for dump in json_dumps:
-        json_info.append(process_metrics(dump))
+        if 'tofino2' in dump['target']:
+            json_obj = metrics.Tofino2Metrics()
+        else:
+            json_obj = metrics.TofinoMetrics()
+        json_obj.process_metric(dump)
+        json_info.append(json_obj)
     return json_info
 
-def display_comparison(metric1, metric2, delta):
-    dt = PrettyTable(['Metric', 'Master', 'Current', 'Delta'])
-    dt.add_row(['Normal PHV bits_occupied', metric1.normal_phv_bits_occupied, metric2.normal_phv_bits_occupied, delta.normal_phv_bits_occupied])
-    dt.add_row(['Normal PHV containers_occupied', metric1.normal_phv_containers_occupied, metric2.normal_phv_containers_occupied, delta.normal_phv_containers_occupied])
-    dt.add_row(['Tagalong PHV bits_occupied', metric1.tagalong_phv_bits_occupied, metric2.tagalong_phv_bits_occupied, delta.tagalong_phv_bits_occupied])
-    dt.add_row(['Tagalong PHV containers_occupied', metric1.tagalong_phv_containers_occupied, metric2.tagalong_phv_containers_occupied, delta.tagalong_phv_containers_occupied])
-    dt.add_row(['MAU srams', metric1.mau_srams, metric2.mau_srams, str(delta.mau_srams) + ' %'])
-    dt.add_row(['MAU tcams', metric1.mau_tcams, metric2.mau_tcams, str(delta.mau_tcams) + ' %'])
-    dt.add_row(['MAU logical_tables', metric1.mau_logical_tables, metric2.mau_logical_tables, str(delta.mau_logical_tables) + ' %'])
-    dt.add_row(['Parser ingress tcam rows', metric1.parser_ingress_tcam_rows, metric2.parser_ingress_tcam_rows, str(delta.parser_ingress_tcam_rows) + ' %'])
-    dt.add_row(['Parser egress tcam rows', metric1.parser_egress_tcam_rows, metric2.parser_egress_tcam_rows, str(delta.parser_egress_tcam_rows) + ' %'])
-    print dt
-
-# TODO: Need to refactor this
 def compare_metrics(curr, master):
-    result = 0
-    m_diff = config.Metric()
-    m_diff.normal_phv_bits_occupied = curr.normal_phv_bits_occupied - master.normal_phv_bits_occupied
-    m_diff.normal_phv_containers_occupied = curr.normal_phv_containers_occupied - master.normal_phv_containers_occupied
-    m_diff.tagalong_phv_bits_occupied = curr.tagalong_phv_bits_occupied - master.tagalong_phv_bits_occupied
-    m_diff.tagalong_phv_containers_occupied = curr.tagalong_phv_containers_occupied - master.tagalong_phv_containers_occupied
-    if curr.mau_srams > 0:
-        m_diff.mau_srams = round(100.0 * (curr.mau_srams - master.mau_srams)/curr.mau_srams, 2)
-    else:
-        m_diff.mau_srams = 0
-    if curr.mau_tcams > 0:
-        m_diff.mau_tcams = round(100.0 * (curr.mau_tcams - master.mau_tcams)/curr.mau_tcams, 2)
-    else:
-        m_diff.mau_tcams= 0
-    if curr.mau_logical_tables > 0:
-        m_diff.mau_logical_tables = round(100.0 * (curr.mau_logical_tables - master.mau_logical_tables)/curr.mau_logical_tables, 2)
-    else:
-        m_diff.mau_logical_tables = 0
-    if curr.parser_ingress_tcam_rows > 0:
-        m_diff.parser_ingress_tcam_rows = round(100.0 * (curr.parser_ingress_tcam_rows - master.parser_ingress_tcam_rows)/curr.parser_ingress_tcam_rows, 2)
-    else:
-        m_diff.parser_ingress_tcam_rows = 0
-    if curr.parser_egress_tcam_rows > 0:
-        m_diff.parser_egress_tcam_rows = round(100.0 * (curr.parser_egress_tcam_rows - master.parser_egress_tcam_rows)/curr.parser_egress_tcam_rows, 2)
-    else:
-        m_diff.parser_egress_tcam_rows = 0
-    display_comparison(master, curr, m_diff)
-
-    if m_diff.normal_phv_bits_occupied > config.limits.normal_phv_bits_occupied:
-        result -= 1
-        print 'Normal PHV bits_occupied:', m_diff.normal_phv_bits_occupied, 'exceeded the limit of', config.limits.normal_phv_bits_occupied
-    elif m_diff.normal_phv_bits_occupied < 0:
-        print 'Normal PHV bits_occupied improved!'
-
-    if m_diff.normal_phv_containers_occupied > config.limits.normal_phv_containers_occupied:
-        result -= 1
-        print 'Normal PHV containers_occupied:', m_diff.normal_phv_containers_occupied, 'exceeded the limit of', config.limits.normal_phv_containers_occupied
-    elif m_diff.normal_phv_containers_occupied < 0:
-        print 'Normal PHV containers_occupied improved!'
-
-    if m_diff.tagalong_phv_bits_occupied > config.limits.tagalong_phv_bits_occupied:
-        result -= 1
-        print 'Tagalong PHV bits_occupied:', m_diff.tagalong_phv_bits_occupied, 'exceeded the limit of', config.limits.tagalong_phv_bits_occupied
-    elif m_diff.tagalong_phv_bits_occupied < 0:
-        print 'Tagalong PHV bits_occupied improved!'
-
-    if m_diff.tagalong_phv_containers_occupied > config.limits.tagalong_phv_containers_occupied:
-        result -= 1
-        print 'Tagalong PHV containers_occupied:', m_diff.tagalong_phv_containers_occupied, 'exceeded the limit of', config.limits.tagalong_phv_containers_occupied
-    elif m_diff.tagalong_phv_containers_occupied < 0:
-        print 'Tagalong PHV containers_occupied improved!'
-
-    if m_diff.mau_srams > config.limits.mau_srams:
-        result -= 1
-        print 'MAU srams:', m_diff.mau_srams, 'exceeded the limit of', config.limits.mau_srams, '%'
-    elif m_diff.mau_srams < 0:
-        print 'MAU srams improved!'
-
-    if m_diff.mau_tcams > config.limits.mau_tcams:
-        result -= 1
-        print 'MAU tcams:', m_diff.mau_tcams, 'exceeded the limit of', config.limits.mau_tcams, '%'
-    elif m_diff.mau_tcams < 0:
-        print 'MAU tcams improved!'
-
-    if m_diff.mau_logical_tables > config.limits.mau_logical_tables:
-        result -= 1
-        print 'MAU logical_tables:', m_diff.mau_logical_tables, 'exceeded the limit of', config.limits.mau_logical_tables, '%'
-    elif m_diff.mau_logical_tables < 0:
-        print 'MAU logical_tables improved!'
-
-    if m_diff.parser_ingress_tcam_rows > config.limits.parser_ingress_tcam_rows:
-        result -= 1
-        print 'Parser ingress tcam rows:', m_diff.parser_ingress_tcam_rows, 'exceeded the limit of', config.limits.parser_ingress_tcam_rows, '%'
-    elif m_diff.parser_ingress_tcam_rows < 0:
-        print 'Parser ingress tcam rows improved!'
-
-    if m_diff.parser_egress_tcam_rows > config.limits.parser_egress_tcam_rows:
-        result -= 1
-        print 'Parser egress tcam rows:', m_diff.parser_egress_tcam_rows, 'exceeded the limit of', config.limits.parser_egress_tcam_rows, '%'
-    elif m_diff.parser_egress_tcam_rows < 0:
-        print 'Parser egress tcam rows improved!'
-
-    return result
+    curr.display_comparison(master)
+    return curr.analyze(master)
 
 def test_metrics(db_curr, db_master):
     results = {}
     for curr, curr_info in db_curr.iteritems():
-        curr_metrics = extract_info(curr_info)
         print 'Analyzing:', curr
         result = 0
         if not curr_info['Metrics_json']:
+            print 'Possible test failure, metrics.json not found'
             result = -1
         else:
+            curr_metrics = extract_info(curr_info)
             if curr in db_master:
                 master_info = db_master[curr]
                 master_metrics = extract_info(master_info)
