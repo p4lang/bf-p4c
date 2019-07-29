@@ -90,3 +90,48 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
         }
     }
 }
+
+inline cstring AddValidityBitSets::getFieldValidityName(cstring origName) {
+    return origName + ".$valid";
+}
+
+Visitor::profile_t AddValidityBitSets::init_apply(const IR::Node* root) {
+    aliasedFields.clear();
+    actionToPOVMap.clear();
+    for (auto& kv : pragmaAlias.getAliasMap()) {
+        const cstring validFieldName = getFieldValidityName(kv.first);
+        const PHV::Field* field = phv.field(validFieldName);
+        if (!field) continue;
+        aliasedFields[phv.field(kv.second.field)].insert(field);
+        LOG1("\tAliased field " << kv.second.field << " has a validity bit from "
+             << kv.first << " (" << field->name << ")");
+    }
+    return Transform::init_apply(root);
+}
+
+IR::Node* AddValidityBitSets::preorder(IR::MAU::Instruction* inst) {
+    if (inst->operands.size() == 0) return inst;
+    const PHV::Field* f = phv.field(inst->operands.at(0));
+    if (!aliasedFields.count(f)) return inst;
+    auto* action = findContext<IR::MAU::Action>();
+    if (!action) return inst;
+    for (const auto* pov : aliasedFields.at(f))
+        actionToPOVMap[action->name].insert(pov);
+    return inst;
+}
+
+IR::Node* AddValidityBitSets::postorder(IR::MAU::Action* action) {
+    if (!actionToPOVMap.count(action->name)) return action;
+    for (const auto* f : actionToPOVMap.at(action->name)) {
+        auto* pov = phv.getTempVar(f);
+        if (!pov) {
+            LOG3("\t  Could not find POV corresponding to " << f->name);
+            continue;
+        }
+        auto* oneExpr = new IR::Constant(new IR::Type_Bits(pov->type->width_bits(), false), 1);
+        auto* prim = new IR::MAU::Instruction("set", { pov, oneExpr });
+        LOG1("\t  Add to action " << action->name << " : " << prim);
+        action->action.push_back(prim);
+    }
+    return action;
+}

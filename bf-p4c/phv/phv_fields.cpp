@@ -84,6 +84,7 @@ void PhvInfo::clear() {
     field_mutex_i.clear();
     constantExtractedInSameState.clear();
     sameStateConstantExtraction.clear();
+    fields_to_tempvars_i.clear();
     PhvInfo::clearMinStageInfo();
     PhvInfo::resetDeparserStage();
 }
@@ -184,7 +185,16 @@ void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
               "Can't create temp of type %s", tv->type);
     if (all_fields.count(tv->name) == 0) {
         add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
+        const PHV::Field* fld = field(tv->name);
+        if (fld)
+            fields_to_tempvars_i[fld] = tv;
     }
+}
+
+const IR::TempVar* PhvInfo::getTempVar(const PHV::Field* f) const {
+    if (fields_to_tempvars_i.count(f))
+        return fields_to_tempvars_i.at(f);
+    return nullptr;
 }
 
 bool PhvInfo::has_struct_info(cstring name_) const {

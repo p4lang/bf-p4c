@@ -413,12 +413,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device"
   smoketest_switch_16_Tests_L3SnakeTest
-  smoketest_switch_16_Tests_ACLTest
-)
-
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: Did not receive expected packets on port .* for device .*"
-  smoketest_switch_16_Tests_ACLFieldsUnitTest
 )
 
 p4c_add_xfail_reason("tofino2"

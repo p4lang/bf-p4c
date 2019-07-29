@@ -12,6 +12,7 @@
   */
 class FindExpressionsForFields : public Inspector {
  private:
+    const PhvInfo& phv;
     /// Map of IR::Expression objects corresponding to the field names.
     ordered_map<cstring, const IR::Member*>& fieldNameToExpressionsMap;
 
@@ -19,8 +20,8 @@ class FindExpressionsForFields : public Inspector {
     bool preorder(const IR::HeaderOrMetadata* h) override;
 
  public:
-    FindExpressionsForFields(const PhvInfo&, ordered_map<cstring, const IR::Member*>& f)
-        : fieldNameToExpressionsMap(f) { }
+    FindExpressionsForFields(const PhvInfo& p, ordered_map<cstring, const IR::Member*>& f)
+        : phv(p), fieldNameToExpressionsMap(f) { }
 };
 
 /** This class replaces all uses of alias source fields with the corresponding alias destination
@@ -47,6 +48,29 @@ class ReplaceAllAliases : public Transform {
         : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
 };
 
+/** For alias sources with explicit validity bits that are replaced during the aliasing transform,
+  * we need to set the corresponding validity bit to true, in every action where the alias
+  * destination is now written. This pass effects that transform.
+  */
+class AddValidityBitSets : public Transform {
+ private:
+    const PhvInfo&                  phv;
+    const PragmaAlias&              pragmaAlias;
+
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> aliasedFields;
+    ordered_map<cstring, ordered_set<const PHV::Field*>> actionToPOVMap;
+
+    inline cstring getFieldValidityName(cstring origName);
+
+    profile_t init_apply(const IR::Node* root) override;
+    IR::Node* preorder(IR::MAU::Instruction* inst) override;
+    IR::Node* postorder(IR::MAU::Action* action) override;
+
+ public:
+    explicit AddValidityBitSets(const PhvInfo& p, const PragmaAlias& pa)
+        : phv(p), pragmaAlias(pa) { }
+};
+
 /** This class implements a pass manager that handles aliasing relationships specified by pa_alias
   * fields. The general idea is that all the uses of one of the fields specified by the pragma
   * (alias source) are replaced by the uses of the other field in the pragma (alias destination). In
@@ -67,6 +91,7 @@ class Alias : public PassManager {
             &pragmaAlias,
             new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
+            new AddValidityBitSets(phv, pragmaAlias),
             new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
         });
     }

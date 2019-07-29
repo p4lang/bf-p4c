@@ -1216,6 +1216,10 @@ class PhvInfo {
     /// they are extracted as part of the same byte.
     SymBitMatrix                             bridged_extracted_together_i;
 
+    /// Mapping of all the fields to the TempVars created. This is needed by the Alias
+    /// transformation to automatically add initializations of validity bits for alias sources.
+    ordered_map<const PHV::Field*, const IR::TempVar*>  fields_to_tempvars_i;
+
     /// Set of containers that must be set to 0 (and their container validity bit set
     /// unconditionally to 1) for the deparsed zero optimization.
     std::set<PHV::Container>    zeroContainers[2];  // per gress
@@ -1298,6 +1302,9 @@ class PhvInfo {
         return struct_info(hr->toString()); }
     const std::map<cstring, PHV::Field>& get_all_fields() const { return all_fields; }
     size_t num_fields() const { return all_fields.size(); }
+    /// @returns the TempVar pointer corresponding to @f, if the underlying expression for field @f
+    /// is a TempVar. @returns nullptr otherwise.
+    const IR::TempVar* getTempVar(const PHV::Field* f) const;
 
     PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true) {
         cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");
