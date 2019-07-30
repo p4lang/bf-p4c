@@ -81,6 +81,11 @@ struct value_t {
         if (type == tCMD && vec.size > 0 && vec[0].type == tSTR)
             return strncmp(vec[0].s, pfx, strlen(pfx)) == 0;
         return false; }
+    bool checkSize() const {
+        if (type == tVEC) return (vec.size > 0);
+        if (type == tMAP) return (map.size > 0);
+        if (type == tCMD) return (vec.size > 0);
+        return true; }
 #endif /* __cplusplus */
 };
 
@@ -153,6 +158,11 @@ std::unique_ptr<json::map> toJson(VECTOR(pair_t) &);
     ((V).type == (T) || \
      (error((V).lineno, "Syntax error, expecting %s", \
             value_type_desc[T]), 0))
+#define CHECKTYPESIZE(V, T) \
+    (CHECKTYPE(V, T) \
+    && ((V).checkSize() || \
+        (error((V).lineno, "Syntax error, empty %s", \
+            value_type_desc[T]), 0)))
 #define PCHECKTYPE(P, V, T) \
     (((P) && (V).type == (T)) || \
      (error((V).lineno, "Syntax error, expecting %s", \

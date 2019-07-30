@@ -21,7 +21,7 @@ void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4T
     Table::common_init_setup(data, ternary, p4type);
     setup_logical_id();
     if (auto *ixbar = get(data, "input_xbar")) {
-        if (CHECKTYPE(*ixbar, tMAP))
+        if (CHECKTYPESIZE(*ixbar, tMAP))
             input_xbar = new InputXbar(this, ternary, ixbar->map); }
 }
 

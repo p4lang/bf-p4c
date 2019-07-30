@@ -41,12 +41,12 @@ namespace BFN {
  * header to byte-boundary. Otherwise, PHV allocation might fail due to
  * unimplemented constraint.
  */
-class DigestEmitMustSpecifyType : public Inspector {
+class CheckExternValidity : public Inspector {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 
  public:
-     DigestEmitMustSpecifyType(P4::ReferenceMap *refMap, P4::TypeMap* typeMap) :
+     CheckExternValidity(P4::ReferenceMap *refMap, P4::TypeMap* typeMap) :
         refMap(refMap), typeMap(typeMap) {}
      bool preorder(const IR::MethodCallExpression*) override;
 };
@@ -54,7 +54,7 @@ class DigestEmitMustSpecifyType : public Inspector {
 class CheckDesignPattern : public PassManager {
  public:
      CheckDesignPattern(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-        passes.push_back(new DigestEmitMustSpecifyType(refMap, typeMap));
+         passes.push_back(new CheckExternValidity(refMap, typeMap));
      }
 };
 
