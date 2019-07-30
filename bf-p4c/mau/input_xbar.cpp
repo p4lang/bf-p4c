@@ -14,6 +14,7 @@
 #include "lib/range.h"
 #include "lib/log.h"
 
+
 constexpr int IXBar::HASH_INDEX_GROUPS;
 constexpr int IXBar::HASH_SINGLE_BITS;
 constexpr int IXBar::METER_ALU_HASH_BITS;
@@ -2541,6 +2542,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 
     alloc.type = Use::SELECTOR;
     alloc.used_by = as->name + "";
+    alloc.symmetric_keys = tbl->sel_symmetric_keys;
 
     int hash_group = getHashGroup(hash_table_input);
     if (hash_group < 0) {
@@ -3193,6 +3195,8 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
 
     rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func->inputs.begin(),
                                    alloc_req.func->inputs.end());
+    LOG1("  Build Hash Dist IR use " << alloc_req.func->symmetrically_hashed_inputs);
+    rv.use.symmetric_keys = alloc_req.func->symmetrically_hashed_inputs;
     // Create pre-allocated bytes of the subset
     create_alloc(map_alloc, rv.use);
 

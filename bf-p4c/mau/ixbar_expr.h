@@ -102,13 +102,21 @@ class CanBeIXBarExpr : public Inspector {
     operator bool() const { return rv; }
 };
 
+
 struct P4HashFunction {
     safe_vector<const IR::Expression *> inputs;
     le_bitrange hash_bits;
     IR::MAU::HashFunction algorithm;
     cstring dyn_hash_name;
+    LTBitMatrix symmetrically_hashed_inputs;
 
-    bool is_dynamic() const { return !dyn_hash_name.isNull(); }
+    bool is_dynamic() const {
+       bool rv = !dyn_hash_name.isNull();
+       if (rv)
+           BUG_CHECK(symmetrically_hashed_inputs.empty(), "Dynamically hashed values cannot "
+               "have symmetric fields");
+       return rv;
+    }
     bool equiv_dyn(const P4HashFunction *func) const;
     bool equiv_inputs_alg(const P4HashFunction *func) const;
 
@@ -121,6 +129,14 @@ struct P4HashFunction {
 
     bool overlap(const P4HashFunction *, le_bitrange *my_overlap, le_bitrange *hash_overlap) const;
     void dbprint(std::ostream &out) const;
+};
+
+class VerifySymmetricHashPairs {
+ public:
+    VerifySymmetricHashPairs(const PhvInfo &phv, safe_vector<const IR::Expression *> &field_list,
+        const IR::Annotations *annotations, gress_t gress, IR::MAU::HashFunction hf,
+        LTBitMatrix *sym_pairs);
+    bool contains_symmetric = false;
 };
 
 /**
@@ -149,10 +165,12 @@ class BuildP4HashFunction : public PassManager {
         BuildP4HashFunction &self;
         bool inside_expr = false;
         safe_vector<const IR::Expression *> fields;
+        LTBitMatrix sym_fields;
 
         Visitor::profile_t init_apply(const IR::Node *node) override {
             auto rv = MauInspector::init_apply(node);
             fields.clear();
+            sym_fields.clear();
             inside_expr = false;
             return rv;
         }
@@ -162,6 +180,7 @@ class BuildP4HashFunction : public PassManager {
         bool preorder(const IR::MAU::ActionArg *) override;
         bool preorder(const IR::Mask *) override;
         bool preorder(const IR::MAU::HashGenExpression *) override;
+        bool preorder(const IR::MAU::FieldListExpression *) override;
         bool preorder(const IR::Cast *) override;
         void postorder(const IR::MAU::HashGenExpression *) override;
 
@@ -178,6 +197,7 @@ class BuildP4HashFunction : public PassManager {
      public:
         explicit OutsideHashGenExpr(BuildP4HashFunction &s) : self(s) {}
     };
+
     void end_apply() override;
 
  public:

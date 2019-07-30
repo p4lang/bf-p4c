@@ -295,7 +295,14 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
     auto hash = new IR::PathExpression(structure->v1model.hash.Id());
     auto mc = new IR::MethodCallExpression(primitive->srcInfo, hash, args);
     auto result = new IR::MethodCallStatement(primitive->srcInfo, mc);
-    return result;
+
+    auto annotations = new IR::Annotations();
+    for (auto annot : fl->annotations->annotations)
+        annotations->annotations.push_back(annot);
+    auto block = new IR::BlockStatement(annotations);
+    block->components.push_back(result);
+
+    return block;
 }
 
 }  // end namespace P4V1

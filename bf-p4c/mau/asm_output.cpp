@@ -323,15 +323,15 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 struct FormatHash {
     using RangeOfConstant = std::map<le_bitrange, const IR::Constant*>;
-    const safe_vector<Slice>    *match_data;
-    const std::map<int, Slice>  *match_data_map;
-    const RangeOfConstant       *constant_map;
-    const Slice                 *ghost;
-    IR::MAU::HashFunction       func;
-    int                         total_bits = 0;
-    le_bitrange                 *field_range;
+    const safe_vector<Slice>         *match_data;
+    const std::multimap<int, Slice>  *match_data_map;
+    const RangeOfConstant            *constant_map;
+    const Slice                      *ghost;
+    IR::MAU::HashFunction            func;
+    int                              total_bits = 0;
+    le_bitrange                      *field_range;
 
-    FormatHash(const safe_vector<Slice> *md, const std::map<int, Slice> *mdm,
+    FormatHash(const safe_vector<Slice> *md, const std::multimap<int, Slice> *mdm,
                const std::map<le_bitrange, const IR::Constant*> *cm, const Slice *g,
                IR::MAU::HashFunction f, int tb = 0, le_bitrange *fr = nullptr)
         : match_data(md), match_data_map(mdm), constant_map(cm), ghost(g),
@@ -926,7 +926,8 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-        const safe_vector<const IR::Expression *> &field_list_order) const {
+        const safe_vector<const IR::Expression *> &field_list_order,
+        const LTBitMatrix &sym_keys) const {
     if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
         auto mask = mah.bit_mask;
         for (auto &el : mah.computed_expressions) {
@@ -942,12 +943,12 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
     } else {
         le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
         int total_bits = 0;
-        std::map<int, Slice> match_data_map;
+        std::multimap<int, Slice> match_data_map;
         std::map<le_bitrange, const IR::Constant*> constant_map;
         bool use_map = false;
         if (mah.algorithm.ordered) {
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    field_list_order, total_bits);
+                    field_list_order, sym_keys, total_bits);
             use_map = true;
         }
         out << indent << br.lo << ".." << br.hi << ": ";
@@ -963,7 +964,8 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::ProxyHashKey &ph,
-        const safe_vector<const IR::Expression *> &field_list_order) const {
+        const safe_vector<const IR::Expression *> &field_list_order,
+        const LTBitMatrix &sym_keys) const {
     int start_bit = ph.hash_bits.ffs();
     do {
         int end_bit = ph.hash_bits.ffz(start_bit);
@@ -971,10 +973,10 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
         int total_bits = 0;
         out << indent << br.lo << ".." << br.hi << ": ";
         if (ph.algorithm.ordered) {
-            std::map<int, Slice> match_data_map;
+            std::multimap<int, Slice> match_data_map;
             std::map<le_bitrange, const IR::Constant*> constant_map;
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    field_list_order, total_bits);
+                    field_list_order, sym_keys, total_bits);
             out << FormatHash(nullptr, &match_data_map, nullptr, nullptr,
                     ph.algorithm, total_bits, &br);
         } else {
@@ -991,15 +993,32 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
  *
  *  FIXME: Currently does not work on repeated data
  */
-void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
+void MauAsmOutput::emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
         std::map<le_bitrange, const IR::Constant*> &constant_map, safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, int &total_size) const {
+        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        int &total_size) const {
+    std::map<int, int> field_start_bits;
+    std::map<int, int> reverse_sym_keys;
+    int bits_seen = 0;
+    for (int i = field_list_order.size() - 1; i >= 0; i--) {
+        auto fs = PHV::AbstractField::create(phv, field_list_order.at(i));
+        field_start_bits[i] = bits_seen;
+        bitvec sym_key = sym_keys[i];
+        if (!sym_key.empty()) {
+            BUG_CHECK(sym_key.popcount() == 1 && reverse_sym_keys.count(sym_key.min().index()) == 0,
+                "Symmetric hash broken in the backend");
+            reverse_sym_keys[sym_key.min().index()] = i;
+        }
+        bits_seen += fs->size();
+    }
+
     for (auto sl : match_data) {
         int order_bit = 0;
         // Traverse field list in reverse order. For a field list the convention
         // seems to indicate the field offsets are determined based on first
-        // field  MSB and last at LSB.
+        int index = field_list_order.size();
         for (auto fs_itr = field_list_order.rbegin(); fs_itr != field_list_order.rend(); fs_itr++) {
+            index--;
             auto fs = PHV::AbstractField::create(phv, *fs_itr);
             if (fs->is<PHV::Constant>()) {
                 auto cons = fs->to<PHV::Constant>();
@@ -1029,7 +1048,10 @@ void MauAsmOutput::emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
             adapted_sl.shrink_lo(lo_adjust);
             adapted_sl.shrink_hi(hi_adjust);
             int offset = adapted_sl.get_lo() - fs->range().lo;
-            match_data_map[order_bit + offset] = adapted_sl;
+
+            int sym_order_bit = reverse_sym_keys.count(index) > 0 ?
+                                field_start_bits.at(reverse_sym_keys.at(index)) : order_bit;
+            match_data_map.emplace(sym_order_bit + offset, adapted_sl);
             order_bit += fs->size();
         }
     }
@@ -1054,12 +1076,12 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     if (use->meter_alu_hash.allocated) {
         emit_ixbar_meter_alu_hash(out, indent, match_data, use->meter_alu_hash,
-                                  use->field_list_order);
+                                  use->field_list_order, use->symmetric_keys);
     }
 
     if (use->proxy_hash_key_use.allocated) {
         emit_ixbar_proxy_hash(out, indent, match_data, use->proxy_hash_key_use,
-                              use->field_list_order);
+                              use->field_list_order, use->symmetric_keys);
     }
 
 
@@ -1088,13 +1110,13 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
             emit_ixbar_hash_dist_ident(out, indent, match_data, hdh, use->field_list_order);
             return;
         }
-        std::map<int, Slice> match_data_map;
+        std::multimap<int, Slice> match_data_map;
         std::map<le_bitrange, const IR::Constant*> constant_map;
         bool use_map = false;
         int total_bits = 0;
         if (hdh.algorithm.ordered) {
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
-                    use->field_list_order, total_bits);
+                    use->field_list_order, use->symmetric_keys, total_bits);
             use_map = true;
         }
 

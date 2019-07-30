@@ -1462,6 +1462,13 @@ class ConstructSymbolTable : public Inspector {
         auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(0)});
         int hashWidth = mce->typeArguments->at(0)->width_bits();
 
+        auto block = findContext<IR::BlockStatement>();
+        auto annotations = new IR::Annotations();
+        if (block) {
+            for (auto annot : block->annotations->annotations)
+                annotations->add(annot);
+        }
+
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
         structure->unique_names.insert(hashName);
@@ -1473,7 +1480,7 @@ class ConstructSymbolTable : public Inspector {
             structure->typeNamesToDo.emplace(typeName, typeName);
             LOG3("add " << typeName << " to translation map"); }
         auto hashArgs = new IR::Vector<IR::Argument>({ algorithm });
-        auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
+        auto hashInst = new IR::Declaration_Instance(hashName, annotations, hashType, hashArgs);
 
         if (isIngress) {
             structure->ingressDeclarations.push_back(hashInst->to<IR::Declaration>());

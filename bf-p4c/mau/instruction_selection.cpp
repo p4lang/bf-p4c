@@ -51,6 +51,17 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Concat *c) {
     return c;
 }
 
+
+void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration_Instance *decl,
+        const IR::ListExpression *le, IR::MAU::HashFunction hf, LTBitMatrix *sym_keys) {
+    auto gress = findContext<IR::MAU::Table>()->gress;
+    safe_vector<const IR::Expression *> field_list;
+    for (auto expr : le->components) {
+        field_list.push_back(expr);
+    }
+    VerifySymmetricHashPairs(self.phv, field_list, decl->annotations, gress, hf, sym_keys);
+}
+
 /**
  * The Hash.get function has different IR for P4-14 and P4-16.  This function converts all
  * of these to HashGenExpression, which currently is language dependent, as there is currently
@@ -153,9 +164,10 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Primitive *prim) {
         hash_name += ".$CONFIGURE";
     }
 
+    check_for_symmetric(decl, fle, algorithm, &fle->symmetric_keys);
     auto *type = IR::Type::Bits::get(bit_size);
     hge = new IR::MAU::HashGenExpression(prim->srcInfo, type, fle, IR::ID(hash_name), algorithm);
-    hge->dynamic = true;
+    hge->dynamic = fle->symmetric_keys.empty();
     hge->any_alg_allowed = self.options.langVersion == CompilerOptions::FrontendVersion::P4_16;
     hge->hash_output_width = hash_output_width;
     hge->alg_names = alg_names;
@@ -2058,7 +2070,7 @@ const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
     new CheckInvalidate(phv),
     new UnimplementedRegisterMethodCalls,
-    new HashGenSetup(options),
+    new HashGenSetup(phv, options),
     new Synth2PortSetup(phv),
     new DoInstructionSelection(phv),
     new StatefulAttachmentSetup(phv),

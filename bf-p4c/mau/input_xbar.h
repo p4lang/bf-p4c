@@ -17,6 +17,8 @@
 class IXBarRealign;
 struct TableResourceAlloc;
 
+
+
 /// Compiler generated random number function for use as hash seed on the input crossbar.
 struct IXBarRandom {
     static std::random_device seed_generator;
@@ -387,6 +389,8 @@ struct IXBar {
 
         // The order in the P4 program that the fields appear in the list
         safe_vector<const IR::Expression *> field_list_order;
+        LTBitMatrix symmetric_keys;
+
         HashDistHash hash_dist_hash;
 
         void clear() {
@@ -823,6 +827,7 @@ struct IXBar {
                                    size_t &start, size_t &last);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
     void create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes);
+
     int max_bit_to_byte(bitvec bit_mask);
     int max_index_group(int max_bit);
     int max_index_single_bit(int max_bit);
@@ -837,6 +842,7 @@ struct IXBar {
                                    const FindSaluSources &sources, unsigned &byte_mask);
     bool setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu, Use &alloc,
                                  const FindSaluSources &sources);
+
     bitvec determine_final_xor(const IR::MAU::HashFunction *hf, const PhvInfo &phv,
         std::map<int, le_bitrange> &bit_starts,
         safe_vector<const IR::Expression *> field_list, int total_input_bits);

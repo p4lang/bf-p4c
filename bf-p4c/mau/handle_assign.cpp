@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/handle_assign.h"
-#include "lib/safe_vector.h"
+#include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "lib/safe_vector.h"
 
 
 bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU::ActionData *ad) {
@@ -89,39 +90,33 @@ bool AssignActionHandle::AssignHandle::preorder(IR::MAU::Action *act) {
 }
 
 Visitor::profile_t AssignActionHandle::ValidateSelectors::init_apply(const IR::Node *root) {
-    profile_t rv = MauInspector::init_apply(root);
+    profile_t rv = PassManager::init_apply(root);
     selector_keys.clear();
     initial_table.clear();
+    table_to_selector.clear();
     return rv;
 }
 
-bool AssignActionHandle::ValidateSelectors::preorder(const IR::MAU::Selector *sel) {
+bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU::Selector *sel) {
     if (findContext<IR::MAU::StatefulAlu>())
         return false;
     auto tbl = findContext<IR::MAU::Table>();
-    safe_vector<PHV::FieldSlice> field_slice_vec;
+    safe_vector<const IR::Expression *> sel_key_vec;
 
     for (auto ixbar_read : tbl->match_key) {
-        le_bitrange field_bits = {0, 0};
         if (!ixbar_read->for_selection())
             continue;
-        auto *field = phv.field(ixbar_read->expr, &field_bits);
-        if (field == nullptr) {
-            ::error("%s: Can currently only handle PHV fields on selection only, and selector "
-                    "%s has a non-field key on table %s", sel->srcInfo, sel->name, tbl->name);
-            return false;
-        }
-        field_slice_vec.emplace_back(field, field_bits);
+        sel_key_vec.push_back(ixbar_read->expr);
     }
 
-    if (field_slice_vec.empty()) {
+    if (sel_key_vec.empty()) {
         ::error("%s: On Table %s, the Selector %s is provided no keys", sel->srcInfo, tbl->name,
                 sel->name);
         return false;
     }
 
-    auto sel_entry = selector_keys.find(sel);
-    if (sel_entry != selector_keys.end() &&
+    auto sel_entry = self.selector_keys.find(sel);
+    if (sel_entry != self.selector_keys.end() &&
         sel->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE) {
         /**
          * Due to the register rams.match.merge.mau_meter_alu_to_logical_map being an OXBar,
@@ -131,22 +126,45 @@ bool AssignActionHandle::ValidateSelectors::preorder(const IR::MAU::Selector *se
         ::error("%s: The selector %s cannot be shared between tables %s and %s, because "
                 "it requires a max pool size of %d.  In order to share a selector on Barefoot "
                 "HW, the max pool size must be %d", sel->srcInfo, sel->name, tbl->name,
-                initial_table.at(sel), sel->max_pool_size,
+                self.initial_table.at(sel), sel->max_pool_size,
                 StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE);
     }
+    le_bitrange hash_bits = { 0, (sel->mode == "resilient" ? IXBar::RESILIENT_MODE_HASH_BITS
+                                                           : IXBar::FAIR_MODE_HASH_BITS) - 1};
 
-    if (sel_entry == selector_keys.end()) {
-        selector_keys[sel] = field_slice_vec;
-        initial_table[sel] = tbl;
+    P4HashFunction *sel_func = new P4HashFunction();
+    sel_func->inputs = sel_key_vec;
+    sel_func->hash_bits = hash_bits;
+    sel_func->algorithm = sel->algorithm;
+    VerifySymmetricHashPairs(self.phv, sel_func->inputs, sel->annotations, tbl->gress,
+                             sel->algorithm, &sel_func->symmetrically_hashed_inputs);
+
+    self.table_to_selector[tbl] = sel;
+
+    if (sel_entry == self.selector_keys.end()) {
+        self.selector_keys[sel] = sel_func;
+        self.initial_table[sel] = tbl;
     } else {
-        auto sel_slice_vec = sel_entry->second;
-        if (sel_slice_vec != field_slice_vec) {
+        auto sel_func_comp = self.selector_keys.at(sel);
+        if (!sel_func->equiv(sel_func_comp)) {
             ::error("%s: The key for selector %s on table %s does not match the key for the "
                     "selector on table %s.  Barefoot requires the selector key to be identical "
-                    "per selector", sel->srcInfo, sel->name, tbl->name, initial_table.at(sel));
+                    "per selector", sel->srcInfo, sel->name, tbl->name, self.initial_table.at(sel));
         }
     }
     return false;
+}
+
+
+bool AssignActionHandle::ValidateSelectors::
+        SetSymmetricSelectorKeys::preorder(IR::MAU::Table *tbl) {
+    auto orig_tbl = getOriginal()->to<IR::MAU::Table>();
+    auto sel_itr = self.table_to_selector.find(orig_tbl);
+    if (sel_itr == self.table_to_selector.end())
+        return true;
+    auto hf = self.selector_keys.at(sel_itr->second);
+    tbl->sel_symmetric_keys = hf->symmetrically_hashed_inputs;
+    return true;
 }
 
 Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const IR::Node *root) {

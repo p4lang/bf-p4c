@@ -55,6 +55,7 @@ class Table : BFN::Unit {
     // XXX(hanw): we should get to the bottom of this issue.
     inline std::map<cstring, TableSeq>          next;
     inline Vector<TableKey>                     match_key;
+    LTBitMatrix                                 sel_symmetric_keys = {}; 
     int                                         random_seed = -1;               // ignored for ==?
     bool                                        dynamic_key_masks = false;      // ignored for ==?
     NullOK EntriesList                          entries_list;                   // ignored for ==?
@@ -817,6 +818,7 @@ class FieldListExpression : ListExpression {
     ID id;
     bool rotateable = false;
     bool permutable = false;
+    LTBitMatrix symmetric_keys = {}; 
 
     dbprint { out << id << " : ";  ListExpression::dbprint(out); }
 }
@@ -834,6 +836,7 @@ class HashGenExpression : Expression {
     HashFunction algorithm;
     bool any_alg_allowed = false;
     NullOK NameList alg_names = nullptr;
+
     // for dyn_hash, not sure if it can be summarized within type
     int hash_output_width = 0;
     HashGenExpression(Util::SourceInfo si, const IR::Type *type, Expression e, HashFunction a)

@@ -122,6 +122,17 @@ template<class K, class V> std::ostream &operator<<(std::ostream &out, const std
     return out;
 }
 
+template<class K, class V> std::ostream &operator<<(std::ostream &out,
+        const std::multimap<K, V> &m) {
+    const char *sep = " ";
+    out << "{";
+    for (const auto &kv : m) {
+        out << sep << kv.first << ": " << kv.second;
+        sep = ", "; }
+    out << (sep+1) << "}";
+    return out;
+}
+
 template<class K, class V> std::ostream &operator<<(std::ostream &out, const ordered_map<K, V> &m) {
     const char *sep = " ";
     out << "{";

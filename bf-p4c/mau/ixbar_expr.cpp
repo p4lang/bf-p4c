@@ -28,6 +28,9 @@ bool P4HashFunction::equiv_inputs_alg(const P4HashFunction *func) const {
         if (!inputs[i]->equiv(*func->inputs[i]))
             return false;
     }
+
+    if (symmetrically_hashed_inputs != func->symmetrically_hashed_inputs)
+        return false;
     return true;
 }
 
@@ -88,6 +91,107 @@ void P4HashFunction::dbprint(std::ostream &out) const {
     out << "hash " << name() << "(" << inputs << ", " << algorithm << ")" << hash_bits;
 }
 
+VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
+       safe_vector<const IR::Expression *> &field_list, const IR::Annotations *annotations,
+       gress_t gress, IR::MAU::HashFunction hf, LTBitMatrix *sym_pairs) {
+    ordered_set<PHV::FieldSlice> symmetric_fields;
+
+    for (auto annot : annotations->annotations) {
+        if (annot->name != "symmetric") continue;
+
+        if (!(annot->expr.size() == 2 && annot->expr.at(0)->is<IR::StringLiteral>()
+              && annot->expr.at(1)->is<IR::StringLiteral>())) {
+            ::error("%1%: The symmetric annotation requires two string inputs", annot->srcInfo);
+            continue;
+        }
+
+        const IR::StringLiteral *sl0 = annot->expr.at(0)->to<IR::StringLiteral>();
+        const IR::StringLiteral *sl1 = annot->expr.at(1)->to<IR::StringLiteral>();
+
+        cstring gress_str = (gress == INGRESS ? "ingress::" : "egress::");
+        auto field0 = phv.field(gress_str + sl0->value);
+        auto field1 = phv.field(gress_str + sl1->value);
+
+        if (field0 == nullptr || field1 == nullptr) {
+            ::error("%1%: The key %2% in the symmetric annotation is not recognized as a PHV "
+                    "field", annot->srcInfo, ((field0 == nullptr) ? sl0->value : sl1->value));
+            continue;
+        }
+
+        if (field0 == field1) {
+            ::error("%1%: A field %2% cannot be symmetric to itself", annot->srcInfo, sl0->value);
+            continue;
+        }
+
+        le_bitrange bits0 = { 0, field0->size - 1 };
+        le_bitrange bits1 = { 0, field1->size - 1 };
+
+        PHV::FieldSlice fs0(field0, bits0);
+        PHV::FieldSlice fs1(field1, bits1);
+
+        le_bitrange bits_in_list0 = { 0, 0 };
+        le_bitrange bits_in_list1 = { 0, 0 };
+
+        auto key_pos0 = field_list.end();
+        auto key_pos1 = field_list.end();
+
+        int bits_seen = 0;
+        for (auto it = field_list.begin(); it != field_list.end(); it++) {
+            auto a_fs = PHV::AbstractField::create(phv, *it);
+            if (a_fs->field() == field0 && a_fs->range() == bits0) {
+                key_pos0 = it;
+                bits_in_list0 = { bits_seen, bits_seen + a_fs->size() - 1 };
+            }
+            if (a_fs->field() == field1 && a_fs->range() == bits1) {
+                key_pos1 = it;
+                bits_in_list1 = { bits_seen, bits_seen + a_fs->size() - 1 };
+            }
+            bits_seen += a_fs->size();
+        }
+
+        if (key_pos0 == field_list.end() || key_pos1 == field_list.end()) {
+            ::error("%1%: The key %2% in the symmetric annotation does not appear within the "
+                "field list", annot->srcInfo,
+                ((key_pos0 == field_list.end()) ? sl0->value : sl1->value));
+            continue;
+        }
+
+        if (!(symmetric_fields.count(fs0) == 0 && symmetric_fields.count(fs1) == 0)) {
+            ::error("%1%: The key %2% in the symmetric annotation has already been declared "
+                    "symmetric with another field.  Please use it only once", annot->srcInfo,
+                    (symmetric_fields.count(fs0) == 0) ? sl0->value : sl1->value);
+            continue;
+        }
+
+        if (bits0.size() != bits1.size()) {
+            ::error("%1%: The two symmetric fields are not the same size", annot->srcInfo);
+            continue;
+        }
+        symmetric_fields.insert(fs0);
+        symmetric_fields.insert(fs1);
+
+        contains_symmetric = true;
+
+        int index0 = key_pos0 - field_list.begin();
+        int index1 = key_pos1 - field_list.begin();
+        if (sym_pairs)
+            (*sym_pairs)[std::max(index0, index1)][std::min(index0, index1)] = 1;
+    }
+
+    if (contains_symmetric) {
+        if (hf.type != IR::MAU::HashFunction::CRC) {
+            ::error("%1%: Currently in p4c, symmetric hash is only supported to work with CRC "
+                    "algorithms", annotations->srcInfo);
+            return;
+        }
+    }
+}
+
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::FieldListExpression *fle) {
+    sym_fields = fle->symmetric_keys;
+    return true;
+}
+
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {
     inside_expr = true;
     return true;
@@ -142,6 +246,7 @@ void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::MAU::HashGenExp
     self._func->inputs = fields;
     self._func->hash_bits = { 0, hge->type->width_bits() - 1 };
     self._func->algorithm = hge->algorithm;
+    self._func->symmetrically_hashed_inputs = sym_fields;
     if (hge->dynamic)
         self._func->dyn_hash_name = hge->id.name;
 }
@@ -163,6 +268,8 @@ void BuildP4HashFunction::OutsideHashGenExpr::postorder(const IR::Slice *sl) {
     self._func->hash_bits = slice_bits;
 }
 
+
+
 /**
  * FIXME: This is a crappy hack for dynamic hash to work.  If a table has repeated values, then
  * the dynamic hash function is not correct.  We should just fail, however, just failing would
@@ -172,7 +279,6 @@ void BuildP4HashFunction::OutsideHashGenExpr::postorder(const IR::Slice *sl) {
 void BuildP4HashFunction::end_apply() {
     bool repeats_allowed = !_func->is_dynamic() &&
                             _func->algorithm.type != IR::MAU::HashFunction::CRC;
-    LOG1("  help me " << _func->dyn_hash_name << " " << repeats_allowed);
     if (repeats_allowed)
         return;
     std::map<cstring, bitvec> field_list_check;

@@ -3,6 +3,7 @@
 
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/mau/ixbar_expr.h"
 
 /**
  * The purpose of this pass is to assign the action handle for the context JSON node
@@ -64,18 +65,46 @@ class AssignActionHandle : public PassManager {
         GuaranteeUniqueHandle() {}
     };
 
-    class ValidateSelectors : public MauInspector {
-        ordered_map<const IR::MAU::Selector *, std::vector<PHV::FieldSlice>> selector_keys;
+    class ValidateSelectors : public PassManager {
+        ordered_map<const IR::MAU::Selector *, P4HashFunction *> selector_keys;
         ordered_map<const IR::MAU::Selector *, const IR::MAU::Table *> initial_table;
+        ordered_map<const IR::MAU::Table *, const IR::MAU::Selector *> table_to_selector;
         const PhvInfo &phv;
 
         profile_t init_apply(const IR::Node *root) override;
-        bool preorder(const IR::MAU::Selector *sel) override;
-        bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+
+
+
+        class ValidateKey : public MauInspector {
+            ValidateSelectors &self;
+
+            bool preorder(const IR::MAU::Selector *sel) override;
+            bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+
+         public:
+            explicit ValidateKey(ValidateSelectors &s) : self(s) { visitDagOnce = false; }
+        };
+
+        class SetSymmetricSelectorKeys : public MauModifier {
+            ValidateSelectors &self;
+            bool preorder(IR::MAU::Table *tbl) override;
+
+         public:
+            explicit SetSymmetricSelectorKeys(ValidateSelectors &s) : self(s) { }
+        };
+
+
 
      public:
-        explicit ValidateSelectors(const PhvInfo &phv) : phv(phv) { visitDagOnce = false; }
+        explicit ValidateSelectors(const PhvInfo &phv) : phv(phv) {
+            addPasses({
+                new ValidateKey(*this),
+                new SetSymmetricSelectorKeys(*this)
+            });
+        }
     };
+
+
 
  public:
     explicit AssignActionHandle(const PhvInfo &phv) {

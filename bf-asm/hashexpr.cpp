@@ -162,14 +162,14 @@ class HashExpr::Random : HashExpr {
 };
 
 class HashExpr::Crc : HashExpr {
-    bitvec                      poly;
-    bitvec                      init;
-    bitvec                      final_xor;
-    std::map<int, Phv::Ref>     what;
-    std::map<int, bitvec>       constants;
-    std::vector<Phv::Ref>       vec_what;
-    bool                        reverse = false;
-    int                         total_input_bits = -1;
+    bitvec                           poly;
+    bitvec                           init;
+    bitvec                           final_xor;
+    std::multimap<int, Phv::Ref>     what;
+    std::map<int, bitvec>            constants;
+    std::vector<Phv::Ref>            vec_what;
+    bool                             reverse = false;
+    int                              total_input_bits = -1;
     Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override;
@@ -395,11 +395,7 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             if (what.vec.size >= i+1 && what[i].type == tMAP) {
                 for (auto &kv : what[i].map) {
                     if (CHECKTYPE(kv.key, tINT)) {
-                        if (rv->what.count(kv.key.i))
-                            error(kv.value.lineno, "Duplicate field at offset %" PRId64 "",
-                                  kv.value.i);
-                        else
-                            rv->what.emplace(kv.key.i, Phv::Ref(gress, stage, kv.value)); } }
+                        rv->what.emplace(kv.key.i, Phv::Ref(gress, stage, kv.value)); } }
             } else {
                 for (; i < what.vec.size; i++) {
                     rv->vec_what.emplace_back(gress, stage, what[i]); } }
@@ -532,10 +528,12 @@ bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
     } else {
         int max = -1;
         for (auto &ref : what) {
+            /*
             if (ref.first < max)
                 error(ref.second.lineno, "Overlapping fields in crc input");
             if (ref.second)
                 max = ref.first + ref.second->size() - 1;
+            */
             rv &= ::check_ixbar(ref.second, ix, grp); } }
     return rv;
 }

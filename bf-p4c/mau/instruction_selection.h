@@ -26,6 +26,7 @@ class UnimplementedRegisterMethodCalls : public MauInspector {
 class HashGenSetup : public PassManager {
     ordered_map<const IR::Expression *, IR::MAU::HashGenExpression *> hash_gen_injections;
     ordered_set<const IR::Expression *> hash_dist_injections;
+    const PhvInfo &phv;
     const BFN_Options &options;
 
 
@@ -45,6 +46,9 @@ class HashGenSetup : public PassManager {
         bool preorder(const IR::BFN::SignExtend *) override;
         bool preorder(const IR::Concat *) override;
         bool preorder(const IR::Primitive *) override;
+
+        void check_for_symmetric(const IR::Declaration_Instance *decl,
+            const IR::ListExpression *le, IR::MAU::HashFunction hf, LTBitMatrix *sym_keys);
 
      public:
         explicit CreateHashGenExprs(HashGenSetup &s) : self(s) {}
@@ -74,7 +78,7 @@ class HashGenSetup : public PassManager {
     };
 
  public:
-    explicit HashGenSetup(const BFN_Options &o) : options(o) {
+    explicit HashGenSetup(const PhvInfo &p, const BFN_Options &o) : phv(p), options(o) {
         addPasses({
             new CreateHashGenExprs(*this),
             new ScanHashDists(*this),

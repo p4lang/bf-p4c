@@ -71,22 +71,22 @@ class MauAsmOutput : public MauInspector {
         const safe_vector<IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *,
         const IR::MAU::Table *, bool ternary) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
-            const Memories::Use *mem) const;
+        const Memories::Use *mem) const;
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
     void emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
         std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
         const IR::MAU::Table *tbl, bool ternary, bool atcam = false) const;
     void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
-            safe_vector<Slice> &ghost, const TableMatch *fmt,
-            std::map<int, std::map<int, Slice>> &sort) const;
-    void emit_ixbar_gather_map(std::map<int, Slice> &match_data_map,
-            std::map<le_bitrange, const IR::Constant*> &constant_map,
-            safe_vector<Slice> &match_data,
-            const safe_vector<const IR::Expression *> &field_list_order, int &total_bits) const;
+        safe_vector<Slice> &ghost, const TableMatch *fmt,
+        std::map<int, std::map<int, Slice>> &sort) const;
+    void emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
+        std::map<le_bitrange, const IR::Constant*> &constant_map, safe_vector<Slice> &match_data,
+        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        int &total_bits) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-            safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
-            int &ident_bits_prev_alloc) const;
+        safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
+        int &ident_bits_prev_alloc) const;
     void ixbar_hash_exact_info(int &min_way_size, int &min_way_slice, const IXBar::Use *use,
         int hash_group, std::map<int, bitvec> &slice_to_select_bits) const;
     void emit_ixbar_match_func(std::ostream &out, indent_t indent,
@@ -95,19 +95,21 @@ class MauAsmOutput : public MauInspector {
         le_bitrange non_rotated_slice, le_bitrange comp_slice, int initial_lo_bit,
         safe_vector<std::pair<le_bitrange, Slice>> &ghost_positions) const;
     void emit_ixbar_hash_atcam(std::ostream &out, indent_t indent, safe_vector<Slice> &ghost,
-            const IXBar::Use *use, int hash_group) const;
+        const IXBar::Use *use, int hash_group) const;
     void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
         int hash_group, int &ident_bits_prev_alloc) const;
     void emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
-            safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
-            const safe_vector<const IR::Expression *> &field_list_order) const;
+        safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
+        const safe_vector<const IR::Expression *> &field_list_order) const;
     void emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-            safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
-            const safe_vector<const IR::Expression *> &field_list_order) const;
+        safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
+        const safe_vector<const IR::Expression *> &field_list_order,
+        const LTBitMatrix &sym_keys) const;
     void emit_ixbar_proxy_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-            const IXBar::Use::ProxyHashKey &ph,
-            const safe_vector<const IR::Expression *> &field_list_order) const;
+        const IXBar::Use::ProxyHashKey &ph,
+        const safe_vector<const IR::Expression *> &field_list_order,
+        const LTBitMatrix &sym_keys) const;
 
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt, const IR::MAU::Table *) const;

@@ -26,6 +26,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     extensions/p4_tests/p4_16/stf/p4c-1426.p4
+    testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -1112,6 +1113,32 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/v1model-digest-containing-ser-enum.p4
   testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
   )
+
+# Symmetric Hash Negative Tests
+p4c_add_xfail_reason("tofino"
+  "The two symmetric fields are not the same size"
+  ../glass/testsuite/p4_tests/mau/test_config_315_sym_hash_neg_test_1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "A field .* cannot be symmetric to itself"
+  ../glass/testsuite/p4_tests/mau/test_config_316_sym_hash_neg_test_2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "symmetric hash is only supported to work with CRC algorithms"
+  ../glass/testsuite/p4_tests/mau/test_config_317_sym_hash_neg_test_3.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "The key .* in the symmetric annotation does not appear within the field list"
+  ../glass/testsuite/p4_tests/mau/test_config_318_sym_hash_neg_test_4.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "The key .* in the symmetric annotation has already been declared symmetric with another field"
+  ../glass/testsuite/p4_tests/mau/test_config_319_sym_hash_neg_test_5.p4
+)
 
 # P4C-1390
 p4c_add_xfail_reason("tofino"
