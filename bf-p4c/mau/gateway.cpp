@@ -637,7 +637,8 @@ bool CollectGatewayFields::compute_offsets() {
         } else {
             field.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << sl << DBPrint::Reset);
+                LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << ' ' << sl <<
+                     DBPrint::Reset);
                 if (bytes == 4 && bits == 0) {
                     bits += 8;
                 } else {

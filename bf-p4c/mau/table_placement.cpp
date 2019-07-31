@@ -400,10 +400,23 @@ TablePlacement::GatewayMergeChoices
         LOG2(table->name << " is not a gateway! Aborting search for merge choices");
         return rv;
     }
+    std::set<cstring>   gw_tags;
+    for (auto &row : table->gateway_rows)
+        gw_tags.insert(row.second);
 
     // Now, use the same criteria as gateway_merge to find viable tables
     for (auto it = table->next.rbegin(); it != table->next.rend(); it++) {
         if (seqInfo.at(it->second).refs.size() > 1) continue;
+        bool multiple_tags = false;
+        for (auto &el : table->next) {
+            if (el.first != it->first && el.second == it->second) {
+                multiple_tags = true;
+                break; } }
+        // FIXME -- if the sequence is used for more than one tag in the gateway, we can't
+        // merge with any table in it as we only track one tag to replace.  Could change
+        // GatewayMergeChoices and Placed to track a set of tags.
+        if (multiple_tags) continue;
+
         int idx = -1;
         for (auto t : it->second->tables) {
             bool should_skip = false;
@@ -1241,7 +1254,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                     ready = false;
                     break; } }
             if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
-                BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
+                BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
                 BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                           "multi-referenced table");
                 found_match = true;
@@ -1251,7 +1264,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
             GroupPlace *g = ready ? new GroupPlace(*this, work, parents, n) : nullptr;
             for (auto t : n->tables) {
                 if (t == pl->table) {
-                    BUG_CHECK(!found_match && !gw_match_grp, "No table to place");
+                    BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
                     BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                               "multi-referenced table");
                     found_match = true;
