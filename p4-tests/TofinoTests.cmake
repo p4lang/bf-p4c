@@ -591,8 +591,8 @@ set (P4FACTORY_REGRESSION_TESTS_INTERNAL
   pctr
   power
   # range                                     # PTF failure
-  # simple_l3_checksum_branched_end           # PTF failure
-  # simple_l3_checksum_single_end             # PTF failure
+  simple_l3_checksum_branched_end
+  simple_l3_checksum_single_end
   # simple_l3_checksum_taken_default_ingress  # PTF failure
   simple_l3_mirror
   stashes
