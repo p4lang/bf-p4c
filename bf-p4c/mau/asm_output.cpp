@@ -988,10 +988,14 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
     } while (start_bit >= 0);
 }
 
-/** Given an order for an allocation, will determine the input position of the slice in
- *  the allocation, and save it in the match_data_map
+/**
+ * Given an order for an allocation, will determine the input position of the slice in
+ * the allocation, and save it in the match_data_map
  *
- *  FIXME: Currently does not work on repeated data
+ * When two keys are considered symmetric, currently they are given the same bit stream position
+ * in the crc calculation in order to guarantee that their hash algorithm is identical for
+ * those two keys.  This change, however, notes that the output of the function is not truly
+ * the CRC function they requested, but a variation on it
  */
 void MauAsmOutput::emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
         std::map<le_bitrange, const IR::Constant*> &constant_map, safe_vector<Slice> &match_data,

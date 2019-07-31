@@ -165,6 +165,7 @@ class HashExpr::Crc : HashExpr {
     bitvec                           poly;
     bitvec                           init;
     bitvec                           final_xor;
+    ///> It is a multimap to allow two fields to have the exact same hash matrix requirements
     std::multimap<int, Phv::Ref>     what;
     std::map<int, bitvec>            constants;
     std::vector<Phv::Ref>            vec_what;
@@ -528,12 +529,6 @@ bool HashExpr::Crc::check_ixbar(InputXbar *ix, int grp) {
     } else {
         int max = -1;
         for (auto &ref : what) {
-            /*
-            if (ref.first < max)
-                error(ref.second.lineno, "Overlapping fields in crc input");
-            if (ref.second)
-                max = ref.first + ref.second->size() - 1;
-            */
             rv &= ::check_ixbar(ref.second, ix, grp); } }
     return rv;
 }

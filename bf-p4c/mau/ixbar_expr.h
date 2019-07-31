@@ -112,6 +112,7 @@ struct P4HashFunction {
 
     bool is_dynamic() const {
        bool rv = !dyn_hash_name.isNull();
+       // Symmetric is currently not supported with the dynamic hash library in bf-utils
        if (rv)
            BUG_CHECK(symmetrically_hashed_inputs.empty(), "Dynamically hashed values cannot "
                "have symmetric fields");

@@ -167,6 +167,7 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Primitive *prim) {
     check_for_symmetric(decl, fle, algorithm, &fle->symmetric_keys);
     auto *type = IR::Type::Bits::get(bit_size);
     hge = new IR::MAU::HashGenExpression(prim->srcInfo, type, fle, IR::ID(hash_name), algorithm);
+    // Symmetric is not supported with bf-utils dynamic hash library
     hge->dynamic = fle->symmetric_keys.empty();
     hge->any_alg_allowed = self.options.langVersion == CompilerOptions::FrontendVersion::P4_16;
     hge->hash_output_width = hash_output_width;

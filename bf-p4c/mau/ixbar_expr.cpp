@@ -91,6 +91,14 @@ void P4HashFunction::dbprint(std::ostream &out) const {
     out << "hash " << name() << "(" << inputs << ", " << algorithm << ")" << hash_bits;
 }
 
+/**
+ * The purpose of this class is to verify that symmetric hashes are valid and can be allocated.
+ * A key can currently be symmetric if it is on either a selector or a hash calculation,
+ * and as long as algorithm is a CRC.
+ *
+ * Currently full string literals are required, perhaps at sometime this can be a function
+ * within the tna/t2na files. 
+ */
 VerifySymmetricHashPairs::VerifySymmetricHashPairs(const PhvInfo &phv,
        safe_vector<const IR::Expression *> &field_list, const IR::Annotations *annotations,
        gress_t gress, IR::MAU::HashFunction hf, LTBitMatrix *sym_pairs) {
