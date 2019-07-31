@@ -200,12 +200,19 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Internal compiler error"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
 )
 
@@ -224,6 +231,9 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_msdc_leaf_int
   switch_8.7_generic_int_leaf
   switch_generic_int_leaf
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
 )
 
 # P4C-1400, P4C-1123
@@ -730,6 +740,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1815.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1234,6 +1245,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
+  extensions/p4_tests/p4-programs/programs/get_hash/get_hash.p4
 )
 
 # checksum only support bit<16> output
@@ -1364,6 +1376,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue355-bmv2.p4
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: PHV allocation was not successful"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1382,25 +1400,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
-)
-
-# Slicing issue
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Slice point cannot be -1 at this point"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Slicing the following supercluster is taking too long...|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1452,14 +1451,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Cannot unify bit<8> to int<8>"
   extensions/p4_tests/p4_16/compile_only/brig-305.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Inconsisten index for next of"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
 )
 
 p4c_add_xfail_reason("tofino"

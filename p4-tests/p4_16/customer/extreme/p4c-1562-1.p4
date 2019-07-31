@@ -1077,7 +1077,7 @@ control IngressSystemAcl(
                        switch_qid_t qid,
                        switch_copp_meter_id_t meter_id) {
         ig_intr_md_for_tm.qid = qid;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
         ig_intr_md_for_tm.packet_color = (bit<2>) copp_meter.execute(meter_id);
         copp_meter_id = meter_id;
         ig_md.cpu_reason = reason_code;
@@ -1139,7 +1139,7 @@ control IngressSystemAcl(
         size = table_size;
     }
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
     action copp_permit() {
@@ -2725,7 +2725,7 @@ control IngressPortMapping(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_intr_md_for_tm.ucast_egress_port =
             (switch_port_t) hdr.fabric.dst_port_or_group;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
     action set_cpu_port_properties(
@@ -4585,7 +4585,7 @@ control SwitchIngress(
     }
     apply {
 ig_intr_md_for_tm.ucast_egress_port = ig_intr_md.ingress_port;
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md();
         }
     }

@@ -639,6 +639,7 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_lpm_match
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
+  tna_mirror
   tna_operations
   tna_port_metadata
   tna_port_metadata_extern

@@ -306,7 +306,7 @@ control SwitchIngress(
         forward.apply();
         vrf = 16w0;
         ipRoute.apply();
-        ig_tm_md.bypass_egress = true;
+        ig_tm_md.bypass_egress = 1w1;
     }
 }
 Pipeline(SwitchIngressParser(),

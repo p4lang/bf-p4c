@@ -1298,7 +1298,7 @@ control IngressSystemAcl(
                        switch_qid_t qid,
                        switch_copp_meter_id_t meter_id) {
         ig_intr_md_for_tm.qid = qid;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         ig_md.cpu_reason = reason_code;
     }
     action redirect_to_cpu(switch_cpu_reason_t reason_code,
@@ -1358,7 +1358,7 @@ control IngressSystemAcl(
         size = table_size;
     }
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
     action copp_permit() {
@@ -3157,7 +3157,7 @@ control IngressPortMapping(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_intr_md_for_tm.ucast_egress_port =
             (switch_port_t) hdr.fabric.dst_port_or_group;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
     action set_cpu_port_properties(
@@ -5725,7 +5725,7 @@ control SwitchIngress(
         if (ig_md.egress_ifindex == SWITCH_IFINDEX_FLOOD) {
         } else {
         }
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md();
         }
     }
@@ -5792,7 +5792,7 @@ control SwitchEgress(
 #if __TARGET_TOFINO__ == 2
         eg_intr_md_for_dprsr.mirror_io_select = 1;
 #endif
-        eg_intr_md_for_oport.capture_tstamp_on_tx = eg_md.flags.capture_ts;
+        eg_intr_md_for_oport.capture_tstamp_on_tx = (bit<1>)eg_md.flags.capture_ts;
     }
 }
 Pipeline(

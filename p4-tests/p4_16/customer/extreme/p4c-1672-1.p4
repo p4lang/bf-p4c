@@ -1461,7 +1461,7 @@ control IngressSystemAcl(
                        switch_qid_t qid,
                        switch_copp_meter_id_t meter_id) {
         ig_md.qos.qid = qid;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
         ig_md.cpu_reason = reason_code;
     }
     action redirect_to_cpu(switch_cpu_reason_t reason_code,
@@ -1514,7 +1514,7 @@ control IngressSystemAcl(
         size = table_size;
     }
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
     action copp_permit() {
@@ -3442,7 +3442,7 @@ control IngressPortMapping(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_intr_md_for_tm.ucast_egress_port =
             (switch_port_t) hdr.fabric.dst_port_or_group;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
     action set_cpu_port_properties(
@@ -5614,10 +5614,10 @@ control DeflectOnDrop(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm)(
         switch_uint32_t table_size=1024) {
     action enable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = true;
+        ig_intr_md_for_tm.deflect_on_drop = 1w1;
     }
     action disable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = false;
+        ig_intr_md_for_tm.deflect_on_drop = 1w0;
     }
     table config {
         key = {
@@ -6716,7 +6716,7 @@ control SwitchIngress(
         } else {
         }
         dtel.apply(hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md(hdr.bridged_md, ig_md);
         }
         set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);

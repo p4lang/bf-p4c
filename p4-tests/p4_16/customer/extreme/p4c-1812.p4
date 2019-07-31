@@ -1479,7 +1479,7 @@ control IngressSystemAcl(
                        switch_copp_meter_id_t meter_id,
                        bool disable_learning) {
         ig_md.qos.qid = qid;
-        ig_intr_md_for_tm.copy_to_cpu = true;
+        ig_intr_md_for_tm.copy_to_cpu = 1w1;
         ig_intr_md_for_dprsr.digest_type =
             disable_learning ? SWITCH_DIGEST_TYPE_INVALID : ig_intr_md_for_dprsr.digest_type;
         ig_md.cpu_reason = reason_code;
@@ -1536,7 +1536,7 @@ control IngressSystemAcl(
         size = table_size;
     }
     action copp_drop() {
-        ig_intr_md_for_tm.copy_to_cpu = false;
+        ig_intr_md_for_tm.copy_to_cpu = 1w0;
         copp_stats.count();
     }
     action copp_permit() {
@@ -2457,8 +2457,8 @@ parser NpbIngressParser(
         out switch_header_t hdr,
         out switch_ingress_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
     value_set<bit<16>>(1) udp_port_vxlan;
  bit<16> ether_type;
  bit<16> inner_ether_type;
@@ -3193,8 +3193,8 @@ control SwitchEgressDeparser(
         in switch_egress_metadata_t eg_md,
         in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     EgressMirror() mirror;
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) ipv4_checksum;
-    Checksum<bit<16>>(HashAlgorithm_t.CSUM16) inner_ipv4_checksum;
+    Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
     apply {
         mirror.apply(hdr, eg_md, eg_intr_md_for_dprsr);
         hdr.ipv4.hdr_checksum = ipv4_checksum.update({
@@ -3560,7 +3560,7 @@ control IngressPortMapping(
         ig_md.port = (switch_port_t) hdr.cpu.ingress_port;
         ig_intr_md_for_tm.ucast_egress_port =
             (switch_port_t) hdr.fabric.dst_port_or_group;
-        ig_intr_md_for_tm.bypass_egress = (bool) hdr.cpu.tx_bypass;
+        ig_intr_md_for_tm.bypass_egress = hdr.cpu.tx_bypass;
         hdr.ethernet.ether_type = hdr.cpu.ether_type;
     }
     action set_cpu_port_properties(
@@ -5803,10 +5803,10 @@ control DeflectOnDrop(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm)(
         switch_uint32_t table_size=1024) {
     action enable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = true;
+        ig_intr_md_for_tm.deflect_on_drop = 1w1;
     }
     action disable_dod() {
-        ig_intr_md_for_tm.deflect_on_drop = false;
+        ig_intr_md_for_tm.deflect_on_drop = 1w0;
     }
     table config {
         key = {
@@ -7014,7 +7014,7 @@ control SwitchIngress(
             lag.apply(ig_md, ig_md.hash[31:16], ig_intr_md_for_tm.ucast_egress_port);
         }
         dtel.apply(hdr, ig_md.lkp, ig_md, ig_md.hash[15:0], ig_intr_md_for_dprsr, ig_intr_md_for_tm);
-        if (!ig_intr_md_for_tm.bypass_egress) {
+        if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md(hdr.bridged_md, ig_md);
         }
         set_ig_intr_md(ig_md, ig_intr_md_for_dprsr, ig_intr_md_for_tm);

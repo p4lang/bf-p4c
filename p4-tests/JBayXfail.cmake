@@ -95,6 +95,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -323,7 +326,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Inconsisten index for next of"
+  "Ran out of parser match registers for"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
@@ -331,31 +334,27 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Metadata initialization analysis incorrect.  Live ranges between .* and .* overlap"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
 )
 
 p4c_add_xfail_reason("tofino2"
-  "ActionAnalysis did not split up container by container"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  "Compiler Bug: No read or write detected for allocated slice"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Metadata initialization analysis incorrect.  Live ranges between .* and .* overlap|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "Slice point cannot be -1 at this point"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -366,6 +365,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "The input .* cannot be found on the hash input"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -385,12 +385,8 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Select on uninitialized value:"
+  "Select on uninitialized value"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Inconsisten index for next of .* in state .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
 )
 
@@ -408,14 +404,4 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "AssignmentStatement: Cannot unify bit<.*> to bit<.*>"
   smoketest_switch_16_compile_l0_profile
-)
-
-p4c_add_xfail_reason("tofino2"
-  "AssertionError: Expected packet was not received on device"
-  smoketest_switch_16_Tests_L3SnakeTest
-)
-
-p4c_add_xfail_reason("tofino2"
-  "TTransportException: TSocket read 0 bytes"
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
