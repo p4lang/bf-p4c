@@ -1111,8 +1111,9 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                         "alu_a", new IR::MAU::SaluReg(val->type, "hi", true), val));
             LOG3("  add " << *action->action.back());
             operands.at(0) = new IR::MAU::SaluReg(val->type, "alu_hi", true);
-        } else if (k && (k->value & (k->value-1)) == 0 && predicate) {
-            // use the predicate output
+        } else if (k && (k->value & (k->value-1)) == 0) {
+            // use the predicate output shifted to the appropriate spot for a power of 2 constant
+            // no predicate means unconditional, which will output 1 unconditionally
             comb_pred_width = std::max(comb_pred_width, k->type->width_bits());
             int shift = floor_log2(k->value);
             if (salu->pred_comb_shift >= 0 && salu->pred_comb_shift != shift)
