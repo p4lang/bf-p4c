@@ -12,6 +12,15 @@ RemoveSetMetadata::RemoveSetMetadata(P4::ReferenceMap* refMap,
                                      P4::TypeMap* typeMap)
     : refMap(refMap), typeMap(typeMap) { }
 
+bool isEgressIntrinsicHeader(const IR::Type* type) {
+    if (auto header = type->to<IR::Type_Header>()) {
+        if (header->name == "egress_intrinsic_metadata_t")
+            return true;
+    }
+
+    return false;
+}
+
 const IR::AssignmentStatement*
 RemoveSetMetadata::preorder(IR::AssignmentStatement* assignment) {
     prune();
@@ -51,10 +60,15 @@ RemoveSetMetadata::preorder(IR::AssignmentStatement* assignment) {
     // Don't remove writes to intrinsic metadata or compiler-generated metadata.
     auto* paramType = typeMap->getType(param);
     BUG_CHECK(paramType, "No type for param: %1%", param);
-    if (isIntrinsicMetadataType(paramType) || isCompilerGeneratedType(paramType)) {
-        LOG4("Won't remove egress parser assignment to intrinsic metadata: "
-              << assignment);
-        return assignment;
+
+    // "egress_intrinsic_metadata_t" is generated in egress packet buffer, it doesn't
+    // make sense to re-set these in egress parser
+    if (!isEgressIntrinsicHeader(paramType)) {
+        if (isIntrinsicMetadataType(paramType) || isCompilerGeneratedType(paramType)) {
+            LOG4("Won't remove egress parser assignment to intrinsic metadata: "
+                  << assignment);
+            return assignment;
+        }
     }
 
     // This is a write to non-local metadata; remove it.
