@@ -271,6 +271,20 @@ class ExcludeMAUOverlays : public MauInspector {
     explicit ExcludeMAUOverlays(PhvInfo& p, const FindAddedHeaderFields& a)
         : phv(p), addedFields(a) { }
 };
+/** Checksum is calculated only when the checksum destination field is valid.
+ * So we need to make sure that the fields included in checksum should  not overlap any other
+ * live fields when checksum destination is live. We do this my giving all the checksum fields
+ * same mutex constraint as that of checksum destination.
+ * Note: This contraint is added only for tofino because tofino's checksum engine cannot
+ * dynamically predicate entries based on header validity
+ */
+class ExcludeCsumOverlays : public Inspector {
+ private:
+    PhvInfo& phv;
+    bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override;
+ public:
+    explicit ExcludeCsumOverlays(PhvInfo& p) : phv(p) { }
+};
 
 class MarkMutexPragmaFields : public Inspector {
  private:
@@ -308,6 +322,7 @@ class MutexOverlay : public PassManager {
             &parserInfo,
             &fieldToParserStates,
             new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),
+            Device::currentDevice() == Device::TOFINO ? new ExcludeCsumOverlays(phv) : nullptr,
             new ExcludeMAUOverlays(phv, addedFields),
             new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())
         });

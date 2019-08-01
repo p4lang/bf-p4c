@@ -28,6 +28,7 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4-programs/internal_p4_14/tcam_search/tcam_search.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mau_mem_test/mau_mem_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/multi_thread_test/multi_thread_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_taken_default_ingress/simple_l3_checksum_taken_default_ingress.p4
   extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/mau_tcam_test/mau_tcam_test.p4
   extensions/p4_tests/p4-programs/programs/chksum/chksum.p4

@@ -216,6 +216,21 @@ void ExcludeMAUOverlays::end_apply() {
     markNonMutex(actionToReads);
 }
 
+bool ExcludeCsumOverlays::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
+    auto checksumDest = phv.field(emitChecksum->dest->field);
+    auto allFields = phv.get_all_fields();
+    for (auto& field : allFields) {
+        if (phv.isFieldMutex(checksumDest, &field.second)) continue;
+        for (auto sourceField : emitChecksum->sources) {
+            auto csumPhvField = phv.field(sourceField->field);
+            LOG3("\t  Mark as non mutually exclusive: " << csumPhvField->name <<
+                ", " << field.first << " due to " << checksumDest->name  << " checksum update");
+            phv.removeFieldMutex(csumPhvField, &field.second);
+        }
+    }
+    return false;
+}
+
 Visitor::profile_t MarkMutexPragmaFields::init_apply(const IR::Node* root) {
     // Mark fields specified by pa_mutually_exclusive pragmas
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
