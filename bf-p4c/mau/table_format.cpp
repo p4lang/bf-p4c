@@ -84,7 +84,7 @@ bitvec TableFormat::Use::result_bus_words() const {
  */
 bool TableFormat::analyze_layout_option() {
     // FIXME: In total needs some information variable passed about ghosting
-    LOG3("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
+    LOG2("  Layout option { pack : " << layout_option.way.match_groups << ", width : "
          << layout_option.way.width << ", entries: " << layout_option.entries << " }");
 
     // If table has @dynamic_table_key_masks pragma, the driver expects all bits
@@ -396,7 +396,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
 bool TableFormat::find_format(Use *u) {
     use = u;
     LOG1("Find format for table " << tbl->name);
-    LOG3("  Layout option action { adt_bytes: " << layout_option.layout.action_data_bytes_in_table
+    LOG2("  Layout option action { adt_bytes: " << layout_option.layout.action_data_bytes_in_table
          << ", immediate_bits: " << layout_option.layout.immediate_bits << " }");
     if (layout_option.layout.ternary) {
         LOG3("Ternary table?");
