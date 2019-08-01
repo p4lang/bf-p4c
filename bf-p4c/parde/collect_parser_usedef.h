@@ -112,11 +112,14 @@ struct ResolveExtractSaves : Modifier {
                 if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
                     auto clone = rval->clone();
 
+                    // Lines up source and dest (both can be field slices)
+                    // The destination field, f, is in little endian, whereas the extract source
+                    // in the input buffer is in big endian.
                     clone->range.lo -= f_bits.lo;
                     clone->range.hi += f->size - f_bits.hi - 1;
 
-                    clone->range.lo += x_bits.lo;
-                    clone->range.hi -= f->size - x_bits.hi - 1;
+                    clone->range.lo = clone->range.hi - x_bits.hi;
+                    clone->range.hi -= x_bits.lo;
 
                     rv = clone;
                 }
@@ -128,6 +131,8 @@ struct ResolveExtractSaves : Modifier {
 
     bool preorder(IR::BFN::Extract* extract) override {
         if (auto save = extract->source->to<IR::BFN::SavedRVal>()) {
+            LOG4("resolve extract save: " << save);
+
             if (auto rval = save->source->to<IR::BFN::InputBufferRVal>()) {
                 extract->source = rval;
             } else {
@@ -139,6 +144,8 @@ struct ResolveExtractSaves : Modifier {
                 if (find_rval.rv)
                     extract->source = find_rval.rv;
             }
+
+            LOG4("as: " << extract->source);
         }
 
         return false;

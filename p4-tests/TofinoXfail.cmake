@@ -335,6 +335,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "This action requires hash, which can only be done through the hit pathway"
   testdata/p4_14_samples/acl1.p4
+  extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1178,7 +1179,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible container alignments for field .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
-  extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
   )
 
 # P4C-1396
