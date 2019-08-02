@@ -26,7 +26,7 @@ class NamedObject(jsl.Document):
 
 MatchType = jsl.StringField(
     required=True,
-    enum=["Exact", "Ternary", "LPM", "Range"],
+    enum=["Exact", "Ternary", "LPM", "Range", "ATCAM"],
     description = "Type of the match key field")
 
 class PrimitiveTypeBase(jsl.Document):

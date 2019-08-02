@@ -331,6 +331,13 @@ static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchT
     }
 }
 
+static boost::optional<cstring> transformOtherMatchType(std::string matchType) {
+    if (matchType == "atcam_partition_index")
+        return cstring("ATCAM");
+    else
+        return boost::none;
+}
+
 /// @returns true if @id's prefix matches the provided Tofino @prefix value
 static bool isOfType(P4Id id, ::barefoot::P4Ids::Prefix prefix) {
     return getIdPrefix(id) == static_cast<P4Id>(prefix);
@@ -2089,7 +2096,15 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
         bool needsPriority = false;
         auto* keyJson = new Util::JsonArray();
         for (const auto& mf : table.match_fields()) {
-            auto matchType = transformMatchType(mf.match_type());
+            boost::optional<cstring> matchType = boost::none;
+            switch (mf.match_case()) {
+                case p4configv1::MatchField::kMatchType:
+                    matchType = transformMatchType(mf.match_type());
+                    break;
+                case p4configv1::MatchField::kOtherMatchType:
+                    matchType = transformOtherMatchType(mf.other_match_type());
+                    break;
+            }
             if (matchType == boost::none) {
                 ::error("Unsupported match type for BF-RT: %1%", mf.match_type());
                 continue;
