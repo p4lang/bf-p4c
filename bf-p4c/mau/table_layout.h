@@ -239,6 +239,13 @@ class ValidateActionProfileFormat : public MauInspector {
     explicit ValidateActionProfileFormat(const LayoutChoices &l) : lc(l) { visitDagOnce = false; }
 };
 
+class ValidateTableSize : public MauInspector {
+    bool preorder(const IR::MAU::Table *) override;
+
+ public:
+    ValidateTableSize() { }
+};
+
 class ProhibitAtcamWideSelectors : public MauInspector {
     bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::Selector *) override;

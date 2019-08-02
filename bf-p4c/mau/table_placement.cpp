@@ -915,6 +915,7 @@ safe_vector<TablePlacement::Placed *>
     for (auto mc : gmc) {
         auto *rv = new Placed(*this, t);
         // Merge
+        LOG1("  Merging with match table " << mc.first->name);
         rv->gateway_merge(mc.first, mc.second);
         // Get a placement
         if (!try_place(rv))
@@ -1622,10 +1623,12 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 it++; } }
         if (work.empty()) break;
         if (trial.empty()) {
-            error("Table placement wedged, likely due to shared attachments on partly placed "
-                  "tables; may be able to avoid the problem with @stage on those tables");
+            ::error("Table placement cannot make any more progress.  Though some tables have "
+                    "not yet been placed, dependency analysis has found that no more tables are "
+                    "placeable.  Frequently this is due to shared attachments on partly placed "
+                    "tables; may be able to avoid the problem with @stage on those tables");
             for (auto *tbl : partly_placed)
-                error("partly placed: %s", tbl);
+                ::error("partly placed: %s", tbl);
             break; }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;

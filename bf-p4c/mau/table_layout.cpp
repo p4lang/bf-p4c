@@ -1019,6 +1019,31 @@ bool DoTableLayout::preorder(IR::MAU::Selector *sel) {
     return false;
 }
 
+
+bool ValidateTableSize::preorder(const IR::MAU::Table *tbl) {
+    if (tbl->match_table == nullptr)
+        return true;
+
+    bool for_match = false;
+    for (auto key : tbl->match_key) {
+        if (key->for_match()) {
+            for_match = true;
+            break;
+        }
+    }
+
+    if (!for_match)
+        return true;
+    if (auto k = tbl->match_table->getConstantProperty("size")) {
+        ERROR_CHECK(k->asInt() > 0, "%1%: The table %2% has a size provided that is not "
+            "positive integer : %3%", tbl->srcInfo, tbl->externalName(), k);
+    } else if (auto k = tbl->match_table->getConstantProperty("min_size")) {
+        ERROR_CHECK(k->asInt() > 0, "%1%: The table %2% has a min_size provided that is not "
+            "positive integer : %3%", tbl->srcInfo, tbl->externalName(), k);
+    }
+    return true;
+}
+
 static double eqn(double current, int num_counters ) {
     return (current-1) + (log(num_counters) / (log(current/(current-1))) + 2*current);
 }
@@ -1177,11 +1202,16 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
 }
 
 bool AssignCounterLRTValues::ComputeLRT::preorder(IR::MAU::Counter *cntr) {
-    calculate_lrt_threshold_and_interval(findContext<IR::MAU::Table>(), cntr);
+    auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl->is_placed())
+        return true;
+    calculate_lrt_threshold_and_interval(tbl, cntr);
     return true;
 }
 
 bool AssignCounterLRTValues::FindCounterRams::preorder(const IR::MAU::Table *t) {
+    if (!t->is_placed())
+        return true;
     for (auto &use : t->resources->memuse) {
         auto &mem = use.second;
         if (mem.type == Memories::Use::COUNTER) {
@@ -1334,6 +1364,7 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
 
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
+        new ValidateTableSize,
         new MeterColorMapramAddress,
         new RandomExternUsedOncePerAction,
         new DoTableLayout(p, lc),
