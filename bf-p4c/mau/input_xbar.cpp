@@ -1814,7 +1814,6 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
                     tbl->name);
         } else if (alloc.proxy_hash_key_use.algorithm.setup(pragma_val)) {
             hash_function_found = true;
-            alloc.proxy_hash_key_use.alg_name = pragma_val->value;
         }
     } else if (tbl->layout.proxy_hash_algorithm.size != 0) {
         hash_function_found = true;
@@ -1822,7 +1821,6 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
     }
     if (!hash_function_found) {
         alloc.proxy_hash_key_use.algorithm = IR::MAU::HashFunction::random();
-        alloc.proxy_hash_key_use.alg_name = "random";
     }
 
     if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::HashFunction::IDENTITY)

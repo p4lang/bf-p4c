@@ -1476,12 +1476,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )
 
-# support custom hash function for proxy hash
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected"
-  extensions/p4_tests/p4_16/compile_only/proxy_hash.p4
-)
-
 # P4C-1862
 p4c_add_xfail_reason("tofino"
   "AttributeError.*Client instance has no attribute"

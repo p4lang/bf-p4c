@@ -376,7 +376,6 @@ struct IXBar {
             int group = -1;
             bitvec hash_bits;
             IR::MAU::HashFunction algorithm;
-            cstring alg_name;
 
             void clear() {
                 allocated = false;

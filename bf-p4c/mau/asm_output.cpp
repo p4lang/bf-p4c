@@ -2992,10 +2992,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             emit_ixbar(out, indent, &tbl->resources->match_ixbar, proxy_ixbar,
                          &tbl->resources->hash_dists, &tbl->resources->memuse.at(unique_id),
                          &fmt, tbl, tbl->layout.ternary);
-            if (proxy_ixbar) {
-                out << indent << "proxy_hash_algorithm: "
-                              << proxy_ixbar->proxy_hash_key_use.alg_name << std::endl;
-            }
         }
         if (!tbl->layout.ternary && !tbl->layout.no_match_rams()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false, false);
