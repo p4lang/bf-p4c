@@ -112,7 +112,7 @@ class TablePlacement : public MauTransform, public Backtrack {
                          int &srams_left, int &tcams_left, int min_entries);
     bool can_duplicate(const IR::MAU::AttachedMemory *);
     bool can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed);
+        const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed);
     bool initial_stage_and_entries(Placed *rv, const Placed *done, int &set_entries,
         int &furthest_stage);
     IR::MAU::Table *create_starter_table(gress_t gress);

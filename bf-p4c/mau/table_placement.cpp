@@ -198,15 +198,15 @@ struct TablePlacement::GroupPlace {
             if (depth <= p->depth)
                 depth = p->depth+1;
             ancestors |= p->ancestors; }
-        LOG4("    new seq " << s->id << " depth=" << depth << " anc=" << ancestors);
+        LOG4("    new seq " << seq->id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
         if (Device::numLongBranchTags() == 0 || self.options.disable_long_branch) {
             // Table run only with next_table, so can't continue placing ancestors until
             // this group is finished
             if (LOGGING(5)) {
-                for (auto s : ancestors)
-                    if (work.count(s))
-                        LOG5("      removing ancestor " << s->seq->id << " from work list"); }
+                for (auto a : ancestors)
+                    if (work.count(a))
+                        LOG5("      removing ancestor " << a->seq->id << " from work list"); }
             work -= ancestors; } }
 
     /// finish a table group -- remove it from the work queue and append its parents
@@ -1282,6 +1282,11 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                         BUG_CHECK(!gw_match_grp, "Failure attaching gateway with multi-ref table");
                         ready = false;
                         break ; } }
+                if (ready && pl->need_more) {
+                    for (auto t : n->tables) {
+                        if (!can_place_with_partly_placed(t, {pl->table}, pl)) {
+                            ready = false;
+                            break; } } }
                 if (ready) {
                     new GroupPlace(*this, work, parents, n); } } } }
     return pl;
@@ -1439,7 +1444,7 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Tab
  * limiting factor.
  */
 bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed) {
+        const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed) {
      if (!(Device::numLongBranchTags() == 0 || options.disable_long_branch))
          return true;
 
@@ -1625,8 +1630,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         if (trial.empty()) {
             ::error("Table placement cannot make any more progress.  Though some tables have "
                     "not yet been placed, dependency analysis has found that no more tables are "
-                    "placeable.  Frequently this is due to shared attachments on partly placed "
-                    "tables; may be able to avoid the problem with @stage on those tables");
+                    "placeable.%1%", partly_placed.empty() ? "" :
+                    "  This may be due to shared attachments on partly placed tables; may be "
+                    "able to avoid the problem with @stage on those tables");
             for (auto *tbl : partly_placed)
                 ::error("partly placed: %s", tbl);
             break; }
