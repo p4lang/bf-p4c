@@ -145,7 +145,10 @@ class JBayPardeSpec : public PardeSpec {
     int numTcamRows() const override { return 256; }
 
     unsigned maxClotsPerState() const override { return 2; }
-    unsigned byteMaxClotSize() const override { return 64; }
+
+    // Cap max size to 56 as a workaround of TF2LAB-44
+    unsigned byteMaxClotSize() const override { return 56;  /* 64 */ }
+
     unsigned numClotsPerGress() const override { return 64; }
     unsigned maxClotsLivePerGress() const override { return 16; }
     unsigned byteInterClotGap() const override { return 3; }
