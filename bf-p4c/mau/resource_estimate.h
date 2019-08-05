@@ -139,6 +139,7 @@ int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout);
 int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
+int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel);
 int SelectorModBits(const IR::MAU::Selector *sel);
 int SelectorShiftBits(const IR::MAU::Selector *sel);
 int SelectorHashModBits(const IR::MAU::Selector *sel);

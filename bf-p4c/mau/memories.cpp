@@ -1849,7 +1849,9 @@ void Memories::swbox_bus_selectors_indirects() {
             BUG_CHECK(ta->allocation_units(as).size() == 1, "Cannot have multiple selector "
                       "objects");
             for (auto u_id : ta->allocation_units(as)) {
-                auto selector_group = new SRAM_group(ta, 2, 0, SRAM_group::SELECTOR);
+                int RAM_lines = SelectorRAMLinesPerEntry(as) * as->num_pools;
+                int depth = mems_needed(RAM_lines, SRAM_DEPTH, 1, true);
+                auto selector_group = new SRAM_group(ta, depth, 0, SRAM_group::SELECTOR);
                 selector_group->attached = as;
                 selector_group->logical_table = u_id.logical_table;
                 synth_bus_users.insert(selector_group);

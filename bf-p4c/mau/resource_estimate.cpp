@@ -145,13 +145,13 @@ int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
 /**
  * Refer to the comments above the allocate_selector_length function in table_format.cpp
  */
-int SelectorRAMLines(const IR::MAU::Selector *sel) {
+int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel) {
     return (sel->max_pool_size + StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE - 1)
             / StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
 }
 
 int SelectorModBits(const IR::MAU::Selector *sel) {
-    int RAM_lines_necessary = SelectorRAMLines(sel);
+    int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD) {
         return ceil_log2(RAM_lines_necessary);
     }
@@ -159,7 +159,7 @@ int SelectorModBits(const IR::MAU::Selector *sel) {
 }
 
 int SelectorShiftBits(const IR::MAU::Selector *sel) {
-    int RAM_lines_necessary = SelectorRAMLines(sel);
+    int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary > StageUseEstimate::MAX_POOL_RAMLINES) {
         error("%s: The max pools size %d of selector %s requires %d RAM lines, more than maximum "
               "%d RAM lines possibly on Barefoot hardware", sel->srcInfo, sel->max_pool_size,
@@ -180,7 +180,7 @@ int SelectorShiftBits(const IR::MAU::Selector *sel) {
 }
 
 int SelectorHashModBits(const IR::MAU::Selector *sel) {
-    int RAM_lines_necessary = SelectorRAMLines(sel);
+    int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary == 1) {
         return 0;
     }
