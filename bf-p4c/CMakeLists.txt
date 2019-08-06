@@ -530,6 +530,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/psa_model.cpp
   arch/psa_program_structure.cpp
   arch/remove_set_metadata.cpp
+  arch/rewrite_action_selector.cpp
   arch/rewrite_packet_path.cpp
   arch/tna.cpp
   arch/v1model.cpp
@@ -559,6 +560,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/psa_model.h
   arch/psa_program_structure.h
   arch/remove_set_metadata.h
+  arch/rewrite_action_selector.h
   arch/rewrite_packet_path.h
   arch/tna.h
   arch/v1model.h

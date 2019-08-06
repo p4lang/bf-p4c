@@ -541,10 +541,10 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             } else if (p->name == "action_profile") {
                 if (auto path = arg->expression->to<IR::PathExpression>()) {
                     auto af = P4::ExternInstance::resolve(path, refMap, typeMap);
-                    if (!af) {
+                    if (af == boost::none) {
                         ::error("Expected %1% for ActionSelector %2% to resolve to an "
                                 "ActionProfile extern instance", arg, name); }
-                    auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+                    auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(*af->name));
                     ap->direct = false;
                     ap->size = getConstant(af->arguments->at(0));
                     // FIXME Need to reconstruct the field list from the table key?

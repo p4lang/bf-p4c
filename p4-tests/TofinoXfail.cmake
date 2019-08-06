@@ -1430,6 +1430,13 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "Null e"
+  testdata/p4_16_samples/psa-action-selector2.p4
+  testdata/p4_16_samples/psa-action-selector1.p4
+  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
 )

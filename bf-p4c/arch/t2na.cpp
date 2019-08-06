@@ -6,6 +6,7 @@
 #include "bf-p4c/arch/check_extern_invocation.h"
 #include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/t2na.h"
+#include "bf-p4c/arch/rewrite_action_selector.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/midend/type_checker.h"
 
@@ -25,6 +26,7 @@ T2naArchTranslation::T2naArchTranslation(P4::ReferenceMap *refMap,
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers",
                                          "requires_versioning", "atcam", "alpm", "proxy_hash"}),
+        new RewriteActionSelector(refMap, typeMap),
         new ConvertPhase0(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

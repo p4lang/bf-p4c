@@ -5,8 +5,8 @@ add update_output data.b3:2 set_port_down()
 #FIXME -- need explicit set of pfe to trigger selector -- harness should do that automatically,
 #but how to tell that the action needs it?
 add select_output data.b1:0 set_output(meter_pfe:0x800000)
-add sel_profile 2 set_output(port:2)
-add sel_profile 3 set_output(port:3)
+add ap 2 set_output(port:2)
+add ap 3 set_output(port:3)
 
 # initial set -- selector has just port 2 up
 expect 0 01010101 02020202 03030303 04040404 00 01 01 02

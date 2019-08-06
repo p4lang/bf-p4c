@@ -62,7 +62,7 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
 }
 
 boost::optional<const IR::Constant*>
-checkIfStatement(const IR::IfStatement* ifStatement) {
+checkMirrorIfStatement(const IR::IfStatement* ifStatement) {
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
         ::warning("Expected comparison of mirror_type with constant: "
@@ -122,7 +122,7 @@ struct FindMirroredFieldLists : public Inspector {
                       "statement");
             return false;
         }
-        auto mirrorIdxConstant = checkIfStatement(ifStatement);
+        auto mirrorIdxConstant = checkMirrorIfStatement(ifStatement);
         if (!mirrorIdxConstant) return false;
 
         auto fieldList = analyzeMirrorStatement(call);

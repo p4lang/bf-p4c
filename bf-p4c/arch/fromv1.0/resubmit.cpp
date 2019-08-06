@@ -8,7 +8,7 @@
 #include "bf-p4c/midend/parser_utils.h"
 
 namespace BFN {
-
+namespace {
 /**
  * Analyze the Resubmit `emit` method within the deparser block,
  * and try to extract the source field list.
@@ -62,7 +62,7 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
 }
 
 boost::optional<const IR::Constant*>
-checkIfStatement(const IR::IfStatement* ifStatement) {
+checkResubmitIfStatement(const IR::IfStatement* ifStatement) {
     auto* equalExpr = ifStatement->condition->to<IR::Equ>();
     if (!equalExpr) {
         ::warning("Expected comparing resubmit_type with constant: %1%", ifStatement->condition);
@@ -104,7 +104,7 @@ class FindResubmit : public DeparserInspector {
         if (!ifStatement) {
             ::warning("Expected Resubmit to be used within an If statement");
         }
-        auto resubmit_type = checkIfStatement(ifStatement);
+        auto resubmit_type = checkResubmitIfStatement(ifStatement);
         if (!resubmit_type) {
             return false;
         }
@@ -223,6 +223,8 @@ class AddResubmitParser : public Transform {
  private:
   const ResubmitExtracts* extracts;
 };
+
+}  // namespace
 
 FixupResubmitMetadata::FixupResubmitMetadata(
         P4::ReferenceMap *refMap,

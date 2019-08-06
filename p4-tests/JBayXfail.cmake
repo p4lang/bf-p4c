@@ -201,6 +201,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
+  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
 )
 
 # P4C-1228

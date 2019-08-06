@@ -8,6 +8,7 @@
 #include "bf-p4c/arch/check_extern_invocation.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/arch/fromv1.0/phase0.h"
+#include "bf-p4c/arch/rewrite_action_selector.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/lib/pad_alignment.h"
@@ -30,6 +31,7 @@ TnaArchTranslation::TnaArchTranslation(P4::ReferenceMap *refMap,
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "filters", "idle_timeout", "registers",
                                          "requires_versioning", "atcam", "alpm", "proxy_hash"}),
+        new BFN::RewriteActionSelector(refMap, typeMap),
         new ConvertPhase0(refMap, typeMap),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

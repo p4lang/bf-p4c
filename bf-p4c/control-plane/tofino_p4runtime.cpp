@@ -13,6 +13,7 @@
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/arch/rewrite_action_selector.h"
 #include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"
 #include "control-plane/p4RuntimeSerializer.h"
@@ -1018,6 +1019,26 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 actionProfilesRefs[*implementation].insert(table->controlPlaneName());
         });
 
+        // analyze action profile used by action selector and adds the set of
+        // table referenced by action selector to the action profile.
+        Helpers::forAllEvaluatedBlocks(evaluatedProgram, [&](const IR::Block* block) {
+            if (!block->is<IR::ExternBlock>()) return;
+            auto selectorExternBlock = block->to<IR::ExternBlock>();
+            if (selectorExternBlock->type->name != "ActionSelector")
+                return;
+            auto selectorDecl = selectorExternBlock->node->to<IR::Declaration_Instance>();
+            CHECK_NULL(selectorDecl);
+            auto profile = selectorExternBlock->getParameterValue("action_profile");
+            if (profile) {
+                auto profileExternBlock = profile->to<IR::ExternBlock>();
+                auto profileDecl = profileExternBlock->node->to<IR::Declaration_Instance>();
+                CHECK_NULL(profileDecl);
+                actionProfilesRefs[profileDecl->controlPlaneName()].insert(
+                        actionProfilesRefs[selectorDecl->controlPlaneName()].begin(),
+                        actionProfilesRefs[selectorDecl->controlPlaneName()].end());
+            }
+        });
+
         // Creates a set of color-aware meters by inspecting every call to the
         // execute method on each meter instance: if at least one method call
         // includes a second argument (pre-color), then the meter is
@@ -1957,6 +1978,12 @@ void generateP4Runtime(const IR::P4Program* program,
     P4::TypeMap         typeMap;
     refMap.setIsV1(true);
     program = program->apply(P4::EliminateTypedef(&refMap, &typeMap));
+    // Following ActionSelector API has been retired, we convert them
+    // to the new syntax before generating BFRT json.
+    // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+    // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
+    // NOTE: this can be removed when we remove old syntax from tofino.p4.
+    program = program->apply(BFN::RewriteActionSelector(&refMap, &typeMap));
 
     auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 
