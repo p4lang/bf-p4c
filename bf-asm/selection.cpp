@@ -372,7 +372,10 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
 #endif // HAVE_JBAY
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
-    json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
+    // Stage table size reflects how many RAM lines are available for the selector, according
+    // to henry wang.
+    int size = (layout_size() - 1)*1024;
+    json::map &tbl = *base_tbl_cfg(out, "selection", size);
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
     tbl["selector_name"] = p4_table ? p4_table->p4_name() : "undefined";
     tbl["selection_key_name"] = "undefined"; /// FIXME!
@@ -387,7 +390,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
             if (auto at = dynamic_cast<ActionTable *>(&(*act))) {
                 tbl["bound_to_action_data_table_handle"] = act->handle();
                 break; }
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", size);
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
