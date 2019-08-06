@@ -188,6 +188,7 @@ struct ActionSelector {
     const cstring name;  // The fully qualified external name of this action selector.
     const boost::optional<cstring> action_profile_name;  // If not known, we will generate
                          // an action profile instance.
+    const int64_t size;  // TODO(hanw): size does not make sense with new ActionSelector P4 extern
     const int64_t max_group_size;
     const int64_t num_groups;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this action
@@ -1470,6 +1471,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                              decl->to<IR::IAnnotated>()};
     }
 
+    static constexpr int64_t defaultMaxGroupSize = 120;
+
     /// @return the action profile referenced in @table's implementation
     /// property, if it has one, or boost::none otherwise.
     static boost::optional<ActionSelector>
@@ -1479,6 +1482,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             getExternInstanceFromProperty(table, "implementation", refMap, typeMap);
         if (!instance) return boost::none;
         if (instance->type->name != "ActionSelector") return boost::none;
+        // TODO(hanw): remove legacy code
         // used to support deprecated ActionSelector constructor.
         if (instance->substitution.lookupByName("size")) {
             auto size = instance->substitution.lookupByName("size")->expression;
@@ -1486,6 +1490,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             return ActionSelector{*instance->name,
                                   boost::none,
                                   size->to<IR::Constant>()->asInt(),
+                                  defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
                                   getTableImplementationAnnotations(table, refMap)};
         }
@@ -1496,6 +1501,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         BUG_CHECK(num_groups->is<IR::Constant>(), "Non-constant num_groups");
         return ActionSelector{*instance->name,
                               *instance->name,
+                              -1  /* size */,
                               max_group_size->to<IR::Constant>()->asInt(),
                               num_groups->to<IR::Constant>()->asInt(),
                               getTableImplementationAnnotations(table, refMap)};
@@ -1511,6 +1517,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             return ActionSelector{action_sel_decl->controlPlaneName(),
                                   boost::none,
                                   size->to<IR::Constant>()->asInt(),
+                                  defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
                                   action_sel_decl->to<IR::IAnnotated>()};
         }
@@ -1523,6 +1530,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
         return ActionSelector{action_sel_decl->controlPlaneName(),
             cstring::to_cstring(action_profile_decl->controlPlaneName()),
+            -1  /* size */,
             max_group_size->to<IR::Constant>()->asInt(),
             num_groups->to<IR::Constant>()->asInt(),
             action_sel_decl->to<IR::IAnnotated>()};
@@ -1818,6 +1826,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         selector.set_max_group_size(actionSelector.max_group_size);
         selector.set_num_groups(actionSelector.num_groups);
         if (actionSelector.action_profile_name) {
+            selector.set_action_profile_id(symbols.getId(
+                SymbolType::ACTION_PROFILE(), *actionSelector.action_profile_name));
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto& table : tablesIt->second) {
@@ -1830,17 +1840,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                     p4Info);
         } else {
             ::barefoot::ActionProfile profile;
-            profile.set_size(actionSelector.max_group_size);
+            profile.set_size(actionSelector.size);
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto& table : tablesIt->second) {
                     cstring tableName = blockPrefix + "." + table;
                     profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
+                    selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
                 }
             }
             addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
                     actionSelector.name, actionSelector.annotations, profile,
                     p4Info);
+            selector.set_action_profile_id(symbols.getId(
+                SymbolType::ACTION_PROFILE(), actionSelector.name));
             std::string selectorName(actionSelector.name + "_sel");
             addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
                     selectorName, actionSelector.annotations, selector,

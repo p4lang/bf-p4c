@@ -742,7 +742,8 @@ static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
 struct BfRtSchemaGenerator::ActionSelector {
     std::string name;
     P4Id id;
-    int64_t size;
+    int64_t max_group_size;
+    int64_t num_groups;  // aka size
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
@@ -754,8 +755,9 @@ struct BfRtSchemaGenerator::ActionSelector {
         auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
         auto tableIds = collectTableIds(
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
-        return ActionSelector{pre.name(), selectorId, actionProfile.size(), tableIds,
-            transformAnnotations(pre)};
+        return ActionSelector{pre.name(), selectorId,
+                              actionProfile.max_group_size(), actionProfile.size(),
+                              tableIds, transformAnnotations(pre)};
     }
 
     static boost::optional<ActionSelector> fromTofinoActionSelector(
@@ -769,8 +771,9 @@ struct BfRtSchemaGenerator::ActionSelector {
         auto selectorId = makeBfRtId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
         auto tableIds = collectTableIds(
             p4info, actionSelector.table_ids().begin(), actionSelector.table_ids().end());
-        return ActionSelector{pre.name(), selectorId, actionSelector.num_groups(), tableIds,
-            transformAnnotations(pre)};
+        return ActionSelector{pre.name(), selectorId,
+                              actionSelector.max_group_size(), actionSelector.num_groups(),
+                              tableIds, transformAnnotations(pre)};
     }
 };
 
@@ -782,8 +785,6 @@ struct BfRtSchemaGenerator::ActionProf {
     int64_t size;
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
-
-    static constexpr int selectorHugeGroupSize = 120;
 
     static boost::optional<ActionProf> from(const p4configv1::P4Info& p4info,
                                             const p4configv1::ActionProfile& actionProfile) {
@@ -1463,11 +1464,11 @@ BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
                                              const ActionSelector& actionSelector) const {
     auto* tableJson = new Util::JsonObject();
 
-    // TODO(antonin): formalize ID allocation for selector tables
     tableJson->emplace("name", actionSelector.name);
     tableJson->emplace("id", actionSelector.id);
     tableJson->emplace("table_type", "Selector");
-    tableJson->emplace("size", actionSelector.size);
+    // the maximum number of groups is the table size for the selector table
+    tableJson->emplace("size", actionSelector.num_groups);
     tableJson->emplace("annotations", actionSelector.annotations);
 
     auto* keyJson = new Util::JsonArray();
@@ -1491,7 +1492,7 @@ BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
     {
         auto* f = makeCommonDataField(
                 BF_RT_DATA_MAX_GROUP_SIZE, "$MAX_GROUP_SIZE",
-                makeTypeInt("uint32", 120), false /* repeated */);
+                makeTypeInt("uint32", actionSelector.max_group_size), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     tableJson->emplace("data", dataJson);
@@ -2103,6 +2104,9 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                     break;
                 case p4configv1::MatchField::kOtherMatchType:
                     matchType = transformOtherMatchType(mf.other_match_type());
+                    break;
+                default:
+                    BUG("Invalid oneof case for the match type of table '%1%'", pre.name());
                     break;
             }
             if (matchType == boost::none) {

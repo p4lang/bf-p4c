@@ -48,6 +48,13 @@ class P4RuntimeStdConverter {
           ::barefoot::P4Ids::SNAPSHOT_LIVENESS,
         };
 
+        // When converting action profile instances, we need to know if the
+        // action profile is associated with a selector, and if yes we need the
+        // information (e.g. max_group_size) about the selector. So we iterate
+        // once over all extern instances first and build a map from action
+        // profile id to corresponding selector (if any).
+        buildActionSelectorMap(*p4info);
+
         for (const auto& externType : p4info->externs()) {
             auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
             auto converterIt = converters.find(externTypeId);
@@ -91,6 +98,34 @@ class P4RuntimeStdConverter {
                   externInstance.preamble().name());
     }
 
+    // Build the oldActionSelectors map, which maps action profile id (from the
+    // original TNA-specific P4Info message) to the corresponding action
+    // selector ExternInstance message (if any).
+    void buildActionSelectorMap(const p4configv1::P4Info& p4info) {
+        for (const auto& externType : p4info.externs()) {
+            auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
+            if (externTypeId != ::barefoot::P4Ids::ACTION_SELECTOR) continue;
+            for (const auto& externInstance : externType.instances()) {
+                ::barefoot::ActionSelector actionSelector;
+                unpackExternInstance(externInstance, &actionSelector);
+                BUG_CHECK(actionSelector.action_profile_id() != 0,
+                          "Action selector '%1%' does not specify an action profile",
+                          externInstance.preamble().name());
+                auto r = oldActionSelectors.emplace(
+                    actionSelector.action_profile_id(), externInstance);
+                BUG_CHECK(r.second, "Action profile id %1% is referenced by multiple selectors",
+                          actionSelector.action_profile_id());
+            }
+            break;
+        }
+    }
+
+    void insertId(P4Id oldId, P4Id newId) {
+        auto r = oldToNewIds.emplace(oldId, newId);
+        BUG_CHECK(r.second, "Id %1% was already in id map when converting P4Info to standard",
+                  oldId);
+    }
+
     template <typename T>
     void setPreamble(const p4configv1::ExternInstance& externInstance,
                      p4configv1::P4Ids::Prefix stdPrefix,
@@ -104,15 +139,13 @@ class P4RuntimeStdConverter {
         // time, this just means doing the correct prefix substitution. But
         // there can be some subtle differences between the 2, which may cause
         // id collisions. We therefore add some logic to handle these
-        // collisions, to be safe and future-proof.
+        // collisions, to be safe and futureproof.
         do {
           id = makeStdId(idBase++, stdPrefix);
         } while (allocatedIds.count(id) > 0);
         allocatedIds.insert(id);
         preOut->set_id(id);
-        auto r = oldToNewIds.emplace(preIn.id(), preOut->id());
-        BUG_CHECK(r.second, "Id %1% was already in id map when converting P4Info to standard",
-                  preIn.id());
+        insertId(preIn.id(), preOut->id());
     }
 
     void convertActionProfile(p4configv1::P4Info* p4info,
@@ -123,17 +156,30 @@ class P4RuntimeStdConverter {
         setPreamble(externInstance, p4configv1::P4Ids::ACTION_PROFILE, actionProfileStd);
         actionProfileStd->mutable_table_ids()->CopyFrom(actionProfile.table_ids());
         actionProfileStd->set_size(actionProfile.size());
-        actionProfileStd->set_with_selector(actionProfile.selector_id() != 0);
+
+        auto oldId = externInstance.preamble().id();
+        auto actionSelectorIt = oldActionSelectors.find(oldId);
+        if (actionSelectorIt != oldActionSelectors.end()) {
+            ::barefoot::ActionSelector actionSelector;
+            unpackExternInstance(actionSelectorIt->second, &actionSelector);
+            actionProfileStd->set_with_selector(true);
+            actionProfileStd->set_max_group_size(actionSelector.max_group_size());
+            // map (old) action selector id to (new / std) action profile id, so
+            // that we can translate the implementation_id field in the Table
+            // message.
+            insertId(actionSelectorIt->second.preamble().id(),
+                     actionProfileStd->preamble().id());
+        }
     }
 
-    void convertActionSelector(p4configv1::P4Info* p4info,
-                               const p4configv1::ExternInstance& externInstance) {
+    void convertActionSelector(p4configv1::P4Info*,
+                               const p4configv1::ExternInstance&) {
         // The standard P4Info only has one message (ActionProfile) whereas the
         // Tofino-specific P4Info defines one message for action profiles
         // (ActionProfile) and one for action selectors (ActionSelector). When
         // visiting the Tofino-specific ActionProfile messages (in
         // convertActionProfile), we generate the appropriate standard
-        // ActionProfile message (in particular we set the selector_id field)
+        // ActionProfile message (in particular we set the with_selector field)
         // to the appropriate value, which means we have nothing to do for
         // Tofino-specific ActionSelector messages (which is why this function
         // is empty). Note that by definition, each ActionSelector message in
@@ -236,6 +282,11 @@ class P4RuntimeStdConverter {
     const p4configv1::P4Info* p4infoIn;
     std::unordered_set<P4Id> allocatedIds{};
     std::unordered_map<P4Id, P4Id> oldToNewIds{};
+    // Maps an action profile id to the corresponding action selector. If an
+    // action profile does not have an action selector, there is no entry in the
+    // map. Note that it is not possible to have one action selector map to
+    // multiple action profiles.
+    std::unordered_map<P4Id, p4configv1::ExternInstance> oldActionSelectors{};
 };
 
 P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI& p4RuntimeIn) {
