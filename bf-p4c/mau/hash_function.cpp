@@ -433,6 +433,8 @@ uint64_t convert_crc_polynomial_to_koopman(uint64_t poly, uint32_t width) {
     mpz_import(koopman.get_mpz_t(), 1, 0, sizeof(poly), 0, 0, &poly);
     mpz_class upper_bit = 1;
     mpz_class mask = (upper_bit << width) - 1;
+    koopman |= upper_bit << width;
+    koopman >>= 1;
     koopman &= mask;
     LOG3("upper_bit : " << upper_bit << " mask " << mask << " koopman: " << koopman);
     return koopman.get_ui();
@@ -451,10 +453,10 @@ bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     auto it = decl->arguments->begin();
     size = (*it)->expression->type->width_bits();
     poly = (*it)->expression->to<IR::Constant>()->asUint64();
-    LOG3("poly" << std::hex << poly << " size: " << size);
+    LOG3("poly " << std::hex << poly << " size: " << size);
     // convert to koopman form.
     poly = convert_crc_polynomial_to_koopman(poly, size);
-    LOG3("poly" << poly);
+    LOG3("poly " << poly);
     std::advance(it, 1);
     reverse = (*it)->expression->to<IR::BoolLiteral>()->value;
     std::advance(it, 1);
