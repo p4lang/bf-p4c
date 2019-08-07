@@ -56,7 +56,7 @@ class Table : BFN::Unit {
     inline std::map<cstring, TableSeq>          next;
     inline Vector<TableKey>                     match_key;
     // Symmetric key information here, as the selector key is on the match table
-    LTBitMatrix                                 sel_symmetric_keys = {}; 
+    LTBitMatrix                                 sel_symmetric_keys = {};
     int                                         random_seed = -1;               // ignored for ==?
     bool                                        dynamic_key_masks = false;      // ignored for ==?
     NullOK EntriesList                          entries_list;                   // ignored for ==?
@@ -819,7 +819,7 @@ class FieldListExpression : ListExpression {
     ID id;
     bool rotateable = false;
     bool permutable = false;
-    LTBitMatrix symmetric_keys = {}; 
+    LTBitMatrix symmetric_keys = {};
 
     dbprint { out << id << " : ";  ListExpression::dbprint(out); }
 }

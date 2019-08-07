@@ -1336,6 +1336,7 @@ class GetBackendTables : public MauInspector {
             } else if (match_id.name == "atcam_partition_index") {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
                 ixbar_read->partition_index = true;
+                ixbar_read->p4_param_order = p4_param_order;
                 tt->match_key.push_back(ixbar_read);
             } else {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
@@ -1350,8 +1351,7 @@ class GetBackendTables : public MauInspector {
                     ixbar_read->partition_index = true;
                 tt->match_key.push_back(ixbar_read);
             }
-            if (match_id.name != "selector" && match_id.name != "dleft_hash" &&
-                    match_id != "atcam_partition_index")
+            if (match_id.name != "selector" && match_id.name != "dleft_hash")
                 p4_param_order++;
         }
     }

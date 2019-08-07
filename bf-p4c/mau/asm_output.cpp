@@ -2663,7 +2663,18 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
         for (auto sl : slices) {
             out << indent << canon_name(name) << ": ";
-            out << "{ type: " << ixbar_read->match_type.name << ", ";
+            // 'atcam_partition_index' match type is synonym to 'exact' match
+            // from the context.json's perspective.  It carries one more bit of
+            // information about which field is used as the
+            // atcam_partition_index and this information is conveyed to
+            // low-level driver via the 'partition_field_name' attribute under
+            // the algorithm tcam node. As a result, we print
+            // 'atcam_partition_index' as 'exact' here.
+            if (ixbar_read->match_type.name == "atcam_partition_index") {
+                out << "{ type: " << "exact" << ", ";
+            } else {
+                out << "{ type: " << ixbar_read->match_type.name << ", ";
+            }
             out << "size: " << sl.second << ", ";
             // Slices are used in keys (only) in p4-16, while masks are used
             // (only) in p4-14. For BF-RT, we consider a slice with an

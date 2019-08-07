@@ -39,8 +39,7 @@ control IngressP(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    ActionProfile(1024) ap;
-    Atcam(1024) atm;
+    Atcam(1024) algo_tcam;
 
     action noop() {}
 
@@ -67,7 +66,7 @@ control IngressP(
                 meta.partition.partition_index : atcam_partition_index; }
         default_action = noop();
         size = 8192;
-        atcam = atm;
+        atcam = algo_tcam;
     }
 
     apply {
