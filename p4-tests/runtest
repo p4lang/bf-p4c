@@ -388,6 +388,11 @@ if $run_bfrt; then
 fi
 
 if $run_ptf || $run_stf2ptf; then
+    # --p4runtime-force-std is required for TNA programs for which we run PTF
+    # tests
+    if [ $arch = "tna" ] || [ $arch = "t2na" ]; then
+        P4C_ARGS="$P4C_ARGS --p4runtime-force-std"
+    fi
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xassembler='--pipe0'"
     BASE_IF_INDEX=0
     NUM_IFACES=8

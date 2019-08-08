@@ -126,6 +126,21 @@ class P4RuntimeStdConverter {
                   oldId);
     }
 
+    // Strip the pipe prefix from the P4Info name
+    // FIXME: This is currently required so that the drivers code can reconcile
+    // the P4Info names with the context JSON names (for TNA progams). This
+    // stripping should not be required and the drivers should be able to do the
+    // reconciliation even when the pipe name is present based on which P4
+    // architecture is used. However, the architecture information is currently
+    // not available in _pi_update_device_start because it is stripped by the
+    // P4Runtime server from P4Info. When this is fixed, we will no longer need
+    // to strip the pipe prefix here.
+    void stripPipePrefix(std::string *name) {
+        auto pos = name->find_first_of('.');
+        if (pos == std::string::npos) return;
+        *name = name->substr(pos + 1);
+    }
+
     template <typename T>
     void setPreamble(const p4configv1::ExternInstance& externInstance,
                      p4configv1::P4Ids::Prefix stdPrefix,
@@ -133,6 +148,7 @@ class P4RuntimeStdConverter {
         const auto& preIn = externInstance.preamble();
         auto* preOut = stdMessage->mutable_preamble();
         preOut->CopyFrom(preIn);
+        stripPipePrefix(preOut->mutable_name());
         P4Id idBase = preIn.id() & 0xffffff;
         P4Id id;
         // Convert the Tofino P4Info id to the Standard P4Info id. Most of the
@@ -250,6 +266,7 @@ class P4RuntimeStdConverter {
 
     void updateTables(p4configv1::P4Info* p4info) {
         for (auto& table : *p4info->mutable_tables()) {
+            stripPipePrefix(table.mutable_preamble()->mutable_name());
             auto& tableName = table.preamble().name();
             auto implementationId = table.implementation_id();
             if (implementationId) {

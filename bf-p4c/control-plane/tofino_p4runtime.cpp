@@ -169,6 +169,10 @@ class SymbolType final : public P4RuntimeSymbolType {
     }
 };
 
+cstring prefix(cstring p, cstring str) {
+    return p.isNullOrEmpty() ? str : p + "." + str;
+}
+
 /// The information about an action profile which is necessary to generate its
 /// serialized representation.
 struct ActionProfile {
@@ -177,8 +181,10 @@ struct ActionProfile {
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this action
                                         // profile declaration.
 
-    p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols) const {
-        return symbols.getId(SymbolType::ACTION_PROFILE(), name);
+    p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols,
+                                        const cstring blockPrefix = "") const {
+        auto symName = prefix(blockPrefix, name);
+        return symbols.getId(SymbolType::ACTION_PROFILE(), symName);
     }
 };
 
@@ -186,19 +192,22 @@ struct ActionProfile {
 /// serialized representation.
 struct ActionSelector {
     const cstring name;  // The fully qualified external name of this action selector.
-    const boost::optional<cstring> action_profile_name;  // If not known, we will generate
+    const boost::optional<cstring> actionProfileName;  // If not known, we will generate
                          // an action profile instance.
     const int64_t size;  // TODO(hanw): size does not make sense with new ActionSelector P4 extern
-    const int64_t max_group_size;
-    const int64_t num_groups;
+    const int64_t maxGroupSize;
+    const int64_t numGroups;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this action
                                         // profile declaration.
 
-    p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols) const {
-        std::string selectorName(name + "_sel");
-        if (action_profile_name)
-            return symbols.getId(SymbolType::ACTION_SELECTOR(), name);
-        return symbols.getId(SymbolType::ACTION_SELECTOR(), selectorName);
+    p4rt_id_t getId(const P4RuntimeSymbolTableIface& symbols,
+                                    const cstring blockPrefix = "") const {
+        auto symName = prefix(blockPrefix, name);
+        std::string symSelectorName(symName + "_sel");
+        if (actionProfileName) {
+            return symbols.getId(SymbolType::ACTION_SELECTOR(), symName);
+        }
+        return symbols.getId(SymbolType::ACTION_SELECTOR(), symSelectorName);
     }
 };
 
@@ -259,7 +268,7 @@ struct ValueSet {
 
 /// The information about a register instance which is needed to serialize it.
 struct Register {
-    const cstring name;       // The fully qualified external name of the register
+    const cstring name;           // The fully qualified external name of the register table
     const p4configv1::P4DataTypeSpec* typeSpec;  // The format of the packed data.
     int64_t size;
     const IR::IAnnotated* annotations;  // If non-null, any annotations applied to this register
@@ -271,8 +280,7 @@ struct Register {
     from(const IR::ExternBlock* instance,
          const ReferenceMap* refMap,
          const TypeMap* typeMap,
-         p4configv1::P4TypeInfo* p4RtTypeInfo,
-         cstring externName) {
+         p4configv1::P4TypeInfo* p4RtTypeInfo) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
@@ -288,7 +296,7 @@ struct Register {
         auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
 
-        return Register{externName,
+        return Register{declaration->controlPlaneName(),
                         typeSpec,
                         size->to<IR::Constant>()->asInt(),
                         declaration->to<IR::IAnnotated>()};
@@ -340,11 +348,11 @@ struct Lpf {
     /// @return the information required to serialize an @instance of Lpf or
     /// boost::none in case of error.
     static boost::optional<Lpf>
-    from(const IR::ExternBlock* instance, cstring externName) {
+    from(const IR::ExternBlock* instance) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
         auto size = instance->getParameterValue("size");
-        return Lpf{externName,
+        return Lpf{declaration->controlPlaneName(),
                    size->to<IR::Constant>()->asInt(),
                    boost::none,
                    declaration->to<IR::IAnnotated>()};
@@ -376,7 +384,7 @@ struct Wred {
     /// @return the information required to serialize an @instance of Wred or
     /// boost::none in case of error.
     static boost::optional<Wred>
-    from(const IR::ExternBlock* instance, cstring externName) {
+    from(const IR::ExternBlock* instance) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
@@ -384,7 +392,7 @@ struct Wred {
         auto dropValue = instance->getParameterValue("drop_value");
         auto noDropValue = instance->getParameterValue("no_drop_value");
 
-        return Wred{externName,
+        return Wred{declaration->controlPlaneName(),
                     static_cast<uint8_t>(dropValue->to<IR::Constant>()->asUnsigned()),
                     static_cast<uint8_t>(noDropValue->to<IR::Constant>()->asUnsigned()),
                     size->to<IR::Constant>()->asInt(),
@@ -670,8 +678,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                         auto parserBlock = parser->to<IR::ParserBlock>();
 
                         // Update Parser Block Names
-                        auto parser_full_name = pipeName + "." + parsersName + "." + parserName;
-                        blockNamePrefixMap[parserBlock] = parser_full_name;
+                        auto parserFullName = pipeName + "." + parsersName + "." + parserName;
+                        blockNamePrefixMap[parserBlock] = parserFullName;
                     }
                     isMultiParser = true;
                 }
@@ -679,20 +687,36 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
     }
 
-    cstring getControlPlaneName(const IR::Block* block) override {
-        return getFullyQualifiedName(block, "");
+    cstring getControlPlaneName(const IR::Block* block, const IR::IDeclaration *decl) {
+        auto declName = decl ? decl->controlPlaneName() : "";
+        return getFullyQualifiedName(block, declName);
     }
 
+    // Overridden function call from base ArchIFace class. Table blocks are
+    // added entirely in the frontend and this call ensures we have our own
+    // implementation of control plane name generation (with the pipe prefix).
+    // This is relevant in multi pipe scenarios where a table (its control) is
+    // shared across pipes and needs fully qualified unique names.
+    cstring getControlPlaneName(const IR::Block* block) override {
+        return getControlPlaneName(block, nullptr);
+    }
+
+    // Given a block get its block prefix (usually pipe name) generate in the
+    // blockNamePrefixMap and prefix it to the control plane name. This name is
+    // unique to the resource. For multi pipe scenarios this becomes relevant
+    // since a resource can be shared across pipes but need to be addressed by
+    // the control plane as separate resources.
     cstring getFullyQualifiedName(const IR::Block *block, const cstring name) {
         cstring block_name = "";
         cstring control_plane_name = "";
+        cstring full_name = blockNamePrefixMap[block];
         if (auto cont = block->getContainer()) {
             block_name = cont->getName();
             control_plane_name = cont->controlPlaneName();
+            full_name = prefix(full_name, control_plane_name);
         }
-        auto full_name = blockNamePrefixMap[block] + "." + control_plane_name;
         if (!name.isNullOrEmpty())
-            full_name = full_name + "." + name;
+            full_name = prefix(full_name, name);
         LOG5("Block : " << block
                 << ", block_name: " << block_name
                 << ", block_name_prefix: " << blockNamePrefixMap[block]
@@ -719,7 +743,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             if (instance != boost::none) {
                 cstring tableName = *instance->name;
                 if (blockNamePrefixMap.count(tableBlock) > 0)
-                    tableName = blockNamePrefixMap[tableBlock] + "." + tableName;
+                    tableName = prefix(blockNamePrefixMap[tableBlock], tableName);
                 if (instance->type->name != "ActionProfile" &&
                     instance->type->name != "ActionSelector") {
                     ::error("Expected an action profile or action selector: %1%",
@@ -752,45 +776,43 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         // resources cannot be constructed in place for TNA.
         if (decl == nullptr) return;
 
-        // TODO: This requires additional fixes in frontend change to identify externBlock
-        // associated with table block to deduce the control plane name
-        // auto symName = getControlPlaneName(externBlock);
+        auto symName = getControlPlaneName(externBlock, decl);
         // Once front end is fixed, replace 'decl' with 'symName'
         // P4C-1445
         if (externBlock->type->name == "Counter") {
-            symbols->add(SymbolType::COUNTER(), decl);
+            symbols->add(SymbolType::COUNTER(), symName);
         } else if (externBlock->type->name == "DirectCounter") {
-            symbols->add(SymbolType::DIRECT_COUNTER(), decl);
+            symbols->add(SymbolType::DIRECT_COUNTER(), symName);
         } else if (externBlock->type->name == "Meter") {
-            symbols->add(SymbolType::METER(), decl);
+            symbols->add(SymbolType::METER(), symName);
         } else if (externBlock->type->name == "DirectMeter") {
-            symbols->add(SymbolType::DIRECT_METER(), decl);
+            symbols->add(SymbolType::DIRECT_METER(), symName);
         } else if (externBlock->type->name == "ActionProfile") {
-            symbols->add(SymbolType::ACTION_PROFILE(), decl);
+            symbols->add(SymbolType::ACTION_PROFILE(), symName);
         } else if (externBlock->type->name == "ActionSelector") {
             if (externBlock->findParameterValue("size")) {
-                std::string selectorName(decl->controlPlaneName() + "_sel");
+                std::string selectorName(symName + "_sel");
                 symbols->add(SymbolType::ACTION_SELECTOR(), selectorName);
-                symbols->add(SymbolType::ACTION_PROFILE(), decl->controlPlaneName());
+                symbols->add(SymbolType::ACTION_PROFILE(), symName);
             } else {
-                symbols->add(SymbolType::ACTION_SELECTOR(), decl);
+                symbols->add(SymbolType::ACTION_SELECTOR(), symName);
             }
         } else if (externBlock->type->name == "Digest") {
-            symbols->add(SymbolType::DIGEST(), decl);
+            symbols->add(SymbolType::DIGEST(), symName);
         } else if (externBlock->type->name == "Register") {
-            symbols->add(SymbolType::REGISTER(), decl);
+            symbols->add(SymbolType::REGISTER(), symName);
         } else if (externBlock->type->name == "DirectRegister") {
-            symbols->add(SymbolType::DIRECT_REGISTER(), decl);
+            symbols->add(SymbolType::DIRECT_REGISTER(), symName);
         } else if (externBlock->type->name == "Lpf") {
-            symbols->add(SymbolType::LPF(), decl);
+            symbols->add(SymbolType::LPF(), symName);
         } else if (externBlock->type->name == "DirectLpf") {
-            symbols->add(SymbolType::DIRECT_LPF(), decl);
+            symbols->add(SymbolType::DIRECT_LPF(), symName);
         } else if (externBlock->type->name == "Wred") {
-            symbols->add(SymbolType::WRED(), decl);
+            symbols->add(SymbolType::WRED(), symName);
         } else if (externBlock->type->name == "DirectWred") {
-            symbols->add(SymbolType::DIRECT_WRED(), decl);
+            symbols->add(SymbolType::DIRECT_WRED(), symName);
         } else if (externBlock->type->name == "Hash") {
-            symbols->add(SymbolType::HASH(), decl);
+            symbols->add(SymbolType::HASH(), symName);
         }
     }
 
@@ -967,15 +989,15 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                     auto userName = (decl == nullptr) ? "" : decl->controlPlaneName();
 
                     auto choice = parserChoices.add_choices();
-                    auto parser_full_name = parsersName + "." + parserName;
-                    parser_full_name = pipeName + "." + parser_full_name;
-                    choice->set_arch_name(parser_full_name);
+                    auto parserFullName = prefix(parsersName, parserName);
+                    parserFullName = prefix(pipeName, parserFullName);
+                    choice->set_arch_name(parserFullName);
                     choice->set_type_name(parserBlock->getName().name);
                     choice->set_user_name(userName);
                 }
-                auto parsers_full_name = pipeName + "." + parsersName;
-                symbols->add(SymbolType::PARSER_CHOICES(), parsers_full_name);
-                parserConfiguration.emplace(parsers_full_name, parserChoices);
+                auto parsersFullName = prefix(pipeName, parsersName);
+                symbols->add(SymbolType::PARSER_CHOICES(), parsersFullName);
+                parserConfiguration.emplace(parsersFullName, parserChoices);
             }
         });
     }
@@ -1089,7 +1111,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto supportsTimeout = getSupportsTimeout(tableDeclaration);
 
         if (actionProfile) {
-            auto id = actionProfile->getId(symbols);
+            auto id = actionProfile->getId(symbols, blockPrefix);
             table->set_implementation_id(id);
             if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
                 addActionProfile(symbols, p4info, *actionProfile, blockPrefix);
@@ -1097,14 +1119,14 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         }
 
         if (actionSelector) {
-            if (actionSelector->action_profile_name) {
-                auto id = actionSelector->getId(symbols);
+            if (actionSelector->actionProfileName) {
+                auto id = actionSelector->getId(symbols, blockPrefix);
                 table->set_implementation_id(id);
                 if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
                     addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
                 }
             } else {
-                auto id = actionSelector->getId(symbols);
+                auto id = actionSelector->getId(symbols, blockPrefix);
                 table->set_implementation_id(id);
                 if (isExternPropertyConstructedInPlace(tableDeclaration, "implementation")) {
                     addActionSelector(symbols, p4info, *actionSelector, blockPrefix);
@@ -1118,32 +1140,36 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         // convenient to get a handle on the parent table (the parent table's id
         // is included in the P4Info message).
         if (directCounter) {
-            auto id = symbols.getId(SymbolType::DIRECT_COUNTER(), directCounter->name);
+            auto id = symbols.getId(SymbolType::DIRECT_COUNTER(),
+                    prefix(blockPrefix, directCounter->name));
             table->add_direct_resource_ids(id);
             addCounter(symbols, p4info, *directCounter, blockPrefix);
         }
 
         if (directMeter) {
             auto id = symbols.getId(SymbolType::DIRECT_METER(),
-                                    directMeter->name);
+                    prefix(blockPrefix, directMeter->name));
             table->add_direct_resource_ids(id);
             addMeter(symbols, p4info, *directMeter, blockPrefix);
         }
 
         if (directRegister) {
-            auto id = symbols.getId(SymbolType::DIRECT_REGISTER(), directRegister->name);
+            auto id = symbols.getId(SymbolType::DIRECT_REGISTER(),
+                    prefix(blockPrefix, directRegister->name));
             table->add_direct_resource_ids(id);
-            addRegister(symbols, p4info, *directRegister);
+            addRegister(symbols, p4info, *directRegister, blockPrefix);
         }
 
         if (directLpf) {
-            auto id = symbols.getId(SymbolType::DIRECT_LPF(), directLpf->name);
+            auto id = symbols.getId(SymbolType::DIRECT_LPF(),
+                    prefix(blockPrefix, directLpf->name));
             table->add_direct_resource_ids(id);
             addLpf(symbols, p4info, *directLpf, blockPrefix);
         }
 
         if (directWred) {
-            auto id = symbols.getId(SymbolType::DIRECT_WRED(), directWred->name);
+            auto id = symbols.getId(SymbolType::DIRECT_WRED(),
+                    prefix(blockPrefix, directWred->name));
             table->add_direct_resource_ids(id);
             addWred(symbols, p4info, *directWred, blockPrefix);
         }
@@ -1236,9 +1262,6 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         using Helpers::CounterlikeTraits;
 
         auto p4RtTypeInfo = p4info->mutable_type_info();
-        // TBD: Fix externBlock in frontend to return control Plane Name
-        // auto externName = getControlPlaneName(externBlock);
-        auto externName = decl->controlPlaneName();
         auto pipeName = blockNamePrefixMap[externBlock];
         // Direct resources are handled by addTableProperties.
         if (externBlock->type->name == "ActionProfile") {
@@ -1254,20 +1277,20 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto meter = Counterlike<MeterExtern>::from(externBlock);
             if (meter) addMeter(symbols, p4info, *meter, pipeName);
         } else if (externBlock->type->name == "Digest") {
-            auto digest = getDigest(decl, p4RtTypeInfo, externName);
-            if (digest) addDigest(symbols, p4info, *digest);
+            auto digest = getDigest(decl, p4RtTypeInfo);
+            if (digest) addDigest(symbols, p4info, *digest, pipeName);
         } else if (externBlock->type->name == "Register") {
-            auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo, externName);
-            if (register_) addRegister(symbols, p4info, *register_);
+            auto register_ = Register::from(externBlock, refMap, typeMap, p4RtTypeInfo);
+            if (register_) addRegister(symbols, p4info, *register_, pipeName);
         } else if (externBlock->type->name == "Lpf") {
-            auto lpf = Lpf::from(externBlock, externName);
+            auto lpf = Lpf::from(externBlock);
             if (lpf) addLpf(symbols, p4info, *lpf, pipeName);
         } else if (externBlock->type->name == "Wred") {
-            auto wred = Wred::from(externBlock, externName);
+            auto wred = Wred::from(externBlock);
             if (wred) addWred(symbols, p4info, *wred, pipeName);
         } else if (externBlock->type->name == "Hash") {
-            auto dynHash = getDynHash(decl, p4RtTypeInfo, externName);
-            if (dynHash) addDynHash(symbols, p4info, *dynHash);
+            auto dynHash = getDynHash(decl, p4RtTypeInfo);
+            if (dynHash) addDynHash(symbols, p4info, *dynHash, pipeName);
         }
     }
 
@@ -1372,8 +1395,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     }
 
     boost::optional<Digest> getDigest(const IR::Declaration_Instance* decl,
-                                      p4configv1::P4TypeInfo* p4RtTypeInfo,
-                                      cstring externName) {
+                                      p4configv1::P4TypeInfo* p4RtTypeInfo) {
         std::vector<const P4::ExternMethod*> packCalls;
         // Check that the pack method is called exactly once on the digest
         // instance. The type of the data being packed used to be a type
@@ -1398,13 +1420,11 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         auto typeSpec = TypeSpecConverter::convert(refMap, typeMap, typeArg, p4RtTypeInfo);
         BUG_CHECK(typeSpec != nullptr,
                   "P4 type %1% could not be converted to P4Info P4DataTypeSpec");
-
-        return Digest{externName, typeSpec, decl->to<IR::IAnnotated>()};
+        return Digest{decl->controlPlaneName(), typeSpec, decl->to<IR::IAnnotated>()};
     }
 
     boost::optional<DynHash> getDynHash(const IR::Declaration_Instance* decl,
-                                      p4configv1::P4TypeInfo* p4RtTypeInfo,
-                                      cstring externName) {
+                                      p4configv1::P4TypeInfo* p4RtTypeInfo) {
         std::vector<const P4::ExternMethod*> hashCalls;
         // Get Hash Calls in the program for the declaration.
         forAllExternMethodCalls(decl, [&](const P4::ExternMethod* method) {
@@ -1437,7 +1457,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                     hashFieldNames.push_back(f->toString());
                 }
             }
-            return DynHash{externName, typeSpec,
+            return DynHash{decl->controlPlaneName(), typeSpec,
                 decl->to<IR::IAnnotated>(), hashFieldNames, hashWidth};
         }
         return boost::none;
@@ -1462,7 +1482,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     /// @return the action profile corresponding to @instance.
     static boost::optional<ActionProfile>
-    getActionProfile(const IR::ExternBlock* instance /*, cstring externName */) {
+    getActionProfile(const IR::ExternBlock* instance) {
         auto decl = instance->node->to<IR::IDeclaration>();
         auto size = instance->getParameterValue("size");
         BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
@@ -1494,46 +1514,46 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                                   size->to<IR::Constant>()->asInt(),
                                   getTableImplementationAnnotations(table, refMap)};
         }
-        auto max_group_size = instance->substitution.lookupByName("max_group_size")->expression;
-        auto num_groups = instance->substitution.lookupByName("num_groups")->expression;
+        auto maxGroupSize = instance->substitution.lookupByName("max_group_size")->expression;
+        auto numGroups = instance->substitution.lookupByName("num_groups")->expression;
         // size is a bit<32> compile-time value
-        BUG_CHECK(max_group_size->is<IR::Constant>(), "Non-constant max_group_size");
-        BUG_CHECK(num_groups->is<IR::Constant>(), "Non-constant num_groups");
+        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
+        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
         return ActionSelector{*instance->name,
                               *instance->name,
                               -1  /* size */,
-                              max_group_size->to<IR::Constant>()->asInt(),
-                              num_groups->to<IR::Constant>()->asInt(),
+                              maxGroupSize->to<IR::Constant>()->asInt(),
+                              numGroups->to<IR::Constant>()->asInt(),
                               getTableImplementationAnnotations(table, refMap)};
     }
 
     static boost::optional<ActionSelector>
     getActionSelector(const IR::ExternBlock* instance) {
-        auto action_sel_decl = instance->node->to<IR::IDeclaration>();
+        auto actionSelDecl = instance->node->to<IR::IDeclaration>();
         // to be deleted, used to support deprecated ActionSelector constructor.
         if (instance->findParameterValue("size")) {
             auto size = instance->getParameterValue("size");
             BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
-            return ActionSelector{action_sel_decl->controlPlaneName(),
+            return ActionSelector{actionSelDecl->controlPlaneName(),
                                   boost::none,
                                   size->to<IR::Constant>()->asInt(),
                                   defaultMaxGroupSize,
                                   size->to<IR::Constant>()->asInt(),
-                                  action_sel_decl->to<IR::IAnnotated>()};
+                                  actionSelDecl->to<IR::IAnnotated>()};
         }
-        auto max_group_size = instance->getParameterValue("max_group_size");
-        auto num_groups = instance->getParameterValue("num_groups");
-        BUG_CHECK(max_group_size->is<IR::Constant>(), "Non-constant max_group_size");
-        BUG_CHECK(num_groups->is<IR::Constant>(), "Non-constant num_groups");
+        auto maxGroupSize = instance->getParameterValue("max_group_size");
+        auto numGroups = instance->getParameterValue("num_groups");
+        BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
+        BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
         auto action_profile = instance->getParameterValue("action_profile");
         auto action_profile_decl =
             action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
-        return ActionSelector{action_sel_decl->controlPlaneName(),
+        return ActionSelector{actionSelDecl->controlPlaneName(),
             cstring::to_cstring(action_profile_decl->controlPlaneName()),
             -1  /* size */,
-            max_group_size->to<IR::Constant>()->asInt(),
-            num_groups->to<IR::Constant>()->asInt(),
-            action_sel_decl->to<IR::IAnnotated>()};
+            maxGroupSize->to<IR::Constant>()->asInt(),
+            numGroups->to<IR::Constant>()->asInt(),
+            actionSelDecl->to<IR::IAnnotated>()};
     }
 
     static p4configv1::Extern* getP4InfoExtern(P4RuntimeSymbolType typeId,
@@ -1566,26 +1586,30 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
     void addDigest(const P4RuntimeSymbolTableIface& symbols,
                    p4configv1::P4Info* p4Info,
-                   const Digest& digestInstance) {
+                   const Digest& digestInstance,
+                   cstring pipeName) {
         ::barefoot::Digest digest;
         digest.mutable_type_spec()->CopyFrom(*digestInstance.typeSpec);
+        auto digestName = prefix(pipeName, digestInstance.name);
         addP4InfoExternInstance(
             symbols, SymbolType::DIGEST(), "Digest",
-            digestInstance.name, digestInstance.annotations, digest,
+            digestName, digestInstance.annotations, digest,
             p4Info);
     }
 
     void addDynHash(const P4RuntimeSymbolTableIface& symbols,
                    p4configv1::P4Info* p4Info,
-                   const DynHash& dynHashInstance) {
+                   const DynHash& dynHashInstance,
+                   cstring pipeName) {
         ::barefoot::DynHash dynHash;
         dynHash.set_hash_width(dynHashInstance.hashWidth);
         dynHash.mutable_type_spec()->CopyFrom(*dynHashInstance.typeSpec);
+        auto dynHashName = prefix(pipeName, dynHashInstance.name);
         for (const auto& f : dynHashInstance.hashFieldNames) {
             dynHash.add_field_names(f);
         }
         addP4InfoExternInstance(
-            symbols, SymbolType::HASH(), "DynHash", dynHashInstance.name,
+            symbols, SymbolType::HASH(), "DynHash", dynHashName,
             dynHashInstance.annotations, dynHash, p4Info);
     }
 
@@ -1641,23 +1665,29 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             name, nullptr, parserChoices, p4Info);
     }
 
+    // For Registers, the table name should have the associated pipe prefix but
+    // the data field names should not since they have local scope.
     void addRegister(const P4RuntimeSymbolTableIface& symbols,
                      p4configv1::P4Info* p4Info,
-                     const Register& registerInstance) {
+                     const Register& registerInstance,
+                     cstring pipeName) {
+        auto registerName = prefix(pipeName, registerInstance.name);
         if (registerInstance.size == 0) {
             ::barefoot::DirectRegister register_;
             register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
+            register_.set_data_field_name(registerInstance.name);
             addP4InfoExternInstance(
                 symbols, SymbolType::DIRECT_REGISTER(), "DirectRegister",
-                registerInstance.name, registerInstance.annotations, register_,
+                registerName, registerInstance.annotations, register_,
                 p4Info);
         } else {
             ::barefoot::Register register_;
             register_.set_size(registerInstance.size);
             register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
+            register_.set_data_field_name(registerInstance.name);
             addP4InfoExternInstance(
                 symbols, SymbolType::REGISTER(), "Register",
-                registerInstance.name, registerInstance.annotations, register_,
+                registerName, registerInstance.annotations, register_,
                 p4Info);
         }
     }
@@ -1679,22 +1709,24 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         if (counterInstance.table) {
             ::barefoot::DirectCounter counter;
             setCounterCommon(&counter, counterInstance);
-            auto tableName = blockPrefix + "." + *counterInstance.table;
+            auto tableName = prefix(blockPrefix, *counterInstance.table);
+            auto counterName = prefix(blockPrefix, counterInstance.name);
             auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), tableName);
             counter.set_direct_table_id(tableId);
             addP4InfoExternInstance(
                 symbols, SymbolType::DIRECT_COUNTER(),
                 Helpers::CounterlikeTraits<CounterExtern>::directTypeName(),
-                counterInstance.name, counterInstance.annotations, counter,
+                counterName, counterInstance.annotations, counter,
                 p4Info);
         } else {
             ::barefoot::Counter counter;
             setCounterCommon(&counter, counterInstance);
             counter.set_size(counterInstance.size);
+            auto counterName = prefix(blockPrefix, counterInstance.name);
             addP4InfoExternInstance(
                 symbols, SymbolType::COUNTER(),
                 Helpers::CounterlikeTraits<CounterExtern>::typeName(),
-                counterInstance.name, counterInstance.annotations, counter,
+                counterName, counterInstance.annotations, counter,
                 p4Info);
         }
     }
@@ -1718,17 +1750,17 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                   p4configv1::P4Info* p4Info,
                   const Helpers::Counterlike<MeterExtern>& meterInstance,
                   const cstring blockPrefix) {
+        auto meterName = prefix(blockPrefix, meterInstance.name);
         if (meterInstance.table) {
             ::barefoot::DirectMeter meter;
             setMeterCommon(&meter, meterInstance);
-            auto tableName = blockPrefix + "." + *meterInstance.table;
+            auto tableName = prefix(blockPrefix, *meterInstance.table);
             auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), tableName);
             meter.set_direct_table_id(tableId);
             addP4InfoExternInstance(
                 symbols, SymbolType::DIRECT_METER(),
                 Helpers::CounterlikeTraits<MeterExtern>::directTypeName(),
-                meterInstance.name, meterInstance.annotations, meter,
-                p4Info);
+                meterName, meterInstance.annotations, meter, p4Info);
         } else {
             ::barefoot::Meter meter;
             setMeterCommon(&meter, meterInstance);
@@ -1736,30 +1768,30 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             addP4InfoExternInstance(
                 symbols, SymbolType::METER(),
                 Helpers::CounterlikeTraits<MeterExtern>::typeName(),
-                meterInstance.name, meterInstance.annotations, meter,
-                p4Info);
+                meterName, meterInstance.annotations, meter, p4Info);
         }
     }
 
     void addLpf(const P4RuntimeSymbolTableIface& symbols,
                 p4configv1::P4Info* p4Info,
                 const Lpf& lpfInstance,
-                const cstring blockPrefix) {
+                const cstring pipeName) {
+        auto lpfName = prefix(pipeName, lpfInstance.name);
         if (lpfInstance.table) {
             ::barefoot::DirectLpf lpf;
-            auto tableName = blockPrefix + "." + *lpfInstance.table;
+            auto tableName = prefix(pipeName, *lpfInstance.table);
             auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), tableName);
             lpf.set_direct_table_id(tableId);
             addP4InfoExternInstance(
                 symbols, SymbolType::DIRECT_LPF(), "DirectLpf",
-                lpfInstance.name, lpfInstance.annotations, lpf,
+                lpfName, lpfInstance.annotations, lpf,
                 p4Info);
         } else {
             ::barefoot::Lpf lpf;
             lpf.set_size(lpfInstance.size);
             addP4InfoExternInstance(
                 symbols, SymbolType::LPF(), "Lpf",
-                lpfInstance.name, lpfInstance.annotations, lpf,
+                lpfName, lpfInstance.annotations, lpf,
                 p4Info);
         }
     }
@@ -1776,16 +1808,17 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addWred(const P4RuntimeSymbolTableIface& symbols,
                  p4configv1::P4Info* p4Info,
                  const Wred& wredInstance,
-                 const cstring blockPrefix) {
+                 const cstring pipeName) {
+        auto wredName = prefix(pipeName, wredInstance.name);
         if (wredInstance.table) {
             ::barefoot::DirectWred wred;
             setWredCommon(&wred, wredInstance);
-            auto tableName = blockPrefix + "." + *wredInstance.table;
+            auto tableName = prefix(pipeName, *wredInstance.table);
             auto tableId = symbols.getId(P4RuntimeSymbolType::TABLE(), tableName);
             wred.set_direct_table_id(tableId);
             addP4InfoExternInstance(
                 symbols, SymbolType::DIRECT_WRED(), "DirectWred",
-                wredInstance.name, wredInstance.annotations, wred,
+                wredName, wredInstance.annotations, wred,
                 p4Info);
         } else {
             ::barefoot::Wred wred;
@@ -1793,7 +1826,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             wred.set_size(wredInstance.size);
             addP4InfoExternInstance(
                 symbols, SymbolType::WRED(), "Wred",
-                wredInstance.name, wredInstance.annotations, wred,
+                wredName, wredInstance.annotations, wred,
                 p4Info);
         }
     }
@@ -1801,20 +1834,21 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     void addActionProfile(const P4RuntimeSymbolTableIface& symbols,
                           p4configv1::P4Info* p4Info,
                           const ActionProfile& actionProfile,
-                          cstring blockPrefix) {
+                          cstring pipeName) {
         ::barefoot::ActionProfile profile;
         profile.set_size(actionProfile.size);
         auto tablesIt = actionProfilesRefs.find(actionProfile.name);
         if (tablesIt != actionProfilesRefs.end()) {
             for (const auto& table : tablesIt->second) {
                 cstring tableName = table;
-                if (!blockPrefix.isNullOrEmpty())
-                    tableName = blockPrefix + "." + tableName;
+                if (!pipeName.isNullOrEmpty())
+                    tableName = prefix(pipeName, tableName);
                 profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
             }
         }
+        auto actionProfileName = prefix(pipeName, actionProfile.name);
         addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
-                                actionProfile.name, actionProfile.annotations, profile,
+                                actionProfileName, actionProfile.annotations, profile,
                                 p4Info);
     }
 
@@ -1823,41 +1857,46 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                           const ActionSelector& actionSelector,
                           cstring blockPrefix) {
         ::barefoot::ActionSelector selector;
-        selector.set_max_group_size(actionSelector.max_group_size);
-        selector.set_num_groups(actionSelector.num_groups);
-        if (actionSelector.action_profile_name) {
+        selector.set_max_group_size(actionSelector.maxGroupSize);
+        selector.set_num_groups(actionSelector.numGroups);
+        cstring actionSelectorName = prefix(blockPrefix, actionSelector.name);
+        if (actionSelector.actionProfileName) {
             selector.set_action_profile_id(symbols.getId(
-                SymbolType::ACTION_PROFILE(), *actionSelector.action_profile_name));
+                SymbolType::ACTION_PROFILE(),
+                prefix(blockPrefix, *actionSelector.actionProfileName)));
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto& table : tablesIt->second) {
-                    cstring tableName = blockPrefix + "." + table;
+                    cstring tableName = prefix(blockPrefix, table);
                     selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
                 }
             }
             addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                    actionSelector.name, actionSelector.annotations, selector,
-                    p4Info);
-        } else {
+                    actionSelectorName, actionSelector.annotations,
+                    selector, p4Info);
+        } else {  // TODO(hanw): legacy support, remove when everything has moved to new API
             ::barefoot::ActionProfile profile;
             profile.set_size(actionSelector.size);
             auto tablesIt = actionProfilesRefs.find(actionSelector.name);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto& table : tablesIt->second) {
-                    cstring tableName = blockPrefix + "." + table;
+                    cstring tableName = prefix(blockPrefix, table);
                     profile.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
                     selector.add_table_ids(symbols.getId(P4RuntimeSymbolType::TABLE(), tableName));
                 }
             }
+            // We use the ActionSelector name for the action profile, and add a "_sel" suffix for
+            // the action selector.
+            cstring profileName = actionSelectorName;
             addP4InfoExternInstance(symbols, SymbolType::ACTION_PROFILE(), "ActionProfile",
-                    actionSelector.name, actionSelector.annotations, profile,
+                    profileName, actionSelector.annotations, profile,
                     p4Info);
             selector.set_action_profile_id(symbols.getId(
-                SymbolType::ACTION_PROFILE(), actionSelector.name));
-            std::string selectorName(actionSelector.name + "_sel");
+                SymbolType::ACTION_PROFILE(), profileName));
+            cstring selectorName = profileName + "_sel";
             addP4InfoExternInstance(symbols, SymbolType::ACTION_SELECTOR(), "ActionSelector",
-                    selectorName, actionSelector.annotations, selector,
-                    p4Info);
+                    selectorName, actionSelector.annotations,
+                    selector, p4Info);
         }
     }
 

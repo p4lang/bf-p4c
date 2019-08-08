@@ -375,8 +375,8 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
     bool isLoopState = false;
     IR::BFN::ParserState* startState = getState(getStateName("start"), isLoopState);
 
-    cstring pipeName = parser->pipeName;
     BlockInfoMapping* binfo = &arch->toBlockInfo;
+    cstring multiParserName = "";
     if (binfo) {
         auto bitr = binfo->begin();
         while (bitr != binfo->end()) {
@@ -384,9 +384,8 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
             auto bparser = b.first->to<IR::P4Parser>();
             if (bparser && (bparser->name.originalName == parser->name) &&
                 (b.second.gress == parser->thread)) {
-                pipeName = b.second.pipe;
                 if (!b.second.arch.isNullOrEmpty())
-                    pipeName += "." + b.second.arch;
+                    multiParserName = b.second.arch;
                 binfo->erase(bitr);
                 break;
             }
@@ -399,14 +398,14 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
         phase0 = parser->phase0->clone();
         // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
         // which is not used in phase0 table name in backend
-        // For multi parsers arch, the fully qualified name prefix is determined
-        // in the pipe name
         if ((BackendOptions().arch != "v1model") && (!arch->hasMultipleParsers))
             phase0->tableName = parser->name + "." + phase0->tableName;
-        phase0->tableName = gen_p4_name(pipeName, phase0->tableName);
+        // For multi parsers arch, the fully qualified name prefix is determined
+        // in the multi parser name generated through block info mapping
+        else if (arch->hasMultipleParsers)
+            phase0->tableName = multiParserName + "." + phase0->tableName;
     }
-    return new IR::BFN::Parser(parser->thread, startState, parser->name,
-            pipeName, phase0, parser->portmap);
+    return new IR::BFN::Parser(parser->thread, startState, parser->name, phase0, parser->portmap);
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,

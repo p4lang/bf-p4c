@@ -837,6 +837,7 @@ struct BfRtSchemaGenerator::Digest {
 
 struct BfRtSchemaGenerator::Register {
     std::string name;
+    std::string dataFieldName;
     P4Id id;
     int64_t size;
     p4configv1::P4DataTypeSpec typeSpec;
@@ -849,8 +850,8 @@ struct BfRtSchemaGenerator::Register {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
             return boost::none;
         }
-        return Register{pre.name(), pre.id(), register_.size(), register_.type_spec(),
-                        transformAnnotations(pre)};
+        return Register{pre.name(), register_.data_field_name(), pre.id(),
+                register_.size(), register_.type_spec(), transformAnnotations(pre)};
     }
 
     static boost::optional<Register> fromTofinoDirect(
@@ -861,7 +862,8 @@ struct BfRtSchemaGenerator::Register {
             ::error("Extern instance %1% does not pack a Register object", pre.name());
             return boost::none;
         }
-        return Register{pre.name(), pre.id(), 0, register_.type_spec(), transformAnnotations(pre)};
+        return Register{pre.name(), register_.data_field_name(), pre.id(), 0,
+                register_.type_spec(), transformAnnotations(pre)};
     }
 };
 
@@ -1312,7 +1314,7 @@ BfRtSchemaGenerator::addRegisterDataFields(Util::JsonArray* dataJson,
     auto* fieldsJson = new Util::JsonArray();
     transformTypeSpecToDataFields(
         fieldsJson, register_.typeSpec, "Register", register_.name,
-        nullptr, register_.name + ".", "", idOffset);
+        nullptr, register_.dataFieldName + ".", "", idOffset);
     for (auto* f : *fieldsJson) {
         auto* fObj = f->to<Util::JsonObject>();
         CHECK_NULL(fObj);

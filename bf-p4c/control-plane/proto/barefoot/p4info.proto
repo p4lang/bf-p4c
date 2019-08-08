@@ -125,10 +125,12 @@ message DirectLpf {
 message Register {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
   int64 size = 2;
+  string data_field_name = 3;
 }
 
 message DirectRegister {
   p4.config.v1.P4DataTypeSpec type_spec = 1;
+  string data_field_name = 2;
 }
 
 

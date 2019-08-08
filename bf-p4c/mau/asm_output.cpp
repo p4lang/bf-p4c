@@ -2558,8 +2558,6 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
-    auto pipeName = pipe->name.toString();
-    p4Name = gen_p4_name(pipeName, p4Name);
     out << indent << "p4: { name: " << p4Name;
     if (auto k = tbl->match_table->getConstantProperty("size"))
         out << ", size: " << k->asInt();

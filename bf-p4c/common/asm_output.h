@@ -104,12 +104,6 @@ class Slice {
     }
 };
 
-// Generate the p4 name which gets eventually output in the context.json. In
-// multipipe scenarios (P4-16) we want the table names to be fully qualified
-// i.e. prefixed with pipe names. This is required to match the names generated
-// in bf-rt.json for bf runtime.
-cstring gen_p4_name(const cstring pipe, const cstring name);
-
 /* The rest of this is pretty generic formatting stuff -- should be in lib somewhere? */
 
 template<class K, class V> std::ostream &operator<<(std::ostream &out, const std::map<K, V> &m) {

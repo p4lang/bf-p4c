@@ -1242,7 +1242,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The following operation is not yet supported"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  extensions/p4_tests/p4-programs/programs/get_hash/get_hash.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/get_hash/get_hash.p4
 )
 
 # checksum only support bit<16> output
@@ -1409,7 +1409,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Found .* duplicate name.* in the P4Info"
   extensions/p4_tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4
-  extensions/p4_tests/p4_16/compile_only/simple_32q.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
   extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
   testdata/p4_16_samples/psa-counter6.p4
