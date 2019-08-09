@@ -13,7 +13,7 @@
 
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
                                TableSummary &summary)
-    : Logging::PassManager("table_placement_"), siaa(mutex) {
+    : Logging::PassManager("table_placement_"), siaa(mutex, ignore) {
         addPasses({
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
             new TableLayout(phv, lc),
@@ -26,6 +26,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new TableFindSeqDependencies(phv),
             new CheckTableNameDuplicate,
             new FindDependencyGraph(phv, deps, "", "Before Table Placement"),
+            &ignore,
             &mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),

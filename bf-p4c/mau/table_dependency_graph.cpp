@@ -226,14 +226,12 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
 class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDataDependencyGraph                 &self;
     const IR::MAU::Table                *table;
-    const ordered_set<cstring>&         ignoreDep;
     std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
     AddDependencies(FindDataDependencyGraph &self,
-                    const IR::MAU::Table *t,
-                    ordered_set<cstring>& t1) :
-        self(self), table(t), ignoreDep(t1) { }
+                    const IR::MAU::Table *t) :
+        self(self), table(t) { }
 
  private:
     profile_t init_apply(const IR::Node* root) override {
@@ -245,8 +243,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                  DependencyGraph::dependencies_t dep, const PHV::Field *field) {
         for (auto upstream_t_pair : tables) {
             auto upstream_t = upstream_t_pair.first;
-            if (upstream_t->match_table
-                && ignoreDep.count(upstream_t->match_table->externalName())) {
+            if (self.ignore.ignore_deps(table, upstream_t)) {
                 LOG4("\tIgnoring dependency from " << upstream_t->name << " to " << table->name);
                 continue;
             }
@@ -262,8 +259,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
     void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables, bitvec range,
             PHV::Container container) {
         for (auto upstream_t : tables) {
-            if (upstream_t.first->match_table &&
-                    ignoreDep.count(upstream_t.first->match_table->externalName())) {
+            if (self.ignore.ignore_deps(table, upstream_t.first)) {
                 WARN_CHECK(upstream_t.second == range, BFN::ErrorType::WARN_PRAGMA_USE,
                            "Table %1%: pragma ignore_table_dependency "
                            "of %2% is also ignoring PHV added action dependencies over container "
@@ -486,21 +482,6 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
 bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     LOG5("\tFindDep table " << t->name);
 
-    // Gather up the names of tables with which dependencies must be ignored, as defined by
-    // @pragma ignore_table_dependency
-    // Note that multiple ignore_table_dependency pragmas may be inserted for a given table and
-    // therefore, we cannot use the get_single() accessor for annotations
-    std::vector<IR::ID> annotation;
-    ordered_set<cstring> ignore_tables;
-    t->getAnnotation("ignore_table_dependency", annotation);
-    for (auto name : annotation) {
-        // Due to P4_14 global name space, a dot is added to the initial table name
-        ignore_tables.insert(name);
-        ignore_tables.insert("." + name); }
-
-    // TODO: add a pass in the beginning of the back end that checks for
-    // duplicate table instances and, if found, aborts compilation.
-    //     error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
 
     // Add this table as a vertex in the dependency graph if it's not
     // already there.
@@ -508,13 +489,13 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
 
     // Add data dependences induced by gateways, matches, and actions.
     for (auto &gw : t->gateway_rows)
-        gw.first->apply(AddDependencies(*this, t, ignore_tables));
+        gw.first->apply(AddDependencies(*this, t));
     for (auto ixbar_read : t->match_key)
-        ixbar_read->apply(AddDependencies(*this, t, ignore_tables));
+        ixbar_read->apply(AddDependencies(*this, t));
     for (auto &action : Values(t->actions))
-        action->apply(AddDependencies(*this, t, ignore_tables));
+        action->apply(AddDependencies(*this, t));
     for (auto &at : t->attached)
-        at->apply(AddDependencies(*this, t, ignore_tables));
+        at->apply(AddDependencies(*this, t));
 
     // Mark fields read/written by this table in accesses.
     // FIXME: Should have a separate gateway row IR to visit rather than other information
@@ -1153,6 +1134,7 @@ bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
 }
 
 
+
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
                                          cstring dotFileName,
@@ -1164,9 +1146,10 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         &mutex,
         &ntp,
         &con_paths,
+        &ignore,
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
-        new FindDataDependencyGraph(phv, dg, red_info, mutex),
+        new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
         new PrintPipe
     });
 }

@@ -13,6 +13,7 @@ class TableSummary;
 class TableAllocPass : public Logging::PassManager {
  private:
     TablesMutuallyExclusive mutex;
+    IgnoreTableDeps ignore;
     SharedIndirectAttachedAnalysis siaa;
     LayoutChoices           lc;
 

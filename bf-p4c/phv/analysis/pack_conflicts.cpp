@@ -2,7 +2,7 @@
 #include "lib/log.h"
 
 Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
-    profile_t rv = Inspector::init_apply(root);
+    profile_t rv = PassManager::init_apply(root);
     totalNumSet = 0;
     // Initialize the fieldNoPack matrix to allow all fields to be packed together
     for (auto& f1 : phv) {
@@ -23,26 +23,26 @@ Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     return rv;
 }
 
-bool PackConflicts::preorder(const IR::MAU::Action *act) {
+bool PackConflicts::GatherWrites::preorder(const IR::MAU::Action *act) {
     auto* tbl = findContext<IR::MAU::Table>();
     // Create a mapping of tables to all the actions it may invoke
-    tableActions[tbl].insert(act);
+    self.tableActions[tbl].insert(act);
 
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(self.phv, false, false, tbl);
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);
 
     // Collect all the PHV fields written to by this action into the actionWrites map
     for (auto& field_action : Values(field_actions_map)) {
-        auto* write = phv.field(field_action.write.expr);
+        auto* write = self.phv.field(field_action.write.expr);
         if (write == nullptr)
             BUG("Action does not have a write?");
-        actionWrites[act].insert(write); }
+        self.actionWrites[act].insert(write); }
     return true;
 }
 
-bool PackConflicts::preorder(const IR::BFN::Digest* digest) {
+bool PackConflicts::GatherWrites::preorder(const IR::BFN::Digest* digest) {
     // The no-pack constraint on metadata fields used in learning digests is not applicable to JBay.
     if (Device::currentDevice() != Device::TOFINO) return true;
     // Currently we support only three digests: learning, mirror, and resubmit.
@@ -54,13 +54,13 @@ bool PackConflicts::preorder(const IR::BFN::Digest* digest) {
     // For fields that are not part of the same digest field lists, set the no-pack constraint.
     for (auto fieldList : digest->fieldLists) {
         for (auto flval1 : fieldList->sources) {
-            const auto* f1 = phv.field(flval1->field);
+            const auto* f1 = self.phv.field(flval1->field);
             // Apply the constraint only to metadata fields.
             if (!f1->metadata && !f1->bridged) continue;
             allDigestFields.insert(f1);
             for (auto flval2 : fieldList->sources) {
                 if (flval1 == flval2) continue;
-                const auto* f2 = phv.field(flval2->field);
+                const auto* f2 = self.phv.field(flval2->field);
                 // Apply the constraint only to metadata fields.
                 if (!f2->metadata && !f2->bridged) continue;
                 // Fields within the same digest field list. So, packing them together is okay.
@@ -68,13 +68,13 @@ bool PackConflicts::preorder(const IR::BFN::Digest* digest) {
 
     // Set no pack for fields not marked digest pack okay.
     for (const auto* digestField : allDigestFields) {
-        for (const auto& f : phv) {
+        for (const auto& f : self.phv) {
             if (digestField == &f) continue;
             if (digestPackOkay(digestField->id, f.id)) continue;
             if (f.padding || f.isCompilerGeneratedPaddingField()) continue;
             LOG3("\t  Setting no-pack for digest field " << digestField->name << " and "
                  "non-digest field " << f.name);
-            fieldNoPack(digestField->id, f.id) = true; } }
+            self.fieldNoPack(digestField->id, f.id) = true; } }
 
     return true;
 }
@@ -101,6 +101,13 @@ void PackConflicts::end_apply() {
             }
         }
     }
+
+    for (auto tbl_pair : ignore.pairwise_deps_to_ignore()) {
+        LOG1("\tGenerate no pack conditions for table " << tbl_pair.first->name << " and table " <<
+              tbl_pair.second->name << " due to ignore_table_dependency constraints");
+        generateNoPackConstraints(tbl_pair.first, tbl_pair.second);
+    }
+
     LOG3("Total packing conditions: " << totalNumSet);
     updateNumPackConstraints();
     if (LOGGING(5))

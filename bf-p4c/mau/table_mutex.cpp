@@ -1,5 +1,72 @@
 #include "bf-p4c/mau/table_mutex.h"
 
+bool IgnoreTableDeps::ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+    auto t1_pos = ignore_dep_map.find(t1);
+    if (t1_pos != ignore_dep_map.end()) {
+        if (t1_pos->second.count(t2))
+            return true;
+    }
+
+    auto t2_pos = ignore_dep_map.find(t2);
+    if (t2_pos != ignore_dep_map.end()) {
+        if (t2_pos->second.count(t1))
+            return true;
+    }
+    return false;
+}
+
+bool IgnoreTableDeps::preorder(const IR::MAU::Table *tbl) {
+    internal_name_to_table[tbl->name] = tbl;
+    external_name_to_table[tbl->externalName()] = tbl;
+
+    std::vector<IR::ID> annotation;
+    tbl->getAnnotation("ignore_table_dependency", annotation);
+    for (auto name : annotation) {
+        // Due to P4_14 global name space, a dot is added to the initial table name
+        table_to_pragmas[tbl].insert(name);
+    }
+    return true;
+}
+
+
+void IgnoreTableDeps::end_apply() {
+    for (auto entry : table_to_pragmas) {
+        const IR::MAU::Table *tbl = entry.first;
+        for (auto pragma_val : entry.second) {
+            const IR::MAU::Table *ign_tbl = nullptr;
+            if (internal_name_to_table.count(pragma_val)) {
+                ign_tbl = internal_name_to_table.at(pragma_val);
+            } else if (external_name_to_table.count(pragma_val)) {
+                // FIXME: For p4-16, honoring the dependency actually forces one of the
+                // tables to fit, due to table_seqdeps not understanding the dependency
+                // is gone corresponding to bad chain lengths.  Fix this after 9.0
+                ign_tbl = external_name_to_table.at(pragma_val);
+            } else if (external_name_to_table.count("." + pragma_val)) {
+                ign_tbl = external_name_to_table.at("." + pragma_val);
+            } else {
+                ::warning(BFN::ErrorType::WARN_PRAGMA_USE, "%1%: The ignore_table_dependency "
+                   "value %2% on table %3% does not have a corresponding backend match",
+                   tbl->srcInfo, pragma_val, tbl->externalName());
+                continue;
+            }
+            ignore_dep_map[tbl].insert(ign_tbl);
+            ignore_dep_map[ign_tbl].insert(tbl);
+        }
+    }
+}
+
+safe_vector<IgnoreTableDeps::TablePair> IgnoreTableDeps::pairwise_deps_to_ignore() const {
+    safe_vector<TablePair> rv;
+    for (auto entry : ignore_dep_map) {
+        auto first_tbl = entry.first;
+        for (auto second_tbl : entry.second) {
+            rv.emplace_back(std::make_pair(first_tbl, second_tbl));
+        }
+    }
+    return rv;
+}
+
+
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // FIXME: Doesn't take into account gateways and match tables merging after table placement
     BUG_CHECK(table_ids.count(tbl), "Table found in postorder not visited in preorder?");
@@ -26,26 +93,6 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
             auto common = set1 & set2;
             for (auto t : set1 - common) {
                 mutex[t] |= set2 - common;
-            }
-        }
-    }
-
-    std::vector<IR::ID> pragmas;
-    if (tbl->getAnnotation("ignore_table_dependency", pragmas)) {
-        for (auto pragma : pragmas) {
-            // P4_14 prefixes table names with "." for global scope
-            if (!name_to_tables.count(pragma))
-                pragma.name = "." + pragma.name;
-            // P4_16 names are fully qualified -- if the pragma is unqualified, look in the
-            // same scope as the current table
-            if (!name_to_tables.count(pragma)) {
-                auto tblname = tbl->externalName();
-                if (auto suffix = tblname.findlast('.'))
-                    pragma.name = tblname.before(suffix) + pragma.name; }
-            if (name_to_tables.count(pragma)) {
-                mutex(table_ids.at(tbl), table_ids.at(name_to_tables.at(pragma))) = true;
-            } else {
-                warning(ErrorType::WARN_UNKNOWN, "Can't find table %1%", pragma);
             }
         }
     }
@@ -104,14 +151,14 @@ void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
 }
 
 bool TablesMutuallyExclusive::operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-    BUG_CHECK(table_ids.count(a), "No table info for %1%", a);
-    BUG_CHECK(table_ids.count(b), "No table info for %1%", b);
+    BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
+    BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return mutex(table_ids.at(a), table_ids.at(b));
 }
 
 bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-    BUG_CHECK(table_ids.count(a), "No table info for %1%", a);
-    BUG_CHECK(table_ids.count(b), "No table info for %1%", b);
+    BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
+    BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return action_mutex(table_ids.at(a), table_ids.at(b));
 }
 
@@ -125,12 +172,28 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
         return false;
     auto *tbl = findContext<IR::MAU::Table>();
     for (auto *check_tbl : backend_users[am]) {
-        if (!mutex(tbl, check_tbl) && !mutex.action(tbl, check_tbl)) {
-            error("%s and %s are not mutually exclusive, yet share %s", tbl, check_tbl, am);
+        if (mutex(tbl, check_tbl))
+            continue;
+        if (mutex.action(tbl, check_tbl))
+            continue;
+        if (ignore.ignore_deps(tbl, check_tbl)) {
+            bitvec check_tbl_bv;
+            check_tbl_bv.setbit(table_ids.at(check_tbl));
+            _mutex_through_ignore[table_ids.at(tbl)] |= check_tbl_bv;
+            continue;
         }
+        ::error("table %1% and table %2% are not mutually exclusive, yet share %3%",
+                tbl->externalName(), check_tbl->externalName(), am);
     }
     backend_users[am].push_back(tbl);
     return false;
+}
+
+bool SharedIndirectAttachedAnalysis
+        ::mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+    BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
+    BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
+    return _mutex_through_ignore(table_ids.at(a), table_ids.at(b));
 }
 
 void SharedIndirectAttachedAnalysis::end_apply() {

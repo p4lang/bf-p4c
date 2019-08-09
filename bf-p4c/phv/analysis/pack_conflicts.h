@@ -13,10 +13,11 @@
   * the constraint that two or more tables in the same stage must not invoke an action that writes
   * the same PHV container.
  */
-class PackConflicts : public Inspector {
+class PackConflicts : public PassManager {
  private:
     const PhvInfo                   &phv;
     // const DependencyGraph           &dg;
+    IgnoreTableDeps                 ignore;
     const TablesMutuallyExclusive   &mutex;
     const MauBacktracker            &bt;
     const ActionMutuallyExclusive   &amutex;
@@ -36,12 +37,17 @@ class PackConflicts : public Inspector {
 
     profile_t init_apply(const IR::Node *root) override;
 
-    /// Populate the tableActions and actionWrites maps
-    bool preorder(const IR::MAU::Action *act) override;
+    class GatherWrites : public Inspector {
+        PackConflicts &self;
+        /// Populate the tableActions and actionWrites maps
+        bool preorder(const IR::MAU::Action *act) override;
 
-    /// Populate noPack constraints related to learning digests.
-    bool preorder(const IR::BFN::Digest* digest) override;
+        /// Populate noPack constraints related to learning digests.
+        bool preorder(const IR::BFN::Digest* digest) override;
 
+     public:
+        explicit GatherWrites(PackConflicts &s) : self(s) {}
+    };
     /// Once the initial information is gathered, generate actual no pack constraints
     void end_apply() override;
 
@@ -59,7 +65,12 @@ class PackConflicts : public Inspector {
  public:
     PackConflicts(const PhvInfo &p, const DependencyGraph &, const TablesMutuallyExclusive &m,
             const MauBacktracker &b, const ActionMutuallyExclusive &a) :
-        phv(p), /* dg(d), */ mutex(m), bt(b), amutex(a) {}
+        phv(p), /* dg(d), */ mutex(m), bt(b), amutex(a) {
+        addPasses({
+            new GatherWrites(*this),
+            &ignore
+        });
+    }
 
     bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
 

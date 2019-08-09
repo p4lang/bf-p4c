@@ -6,6 +6,35 @@
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
 
+class IgnoreTableDeps : public MauInspector {
+    using TablePair = std::pair<const IR::MAU::Table *, const IR::MAU::Table *>;
+
+
+    ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> ignore_dep_map;
+
+    std::map<cstring, const IR::MAU::Table *> internal_name_to_table;
+    std::map<cstring, const IR::MAU::Table *> external_name_to_table;
+    ordered_map<const IR::MAU::Table *, std::set<cstring>> table_to_pragmas;
+
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        ignore_dep_map.clear();
+        internal_name_to_table.clear();
+        external_name_to_table.clear();
+        table_to_pragmas.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *) override;
+    void end_apply() override;
+
+
+ public:
+    IgnoreTableDeps() {}
+    bool ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const;
+    safe_vector<TablePair> pairwise_deps_to_ignore() const;
+};
+
 /** In order for tables to be considered mutually exclusive, the following premise can be
  *  considered as two tables that will never run on the same packet.  This will only
  *  happen if two tables are in separate TableSeqs that can never be accessed together,
@@ -39,6 +68,7 @@
 
 class TablesMutuallyExclusive : public MauInspector {
     std::map<const IR::MAU::Table *, int>    table_ids;
+    std::map<int, const IR::MAU::Table *>    rev_table_ids;
     std::map<const IR::MAU::Table *, bitvec> table_succ;
     SymBitMatrix                        mutex;
     SymBitMatrix                        action_mutex;
@@ -48,12 +78,14 @@ class TablesMutuallyExclusive : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         table_ids.clear();
+        rev_table_ids.clear();
         table_succ.clear();
         mutex.clear();
         action_mutex.clear();
         name_to_tables.clear();
         forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
             assert(!table_ids.count(t));
+            rev_table_ids.emplace(table_ids.size(), t);
             table_ids.emplace(t, table_ids.size());
             name_to_tables.emplace(t->externalName(), t); });
         return rv; }
@@ -72,16 +104,32 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     ordered_map<const IR::MAU::Table *,
                 ordered_set<const IR::MAU::Table *>> act_data_shared_tables;
     const TablesMutuallyExclusive &mutex;
+    const IgnoreTableDeps &ignore;
+
+    std::map<const IR::MAU::Table *, int>    table_ids;
+    std::map<int, const IR::MAU::Table *>    rev_table_ids;
+    SymBitMatrix _mutex_through_ignore;
 
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         backend_users.clear();
         act_data_shared_tables.clear();
+
+        table_ids.clear();
+        rev_table_ids.clear();
+        _mutex_through_ignore.clear();
+        forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
+            assert(!table_ids.count(t));
+            rev_table_ids.emplace(table_ids.size(), t);
+            table_ids.emplace(t, table_ids.size()); });
         return rv;
     }
+
     bool preorder(const IR::MAU::AttachedMemory *ba) override;
     bool preorder(const IR::MAU::Action *) override;
+
     void end_apply() override;
+
 
  public:
     safe_vector<const IR::MAU::Table *>
@@ -100,6 +148,9 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
             return empty;
         }
     }
-    explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
+
+    bool mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m,
+         const IgnoreTableDeps &i) : mutex(m), ignore(i) {}
 };
 #endif /* BF_P4C_MAU_TABLE_MUTEX_H_ */

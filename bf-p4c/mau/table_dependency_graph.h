@@ -457,6 +457,7 @@ struct DependencyGraph {
     static void dump_viz(std::ostream &out, const DependencyGraph &dg);
 };
 
+
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
@@ -474,6 +475,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     DependencyGraph&                                      dg;
     const ReductionOrInfo&                                red_info;
     const TablesMutuallyExclusive&                        mutex;
+    const IgnoreTableDeps&                                ignore;
     std::map<cstring, access_t>                           access;
     std::map<cstring, cstring>                            red_or_use;
     std::map<PHV::Container, cont_write_t>                cont_write;
@@ -510,8 +512,8 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
  public:
     FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out, const ReductionOrInfo &ri,
-        const TablesMutuallyExclusive &m)
-    : phv(phv), dg(out), red_info(ri), mutex(m) {
+        const TablesMutuallyExclusive &m, const IgnoreTableDeps &ig)
+    : phv(phv), dg(out), red_info(ri), mutex(m), ignore(ig) {
         joinFlows = true;
     }
 };
@@ -573,6 +575,7 @@ class PrintPipe : public MauInspector {
     PrintPipe() { }
 };
 
+
 class FindDependencyGraph : public Logging::PassManager {
     bool _add_logical_deps = true;
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
@@ -591,6 +594,7 @@ class FindDependencyGraph : public Logging::PassManager {
     ReductionOrInfo red_info;
     ControlPathwaysToTable con_paths;
     CalculateNextTableProp ntp;
+    IgnoreTableDeps ignore;
     cstring dotFile;
     cstring passContext;
 

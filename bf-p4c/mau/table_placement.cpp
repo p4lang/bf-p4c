@@ -1451,7 +1451,7 @@ bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
     for (auto pp : partly_placed) {
         if (pp == tbl || placed->is_match_placed(tbl))
             continue;
-        if (!mutex(pp, tbl)) {
+        if (!mutex(pp, tbl) && !siaa.mutex_through_ignore(pp, tbl)) {
             LOG3("  - skipping " << tbl->name << " as it is not mutually "
                  "exclusive with partly placed " << pp->name);
             return false;
