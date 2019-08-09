@@ -147,7 +147,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     for (auto& slice2 : allocations[slice.container])
                         if (slice2.container_bits().overlaps(slice.container_bits()) &&
                                 !slice2.isLiveRangeDisjoint(slice) &&
-                                !phv.isFieldMutex(slice.field, slice2.field))
+                                !phv.isFieldMutex(slice.field, slice2.field) &&
+                                !phv.isMetadataMutex(slice.field, slice2.field))
                             foundOverlappingSlices = true;
                 ERROR_CHECK(!foundOverlappingSlices,
                             "Multiple slices in the same container %2% are allocated "
