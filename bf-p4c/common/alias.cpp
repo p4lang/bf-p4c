@@ -1,6 +1,7 @@
 #include <sstream>
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 Visitor::profile_t FindExpressionsForFields::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
@@ -134,4 +135,51 @@ IR::Node* AddValidityBitSets::postorder(IR::MAU::Action* action) {
         action->action.push_back(prim);
     }
     return action;
+}
+
+const IR::Annotation* ReplicatePragmas::getRelevantAnnotation(const IR::Annotation* anno) const {
+    // Ignore pa_alias and pa_no_init pragmas. Just because the programmer wants to reduce the live
+    // range for the alias source does not mean the same applies to alias destination.
+    if (anno->name.name == "pa_alias" || anno->name.name == "pa_no_init")
+        return nullptr;
+    auto& exprs = anno->expr;
+    auto gress = exprs[0]->to<IR::StringLiteral>();
+    if (!gress) return nullptr;
+    if (!PHV::Pragmas::gressValid("pa_pragmas", gress->value, true)) return nullptr;
+    auto& aliasMap = pragmaAlias.getAliasMap();
+    auto* newAnnotation = anno->clone();
+    bool returnNewAnnotation = false;
+    for (unsigned i = 1; i < exprs.size(); i++) {
+        auto field_ir = exprs[i]->to<IR::StringLiteral>();
+        if (!field_ir) continue;
+        auto field_name = gress->value + "::" + field_ir->value;
+        auto field = phv_i.field(field_name);
+        if (!field) continue;
+        if (!aliasMap.count(field->name)) continue;
+        auto newFieldName = aliasMap.at(field->name).field;
+        auto* postGressString = newFieldName.find("::");
+        cstring postGressName(postGressString + 2);
+        const IR::StringLiteral* replacementFieldName = new IR::StringLiteral(postGressName);
+        newAnnotation->expr[i] = replacementFieldName;
+        returnNewAnnotation = true;
+    }
+    if (returnNewAnnotation)
+        return newAnnotation;
+    else
+        return nullptr;
+}
+
+bool ReplicatePragmas::preorder(IR::BFN::Pipe* pipe) {
+    if (pragmaAlias.getAliasMap().size() == 0) return true;
+    auto global_pragmas = pipe->global_pragmas;
+    std::vector<const IR::Annotation*> aliasRelatedAnnotations;
+    for (const auto* annotation : global_pragmas) {
+        const auto* newAnnotation = getRelevantAnnotation(annotation);
+        if (newAnnotation == nullptr) continue;
+        aliasRelatedAnnotations.push_back(newAnnotation);
+        LOG1("\t  New annotation required: " << newAnnotation);
+    }
+    for (const auto* annotation : aliasRelatedAnnotations)
+        pipe->global_pragmas.push_back(annotation);
+    return true;
 }
