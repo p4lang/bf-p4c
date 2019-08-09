@@ -163,13 +163,17 @@ class Extract : ParserPrimitive {
     Extract(Util::SourceInfo si, Expression dest, ParserRVal source)
       : ParserPrimitive(si), dest(new FieldLVal(dest)), source(source) { }
 
-    dbprint { out << "extract " << source << " to " << dest; }
+    dbprint {
+        out << "extract " << source << " to " << dest;
+    }
 
     /// The location to be written to.
     ParserLVal dest;
 
     /// The location that will be read from.
     ParserRVal source;
+
+    ParserWriteMode write_mode = ParserWriteMode::SINGLE_WRITE;
 
     /// This extract expects that data on the wire is marshaled from a `field`.
     optional boost::optional<MarshaledFrom> marshaled_from;  // not visited

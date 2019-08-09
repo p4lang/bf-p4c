@@ -82,22 +82,30 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "start: " << canon_name(parser->start->name)
                 << std::endl;
 
-        if (Device::currentDevice() == Device::TOFINO) {
-            if (!parser->initZeroContainers.empty()) {
-                out << indent << "init_zero: ";
-                const char *sep = "[ ";
-                for (auto container : parser->initZeroContainers) {
-                    out << sep << container;
-                    sep = ", ";
-                }
-                out << " ]" << std::endl;
+        if (!parser->initZeroContainers.empty()) {
+            out << indent << "init_zero: ";
+            const char *sep = "[ ";
+            for (auto container : parser->initZeroContainers) {
+                out << sep << container;
+                sep = ", ";
             }
+            out << " ]" << std::endl;
         }
 
-        if (!parser->multiwriteContainers.empty()) {
-            out << indent << "multi_write: ";
+        if (!parser->bitwiseOrContainers.empty()) {
+            out << indent << "bitwise_or: ";
             const char *sep = "[ ";
-            for (auto container : parser->multiwriteContainers) {
+            for (auto container : parser->bitwiseOrContainers) {
+                out << sep << container;
+                sep = ", ";
+            }
+            out << " ]" << std::endl;
+        }
+
+        if (!parser->clearOnWriteContainers.empty()) {
+            out << indent << "clear_on_write: ";
+            const char *sep = "[ ";
+            for (auto container : parser->clearOnWriteContainers) {
                 out << sep << container;
                 sep = ", ";
             }

@@ -33,6 +33,7 @@
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
+#include "bf-p4c/parde/check_parser_multi_write.h"
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
@@ -175,6 +176,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         (options.disable_parser_state_merging == false) ? new MergeParserStates : nullptr,
         new CollectPhvInfo(phv),
+        new CheckParserMultiWrite(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),
         // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
         // external names for bridged metadata PHV::Field objects.

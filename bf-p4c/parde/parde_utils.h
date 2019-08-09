@@ -69,4 +69,19 @@ struct ShiftPacketRVal : Shift {
     }
 };
 
+static unsigned get_state_shift(const IR::BFN::ParserState* state) {
+    unsigned state_shift = 0;
+
+    for (unsigned i = 0; i < state->transitions.size(); i++) {
+        auto t = state->transitions[i];
+
+        if (i == 0)
+            state_shift = t->shift;
+        else
+            BUG_CHECK(state_shift == t->shift, "Inconsistent shifts in %1%", state->name);
+    }
+
+    return state_shift;
+}
+
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_ */

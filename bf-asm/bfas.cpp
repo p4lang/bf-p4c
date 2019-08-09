@@ -370,7 +370,7 @@ void no_sections_error_exit() {
         std::cerr << "No valid sections found in assembly file" << std::endl; exit(1); }
 }
 
-bool no_section_error(char* name) {
+bool no_section_error(const char* name) {
     if (!Section::section_in_assembly(name)) {
         std::cerr << "No '" << name << "' section found in assembly file" << std::endl;
         return true;

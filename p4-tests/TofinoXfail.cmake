@@ -146,7 +146,7 @@ p4c_add_xfail_reason("tofino"
 
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
-  "error: Assignment cannot be supported in the parser"
+  "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
@@ -919,7 +919,7 @@ p4c_add_xfail_reason("tofino"
 # Valid XFAIL
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
-  "error: Assignment cannot be supported in the parser"
+  "error: Assignment source cannot be evaluated in the parser"
   ../glass/testsuite/p4_tests/phv/test_config_402_parser_sub.p4
   )
 
@@ -1234,7 +1234,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-   "Assignment cannot be supported in the parser"
+   "Assignment source cannot be evaluated in the parser"
    testdata/p4_14_samples/axon.p4
    testdata/p4_16_samples/issue1001-bmv2.p4
 )
@@ -1283,6 +1283,14 @@ p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
   extensions/p4_tests/p4_14/stf/parser_counter_4.p4  # frontend p4-14 to 16 translation bug?
+)
+
+# These should be compilation errors due to Tofino's lack of support
+# of clear-on-write semantic in the parser. We give warnings for now.
+p4c_add_xfail_reason("tofino"
+  ".* expected packet on port .* not seen"
+  extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
+  extensions/p4_tests/p4_16/stf/parser_multi_write_8.p4
 )
 
 # P4C-1753
@@ -1364,7 +1372,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Select on uninitialized value"
+  "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
@@ -1388,7 +1396,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Assignment cannot be supported in the parser"
+  "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_16_samples/issue1937-2-bmv2.p4
 )
 

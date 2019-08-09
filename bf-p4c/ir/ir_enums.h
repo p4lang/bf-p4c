@@ -20,6 +20,7 @@ enum class ColorMapramAddress { IDLETIME, STATS, MAPRAM_ADDR_TYPES, NOT_SET };
 
 namespace BFN {
 enum class ChecksumMode { VERIFY, RESIDUAL, CLOT };
+enum class ParserWriteMode { SINGLE_WRITE, BITWISE_OR, CLEAR_ON_WRITE };
 }  // end namespace BFN
 
 }  // end namespace IR
@@ -47,5 +48,8 @@ bool operator>>(cstring s, IR::MAU::ColorMapramAddress &cma);
 
 std::ostream& operator<<(std::ostream &out, const IR::BFN::ChecksumMode &t);
 bool operator>>(cstring s, IR::BFN::ChecksumMode &t);
+
+std::ostream& operator<<(std::ostream &out, const IR::BFN::ParserWriteMode &t);
+bool operator>>(cstring s, IR::BFN::ParserWriteMode &t);
 
 #endif /* BF_P4C_IR_IR_ENUMS_H_ */

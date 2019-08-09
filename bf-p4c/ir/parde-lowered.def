@@ -70,7 +70,10 @@ class LoweredExtractPhv : LoweredParserPrimitive {
       : LoweredParserPrimitive(si), source(source), dest(new BFN::ContainerRef(dest)) { }
 #end
 
-    dbprint { out << "extract " << source << " to " << dest; }
+    dbprint {
+        out << "extract " << source << " to " << dest;
+    }
+
     validate { BUG_CHECK(bool(dest->container), "Invalid PHV container"); }
 
     /// The location that will be read from.
@@ -78,6 +81,8 @@ class LoweredExtractPhv : LoweredParserPrimitive {
 
     /// The PHV container this extract writes to.
     BFN::ContainerRef dest;
+
+    ParserWriteMode write_mode = ParserWriteMode::SINGLE_WRITE;
 
 #emit
     /// Debugging information about the high-level operations that are
@@ -315,8 +320,11 @@ class LoweredParser : AbstractParser {
     /// parser error
     optional NullOK BFN::ContainerRef parserError;
 
-    /// The set of PHV containers that are allowed to be written more than once
-    inline Vector<BFN::ContainerRef> multiwriteContainers;
+    /// The set of PHV containers that are allowed to be written more than once (bitwise OR on rewrite)
+    inline Vector<BFN::ContainerRef> bitwiseOrContainers;
+
+    /// The set of PHV containers that are allowed to be written more than once (clear on rewrite)
+    inline Vector<BFN::ContainerRef> clearOnWriteContainers;
 
     /// The set of PHV containers that are zero initialized
     inline Vector<BFN::ContainerRef> initZeroContainers;
@@ -329,6 +337,7 @@ class LoweredParser : AbstractParser {
     optional inline cstring name;  // parser name defined in architecture
 
     optional inline std::vector<int> portmap;  // used for multiple parser support
+
 #emit
     /// bitmask for selection of optional metadata metadata (egress only)
     /// refer to CSR for what metadata field each bit means

@@ -244,8 +244,9 @@ class Parser {
     // in Parser class.
     // FIXME -- should move all merge reg handling into AsmParser.
     Phv::Ref                            ghost_parser;
-    std::vector<Phv::Ref>               multi_write, init_zero;
-    bitvec                              (&phv_use)[2], phv_allow_multi_write, phv_init_valid;
+    bitvec                              (&phv_use)[2];
+    bitvec                              phv_allow_bitwise_or, phv_allow_clear_on_write;
+    bitvec                              phv_init_valid;
     int                                 hdr_len_adj = 0, meta_opt = 0;
     std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use;
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init;

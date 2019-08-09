@@ -297,7 +297,7 @@ struct CollectParserUseDef : PassManager {
                 parser_use_def[parser].add_def(use, def);
 
             if (!parser_use_def[parser].use_to_defs.count(use))
-                ::fatal_error("Select on uninitialized value %1%", use->print());
+                ::fatal_error("Use of uninitialized parser value %1%", use->print());
 
             LOG4(parser_use_def[parser].print(use));
 

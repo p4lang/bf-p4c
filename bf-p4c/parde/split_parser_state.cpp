@@ -121,7 +121,9 @@ struct SliceExtracts : public ParserModifier {
             BUG("unknown extract source");
         }
 
-        return new Extract(dest_lval, src_slice);
+        auto sliced = new Extract(dest_lval, src_slice);
+        sliced->write_mode = extract->write_mode;
+        return sliced;
     }
 
     /// Breaks up an Extract into a series of Extracts according to the extracted field's PHV and
@@ -189,21 +191,6 @@ struct SliceExtracts : public ParserModifier {
         return true;
     }
 };
-
-static unsigned get_state_shift(const IR::BFN::ParserState* state) {
-    unsigned state_shift = 0;
-
-    for (unsigned i = 0; i < state->transitions.size(); i++) {
-        auto t = state->transitions[i];
-
-        if (i == 0)
-            state_shift = t->shift;
-        else
-            BUG_CHECK(state_shift == t->shift, "Inconsistent shifts in %1%", state->name);
-    }
-
-    return state_shift;
-}
 
 struct AllocateParserState : public ParserTransform {
     const PhvInfo& phv;

@@ -180,3 +180,21 @@ bool operator>>(cstring s, IR::BFN::ChecksumMode &t) {
     return false;
 }
 
+
+static const char *parser_write_mode_to_str[] = {
+    "SINGLE_WRITE", "BITWISE_OR", "CLEAR_ON_WRITE"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::BFN::ParserWriteMode &t) {
+    out << parser_write_mode_to_str[static_cast<int>(t)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::BFN::ParserWriteMode &t) {
+    for (int i = 0; i < 3; i++) {
+        if (parser_write_mode_to_str[i] == s) {
+            t = static_cast<IR::BFN::ParserWriteMode>(i); return true;
+        }
+    }
+    return false;
+}

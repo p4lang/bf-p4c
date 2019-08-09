@@ -218,6 +218,7 @@ struct ExtractSimplifier {
 
                 auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
 
+                newExtract->write_mode = extract->write_mode;
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
                                                               bufferRange));
 
@@ -241,17 +242,16 @@ struct ExtractSimplifier {
                 BUG_CHECK(constSlice.fitsUint(), "Constant slice larger than 32-bit?");
 
                 // Create an extract that writes just those bits.
-                if (constSlice.asUnsigned()) {
-                    LOG4("  Placing constant slice " << constSlice << " into " << slice.container);
+                LOG4("extract " << constSlice << " into " << slice.container);
 
-                    auto* newSource =
-                      new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
-                    auto* newExtract =
-                      new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+                auto* newSource =
+                  new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
+                auto* newExtract =
+                  new IR::BFN::LoweredExtractPhv(slice.container, newSource);
 
-                    newExtract->debug.info.push_back(debugInfoFor(extract, slice));
-                    extractConstantByContainer[slice.container].push_back(newExtract);
-                }
+                newExtract->write_mode = extract->write_mode;
+                newExtract->debug.info.push_back(debugInfoFor(extract, slice));
+                extractConstantByContainer[slice.container].push_back(newExtract);
             }
         } else {
             BUG("Unexpected parser primitive (most likely something that should "
@@ -263,6 +263,7 @@ struct ExtractSimplifier {
     static const IR::BFN::LoweredExtractPhv*
     mergeExtractsFor(PHV::Container container, const ExtractSequence& extracts) {
         BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
+
         if (extracts.size() == 1)
             return extracts[0];
 
@@ -271,38 +272,44 @@ struct ExtractSimplifier {
         // we want to know about it.
         nw_byteinterval bufferRange;
 
+        const IR::BFN::LoweredExtractPhv* prev = nullptr;
+
         for (auto* extract : extracts) {
             auto* bufferSource = extract->source->to<InputBufferRValType>();
+
             BUG_CHECK(bufferSource, "Unexpected non-buffer source");
 
             if (std::is_same<InputBufferRValType, IR::BFN::LoweredMetadataRVal>::value)
                 BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteInputBufferMetadataRange())
-                            .contains(bufferSource->byteInterval()),
-                          "Buffer mapped I/O range is outside of the mapped input "
-                          "buffer range: %1%", bufferSource->byteInterval());
+                          .contains(bufferSource->byteInterval()),
+                          "Extract from out of the input buffer range: %1%",
+                          bufferSource->byteInterval());
+
+            if (prev && extract->write_mode != prev->write_mode)
+                BUG("Inconsistent parser write semantic on %1%", container);
 
             bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
+
+            prev = extract;
         }
 
         BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
-        const size_t extractedSizeBits =
-          bufferRange.toUnit<RangeUnit::Bit>().size();
+
+        auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
+
         BUG_CHECK(extractedSizeBits == container.size(),
                   "Extracted range %1% with size %2% doesn't match "
-                  "destination container %3% with size %4%; was the PHV "
-                  "allocation misaligned or inconsistent?", bufferRange,
+                  "destination container %3% with size %4%", bufferRange,
                   extractedSizeBits, container, container.size());
 
         // Create a single combined extract that implements all of the
-        // component extracts. Because `add()` expands each extract
-        // operation so that it writes to an entire container, if PHV
-        // allocation did its job all of these extracts should read the same
-        // bytes of the input buffer - they're in some sense "the same".
-        // We only need to merge their debug info.
+        // component extracts. Each merged extract writes to an entire container.
         const auto* finalBufferValue =
           new InputBufferRValType(*toClosedRange(bufferRange));
 
         auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
+
+        mergedExtract->write_mode = extracts[0]->write_mode;
 
         for (auto* extract : extracts)
             mergedExtract->debug.mergeWith(extract->debug);
@@ -326,14 +333,39 @@ struct ExtractSimplifier {
 
                 return !!ea;
             });
-     }
+    }
 
+    const IR::BFN::LoweredExtractPhv*
+    mergeExtractsForConstants(PHV::Container container, const ExtractSequence& extracts) {
+        BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
+
+        if (extracts.size() == 1)
+            return extracts[0];
+
+        // Merge all of the constant extracts for this container into a
+        // single operation by ORing the constant sources together.
+        auto* mergedValue = new IR::BFN::LoweredConstantRVal(0);
+        auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, mergedValue);
+
+        for (auto* extract : extracts) {
+            auto* constantSource =
+              extract->source->to<IR::BFN::LoweredConstantRVal>();
+
+            BUG_CHECK(constantSource, "Unexpected non-constant source");
+
+            mergedValue->constant |= constantSource->constant;
+            mergedExtract->write_mode = extract->write_mode;
+            mergedExtract->debug.mergeWith(extract->debug);
+        }
+
+        return mergedExtract;
+    }
 
     /// Convert the sequence of Extract operations that have been passed to
     /// `add()` so far into a sequence of LoweredExtract operations. Extracts
     /// that write to the same container are merged together.
     IR::Vector<IR::BFN::LoweredParserPrimitive> lowerExtracts(
-                   std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit) {
+               std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit) {
         IR::Vector<IR::BFN::LoweredParserPrimitive> loweredExtracts;
 
         for (auto& item : extractFromPacketByContainer) {
@@ -355,28 +387,8 @@ struct ExtractSimplifier {
         for (auto& item : extractConstantByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
-
-            BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
-            if (extracts.size() == 1) {
-                loweredExtracts.push_back(extracts[0]);
-                continue;
-            }
-
-            // Merge all of the constant extracts for this container into a
-            // single operation. Because `add()` expands each constant write to
-            // operate over the entire container, all we need to do is OR the
-            // constants together.
-            auto* mergedValue = new IR::BFN::LoweredConstantRVal(0);
-            auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, mergedValue);
-            for (auto* extract : extracts) {
-                auto* constantSource =
-                  extract->source->to<IR::BFN::LoweredConstantRVal>();
-                BUG_CHECK(constantSource, "Unexpected non-constant source");
-                mergedValue->constant |= constantSource->constant;
-                mergedExtract->debug.mergeWith(extract->debug);
-            }
-
-            loweredExtracts.push_back(mergedExtract);
+            auto* merged = mergeExtractsForConstants(container, extracts);
+            loweredExtracts.push_back(merged);
         }
 
         for (auto cx : clotExtracts) {
@@ -437,9 +449,6 @@ struct ExtractSimplifier {
 
     std::map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
 };
-
-using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
-                                       const IR::BFN::LoweredParserState*>;
 
 /// Maps a sequence of fields to a sequence of PHV containers. The sequence of
 /// fields is treated as ordered and non-overlapping; the resulting container
@@ -580,7 +589,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredStates[nullptr] = nullptr;
     }
 
-    LoweredParserIRStates loweredStates;
+    std::map<const IR::BFN::ParserState*,
+             const IR::BFN::LoweredParserState*> loweredStates;
+
     const IR::BFN::ContainerRef* igParserError = nullptr;
     const IR::BFN::ContainerRef* egParserError = nullptr;
     unsigned egressMetaOpt = 0;
@@ -772,9 +783,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
     void postorder(const IR::BFN::ParserState* state) override {
         LOG4("[ComputeLoweredParserIR] lowering state " << state->name);
-        BUG_CHECK(loweredStates.find(state) == loweredStates.end(),
-                  "Revisiting state %1%, but we already lowered it?",
-                  state->name);
+
+        BUG_CHECK(!loweredStates.count(state),
+                  "Parser state %1% already lowered?", state->name);
 
         auto* loweredState =
           new IR::BFN::LoweredParserState(sanitizeName(state->name), state->gress);
@@ -1662,40 +1673,68 @@ struct LowerDeparserIR : public PassManager {
     }
 };
 
-/// Locate all containers that are written more than once by the parser (and
-/// hence need the "multiwrite" bit set).
-/// Must run after ComputeInitZeroContainers, because those containers probably
-/// need to be on the multi_write list, if packed with other field wrote in parser.
-class ComputeMultiwriteContainers : public ParserModifier {
-    bool preorder(IR::BFN::LoweredParserMatch* match) override {
-        for (auto* stmt : match->extracts)
-            if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
-                if (extract->dest)
-                    writes[extract->dest->container]++;
+/// Collect all containers that are written more than once by the parser.
+class ComputeMultiWriteContainers : public ParserModifier {
+    bool preorder(IR::BFN::LoweredExtractPhv* extract) override {
+        if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+            clear_on_write[extract->dest->container]++;
+        else
+            bitwise_or[extract->dest->container]++;
+
+        return false;
+    }
+
+    bool preorder(IR::BFN::LoweredParser*) override {
+        bitwise_or = clear_on_write = {};
         return true;
     }
 
     void postorder(IR::BFN::LoweredParser* parser) override {
-        // Init Zero fields set container valid it 1, so if where is any write,
-        // the container should be set as multi_write.
-        for (auto& c : parser->initZeroContainers) {
-            writes[c->container]++; }
-
-        // Mark any container that's written more than once as multiwrite. (At
-        // this point, we assume that earlier passes have verified that the
-        // program is correct, so multiple writes must be intentional.)
-        for (auto item : writes) {
-            auto container = item.first;
-            auto writeCount = item.second;
-            if (writeCount > 1)
-                parser->multiwriteContainers.push_back(new IR::BFN::ContainerRef(container));
+        for (auto bor : bitwise_or) {
+            if (bor.second > 1) {
+                parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(bor.first));
+                LOG4("mark " << bor.first << " as bitwise-or");
+            } else if (Device::currentDevice() == Device::JBAY) {
+                // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
+                // So if both are used, we need to mark the extract as a multi write.
+                if (bor.first.is(PHV::Size::b8)) {
+                    PHV::Container other(bor.first.type(), bor.first.index() ^ 1);
+                    if (bitwise_or.count(other)) {
+                        parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(bor.first));
+                        LOG4("mark " << bor.first << " as bitwise-or");
+                    }
+                }
+            }
         }
 
-        // Reset our data structure; each parser must be considered separately.
-        writes = { };
+        for (auto clr : clear_on_write) {
+            if (clr.second > 1) {
+                parser->clearOnWriteContainers.push_back(new IR::BFN::ContainerRef(clr.first));
+                LOG4("mark " << clr.first << " as clear-on-write");
+            } else if (Device::currentDevice() == Device::JBAY) {
+                if (clr.first.is(PHV::Size::b8)) {
+                    PHV::Container other(clr.first.type(), clr.first.index() ^ 1);
+                    if (clear_on_write.count(other)) {
+                        parser->clearOnWriteContainers.push_back(
+                            new IR::BFN::ContainerRef(clr.first));
+                        LOG4("mark " << clr.first << " as clear-on-write");
+                    }
+                }
+            }
+        }
+
+        // validate
+        for (auto bor : parser->bitwiseOrContainers) {
+            for (auto clr : parser->clearOnWriteContainers) {
+                if (bor->container == clr->container) {
+                    BUG("Container cannot be both clear-on-write and bitwise-or: %1%",
+                         clr->container);
+                }
+            }
+        }
     }
 
-    std::map<PHV::Container, unsigned> writes;
+    std::map<PHV::Container, unsigned> bitwise_or, clear_on_write;
 };
 
 // If a container that participates in ternary match is invalid, model(HW)
@@ -1748,7 +1787,9 @@ class WarnTernaryMatchFields : public MauInspector {
     }
 };
 
-/// Compute containers that have fields relying on parser zero initialization.
+/// Compute containers that have fields relying on parser zero initialization, these containers
+/// will be marked as valid coming out of the parser (Tofino only). In Tofino2, all containers
+/// are valid coming out of the parser.
 class ComputeInitZeroContainers : public ParserModifier {
     void postorder(IR::BFN::LoweredParser* parser) override {
         ordered_set<PHV::Container> zero_init_containers;
@@ -1870,14 +1911,17 @@ class ComputeBufferRequirements : public ParserModifier {
 
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
-    auto* pragma_no_init = new PragmaNoInit(phv);
+    auto pragma_no_init = new PragmaNoInit(phv);
+    auto compute_init_valid =
+        new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields());
+
     addPasses({
         pragma_no_init,
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
-        new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields()),
-        new ComputeMultiwriteContainers,  // Must run after ComputeInitZeroContainers.
+        Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,
+        new ComputeMultiWriteContainers,
         new ComputeBufferRequirements,
         new CharacterizeParser
     });

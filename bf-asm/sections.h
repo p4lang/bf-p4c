@@ -71,7 +71,7 @@ public:
         }
         return true;
     }
-    static bool section_in_assembly(char* name) {
+    static bool section_in_assembly(const char* name) {
         return get(name)->isInput;
     }
 };

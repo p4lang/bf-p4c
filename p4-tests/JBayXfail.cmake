@@ -101,7 +101,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Assignment cannot be supported in the parser"
+  "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_14_samples/axon.p4
 )
 
@@ -386,7 +386,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Select on uninitialized value"
+  "Use of uninitialized parser value:"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
 )

@@ -471,21 +471,12 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
-        // If a previous operation (e.g. an `advance()` call) left us in a
-        // non-byte-aligned position, we need to move up to the next byte; on
-        // Tofino, we can't support unaligned extracts.
-        if (currentBit % 8 != 0) {
-            ::warning("Can't extract header %1% from non-byte-aligned input "
-                      "buffer position on %2%; adding padding.", hdr,
-                      Device::name());
-            currentBit += 8 - currentBit % 8;
-        }
-
         // Generate an extract operation for each field.
         auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
         for (auto field : hdr_type->fields) {
             if (field->type->is<IR::Type::Varbits>())
-                P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
+                BUG("Extraction to varbit field should have been de-sugared in midend.");
+
             auto* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
             auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width));
@@ -498,16 +489,16 @@ struct RewriteParserStatements : public Transform {
             extractedFields[fref] = rval;
         }
 
-        // On Tofino we can only extract and deparse headers with byte
-        // alignment. Any non-byte-aligned headers should've been caught by
-        // BFN::CheckHeaderAlignment in the midend.
-        // BUG_CHECK(currentBit % 8 == 0,
-        //          "A non-byte-aligned header type reached the backend");
-
         if (auto* cf = hdr->to<IR::ConcreteHeaderRef>()) {
             if (cf->ref->to<IR::Metadata>())
                 return rv;
         }
+
+        // On Tofino we can only extract and deparse headers with byte
+        // alignment. Any non-byte-aligned headers should've been caught by
+        // BFN::CheckHeaderAlignment in the midend.
+        BUG_CHECK(currentBit % 8 == 0,
+                 "A non-byte-aligned header type reached the backend");
 
         // Generate an extract operation for the POV bit.
         auto* type = IR::Type::Bits::get(1);
@@ -802,12 +793,31 @@ struct RewriteParserStatements : public Transform {
                expression->is<IR::MethodCallExpression>();  // verify checksum
     }
 
+    const IR::BFN::Extract*
+    createBitwiseOrExtract(const IR::Expression* dest,
+                           const IR::Expression* src,
+                           Util::SourceInfo srcInfo) {
+        IR::BFN::Extract* e = nullptr;
+
+        if (auto c = src->to<IR::Constant>()) {
+            e = new IR::BFN::Extract(srcInfo, dest, new IR::BFN::ConstantRVal(c));
+        } else {
+            e = new IR::BFN::Extract(srcInfo, dest, new IR::BFN::SavedRVal(src));
+        }
+
+        e->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
+
+        return e;
+    }
+
     const IR::BFN::ParserPrimitive*
     preorder(IR::AssignmentStatement* s) override {
         if (s->left->type->is<IR::Type::Varbits>())
-            P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
+            BUG("Extraction to varbit field should have been de-sugared in midend.");
 
+        auto lhs = s->left;
         auto rhs = s->right;
+
         // no bits are lost by throwing away IR::BFN::ReinterpretCast.
         if (rhs->is<IR::BFN::ReinterpretCast>())
             rhs = rhs->to<IR::BFN::ReinterpretCast>()->expr;
@@ -820,13 +830,13 @@ struct RewriteParserStatements : public Transform {
 
                     if (method->member == "verify") {
                         auto verify = new IR::BFN::ChecksumVerify(declName);
-                        if (auto mem = s->left->to<IR::Member>())
+                        if (auto mem = lhs->to<IR::Member>())
                             verify->dest = new IR::BFN::FieldLVal(mem);
-                        else if (auto sl = s->left->to<IR::Slice>())
+                        else if (auto sl = lhs->to<IR::Slice>())
                             verify->dest = new IR::BFN::FieldLVal(sl);
                         return verify;
                     } else if (method->member == "get") {
-                        auto mem = s->left->to<IR::Member>();
+                        auto mem = lhs->to<IR::Member>();
                         auto get = new IR::BFN::ChecksumGet(declName, new IR::BFN::FieldLVal(mem));
                         return get;
                     }
@@ -839,7 +849,7 @@ struct RewriteParserStatements : public Transform {
                 if (auto* mem = call->method->to<IR::Member>()) {
                     if (mem->member == "lookahead") {
                         auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
-                        return new IR::BFN::Extract(s->srcInfo, s->left, rval);
+                        return new IR::BFN::Extract(s->srcInfo, lhs, rval);
                     }
                 }
             }
@@ -847,12 +857,12 @@ struct RewriteParserStatements : public Transform {
             if (auto* mem = call->method->to<IR::Member>()) {
                 if (mem->member == "lookahead") {
                     auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
-                    return new IR::BFN::Extract(s->srcInfo, s->left, rval);
+                    return new IR::BFN::Extract(s->srcInfo, lhs, rval);
                 }
             }
         }
 
-        if (auto mem = s->left->to<IR::Member>()) {
+        if (auto mem = lhs->to<IR::Member>()) {
             if (mem->member == "ingress_parser_err" || mem->member == "egress_parser_err")
                 return nullptr;
         }
@@ -869,12 +879,21 @@ struct RewriteParserStatements : public Transform {
         // Allow slices if we'd allow the expression being sliced.
         if (auto* slice = rhs->to<IR::Slice>()) {
             if (canEvaluateInParser(slice->e0))
-                return new IR::BFN::Extract(s->srcInfo, s->left,
+                return new IR::BFN::Extract(s->srcInfo, lhs,
                                             new IR::BFN::SavedRVal(rhs));
         }
 
+        // a = a | b
+        if (auto bor = rhs->to<IR::BOr>()) {
+            if (bor->left->equiv(*lhs)) {
+                return createBitwiseOrExtract(lhs, bor->right, s->srcInfo);
+            } else if (bor->right->equiv(*lhs)) {
+                return createBitwiseOrExtract(lhs, bor->left, s->srcInfo);
+            }
+        }
+
         if (!canEvaluateInParser(rhs)) {
-            ::error("Assignment cannot be supported in the parser: %1%", rhs);
+            ::error("Assignment source cannot be evaluated in the parser: %1%", rhs);
             return nullptr;
         }
 
@@ -1076,7 +1095,7 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
 
     if (parserPragmas.force_shift.count(state->p4State)) {
         bitShift = parserPragmas.force_shift.at(state->p4State);
-        ::warning("state %1% will shift %2% bits because @pragma force_shift",
+        ::warning("state %1% will shift %2% bits because of @pragma force_shift",
                   state->name, bitShift);
     }
 
@@ -1149,7 +1168,8 @@ void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {
     parser->apply(pg);
 
     GetBackendParser gp(typeMap, refMap, pg);
-    rv->thread[parser->thread].parsers.push_back(gp.extract(parser, arch));
+    auto backendParser = gp.extract(parser, arch);
+    rv->thread[parser->thread].parsers.push_back(backendParser);
 }
 
 void ExtractParser::end_apply() {

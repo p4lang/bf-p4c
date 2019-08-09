@@ -75,15 +75,25 @@ void AsmParser::process() {
             p->ghost_parser = ghost_parser;
             p->process(); } }
 
-    bitvec phv_allow_multi_write;
+    bitvec phv_allow_bitwise_or;
     for (auto p : parser[INGRESS]) {
-        phv_allow_multi_write |= p->phv_allow_multi_write; }
+        phv_allow_bitwise_or |= p->phv_allow_bitwise_or; }
     for (auto p : parser[EGRESS]) {
-        phv_allow_multi_write |= p->phv_allow_multi_write; }
+        phv_allow_bitwise_or |= p->phv_allow_bitwise_or; }
     for (auto p : parser[INGRESS]) {
-        p->phv_allow_multi_write = phv_allow_multi_write; }
+        p->phv_allow_bitwise_or = phv_allow_bitwise_or; }
     for (auto p : parser[EGRESS]) {
-        p->phv_allow_multi_write = phv_allow_multi_write; }
+        p->phv_allow_bitwise_or = phv_allow_bitwise_or; }
+
+    bitvec phv_allow_clear_on_write;
+    for (auto p : parser[INGRESS]) {
+        phv_allow_clear_on_write |= p->phv_allow_clear_on_write; }
+    for (auto p : parser[EGRESS]) {
+        phv_allow_clear_on_write |= p->phv_allow_clear_on_write; }
+    for (auto p : parser[INGRESS]) {
+        p->phv_allow_clear_on_write = phv_allow_clear_on_write; }
+    for (auto p : parser[EGRESS]) {
+        p->phv_allow_clear_on_write = phv_allow_clear_on_write; }
 
     bitvec phv_init_valid;
     for (auto p : parser[INGRESS]) {
@@ -126,6 +136,16 @@ void AsmParser::output(json::map &ctxt_json) {
 std::map<std::string, std::vector<Parser::State::Match::Clot *>>     Parser::clots;
 Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use;
 unsigned                                                             Parser::max_handle = 0;
+
+static void collect_phv_vector(value_t value, gress_t gress, bitvec& bv) {
+    for (auto &el : value.vec) {
+        Phv::Ref reg(gress, 0, el);
+        if (reg.check()) {
+            int id = reg->reg.uid;
+            bv[id] = 1;
+        }
+    }
+}
 
 void Parser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
@@ -173,20 +193,29 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 } else
                     parser_error = Phv::Ref(gress, 0, kv.value);
                 continue; }
-            if (kv.key == "multi_write") {
-                if (kv.value.type == tVEC)
-                    for (auto &el : kv.value.vec)
-                        multi_write.emplace_back(gress, 0, el);
-                else
-                    multi_write.emplace_back(gress, 0, kv.value);
-                continue; }
+            if (kv.key == "bitwise_or") {
+                if (CHECKTYPE(kv.value, tVEC))
+                    collect_phv_vector(kv.value, gress, phv_allow_bitwise_or);
+
+                continue;
+            }
+            if (kv.key == "clear_on_write") {
+                if (options.target == TOFINO)
+                    error(kv.key.lineno, "Tofino parser does not support clear-on-write semantic");
+
+                if (CHECKTYPE(kv.value, tVEC))
+                    collect_phv_vector(kv.value, gress, phv_allow_clear_on_write);
+
+                continue;
+            }
             if (kv.key == "init_zero") {
-                if (kv.value.type == tVEC)
-                    for (auto &el : kv.value.vec)
-                        init_zero.emplace_back(gress, 0, el);
-                else
-                    init_zero.emplace_back(gress, 0, kv.value);
-                continue; }
+                if (CHECKTYPE(kv.value, tVEC)) {
+                    collect_phv_vector(kv.value, gress, phv_init_valid);
+                    collect_phv_vector(kv.value, gress, phv_use[gress]);
+                }
+
+                continue;
+            }
             if (kv.key == "hdr_len_adj") {
                 if (CHECKTYPE(kv.value, tINT))
                     hdr_len_adj = kv.value.i;
@@ -309,21 +338,6 @@ void Parser::process() {
     for (auto u : unreach)
         warning(all[u]->lineno, "%sgress state %s unreachable",
                 all[u]->gress ? "E" : "In", all[u]->name.c_str());
-    for (auto &reg : multi_write)
-        if (reg.check()) {
-            int id = reg->reg.parser_id();
-            if (id >= 0)
-                phv_allow_multi_write[id] = 1;
-            else
-                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); }
-    for (auto &reg : init_zero)
-        if (reg.check()) {
-            int id = reg->reg.parser_id();
-            if (id >= 0) {
-                phv_init_valid[id] = 1;
-                phv_use[reg.gress()][id] = 1;
-            } else {
-                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); } }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS])) {
         bitvec tmp = phv_use[INGRESS];
         tmp &= phv_use[EGRESS];
@@ -1205,34 +1219,12 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         else if ((s.hi-s.lo+1)*8 != size)
             error(s.where.lineno, "Data to write doesn't match phv register size");
     }
-    //TODO: Merge phv reg slices if present. Phv slices if generated by the
-    //compiler are merged together as otherwise assembler will put them in different
-    //slots and can cause 'Ran out of phv slices' error. This should eventually go away
-    //as ideally the compiler should not generate any phv slices
-    if (!options.match_compiler) {
-        for (unsigned i1 = 0; i1 < set.size(); ++i1) {
-            for (unsigned i2 = i1 + 1; i2 < set.size(); ++i2) {
-                auto &a = set[i1];
-                auto &b = set[i2];
-                if (a == b) continue;
-                if (a.where->reg == b.where->reg) {
-                    if(a.merge(state->gress, b)) {
-                        set.erase(set.begin() + i2);
-                        --i2; }
-                    else {
-                        error(a.where.lineno, "Cannot merge phv slices %s and %s",
-                              a.where.name(), b.where.name());
-                        break; } } } } }
     for (auto &s : set) {
         if (!s.where.check()) continue;
         if (s.where->reg.parser_id() < 0)
             error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
         pa->phv_use[state->gress][s.where->reg.uid] = 1;
-        if (s.where->lo || s.where->hi != s.where->reg.size-1) {
-            pa->phv_allow_multi_write[s.where->reg.parser_id()] = 1;
-            if (s.what > ~(~1U << (s.where->hi - s.where->lo)))
-                error(s.where.lineno, "Can't fit value %d in a %d bit phv slice",
-                        s.what, (s.where->hi - s.where->lo + 1)); } }
+    }
     if (value_set_size == 0) {
         uint64_t match_mask = (UINT64_C(1) << state->key.width) - 1;
         uint64_t not_covered = match_mask & ~(match.word0 | match.word1);

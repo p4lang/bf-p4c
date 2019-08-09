@@ -8,6 +8,21 @@
 #include "bf-p4c/parde/parser_info.h"
 #include "device.h"
 
+// If the start state has selects, we need to insert a dummy state
+// before it where we can insert the save instructions.
+struct InsertInitSaveState : public ParserTransform {
+    IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
+        if (!parser->start->selects.empty()) {
+            auto init = new IR::BFN::ParserState(nullptr, "$init_match", parser->start->gress);
+            auto next = new IR::BFN::Transition(match_t(), 0, parser->start);
+            init->transitions = { next };
+            parser->start = init;
+        }
+
+        return parser;
+    }
+};
+
 // Insert a stall state on transition whose next state requires
 // branch word that is out of the input buffer of the current state.
 struct ResolveOutOfBufferSaves : public ParserTransform {
@@ -1048,6 +1063,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_parser_match_alloc") : nullptr,
+        new InsertInitSaveState,
         new ResolveOutOfBufferSaves,
         LOGGING(4) ? new DumpParser("after_resolve_oob_saves") : nullptr,
         parserInfo,

@@ -188,7 +188,7 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
     *map[slot.idx].dst = id;
     used |= slot.usemask;
 
-    pa->phv_allow_multi_write[id] = 1;
+    pa->phv_allow_bitwise_or[id] = 1;
 }
 
 template <>
@@ -415,15 +415,15 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
             regs.egress.prsr_reg.phv_owner.owner[id] = 1; } }
 
     for (int i = 0; i < 224; i++) {
-        if (!phv_allow_multi_write[i]) {
+        if (!phv_allow_bitwise_or[i]) {
             regs.ingress.prsr_reg.no_multi_wr.nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.nmw[i] = 1;
         }
-        if (phv_allow_multi_write[i] || phv_init_valid[i])
+        if (phv_allow_bitwise_or[i] || phv_init_valid[i])
             regs.merge.phv_valid.vld[i] = 1; }
 
     for (int i = 0; i < 112; i++)
-        if (!phv_allow_multi_write[256+i]) {
+        if (!phv_allow_bitwise_or[256+i]) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
 
