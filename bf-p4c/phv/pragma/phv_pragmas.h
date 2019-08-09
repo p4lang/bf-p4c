@@ -24,11 +24,10 @@ constexpr const char* DISABLE_DEPARSE_ZERO = "pa_disable_deparse_0_optimization"
 class Pragmas : public PassManager {
  public:
     /// @returns true if for the associated @pragmaName, the @gress is either ingress or egress.
-    static bool gressValid(cstring pragmaName, cstring gress, bool suppressWarning = false) {
+    static bool gressValid(cstring pragmaName, cstring gress) {
         if (gress != "ingress" && gress != "egress") {
-            if (!suppressWarning)
-                ::warning("@pragma %1%'s first argument must either be ingress/egress, "
-                          "instead of %2%, skipped", pragmaName, gress);
+            ::warning("@pragma %1%'s first argument must either be ingress/egress, "
+                      "instead of %2%, skipped", pragmaName, gress);
             return false;
         }
         return true;

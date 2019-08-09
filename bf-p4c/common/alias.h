@@ -71,26 +71,6 @@ class AddValidityBitSets : public Transform {
         : phv(p), pragmaAlias(pa) { }
 };
 
-/** This class implements a pass manager that goes through all the pa pragmas specified by the
-  * programmer and applies the non pa_alias and non pa_no_init pragmas to the alias destinations
-  * (which replace the alias sources in the ReplaceAllAliases pass).
-  */
-class ReplicatePragmas : public Modifier {
- private:
-    const PhvInfo&                  phv_i;
-    const PragmaAlias&              pragmaAlias;
-
-    bool preorder(IR::BFN::Pipe* pipe) override;
-    // Given an annotation @anno, determines if it is a pa_* pragma referring to an alias source
-    // field, and if yes, creates a new annotation that applies the same pragma to the alias
-    // destination (not applicable to pa_alias or pa_no_init pragmas).
-    const IR::Annotation* getRelevantAnnotation(const IR::Annotation* anno) const;
-
- public:
-    explicit ReplicatePragmas(const PhvInfo& phv, const PragmaAlias& pa)
-        : phv_i(phv), pragmaAlias(pa) { }
-};
-
 /** This class implements a pass manager that handles aliasing relationships specified by pa_alias
   * fields. The general idea is that all the uses of one of the fields specified by the pragma
   * (alias source) are replaced by the uses of the other field in the pragma (alias destination). In
@@ -112,8 +92,7 @@ class Alias : public PassManager {
             new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
             new AddValidityBitSets(phv, pragmaAlias),
-            new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions),
-            new ReplicatePragmas(phv, pragmaAlias)
+            new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
         });
     }
 };
