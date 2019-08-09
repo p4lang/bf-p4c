@@ -3632,6 +3632,13 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
                 int per_word = RegisterPerWord(salu);
                 shift = 7 - ceil_log2(per_word);
             }
+            if (!lo->dleft_hash_sizes.empty()) {
+                // For dleft tables need to mask the addresses by the way sizes.
+                // FIXME -- how to deal with different sizes for the different ways?
+                // FIXME -- how do we know this is the dleft addressing hash?  Can a single
+                // table have both dleft and another hash_dist use?
+                post_expand_bits.hi = ceil_log2(lo->dleft_hash_sizes[0]) + 10 - 1;
+            }
         } else if (ba->attached->to<IR::MAU::Meter>()) {
             dest = IXBar::HD_METER_ADR;
             shift = 7;
