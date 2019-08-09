@@ -1332,7 +1332,7 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
                              (1 << slice.container_bits().lo/16U);
             }
             offset += slice.width;
-            containerToSwap[slice.container] = swap;
+            containerToSwap[slice.container] |= swap;
         }
     }
     return containerToSwap;
