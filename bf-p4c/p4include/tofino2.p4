@@ -86,7 +86,8 @@ match_kind {
     // lpm,               // Longest-prefix match.
     range,
     selector,             // Used for implementing dynamic action selection
-    dleft_hash            // Used for dleft dynamic caching
+    dleft_hash,           // Used for dleft dynamic caching
+    atcam_partition_index // Used for implementing algorithmic tcam
 }
 
 error {
