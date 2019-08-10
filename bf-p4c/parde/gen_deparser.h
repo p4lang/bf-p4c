@@ -39,7 +39,8 @@ class ExtractDeparser : public DeparserInspector {
 
     void generateEmits(const IR::MethodCallExpression* mc);
     void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list,
-                        const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr);
+                        const IR::MethodCallExpression* mc, cstring controlPlaneName = nullptr,
+                        bool singleEntry = false);
     void simpl_concat(std::vector<const IR::Expression*>& slices, const IR::Concat* expr);
     void process_concat(IR::Vector<IR::BFN::FieldLVal>& vec, const IR::Concat* expr);
     void fixup_mirror_digest(const IR::MethodCallExpression*,

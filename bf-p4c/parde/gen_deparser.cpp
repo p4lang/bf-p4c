@@ -176,7 +176,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
             generateDigest(digests["resubmit"], "resubmit", expr, mc);
         } else if (em->actualExternType->getName() == "Pktgen") {
             auto expr = mc->arguments->at(0)->expression;
-            generateDigest(digests["pktgen"], "pktgen", expr, mc);
+            generateDigest(digests["pktgen"], "pktgen", expr, mc, nullptr, true /* singleEntry */);
         } else {
             fatal_error(ErrorType::ERR_UNSUPPORTED,
                         "Unsupported method call %1% in deparser", mc);
@@ -194,10 +194,14 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
 }
 
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
+// Collect information to generate assembly output.
+// @param singleEntry is used by jbay pktgen, as the pktgen_tbl has only one entry.
+// the entry index must be 0.
 void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                                       const IR::Expression *expr,
                                       const IR::MethodCallExpression* mc,
-                                      cstring controlPlaneName) {
+                                      cstring controlPlaneName,
+                                      bool singleEntry) {
     int digest_index = 0;
     const IR::Literal *k = nullptr;
     const IR::Expression *select;
@@ -224,8 +228,11 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     if (!k) {
         fatal_error(ErrorType::ERR_UNSUPPORTED, "condition %2% in %3%.emit", mc, pred, name);
         return;
-    } else if (k->is<IR::Constant>()) {
-            digest_index = k->to<IR::Constant>()->asInt(); }
+    } else if (k->is<IR::Constant>() && !singleEntry) {
+        digest_index = k->to<IR::Constant>()->asInt();
+    } else {
+        digest_index = 0;
+    }
 
     if (!digest) {
         digest = new IR::BFN::Digest(name, select);
@@ -253,6 +260,12 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                 sources.push_back(new IR::BFN::FieldLVal(gen_fieldref(ref->ref, item->name)));
             }
         }
+        auto type = expr->type->to<IR::Type_StructLike>();
+        if (type == nullptr)
+            ::error("Digest field list %1% must be a struct/header type", expr);
+        auto* fieldList =
+            new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
+        digest->fieldLists.push_back(fieldList);
     } else if (auto* initializer = expr->to<IR::StructInitializerExpression>()) {
         for (auto *item : initializer->components) {
             if (item->expression->is<IR::Concat>()) {
