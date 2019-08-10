@@ -110,13 +110,13 @@ error {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header ingress_intrinsic_metadata_t {
-    bit<1> resubmit_flag;               // Flag distinguising original packets
+    bit<1> resubmit_flag;               // Flag distinguishing original packets
                                         // from resubmitted packets.
-    bit<1> _pad1;
+    @padding bit<1> _pad1;
 
     bit<2> packet_version;              // Read-only Packet version.
 
-    bit<3> _pad2;
+    @padding bit<3> _pad2;
 
     bit<9> ingress_port;                // Ingress physical port id.
                                         // this field is passed to the deparser
@@ -258,17 +258,17 @@ header ghost_intrinsic_metadata_t {
 // -----------------------------------------------------------------------------
 @__intrinsic_metadata
 header egress_intrinsic_metadata_t {
-    bit<7> _pad0;
+    @padding bit<7> _pad0;
 
     bit<9> egress_port;                 // Egress port id.
                                         // this field is passed to the deparser
 
-    bit<5> _pad1;
+    @padding bit<5> _pad1;
 
     bit<19> enq_qdepth;                 // Queue depth at the packet enqueue
                                         // time.
 
-    bit<6> _pad2;
+    @padding bit<6> _pad2;
 
     bit<2> enq_congest_stat;            // Queue congestion status at the packet
                                         // enqueue time.
@@ -276,12 +276,12 @@ header egress_intrinsic_metadata_t {
     bit<32> enq_tstamp;                 // Time snapshot taken when the packet
                                         // is enqueued (in nsec).
 
-    bit<5> _pad3;
+    @padding bit<5> _pad3;
 
     bit<19> deq_qdepth;                 // Queue depth at the packet dequeue
                                         // time.
 
-    bit<6> _pad4;
+    @padding bit<6> _pad4;
 
     bit<2> deq_congest_stat;            // Queue congestion status at the packet
                                         // dequeue time.
@@ -296,28 +296,28 @@ header egress_intrinsic_metadata_t {
     bit<16> egress_rid;                 // L3 replication id for multicast
                                         // packets.
 
-    bit<7> _pad5;
+    @padding bit<7> _pad5;
 
     bit<1> egress_rid_first;            // Flag indicating the first replica for
                                         // the given multicast group.
 
-    bit<1> _pad6;
+    @padding bit<1> _pad6;
 
     bit<7> egress_qid;                  // Egress (physical) queue id via which
                                         // this packet was served.
 
-    bit<5> _pad7;
+    @padding bit<5> _pad7;
 
     bit<3> egress_cos;                  // Egress cos (eCoS) value.
 
-    bit<7> _pad8;
+    @padding bit<7> _pad8;
 
     bit<1> deflection_flag;             // Flag indicating whether a packet is
                                         // deflected due to deflect_on_drop.
 
     bit<16> pkt_length;                 // Packet length, in bytes
 
-    bit<8> _pad9;                       // Pad to 4-byte alignment for egress
+    @padding bit<8> _pad9;              // Pad to 4-byte alignment for egress
                                         // intrinsic metadata (HW constraint)
 }
 
@@ -402,10 +402,10 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // programmable number of packets per batch.
 
 header pktgen_timer_header_t {
-    bit<2> _pad1;
+    @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    bit<8> _pad2;
+    @padding bit<8> _pad2;
 
     bit<16> batch_id;                   // Start at 0 and increment to a
                                         // programmed number
@@ -415,10 +415,10 @@ header pktgen_timer_header_t {
 }
 
 header pktgen_port_down_header_t {
-    bit<2> _pad1;
+    @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    bit<15> _pad2;
+    @padding bit<15> _pad2;
     bit<9> port_num;                    // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
@@ -426,10 +426,10 @@ header pktgen_port_down_header_t {
 }
 
 header pktgen_recirc_header_t {
-    bit<2> _pad1;
+    @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    bit<8> _pad2;
+    @padding bit<8> _pad2;
     bit<16> batch_id;                   // Start at 0 and increment to a
                                         // programmed number
 
@@ -438,10 +438,10 @@ header pktgen_recirc_header_t {
 }
 
 header pktgen_deparser_header_t {
-    bit<2> _pad1;
+    @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    bit<8> _pad2;
+    @padding bit<8> _pad2;
     bit<16> batch_id;                   // Start at 0 and increment to a
                                         // programmed number
 
@@ -450,10 +450,10 @@ header pktgen_deparser_header_t {
 }
 
 header pktgen_pfc_header_t {
-    bit<2> _pad1;
+    @padding bit<2> _pad1;
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
-    bit<40> _pad2;
+    @padding bit<40> _pad2;
 };
 
 // -----------------------------------------------------------------------------
@@ -567,21 +567,24 @@ extern ParserPriority {
 // ----------------------------------------------------------------------------
 // HASH ENGINE
 // ----------------------------------------------------------------------------
+extern CRCPolynomial<T> {
+    CRCPolynomial(T coeff, bool reversed, bool msb, bool extended, T init, T xor);
+}
+
 extern Hash<W> {
     /// Constructor
+    /// @type_param W : width of the calculated hash.
+    /// @param algo : The default algorithm used for hash calculation.
     Hash(HashAlgorithm_t algo);
 
-    /// Compute the hash for data.
-    /// @param data : The data over which to calculate the hash.
+    /// Constructor
+    /// @param poly : The default coefficient used for hash algorithm.
+    Hash(HashAlgorithm_t algo, CRCPolynomial<_> poly);
+
+    /// Compute the hash for the given data.
+    /// @param data : The list of fields contributing to the hash.
     /// @return The hash value.
     W get<D>(in D data);
-
-    /// Compute the hash for data.
-    /// @param data : The data over which to calculate the hash.
-    /// @param base : Minimum return value.
-    /// @param max : The value use in modulo operation.
-    /// @return (base + (h % max)) where h is the hash value.
-    W get<D>(in D data, in W base, in W max);
 }
 
 /// Random number generator.
@@ -618,8 +621,16 @@ extern bit<32> sizeInBits<H>(in H h);
 extern bit<32> sizeInBytes<H>(in H h);
 
 /// Counter
+/// Indexed counter with `size’ independent counter values.
 extern Counter<W, I> {
+    /// Constructor
+    /// @type_param W : width of the counter value.
+    /// @type_param I : width of the counter index.
+    /// @param type : counter type. Packet an byte counters are supported.
     Counter(bit<32> size, CounterType_t type);
+
+    /// Increment the counter value.
+    /// @param index : index of the counter to be incremented.
     void count(in I index);
 }
 
@@ -1081,6 +1092,9 @@ extern ActionSelector {
     /// Construct a selection table for action profile of 'size' entries.
     @deprecated("ActionSelector must be specified with an associated ActionProfile")
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+
+    @deprecated("ActionSelector must be specified with an associated ActionProfile")
+    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
 }
 
 extern Mirror {
