@@ -936,13 +936,15 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
   )
 
+# P4C-1906
 p4c_add_xfail_reason("tofino"
-  "error.*condition too complex|./p4c TIMEOUT"
+  "error.*Depth of way doesn't match number of rams|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported

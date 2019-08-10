@@ -3,6 +3,248 @@
 #include "bf-p4c/mau/instruction_memory.h"
 #include "ir/ir.h"
 
+namespace IR {
+namespace MAU {
+
+// These must be implemented here because C++ requires the definitions and instantiations of
+// function templates to be in the same compilation unit.
+void Table::visit_children(Visitor& v) { visit_children(this, v); }
+void Table::visit_children(Visitor& v) const { visit_children(this, v); }
+
+template<class THIS>
+void Table::visit_children(THIS* self, Visitor& v) {
+    // We visit the table in a way that reflects its control flow: at branches, we visit with
+    // clones of the visitor; at join points, we merge the clones back together. IMPORTANT: we must
+    // ensure that each node is visited exactly once.
+    //
+    // A table is executed as follows. First, the gateway conditions in "gateway_rows" are
+    // evaluated.
+    //
+    // If no gateway condition is satisfied, the table keys are evaluated. If "next" has a
+    // "$try_next_stage" entry, then we nondeterministically choose whether to execute that entry.
+    // If there is no "$try_next_stage", or if we choose not to execute it, then we execute a table
+    // action, according to the control-plane program. The entry corresponding to "$hit" or "$miss"
+    // in "next" is then executed, according to whether the table hit or miss; if neither entry
+    // exists, then the "$default" entry in "next" is executed, if it exists.
+    //
+    // If any condition is satisfied, we have a gateway-inhibited table. The payload in
+    // "gateway_payload" is executed, before executing the entry in "next" corresponding to the
+    // satisfied condition.
+
+    // Visit gateway conditions.
+    for (auto& gw : self->gateway_rows) {
+        auto& cond = gw.first;
+        v.visit(cond, "gateway_row");
+    }
+
+    // Now, we fall into one of four cases, depending on whether the table uses its gateway
+    // payload, and on whether the table has a match component.
+    bool have_gateway_payload = self->uses_gateway_payload();
+    bool have_match_table = !self->gateway_only();
+
+    if (have_gateway_payload && have_match_table) {
+        auto& gateway_visitor = v.flow_clone();
+        visit_gateway_inhibited(self, gateway_visitor);
+        visit_match_table(self, v);
+        v.flow_merge(gateway_visitor);
+    } else if (have_gateway_payload) {
+        visit_gateway_inhibited(self, v);
+    } else if (have_match_table) {
+        visit_match_table(self, v);
+    } else {
+        // Have neither a gateway payload nor a match table. This table is a no-op; fall through to
+        // attached tables.
+    }
+
+    // FIXME -- attached tables are not properly visited here in the control-flow order,
+    // FIXME -- because we don't really know which actions will trigger them.  They
+    // FIXME -- should be visited after the action(s) that trigger them and before
+    // FIXME -- the next tables that happen after those actions?
+    // FIXME -- If the actions contain references to them, then they'll be visited when
+    // FIXME -- the action is visited, and this will be a 'revisit'
+    self->attached.visit_children(v);
+}
+
+template<class THIS>
+void Table::visit_gateway_inhibited(THIS* self, Visitor& v) {
+    // Visit gateway payload.
+    v.visit(self->gateway_payload, "gateway_payload");
+
+    // Now, visit actions for when the table is gateway-inhibited.
+
+    // Save the control-flow state. We use v to visit the first execution path through the gateway
+    // actions. On subsequent paths, we visit with a copy of this saved state, and merge the result
+    // into v.
+    Visitor* saved = &v.flow_clone();
+
+    // This is the visitor we will use to visit the various gateway actions. Initially, this is
+    // v. After the first execution path, this becomes nullptr, and will be lazily instantiated
+    // with a copy of "saved", as needed.
+    Visitor* current = &v;
+
+    std::set<cstring> gw_tags_seen;
+    bool fallen_through = false;
+    for (auto& gw : self->gateway_rows) {
+        auto tag = gw.second;
+        if (!tag || gw_tags_seen.count(tag)) continue;
+
+        gw_tags_seen.emplace(tag);
+
+        if (self->next.count(tag)) {
+            if (!current) current = &saved->flow_clone();
+            current->visit(self->next.at(tag), tag);
+            if (current != &v) v.flow_merge(*current);
+            current = nullptr;
+
+            continue;
+        }
+
+        // No matching action, so fall through from "saved" if we haven't done so already.
+        if (!fallen_through) {
+            if (current) {
+                // "current" hasn't been used yet, so just consume it.
+                current = nullptr;
+            } else {
+                v.flow_merge(*saved);
+            }
+
+            fallen_through = true;
+        }
+    }
+}
+
+template<class THIS>
+void Table::visit_match_table(THIS* self, Visitor& v) {
+    // Visit match keys.
+    self->match_key.visit_children(v);
+
+    // Save the current control-flow state. We use v to visit the first execution path through the
+    // table. On subsequent paths, we visit with a copy of this saved state, and merge the result
+    // into v.
+    Visitor* saved = &v.flow_clone();
+
+    // This is the visitor we will use to visit the various parts of the table. Initially, this is
+    // v. After the first execution path, this becomes nullptr, and will be lazily instantiated
+    // with a copy of "saved", as needed.
+    Visitor* current = &v;
+
+    // Handle all exiting actions. For these actions, we don't want to merge the control-flow back
+    // into v.
+    for (auto& action : Values(self->actions)) {
+        if (!action->exitAction) continue;
+
+        auto exit_visitor = &saved->flow_clone();
+        exit_visitor->visit(action);
+        exit_visitor->flow_merge_global_to("-EXIT-");
+    }
+
+    // Handle non-exiting actions, while being careful to avoid visiting "next" entries multiple
+    // times.
+
+    // This map ensures that we visit the "next" entries in a specific order later on.
+    ordered_map<cstring, Visitor*> next_visitors;
+    bool have_hit_miss = self->next.count("$hit") || self->next.count("$miss");
+    if (have_hit_miss) {
+        next_visitors["$hit"] = nullptr;
+        next_visitors["$miss"] = nullptr;
+    } else {
+        next_visitors["$default"] = nullptr;
+    }
+
+    // These visitors that will need to be merged back into v once we're done handling "next".
+    std::vector<Visitor*> unmerged_table_chain_visitors;
+
+    // Visit all actions to populate next_visitors with visitors to visit "next".
+    for (auto& kv : self->actions) {
+        auto action_name = kv.first;
+        auto& action = kv.second;
+
+        if (action->exitAction) continue;
+
+        // Visit the action.
+        if (!current) current = &saved->flow_clone();
+        current->visit(action);
+
+        // Figure out which keys in the next_visitors table need updating.
+
+        // Can separate table using hit/miss from tables using action chaining, as in P4
+        // semantically, a table can not use both hit/miss and action chaining. Potentially if that
+        // changes, we will have to support it with a layered approach to the next table
+        // propagation
+        std::vector<cstring> keys;
+        if (have_hit_miss) {
+            // Table uses hit/miss chaining.
+            if (!action->miss_only()) keys.push_back("$hit");
+            if (!action->hit_only()) keys.push_back("$miss");
+        } else {
+            // Table uses action chaining.
+            if (self->next.count(action_name)) {
+                // Action has a "next" entry. Handle it here directly; some visitors apparently
+                // expect the chained table sequence to be visited immediately after the action.
+                current->visit(self->next.at(action_name), action_name);
+
+                // At this point, v may have already been used to visit a sibling action and may be
+                // waiting to visit the "$default" entry in "next". So, we defer merging into v
+                // until we are done visiting "next".
+                if (current != &v) unmerged_table_chain_visitors.push_back(current);
+                current = nullptr;
+                continue;
+            }
+
+            // The action has no "next" entry. It chains to the entry for "$default".
+            keys.push_back("$default");
+        }
+
+        // Merge the current visitor into the next_visitors table.
+        bool current_used = false;
+        for (auto key : keys) {
+            BUG_CHECK(next_visitors.count(key), "Unexpected 'next' key: %s", key);
+            auto& next_visitor = next_visitors.at(key);
+            if (next_visitor) {
+                next_visitor->flow_merge(*current);
+            } else if (current_used) {
+                next_visitor = &current->flow_clone();
+            } else {
+                next_visitor = current;
+                current_used = true;
+            }
+        }
+
+        current = nullptr;
+    }
+
+    // Now visit "next".
+    for (auto kv : next_visitors) {
+        auto next_action_key = kv.first;
+        auto next_visitor = kv.second;
+
+        if (self->next.count(next_action_key)) {
+            if (!next_visitor) next_visitor = &saved->flow_clone();
+            next_visitor->visit(self->next.at(next_action_key), next_action_key);
+        }
+
+        // At this point, v may not have visited its entry in "next" yet. Defer merging into v
+        // until we are done visiting "next".
+        if (next_visitor && next_visitor != &v)
+            unmerged_table_chain_visitors.push_back(next_visitor);
+    }
+
+    // Handle any deferred merges.
+    for (auto to_merge : unmerged_table_chain_visitors)
+        v.flow_merge(*to_merge);
+
+    // Visit $try_next_stage, if it exists.
+    if (self->next.count("$try_next_stage")) {
+        if (!current) current = &saved->flow_clone();
+        current->visit(self->next.at("$try_next_stage"), "$try_next_stage");
+        if (current != &v) v.flow_merge(*current);
+        current = nullptr;
+    }
+}
+
+}  // namespace MAU
+}  // namespace IR
+
 bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&
            gress == a.gress &&

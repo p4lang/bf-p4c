@@ -37,13 +37,19 @@ class Table : BFN::Unit {
     int                                         logical_split = -1;             // ignored for ==?
     int                                         logical_tables_in_stage = -1;   // ignored for ==?
     safe_vector<std::pair<Expression, cstring>> gateway_rows;
-    /** each gateway_row is a an expression for a single row of the gateway,
+    /** each gateway_row is an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
      * if the match_table should run.  The last row (only) may have a NULL
      * expression for 'always' -- corresponding to the gateway miss action
      * (taken if no gateway rows match).  If this last row NULL expression
      * is not present, the default action is to run the table. */
     NullOK Action                               gateway_payload;
+    /* if the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
+     * can also run an action directly, via the payload.  All rows must be the same action on
+     * tofino, but tofino2 allows different actions for different rows, so `gateway_payload`
+     * should be moved into the `gateway_rows` info (tuple, instead of pair?)  We currently never
+     * set this, so it is only needed for future optimizations */
+
     // match_table never visited, keys are in match_key, default action also in action
     NullOK IR::P4Table                          match_table;
     inline Vector<BackendAttached>              attached;
@@ -60,6 +66,7 @@ class Table : BFN::Unit {
     int                                         random_seed = -1;               // ignored for ==?
     bool                                        dynamic_key_masks = false;      // ignored for ==?
     NullOK EntriesList                          entries_list;                   // ignored for ==?
+    // Indicates whether this is a "starter pistol" table generated during table placement.
     bool                                        created_during_tp = false;      // ignored for ==?
     // Flag to indicate the table is compiler generated. This flag is passed on
     // the assembly and context json as 'p4_hidden' to disable PD API generation
@@ -271,6 +278,13 @@ class Table : BFN::Unit {
     bool operator==(const Table &a) const override;
 #end
     bool uses_gateway() const { return !gateway_rows.empty(); }
+    bool uses_gateway_payload() const {
+        for (auto row : gateway_rows) {
+            if (row.second) return true;
+        }
+
+        return false;
+    }
     bool gateway_only() const { return match_key.empty() && actions.empty(); }
     cstring build_gateway_name() const {
         auto gName = gateway_name.isNullOrEmpty() ? name : gateway_name;
@@ -289,8 +303,10 @@ class Table : BFN::Unit {
             else if (gw.first)
                 gw_next.emplace(cstring());
             gw_next.emplace(gw.second); }
-        if (gateway_only() && !uses_gateway() && !created_during_tp)
-            BUG("table with no gateway or match table");
+        if (created_during_tp && !gateway_only())
+            BUG("starter-pistol table %s cannot have a match table", name);
+        if (created_during_tp && uses_gateway_payload())
+            BUG("starter-pistol table %s cannot have a gateway payload", name);
         if (gateway_only() && gw_next.count(cstring()))
             BUG("gateway with no match table wants to run match table");
         if (!gateway_only() && uses_gateway() && !gw_next.count(cstring()))
@@ -321,104 +337,31 @@ class Table : BFN::Unit {
                 BUG_CHECK(next.count(act.first) == 0,
                           "action %s is an early exit and has next", act.first); }
     }
-    visit_children {
-        for (auto &gw : gateway_rows)
-            v.visit(gw.first, "gateway_row");
-        auto &gateway_inhibit(v.flow_clone());
-        gateway_inhibit.visit(gateway_payload, "gateway_payload");
-        match_key.visit_children(v);
-        Visitor *current = &v.flow_clone();
-        if (!gateway_only()) {
-            Visitor *before_action = &v.flow_clone();
-            // Can separate table using hit/miss from tables using action chaining,
-            // as in P4 semantically, a table can not use both hit/miss and action chaining
-            // Potentially if that changes, we will have to support it with a layered approach
-            // to the next table propagation
-            if (!next.count("$hit") && !next.count("$miss")) {
-                Visitor *default_action = nullptr;
-                for (auto &action : actions) {
-                    if (!current) current = &before_action->flow_clone();
-                    current->visit(action.second);
-                    if (action.second->exitAction) {
-                        current->flow_merge_global_to("-EXIT-");
-                    } else if (next.count(action.first)) {
-                        current->visit(next.at(action.first), action.first);
-                        if (current != &v)
-                            v.flow_merge(*current);
-                    } else {
-                        if (default_action)
-                            default_action->flow_merge(*current);
-                        else if (current == &v)
-                            default_action = &current->flow_clone();
-                        else
-                            default_action = current; }
-                    current = nullptr; }
-                if (next.count("$default")) {
-                    // if there are no actions that use the $default next, use a nop action
-                    if (!default_action) default_action = &before_action->flow_clone();
-                    default_action->visit(next.at("$default"), "$default"); }
-                if (default_action) {
-                    v.flow_merge(*default_action); }
-            } else {
-                Visitor *hit_actions = nullptr, *miss_actions = nullptr;
-                for (auto &action : Values(actions)) {
-                    if (!current) current = &before_action->flow_clone();
-                    current->visit(action);
-                    if (action->exitAction) {
-                        current->flow_merge_global_to("-EXIT-");
-                    } else {
-                        if (!action->hit_only()) {
-                            if (miss_actions)
-                                miss_actions->flow_merge(*current);
-                            else
-                                miss_actions = current; }
-                        if (!action->miss_only()) {
-                            if (hit_actions)
-                                hit_actions->flow_merge(*current);
-                            else if (current != miss_actions)
-                                hit_actions = current;
-                            else
-                                hit_actions = &current->flow_clone(); } }
-                    current = nullptr; }
 
-                if (next.count("$hit")) {
-                    if (!hit_actions) hit_actions = &before_action->flow_clone();
-                    hit_actions->visit(next.at("$hit"), "$hit"); }
-                if (next.count("$miss")) {
-                    if (!miss_actions) miss_actions = &before_action->flow_clone();
-                    miss_actions->visit(next.at("$miss"), "$miss"); }
-                if (hit_actions && hit_actions != &v)
-                    v.flow_merge(*hit_actions);
-                if (miss_actions && miss_actions != &v)
-                    v.flow_merge(*miss_actions);
-            }
-            if (next.count("$try_next_stage")) {
-                before_action->visit(next.at("$try_next_stage"), "$try_next_stage");
-                v.flow_merge(*before_action);
-                before_action = nullptr; } }
-        std::set<cstring> gw_next;
-        for (auto &gw : gateway_rows) {
-            if (gw.second && !gw_next.count(gw.second)) {
-                if (next.count(gw.second)) {
-                    if (!current) current = &gateway_inhibit.flow_clone();
-                    current->visit(next.at(gw.second), gw.second);
-                    if (current != &v)
-                        v.flow_merge(*current);
-                } else {
-                    v.flow_merge(gateway_inhibit); }
-                current = nullptr;
-                gw_next.emplace(gw.second); } }
-        // FIXME -- attached tables are not properly visited here in the control-flow order,
-        // FIXME -- because we don't really know which actions will trigger them.  They
-        // FIXME -- should be visited after the action(s) that trigger them and before
-        // FIXME -- the next tables that happen after those actions?
-        // FIXME -- If the actions contain references to them, then they'll be visited when
-        // FIXME -- the action is visited, and this will be a 'revisit'
-        attached.visit_children(v);
-    }
+    // Delegates to the static version of the method. We don't implement this here because
+    // C++ requires the definitions and instantiations of function templates to be in the same
+    // compilation unit.
+    visit_children;
+
+#emit
+    // We use a template to obtain polymorphism on the constness of `this`.
+    template<class THIS>
+    static void visit_children(THIS*, Visitor& v);
+
+    /// Helper for visit_children. Visits the match table for when it is not
+    /// gateway-inhibited.
+    // We use a template to obtain polymorphism on the constness of `this`.
+    template<class THIS>
+    static void visit_match_table(THIS* self, Visitor& v);
+
+    /// Helper for visit_children. Visits the gateway payload, for when the
+    /// match table is gateway-inhibited.
+    // We use a template to obtain polymorphism on the constness of `this`.
+    template<class THIS>
+    static void visit_gateway_inhibited(THIS* self, Visitor& v);
+#end
 #apply
 }
-
 
 // attachement of an AttachedMemory table to a match table -- different match tables
 // may attach the same AttachedMemory table with different BackendAttached, as long as

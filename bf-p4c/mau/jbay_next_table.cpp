@@ -307,8 +307,6 @@ void NextTableProp::NextTableAlloc::cross_prop(NTInfo& nti) {
                   if (prev_nt && prev_nt->type == LONG_BRANCH) {
                       merge_lb(prev_nt, rv);
                       BUG_CHECK(last_lb_orig, "Previous NT used LB, but last_lb_orig not set!");
-                      // Associate this next table with the last long branch origin
-                      self.props[get_uid(last_lb_orig)][branch].insert(*rv);
                   } else {
                       alloc_lb(rv, prev_st);
                       if (rv->lb.tag >= Device::numLongBranchTags())
@@ -316,6 +314,8 @@ void NextTableProp::NextTableAlloc::cross_prop(NTInfo& nti) {
                       // Update the last long branch origin, as prev_t is now an lb origin
                       last_lb_orig = prev_t;
                   }
+                  // Associate this next table with the last long branch origin
+                  self.props[get_uid(last_lb_orig)][branch].insert(*rv);
                   // Add the tables to pretty printer
                   lb_pp[rv->lb.tag][prev_t->stage()] =
                       std::pair<const IR::MAU::Table*, const IR::MAU::Table*>(prev_t, rep);
