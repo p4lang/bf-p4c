@@ -131,7 +131,7 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
          "all
          ^switch_tests.L3SVITest
@@ -145,15 +145,15 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
          ^switch_hostif.HostIfRxTest
 	 ^switch_tests.L2LagTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
          "switch_hostif.HostIfPingTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
          "switch_hostif.HostIfRxTest")
  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
          "switch_tests.L2FloodTest
           switch_tests.IPv4MalformedPacketsTest

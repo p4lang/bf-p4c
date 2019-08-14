@@ -29,7 +29,7 @@ p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
 
 # Running switch-16 PTF tests on default profile
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile c0_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests"
         "all
