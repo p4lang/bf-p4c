@@ -119,15 +119,11 @@
  *    Note how in this version we got rid of the second long branch entirely and were able to
  *    shorten the first long branch by 1 stage.
  *
- * 4. "Overlap" long branches in the same gress (FIXME UNIMPLEMENTED): Suppose we have one long
- *    branch from stages 2-5 and one from 5-7. These can be on the same tag if and only if they are
- *    both associated with the same gress (technically, ghost and ingress can also overlap, but we
- *    will not consider that case for now). As such, we will overlap the two long branches if they
- *    are from the same gress.
+ * 4. "Overlap" long branches in the same gress: Suppose we have one long branch from stages 2-5 and
+ *    one from 5-7. These can be on the same tag if and only if they are both associated with the
+ *    same gress (technically, ghost and ingress can also overlap, but we will not consider that
+ *    case for now). As such, we will overlap the two long branches if they are from the same gress.
  */
-
-NextTableProp::NextTable::NextTable(const IR::MAU::Table* t, next_t ty)
-        : id(get_uid(t)), type(ty), stage(t->stage()) { }
 
 /* Holds next table prop information for a specific table sequence. One created per call to
  * add_table_seq. Note that add_table_seq may be called on the same table sequence multiple times,
@@ -135,19 +131,18 @@ NextTableProp::NextTable::NextTable(const IR::MAU::Table* t, next_t ty)
  * same tables); (2) under different tables. In the case of (1), we do not need to run it twice, but
  * do so right now out of convenience. In the case of (2), we do need to run it multiple times,
  * since the NTP needs to be associated with different tables. */
-struct NextTableProp::NextTableAlloc::NTInfo {
+struct NextTable::Prop::NTInfo {
     const IR::MAU::Table* parent;  // Origin of this control flow
-    std::vector<std::vector<const IR::MAU::Table*>> stages;  // Tables in each stage
+    dyn_vector<dyn_vector<const IR::MAU::Table*>> stages;  // Tables in each stage
     const int first_stage;
     int last_stage;
     const cstring seq_nm;  // Name of the table sequence
     const IR::MAU::TableSeq* ts;
-    bitvec dummies;  // Dumb table usage
 
     NTInfo(const IR::MAU::Table* tbl, std::pair<cstring, const IR::MAU::TableSeq*> seq)
             : parent(tbl), first_stage(tbl->stage()), seq_nm(seq.first), ts(seq.second) {
-        LOG3("Calculating next table propagation for table " << tbl->name << " and sequence "
-             << seq.first);
+        LOG1("NTP for " << tbl->name << " and sequence "
+             << seq.first << ":");
         stages.resize(Device::numStages());
         last_stage = tbl->stage();
         BUG_CHECK(first_stage >= 0, "Unplaced table %s", tbl->name);
@@ -156,7 +151,8 @@ struct NextTableProp::NextTableAlloc::NTInfo {
         for (auto t : ts->tables) {
             auto st = t->stage();
             BUG_CHECK(st >= 0, "Unplaced table %s", t->name);
-            BUG_CHECK(first_stage <= st, "Table %s placed before parent %s", t->name, tbl->name);
+            BUG_CHECK(first_stage <= st, "Table %s (LID: %d) placed before parent %s (LID: %d)",
+                      t->name, t->logical_id, tbl->name, tbl->logical_id);
             // Update last stage
             last_stage = st > last_stage ? st : last_stage;
             // Add to the correct vector
@@ -167,34 +163,74 @@ struct NextTableProp::NextTableAlloc::NTInfo {
     }
 };
 
-// Adds a table sequence to the map
-void NextTableProp::NextTableAlloc::add_table_seq(const IR::MAU::Table* t, std::pair<cstring,
-                                                  const IR::MAU::TableSeq*> next) {
-    NTInfo nti(t, next);
-    local_prop(nti);
-    find_dummies(nti);
-    cross_prop(nti);
+// Checks if there is any overlap between two tags
+bool NextTable::LBUse::operator&(const LBUse& r) const {
+    BUG_CHECK(fst <= lst && r.fst <= r.lst, "LBUse first and last have been corrupted!");
+    if ((lst - fst) < 2 || (r.lst - r.fst) < 2)
+        return false;
+    else if (thread() == r.thread())
+        return !(fst >= r.lst || lst <= r.fst);
+    else
+        return !(fst > r.lst || lst < r.fst);
 }
 
-void NextTableProp::NextTableAlloc::local_prop(NTInfo& nti) {
+void NextTable::LBUse::extend(const IR::MAU::Table* t) {
+    size_t st = t->stage();
+    BUG_CHECK(size_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
+    // If tables are in the same stage, we don't need to do anything
+    if (st == fst) return;
+    extended = true;
+    fst = st < fst ? st : fst;
+}
+
+bool NextTable::Tag::add_use(const LBUse& lbu) {
+    for (auto u : uses)
+        if (u & lbu) return false;
+    uses.push_back(lbu);
+    return true;
+}
+
+NextTable::profile_t NextTable::Prop::init_apply(const IR::Node* root) {
+    if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
+    // Clear maps, since we have to rebuild them
+    self.props.clear();
+    self.lbs.clear();
+    self.stage_id.clear();
+    self.lbus.clear();
+    self.dest_src.clear();
+    self.dest_ts.clear();
+    self.al_runs.clear();
+    self.max_stage = 0;
+    self.stage_tags.clear();
+    LOG1("BEGINNING NEXT TABLE PROPAGATION");
+    return MauInspector::init_apply(root);
+}
+
+bool NextTable::Prop::preorder(const IR::BFN::Pipe*) {
+    return self.rebuild;
+}
+
+void NextTable::Prop::local_prop(const NTInfo& nti) {
     // Add tables that are in the same stage as the parent to the parent's set of LOCAL_EXEC tables
     // for the given sequence
-    for (auto nt : nti.stages[nti.first_stage]) {
+    if (size_t(nti.first_stage) >= nti.stages.size()) return;
+    for (auto nt : nti.stages.at(nti.first_stage)) {
         BUG_CHECK(nti.parent->logical_id <= nt->logical_id,
-                  "Table %s has LID less than parent table %s", nt->name, nti.parent->name);
-        LOG3("  Adding " << nt->name << " to " << nti.seq_nm << " LOCAL_EXEC of parent table "
-             << nti.parent->name);
-        self.props[get_uid(nti.parent)][nti.seq_nm].insert(NextTable(nt, LOCAL_EXEC));
+                  "Table %s has LID %d, less than parent table %s (LID %d)", nt->name,
+                  nt->logical_id, nti.parent->name, nti.parent->logical_id);
+        LOG3("  - " << nt->name << " to " << nti.seq_nm << "; LOCAL_EXEC from " << nti.parent->name
+             << " in stage " << nt->stage());
+        self.props[get_uid(nti.parent)][nti.seq_nm].insert(get_uid(nt));
     }
     // Vertically compress each stage; i.e. calculate all of the local_execs, giving us a single
     // representative table for each stage to use in cross stage propagation
-    for (int i = nti.first_stage + 1; i <= nti.last_stage; ++i) {
-        auto& tables = nti.stages[i];
-        if (tables.empty()) continue;
+    for (int i = nti.first_stage + 1; i <= nti.last_stage && size_t(i) < nti.stages.size(); ++i) {
+        auto& tables = nti.stages.at(i);
+        if (tables.empty()) continue;  // Skip empty stages
 
         // Tables should be in logical ID order. The "representative" table (lowest LID) for this
         // stage and its set of $run_if_ran tables
-        auto rep = tables[0];
+        auto rep = tables.at(0);
         auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"];
         for (auto nt : tables) {
             // Skip the representative
@@ -202,199 +238,375 @@ void NextTableProp::NextTableAlloc::local_prop(NTInfo& nti) {
             BUG_CHECK(rep->logical_id < nt->logical_id,
                       "Tables not in logical ID order; representative %s has greater LID than %s.",
                       rep->name, nt->name);
-            LOG3("  Adding " << nt->name << " to $run_if_ran LOCAL_EXEC of table " << rep->name);
-            r_i_r.insert(NextTable(nt, LOCAL_EXEC));
+            LOG3("  - " << nt->name << " on $run_if_ran; LOCAL_EXEC from " << rep->name
+                 << " in stage " << nt->stage());
+            r_i_r.insert(get_uid(nt));
         }
     }
 }
 
-
-/* Before we do cross stage propagation, we want to add dummy tables to reduce long branch
- * pressure. We do this in two phases. First, we find the places where we can add dummy
- * stages. After we've found all of these locations, we remove useless ones. Finally, we create
- * these dumb tables and stage them for memory allocation in the end_apply 
- * FIXME: Refactor adding dummies to its own pass so we don't do it so greedily. */
-void NextTableProp::NextTableAlloc::find_dummies(NTInfo& nti) {
-    auto fs = nti.first_stage;
-    auto ls = nti.last_stage;
-    auto& dummies = nti.dummies;
-    // Look for where we can add tables
-    for (int i = fs + 1; i < ls; ++i) {
-        // If we have a table in the stage, we don't care
-        if (!nti.stages[i].empty()) continue;
-        // Can add a dummy if we have an empty logical ID
-        if (self.stage_cap[i] < Memories::LOGICAL_TABLES) dummies.setbit(i);
-    }
-    /* Now, prune out useless dummies. To be useful, one of the following conditions must be met:
-     *   - Dummy is in stage first_stage + 1. This frees up first_stage.
-     *   - Dummy is in last_stage - 1. This frees up last_stage.
-     *   - Dummy is in a chain of dummy tables or real tables of at least length 3.
-     * Thus, we start our search at first_stage + 2 and end it at last_stage - 2. 
-     * FIXME: Once debubbling has gone in, this condition can be relaxed to a chain of 2. */
-    // Check if we have a real OR a dumb table in given stage
-    auto have_table = [&](int idx) {
-                          bool rv = idx < 0 || size_t(idx) > nti.stages.size() ? false
-                              : dummies.getbit(idx) || !nti.stages[idx].empty();
-                          return rv;
-                      };
-    bool in_chain = have_table(fs + 1);
-    for (int i = fs + 2; i < ls - 1; ++i) {
-        // If we're already in a chain, this one is useful
-        if (in_chain) {
-            in_chain = have_table(i);
-            continue;
-        }
-        // If this bit isn't set and we're not in a chain than we're still not in a chain
-        if (!dummies.getbit(i)) continue;
-        // Can be in a chain by having the 2 adjacent, having the previous 2 or having the next two
-        if ((have_table(i-1) && have_table(i+1)) || (have_table(i-1) && have_table(i-2))
-            || (have_table(i+1) && have_table(i+2))) {
-            in_chain = true;
-            continue;
-        }
-        // Otherwise, we don't have a chain and this dummy is useless
-        dummies.clrbit(i);
-    }
-    // Create the dummy tables
-    for (int i = fs + 1; i < ls; ++i) {
-        if (dummies.getbit(i)) {
-            // Create the new dummy table
-            cstring tname = "$" + nti.parent->name + "-" + nti.seq_nm
-                + "-next-table-forward-" + std::to_string(i);
-            LOG3("  Adding dummy table to stage " << i << " for NTP of parent "
-                 << nti.parent->name);
-            auto *dt = new IR::MAU::Table(tname, nti.parent->thread());
-            if (self.stage_id.count(i) == 0) {  // If nothing is in the stage, use min
-                dt->logical_id = i * 16;
-                self.stage_id[i] = i * 16 + 1;
-            } else {  // Otherwise, use one larger than max seen
-                dt->logical_id = ++self.stage_id[i];
-            }
-            nti.stages[i].push_back(dt);  // Add for cross table propagation
-            self.stage_cap[i]++;  // Increased num in use
-            self.dumb_tbls[nti.ts].push_back(dt);  // Add for insertion into IR
-            stage_dumbs[i].push_back(dt);  // Add for memory allocation
-        }
-    }
-}
-
-void NextTableProp::NextTableAlloc::cross_prop(NTInfo& nti) {
+void NextTable::Prop::cross_prop(const NTInfo& nti) {
     auto stages = nti.stages;
     auto prev_t = nti.parent;  // The table from which we will propagate
     int prev_st = nti.first_stage;  // The stage that prev_t is in
-    NextTable* prev_nt = nullptr;  // The previous NextTable object
-    const IR::MAU::Table* last_lb_orig = nullptr;  // The last table a long branch originated from
     cstring branch = nti.seq_nm;  // The name of the seq branch. Will be $run_if_ran after parent
-    int i = nti.first_stage + 1;
 
-    // Creates a GLOBAL_EXEC NextTable object for rep
-    auto ge = [&](const IR::MAU::Table* rep) {
-                  LOG3("  Adding " << rep->name << " to " << branch
-                       << " GLOBAL_EXEC of table " << prev_t->name << " from stage "
-                       << prev_st << " to stage " << i);
-                  NextTable* rv = new NextTable(rep, GLOBAL_EXEC);
-                  // Associate it with prev_t in the props map
-                  self.props[get_uid(prev_t)][branch].insert(*rv);
-                  return rv;
-              };
-    // Creates a LONG_BRANCH NextTable object for rep
-    auto lb = [&](const IR::MAU::Table* rep) {
-                  BUG_CHECK(prev_t->stage() + 1 < rep->stage(),
-                            "LB used between %s in stage %d and %s in stage %d!",
-                            prev_t->name, prev_t->stage(), rep->name, rep->stage());
-                  NextTable* rv = new NextTable(rep, LONG_BRANCH);
-                  // If the previous one was a long branch as well, we can just combine them
-                  if (prev_nt && prev_nt->type == LONG_BRANCH) {
-                      merge_lb(prev_nt, rv);
-                      BUG_CHECK(last_lb_orig, "Previous NT used LB, but last_lb_orig not set!");
-                  } else {
-                      alloc_lb(rv, prev_st);
-                      if (rv->lb.tag >= Device::numLongBranchTags())
-                          ::error(ErrorType::ERR_OVERLIMIT, "too many long branches %1%", rep);
-                      // Update the last long branch origin, as prev_t is now an lb origin
-                      last_lb_orig = prev_t;
-                  }
-                  // Associate this next table with the last long branch origin
-                  self.props[get_uid(last_lb_orig)][branch].insert(*rv);
-                  // Add the tables to pretty printer
-                  lb_pp[rv->lb.tag][prev_t->stage()] =
-                      std::pair<const IR::MAU::Table*, const IR::MAU::Table*>(prev_t, rep);
-                  LOG3("  Adding " << rep->name << " to " << branch
-                       << " LONG_BRANCH of table " << prev_t->name << " from stage " << prev_st
-                       << " to stage " << i << " on tag " << rv->lb.tag);
-                  return rv;
-              };
-
-    for (; i <= nti.last_stage; ++i) {
+    for (int i = nti.first_stage + 1; i <= nti.last_stage; ++i) {
         if (stages[i].empty()) continue;
         BUG_CHECK(prev_st < i, "Previous is not previous!");
         // The representative for this stage that will receive (and pass) cross-stage propagation
         auto rep = stages[i][0];
 
-        // Do we need global_exec or long_branch?
-        NextTable* nt = prev_st == i-1 ? ge(rep) : lb(rep);
+        // Logging
+        if (prev_st == i-1) {  // Global exec
+            LOG3("  - " << rep->name << " on " << branch
+                 << "; GLOBAL_EXEC from " << prev_t->name << " on range [" << prev_st << " -- "
+                 << i << "]");
+        } else {  // Long branch
+            BUG_CHECK(prev_t->stage() + 1 < rep->stage(),
+                      "LB used between %s in stage %d and %s in stage %d!",
+                      prev_t->name, prev_t->stage(), rep->name, rep->stage());
+            LOG3("  - " << rep->name << " on " << branch
+                 << "; LONG_BRANCH from " << prev_t->name << " on range [" << prev_st << " -- "
+                 << i << "]");
+            if (self.lbus.count(LBUse(rep))) {  // If we already have an lb for this dest, extend it
+                auto it = self.lbus.find(LBUse(rep));
+                auto lb = *it;
+                self.lbus.erase(it);
+                lb.extend(prev_t);
+                self.lbus.insert(lb);
+            } else {  // Otherwise, create a new LBUse
+                self.lbus.insert(LBUse(rep, prev_st, i));
+            }
+            self.dest_src[get_uid(rep)].insert(get_uid(prev_t));
+            self.dest_ts[get_uid(rep)] = nti.ts;
+        }
+        // Add to the propagation map for asm gen
+        self.props[get_uid(prev_t)][branch].insert(get_uid(rep));
         // Update previous
         prev_t = rep;
         prev_st = i;
-        prev_nt = nt;
         branch = "$run_if_ran";
     }
 }
 
-// Return the unique ID for this table. Since we're in the weird position of having both unplaced
-// and placed tables, we need to check if we are placed or not
-UniqueId NextTableProp::get_uid(const IR::MAU::Table* t) {
-    return t->is_placed() ? t->unique_id() : t->pp_unique_id();
-}
-
-// Allocate a long branch tag for this table
-void NextTableProp::NextTableAlloc::alloc_lb(NextTable* nt, int first_stage) {
-    auto& lb = nt->lb;
-    lb.first_stage = first_stage;
-    BUG_CHECK(first_stage >= 0, "Unplaced table");
-    lb.rng = bitvec(first_stage, nt->stage + 1 - first_stage);
-
-    // Loop to find an open tag
-    lb.tag = 0;
-    while (size_t(lb.tag) < stage_use.size()  // See if we're at a completely new tag
-           && (stage_use[lb.tag] & lb.rng))  // Check for stage range overlap
-        ++lb.tag;
-    BUG_CHECK(lb.tag >= 0, "Invalid long branch tag %d", lb.tag);
-
-    // Add this tag to the uses
-    stage_use[lb.tag] |= lb.rng;
-    // for (int st = first_stage; st <= stage; ++st) {
-    //     if (use[st][lb.tag] && use[st][lb.tag] != &lb)
-    //         BUG("conflicting allocation for long branch tag %d in stage %d", lb.tag, st);
-    //     use[st][lb.tag] = &lb;
-    // }
-}
-
-// Merge prev lb with nt
-void NextTableProp::NextTableAlloc::merge_lb(NextTable* prev, NextTable* nt) {
-    // When we merge, we're just going to reuse the same tag from prev but increase the range that
-    // it covers. We also need to accordingly update the range in the global stage_use.
-    auto& prev_lb = prev->lb;
-    auto& lb = nt->lb;
-    lb.first_stage = prev_lb.first_stage;
-    bitvec rng(lb.first_stage, nt->stage + 1 - lb.first_stage);
-    lb.rng = prev_lb.rng = rng;
-    lb.tag = prev_lb.tag;
-    stage_use[lb.tag] |= rng;
-}
-
-bool NextTableProp::NextTableAlloc::preorder(const IR::MAU::Table* t) {
+bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
+    int st = t->stage();
+    self.max_stage = st > self.max_stage ? st : self.max_stage;
+    self.mems[st].update(t->resources->memuse);
+    if (t->logical_id > self.stage_id[st])
+        self.stage_id[st] = t->logical_id;
     if (!findContext<IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
     // Add all of the table's table sequences
-    for (auto ts : t->next)
-        add_table_seq(t, ts);
+    for (auto ts : t->next) {
+        NTInfo nti(t, ts);
+        local_prop(nti);
+        cross_prop(nti);
+    }
     return true;
 }
 
-void NextTableProp::NextTableAlloc::end_apply() {
+void NextTable::Prop::end_apply() {
+    for (int i = 0; i < self.max_stage; ++i) {  // Fix up stage_id
+        if (self.stage_id[i] < i * Memories::LOGICAL_TABLES)
+            self.stage_id[i] = i * Memories::LOGICAL_TABLES;
+        else
+            self.stage_id[i]++;  // Collected max, but need next open one
+    }
+    if (!self.rebuild) return;
+    LOG1("FINISHED NEXT TABLE PROPAGATION");
+}
+
+NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
+    if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
+    LOG1("BEGIN LONG BRANCH TAG ALLOCATION");
+    // Get LBU's in order of their first stage, for better merging
+    std::vector<LBUse> lbus(self.lbus.begin(), self.lbus.end());
+    std::sort(lbus.begin(), lbus.end(), [](const LBUse& l, const LBUse& r)
+                                            { return (l.fst < r.fst); });
+    // Loop through all of the tags in order of their first stage
+    for (auto& u : lbus) {
+        int tag = alloc_lb(u);
+        LOG3("  Long branch targeting " << u.dest->name << " allocated on tag " << tag);
+        // Loop through all sources and mark them in the map we expose
+        for (auto src : self.dest_src[get_uid(u.dest)]) {
+            LOG5("    - source: " << src.build_name());
+            self.lbs[src][tag].insert(get_uid(u.dest));
+        }
+    }
+    self.rebuild = self.stage_tags.size() >= size_t(Device::numLongBranchTags());
+    LOG1("FINISHED LONG BRANCH TAG ALLOCATION");
+    return MauInspector::init_apply(root);
+}
+
+int NextTable::LBAlloc::alloc_lb(const LBUse& u) {
+    int tag = 0;
+    bool need_new = true;
+    // Keep looping and trying to add LB to a tag
+    for (; size_t(tag) < self.stage_tags.size(); ++tag) {
+        if (self.stage_tags[tag].add_use(u)) {
+            need_new = false;
+            break;
+        }
+    }
+    if (need_new) {
+        tag = self.stage_tags.size();
+        Tag t;
+        t.add_use(u);
+        self.stage_tags.push_back(t);
+        self.max_tag = tag;
+    }
+    return tag;
+}
+
+bool NextTable::LBAlloc::preorder(const IR::BFN::Pipe*) {
+    return false;
+}
+
+NextTable::profile_t NextTable::TagReduce::init_apply(const IR::Node* root) {
+    return MauTransform::init_apply(root);
+}
+
+IR::Node* NextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
+    if (!self.rebuild) {  // Short circuit when we don't need dumb tables
+        prune();
+        return p;
+    }
+    // Try to merge tags
+    LOG1("BEGINNING TAG REDUCTION");
+    bool success = merge_tags();
+    if (!success) {
+        LOG1("TAG REDUCTION FAILED! BACKTRACKING AND RETRYING WITHOUT LONG BRANCHES!");
+        // Backtrack, because we can't add DTs to fix the problem!
+        prune();
+        return p;
+    }
+    // Allocate memories for DTs
+    alloc_dt_mems();
+    LOG1("FINISHED TAG REDUCTION SUCCESSFULLY, INSERTING TABLES INTO IR");
+    return p;
+}
+
+IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
+    // Get the original pointer
+    auto key = dynamic_cast<const IR::MAU::TableSeq*>(getOriginal());
+    // Add new tables
+    ts->tables.insert(ts->tables.end(), dumb_tbls[key].begin(), dumb_tbls[key].end());
+    // Put tables into LID sorted order
+    std::sort(ts->tables.begin(), ts->tables.end(),
+              [](const IR::MAU::Table* t1, const IR::MAU::Table* t2)
+              { return t1->logical_id < t2->logical_id; });
+    return ts;
+}
+
+IR::Node* NextTable::TagReduce::preorder(IR::MAU::Table* t) {
+    if (self.al_runs.count(t->unique_id()))
+        t->always_run = true;
+    return t;
+}
+
+/* Represents a symmetric matrix as a flattened vector. (i, j) = (j, i) */
+template <class T>
+class NextTable::TagReduce::sym_matrix {
+    std::vector<T> m;
+    size_t dim;
+    inline bool inrng(size_t i) const { return i < dim; }
+    // Converts 2D indexing to 1D
+    inline size_t conv(size_t i, size_t j) const {
+        if (!inrng(i) || !inrng(j))
+            throw std::out_of_range("Index out of range in tag matrix!");
+        size_t x = std::max(i, j);
+        size_t y = std::min(i, j);
+        return x * (x + 1) / 2 + y;
+    }
+    // Takes an index in the 1D vector and converts back to a coordinate pair. Always returns in
+    // order (smaller, larger)
+    static std::pair<size_t, size_t> invert(size_t z) {
+        size_t x = floor((sqrt(double(8*z + 1)) - 1.0)/2.0);
+        size_t y = z - (x * (x + 1)) / 2;
+        return std::pair<size_t, size_t>(y, x);
+    }
+
+ public:
+    explicit sym_matrix(size_t num) : m((num*(num+1))/2, T()), dim(num) {}
+    // Lookup (i,j)
+    T operator()(size_t i, size_t j) const {
+        return m.at(conv(i, j));
+    }
+    // Assign vec to (i,j), returns old value
+    T operator()(size_t i, size_t j, T val) {
+        T old = m[conv(i, j)];
+        m[conv(i, j)] = val;
+        return old;
+    }
+    // Returns index of an object given a comparison function. comp should return true if the left
+    // argument is to be preferred. Returns index in order (smaller, larger)
+    std::pair<size_t, size_t> get(std::function<bool(T, T)> comp) const {
+        size_t idx = 0;
+        T best = m.at(0);
+        for (size_t i = 1; i < m.size(); ++i) {
+            if (comp(m.at(i), best)) {
+                idx = i;
+                best = m.at(i);
+            }
+        }
+        return invert(idx);
+    }
+};
+
+struct NextTable::TagReduce::merge_t {
+    Tag merged;
+    std::map<LBUse, std::set<int>> dum;
+    bool success;
+    bool finalized;
+    size_t num_dts;
+    merge_t() : success(true), finalized(false), num_dts(0) {}
+};
+
+NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
+    merge_t rv;
+    std::map<int, int> stage_id(self.stage_id);  // Need our own copy
+    auto cap = [&](int k) {  // Check the capacity of a stage. 0 means full
+                   return (k+1) * Memories::LOGICAL_TABLES - stage_id[k];
+               };
+    auto addrng = [&](int fst, int lst) {  // Returns a set containing [fst, lst)
+                      std::set<int> dts;
+                      for (; fst < lst; ++fst) {
+                          if (!cap(fst)) rv.success = false;
+                          dts.insert(fst);
+                          rv.num_dts++;
+                      }
+                      return dts;
+                  };
+    for (auto& lu : l) {
+        for (auto& ru : r) {
+            if (!(lu & ru)) continue;  // Skip if there's no overlap
+            if (!lu.can_dt() && !ru.can_dt()) {  // Early exit if overlap and can't DT both
+                rv.success = false;
+                return rv;
+            }
+            std::set<int> dts;
+            LBUse* key;  // The LB which dummy tables were added to
+            // Handles when one tag fully covers another
+            auto overlap = [&](LBUse* lrg, LBUse* sml) {
+                               if (sml->can_dt()) {  // Try to get rid of smaller
+                                   dts = addrng(sml->fst + 1, sml->lst);
+                                   sml->fst = sml->lst;
+                                   key = sml;
+                               } else {  // Get rid of larger o.w.
+                                   dts = addrng(lrg->fst + 1, lrg->lst);
+                                   lrg->fst = lrg->lst;
+                                   key = lrg;
+                               }
+                           };
+            // Handles when one tag only partially covers another
+            auto partial
+                = [&](LBUse* lft, LBUse* rgt) {
+                      // Here, we can add rf--ll-1 to the left or rf+1--ll if on. If off, we can add
+                      // max(lf + 1, rf - 1)--ll-1 to the left or rf+1--min(ll + 1, rl - 1) to the
+                      // right
+                      bool on = lft->same_gress(*rgt);
+                      int lbeg = on ? lft->fst : std::max(lft->fst + 1, rgt->fst - 1);
+                      int rend = on ? lft->lst : std::min(lft->lst + 1, rgt->lst - 1);
+                      if (!rgt->can_dt() || cap(lbeg) > cap(rend)) {
+                          dts = addrng(lbeg, lft->lst);
+                          lft->lst = lbeg;
+                          key = lft;
+                      } else {
+                          dts = addrng(rgt->fst + 1, rend + 1);
+                          rgt->fst = rend;
+                          key = rgt;
+                      }
+                  };
+            // Four ways to conflict:
+            if (lu.fst <= ru.fst && ru.lst <= lu.lst)  // lu completely overlaps ru
+                overlap(&lu, &ru);
+            else if (ru.fst <= lu.fst && lu.lst <= ru.lst)  // ru completely overlaps lu
+                overlap(&ru, &lu);
+            else if (lu.fst < ru.fst && lu.lst < ru.lst)  // lu partially overlaps ru
+                partial(&lu, &ru);
+            else  // ru partially overlaps lu
+                partial(&ru, &lu);
+            if (!rv.success) return rv;
+            BUG_CHECK(dts.size() > 0, "Two uses overlap but don't need dummy tables to merge??");
+            // Insert into map, update the key
+            for (auto i : dts) {
+                rv.dum[*key].insert(i);
+                stage_id[i]++;
+            }
+        }
+    }
+    // Merge tags
+    for (auto u : l)
+        rv.merged.add_use(u);
+    for (auto u : r)
+        rv.merged.add_use(u);
+    rv.finalized = true;
+    return rv;
+}
+
+// Only called after we determine we need dumb tables. Finds (locally) minimal configuration of dumb
+// tables
+NextTable::TagReduce::sym_matrix<NextTable::TagReduce::merge_t>
+NextTable::TagReduce::find_merges() const {
+    // Comparison between tag i and tag j
+    sym_matrix<merge_t> m(self.stage_tags.size());
+    // Get all of the possible dummy tables
+    for (size_t i = 0; i < self.stage_tags.size(); ++i) {
+        // Compare to tags greater than i (comparisons are commutative
+        for (size_t j = i + 1; j < self.stage_tags.size(); ++j)
+            m(i, j, merge(self.stage_tags.at(i), self.stage_tags.at(j)));
+    }
+    return m;
+}
+
+// Merges tags until we've reduced long branch pressure far enough. Returns true if LB pressure can
+// be lowered to below device limtis, false o.w.
+bool NextTable::TagReduce::merge_tags() {
+    // Continue merging until our long branches have been minimized
+    for (int num_merges = self.stage_tags.size() - Device::numLongBranchTags();
+         num_merges; --num_merges) {
+        auto m = find_merges();  // Find the merges we can do on this iteration
+        // Get the coordinates of the smallest vector that is not empty
+        size_t fst, snd;
+        std::tie(fst, snd) = m.get([&](merge_t l, merge_t r) {
+                                       if (!l.success || !l.finalized) return false;
+                                       if (!r.success || !r.finalized) return true;
+                                       return l.num_dts < r.num_dts;
+                                   });
+        merge_t mrg = m(fst, snd);  // Dumb tables needed to merge fst and snd
+        if (!mrg.success || !mrg.finalized) {  // If we can't find a successful merge, fail
+            return false;
+        }
+        LOG2("  Merging tags " << fst << " and " << snd);
+        for (auto kv : mrg.dum) {  // Associate all of the dummy tables with the table sequence
+            auto ts = self.dest_ts[get_uid(kv.first.dest)];
+            auto dtbls =
+                std::accumulate(kv.second.begin(), kv.second.end(), std::vector<IR::MAU::Table*>(),
+                                [&](std::vector<IR::MAU::Table*> a, int st) {
+                                    cstring tname = "$next-table-forward-to-" + kv.first.dest->name
+                                        + "-" + std::to_string(st);
+                                    LOG3("    - " << tname << " in stage " << st
+                                         << ", targeting dest " << kv.first.dest->name);
+                                    auto* dt = new IR::MAU::Table(tname, kv.first.thread());
+                                    dt->logical_id = self.stage_id[st]++;
+                                    stage_dts[st].push_back(dt);
+                                    a.push_back(dt);
+                                    return a;
+                                });
+            dumb_tbls[ts].insert(dumb_tbls[ts].end(), dtbls.begin(), dtbls.end());
+        }
+        // Delete the old tags and add the merged tag
+        self.stage_tags[fst] = mrg.merged;
+        self.stage_tags.erase(self.stage_tags.begin() + snd);
+    }
+    return true;
+}
+
+void NextTable::TagReduce::alloc_dt_mems() {
     // Allocate memories for dumb tables
-    for (auto stage : stage_dumbs) {
+    for (auto stage : stage_dts) {
         // Need to store resources until allocation has finished
         std::map<IR::MAU::Table*, TableResourceAlloc*> tras;
         auto& mem = self.mems[stage.first];
@@ -413,44 +625,9 @@ void NextTableProp::NextTableAlloc::end_apply() {
         for (auto res : tras)
             res.first->resources = res.second;
     }
-    // Pretty print long branch usage
-    pretty_print();
-    LOG3(log.str());
 }
 
-bool NextTableProp::EmptyIds::preorder(const IR::MAU::Table* t) {
-    int st = t->stage();
-    self.stage_cap[st]++;
-    self.mems[st].update(t->resources->memuse);
-    if (t->logical_id > self.stage_id[st])
-        self.stage_id[st] = t->logical_id;
-    return true;
-}
-
-IR::Node* NextTableProp::AddDumbTables::preorder(IR::MAU::TableSeq* ts) {
-    // Get the original pointer
-    auto key = dynamic_cast<const IR::MAU::TableSeq*>(getOriginal());
-    // Add new tables
-    ts->tables.insert(ts->tables.end(), self.dumb_tbls[key].begin(), self.dumb_tbls[key].end());
-    // Put tables into LID sorted order
-    std::sort(ts->tables.begin(), ts->tables.end(),
-              [](const IR::MAU::Table* t1, const IR::MAU::Table* t2)
-              { return t1->logical_id < t2->logical_id; });
-    return ts;
-}
-
-IR::Node* NextTableProp::AddDumbTables::preorder(IR::MAU::Table* t) {
-    if (self.al_runs.count(t->unique_id()))
-        t->always_run = true;
-    return t;
-}
-
-NextTableProp::NextTableProp() {
-    addPasses({new EmptyIds(*this), new NextTableAlloc(*this),
-               new AddDumbTables(*this)});
-}
-
-void NextTableProp::NextTableAlloc::pretty_print() {
+void NextTable::TagReduce::pretty_print() {
     std::vector<std::string> header;
     header.push_back("Tag #");
     int ns = Device::numStages();
@@ -493,4 +670,14 @@ void NextTableProp::NextTableAlloc::pretty_print() {
     }
     tp->print();
     log << std::endl;
+}
+
+
+// FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
+NextTable::NextTable() {
+    addPasses({new Prop(*this),
+               new LBAlloc(*this),
+               new TagReduce(*this),
+               new Prop(*this),
+               new LBAlloc(*this)});
 }

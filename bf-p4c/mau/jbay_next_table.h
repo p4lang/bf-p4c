@@ -8,143 +8,137 @@
 
 /* This pass determines next table propagation in tofino2. It minimizes the use of long branches
  * whenever possible by "pushing down" next table propagation to tables in the table sequence and
- * using global_exec/local_exec instead. This pass must be run after modifications to table graph
- * are done, otherwise its data will be invalidated.
+ * using global_exec/local_exec instead. This pass must be run after modifications to IR graph are
+ * done, otherwise its data will be invalidated.
  */
-class NextTableProp : public PassManager {
+class NextTable : public PassManager {
  public:
-    // Different kinds of next table propagation
-    enum next_t {LOCAL_EXEC, GLOBAL_EXEC, LONG_BRANCH};
-
-    // Container for long branch information
-    struct LBInfo {
-        // The stage from which the LB originates
-        int              first_stage = -1;
-        // The range that the long_branch is active on
-        bitvec           rng;
-        int              tag = -1;
-    };
-
-    // Container for table IDs, as well as how the next table will be propagated to it
-    struct NextTable {
-        NextTable(const IR::MAU::Table* t, next_t ty);
-        // ID of this table
-        const UniqueId         id;
-        // The type of propagation
-        const next_t           type;
-        // The stage that this table is placed in
-        const int              stage;
-        // Long branch information (if it's needed)
-        LBInfo                 lb;
-
-        bool operator==(const NextTable& other) const {
-            return (id == other.id && type == other.type && stage == other.stage);
-        }
-        bool operator<(const NextTable& other) const {
-            return id < other.id;
-        }
-    };
-
     // Map from tables->condition (tseq names)->sets of tables that need to occur next
-    using next_map_t =
-        std::map<UniqueId, std::unordered_map<cstring, std::set<NextTable>>>;
+    using next_map_t = std::map<UniqueId, std::unordered_map<cstring, std::set<UniqueId>>>;
     next_map_t props;
-
-    NextTableProp();
+    // Map from table to tag # to set of tables
+    std::map<UniqueId, std::unordered_map<int, std::set<UniqueId>>> lbs;
+    size_t get_num_lbs() { return max_tag; }  // For metrics
+    NextTable();
 
  private:
-    // Gets the unique id for a table, depending on whether the table is placed or not
-    static inline UniqueId get_uid(const IR::MAU::Table*);
-
-    // Map from stage to number of tables in it
-    std::map<int, int> stage_cap;
-    // Map from stage to tables
-    std::map<int, Memories> mems;
-    // Map from stage to max logical ID
-    std::map<int, int> stage_id;
-
-    // Collect stage to table information to facilitate conversion of LBs to GE
-    class EmptyIds : public MauInspector {
-        NextTableProp& self;
-        profile_t init_apply(const IR::Node* root) override {
-            self.stage_cap.clear();
-            self.mems.clear();
-            self.stage_id.clear();
-            return MauInspector::init_apply(root);
-        }
-        bool preorder(const IR::MAU::Table*) override;
+    // Represents a long branch targeting a single destination (unique on destination)
+    class LBUse {
+        bool extended;  // Whether this use has been extended
      public:
-        explicit EmptyIds(NextTableProp& ntp) : self(ntp) {}
+        size_t fst, lst;  // First and last stages this tag is used on
+        const IR::MAU::Table* dest;  // The destination related with this use
+        explicit LBUse(const IR::MAU::Table* d)  // Dummy constructor for lookup by destination
+                : extended(false), fst(0), lst(0), dest(d) {}
+        LBUse(const IR::MAU::Table* d, size_t f, size_t l)  // Construct a LBUse for a dest
+                : extended(false), fst(f), lst(l), dest(d) {}
+        bool operator<(const LBUse& r) const { return dest < r.dest; }  // Always unique on dest!
+        bool operator&(const LBUse& a) const;  // Returns true if tags do have unmergeable overlap
+        void extend(const IR::MAU::Table*);  // Extends this LB to a new source table
+        // Returns true if on the same gress, false o.w.
+        inline bool same_gress(const LBUse& r) const { return dest->thread() == r.dest->thread(); }
+        // Returns true if this LB is targetable for DT, false o.w.
+        inline bool can_dt() const { return !extended; }
+        inline gress_t thread() const { return dest->thread(); }
+        friend std::ostream& operator<<(std::ostream& out, const LBUse& u) {
+            out << "dest: " << u.dest->name << ", rng: " << u.fst << "->" << u.lst
+                << ", extended? " << u.extended;
+            return out;
+        }
     };
 
+    // Represents a single wire with multiple LBUses in it
+    class Tag {
+        std::vector<LBUse> uses;  // Live ranges of this tag
+     public:
+        // Attempts to add a tag. Returns true if successful, false otherwise
+        bool add_use(const LBUse&);
+        std::vector<LBUse>::iterator begin() { return uses.begin(); }
+        std::vector<LBUse>::iterator end() { return uses.end(); }
+        size_t size() const { return uses.size(); }
+    };
 
-    // Map from table sequences to dumb tables to add to sequence
-    std::map<const IR::MAU::TableSeq*, std::vector<IR::MAU::Table*>> dumb_tbls;
-    // Set of tables to make set always_run to true
-    std::set<UniqueId> al_runs;
+    // Gets the unique id for a table, depending on whether the table is placed or not
+    static inline UniqueId get_uid(const IR::MAU::Table* t) {
+        return t->is_placed() ? t->unique_id() : t->pp_unique_id();
+    }
 
-    // Allocates long branches, finds where new tables are necessary
-    class NextTableAlloc : public MauInspector {
-     private:
-        // Parent PassManager
-        NextTableProp& self;
+    /*===================================Data gathered by Prop===================================*/
+    std::map<int, Memories>                      mems;      // Map from stage to tables
+    std::map<int, int>                           stage_id;  // Map from stage to next open LID
+    std::set<LBUse>                              lbus;      // Long branches that are needed
+    std::map<UniqueId, std::set<UniqueId>>       dest_src;  // Map from dest. to set of srcs
+    std::map<UniqueId, const IR::MAU::TableSeq*> dest_ts;   // Map from dest. to containing seq
+    std::set<UniqueId>                           al_runs;   // Set of tables that always run
+    int                                          max_stage;
+
+    // Computes a minimal scheme for how to propagate next tables and records long branches for
+    // allocation. Also gathers information for dumb table allocation/addition.
+    class Prop : public MauInspector {
+        NextTable& self;
 
         // Holds information for propagating a single table sequence
         struct NTInfo;
-
-        // Propagate tables for this table
-        bool preorder(const IR::MAU::Table*) override;
         // Adds a table and corresponding table sequence to props map
         void add_table_seq(const IR::MAU::Table*, std::pair<cstring, const IR::MAU::TableSeq*>);
-        // Calculates and adds local (same stage) propagation
-        void local_prop(NTInfo& nti);
-        // Adds useful dumb tables
-        void find_dummies(NTInfo& nti);
-        // Calculates cross stage propagation
-        void cross_prop(NTInfo& nti);
-        // Map from stage to dumb tables that need memory allocation
-        std::map<int, std::vector<IR::MAU::Table*>> stage_dumbs;
+        void local_prop(const NTInfo& nti);  // Calculates and adds local (same stage) propagation
+        void cross_prop(const NTInfo& nti);  // Calculates cross stage propagation
+        bool preorder(const IR::MAU::Table*) override;
+        bool preorder(const IR::BFN::Pipe*) override;  // Early abort
 
-        /* For long_branch allocation: track usage of tags x stages so far.  In theory two uses
-         * could overlap by a single stage (the last stage, where the tag is terminated, is the
-         * stage where another sets it for a different use), but ONLY if the uses are in the samre
-         * thread.  For timing reasons, we can't do this if one use is ingress and the other egress.
-         * For now, we don't even try */
-        dyn_vector<bitvec>                  stage_use;
-        /* track usage of stages x tags */
-        // dyn_vector<dyn_vector<LBInfo*>>      use;
-        // Allocates a long_branch according to global use of lb tags
-        void alloc_lb(NextTable* nt, int first_stage);
-        // Merges a long branch with an existing one
-        void merge_lb(NextTable* prev, NextTable* nt);
-
-        // Setup and clear
-        profile_t init_apply(const IR::Node *root) override {
-            self.props.clear();
-            return MauInspector::init_apply(root);
-        }
-
-        // Allocates resources for dumb tables and pretty prints
+        profile_t init_apply(const IR::Node* root) override;
         void end_apply() override;
+
+     public:
+        explicit Prop(NextTable& ntp) : self(ntp) {}
+    };
+
+    /*==================================Data gathered by LBAlloc==================================*/
+    bool                                         rebuild = true;  // Whether we need dumb tables
+    dyn_vector<Tag>                              stage_tags;  // Track usage of tags x stages so far
+    size_t                                       max_tag;  // Largest tag allocated (number of lbs)
+    // Allocates long branches into tags
+    class LBAlloc : public MauInspector {
+        NextTable& self;
+        profile_t init_apply(const IR::Node* root) override;  // Allocates long branches to tags
+        bool preorder(const IR::BFN::Pipe*) override;  // Early abort
+        int alloc_lb(const LBUse&);  // Finds a tag in self.stage_tags to fit the LBUse
+
+     public:
+        explicit LBAlloc(NextTable& ntp) : self(ntp) {}
+    };
+
+    // Attempts to reduce the number of tags in use to the max supported by the device
+    class TagReduce : public MauTransform {
+        NextTable& self;
+
+        template <class T> class sym_matrix;  // Symmetric matrix for merging
+        struct merge_t;  // Represents an "in-progress" merge of two tags
+        sym_matrix<merge_t> find_merges() const;  // Finds all possible merges given current tags
+        merge_t merge(Tag l, Tag r) const;  // Merges two tags, creating list of dummy tables
+        bool merge_tags();  // Merge tags by adding DTs to fit. Returns false if failed
+        std::map<int, std::vector<IR::MAU::Table*>> stage_dts;  // Map from stage # to DTs
+        void alloc_dt_mems();  // Allocates memories for DTs in stage_dts
+
+        // Map from table sequences to dumb tables to add to sequence
+        std::map<const IR::MAU::TableSeq*, std::vector<IR::MAU::Table*>> dumb_tbls;
+
+        profile_t init_apply(const IR::Node* root) override;
+        // Early abort if push-down is sufficient. Adds DTs and allocates them memories
+        IR::Node* preorder(IR::BFN::Pipe*) override;
+        IR::Node* preorder(IR::MAU::Table*) override;  // Set always run tags
+        IR::Node* preorder(IR::MAU::TableSeq*) override;  // Add specified tables to table sequences
+
+        // FIXME: Pretty printing is all wrong right now
         // Capture information for pretty printing long branches (tag # -> src stage # -> src,dest)
         std::map<int, std::map<int, std::pair<const IR::MAU::Table*, const IR::MAU::Table*>>> lb_pp;
         // Log that captures pretty printing info
         std::stringstream log;
+        // Print long branches prettily
         void pretty_print();
 
      public:
-        explicit NextTableAlloc(NextTableProp& ntp) : self(ntp) {}
-    };
-
-    class AddDumbTables : public MauTransform {
-     private:
-        NextTableProp& self;
-        // Add specified tables to table sequences
-        IR::Node* preorder(IR::MAU::TableSeq*) override;
-        // Add always_run tags
-        IR::Node* preorder(IR::MAU::Table*) override;
-     public:
-        explicit AddDumbTables(NextTableProp& ntp) : self(ntp) {}
+        explicit TagReduce(NextTable& ntp) : self(ntp) {}
     };
 };
 

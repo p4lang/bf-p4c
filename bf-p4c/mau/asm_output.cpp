@@ -1783,18 +1783,16 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
         // Jbay specific
         if (tbl->next.at(what) && nxt_tbl) {
             // We want to build this set according to the NextTableProp
-            BUG_CHECK(nxt_tbl != nullptr,
-                      "LB supported and enabled, but NextTableProp hasn't been calculated!");
             NextTableSet rv;
 
             // Add tables according to next table propagation (if it has an entry in the map)
             if (nxt_tbl->props.count(tbl->unique_id())) {
                 auto prop = nxt_tbl->props.at(tbl->unique_id());
-                for (auto nt : prop[what])
-                    rv.insert(nt.id);
+                for (auto id : prop[what])
+                    rv.insert(id);
                 // Add the run_if_ran set
-                for (auto always_nt : prop["$run_if_ran"])
-                    rv.insert(always_nt.id);
+                for (auto always : prop["$run_if_ran"])
+                    rv.insert(always);
                 return rv;
             }
         }
@@ -1806,8 +1804,8 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
         NextTableSet rv;
         if (nxt_tbl->props.count(tbl->unique_id())) {
             auto prop = nxt_tbl->props.at(tbl->unique_id());
-            for (auto always_nt : prop["$run_if_ran"])
-                rv.insert(always_nt.id);
+            for (auto always : prop["$run_if_ran"])
+                rv.insert(always);
         }
         return rv;
     }
@@ -3028,39 +3026,19 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     }
 
     if (Device::numLongBranchTags() > 0 && !options.disable_long_branch
-        && nxt_tbl->props.count(tbl->unique_id())) {
-        // Whether we've printed the first line of the long branch or not
-        bool printed_start = false;
-        // Check for long branches off of this table
-        for (auto ts : nxt_tbl->props.at(tbl->unique_id())) {
-            // Iterate through the tables in the sequence and collect all of the LBs
-            std::map<int, std::set<NextTableProp::NextTable>> lbs;
-            for (auto nt : ts.second)
-                if (nt.type == NextTableProp::LONG_BRANCH) lbs[nt.lb.tag].insert(nt);
-
-            // Now, add the long branch
-            if (lbs.empty()) continue;
-            if (!printed_start) {
-                // Add the first line for this table if we haven't already
-                out << indent++ << "long_branch:" << std::endl;
-                // But never do it again for this table
-                printed_start = true;
+        && nxt_tbl->lbs.count(tbl->unique_id())) {
+        out << indent++ << "long_branch:" << std::endl;
+        // Check for long branches out of this table
+        for (auto tag : nxt_tbl->lbs.at(tbl->unique_id())) {
+            out << indent << tag.first << ": [";
+            const char *sep = " ";
+            for (auto id : tag.second) {
+                out << sep << id.build_name();
+                sep = ", ";
             }
-
-            // Now, print for this tag sequence
-            for (auto tag : lbs) {
-                out << indent << tag.first << ": [";
-                const char *sep = " ";
-                for (auto nt : tag.second) {
-                    out << sep << nt.id.build_name();
-                    sep = ", ";
-                }
-                out << (sep+1) << "]" << std::endl;
-            }
+            out << (sep+1) << "]" << std::endl;
         }
-        // Reset the indent if we printed any lbs
-        if (printed_start)
-            --indent;
+        --indent;
     }
 
     if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {

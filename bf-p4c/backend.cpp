@@ -105,7 +105,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
-        ? new NextTableProp : nullptr;
+        ? new NextTable : nullptr;
     addPasses({
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,

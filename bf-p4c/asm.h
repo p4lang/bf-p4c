@@ -29,7 +29,7 @@ class AsmOutput : public Inspector {
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
-    const NextTableProp *nxt_tbl;
+    const NextTable *nxt_tbl;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
@@ -43,7 +43,7 @@ class AsmOutput : public Inspector {
     AsmOutput(const PhvInfo &phv,
               const ClotInfo &clot,
               const FieldDefUse& defuse,
-              const NextTableProp* nxts,
+              const NextTable* nxts,
               const BFN_Options &opts,
               bool success)
             : phv(phv), clot(clot), defuse(defuse), nxt_tbl(nxts),

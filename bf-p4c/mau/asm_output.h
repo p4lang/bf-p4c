@@ -20,7 +20,7 @@ class MauAsmOutput : public MauInspector {
  protected:
     const PhvInfo       &phv;
     const IR::BFN::Pipe *pipe;
-    const NextTableProp *nxt_tbl;
+    const NextTable *nxt_tbl;
     const BFN_Options   &options;
 
  private:
@@ -163,7 +163,7 @@ class MauAsmOutput : public MauInspector {
     class EmitHashExpression;
 
  public:
-    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const NextTableProp *nxts,
+    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const NextTable *nxts,
                  const BFN_Options &options)
             : phv(phv), pipe(pipe), nxt_tbl(nxts), options(options) { }
 };

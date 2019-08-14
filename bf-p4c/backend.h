@@ -46,7 +46,7 @@ class Backend : public PassManager {
     Util::JsonObject dynHashNode;
 
     CollectPhvLoggingInfo *phvLoggingInfo;
-    NextTableProp *nextTblProp;
+    NextTable *nextTblProp;
 
  public:
     explicit Backend(const BFN_Options& options, int pipe_id);
@@ -54,7 +54,7 @@ class Backend : public PassManager {
     const PhvInfo       &get_phv()     const { return phv; }
     const ClotInfo      &get_clot()    const { return clot; }
     const FieldDefUse   &get_defuse()  const { return defuse; }
-    const NextTableProp *get_nxt_tbl() const { return nextTblProp; }
+    const NextTable *get_nxt_tbl() const { return nextTblProp; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }
