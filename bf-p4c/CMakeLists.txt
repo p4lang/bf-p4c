@@ -25,19 +25,6 @@ if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
 
-macro(get_schema_version schema_file schema_var)
-  execute_process(
-    COMMAND python3 -c "from ${schema_file} import get_schema_version;print(get_schema_version(), end='', flush=True)"
-    OUTPUT_VARIABLE __schema_version
-    RESULT_VARIABLE __schema_errcode
-    ERROR_VARIABLE __schema_errstr
-    WORKING_DIRECTORY ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas)
-  if (${__schema_errcode})
-    MESSAGE(FATAL_ERROR "Error retrieving ${schema_file} version ${__schema_errstr}")
-  endif()
-  set(${schema_var} ${__schema_version})
-endmacro(get_schema_version)
-
 get_schema_version(manifest_schema MANIFEST_SCHEMA_VERSION)
 MESSAGE(STATUS "Found manifest schema version ${MANIFEST_SCHEMA_VERSION}")
 set_source_files_properties(logging/manifest.cpp PROPERTIES

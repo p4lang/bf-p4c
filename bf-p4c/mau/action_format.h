@@ -377,7 +377,7 @@ class MeterALU : public Parameter {
     le_bitrange range() const { return _range; }
     int size() const override { return _range.size(); }
     bool from_p4_program() const override { return true; }
-    cstring name() const { return _alu_user; }
+    cstring name() const override { return _alu_user; }
     bool only_one_overlap_solution() const override { return true; }
     const Parameter *split(int lo, int hi) const override;
     bool is_next_bit_of_param(const Parameter *, bool) const override;

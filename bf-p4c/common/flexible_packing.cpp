@@ -1,5 +1,7 @@
 #include <cstring>
 #include <algorithm>
+#include <sstream>
+
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/utils.h"
@@ -1945,10 +1947,6 @@ std::string LogRepackedHeaders::strip_prefix(cstring str, std::string pre) {
 
 // Collect repacked headers
 bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
-    // Check if we should be doing anything
-    if (!LOGGING(1))
-        return false;
-
     // Check if we have visited this header's ingress/egress version before
     cstring hname = h->name;
     std::string h_in = strip_prefix(hname, "ingress::");
@@ -1984,9 +1982,11 @@ bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
 
 // Pretty print all of the headers
 void LogRepackedHeaders::end_apply() {
-    // Iterate through the headers and print all of their fields
-    for (auto h : repacked)
-        LOG1(pretty_print(h.first, h.second));
+    // Check if we should be logging anything
+    if (LOGGING(1))
+        // Iterate through the headers and print all of their fields
+        for (auto h : repacked)
+            LOG1(pretty_print(h.first, h.second));
 }
 
 // TODO: Currently outputting backend name for each field. Should be changed to user facing name.
@@ -2180,4 +2180,48 @@ FlexiblePacking::FlexiblePacking(
                       // new tempvars
                       new CollectPhvInfo(p),
               });
+}
+
+// Return a Json representation of flexible headers to be saved in .bfa/context.json
+std::string FlexiblePacking::asm_output() const {
+    const auto repacked = log.repackedHeaders();
+    if (repacked.empty())
+        return std::string("");
+
+    std::ostringstream out;
+    bool first_header = true;
+    out << "flexible_headers: [\n";  // list of headers
+    for (auto h : repacked) {
+        if (!first_header) {
+            out << ",\n";
+        } else {
+            out << "\n"; first_header = false;
+        }
+
+        out << "  { name: \"" << h.second << "\",\n"
+            << "    fields: [\n";  // list of fields
+
+        bool first_field = true;
+        for (auto f : h.first->type->fields) {
+            auto name = f->name.name;   // getFieldName(h.second, f);
+            // for now all the fields are full fields not slices
+            unsigned width = f->type->width_bits();
+            unsigned start_bit = 0;  // so all fields start at 0.
+
+            if (!first_field) {
+                out << ",\n";
+            } else {
+                out << "\n"; first_field = false;
+            }
+
+            out << "      { name: \"" << name << "\", slice: { "
+                << "start_bit: " << start_bit << ", bit_width: " << width
+                // << ", slice_name:" << "the name of the slice"
+                << " } }";
+        }
+        out << "    ]\n";    // list of fields
+        out << "  }";     // header
+    }
+    out << "]\n";  // list of headers
+    return out.str();
 }

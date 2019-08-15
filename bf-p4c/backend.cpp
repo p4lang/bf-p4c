@@ -102,6 +102,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     bridged_fields(phv),
     table_alloc(phv.field_mutex(), options.disable_init_metadata),
     table_summary(pipe_id, deps) {
+    flexiblePacking = new FlexiblePacking(options, phv, uses, deps, bridged_fields,
+                                          extracted_together, table_alloc);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
@@ -154,8 +156,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
-        new FlexiblePacking(options, phv, uses, deps, bridged_fields, extracted_together,
-                table_alloc),
+        flexiblePacking,
         new ResolveSizeOfOperator(),
         new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.

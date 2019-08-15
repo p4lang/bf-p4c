@@ -56,6 +56,15 @@ if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
 
+get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
+MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
+if (ENABLE_UNIFIED_COMPILATION)
+  add_definitions("-DCONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\"")
+else()
+  set_source_files_properties(bfas.cpp PROPERTIES
+    COMPILE_DEFINITIONS CONTEXT_SCHEMA_VERSION=\"${CONTEXT_SCHEMA_VERSION}\")
+endif()
+
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
 include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})
 
@@ -111,6 +120,7 @@ set (BFAS_COMMON_SOURCES
   deparser.cpp
   dynhash.cpp
   exact_match.cpp
+  flexible_headers.cpp
   gateway.cpp
   hash_action.cpp
   hash_dist.cpp

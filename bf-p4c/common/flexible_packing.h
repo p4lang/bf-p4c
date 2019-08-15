@@ -633,12 +633,14 @@ class ReplaceFlexFieldUses : public Transform {
     }
 };
 
+using RepackedHeaders = std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>>;
+
 class LogRepackedHeaders : public Inspector {
  private:
     // Need this for field names
     const PhvInfo& phv;
     // Contains all of the (potentially) repacked headers
-    std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>> repacked;
+    RepackedHeaders repacked;
     // All headers we have seen before, but with "egress" or "ingress" removed (avoid duplication)
     std::unordered_set<std::string> hdrs;
 
@@ -660,6 +662,7 @@ class LogRepackedHeaders : public Inspector {
 
  public:
     explicit LogRepackedHeaders(const PhvInfo& p) : phv(p) { }
+    const RepackedHeaders &repackedHeaders() const { return repacked; }
 };
 
 class FlexiblePacking : public Logging::PassManager {
@@ -692,6 +695,10 @@ class FlexiblePacking : public Logging::PassManager {
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,
             const MauBacktracker& alloc);
+
+    // Return a Json representation of flexible headers to be saved in .bfa/context.json
+    // must be called after the pass is applied
+    std::string asm_output() const;
 };
 
 #endif  /* EXTENSIONS_BF_P4C_COMMON_FLEXIBLE_PACKING_H_ */

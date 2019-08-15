@@ -1,5 +1,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 
+#include "bf-p4c/lib/error_type.h"
+
 bool IgnoreTableDeps::ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
     auto t1_pos = ignore_dep_map.find(t1);
     if (t1_pos != ignore_dep_map.end()) {

@@ -173,7 +173,8 @@ class GenerateOutputs : public PassManager {
         std::string phvLogFile(logsDir + "/phv.json");
         addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
                                 // information in assembly
-                    new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(), b.get_nxt_tbl(),
+                    new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
+                                       b.get_flexible_packing(), b.get_nxt_tbl(),
                                        o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),

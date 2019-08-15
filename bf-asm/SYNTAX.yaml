@@ -333,15 +333,15 @@ stage <constant> <thread>:
             # passed on directly to the driver through context json. The
             # match_key_fields_values and action_parameters_values follow the
             # same order as the p4_param_order list in the table and action
-            # sections. 
+            # sections.
             # Match Key Fields Values based on match type:
             # Exact - field_name, value
             # Ternary - field_name, value, mask
             # Range - field_name, range_start, range_end
             # Lpm - field_name, value, prefix_length // TODO
             - priority: <int>
-              match_key_fields_values: 
-              - field_name: <name> 
+              match_key_fields_values:
+              - field_name: <name>
                 value: <int>
                 mask: <hex> # Only for ternary match
                 range_start: <int> # Only for range match
@@ -349,7 +349,7 @@ stage <constant> <thread>:
                 prefix_length: <int> # Only for lpm match // TODO
               action_handle: <int>
               is_default_entry: <bool>
-              action_parameters_values: 
+              action_parameters_values:
               - parameter_name: <string>
                 value: <int>
     exact_match <name> [<logical_id>]:
@@ -358,7 +358,7 @@ stage <constant> <thread>:
         column: <vector> | '[' <vector>, ... ']'
             # physical rows and srams used by the table
         stash: # Stash Allocation for exact match tables only
-          row: <vector> 
+          row: <vector>
           col: <vector>
           # Row and col are indexed in sync to give RAM used to determine word
           # in entry
@@ -517,10 +517,10 @@ stage <constant> <thread>:
         width: <int>
         # other common keys are NOT available in this table type
     proxy_hash <name> [<logical_id>]:
-        # Proxy hash Table 
+        # Proxy hash Table
         row: <vector>
         column: <vector> | '[' <vector>, ... ']'
-            # see exact_match 
+            # see exact_match
         input_xbar:
             # see exact_match
         format: { <name>: <range>, <name>: <size> ... }
@@ -529,7 +529,7 @@ stage <constant> <thread>:
             action: ... # field that selects which action to run
             next: ...   # next table
         match: hash_group(<int>..<int>) | '[' hash_group(<int>..<int>), ... ']'
-            # hash groups 
+            # hash groups
         ways:
             - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
             # see exact_match
@@ -822,7 +822,7 @@ deparser <thread>:
     meter_color: <phv-location> [ ':' <pov-bit> ]
     icos: <phv-location> [ ':' <pov-bit> ]
     qid: <phv-location> [ ':' <pov-bit> ]
-    xid: <phv-location> [ ':' <pov-bit> ] 
+    xid: <phv-location> [ ':' <pov-bit> ]
     yid: <phv-location> [ ':' <pov-bit> ]
     rid: <phv-location> [ ':' <pov-bit> ]
     warp: <phv-location> [ ':' <pov-bit> ]
@@ -836,6 +836,12 @@ deparser <thread>:
     capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
     coal: <phv-location> [ ':' <pov-bit> ]
     ecos: <phv-location> [ ':' <pov-bit> ]
+flexible_headers:
+    # Lists the headers that were re-packed by the compiler because
+    # they were marked flexible. See context.json schema 'flexible_headers' node
+    # for more information. This section is optional. It exists only if there are
+    # flexible headers defined in the program (e.g., bridged metadata)
+    # It consists of the json snippet that is part of context.json verbatim.
 primitives: <filename>
     # Defines the name of the json file that has information on primitives used
     # within table actions. These are placed in the respective actions as

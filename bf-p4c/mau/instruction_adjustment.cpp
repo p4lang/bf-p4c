@@ -8,8 +8,6 @@
 /** SplitInstructions */
 
 const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
-    auto act = findContext<IR::MAU::Action>();
-    auto tbl = findContext<IR::MAU::Table>();
     le_bitrange bits;
     auto* field = phv.field(inst->operands.at(0), &bits);
     if (!field) return inst;  // error?

@@ -84,6 +84,20 @@ endif()
 set (ENV{P4C_VERSION} "${BFN_P4C_VERSION} (SHA: ${BFN_P4C_GIT_SHA})")
 MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
+
+macro(get_schema_version schema_file schema_var)
+  execute_process(
+    COMMAND python3 -c "from ${schema_file} import get_schema_version;print(get_schema_version(), end='', flush=True)"
+    OUTPUT_VARIABLE __schema_version
+    RESULT_VARIABLE __schema_errcode
+    ERROR_VARIABLE __schema_errstr
+    WORKING_DIRECTORY ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas)
+  if (${__schema_errcode})
+    MESSAGE(FATAL_ERROR "Error retrieving ${schema_file} version ${__schema_errstr}")
+  endif()
+  set(${schema_var} ${__schema_version})
+endmacro(get_schema_version)
+
 # If we're on GCC, use the gold linker if available.
 if (CMAKE_COMPILER_IS_GNUCC)
     execute_process(

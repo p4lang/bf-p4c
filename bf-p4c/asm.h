@@ -11,6 +11,7 @@
 
 #include "bf-asm/version.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/parde/asm_output.h"
@@ -29,6 +30,7 @@ class AsmOutput : public Inspector {
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
+    const FlexiblePacking *flexiblePacking;
     const NextTable *nxt_tbl;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
@@ -43,10 +45,11 @@ class AsmOutput : public Inspector {
     AsmOutput(const PhvInfo &phv,
               const ClotInfo &clot,
               const FieldDefUse& defuse,
+              const FlexiblePacking *flexPack,
               const NextTable* nxts,
               const BFN_Options &opts,
               bool success)
-            : phv(phv), clot(clot), defuse(defuse), nxt_tbl(nxts),
+        : phv(phv), clot(clot), defuse(defuse), flexiblePacking(flexPack), nxt_tbl(nxts),
           options(opts), _successfulCompile(success) {}
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
@@ -73,7 +76,8 @@ class AsmOutput : public Inspector {
                     out << "parser ghost: " << ghostPhvContainer() << std::endl;
                 out << ParserAsmOutput(pipe, EGRESS)
                     << DeparserAsmOutput(pipe, phv, clot, EGRESS)
-                    << mauasm;
+                    << mauasm << std::endl
+                    << flexiblePacking->asm_output() << std::endl;
             }
             out << std::flush;
         }

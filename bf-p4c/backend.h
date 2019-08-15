@@ -16,6 +16,7 @@
 #include "bf-p4c/mau/jbay_next_table.h"
 
 class FieldDefUse;
+class FlexiblePacking;
 struct CollectPhvLoggingInfo;
 
 namespace BFN {
@@ -45,6 +46,7 @@ class Backend : public PassManager {
     // Dynamic Hash Calculations Node, is populated at the end of backend passes
     Util::JsonObject dynHashNode;
 
+    FlexiblePacking *flexiblePacking;
     CollectPhvLoggingInfo *phvLoggingInfo;
     NextTable *nextTblProp;
 
@@ -57,6 +59,7 @@ class Backend : public PassManager {
     const NextTable *get_nxt_tbl() const { return nextTblProp; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
+    const FlexiblePacking  *get_flexible_packing() const { return flexiblePacking; }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }
     const ordered_map<cstring, ordered_set<int>>& get_table_alloc() const {
         return table_summary.getTableAlloc();
