@@ -98,23 +98,18 @@ class TablePlacement : public MauTransform, public Backtrack {
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,
                                           const StageUseEstimate &current,
                                           GatewayMergeChoices &gmc);
-    Placed *try_place_table(Placed *rv, const IR::MAU::Table *t, const Placed *done,
-        const StageUseEstimate &current);
-    bool try_alloc_ixbar(Placed *next, const Placed *done, TableResourceAlloc *alloc);
-    bool try_alloc_format(Placed *next, TableResourceAlloc *resources, bool gw_linked);
-    bool try_alloc_mem(Placed *next, const Placed *done, TableResourceAlloc *resources,
-        safe_vector<TableResourceAlloc *> &prev_resources);
-    bool try_alloc_adb(Placed *next, const Placed *done, TableResourceAlloc *resources);
-    bool try_alloc_imem(Placed *next, const Placed *done, TableResourceAlloc *resources);
-    bool pick_layout_option(Placed *next, const Placed *done, TableResourceAlloc *resources,
-        bool estimate_set);
-    bool shrink_estimate(Placed *next, const Placed *done, TableResourceAlloc *resources,
-                         int &srams_left, int &tcams_left, int min_entries);
+    Placed *try_place_table(Placed *rv, const StageUseEstimate &current);
+    bool try_alloc_ixbar(Placed *next);
+    bool try_alloc_format(Placed *next, bool gw_linked);
+    bool try_alloc_mem(Placed *next, safe_vector<TableResourceAlloc *> &prev_resources);
+    bool try_alloc_adb(Placed *next);
+    bool try_alloc_imem(Placed *next);
+    bool pick_layout_option(Placed *next, bool estimate_set);
+    bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries);
     bool can_duplicate(const IR::MAU::AttachedMemory *);
     bool can_place_with_partly_placed(const IR::MAU::Table *tbl,
         const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed);
-    bool initial_stage_and_entries(Placed *rv, const Placed *done, int &set_entries,
-        int &furthest_stage);
+    bool initial_stage_and_entries(Placed *rv, int &furthest_stage);
     IR::MAU::Table *create_starter_table(gress_t gress);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
     const Placed *add_starter_pistols(const Placed *done, safe_vector<const Placed *> &trial,
