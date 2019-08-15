@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/lib/error_type.h"
 
 #include "bf-p4c/lib/error_type.h"
 

@@ -528,7 +528,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                     error("%1% bound to both %2% and %3%", reg, stateful_selectors.at(reg), sel);
                 stateful_selectors.emplace(reg, sel);
             } else if (p->name == "max_group_size") {
-                int max_group_size = getConstant(arg);
+                max_group_size = getConstant(arg);
                 // max ram words is 992, max members per word is 120
                 if (max_group_size < 1 || max_group_size > (992*120)) {
                     ::error("%s: The max_group_size value on ActionSelector %s is "

@@ -29,10 +29,10 @@ const IR::Node* RewriteActionSelector::postorder(IR::Declaration_Instance *di) {
             args->push_back(inst->substitution.lookupByName("mode"));
             args->push_back(new IR::Argument(
                         new IR::Constant(IR::Type_Bits::get(32),
-                            StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS)));
+                            StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE)));
             args->push_back(new IR::Argument(
                         new IR::Constant(IR::Type_Bits::get(32),
-                            StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE)));
+                            StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS)));
             const IR::Annotations* annot = nullptr;
             if (auto ann = di->getAnnotation(IR::Annotation::nameAnnotation)) {
                 auto annName = IR::Annotation::getName(ann);
