@@ -666,7 +666,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 LOG5("\t\tCreated a new slice list of " << newSliceListSize << "b.");
             } else if (left != -1) {
                 auto slicingPoint = getBestSlicingPoint(sliceListToProcess, possibleSlicingPoints,
-                        minSize);
+                        minSize, candidate);
                 LOG5("\t\t  Best slicing point: " << slicingPoint);
                 if (sliceLocations[slicingPoint].first != -1) {
                     LOG5("\t  B. Slicing before slice " << slicingPoint);
@@ -742,11 +742,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                                 get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
                         alreadyProcessedSlices.insert(sl);
                     }
-                    // After all the slices in the first slice list are adjusted, clear seenFields
-                    // and reset the intraListSize to 0.
-                    seenFieldSlices.clear();
                     newSliceBoundaryFoundLeft = false;
-                    LOG5("\t\t\tClearing state because we finished the previous slice.");
                 }
 
                 // Add data related to the current slice whose MAU constraints are being considered.
@@ -906,16 +902,35 @@ void PHV::SlicingIterator::impose_MAU_constraints(
 PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
         const std::vector<FieldSlice>& list,
         const ordered_set<FieldSlice>& points,
-        const int minSize) const {
+        const int minSize,
+        const FieldSlice& candidate) const {
     for (auto& point : points) {
+        LOG6("\t\t\tChecking slicing point (slice before point): " << point);
         bool pointFound = false;
+        bool candidateFound = false;
         int sliceListSize = 0;
         for (auto& slice : list) {
-            if (!pointFound && slice != point) continue;
-            if (slice == point) pointFound = true;
+            LOG6("\t\t\t Slice: " << slice);
+            if (slice == candidate) candidateFound = true;
+            if (!pointFound && slice != point) {
+                LOG6("\t\t\t  Ignoring slice " << slice << " because it is before slicing point.");
+                continue;
+            }
+            if (slice == point) {
+                LOG6("\t\t\t  Found slicing point " << slice << ". " << sliceListSize + slice.size()
+                     << " bits in this slice list now.");
+                pointFound = true;
+            }
             sliceListSize += slice.size();
-            if (sliceListSize == minSize) return point;
-            if (sliceListSize > minSize) break;
+            if (candidateFound && sliceListSize == minSize) {
+                LOG6("\t\t\t  Returning point " << point);
+                return point;
+            }
+            if (sliceListSize > minSize) {
+                LOG6("\t\t\t  We are greater than the minSize " << minSize << " now. So, go to next"
+                     " slicing point.");
+                break;
+            }
         }
         LOG5("\t\t\tSlicing at " << point << " causes a slice boundary to fall between slices.");
     }
@@ -1067,11 +1082,19 @@ void PHV::SlicingIterator::break_24b_slice_list(
 
 void PHV::SlicingIterator::enforce_container_size_pragmas(
         const ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& listDetails) {
+    LOG6("Inside enforce container size pragma");
     // If there are no container size pragmas for this supercluster, nothing to be done.
-    if (pa_container_sizes_i.size() == 0) return;
+    if (pa_container_sizes_i.size() == 0) {
+        LOG6("  No pragmas detected for this supercluster.");
+        return;
+    }
     // If there are no slice lists in the super cluster, nothing to be done.
-    if (!has_slice_lists_i) return;
+    if (!has_slice_lists_i) {
+        LOG6("  No slice lists in this supercluster");
+        return;
+    }
     for (auto* list : sc_i->slice_lists()) {
+        LOG6("    Slice list: " << *list);
         // Offset of the slice (in bits) within this slice list.
         int slice_offset = 0;
         // Start offset of the bitvec corresponding to this slice list within the supercluster's
@@ -1083,6 +1106,7 @@ void PHV::SlicingIterator::enforce_container_size_pragmas(
             // If the slice doesn't belong to a field with a pa_container_size pragma, then nothing
             // to be done here.
             if (it == pa_container_sizes_i.end()) {
+                LOG6("\tDid not find pa_container_size pragma for slice: " << slice);
                 slice_offset += slice.size();
                 continue;
             }
@@ -1096,6 +1120,8 @@ void PHV::SlicingIterator::enforce_container_size_pragmas(
                 // then no slicing is required.
                 if (slice.field()->size <= size) {
                     slice_offset += slice.size();
+                    LOG6("  No slicing required because field size " << slice.field()->size <<
+                         " is smaller than the container size " << size);
                     continue;
                 }
                 // XXX(Deep): Account for case where we have to evenly split the fields.

@@ -154,7 +154,8 @@ class SlicingIterator {
     FieldSlice getBestSlicingPoint(
             const std::vector<FieldSlice>& list,
             const ordered_set<FieldSlice>& points,
-            const int minSize) const;
+            const int minSize,
+            const FieldSlice& candidate) const;
 
     /// Update the slice related data structures: @exactSliceListSize, @alreadyProcessedSlices, and
     /// @sliceLocations for the case where we want to slice the slice list immediate before @point.

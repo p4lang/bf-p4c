@@ -676,8 +676,8 @@ void RepackFlexHeaders::determineAlignmentConstraints(
             if (alignmentConstraints.count(field)) {
                 le_bitrange align = le_bitrange(StartLen(0, field->size));
                 if (alignmentConstraints[field] != align) {
-                    ::warning("Alignment constraint %3% already present for field %1%: %2%",
-                            field->name, alignmentConstraints.at(field).lo, align.lo);
+                    LOG3("Alignment constraint " << align.lo << " already present for field " <<
+                         field->name << " : " << alignmentConstraints.at(field).lo);
                     conflictingAlignmentConstraints[field].insert(
                             alignmentConstraints.at(field).lo);
                 }
@@ -779,9 +779,9 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                     LOG5("\t\t  Does this field enforce non-negotiable alignment? " <<
                             (this_non_negotiable_alignment ? "YES" : "NO"));
                     if (this_non_negotiable_alignment && nonNegotiableAlignments.count(field)) {
-                        ::warning("Multiple fields enforcing non-negotiable alignment for "
-                                "flexible field %1%: %2%, %3%", field->name, f->alignment->align,
-                                alignSource->alignment->align);
+                        LOG3("Multiple fields enforcing non-negotiable alignment for flexible "
+                             "field " << field->name << " : " << f->alignment->align << ", " <<
+                             alignSource->alignment->align);
                         conflictingAlignmentConstraints[field].insert(f->alignment->align);
                         conflictingAlignmentConstraints[field].insert(
                                 alignSource->alignment->align);

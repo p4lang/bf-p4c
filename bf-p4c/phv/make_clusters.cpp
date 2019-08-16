@@ -560,7 +560,8 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // used), the hardware will still write those bits, so it may not be possible to reuse it
         // for something else (need to add an explicit write in the mau pipe). The fields may not
         // also be relocated within the container.
-        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
+        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField() &&
+                field->size % 8 == 0) {
             LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
             lastUnreferenced = true;
             continue; }
