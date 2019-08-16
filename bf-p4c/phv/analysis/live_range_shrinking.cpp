@@ -18,7 +18,7 @@ bool FindInitializationNode::preorder(const IR::MAU::Table* tbl) {
 }
 
 bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
-    GetHashDistReqs ghdr;
+    GetActionRequirements ghdr;
     act->apply(ghdr);
     if (ghdr.is_hash_dist_needed()) {
         LOG3("\tCannot initialize at action " << act->name << " because it requires "
