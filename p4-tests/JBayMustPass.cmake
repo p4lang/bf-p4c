@@ -19,7 +19,6 @@ set (JBAY_MUST_PASS_TESTS
   extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
 
   # p4-tests tna programs
-  p4_16_programs_simple_switch
   p4_16_programs_tna_32q_multiprogram_a
   p4_16_programs_tna_32q_multiprogram_b
   p4_16_programs_tna_32q_2pipe
@@ -38,6 +37,7 @@ set (JBAY_MUST_PASS_TESTS
   p4_16_programs_tna_pvs
   p4_16_programs_tna_range_match
   p4_16_programs_tna_register
+  p4_16_programs_tna_simple_switch
 
   # Switch compile only
   smoketest_switch_16_compile

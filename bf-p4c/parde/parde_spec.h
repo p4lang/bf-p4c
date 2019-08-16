@@ -80,6 +80,9 @@ class PardeSpec {
     /// The minimum number of bytes required between consecutive CLOTs.
     virtual unsigned byteInterClotGap() const = 0;
 
+    /// The maximum offset+length a CLOT can have, in bits.
+    virtual unsigned bitMaxClotPos() const = 0;
+
     // Number of deparser consant bytes available
     virtual unsigned numDeparserConstantBytes() const = 0;
 };
@@ -117,6 +120,8 @@ class TofinoPardeSpec : public PardeSpec {
 
     unsigned byteInterClotGap() const override { BUG("No CLOTs in Tofino"); }
 
+    unsigned bitMaxClotPos() const override { BUG("No CLOTs in Tofino"); }
+
     unsigned numDeparserConstantBytes() const override { return 0; }
 };
 
@@ -152,6 +157,7 @@ class JBayPardeSpec : public PardeSpec {
     unsigned numClotsPerGress() const override { return 64; }
     unsigned maxClotsLivePerGress() const override { return 16; }
     unsigned byteInterClotGap() const override { return 3; }
+    unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
 
     unsigned numDeparserConstantBytes() const override { return 8; }
 };

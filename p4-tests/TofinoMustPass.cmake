@@ -61,7 +61,6 @@ set (TOFINO_MUST_PASS_TESTS
   smoketest_programs_hash_driven
 
   # p4-tests tna programs
-  p4_16_programs_simple_switch
   p4_16_programs_tna_32q_multiprogram_a
   p4_16_programs_tna_32q_multiprogram_b
   p4_16_programs_tna_32q_2pipe
@@ -82,6 +81,7 @@ set (TOFINO_MUST_PASS_TESTS
   p4_16_programs_tna_pvs
   p4_16_programs_tna_range_match
   p4_16_programs_tna_register
+  p4_16_programs_tna_simple_switch
   p4_16_programs_tna_ternary_match
 
   # Switch compile only

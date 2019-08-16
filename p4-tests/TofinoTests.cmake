@@ -657,7 +657,7 @@ set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "p4_16_programs_simple_switch" ${p4_16_programs_path}/simple_switch/simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
+  "p4_16_programs_tna_simple_switch" ${p4_16_programs_path}/tna_simple_switch/tna_simple_switch.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE

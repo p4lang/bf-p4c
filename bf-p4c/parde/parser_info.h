@@ -347,6 +347,22 @@ class CollectParserInfoImpl : public PardeInspector {
                      std::map<const State*, const std::set<int>*>> all_shift_amounts_;
 
  public:
+    /// @return all possible shift amounts, in bits, for all paths from the start state to @arg
+    ///   dst. If @arg dst is the start state, then a singleton 0 is returned.
+    //
+    // DANGER: This method assumes the parser graph is a DAG.
+    const std::set<int>* get_all_shift_amounts(const State* dst) const {
+        return get_all_shift_amounts(graph(parser(dst)).root, dst);
+    }
+
+    /// @return the maximum possible shift amount, in bits, of all paths from the start state to
+    ///    @arg dst.
+    //
+    // DANGER: This method assumes the parser graph is a DAG.
+    const int get_max_shift_amount(const State* dst) const {
+        return *get_all_shift_amounts(dst)->rbegin();
+    }
+
     /// @return all possible shift amounts, in bits, for all paths from @arg src to @arg dst. If
     ///   the two states are the same, then a singleton 0 is returned. If the states are mutually
     ///   exclusive, an empty set is returned. If @arg src is an ancestor of @arg dst, then the

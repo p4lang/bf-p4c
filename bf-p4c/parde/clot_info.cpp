@@ -92,6 +92,9 @@ class FieldSliceExtractInfo {
     /// The parser state in which the field slice is extracted.
     const IR::BFN::ParserState* state_;
 
+    /// The field slice's maximum offset, in bits, from the start of the packet.
+    const unsigned max_packet_bit_offset_;
+
     /// The field slice's offset, in bits, from the start of the parser state.
     const unsigned state_bit_offset_;
 
@@ -100,17 +103,24 @@ class FieldSliceExtractInfo {
 
  public:
     FieldSliceExtractInfo(const IR::BFN::ParserState* state,
+                          unsigned max_packet_bit_offset,
                           unsigned state_bit_offset,
                           const PHV::Field* field)
-        : FieldSliceExtractInfo(state, state_bit_offset, new PHV::FieldSlice(field)) { }
+        : FieldSliceExtractInfo(state, max_packet_bit_offset, state_bit_offset,
+                                new PHV::FieldSlice(field)) { }
 
     FieldSliceExtractInfo(const IR::BFN::ParserState* state,
+                          unsigned max_packet_bit_offset,
                           unsigned state_bit_offset,
                           const PHV::FieldSlice* slice)
-        : state_(state), state_bit_offset_(state_bit_offset), slice_(slice) { }
+        : state_(state), max_packet_bit_offset_(max_packet_bit_offset),
+          state_bit_offset_(state_bit_offset), slice_(slice) { }
 
     /// @return the parser state in which the field slice is extracted.
     const IR::BFN::ParserState* state() const { return state_; }
+
+    /// @return the field slice's maximum offset, in bits, from the start of the packet.
+    unsigned max_packet_bit_offset() const { return max_packet_bit_offset_; }
 
     /// @return the field slice's offset, in bits, from the start of the parser state.
     unsigned state_bit_offset() const { return state_bit_offset_; }
@@ -118,14 +128,20 @@ class FieldSliceExtractInfo {
     /// @return the field slice itself.
     const PHV::FieldSlice* slice() const { return slice_; }
 
-    /// Trims the start of the extract so that it is byte-aligned. Returns nullptr if this results
-    /// in an empty slice.
+    /// Trims the start of the extract so that it is byte-aligned.
     const FieldSliceExtractInfo* trim_head_to_byte() const;
 
-    /// Trims the end of the extract so that it is byte-aligned. Returns nullptr if this results in
-    /// an empty slice.
+    /// Trims the end of the extract so that it is byte-aligned.
     const FieldSliceExtractInfo* trim_tail_to_byte() const;
 
+    /// Trims the end of the extract so that it does not extend past the maximum CLOT position.
+    const FieldSliceExtractInfo* trim_tail_to_max_clot_pos() const;
+
+ private:
+    /// Trims the given number of bits off the end of the extract.
+    const FieldSliceExtractInfo* trim_tail_bits(int size) const;
+
+ public:
     /// Trims the extract to a sub-slice.
     ///
     /// @param start_idx The start of the new slice, relative to the start of the old slice.
@@ -352,6 +368,14 @@ bool ClotInfo::can_end_clot(const FieldSliceExtractInfo* extract_info) const {
     // Slice must not be a checksum.
     if (is_checksum(slice)) {
         LOG6("  Can't end CLOT with " << slice->field()->name << ": is checksum");
+        return false;
+    }
+
+    // Slice must start before the maximum CLOT position.
+    if (extract_info->max_packet_bit_offset() >= Device::pardeSpec().bitMaxClotPos()) {
+        LOG6("  Can't end CLOT with " << slice->field()->name << ": start offset "
+            << extract_info->max_packet_bit_offset() << " not less than "
+            << Device::pardeSpec().bitMaxClotPos());
         return false;
     }
 
@@ -817,14 +841,32 @@ int Pseudoheader::nextId = 0;
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_head_to_byte() const {
     auto trim_amt = (8 - state_bit_offset_ % 8) % 8;
     auto size = slice_->size() - trim_amt;
-    return size > 0 ? trim(0, size) : nullptr;
+    BUG_CHECK(size > 0, "Trimmed extract %1% to %2% bits", slice()->shortString(), size);
+    return trim(0, size);
+}
+
+const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_bits(int trim_amt) const {
+    auto start_idx = trim_amt;
+    auto size = slice_->size() - trim_amt;
+    BUG_CHECK(size > 0, "Trimmed extract %1% to %2% bits", slice()->shortString(), size);
+    return trim(start_idx, size);
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_to_byte() const {
     auto trim_amt = (state_bit_offset_ + slice_->size()) % 8;
-    auto start_idx = trim_amt;
-    auto size = slice_->size() - trim_amt;
-    return size > 0 ? trim(start_idx, size) : nullptr;
+    return trim_tail_bits(trim_amt);
+}
+
+const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_to_max_clot_pos() const {
+    auto max_pos = max_packet_bit_offset_ + slice_->size();
+    int trim_amt = max_pos - Device::pardeSpec().bitMaxClotPos();
+    if (trim_amt <= 0) {
+        // No need to trim.
+        return this;
+    }
+
+    auto result = trim_tail_bits(trim_amt);
+    return result;
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int start_idx, int size) const {
@@ -840,10 +882,11 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int start_idx, int size
 
     if (start_idx == 0 && cur_size == size) return this;
 
+    auto max_packet_bit_offset = max_packet_bit_offset_ + (cur_size - start_idx - size);
     auto state_bit_offset = state_bit_offset_ + (cur_size - start_idx - size);
     auto range = slice_->range().shiftedByBits(start_idx).resizedToBits(size);
     auto slice = new PHV::FieldSlice(slice_->field(), range);
-    return new FieldSliceExtractInfo(state_, state_bit_offset, slice);
+    return new FieldSliceExtractInfo(state_, max_packet_bit_offset, state_bit_offset, slice);
 }
 
 std::vector<const FieldSliceExtractInfo*>*
@@ -1093,7 +1136,9 @@ class GreedyClotAllocator : public Visitor {
                           "pseudoheader information)",
                           field->name);
 
+                auto max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
                 auto fei = new FieldSliceExtractInfo(state,
+                                                     static_cast<unsigned>(max_packet_offset),
                                                      static_cast<unsigned>(bitrange.lo),
                                                      field);
                 for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
@@ -1136,10 +1181,12 @@ class GreedyClotAllocator : public Visitor {
 
         // If we still have extracts, create a CLOT candidate out of those.
         if (!extracts.empty()) {
-            // Trim the last extract so that it is byte-aligned. If we only have a single extract,
-            // and this results in the extract being empty, then don't create a CLOT candidate.
+            // Trim the last extract so that it is byte-aligned.
             extracts.back() = extracts.back()->trim_tail_to_byte();
-            if (extracts.size() == 1 && extracts[0] == nullptr) return;
+
+            // Further trim the last extract so that it does not extend past the maximum CLOT
+            // position.
+            extracts.back()->trim_tail_to_max_clot_pos();
 
             const ClotCandidate* candidate = new ClotCandidate(clotInfo, pseudoheader, extracts);
             candidates->insert(candidate);
