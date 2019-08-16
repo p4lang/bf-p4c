@@ -538,8 +538,14 @@ struct RewriteParserStatements : public Transform {
     // check if member is header/payload checksum field itself
     // (annotated with @header_checksum/@payload_checksum)
     bool isChecksumField(const IR::Member* member, cstring which) {
-        auto headerRef = member->expr->to<IR::ConcreteHeaderRef>();
-        auto header = headerRef->baseRef();
+        const IR::HeaderOrMetadata* header = nullptr;
+        if (auto headerRef = member->expr->to<IR::ConcreteHeaderRef>()) {
+            header = headerRef->baseRef();
+        } else if (auto headerRef = member->expr->to<IR::HeaderStackItemRef>()) {
+            header = headerRef->baseRef();
+        } else {
+            ::error("Unhandled checksum expression %1%", member);
+        }
         for (auto field : header->type->fields) {
             if (field->name == member->member) {
                 auto annot = field->annotations->getSingle(which);
