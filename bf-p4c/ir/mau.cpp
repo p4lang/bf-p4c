@@ -617,6 +617,14 @@ bool IR::MAU::Table::is_force_immediate() const {
     return false;
 }
 
+bool IR::MAU::Table::has_match_data() const {
+    for (auto key : match_key) {
+        if (key->for_match())
+            return true;
+    }
+    return false;
+}
+
 int IR::MAU::Table::hit_actions() const {
     int _hit_actions = 0;
     for (auto act : Values(actions)) {

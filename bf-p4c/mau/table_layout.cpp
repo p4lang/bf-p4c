@@ -18,6 +18,19 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
     return MauModifier::init_apply(root);
 }
 
+safe_vector<ActionData::Format::Use> LayoutChoices::get_action_formats(const IR::MAU::Table *t,
+        int type) const {
+    safe_vector<ActionData::Format::Use> empty;
+    if (t == nullptr)
+        return empty;
+    if (total_action_formats.count(t->name) == 0)
+        return empty;
+    auto af_by_type = total_action_formats.at(t->name);
+    if (af_by_type.count(type) == 0)
+        return empty;
+    return af_by_type.at(type);
+}
+
 bool DoTableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }
@@ -431,30 +444,41 @@ void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
                   "number results.", tbl, tbl->externalName());
     }
 
-    safe_vector<ActionData::Format::Use> uses;
-    ActionData::Format af(phv, tbl, uses);
+    auto &af_by_type = lc.total_action_formats[tbl->name];
+    auto &uses = af_by_type[LayoutChoices::NORMAL];
+
+    // safe_vector<ActionData::Format::Use> uses;
+    ActionData::Format af(phv, tbl, att_info);
+    af.set_uses(&uses);
     af.allocate_format(immediate_forced);
-    lc.total_action_formats[tbl->name] = uses;
     if (uses.size() > 0) {
         tbl->layout.action_data_bytes =
             uses[0].bytes_per_loc[ActionData::ACTION_DATA_TABLE] +
             uses[0].bytes_per_loc[ActionData::IMMEDIATE];
     }
+
+    ActionData::Format af_2(phv, tbl, att_info);
+    auto uses2 = af_by_type[LayoutChoices::SPLIT_ATTACHED];
+    af_2.set_uses(&uses2);
+    af_2.allocate_format(immediate_forced, true);
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
-void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl,
+        safe_vector<IR::MAU::Table::Layout> &layouts_per_type) {
     LOG2("Setup TCAM match layouts " << tbl->name);
     int index = 0;
-    for (auto &use : lc.get_action_formats(tbl)) {
-        IR::MAU::Table::Layout layout = tbl->layout;
-        layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
-        layout.immediate_bits = use.immediate_bits();
-        layout.overhead_bits += use.immediate_bits();
-        LayoutOption lo(layout, index);
-        lc.total_layout_options[tbl->name].push_back(lo);
-        index++;
+    for (int i = 0; i < LayoutChoices::FORMAT_TYPES; i++) {
+        for (auto &use : lc.get_action_formats(tbl, i)) {
+            IR::MAU::Table::Layout layout = layouts_per_type[i];
+            layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
+            layout.immediate_bits = use.immediate_bits();
+            layout.overhead_bits += use.immediate_bits();
+            LayoutOption lo(layout, index);
+            lc.total_layout_options[tbl->name][i].push_back(lo);
+            index++;
+        }
     }
 }
 
@@ -473,8 +497,9 @@ void DoTableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
  * Lastly, the width <= 8, as that is the maximal width of the RAM array on which to
  * perform a wide match.
  */
-void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
-                                    int immediate_bits, int index) {
+void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
+        LayoutChoices::FormatType_t format_type, int action_data_bytes_in_table,
+        int immediate_bits, int index) {
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
     if (auto s = annot->getSingle("pack")) {
@@ -516,7 +541,7 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
         }
     }
 
-    if (pack_val > 0 && tbl->layout.sel_len_bits > 0 && pack_val != 1) {
+    if (pack_val > 0 && layout.sel_len_bits > 0 && pack_val != 1) {
         ::error(ErrorType::ERR_INVALID,
                 "table %2%. It has a pack value of %3% provided, but also uses a wide selector, "
                 "which requires a pack of 1.", tbl, tbl->externalName(), pack_val);
@@ -526,17 +551,17 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
     for (int entry_count = MIN_PACK; entry_count <= MAX_PACK; entry_count++) {
         if (pack_val > 0 && entry_count != pack_val)
             continue;
-        if (entry_count != 1 && tbl->layout.sel_len_bits > 0)
+        if (entry_count != 1 && layout.sel_len_bits > 0)
             continue;
 
-        int single_overhead_bits = immediate_bits + tbl->layout.overhead_bits;
+        int single_overhead_bits = immediate_bits + layout.overhead_bits;
         int single_entry_bits = single_overhead_bits;
-        if (tbl->layout.requires_versioning)
+        if (layout.requires_versioning)
             single_entry_bits += TableFormat::VERSION_BITS;
-        single_entry_bits += tbl->layout.match_width_bits;
+        single_entry_bits += layout.match_width_bits;
 
         int total_bits = entry_count * single_entry_bits;
-        int total_bytes = entry_count * tbl->layout.match_bytes;
+        int total_bytes = entry_count * layout.match_bytes;
         int total_overhead_bits = entry_count * single_overhead_bits;
 
         int bit_limit_width = (total_bits + TableFormat::SINGLE_RAM_BITS - 1)
@@ -550,7 +575,7 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
 
         // ATCAM tables can only have one payload bus, as the priority ranking happens on
         // a single bus
-        if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && tbl->layout.atcam)
+        if ((overhead_width > 1 || entry_count > MAX_ENTRIES_PER_ROW) && layout.atcam)
             break;
 
 
@@ -578,32 +603,38 @@ void DoTableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes
         LOG2(" Potential Layout Option: { pack : " << entry_count << ", width : " << width
              << ", action data table bytes : " << action_data_bytes_in_table
              << ", immediate bits : " << immediate_bits << " }");
-        IR::MAU::Table::Layout layout = tbl->layout;
+        IR::MAU::Table::Layout layout_for_pack = layout;
         IR::MAU::Table::Way way;
-        layout.action_data_bytes_in_table = action_data_bytes_in_table;
-        layout.immediate_bits = immediate_bits;
-        layout.overhead_bits += immediate_bits;
+        layout_for_pack.action_data_bytes_in_table = action_data_bytes_in_table;
+        layout_for_pack.immediate_bits = immediate_bits;
+        layout_for_pack.overhead_bits += immediate_bits;
         way.match_groups = entry_count;
         way.width = width;
-        LayoutOption lo(layout, way, index);
-        lc.total_layout_options[tbl->name].push_back(lo);
+        LayoutOption lo(layout_for_pack, way, index);
+        lc.total_layout_options[tbl->name][format_type].push_back(lo);
     }
 }
 
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
-void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl,
+        safe_vector<IR::MAU::Table::Layout> &layouts_per_type) {
     LOG2("Determining SRAM match layouts " << tbl->name);
     int index = 0;
     bool hash_action_only = false;
-    add_hash_action_option(tbl, hash_action_only);
+    add_hash_action_option(tbl, layouts_per_type[LayoutChoices::NORMAL], hash_action_only);
     if (hash_action_only)
         return;
 
-    for (auto &use : lc.get_action_formats(tbl)) {
-        setup_exact_match(tbl, use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
-                          use.immediate_bits(), index);
-        index++;
+
+    for (int i = 0; i < LayoutChoices::FORMAT_TYPES; i++) {
+        for (auto &use : lc.get_action_formats(tbl, i)) {
+            auto format_type = static_cast<LayoutChoices::FormatType_t>(i);
+            setup_exact_match(tbl, layouts_per_type[i], format_type,
+                              use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
+                              use.immediate_bits(), index);
+            index++;
+        }
     }
 
     auto pack_format_it = lc.total_layout_options.find(tbl->name);
@@ -621,7 +652,8 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl) {
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work */
-void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
+void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl,
+        safe_vector<IR::MAU::Table::Layout> &layouts_per_type) {
     LOG2("Determining no match table layouts " << tbl->name);
     GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
@@ -633,15 +665,35 @@ void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     // that is preferred generally, but not always, if somehow it couldn't fit on the action
     // data bus.  Action data bus allocation could properly be optimized a lot more before this
     // choice would have to be made
-    auto uses = lc.get_action_formats(tbl);
-    BUG_CHECK(!uses.empty(), "no uses?");
-    auto &use = uses.back();
-    IR::MAU::Table::Layout layout = tbl->layout;
-    layout.immediate_bits = use.immediate_bits();
-    layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
-    layout.overhead_bits += use.immediate_bits();
-    LayoutOption lo(layout, uses.size() - 1);
-    lc.total_layout_options[tbl->name].push_back(lo);
+    for (int i = 0; i < LayoutChoices::FORMAT_TYPES; i++) {
+        auto uses = lc.get_action_formats(tbl, i);
+        if (uses.empty())
+            continue;
+        auto &use = uses.back();
+        IR::MAU::Table::Layout layout = layouts_per_type[i];
+        layout.immediate_bits = use.immediate_bits();
+        layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
+        layout.overhead_bits += use.immediate_bits();
+        LayoutOption lo(layout, uses.size() - 1);
+        lc.total_layout_options[tbl->name][i].push_back(lo);
+    }
+}
+
+/**
+ * When the stateful table has been split from the match table, the indirect pointer is not
+ * necessary to the table format, and is instead contained within the action format 
+ */
+void DoTableLayout::setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+        LayoutChoices::FormatType_t format_type) {
+    ValidateAttachedOfSingleTable::TypeToAddressMap type_to_addr_map;
+    ValidateAttachedOfSingleTable validate_attached(type_to_addr_map, tbl);
+    tbl->attached.apply(validate_attached);
+    layout.action_addr = type_to_addr_map[ValidateAttachedOfSingleTable::ACTIONDATA];
+    layout.stats_addr = type_to_addr_map[ValidateAttachedOfSingleTable::STATS];
+    if (format_type == LayoutChoices::NORMAL)
+        layout.meter_addr = type_to_addr_map[ValidateAttachedOfSingleTable::METER];
+    layout.overhead_bits += layout.action_addr.total_bits() + layout.stats_addr.total_bits()
+                            + layout.meter_addr.total_bits();
 }
 
 /**
@@ -708,7 +760,8 @@ bool DoTableLayout::can_be_hash_action(IR::MAU::Table *tbl, std::string &reason)
  * Adds the hash action layout as a potential choice for a layout for a table, if that
  * layout is possible.
  */
-void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_action_only) {
+void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
+        bool &hash_action_only) {
     std::string hash_action_reason = "";
     bool possible = can_be_hash_action(tbl, hash_action_reason);
     hash_action_only = false;
@@ -734,118 +787,27 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, bool &hash_actio
     if (!possible)
         return;
 
-    auto uses = lc.get_action_formats(tbl);
+    auto uses = lc.get_action_formats(tbl, LayoutChoices::NORMAL);
     auto &use = uses[0];
     BUG_CHECK(use.immediate_bits() == 0, "Cannot have overhead bits in a hash action table");
-    IR::MAU::Table::Layout layout = tbl->layout;
-    layout.immediate_bits = 0;
-    layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
-    layout.hash_action = true;
-    LayoutOption lo(layout, 0);
-    lc.total_layout_options[tbl->name].push_back(lo);
+    IR::MAU::Table::Layout ha_layout = layout;
+    ha_layout.immediate_bits = 0;
+    ha_layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
+    ha_layout.hash_action = true;
+    LayoutOption lo(ha_layout, 0);
+    lc.total_layout_options[tbl->name][LayoutChoices::NORMAL].push_back(lo);
 }
 
 namespace {
-class VisitAttached : public Inspector {
+class SelLengthForLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
-    enum addr_type_t { STATS, METER, TYPES };
-    const IR::MAU::AttachedMemory *users[TYPES] = { 0 };
+    const IR::MAU::Table *tbl;
 
-    cstring addr_type_name(addr_type_t type) {
-        switch (type) {
-            case STATS: return "stats";
-            case METER: return "meter";
-            default: return "";
-        }
-    }
-
-    bool free_address(const IR::MAU::AttachedMemory *am, IR::MAU::Table::IndirectAddress &ia,
-            addr_type_t type) {
-        auto ba = findContext<IR::MAU::BackendAttached>();
-        if (users[type] != nullptr) {
-            ::error(ErrorType::ERR_INVALID,
-                    "overlap. Both %2% and %3% require the %4% address hardware, and cannot be on "
-                    "the same table %5%.",
-                    am, am->name, users[type]->name, addr_type_name(type), tbl->externalName());
-            return false;
-        }
-        users[type] = am;
-
-        if (!am->direct) {
-            if (am->size <= 0) {
-                ::error(ErrorType::ERR_NOT_FOUND,
-                        "indirect attached table %2%. Does not have a size.", am, am->name);
-                return false;
-            }
-        }
-
-        BUG_CHECK(am->direct == (IR::MAU::AddrLocation::DIRECT == ba->addr_location), "%s: "
-            "Instruction Selection did not correctly set up the addressing scheme for %s",
-            am->srcInfo, am->name);
-
-        ia.shifter_enabled = true;
-        bool from_hash = false;
-        if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
-            ia.address_bits += std::max(ceil_log2(am->size), 10);
-        } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
-            from_hash = true;
-        }
-
-        if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
-            if (from_hash) {
-                if (layout.no_match_data()) {
-                    ::error(ErrorType::ERR_INVALID,
-                            "When an attached memory %2% is addressed by hash and requires "
-                            "per action enabling, then the table %3% must have match data",
-                             am, am->name, tbl->externalName());
-                    return false;
-                }
-            }
-            ia.per_flow_enable = true;
-        }
-
-        if (type == METER && ba->type_location == IR::MAU::TypeLocation::OVERHEAD) {
-            if (from_hash) {
-                if (layout.no_match_data()) {
-                    ::error(ErrorType::ERR_INVALID,
-                            "When an attached memory %2% is addressed by hash and requires "
-                            "multiple meter_type, then the table %3% must have match data",
-                            am, am->name, tbl->externalName());
-                    return false;
-                }
-            }
-            ia.meter_type_bits = 3;
-        }
-        layout.overhead_bits += ia.total_bits();
-        return true;
-    }
-
-
-    /** The purpose of this function is to determine whether or not the tables using stateful
-     *  tables are allowed within Tofino.  Essentially the constraints are the following:
-     *  - Multiple counters, meters, or registers can be found on a table if they use the
-     *    same exact addressing scheme.
-     *  - A table can only have a meter, a stateful alu, or a selector, as they use
-     *    the same address in match central
-     *  - Indirect addresses for twoport tables require a per flow enable bit as well
-     */
-    bool preorder(const IR::MAU::Counter *cnt) override {
-        free_address(cnt, layout.stats_addr, STATS);
+    bool preorder(const IR::MAU::StatefulAlu *) override {
         return false;
     }
 
-    bool preorder(const IR::MAU::Meter *mtr) override {
-        free_address(mtr, layout.meter_addr, METER);
-        return false;
-    }
-
-    bool preorder(const IR::MAU::StatefulAlu *salu) override {
-        if (getParent<IR::MAU::BackendAttached>()->use != IR::MAU::StatefulUse::NO_USE)
-            free_address(salu, layout.meter_addr, METER);
-        return false;
-    }
     bool preorder(const IR::MAU::Selector *as) override {
-        free_address(as, layout.meter_addr, METER);
         int sel_len = SelectorLengthBits(as);
         if (sel_len > 0) {
             layout.overhead_bits += sel_len;
@@ -853,30 +815,9 @@ class VisitAttached : public Inspector {
         }
         return false;
     }
-    bool preorder(const IR::MAU::TernaryIndirect *) override {
-        BUG("No ternary indirect should exist before table placement");
-        return false; }
-    bool preorder(const IR::MAU::ActionData *ad) override {
-        BUG_CHECK(!ad->direct, "Cannot have a direct action data table before table placement");
-        if (ad->size <= 0)
-            error(ErrorType::ERR_NOT_FOUND, "size count in %2% %3%", ad, ad->kind(), ad->name);
-        int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
-        layout.overhead_bits += vpn_bits_needed;
-        layout.action_addr.address_bits = vpn_bits_needed;
-        layout.action_addr.shifter_enabled = true;
-        return false;
-    }
-    bool preorder(const IR::MAU::IdleTime *) override {
-        return false;
-    }
-    bool preorder(const IR::Attached *att) override {
-        BUG("Unknown attached table type %s", typeid(*att).name()); }
-
-    const IR::MAU::Table *tbl;
 
  public:
-    explicit VisitAttached(IR::MAU::Table::Layout *l, const IR::MAU::Table *t)
-        : layout(*l), tbl(t) {}
+    SelLengthForLayout(IR::MAU::Table::Layout *l, const IR::MAU::Table *t) : layout(*l), tbl(t) {}
 };
 }  // namespace
 
@@ -912,18 +853,27 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
-    VisitAttached visit_attached(&tbl->layout, tbl);
-    tbl->attached.apply(visit_attached);
+    SelLengthForLayout sel_length(&tbl->layout, tbl);
+    tbl->attached.apply(sel_length);
     setup_action_layout(tbl);
     tbl->random_seed = tbl->get_random_seed();
+
+    safe_vector<IR::MAU::Table::Layout> layouts_per_type(LayoutChoices::FORMAT_TYPES);
+    for (int i = 0; i < LayoutChoices::FORMAT_TYPES; i++) {
+        LayoutChoices::FormatType_t format_type = static_cast<LayoutChoices::FormatType_t>(i);
+        layouts_per_type[i] = tbl->layout;
+        setup_indirect_ptrs(layouts_per_type[i], tbl, format_type);
+    }
+
+
     if (tbl->layout.gateway)
         return true;
     else if (tbl->layout.no_match_data())
-        setup_layout_option_no_match(tbl);
+        setup_layout_option_no_match(tbl, layouts_per_type);
     else if (tbl->layout.ternary)
-        setup_ternary_layout_options(tbl);
+        setup_ternary_layout_options(tbl, layouts_per_type);
     else
-        setup_layout_options(tbl);
+        setup_layout_options(tbl, layouts_per_type);
     return true;
 }
 
@@ -1255,7 +1205,7 @@ void RandomExternUsedOncePerAction::postorder(const IR::MAU::RandomNumber *rn) {
  */
 bool ValidateActionProfileFormat::preorder(const IR::MAU::ActionData *ad) {
     auto tbl = findContext<IR::MAU::Table>();
-    auto formats = lc.get_action_formats(tbl);
+    auto formats = lc.get_action_formats(tbl, LayoutChoices::NORMAL);
     BUG_CHECK(formats.size() == 1, "%s: Compiler generated multiple formats for action profile "
               "%s on table %s", ad->srcInfo, ad->name, tbl->externalName());
     if (formats.size() > 0)
@@ -1365,9 +1315,10 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
 TableLayout::TableLayout(const PhvInfo &p, LayoutChoices &l) : lc(l) {
     addPasses({
         new ValidateTableSize,
+        &att_info,
         new MeterColorMapramAddress,
         new RandomExternUsedOncePerAction,
-        new DoTableLayout(p, lc),
+        new DoTableLayout(p, lc, att_info),
         new ValidateActionProfileFormat(lc),
         new ProhibitAtcamWideSelectors
     });

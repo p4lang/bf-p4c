@@ -243,6 +243,7 @@ class Table : BFN::Unit {
     int get_random_seed() const;
     int get_pragma_max_actions() const;
     bool is_force_immediate() const;
+    bool has_match_data() const;
     bool for_dleft() const;
     bool getAnnotation(cstring name, int &val) const;
     bool getAnnotation(cstring name, ID &val) const;

@@ -742,8 +742,8 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     logical_ids = 1;
     layout_options.clear();
     if (!tbl->created_during_tp) {
-        layout_options = lc->get_layout_options(tbl);
-        action_formats = lc->get_action_formats(tbl);
+        layout_options = lc->get_layout_options(tbl, LayoutChoices::NORMAL);
+        action_formats = lc->get_action_formats(tbl, LayoutChoices::NORMAL);
         meter_format = lc->get_attached_formats(tbl);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;

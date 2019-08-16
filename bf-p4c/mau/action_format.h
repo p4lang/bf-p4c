@@ -13,6 +13,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/action_format.h"
+#include "bf-p4c/mau/attached_info.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/phv/phv.h"
 
@@ -483,13 +484,21 @@ class ALUOperation {
     bitvec phv_bits() const { return _phv_bits; }
     bitvec mask_bits() const { return _mask_bits; }
     bitvec slot_bits() const {
+        BUG_CHECK(_right_shift_set, "Unsafe call of slot bits in action format");
         return _phv_bits.rotate_right_copy(0, _right_shift, _container.size());
     }
-    size_t size() const { return _container.size(); }
+
+    bool valid() const { return static_cast<bool>(_container); }
+    size_t size() const {
+        return valid() ? _container.size() : static_cast<size_t>(PHV::Size::b32);
+    }
     bool is_constrained(ALUOPConstraint_t cons) const {
         return _constraint == cons;
     }
-    size_t index() const { return ceil_log2(size()) - 3; }
+    size_t index() const {
+        BUG_CHECK(valid(), "Cannot call index on an invalid ALU operation");
+        return ceil_log2(size()) - 3;
+    }
     ALUOPConstraint_t constraint() const { return _constraint; }
 
     ALUOperation(PHV::Container cont, ALUOPConstraint_t cons)
@@ -898,7 +907,8 @@ class Format {
  private:
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
-    safe_vector<Use> &uses;
+    safe_vector<Use> *uses = nullptr;
+    const SplitAttachedInfo &att_info;
     int calc_max_size = 0;
     std::map<cstring, RamSec_vec_t> init_ram_sections;
 
@@ -929,10 +939,10 @@ class Format {
     void create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange container_bits,
         int &constant_alias_index);
 
-
+    void create_split_param(const IR::MAU::Action *act);
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);
-    bool analyze_actions();
+    bool analyze_actions(bool with_split);
 
     void initial_possible_condenses(PossibleCondenses &condenses, const RamSec_vec_t &ram_sects);
     void incremental_possible_condenses(PossibleCondenses &condense, const RamSec_vec_t &ram_sects);
@@ -978,9 +988,10 @@ class Format {
 
 
  public:
-    void allocate_format(bool immediate_forced);
-    Format(const PhvInfo &p, const IR::MAU::Table *t, safe_vector<Use> &u)
-        : phv(p), tbl(t), uses(u) {}
+    void set_uses(safe_vector<Use> *u) { uses = u; }
+    void allocate_format(bool immediate_forced, bool with_split = false);
+    Format(const PhvInfo &p, const IR::MAU::Table *t, const SplitAttachedInfo &sai)
+        : phv(p), tbl(t), att_info(sai) {}
 };
 
 }  // namespace ActionData

@@ -894,6 +894,7 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
 const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alias_idx) const {
     ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
+    rv->_right_shift_set = true;
     bool rotational_alias = false;
     LOG6("\tadd_right_shift: params size = " << rv->_params.size());
     for (auto &param : rv->_params) {
@@ -1494,11 +1495,36 @@ BusInputs RamSection::bus_inputs() const {
                   "Alu not contained in the operation");
         size_t start_alu_offset = final_first_phv_bit_pos / ad_alu->size();
         size_t start_byte = start_alu_offset * (ad_alu->size() / 8);
-        size_t sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2: ad_alu->size();
-        sz /= 8;
-        BUG_CHECK(start_byte + sz <= size() / 8, "Action Data For ALU outside of RAM section");
-        BUG_CHECK(start_byte % sz == 0, "Non slot size offset");
-        rv[ad_alu->index()].setrange(start_byte, sz);
+
+        if (ad_alu->valid()) {
+            size_t sz = ad_alu->is_constrained(BITMASKED_SET) ? ad_alu->size() * 2: ad_alu->size();
+            sz /= 8;
+            BUG_CHECK(start_byte + sz <= size() / 8, "Action Data For ALU outside of RAM section");
+            BUG_CHECK(start_byte % sz == 0, "Non slot size offset");
+            rv[ad_alu->index()].setrange(start_byte, sz);
+       } else {
+            // For any created parameter, the assumption is that all 8, 16, and 32 bit ADB slots
+            // will be reserved, as it is not yet clear which size the parameter is yet in
+            for (int i = 0; i < SLOT_TYPES; i++) {
+                SlotType_t slot_type = static_cast<SlotType_t>(i);
+                int start_pos = start_alu_offset;
+                int end_pos = start_alu_offset + ad_alu->phv_bits().popcount() - 1;
+                size_t sz = slot_type_to_bits(slot_type);
+                end_pos %= ad_alu->size();
+                start_pos /= sz;
+                end_pos /= sz;
+                int rotation = slot_type_to_bits(FULL) / sz;
+                sz /= 8;
+                int slot_pos = start_pos;
+                while (slot_pos != end_pos) {
+                    rv[i].setrange(slot_pos, sz);
+                    slot_pos++;
+                    if (slot_pos == rotation)
+                        slot_pos = 0;
+                }
+                rv[i].setrange(slot_pos, sz);
+            }
+        }
     }
     return rv;
 }
@@ -2121,6 +2147,39 @@ void Format::create_mask_constant(ALUOperation &alu, bitvec value, le_bitrange c
 }
 
 /**
+ * Create an argument to be saved somewhere within the action data RAM.  The enables/meter types
+ * are constants, and assumed to be supported through src1 encoding.  Constant Arguments are also
+ * assumed to be accessible through src1 encoding
+ */
+void Format::create_split_param(const IR::MAU::Action *act) {
+    auto check_instr = att_info.pre_split_addr_instr(act, tbl, &phv);
+    if (check_instr)
+        return;
+    LOG2("  Creating extra split action data alu for " << act->name);
+
+    auto instr = att_info.pre_split_addr_instr(act, tbl, nullptr);
+    ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
+    // Invalid container, to note that this is not yet linked to a PHV container yet
+    PHV::Container container;
+    ALUOperation *alu = new ALUOperation(container, alu_cons);
+    alu->set_action_name(act->name);
+    auto expr = instr->operands[1];
+    Parameter *param = nullptr;
+    if (auto *ir_arg = expr->to<IR::MAU::ActionArg>()) {
+        le_bitrange range = { 0, ir_arg->type->width_bits() - 1 };
+        param = new Argument(ir_arg->name.name, range);
+    } else if (auto *ir_con = expr->to<IR::Constant>()) {
+        return;
+    } else {
+        BUG("A split parameter must either be an action data argument or a constant");
+    }
+    ALUParameter ap(param, { 0, expr->type->width_bits() - 1 });
+    alu->add_param(ap);
+    auto &ram_sec_vec = init_ram_sections[act->name];
+    ram_sec_vec.push_back(alu->create_RamSection(true));
+}
+
+/**
  * Looks through the ActionAnalysis maps, and builds Parameters and ALUOperation
  * structures.  This will then add a RamSection to potentially be condensed through the
  * algorithm.
@@ -2459,14 +2518,27 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
 }
 
-bool Format::analyze_actions() {
+bool Format::analyze_actions(bool with_split) {
+    if (with_split) {
+        auto at = att_info.attached_from_table(tbl);
+        if (at == nullptr)
+            return false;
+    }
+
     ActionAnalysis::ContainerActionsMap container_actions_map;
-    for (auto action : Values(tbl->actions)) {
+    for (auto orig_action : Values(tbl->actions)) {
         container_actions_map.clear();
         ActionAnalysis aa(phv, true, false, tbl);
         aa.set_container_actions_map(&container_actions_map);
-        action->apply(aa);
-        create_alu_ops_for_action(container_actions_map, action->name);
+        const IR::MAU::Action *act_to_analyze = orig_action;
+        // If the split parameters exist within the PHV allocation, then add the objects
+        // to the IR action in order to correctly understand the split action
+        if (with_split)
+            act_to_analyze = att_info.create_pre_split_action(orig_action, tbl, &phv);
+        act_to_analyze->apply(aa);
+        create_alu_ops_for_action(container_actions_map, orig_action->name);
+        if (with_split)
+            create_split_param(orig_action);
     }
 
     for (auto &entry : init_ram_sections) {
@@ -3101,7 +3173,16 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
         byte_sz /= 8;
         alu_positions.emplace_back(ad_alu, loc, start_byte);
         // Validation on the BusInputs
-        verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
+
+        if (ad_alu->valid()) {
+            verify_inputs[ad_alu->index()].setrange(start_byte, byte_sz);
+        } else {
+            for (int i = BYTE; i < SLOT_TYPES; i++) {
+                auto created_sect = ad_alu->create_RamSection(false);
+                verify_inputs[i] |= (created_sect->bus_inputs()[i] << start_byte);
+                delete created_sect;
+            }
+        }
     }
 }
 
@@ -3181,7 +3262,7 @@ void Format::build_potential_format(bool immediate_forced) {
     use.determine_mod_cond_maps();
     // If we're forcing immediate, do not consider allocations that use the action data table
     if (!immediate_forced || (immediate_forced && bytes_per_loc[ACTION_DATA_TABLE] == 0))
-        uses.push_back(use);
+        uses->push_back(use);
     else
         LOG2("Skipping action parameter allocation with ADT = " <<
              bytes_per_loc[ACTION_DATA_TABLE] << " and IMM = " <<
@@ -3211,9 +3292,9 @@ void Format::build_potential_format(bool immediate_forced) {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format(bool immediate_forced) {
+void Format::allocate_format(bool immediate_forced, bool with_split) {
     LOG1("Determining Formats for table " << tbl->name);
-    bool possible = analyze_actions();
+    bool possible = analyze_actions(with_split);
     if (!possible)
         return;
     bool initialized = false;

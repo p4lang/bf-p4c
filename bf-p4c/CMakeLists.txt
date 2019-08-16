@@ -252,6 +252,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_format.cpp
   mau/action_mutex.cpp
   mau/asm_output.cpp
+  mau/attached_info.cpp
   mau/attached_output.cpp
   mau/characterize_power.cpp
   mau/dynhash.cpp
@@ -296,6 +297,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_format.h
   mau/action_mutex.h
   mau/asm_output.h
+  mau/attached_info.h
   mau/attached_output.h
   mau/characterize_power.h
   mau/dynhash.h

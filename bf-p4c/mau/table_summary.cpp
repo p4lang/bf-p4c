@@ -224,8 +224,8 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         else
             lo.emplace_back(t->layout, t->ways[0], 0);
         action_formats.push_back(t->resources->action_format);
-        lc.total_layout_options[t->name] = lo;
-        lc.total_action_formats[t->name] = action_formats;
+        lc.total_layout_options[t->name][LayoutChoices::NORMAL] = lo;
+        lc.total_action_formats[t->name][LayoutChoices::NORMAL] = action_formats;
 
         int entries = t->layout.entries;
         StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
