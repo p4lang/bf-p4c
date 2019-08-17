@@ -125,6 +125,9 @@
  *    case for now). As such, we will overlap the two long branches if they are from the same gress.
  */
 
+/* 
+*/
+
 /* Holds next table prop information for a specific table sequence. One created per call to
  * add_table_seq. Note that add_table_seq may be called on the same table sequence multiple times,
  * as table sequences can both be (1) under the same table multiple times (multiple actions run the
@@ -143,7 +146,6 @@ struct NextTable::Prop::NTInfo {
             : parent(tbl), first_stage(tbl->stage()), seq_nm(seq.first), ts(seq.second) {
         LOG1("NTP for " << tbl->name << " and sequence "
              << seq.first << ":");
-        stages.resize(Device::numStages());
         last_stage = tbl->stage();
         BUG_CHECK(first_stage >= 0, "Unplaced table %s", tbl->name);
 
@@ -156,8 +158,6 @@ struct NextTable::Prop::NTInfo {
             // Update last stage
             last_stage = st > last_stage ? st : last_stage;
             // Add to the correct vector
-            if (size_t(st) >= stages.size())
-                stages.resize(st+1);
             stages[st].push_back(t);
         }
     }
@@ -194,14 +194,12 @@ NextTable::profile_t NextTable::Prop::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
     // Clear maps, since we have to rebuild them
     self.props.clear();
-    self.lbs.clear();
     self.stage_id.clear();
     self.lbus.clear();
     self.dest_src.clear();
     self.dest_ts.clear();
     self.al_runs.clear();
     self.max_stage = 0;
-    self.stage_tags.clear();
     LOG1("BEGINNING NEXT TABLE PROPAGATION");
     return MauInspector::init_apply(root);
 }
@@ -320,6 +318,11 @@ void NextTable::Prop::end_apply() {
 
 NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
+    // Clear old values
+    self.stage_tags.clear();
+    self.lbs.clear();
+    self.max_tag = -1;
+    self.use_tags.clear();
     LOG1("BEGIN LONG BRANCH TAG ALLOCATION");
     // Get LBU's in order of their first stage, for better merging
     std::vector<LBUse> lbus(self.lbus.begin(), self.lbus.end());
@@ -357,11 +360,91 @@ int NextTable::LBAlloc::alloc_lb(const LBUse& u) {
         self.stage_tags.push_back(t);
         self.max_tag = tag;
     }
+    self.use_tags[u] = tag;
     return tag;
 }
 
 bool NextTable::LBAlloc::preorder(const IR::BFN::Pipe*) {
     return false;
+}
+
+// Pretty prints tag information
+void NextTable::LBAlloc::pretty_tags() {
+    std::vector<std::string> header;
+    header.push_back("Tag #");
+    for (int i = 0; i < self.max_stage; ++i)
+        header.push_back("Stage " + std::to_string(i));
+
+    std::map<gress_t, std::string> gress_char;
+    gress_char[INGRESS] = "-";
+    gress_char[EGRESS] = "+";
+    gress_char[GHOST] = "=";
+    log << "======KEY======" << std::endl
+        << "INGRESS: " << gress_char[INGRESS] << std::endl
+        << "EGRESS:  " << gress_char[EGRESS] << std::endl
+        << "GHOST:   " << gress_char[GHOST] << std::endl;
+
+    TablePrinter* tp = new TablePrinter(log, header, TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    // Print each tag's occupied stages
+    int tag_num = 0;
+    for (auto t : self.stage_tags) {
+        std::vector<std::string> row;
+        row.push_back(std::to_string(tag_num));
+        std::map<int, std::string> stage_occ;
+        for (auto u : t) {  // Iterate through all of the uses
+            if (u.fst >= u.lst - 1) continue;  // skip reduced uses
+            std::string spacer = gress_char[u.dest->thread()];
+            stage_occ[u.fst] += "|" + spacer;
+            for (size_t i = u.fst + 1; i < u.lst; ++i) {
+                stage_occ[i] = spacer + spacer;
+            }
+            stage_occ[u.lst] = spacer + ">" + stage_occ[u.lst];
+        }
+        for (int i = 0; i < self.max_stage; ++i) {
+            if (stage_occ.count(i))
+                row.push_back(stage_occ[i]);
+            else
+                row.push_back("");
+        }
+        tp->addRow(row);
+        ++tag_num;
+    }
+    tp->print();
+    log << std::endl;
+}
+
+void NextTable::LBAlloc::pretty_srcs() {
+    std::vector<std::string> header({"Dest. table", "Tag #", "Range", "Src tables"});
+    TablePrinter* tp = new TablePrinter(log, header, TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    for (auto kv : self.use_tags) {
+        std::vector<std::string> row;
+        row.push_back(get_uid(kv.first.dest).build_name());
+        row.push_back(std::to_string(kv.second));
+        row.push_back("[ " + std::to_string(kv.first.fst) + " -- " + std::to_string(kv.first.lst)
+                      + " ]");
+        std::string srcs("[ ");
+        for (auto s : self.dest_src[get_uid(kv.first.dest)])
+            srcs += s.build_name() + ", ";
+        srcs.pop_back();  // Delete last space ...
+        srcs.pop_back();  // and comma
+        srcs += " ]";
+        row.push_back(srcs);
+        tp->addRow(row);
+    }
+    tp->print();
+    log << std::endl;
+}
+
+void NextTable::LBAlloc::end_apply() {
+    pretty_tags();
+    LOG2(log);
+    std::stringstream().swap(log);  // Reset and print source dest info
+    pretty_srcs();
+    LOG3(log);
 }
 
 NextTable::profile_t NextTable::TagReduce::init_apply(const IR::Node* root) {
@@ -626,52 +709,6 @@ void NextTable::TagReduce::alloc_dt_mems() {
             res.first->resources = res.second;
     }
 }
-
-void NextTable::TagReduce::pretty_print() {
-    std::vector<std::string> header;
-    header.push_back("Tag #");
-    int ns = Device::numStages();
-    for (int i = 0; i < ns; ++i)
-        header.push_back("Stage " + std::to_string(i));
-
-    TablePrinter* tp = new TablePrinter(log, header, TablePrinter::Align::CENTER);
-    tp->addSep();
-
-    // Print each tag
-    for (unsigned i = 0; i < lb_pp.size(); ++i) {
-        std::vector<std::string> row;
-        row.push_back(std::to_string(i));
-        auto tag_use = lb_pp[i];
-        // Iterate through the stages
-        for (int j = 0; j < ns; ++j) {
-            // If the tag has an entry at this stage
-            if (tag_use.count(j)) {
-                // Get the tables
-                auto src_dest = tag_use.at(j);
-                // Add the first table and increment j accordingly.
-                std::string nm = src_dest.first->name + "";
-                row.push_back(nm);
-                ++j;
-                // Add fillers
-                int k = j;
-                for (; k < src_dest.second->stage()-1; ++k)
-                    row.push_back("--");
-                row.push_back("->");
-                // Update j to reflect fillers
-                j = k + 1;
-                // Finally, add the dest name
-                nm = src_dest.second->name + "";
-                row.push_back(nm);
-            } else {  // Otherwise, add an empty string
-                row.push_back("");
-            }
-        }
-        tp->addRow(row);
-    }
-    tp->print();
-    log << std::endl;
-}
-
 
 // FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
 NextTable::NextTable() {

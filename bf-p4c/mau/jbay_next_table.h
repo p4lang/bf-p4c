@@ -64,13 +64,13 @@ class NextTable : public PassManager {
     }
 
     /*===================================Data gathered by Prop===================================*/
-    std::map<int, Memories>                      mems;      // Map from stage to tables
-    std::map<int, int>                           stage_id;  // Map from stage to next open LID
-    std::set<LBUse>                              lbus;      // Long branches that are needed
-    std::map<UniqueId, std::set<UniqueId>>       dest_src;  // Map from dest. to set of srcs
-    std::map<UniqueId, const IR::MAU::TableSeq*> dest_ts;   // Map from dest. to containing seq
-    std::set<UniqueId>                           al_runs;   // Set of tables that always run
-    int                                          max_stage;
+    std::map<int, Memories>                      mems;       // Map from stage to tables
+    std::map<int, int>                           stage_id;   // Map from stage to next open LID
+    std::set<LBUse>                              lbus;       // Long branches that are needed
+    std::map<UniqueId, std::set<UniqueId>>       dest_src;   // Map from dest. to set of srcs
+    std::map<UniqueId, const IR::MAU::TableSeq*> dest_ts;    // Map from dest. to containing seq
+    std::set<UniqueId>                           al_runs;    // Set of tables that always run
+    int                                          max_stage;  // The last stage seen
 
     // Computes a minimal scheme for how to propagate next tables and records long branches for
     // allocation. Also gathers information for dumb table allocation/addition.
@@ -97,12 +97,18 @@ class NextTable : public PassManager {
     bool                                         rebuild = true;  // Whether we need dumb tables
     dyn_vector<Tag>                              stage_tags;  // Track usage of tags x stages so far
     size_t                                       max_tag;  // Largest tag allocated (number of lbs)
+    std::map<LBUse, int>                         use_tags;  // Map from uses to tags
     // Allocates long branches into tags
     class LBAlloc : public MauInspector {
         NextTable& self;
         profile_t init_apply(const IR::Node* root) override;  // Allocates long branches to tags
         bool preorder(const IR::BFN::Pipe*) override;  // Early abort
         int alloc_lb(const LBUse&);  // Finds a tag in self.stage_tags to fit the LBUse
+
+        std::stringstream log;  // Log that captures pretty printing
+        void pretty_tags();  // Print tags nice
+        void pretty_srcs();  // Print src info nice
+        void end_apply() override;  // Pretty print
 
      public:
         explicit LBAlloc(NextTable& ntp) : self(ntp) {}
@@ -128,15 +134,6 @@ class NextTable : public PassManager {
         IR::Node* preorder(IR::BFN::Pipe*) override;
         IR::Node* preorder(IR::MAU::Table*) override;  // Set always run tags
         IR::Node* preorder(IR::MAU::TableSeq*) override;  // Add specified tables to table sequences
-
-        // FIXME: Pretty printing is all wrong right now
-        // Capture information for pretty printing long branches (tag # -> src stage # -> src,dest)
-        std::map<int, std::map<int, std::pair<const IR::MAU::Table*, const IR::MAU::Table*>>> lb_pp;
-        // Log that captures pretty printing info
-        std::stringstream log;
-        // Print long branches prettily
-        void pretty_print();
-
      public:
         explicit TagReduce(NextTable& ntp) : self(ntp) {}
     };
