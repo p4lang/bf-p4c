@@ -106,7 +106,7 @@ bool DarkLiveRange::preorder(const IR::MAU::Table* tbl) {
 }
 
 bool DarkLiveRange::preorder(const IR::MAU::Action* act) {
-    GetActionRequirements ghdr;
+    GetHashDistReqs ghdr;
     act->apply(ghdr);
     if (ghdr.is_hash_dist_needed()) {
         LOG2("\tCannot initialize at action " << act->name << " because it requires " <<

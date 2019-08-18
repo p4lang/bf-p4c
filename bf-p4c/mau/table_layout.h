@@ -86,22 +86,17 @@ class LayoutChoices {
     }
 };
 
-/** Checks to see if the action(s) have hash distribution or rng access somewhere */
-class GetActionRequirements : public MauInspector {
-    bool _hash_dist_needed = false;
-    bool _rng_needed = false;
+/** Checks to see if the table has a hash distribution access somewhere */
+class GetHashDistReqs : public MauInspector {
+    bool _hash_dist_needed;
     bool preorder(const IR::MAU::HashDist *) {
         _hash_dist_needed = true;
-        return false;
-    }
-    bool preorder(const IR::MAU::RandomNumber *) {
-        _rng_needed = true;
         return false;
     }
 
  public:
     bool is_hash_dist_needed() { return _hash_dist_needed; }
-    bool is_rng_needed() { return _rng_needed; }
+    GetHashDistReqs() : _hash_dist_needed(false) { }
 };
 
 

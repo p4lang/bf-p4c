@@ -655,12 +655,10 @@ void DoTableLayout::setup_layout_options(IR::MAU::Table *tbl,
 void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl,
         safe_vector<IR::MAU::Table::Layout> &layouts_per_type) {
     LOG2("Determining no match table layouts " << tbl->name);
-    GetActionRequirements ghdr;
+    GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
     for (auto v : Values(tbl->actions))
         v->apply(ghdr);
-    if (ghdr.is_hash_dist_needed() || ghdr.is_rng_needed())
-        tbl->layout.hash_action = true;
 
     // No match tables are required to have only one layout option in a later pass, so the
     // algorithm picks the action format that has the most immediate.  This is the option
@@ -882,53 +880,51 @@ bool DoTableLayout::preorder(IR::MAU::Table *tbl) {
 
 bool DoTableLayout::preorder(IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
-    GetActionRequirements ghdr;
+    if (tbl->layout.no_match_hit_path())
+        return false;
+    GetHashDistReqs ghdr;
     act->apply(ghdr);
-    if (!ghdr.is_hash_dist_needed() && !ghdr.is_rng_needed())
+    if (!ghdr.is_hash_dist_needed())
         return false;
 
-    ERROR_CHECK(!act->init_default || tbl->layout.no_match_hit_path(),
-                ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "Cannot specify %2% as the default action, as it requires %3%", act, act->name,
-                ghdr.is_hash_dist_needed() ?  "the hash distribution unit." : "a random number.");
+    ERROR_CHECK(!act->init_default, ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "Cannot specify %2% as the default action, as it requires "
+                "the hash distribution unit.", act, act->name);
     /**
      * This check is to validate that a keyless table that has to go through the miss path,
      * because the driver has to potentially program the table, does not have any actions that
      * require hash.  These actions have to go through the hit path, and thus must go through
      * a mstch with no key table.
      */
-    if (tbl->layout.no_match_rams()) {
-        const char *error_reason = nullptr;
-        const char *solution = nullptr;
+    if (tbl->layout.no_match_miss_path()) {
+        std::string error_reason = "";
+        std::string solution = "";
         if (tbl->layout.total_actions > 1) {
             error_reason = "the table has multiple actions";
             solution = "declare only one action on the table, and mark it as the default action";
         } else if (tbl->layout.action_data_bytes > 0) {
             error_reason = "the table requires programming action data";
             solution = "remove all action data from the action";
-        } else if (tbl->layout.no_match_miss_path()) {
+        } else {
             error_reason = "the table requires overhead";
             solution = "remove all match overhead";
         }
-        if (error_reason) {
-            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                  "The table %2% with no key cannot have the action %3%.  This action requires "
-                  "%6%, which can only be done through the hit pathway.  However, because %4%, "
-                  "the driver may need to change at runtime, and the driver can only currently "
-                  "program the miss pathway.  The solution may be to %5%.",
-                  act, tbl->externalName(), act->name, error_reason, solution,
-                  ghdr.is_hash_dist_needed() ?  "hash" : "rng");
-        }
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "The table %2% with no key cannot have the action %3%.  This action requires "
+                "hash, which can only be done through the hit pathway.  However, because %4%, "
+                "the driver may need to change at runtime, and the driver can only currently "
+                "program the miss pathway.  The solution may be to %5%.",
+                act, tbl->externalName(), act->name, error_reason, solution);
     }
 
     ERROR_CHECK(!tbl->layout.no_match_miss_path(), ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "This table with no key cannot have the action %2% as an action here, "
-                "because it requires %3%, which utilizes the hit path in Tofino, while the "
-                "driver configures the miss path", act, act->name,
-                ghdr.is_hash_dist_needed() ?  "hash distribution" : "the rng unit");
+                "because it requires hash distribution, which "
+                "utilizes the hit path in Tofino, while the driver configures the miss path",
+                act, act->name);
 
     act->hit_path_imp_only = false;
-    act->disallowed_reason = ghdr.is_hash_dist_needed() ? "uses_hash_dist" : "uses_rng";
+    act->disallowed_reason = "uses_hash_dist";
     return false;
 }
 

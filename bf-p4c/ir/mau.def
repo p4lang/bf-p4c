@@ -182,11 +182,14 @@ class Table : BFN::Unit {
         bool no_match_rams() const {
             return no_match_data() || hash_action;
         }
-        /** no match tables that need hash_dist need to go through the hit path; all others
-         *  can use the miss path
+        /** Currently hash action tables and default action tables that cannot be adapted by
+         *  runtime go through the hit pathway in Glass, so allocating accordingly.
          */
         bool no_match_hit_path() const {
-            return no_match_rams() && hash_action;
+            return no_match_rams() &&
+                   ((no_match_data() && overhead_bits == 0 && action_data_bytes == 0
+                                    && total_actions <= 1)
+                   || hash_action);
         }
         /** Any keyless table that has parameters that can be adjusted during runtime, such
          *  as action or action data must go through the miss pathway, as those are the registers

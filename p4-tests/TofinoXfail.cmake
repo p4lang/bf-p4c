@@ -709,13 +709,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
 )
 
-# expected failure -- rng must be on hit path
-p4c_add_xfail_reason("tofino"
-  "Unsupported.*action requires rng.*hit pathway.*driver can only currently program the miss pathway"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/hash_table_column_duplicated.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
-)
-
 # P4C-1067
 # Expected failure, negative test.
 p4c_add_xfail_reason("tofino"
