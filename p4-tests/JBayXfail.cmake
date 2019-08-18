@@ -398,7 +398,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Unsupported on target Cannot specify .* as the default action, as it requires the hash distribution unit"
+  "Unsupported on target.*This action requires hash, which can only be done through the hit pathway.  However, because the table requires programming action data, the driver may need to change at runtime, and the driver can only currently program the miss pathway."
   p4_16_internal_p4_16_hwlrn
 )
 
