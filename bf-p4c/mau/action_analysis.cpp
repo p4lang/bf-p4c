@@ -712,7 +712,7 @@ bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAc
         param = new ActionData::Hash(*func);
     } else if (read.speciality == ActionParam::RANDOM) {
         auto rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
-        param = new ActionData::RandomNumber(rn->name, action_name, read.range().size());
+        param = new ActionData::RandomNumber(rn->name, action_name, read.range());
     } else {
         return init_simple_alignment(read, cont_action, write_bits);
     }

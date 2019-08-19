@@ -567,73 +567,94 @@ TEST(ActionFormatHelper, ConditionalArgs) {
     ConditionalArgs_Test(con1, con1_cond1, con1_cond2, con1_extend_cond1);
 }
 
+/**
+ * Test to make sure RandomNumbers in the same action cannot merge
+ */
 void RandomNumberSingleAction() {
-    cstring null_rand_name;
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", 8);
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", 8);
-    ActionData::RandomNumber *rn_null_a1 = new ActionData::RandomNumber(null_rand_name, "act1", 8);
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 7});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 7});
+    ActionData::RandomPadding *pad = new ActionData::RandomPadding(8);
+
+    EXPECT_EQ(rn1_a1->size(), 8);
+    EXPECT_EQ(rn2_a1->size(), 8);
 
     EXPECT_FALSE(rn1_a1->can_merge(rn2_a1));
-    EXPECT_TRUE(rn1_a1->can_merge(rn_null_a1));
-    EXPECT_TRUE(rn2_a1->can_merge(rn_null_a1));
-    EXPECT_FALSE(rn1_a1->equiv_value(rn_null_a1));
-    EXPECT_FALSE(rn2_a1->equiv_value(rn_null_a1));
+    EXPECT_FALSE(rn2_a1->can_merge(rn1_a1));
+    EXPECT_TRUE(rn1_a1->can_merge(pad));
+    EXPECT_TRUE(pad->can_merge(rn1_a1));
+    EXPECT_TRUE(rn2_a1->can_merge(pad));
+    EXPECT_TRUE(pad->can_merge(rn2_a1));
 
-    auto merge1 = rn1_a1->merge(rn_null_a1);
-    auto merge2 = rn2_a1->merge(rn_null_a1);
-
-    EXPECT_TRUE(rn1_a1->is_subset_of(merge1));
-    EXPECT_FALSE(rn2_a1->is_subset_of(merge1));
-    EXPECT_FALSE(rn1_a1->is_subset_of(merge2));
-    EXPECT_TRUE(rn2_a1->is_subset_of(merge2));
-    EXPECT_TRUE(rn_null_a1->is_subset_of(merge1));
-    EXPECT_TRUE(rn_null_a1->is_subset_of(merge2));
-
-    EXPECT_TRUE(merge1->can_merge(rn_null_a1));
-    EXPECT_TRUE(merge2->can_merge(rn_null_a1));
+    EXPECT_FALSE(rn1_a1->is_subset_of(rn2_a1));
+    EXPECT_FALSE(rn2_a1->is_subset_of(rn1_a1));
+    EXPECT_TRUE(rn1_a1->is_subset_of(pad));
+    EXPECT_TRUE(pad->is_subset_of(rn1_a1));
+    EXPECT_TRUE(rn2_a1->is_subset_of(pad));
+    EXPECT_TRUE(pad->is_subset_of(rn2_a1));
 }
 
+/**
+ * Test to make sure Random Numbers across actions can be merged, and their subsets work
+ * appropriately
+ */
 void RandomNumberMultipleActions() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", 8);
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", 8);
-
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", 8);
-    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", 8);
-
-    ActionData::RandomNumber *rn1_a3 = new ActionData::RandomNumber("rand1", "act3", 8);
-    ActionData::RandomNumber *rn2_a3 = new ActionData::RandomNumber("rand2", "act3", 8);
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 7});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 7});
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 7});
+    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", {0, 7});
+    ActionData::RandomPadding *pad = new ActionData::RandomPadding(8);
 
     EXPECT_TRUE(rn1_a1->can_merge(rn1_a2));
-    EXPECT_TRUE(rn2_a1->can_merge(rn2_a2));
     EXPECT_TRUE(rn1_a1->can_merge(rn2_a2));
     EXPECT_TRUE(rn2_a1->can_merge(rn1_a2));
+    EXPECT_TRUE(rn2_a1->can_merge(rn2_a2));
+    EXPECT_TRUE(rn1_a2->can_merge(rn1_a1));
+    EXPECT_TRUE(rn1_a2->can_merge(rn2_a1));
+    EXPECT_TRUE(rn2_a2->can_merge(rn1_a1));
+    EXPECT_TRUE(rn2_a2->can_merge(rn2_a1));
+
+    EXPECT_FALSE(rn1_a1->is_subset_of(rn1_a2));
+    EXPECT_FALSE(rn1_a1->is_subset_of(rn2_a2));
+    EXPECT_FALSE(rn2_a1->is_subset_of(rn1_a2));
+    EXPECT_FALSE(rn2_a1->is_subset_of(rn2_a2));
+    EXPECT_FALSE(rn1_a2->is_subset_of(rn1_a1));
+    EXPECT_FALSE(rn1_a2->is_subset_of(rn2_a1));
+    EXPECT_FALSE(rn2_a2->is_subset_of(rn1_a1));
+    EXPECT_FALSE(rn2_a2->is_subset_of(rn2_a1));
 
     auto merge1 = rn1_a1->merge(rn2_a2);
-    auto merge2 = rn1_a2->merge(rn2_a1);
+    auto merge2 = rn2_a1->merge(rn1_a2);
 
-    EXPECT_FALSE(merge1->can_merge(rn1_a2));
-    EXPECT_FALSE(merge1->can_merge(rn2_a1));
-    EXPECT_FALSE(merge2->can_merge(rn1_a1));
-    EXPECT_FALSE(merge2->can_merge(rn2_a2));
+    EXPECT_FALSE(merge1 == nullptr);
+    EXPECT_FALSE(merge2 == nullptr);
 
-    EXPECT_TRUE(merge1->can_merge(rn1_a3));
-    EXPECT_TRUE(merge1->can_merge(rn2_a3));
-    EXPECT_TRUE(merge2->can_merge(rn1_a3));
-    EXPECT_TRUE(merge2->can_merge(rn2_a3));
+    EXPECT_FALSE(merge1->can_merge(merge2));
+    EXPECT_FALSE(merge2->can_merge(merge1));
+    EXPECT_TRUE(merge1->can_merge(pad));
+    EXPECT_TRUE(pad->can_merge(merge1));
+    EXPECT_TRUE(merge2->can_merge(pad));
+    EXPECT_TRUE(pad->can_merge(merge2));
 
-    merge1 = merge1->merge(rn1_a3);
-    merge2 = merge2->merge(rn2_a3);
+    EXPECT_TRUE(rn1_a1->is_subset_of(merge1));
+    EXPECT_TRUE(rn2_a2->is_subset_of(merge1));
+    EXPECT_FALSE(rn2_a1->is_subset_of(merge1));
+    EXPECT_FALSE(rn1_a2->is_subset_of(merge1));
 
-    EXPECT_FALSE(merge1->can_merge(rn2_a3));
-    EXPECT_FALSE(merge2->can_merge(rn1_a3));
+    EXPECT_FALSE(rn1_a1->is_subset_of(merge2));
+    EXPECT_FALSE(rn2_a2->is_subset_of(merge2));
+    EXPECT_TRUE(rn2_a1->is_subset_of(merge2));
+    EXPECT_TRUE(rn1_a2->is_subset_of(merge2));
 }
 
+/**
+ * Test to make sure RandomNumbers overlap function works properly 
+ */
 void RandomNumberOverlaps() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", 2);
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", 4);
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 1});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 3});
 
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", 6);
-    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", 8);
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 5});
+    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", {0, 7});
 
     le_bitrange my_overlap = {0, 0};
     le_bitrange ad_overlap = {0, 0};
@@ -644,8 +665,6 @@ void RandomNumberOverlaps() {
     if (overlap1) {
         auto rn_overlap = overlap1->to<ActionData::RandomNumber>();
         EXPECT_EQ(rn_overlap->size(), 2);
-        EXPECT_TRUE(rn_overlap->contains_rand_num("rand1", "act1"));
-        EXPECT_TRUE(rn_overlap->contains_rand_num("rand1", "act2"));
         EXPECT_TRUE(my_overlap.lo == 0 && my_overlap.size() == 2);
         EXPECT_TRUE(ad_overlap.lo == 0 && ad_overlap.size() == 2);
     }
@@ -655,8 +674,6 @@ void RandomNumberOverlaps() {
     if (overlap2) {
         auto rn_overlap = overlap2->to<ActionData::RandomNumber>();
         EXPECT_EQ(rn_overlap->size(), 4);
-        EXPECT_TRUE(rn_overlap->contains_rand_num("rand2", "act1"));
-        EXPECT_TRUE(rn_overlap->contains_rand_num("rand1", "act2"));
         EXPECT_TRUE(my_overlap.lo == 0 && my_overlap.size() == 4);
         EXPECT_TRUE(ad_overlap.lo == 0 && ad_overlap.size() == 4);
     }
@@ -667,51 +684,54 @@ void RandomNumberOverlaps() {
     EXPECT_EQ(overlap4, nullptr);
 }
 
+/**
+ */
 void RandomNumberRamSection() {
     cstring null_rand_name;
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", 4);
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", 4);
-    ActionData::RandomNumber *rn_null_a1 = new ActionData::RandomNumber(null_rand_name, "act1", 4);
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", 8);
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 3});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand1", "act1", {4, 7});
+    ActionData::RandomPadding *pad = new ActionData::RandomPadding(4);
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 7});
 
     ActionData::PackingConstraint pc;
     ActionData::PackingConstraint first_layer_pc = pc.expand(1, 8);
     ActionData::RamSection *sect1 = new ActionData::RamSection(8, first_layer_pc);
 
     sect1->add_param(0, rn1_a1);
-    sect1->add_param(4, rn_null_a1);
+    sect1->add_param(4, pad);
 
     ActionData::RamSection *sect2 = new ActionData::RamSection(8, first_layer_pc);
-    sect2->add_param(0, rn_null_a1);
     sect2->add_param(4, rn2_a1);
+    sect2->add_param(0, pad);
 
     ActionData::RamSection *sect3 = new ActionData::RamSection(8, first_layer_pc);
     sect3->add_param(0, rn1_a2);
+
+    auto sect2_rotate = sect2->can_rotate(0, 4);
+    EXPECT_TRUE(sect2_rotate != nullptr);
 
     auto merge1 = sect1->merge(sect2);
     EXPECT_TRUE(merge1 != nullptr);
     if (merge1) {
         auto param_positions = merge1->parameter_positions();
-        EXPECT_EQ(param_positions.size(), size_t(2));
+        EXPECT_EQ(param_positions.size(), size_t(1));
         auto param_pos = param_positions.find(0);
         EXPECT_TRUE(param_pos != param_positions.end());
         if (param_pos != param_positions.end()) {
             auto rn_check = param_pos->second->to<ActionData::RandomNumber>();
-            EXPECT_TRUE(rn1_a1->is_subset_of(rn_check));
-            EXPECT_TRUE(rn_null_a1->is_subset_of(rn_check));
+            EXPECT_TRUE(rn1_a1->is_subset_of(rn_check->split(0, 3)));
+            EXPECT_TRUE(pad->is_subset_of(rn_check->split(4, 7)));
+            EXPECT_TRUE(rn2_a1->is_subset_of(rn_check->split(4, 7)));
+            EXPECT_TRUE(pad->is_subset_of(rn_check->split(0, 3)));
         }
 
-        param_pos = param_positions.find(4);
-        EXPECT_TRUE(param_pos != param_positions.end());
-        if (param_pos != param_positions.end()) {
-            auto rn_check = param_pos->second->to<ActionData::RandomNumber>();
-            EXPECT_TRUE(rn2_a1->is_subset_of(rn_check));
-            EXPECT_TRUE(rn_null_a1->is_subset_of(rn_check));
-        }
+        int final_bit_pos = 0;
+        EXPECT_TRUE(merge1->contains_any_rotation_from_0(sect1, 0, &final_bit_pos));
+        EXPECT_EQ(final_bit_pos, 0);
+        EXPECT_TRUE(merge1->contains_any_rotation_from_0(sect2_rotate, 0, &final_bit_pos));
+        EXPECT_EQ(final_bit_pos, 4);
     }
 
-    auto sect2_rotate = sect2->can_rotate(0, 4);
-    EXPECT_TRUE(sect2_rotate != nullptr);
     if (sect2_rotate) {
         auto merge2 = sect2_rotate->merge(sect1);
         EXPECT_EQ(merge2, nullptr);
@@ -726,23 +746,18 @@ void RandomNumberRamSection() {
         if (param_pos != param_positions.end()) {
             auto rn_check = param_pos->second->to<ActionData::RandomNumber>();
             EXPECT_TRUE(rn1_a1->is_subset_of(rn_check));
-            EXPECT_TRUE(rn_check->contains_rand_num("rand1", "act2"));
         }
 
         param_pos = param_positions.find(4);
         EXPECT_TRUE(param_pos != param_positions.end());
         if (param_pos != param_positions.end()) {
             auto rn_check = param_pos->second->to<ActionData::RandomNumber>();
-            EXPECT_TRUE(rn_null_a1->is_subset_of(rn_check));
-            EXPECT_TRUE(rn_check->contains_rand_num("rand1", "act2"));
+            EXPECT_TRUE(pad->is_subset_of(rn_check));
         }
     }
 }
 
-/**
- * Guarantees some of the properties of RandomNumber parameters, i.e. that their overlap
- * functions work correctly, and their merge functions work correctly
- */
+
 TEST(ActionFormatHelper, RandomNumberTests) {
     RandomNumberSingleAction();
     RandomNumberMultipleActions();

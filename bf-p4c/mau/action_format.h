@@ -251,9 +251,7 @@ class Hash : public Parameter {
  * particular bits.  Because the bits are always random, there is not lo-hi, only size.
  */
 class RandomNumber : public Parameter {
- public:
-    struct UniqueAlloc {
-     private:
+    class UniqueAlloc {
         cstring _random;
         cstring _action;
 
@@ -263,44 +261,41 @@ class RandomNumber : public Parameter {
                 return _random < ua._random;
             return _action < ua._action;
         }
+
         bool operator==(const UniqueAlloc &ua) const {
             return _random == ua._random && _action == ua._action;
         }
 
         bool operator!=(const UniqueAlloc &ua) const { return !(*this == ua); }
 
-
-        UniqueAlloc(cstring r, cstring a) : _random(r), _action(a) { }
-        bool used_in_alu_op() const { return !_random.isNull(); }
-        cstring random() const {
-            return used_in_alu_op() ? _random : "rng_output";
-        }
+        cstring random() const { return _random; }
         cstring action() const { return _action; }
+        UniqueAlloc(cstring rand, cstring act) : _random(rand), _action(act) {}
     };
 
- private:
-    std::set<UniqueAlloc> _rand_nums;
-    size_t _size;
-
- public:
-    RandomNumber(cstring rn, cstring act, size_t sz) : _size(sz) {
-        _rand_nums.emplace(rn, act);
-    }
-
+    std::map<UniqueAlloc, le_bitrange> _rand_nums;
     std::string rand_num_names() const {
-        std::string rv = "{ ";
+        std::stringstream str;
+        str << "{ ";
         std::string sep = "";
         for (auto ua : _rand_nums) {
-            rv += sep + ua.random() + "$" + ua.action();
+            str << sep << ua.first.random() << "$" << ua.first.action() << ua.second;
             sep = ", ";
         }
-        return rv + " }";
+        str << " }";
+        return str.str();
     }
 
-    int size() const override { return _size; }
+    RandomNumber() {}
+    void add_alloc(cstring rand, cstring act, le_bitrange range) {
+        UniqueAlloc ua(rand, act);
+        _rand_nums.emplace(ua, range);
+    }
+
+ public:
+    int size() const override;
     cstring name() const override { return "random"; }
     const Parameter *split(int lo, int hi) const override;
-
     bool from_p4_program() const override { return true; }
     bool only_one_overlap_solution() const override { return false; }
     bool is_next_bit_of_param(const Parameter *ad, bool same_alias) const override;
@@ -313,16 +308,38 @@ class RandomNumber : public Parameter {
     bool is_subset_of(const Parameter *ad) const override;
     bool can_merge(const Parameter *ad) const override;
     const Parameter *merge(const Parameter *ad) const override;
-
-    bool contains_rand_num(cstring rn, cstring act) const {
-        UniqueAlloc ua(rn, act);
-        return _rand_nums.count(ua) != 0;
+    void dbprint(std::ostream &out) const override {
+        out << "random " << rand_num_names();
     }
 
-    void dbprint(std::ostream &out) const override {
-        out << "random " << rand_num_names() << " : " << _size;
+    RandomNumber(cstring rand, cstring act, le_bitrange range) {
+        UniqueAlloc ua(rand, act);
+        _rand_nums.emplace(ua, range);
     }
 };
+
+class RandomPadding : public Parameter {
+    int _size;
+
+ public:
+    int size() const override { return _size; }
+    cstring name() const override { return "rand_padding"; }
+    const Parameter *split(int lo, int hi) const override;
+    bool from_p4_program() const override { return false; }
+    bool only_one_overlap_solution() const override { return false; }
+    bool is_next_bit_of_param(const Parameter *ad, bool same_alias) const override;
+    const Parameter *get_extended_param(uint32_t extensions, const Parameter *ad) const override;
+    const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
+    bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
+    bool is_subset_of(const Parameter *ad) const override;
+    bool can_merge(const Parameter *ad) const override;
+    const Parameter *merge(const Parameter *ad) const override;
+    void dbprint(std::ostream &out) const override { out << name() << " : " << size(); }
+
+    explicit RandomPadding(int s) : _size(s) {}
+};
+
 
 /**
  * A Meter Color Map RAM outputs an 8-bit color to bits 24..31 of immediate.  Only one meter
@@ -887,6 +904,7 @@ class Format {
                 if (alu_position.start_byte != static_cast<unsigned>(byte_offset))
                     continue;
                 auto param_positions = alu_position.alu_op->parameter_positions();
+                BUG_CHECK(!param_positions.empty(), "An ALU operation somehow has no parameters");
                 for (auto &param_pos : param_positions) {
                     bool template_param = param_pos.second->is<T>();
                     if (!found) {
@@ -900,7 +918,6 @@ class Format {
             }
             return is_template;
         }
-
         const RamSection *build_locked_in_sect() const;
     };
 
@@ -931,7 +948,7 @@ class Format {
         le_bitrange container_bits);
     void create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits, cstring action_name);
-    void create_random_padding(ALUOperation &alu, le_bitrange padding_bits, cstring action_name);
+    void create_random_padding(ALUOperation &alu, le_bitrange padding_bits);
     void create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,

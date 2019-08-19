@@ -924,12 +924,13 @@ bool ActionDataBus::alloc_rng(Use &use, const ActionData::Format::Use *format, c
     bitvec rng_bytes;
 
     const ActionData::RamSection *immed_path_sect = format->build_locked_in_sect();
-    auto ad_positions = immed_path_sect->parameter_positions(false);
+    // The true parameter in this includes both RandomNumbers and RandomPaddings
+    auto ad_positions = immed_path_sect->parameter_positions(true);
     for (auto pos : ad_positions) {
-        auto rn = pos.second->to<ActionData::RandomNumber>();
-        if (rn == nullptr)
+        auto ad = pos.second;
+        if (!ad->is<ActionData::RandomNumber>() && !ad->is<ActionData::RandomPadding>())
             continue;
-        le_bitrange immed_range = { pos.first, pos.first + rn->size() - 1 };
+        le_bitrange immed_range = { pos.first, pos.first + ad->size() - 1 };
         for (int i = 0; i < ActionData::Format::IMMEDIATE_BITS; i += 8) {
             int bit_pos_lo = i * 8;
             int bit_pos_hi = bit_pos_lo + 7;

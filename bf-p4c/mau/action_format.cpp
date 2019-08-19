@@ -234,13 +234,30 @@ bool Hash::equiv_value(const Parameter *ad, bool check_cond) const {
     return _func.equiv(&hash->_func);
 }
 
+int RandomNumber::size() const {
+    BUG_CHECK(_rand_nums.size() > 0, "Random Number in ActionFormat allocation not tied to a "
+        "P4 based random number");
+    int rv = -1;
+    for (auto &entry : _rand_nums) {
+        if (rv == -1)
+            rv = entry.second.size();
+        else
+            BUG_CHECK(static_cast<int>(entry.second.size()) == rv, "Random number has allocations "
+                "of different sizes");
+    }
+    return rv;
+}
 
 const Parameter *RandomNumber::split(int lo, int hi) const {
-    size_t new_size = hi - lo + 1;
-    BUG_CHECK(new_size <= _size, "Splitting a random number larger into a section larger than "
-                                "itself");
-    auto rv = new RandomNumber(*this);
-    rv->_size = new_size;
+    int new_size = hi - lo + 1;
+    BUG_CHECK(new_size <= size(), "Splitting a random number larger into a section larger than "
+                                  "itself");
+    auto rv = new RandomNumber();
+    for (auto &entry : _rand_nums) {
+        auto ua = entry.first;
+        le_bitrange range = { entry.second.lo + lo, entry.second.lo + hi };
+        rv->add_alloc(ua.random(), ua.action(), range);
+    }
     return rv;
 }
 
@@ -249,80 +266,33 @@ bool RandomNumber::is_next_bit_of_param(const Parameter *ad, bool) const {
     if (!equiv_cond(ad)) return false;
     auto rn = ad->to<RandomNumber>();
     if (rn == nullptr) return false;
-    return (_rand_nums == rn->_rand_nums);
-}
+    for (auto entry : _rand_nums) {
+        auto rn_pos = rn->_rand_nums.find(entry.first);
+        if (rn_pos == rn->_rand_nums.end())
+            return false;
+        if (entry.second.lo != rn_pos->second.hi + 1)
+            return false;
+    }
 
-const Parameter *RandomNumber::get_extended_param(uint32_t extension, const Parameter *) const {
-    auto rv = new RandomNumber(*this);
-    rv->_size += extension;
-    return rv;
-}
-
-bool RandomNumber::equiv_value(const Parameter *ad, bool check_cond) const {
-    auto rn = ad->to<RandomNumber>();
-    if (rn == nullptr) return false;
-    if (check_cond && !equiv_cond(ad)) return false;
-    return _rand_nums == rn->_rand_nums && _size == rn->_size;
-}
-
-/**
- * @seealso RandomNumber::overlap
- *
- * Returns true if the set of randoms don't have any overlapping actions, or are padding
- * within that action
- */
-bool RandomNumber::rand_nums_overlap_into(const RandomNumber *rn) const {
-    for (auto ua : _rand_nums) {
-        if (!ua.used_in_alu_op())
-            continue;
-        for (auto ua_check : rn->_rand_nums) {
-            if (!ua_check.used_in_alu_op())
-                continue;
-            if (ua.action() == ua_check.action())
-                return false;
-        }
+    for (auto entry : rn->_rand_nums) {
+        auto rn_pos = _rand_nums.find(entry.first);
+        if (rn_pos == _rand_nums.end())
+            return false;
+        if (entry.second.hi + 1 != rn_pos->second.lo)
+            return false;
     }
     return true;
 }
 
-bool RandomNumber::is_subset_of(const Parameter *ad) const {
-    if (ad == nullptr)
-        return false;
-    auto rn = ad->to<RandomNumber>();
-    if (rn == nullptr)
-        return false;
-    if (size() != rn->size())
-        return false;
-    return std::includes(rn->_rand_nums.begin(), rn->_rand_nums.end(),
-                         _rand_nums.begin(), _rand_nums.end());
-}
-
-/**
- * Returns true if each rand_nums set can overlap into each other (and are the same size)
- */
-bool RandomNumber::can_merge(const Parameter *ad) const {
-    if (ad == nullptr)
-        return true;
-    auto rn = ad->to<RandomNumber>();
-    if (rn == nullptr)
-        return false;
-    if (size() != rn->size())
-        return false;
-    return (rand_nums_overlap_into(rn) && rn->rand_nums_overlap_into(this));
-}
-
-const Parameter *RandomNumber::merge(const Parameter *ad) const {
-    if (ad == nullptr)
-        return this;
-    BUG_CHECK(size() == ad->size(), "Parameters in merge must be the same size");
-
-    auto rn = ad->to<RandomNumber>();
-    BUG_CHECK(rn != nullptr, "Attempting to merge a random number with a non-random number");
-    auto rv = new RandomNumber(*this);
-    rv->_rand_nums.insert(rn->_rand_nums.begin(), rn->_rand_nums.end());
-
+const Parameter *RandomNumber::get_extended_param(uint32_t extension, const Parameter *) const {
+    auto rv = new RandomNumber();
+    for (auto entry : _rand_nums) {
+        le_bitrange range = { entry.second.lo, entry.second.hi + static_cast<int>(extension) };
+        rv->_rand_nums.emplace(entry.first, range);
+    }
     return rv;
 }
+
 
 /**
  * Each action in a table is mutually exclusive, thus random externs that are used in different
@@ -351,22 +321,159 @@ const Parameter *RandomNumber::overlap(const Parameter *ad, bool only_one_overla
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
     if (only_one_overlap_solution)
         return nullptr;
-
-    auto rn = ad->to<RandomNumber>();
-    if (rn == nullptr)
-        return nullptr;
     if (!equiv_cond(ad))
         return nullptr;
-    if (!rand_nums_overlap_into(rn) || !rn->rand_nums_overlap_into(this))
-        return nullptr;
-    size_t min_size = std::min(_size, rn->_size);
 
-    auto rv = this->split(0, min_size - 1)->merge(rn->split(0, min_size - 1));
+    auto rn = ad->to<RandomNumber>();
+    auto rp = ad->to<RandomPadding>();
+
+    if (rn == nullptr && rp == nullptr)
+        return nullptr;
+
+    size_t min_size = std::min(size(), ad->size());
+
+    if (rn && (!rand_nums_overlap_into(rn) || !rn->rand_nums_overlap_into(this)))
+        return nullptr;
+
+    auto rv = this->split(0, min_size - 1)->merge(ad->split(0, min_size - 1));
     if (my_overlap)
         *my_overlap = { 0, static_cast<int>(min_size) - 1 };
     if (ad_overlap)
         *ad_overlap = { 0, static_cast<int>(min_size) - 1 };
     return rv;
+}
+
+bool RandomNumber::equiv_value(const Parameter *ad, bool check_cond) const {
+    if (check_cond && !equiv_cond(ad)) return false;
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr) return false;
+    return _rand_nums == rn->_rand_nums;
+}
+
+/**
+ * @seealso RandomNumber::overlap
+ *
+ * Returns true if the set of randoms don't have any overlapping actions, or are padding
+ * within that action
+ */
+bool RandomNumber::rand_nums_overlap_into(const RandomNumber *rn) const {
+    for (auto entry : _rand_nums) {
+        auto ua = entry.first;
+        for (auto entry_check : rn->_rand_nums) {
+            auto ua_check = entry_check.first;
+            if (ua.action() == ua_check.action())
+                return false;
+        }
+    }
+    return true;
+}
+
+bool RandomNumber::is_subset_of(const Parameter *ad) const {
+    if (ad == nullptr)
+        return false;
+    if (size() != ad->size())
+        return false;
+    if (ad->is<RandomPadding>())
+        return true;
+    auto rn = ad->to<RandomNumber>();
+    return std::includes(rn->_rand_nums.begin(), rn->_rand_nums.end(),
+                         _rand_nums.begin(), _rand_nums.end());
+}
+
+bool RandomNumber::can_merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return true;
+    if (size() != ad->size())
+        return false;
+    if (ad->is<RandomPadding>())
+        return true;
+    auto rn = ad->to<RandomNumber>();
+    if (rn == nullptr)
+        return false;
+    return rand_nums_overlap_into(rn) && rn->rand_nums_overlap_into(this);
+}
+
+const Parameter *RandomNumber::merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return this;
+    BUG_CHECK(size() == ad->size(), "Parameters in merge must be the same size");
+    if (ad->is<RandomPadding>())
+        return this;
+    auto rn = ad->to<RandomNumber>();
+    BUG_CHECK(rn != nullptr, "Attempting to merge a random number with a non-random number");
+    auto rv = new RandomNumber(*this);
+    rv->_rand_nums.insert(rn->_rand_nums.begin(), rn->_rand_nums.end());
+    return rv;
+}
+
+const Parameter *RandomPadding::split(int lo, int hi) const {
+    int new_size = hi - lo + 1;
+    BUG_CHECK(new_size <= size(), "Splitting a random number larger into a section larger than "
+                                  "itself");
+    return new RandomPadding(new_size);
+}
+
+bool RandomPadding::is_next_bit_of_param(const Parameter *ad, bool) const {
+    return ad->is<RandomPadding>();
+}
+
+const Parameter *RandomPadding::get_extended_param(uint32_t extension, const Parameter *) const {
+    return new RandomPadding(size() + extension);
+}
+
+const Parameter *RandomPadding::overlap(const Parameter *ad, bool only_one_overlap_solution,
+        le_bitrange *my_overlap, le_bitrange *ad_overlap) const {
+    if (only_one_overlap_solution)
+        return nullptr;
+    if (!equiv_cond(ad))
+        return nullptr;
+
+    auto rn = ad->to<RandomNumber>();
+    auto rp = ad->to<RandomPadding>();
+
+    if (rn == nullptr && rp == nullptr)
+        return nullptr;
+    size_t min_size = std::min(size(), ad->size());
+
+    auto rv = this->split(0, min_size - 1)->merge(ad->split(0, min_size - 1));
+    if (my_overlap)
+        *my_overlap = { 0, static_cast<int>(min_size) - 1 };
+    if (ad_overlap)
+        *ad_overlap = { 0, static_cast<int>(min_size) - 1 };
+    return rv;
+}
+
+bool RandomPadding::equiv_value(const Parameter *ad, bool check_cond) const {
+    if (check_cond && !equiv_cond(ad)) return false;
+    auto rp = ad->to<RandomPadding>();
+    if (rp == nullptr) return false;
+    return _size == rp->_size;
+}
+
+bool RandomPadding::is_subset_of(const Parameter *ad) const {
+    if (ad == nullptr)
+        return false;
+    if (size() != ad->size())
+        return false;
+    return ad->is<RandomPadding>() || ad->is<RandomNumber>();
+}
+
+bool RandomPadding::can_merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return true;
+    if (size() != ad->size())
+        return false;
+    return ad->is<RandomPadding>() || ad->is<RandomNumber>();
+}
+
+const Parameter *RandomPadding::merge(const Parameter *ad) const {
+    if (ad == nullptr)
+        return this;
+    BUG_CHECK(size() == ad->size(), "Parameters in merge must be the same size");
+    if (ad->is<RandomPadding>())
+        return this;
+    BUG_CHECK(ad->is<RandomNumber>(), "Can only merge Randoms with Randoms");
+    return ad;
 }
 
 const Parameter *MeterColor::split(int lo, int hi) const {
@@ -463,6 +570,29 @@ const Parameter *MeterALU::get_extended_param(uint32_t extension, const Paramete
     return rv;
 }
 
+/**
+ * Each action in a table is mutually exclusive, thus random externs that are used in different
+ * actions can share the same bits in the immediate, as these bits will be mutually exclusive.
+ * Random externs used in the same actions can not overlap, in order to guarantee that each random
+ * bit is unique.
+ *
+ * Previously checked before this pass is run, a random extern can only be used once per action,
+ * as the infrastucture cannot tell what bits are supposed to be shared, vs. what bits will be
+ * different.
+ *
+ * Bits that are not headed directly to an ALU operation can be overlaid:
+ *
+ * action a1() {
+ *     f1 = random1.get();
+ *     f2 = random2.get();
+ * }
+ *
+ * where f1 and f2 are two 4 bit fields in different 8 bit containers.  In this case, because the
+ * random numbers output byte by byte, each random number impact is actually 8 bits.  But because
+ * each of these operands only use 4 bits, each random number can overlap with each other.
+ *
+ * Because these bits can always overlap, just return the max size position
+ */
 const Parameter *MeterALU::overlap(const Parameter *ad, bool, le_bitrange *my_overlap,
         le_bitrange *ad_overlap) const {
     const MeterALU *ma = ad->to<MeterALU>();
@@ -2086,8 +2216,7 @@ void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam
     auto ir_rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
     BUG_CHECK(ir_rn != nullptr, "Cannot create random");
     cstring rand_name = ir_rn->name;
-    size_t size = read.range().size();
-    RandomNumber *rn = new RandomNumber(rand_name, action_name, size);
+    RandomNumber *rn = new RandomNumber(rand_name, action_name, read.range());
     ALUParameter ap(rn, container_bits);
     alu.add_param(ap);
 }
@@ -2096,11 +2225,9 @@ void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam
  * Creates an output of the RandomNumberGenerator that is not used in an ALU operation
  * directly, but cannot be ORed with anything else
  */
-void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits,
-        cstring action_name) {
-    cstring null_rand_name;
-    RandomNumber *rn = new RandomNumber(null_rand_name, action_name, container_bits.size());
-    ALUParameter ap(rn, container_bits);
+void Format::create_random_padding(ALUOperation &alu, le_bitrange container_bits) {
+    RandomPadding *rp = new RandomPadding(container_bits.size());
+    ALUParameter ap(rp, container_bits);
     alu.add_param(ap);
 }
 
@@ -2285,7 +2412,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
             // action data bus portion will only understand outputs in their container sizes
             for (auto br : bitranges(bitvec(0, container.size()) - rand_num_write_bits)) {
                 le_bitrange padding_bits = { br.first, br.second };
-                create_random_padding(*alu, padding_bits, action_name);
+                create_random_padding(*alu, padding_bits);
             }
         }
 
