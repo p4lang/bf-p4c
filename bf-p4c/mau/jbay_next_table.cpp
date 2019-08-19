@@ -15,7 +15,7 @@
  * condition. The NextTable object captures one table that needs to be run and how that signal is
  * propagated to it (either by LOCAL_EXEC, GLOBAL_EXEC, or LONG_BRANCH). The pass is split into 3
  * stages: EmptyIds, NextTableAlloc and AddDummyTables (which must run in that order).
- * 
+ *
  * AT A GLANCE:
  *
  * 1. EmptyIds collects information about how tables were placed. As the name suggests, its primary
@@ -65,7 +65,7 @@
  *    +----+----+---------------------+
  *    | 12 | t8 | global_exec from t6 |
  *    +----+----+---------------------+
- *    
+ *
  *    This limits long_branch usage to stage 6 to 9 and 9 to 11. Notice how our parent table t is
  *    now only responsible for propagating the signal to t1, which then propagates the signal to t2,
  *    etc. This functionality is accomplished by adding a $run_if_ran "branch" (a sort of fake table
@@ -125,7 +125,7 @@
  *    case for now). As such, we will overlap the two long branches if they are from the same gress.
  */
 
-/* 
+/*
 */
 
 /* Holds next table prop information for a specific table sequence. One created per call to
@@ -441,10 +441,10 @@ void NextTable::LBAlloc::pretty_srcs() {
 
 void NextTable::LBAlloc::end_apply() {
     pretty_tags();
-    LOG2(log);
+    LOG2(log.str());
     std::stringstream().swap(log);  // Reset and print source dest info
     pretty_srcs();
-    LOG3(log);
+    LOG3(log.str());
 }
 
 NextTable::profile_t NextTable::TagReduce::init_apply(const IR::Node* root) {
