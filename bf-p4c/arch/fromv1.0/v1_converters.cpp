@@ -869,7 +869,7 @@ struct ParserCounterSelectCaseConverter : Transform {
             auto newList = list->clone();
 
             for (unsigned i = 0; i < newList->components.size(); i++) {
-                if (i == counterIdx) {
+                if (int(i) == counterIdx) {
                     newList->components[i] = newList->components[i]->apply(rewrite);
                     break;
                 }

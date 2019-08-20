@@ -359,7 +359,7 @@ class CollectParserInfoImpl : public PardeInspector {
     ///    @arg dst.
     //
     // DANGER: This method assumes the parser graph is a DAG.
-    const int get_max_shift_amount(const State* dst) const {
+    int get_max_shift_amount(const State* dst) const {
         return *get_all_shift_amounts(dst)->rbegin();
     }
 

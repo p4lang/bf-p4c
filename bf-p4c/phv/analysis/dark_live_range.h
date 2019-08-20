@@ -176,7 +176,7 @@ class DarkLiveRange : public Inspector {
     const PhvUse                            &uses;
     const BuildDominatorTree                &domTree;
     const ActionPhvConstraints              &actionConstraints;
-    const MauBacktracker                    &alloc;
+    // const MauBacktracker                    &alloc;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
@@ -323,11 +323,11 @@ class DarkLiveRange : public Inspector {
             const PhvUse& u,
             const BuildDominatorTree& d,
             const ActionPhvConstraints& actions,
-            const MauBacktracker& a,
+            const MauBacktracker&,
             const TablesMutuallyExclusive& t,
             const MapTablesToActions& m)
         : phv(p), clot(c), dg(g), defuse(f), noOverlay(pragmas.pa_no_overlay()), uses(u),
-          domTree(d), actionConstraints(actions), alloc(a),
+          domTree(d), actionConstraints(actions),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotParsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),

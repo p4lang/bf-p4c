@@ -14,7 +14,6 @@
 #include "bf-p4c/arch/collect_bridged_fields.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/lib/pad_alignment.h"
 
 namespace BFN {
 namespace {

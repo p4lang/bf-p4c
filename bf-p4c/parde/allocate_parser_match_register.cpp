@@ -78,7 +78,7 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         t->next->selects.apply(max_save);
         t->next->statements.apply(max_save);
 
-        return (t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
+        return int(t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
     }
 
     IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
@@ -667,7 +667,7 @@ class MatcherAllocator : public Visitor {
                 unsigned lo = group_range.lo + bytes;
                 nw_byterange reg_range(lo, lo + reg.size - 1);
 
-                BUG_CHECK(reg_range.size() <= reg.size,
+                BUG_CHECK(size_t(reg_range.size()) <= reg.size,
                            "saved bits greater than register size?");
 
                 // The state splitter should have split the states such that the branch

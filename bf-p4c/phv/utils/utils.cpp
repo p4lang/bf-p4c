@@ -551,7 +551,7 @@ PHV::Allocation::getTagalongCollectionsUsed() const {
 }
 
 const ordered_map<const IR::BFN::ParserState*, std::set<PHV::Container>>&
-PHV::Allocation::getParserStateToContainers(const PhvInfo& phv,
+PHV::Allocation::getParserStateToContainers(const PhvInfo&,
         const MapFieldToParserStates& field_to_parser_states) const {
     if (state_to_containers_i.empty()) {
         for (const auto& kv : field_status_i) {

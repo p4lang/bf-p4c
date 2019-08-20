@@ -65,10 +65,10 @@ bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which
 
 static IR::Declaration_Instance*
 createChecksumDeclaration(ProgramStructure *structure,
-                          const IR::MethodCallStatement* csum) {
-    auto mc = csum->methodCall->to<IR::MethodCallExpression>();
+                          const IR::MethodCallStatement*) {
+    // auto mc = csum->methodCall->to<IR::MethodCallExpression>();
 
-    auto typeArgs = new IR::Vector<IR::Type>();
+    // auto typeArgs = new IR::Vector<IR::Type>();
     auto inst = new IR::Type_Name("Checksum");
 
     auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');

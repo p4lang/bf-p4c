@@ -153,8 +153,8 @@ struct DoRewriteControlAndParserBlocks : Transform {
 
  private:
     BlockInfoMapping* block_info;
-    bool *hasMultiplePipes = nullptr;
-    bool *hasMultipleParsers = nullptr;
+    // bool *hasMultiplePipes = nullptr;
+    // bool *hasMultipleParsers = nullptr;
 };
 
 // This pass rewrites the IR::P4Parser and IR::P4Control node to

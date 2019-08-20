@@ -685,7 +685,7 @@ void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl,
 
 /**
  * When the stateful table has been split from the match table, the indirect pointer is not
- * necessary to the table format, and is instead contained within the action format 
+ * necessary to the table format, and is instead contained within the action format
  */
 void DoTableLayout::setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
         LayoutChoices::FormatType_t format_type) {
@@ -805,7 +805,6 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::
 namespace {
 class SelLengthForLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
-    const IR::MAU::Table *tbl;
 
     bool preorder(const IR::MAU::StatefulAlu *) override {
         return false;
@@ -821,7 +820,7 @@ class SelLengthForLayout : public MauInspector {
     }
 
  public:
-    SelLengthForLayout(IR::MAU::Table::Layout *l, const IR::MAU::Table *t) : layout(*l), tbl(t) {}
+    SelLengthForLayout(IR::MAU::Table::Layout *l, const IR::MAU::Table *) : layout(*l) {}
 };
 }  // namespace
 

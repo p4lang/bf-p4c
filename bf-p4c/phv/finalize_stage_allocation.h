@@ -39,7 +39,7 @@ class UpdateFieldAllocation : public Inspector {
     PhvInfo& phv;
     const FieldDefUse& defuse;
     const DependencyGraph& dg;
-    const TableSummary& tables;
+    // const TableSummary& tables;
     const CalcMaxPhysicalStages& depStages;
 
     // Map of field to its allocated slices.
@@ -62,8 +62,8 @@ class UpdateFieldAllocation : public Inspector {
 
  public:
     explicit UpdateFieldAllocation(PhvInfo& p, const FieldDefUse& u,
-            const DependencyGraph& d, const TableSummary& t, const CalcMaxPhysicalStages& s)
-        : phv(p), defuse(u), dg(d), tables(t), depStages(s) { }
+            const DependencyGraph& d, const TableSummary&, const CalcMaxPhysicalStages& s)
+        : phv(p), defuse(u), dg(d), depStages(s) { }
 };
 
 class FinalizeStageAllocation : public PassManager {

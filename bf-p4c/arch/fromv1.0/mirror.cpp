@@ -286,7 +286,7 @@ class AddMirroredFieldListParser : public Transform {
 
 FixupMirrorMetadata::FixupMirrorMetadata(
         P4::ReferenceMap *refMap,
-        P4::TypeMap *typeMap) : refMap(refMap), typeMap(typeMap) {
+        P4::TypeMap *typeMap) {
     auto findMirror = new FindMirroredFieldLists(refMap, typeMap);
     addPasses({
         findMirror,

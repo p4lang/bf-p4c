@@ -31,8 +31,6 @@ using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
  */
 
 class FixupMirrorMetadata : public PassManager {
-    P4::ReferenceMap *refMap;
-    P4::TypeMap* typeMap;
     MirroredFieldLists fieldLists;
 
  public:

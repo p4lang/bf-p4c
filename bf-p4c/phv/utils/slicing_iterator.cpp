@@ -15,7 +15,7 @@ PHV::SlicingIterator::SlicingIterator(
         const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
         bool e,
         bool f)
-        : sc_i(sc), enforcePragmas(e), errorOnSlicingFail(f), done_i(false) {
+        : sc_i(sc), enforcePragmas(e), done_i(false) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
     num_slicings = 0;

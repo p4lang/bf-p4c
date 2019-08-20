@@ -85,7 +85,7 @@ class SlicingIterator {
 
     /// true when incrementing slicing iterator should not cause error to be displayed (used when we
     /// are trying to split larger superclusters after pre-slicing).
-    bool errorOnSlicingFail;
+    // bool errorOnSlicingFail;
 
     /// Actual threshold for slicing used by this SlicingIterator object.
     uint64_t SLICING_THRESHOLD;

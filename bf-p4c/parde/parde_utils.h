@@ -69,7 +69,7 @@ struct ShiftPacketRVal : Shift {
     }
 };
 
-static unsigned get_state_shift(const IR::BFN::ParserState* state) {
+inline unsigned get_state_shift(const IR::BFN::ParserState* state) {
     unsigned state_shift = 0;
 
     for (unsigned i = 0; i < state->transitions.size(); i++) {

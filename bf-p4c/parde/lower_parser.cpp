@@ -297,7 +297,7 @@ struct ExtractSimplifier {
 
         auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
 
-        BUG_CHECK(extractedSizeBits == container.size(),
+        BUG_CHECK(size_t(extractedSizeBits) == container.size(),
                   "Extracted range %1% with size %2% doesn't match "
                   "destination container %3% with size %4%", bufferRange,
                   extractedSizeBits, container, container.size());
@@ -418,7 +418,7 @@ struct ExtractSimplifier {
                 }
 
                 if (auto sl = extract->dest->field->to<IR::Slice>()) {
-                    if (sl->getH() == first_slice->range().hi) {
+                    if (int(sl->getH()) == first_slice->range().hi) {
                         // Extracted slice includes the first bit of the slice.
                         is_start = true;
                         continue;
@@ -847,7 +847,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredState->select = loweredSelect;
 
         for (auto* transition : state->transitions) {
-            BUG_CHECK(transition->shift <= Device::pardeSpec().byteInputBufferSize(),
+            BUG_CHECK(int(transition->shift) <= Device::pardeSpec().byteInputBufferSize(),
                       "State %1% has shift %2% more than buffer size?",
                       state->name, transition->shift);
             BUG_CHECK(loweredStates.find(transition->next) != loweredStates.end(),

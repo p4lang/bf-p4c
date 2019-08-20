@@ -7,15 +7,14 @@
 
 class MemoizeMinStage : public Inspector {
  private:
-    PhvInfo& phv;
     const DependencyGraph& dg;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Table* tbl) override;
 
  public:
-    explicit MemoizeMinStage(PhvInfo& p, const DependencyGraph& d)
-        : phv(p), dg(d) { }
+    explicit MemoizeMinStage(PhvInfo&, const DependencyGraph& d)
+        : dg(d) { }
 };
 
 #endif  /*  EXTENSIONS_BF_P4C_PHV_ANALYSIS_MEMOIZE_MIN_STAGE_H_  */

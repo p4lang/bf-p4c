@@ -968,14 +968,14 @@ struct AllocateParserState : public ParserTransform {
                 if (s_shift) total_shift += s_shift;
 
                 if (orig_shift)
-                    BUG_CHECK(orig_shift == total_shift, "Shifts don't add up after split");
+                    BUG_CHECK(int(orig_shift) == total_shift, "Shifts don't add up after split");
             }
         };
 
         IR::BFN::ParserState* insert_stall_if_needed(IR::BFN::ParserState* state) {
             auto shift = get_state_shift(state);
 
-            if (shift <= Device::pardeSpec().byteInputBufferSize())
+            if (int(shift) <= Device::pardeSpec().byteInputBufferSize())
                 return nullptr;
 
             cstring name = state->name + ".$stall";
@@ -1127,7 +1127,7 @@ struct InsertParserCounterStall : public ParserTransform {
 struct ClipTerminalTransition : ParserModifier {
     bool preorder(IR::BFN::Transition* t) override {
         if (t->next == nullptr &&
-            t->shift > Device::pardeSpec().byteInputBufferSize()) {
+            int(t->shift) > Device::pardeSpec().byteInputBufferSize()) {
             t->shift = Device::pardeSpec().byteInputBufferSize();
         }
 

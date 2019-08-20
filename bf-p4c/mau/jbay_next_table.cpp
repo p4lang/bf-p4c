@@ -22,7 +22,7 @@
  *      to be associated with each tag. This is necessary to generate the correct ASM, although
  *      effectively captures similar information in props, just in a format that is more usable in
  *      assembly generation.
- * 
+ *
  * AT A GLANCE:
  *
  * 1. Prop calculates the ~props~ map. It does so according to push-down, as described in the
@@ -41,7 +41,7 @@
  *    LBAlloc to run again.
  *
  * Passes are run in order: Prop, LBAlloc, TagReduce, Prop (if needed), LBAlloc (if needed). Prop
- * and LBAlloc are only repeated if TagReduce reduced the number of tags. 
+ * and LBAlloc are only repeated if TagReduce reduced the number of tags.
  *
  * OPTIMIZATIONS:
  *
@@ -95,7 +95,7 @@
  *       0  1  2  3  4  5  6  7  8  9
  *    0  |--------|-----|             <--- Tightest merge when two uses are on same gress
  *    1  |========|  |--------|       <--- Tightest merge when two uses are on different gresses
- *                ^^^^ Single stage bubble for timing 
+ *                ^^^^ Single stage bubble for timing
  *
  * 3. Add dumb tables: Inject tables that do nothing more than propagate a global exec signal. This
  *    is the most aggressive optimization, often capable of entirely eliminating long branches. When
@@ -449,7 +449,8 @@ void NextTable::LBAlloc::pretty_srcs() {
 void NextTable::LBAlloc::end_apply() {
     pretty_tags();
     LOG2(log.str());
-    std::stringstream().swap(log);  // Reset and print source dest info
+    // Reset and print source dest info
+    log.clear();
     pretty_srcs();
     LOG3(log.str());
 }
