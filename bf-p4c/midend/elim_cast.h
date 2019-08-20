@@ -293,21 +293,65 @@ struct SliceInfo {
 class RewriteConcatToSlices : public Transform {
  public:
     RewriteConcatToSlices() {}
+    int tmpvar_created = 0;
 
     // do not simplify '++' in apply functions.
     const IR::Node* preorder(IR::Function* func) override {
         prune();
         return func; }
 
+    safe_vector<const IR::Declaration_Variable *> temps;
+    safe_vector<const IR::AssignmentStatement *> write_to_temps;
+    safe_vector<const IR::AssignmentStatement *> read_from_temps;
+
+
+    void build_assignments(const IR::Expression *l_value, const IR::Expression *r_value,
+            Util::SourceInfo srcInfo) {
+        IR::ID id("$concat_to_slice" + std::to_string(tmpvar_created++));
+        temps.push_back(new IR::Declaration_Variable(id, r_value->type));
+        auto pe = new IR::PathExpression(r_value->type, new IR::Path(id));
+        write_to_temps.push_back(new IR::AssignmentStatement(srcInfo, pe, r_value));
+        read_from_temps.push_back(new IR::AssignmentStatement(srcInfo, l_value, pe));
+    }
+
+    void collect_assignment_statements(const IR::Concat *c, const IR::Expression *l_value,
+            Util::SourceInfo srcInfo) {
+        int lsize = c->left->type->width_bits();
+        int rsize = c->right->type->width_bits();
+        auto left_l_value = MakeSlice(l_value, rsize, rsize + lsize - 1);
+        auto right_l_value = MakeSlice(l_value, 0, rsize - 1);
+        if (auto left_c = c->left->to<IR::Concat>()) {
+            collect_assignment_statements(left_c, left_l_value, srcInfo);
+        } else {
+            build_assignments(left_l_value, c->left, srcInfo);
+        }
+
+        if (auto right_c = c->right->to<IR::Concat>()) {
+            collect_assignment_statements(right_c, right_l_value, srcInfo);
+        } else {
+            build_assignments(right_l_value, c->right, srcInfo);
+        }
+    }
+
     const IR::Node* preorder(IR::AssignmentStatement* stmt) override {
         if (auto c = stmt->right->to<IR::Concat>()) {
+            temps.clear();
+            write_to_temps.clear();
+            read_from_temps.clear();
+            collect_assignment_statements(c, stmt->left, stmt->srcInfo);
             auto *rv = new IR::BlockStatement;
-            int rsize = c->right->type->width_bits();
-            int lsize = c->left->type->width_bits();
-            rv->components.push_back(new IR::AssignmentStatement(stmt->srcInfo,
-                MakeSlice(stmt->left, rsize, rsize + lsize - 1), c->left));
-            rv->components.push_back(new IR::AssignmentStatement(stmt->srcInfo,
-                MakeSlice(stmt->left, 0, rsize - 1), c->right));
+            // In order to maintain sequentiality, especially if any part of the write expression is
+            // within the read expression, all writes to temp variables are done before all
+            // reads from temp variables
+            for (auto entry : temps)
+                rv->components.push_back(entry);
+            for (auto assign : write_to_temps)
+                rv->components.push_back(assign);
+            for (auto assign : read_from_temps)
+                rv->components.push_back(assign);
+            temps.clear();
+            write_to_temps.clear();
+            read_from_temps.clear();
             return rv;
         }
         return stmt;
@@ -367,6 +411,8 @@ class ElimCasts : public PassManager {
            // so we repeat until a fixed point is reached.
            new PassRepeated({new StrengthReduction(refMap, typeMap)}),
            new RewriteConcatToSlices(),
+           new P4::ClearTypeMap(typeMap),
+           new BFN::TypeChecking(refMap, typeMap, true),
            new P4::SimplifyControlFlow(refMap, typeMap),
            new P4::ClearTypeMap(typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),

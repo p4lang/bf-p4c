@@ -122,6 +122,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         le_bitrange write_bits;
         le_bitrange read_bits;
         Alignment(le_bitrange wb, le_bitrange rb) : write_bits(wb), read_bits(rb) {}
+
+        int right_shift(PHV::Container container) const;
     };
 
     /** Information on all PHV reads affecting a single container.  Again used for verification
@@ -296,7 +298,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         ActionDataInfo adi;
         ConstantInfo ci;
         bitvec invalidate_write_bits;
-        std::map<PHV::Container, TotalAlignment> phv_alignment;
+
+
+        std::map<PHV::Container, safe_vector<Alignment>> initialization_phv_alignment;
+        // A container can be sourced multiple times, and thus this has become a multimap
+        std::multimap<PHV::Container, TotalAlignment> phv_alignment;
 
         // Set of error codes for which we report an error in compilation.
         static std::set<unsigned> codesForErrorCases;
@@ -493,6 +499,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         le_bitrange write_bits);
     void initialize_constant(const ActionParam &read, ContainerAction &cont_action,
         le_bitrange write_bits, safe_vector<le_bitrange> &read_bits_brs);
+    void build_phv_alignment(PHV::Container container, ContainerAction &cont_action);
     void determine_unused_bits(PHV::Container container, ContainerAction &cont_action);
 
     bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,

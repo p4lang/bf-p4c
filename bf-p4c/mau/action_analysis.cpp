@@ -669,14 +669,11 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
          }
          le_bitrange mini_write_bits(lo, hi);
 
-         auto &phv_alignment = cont_action.phv_alignment;
-         if (phv_alignment.find(alloc.container) == phv_alignment.end()) {
-             TotalAlignment ta;
-             ta.add_alignment(mini_write_bits, read_bits);
-             phv_alignment[alloc.container] = ta;
-             cont_action.counts[ActionParam::PHV]++;
+         auto &init_phv_alignment = cont_action.initialization_phv_alignment;
+         if (init_phv_alignment.find(alloc.container) == init_phv_alignment.end()) {
+             init_phv_alignment[alloc.container].emplace_back(mini_write_bits, read_bits);
          } else {
-             phv_alignment[alloc.container].add_alignment(mini_write_bits, read_bits);
+             init_phv_alignment[alloc.container].emplace_back(mini_write_bits, read_bits);
          }
     });
     return true;
@@ -934,6 +931,28 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
     return true;
 }
 
+/**
+ * A PHV source can potentially appear both src1 and src2 of an instruction.  This function
+ * splits the sources if a PHV alignment requirements have different right shift requirements
+ */
+void ActionAnalysis::build_phv_alignment(PHV::Container container, ContainerAction &cont_action) {
+    for (auto entry : cont_action.initialization_phv_alignment) {
+        std::map<int, safe_vector<Alignment>> alignment_per_right_shift;
+        for (auto alignment : entry.second) {
+            int right_shift = alignment.right_shift(container);
+            alignment_per_right_shift[right_shift].emplace_back(alignment);
+        }
+        for (auto apr_entry : alignment_per_right_shift) {
+            TotalAlignment ta;
+            for (auto alignment : apr_entry.second) {
+                ta.add_alignment(alignment.write_bits, alignment.read_bits);
+            }
+            cont_action.counts[ActionParam::PHV]++;
+            cont_action.phv_alignment.emplace(entry.first, ta);
+        }
+    }
+}
+
 void ActionAnalysis::determine_unused_bits(PHV::Container container,
                                            ContainerAction &cont_action) {
     ordered_set<const PHV::Field*> fieldsWritten;
@@ -1039,6 +1058,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 total_init &= init;
             }
         }
+        build_phv_alignment(container, cont_action);
         determine_unused_bits(container, cont_action);
 
         cstring error_message;
@@ -1089,6 +1109,14 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
     total_write_ |= ci.alignment.direct_write_bits;
 
     return total_write_;
+}
+
+
+int ActionAnalysis::Alignment::right_shift(PHV::Container container) const {
+    int rv = read_bits.lo - write_bits.lo;
+    if (rv < 0)
+        rv += container.size();
+    return rv;
 }
 
 /**
@@ -1211,12 +1239,11 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
 bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container &container) {
     bool right_shift_set = false;
     for (auto indiv_align : indiv_alignments) {
-        int possible_right_shift = indiv_align.read_bits.lo - indiv_align.write_bits.lo;
-        if (possible_right_shift < 0)
-            possible_right_shift += container.size();
+        int possible_right_shift = indiv_align.right_shift(container);
         if (right_shift_set && possible_right_shift != right_shift)
             return false;
         right_shift = possible_right_shift;
+        right_shift_set = true;
     }
     // For mocha and dark containers, individual writes need to be aligned with their sources.
     if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
