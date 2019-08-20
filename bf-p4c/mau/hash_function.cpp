@@ -375,9 +375,6 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     else
         return false;
 
-    if (type == CRC)
-        ordered = true;
-
     BUG_CHECK(((type == IDENTITY || type == RANDOM) && args->size() == 2) ||
               (type == CRC && args->size() == 6), "Hash function method call misconfigured");
 
@@ -468,7 +465,6 @@ bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     std::advance(it, 1);
     final_xor = (*it)->expression->to<IR::Constant>()->asUint64();
     type = IR::MAU::HashFunction::CRC;
-    ordered = true;
     return true;
 }
 

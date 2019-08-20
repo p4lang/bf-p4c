@@ -1510,9 +1510,3 @@ p4c_add_xfail_reason("tofino"
   "Unsupported on target"
   extensions/p4_tests/p4_16/compile_only/p4c-1819-neg.p4
 )
-
-# P4C-2030
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*For a crc, must be a map"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4
-)

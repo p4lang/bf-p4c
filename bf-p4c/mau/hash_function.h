@@ -17,7 +17,6 @@ struct HashFunction {
     uint64_t            poly = 0;         // crc polynomial in koopman form (poly-1)/2
     uint64_t            init = 0;
     uint64_t            final_xor = 0;
-    bool                ordered = false;
 
     bool operator==(const HashFunction &a) const {
         return type == a.type && size == a.size && msb == a.msb && reverse == a.reverse &&
@@ -40,6 +39,7 @@ struct HashFunction {
             return true;
         return false;
     }
+    bool ordered() const { return type != RANDOM; }
 
     std::string name() const {
         std::string algo_name = "";

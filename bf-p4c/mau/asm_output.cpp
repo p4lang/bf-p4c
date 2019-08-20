@@ -946,7 +946,7 @@ void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
         std::multimap<int, Slice> match_data_map;
         std::map<le_bitrange, const IR::Constant*> constant_map;
         bool use_map = false;
-        if (mah.algorithm.ordered) {
+        if (mah.algorithm.ordered()) {
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
                     field_list_order, sym_keys, total_bits);
             use_map = true;
@@ -972,7 +972,7 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
         le_bitrange br = { start_bit, end_bit - 1 };
         int total_bits = 0;
         out << indent << br.lo << ".." << br.hi << ": ";
-        if (ph.algorithm.ordered) {
+        if (ph.algorithm.ordered()) {
             std::multimap<int, Slice> match_data_map;
             std::map<le_bitrange, const IR::Constant*> constant_map;
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
@@ -1118,7 +1118,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
         std::map<le_bitrange, const IR::Constant*> constant_map;
         bool use_map = false;
         int total_bits = 0;
-        if (hdh.algorithm.ordered) {
+        if (hdh.algorithm.ordered()) {
             emit_ixbar_gather_map(match_data_map, constant_map, match_data,
                     use->field_list_order, use->symmetric_keys, total_bits);
             use_map = true;
