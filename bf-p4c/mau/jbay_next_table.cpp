@@ -8,34 +8,48 @@
 #include "lib/error.h"
 #include "bf-p4c/common/table_printer.h"
 
-/* This pass calculates a map ~props~, which is used in assembly generation to correctly propagate
- * next tables. Conceptually, ~props~ specifies the set of tables a table is responsible for
- * running after itself. More specifically, for a given table and a given table sequence owned by
- * that table, it specifies the set of tables that are to run under that table sequence's
- * condition. The NextTable object captures one table that needs to be run and how that signal is
- * propagated to it (either by LOCAL_EXEC, GLOBAL_EXEC, or LONG_BRANCH). The pass is split into 3
- * stages: EmptyIds, NextTableAlloc and AddDummyTables (which must run in that order).
- *
+
+/* This pass calculates 2 data structures used during assembly generation:
+ *   1. ~props~ specifies a set of tables to be run after a given table is applied and a certain
+ *      condition is met. This specifies how the next table "signal" propagtes through tables at
+ *      runtime.  More specifically, for a given table and a given table sequence owned by that
+ *      table, it specifies the set of table that are to run under that table sequence's
+ *      condition.   The NextTable object captures one table that needs to be run and how that
+ *      signal is propagate to it (either by LOCAL_EXEC, GLOBAL_EXEC, or LONG_BRANCH).  The pass
+ *      is split into 3 stages: EmptyIds, NextTableAlloc, and AddDummyTables (which must run in that
+ *      order).
+ *   2. ~lbs~ specifies the long branch tags that a source table needs to set and which tables need
+ *      to be associated with each tag. This is necessary to generate the correct ASM, although
+ *      effectively captures similar information in props, just in a format that is more usable in
+ *      assembly generation.
+ * 
  * AT A GLANCE:
  *
- * 1. EmptyIds collects information about how tables were placed. As the name suggests, its primary
- *    use is to find empty logical IDs that can be used by dumb tables, described in
- *    OPTIMIZATIONS. It builds the maps stage_cap, mems, stage_id.
+ * 1. Prop calculates the ~props~ map. It does so according to push-down, as described in the
+ *    optimizations section. Additionally, it collects a lot of data that is used throughout the
+ *    rest of the pass. In building the ~props~ map, it builds the information needed to run
+ *    LBAlloc, the next pass. Furthermore, it finds which tables are to be set to always run, which
+ *    is then added by TagReduce.
  *
- * 2. NextTableAlloc is where most of the work occurs. It builds the map ~props~, which is the data
- *    structure used by assembly generation to propagate next tables and add long branches. It does
- *    this one table sequence at a time. ~props~ is built additively; that is, an entry is never
- *    removed once added.
+ * 2. LBAlloc doesn't really need to be a pass, as it does not actually iterate over the graph. In
+ *    the init_apply, it takes the data captured by Prop and allocates all of the long branch uses
+ *    into tags.
  *
- * 3. AddDumbTables performs transformations requested by NextTableAlloc, most of which are related
- *    to dumb table creation, described in OPTIMIZATIONS.
+ * 3. TagReduce is responsible for two things: (1) setting always run on tables; and (2) reducing
+ *    the number of long branch tags to a level that is supported by the device. It accomplishes (2)
+ *    by adding dumb tables, as described below. If it is able to merge tags, it sets Prop and
+ *    LBAlloc to run again.
+ *
+ * Passes are run in order: Prop, LBAlloc, TagReduce, Prop (if needed), LBAlloc (if needed). Prop
+ * and LBAlloc are only repeated if TagReduce reduced the number of tags. 
  *
  * OPTIMIZATIONS:
  *
  * This pass attempts to minimize the use of long branches wherever possible, as LOCAL_EXEC and
- * GLOBAL_EXEC are effectively unlimited. Unoptimized NTP would use a long branch across an entire
- * table sequence if *any* of the tables in the sequence were placed 2 stages or
- * later. The following example will be used to illustrate these optimizations:
+ * GLOBAL_EXEC are effectively unlimited. This is accomplished via push-down, which achieves a
+ * minimal usage of long branches for a given table placement. Unoptimized NTP would use a long
+ * branch across an entire table sequence if *any* of the tables in the sequence were placed 2
+ * stages or later. The following example will be used to illustrate these optimizations:
  *
  *                    t3       t5     t7
  *              t  t1 t2       t4     t6  t8        TABLES
@@ -73,23 +87,15 @@
  *    t is run. During assembly generation, tables in $run_if_ran are added to every other table
  *    sequence.
  *
- * 2. Merge contiguous long branches: Long branches in the same table sequence that have an overlap
- *    can be merged. For other reasons (see 4), the long branches created in push-down between
- *    stages 6-9 and stages 9-11 must use different tags even though they don't really overlap. This
- *    can lead to rather poor long branch usage. Instead, we now merge them into a single long
- *    branch, resulting in the following change to the NTP from push-down:
+ * 2. Tag allocation: Once we have our uses, we must allocate them into tags. Tags can be used for
+ *    multiple long branches as long as the live ranges do not overlap. If the uses are on different
+ *    gresses, there is an additional restriction that there must be a 1 stage gap between the two
+ *    uses, to account for the different timings of the gresses. See below for a clarifying example.
  *
- *    +----+----+---------------------+
- *    | .. | .. | ...                 |
- *    +----+----+---------------------+
- *    | 09 | t4 | long_branch from t2 |
- *    | 09 | t5 | local_exec from t4  |
- *    +----+----+---------------------+
- *    | 11 | t6 | long_branch from t2 | <--- long branch is from t2 instead of t4 now!
- *    | 11 | t7 | local_exec from t6  |
- *    +----+----+---------------------+
- *    | 12 | t8 | global_exec from t8 |
- *    +----+----+---------------------+
+ *       0  1  2  3  4  5  6  7  8  9
+ *    0  |--------|-----|             <--- Tightest merge when two uses are on same gress
+ *    1  |========|  |--------|       <--- Tightest merge when two uses are on different gresses
+ *                ^^^^ Single stage bubble for timing 
  *
  * 3. Add dumb tables: Inject tables that do nothing more than propagate a global exec signal. This
  *    is the most aggressive optimization, often capable of entirely eliminating long branches. When
@@ -117,12 +123,12 @@
  *    +----+----+---------------------+
  *
  *    Note how in this version we got rid of the second long branch entirely and were able to
- *    shorten the first long branch by 1 stage.
+ *    shorten the first long branch by 1 stage. However, this optimization comes at a cost of adding
+ *    logical IDs, which may be a precious resource. As such, the TagReduce algorithm only performs
+ *    dumb table injection when the number of tags has exceeded the device limits. Additionally, it
+ *    attempts to find an injection that uses the fewest number of tables possible. See merging
+ *    methods in TagReduce for full algorithm.
  *
- * 4. "Overlap" long branches in the same gress: Suppose we have one long branch from stages 2-5 and
- *    one from 5-7. These can be on the same tag if and only if they are both associated with the
- *    same gress (technically, ghost and ingress can also overlap, but we will not consider that
- *    case for now). As such, we will overlap the two long branches if they are from the same gress.
  */
 
 /*
@@ -338,6 +344,7 @@ NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
             self.lbs[src][tag].insert(get_uid(u.dest));
         }
     }
+    // FIXME: Change to Device::numLongBranchTags()
     self.rebuild = self.stage_tags.size() >= size_t(Device::numLongBranchTags());
     LOG1("FINISHED LONG BRANCH TAG ALLOCATION");
     return MauInspector::init_apply(root);
@@ -448,12 +455,12 @@ void NextTable::LBAlloc::end_apply() {
 }
 
 NextTable::profile_t NextTable::TagReduce::init_apply(const IR::Node* root) {
+    self.num_dts = 0;
     return MauTransform::init_apply(root);
 }
 
 IR::Node* NextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
     if (!self.rebuild) {  // Short circuit when we don't need dumb tables
-        prune();
         return p;
     }
     // Try to merge tags
@@ -697,6 +704,7 @@ void NextTable::TagReduce::alloc_dt_mems() {
             TableResourceAlloc* tra = new TableResourceAlloc;
             tras[t] = tra;
             mem.add_table(t, nullptr, tra, nullptr, 0, 0);
+            self.num_dts++;
         }
         bool success = mem.allocate_all_dummies();
         // Just to check that allocation succeeded. If a logical ID is available (which we check

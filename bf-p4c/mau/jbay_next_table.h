@@ -2,9 +2,10 @@
 #define EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_
 
 #include "mau_visitor.h"
-#include "lib/dyn_vector.h"
+#include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/table_layout.h"
+
 
 /* This pass determines next table propagation in tofino2. It minimizes the use of long branches
  * whenever possible by "pushing down" next table propagation to tables in the table sequence and
@@ -18,7 +19,8 @@ class NextTable : public PassManager {
     next_map_t props;
     // Map from table to tag # to set of tables
     std::map<UniqueId, std::unordered_map<int, std::set<UniqueId>>> lbs;
-    size_t get_num_lbs() { return max_tag; }  // For metrics
+    size_t get_num_lbs() { return size_t(max_tag + 1); }  // For metrics
+    size_t get_num_dts() { return num_dts; }
     NextTable();
 
  private:
@@ -114,6 +116,7 @@ class NextTable : public PassManager {
         explicit LBAlloc(NextTable& ntp) : self(ntp) {}
     };
 
+    size_t                                       num_dts;
     // Attempts to reduce the number of tags in use to the max supported by the device
     class TagReduce : public MauTransform {
         NextTable& self;

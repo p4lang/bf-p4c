@@ -2166,3 +2166,4 @@ TablePlacement::find_placed(cstring name) const {
 
 void dump(const ordered_set<const TablePlacement::GroupPlace *> &work) {
     std::cout << work << std::endl; }
+

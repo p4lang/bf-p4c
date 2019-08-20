@@ -5,6 +5,7 @@
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
