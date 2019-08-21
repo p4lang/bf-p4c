@@ -191,7 +191,12 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
                 }
                 currentFieldHeaderRef = nullptr;
             } else if (auto* member = source->to<IR::Member>()) {
-                currentFieldHeaderRef = member->expr->to<IR::ConcreteHeaderRef>()->ref;
+                if (auto curHeader = member->expr->to<IR::ConcreteHeaderRef>())
+                    currentFieldHeaderRef = curHeader->baseRef();
+                else if (auto curStack = member->expr->to<IR::HeaderStackItemRef>())
+                    currentFieldHeaderRef = curStack->baseRef();
+                else
+                    ::error("Unhandled checksum expression %1%", member);
                 fields->push_back(new IR::BFN::FieldLVal(member));
                 fieldsToOffset[fields->size() - 1] = offset;
             }

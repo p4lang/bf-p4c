@@ -78,7 +78,11 @@ control DeparserI(
         inout headers hdr,
         in metadata meta,
         in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
-    apply { b.emit(hdr); }
+    Checksum() check;
+    apply {
+        hdr.h[0].f = check.update({hdr.h[0].f, hdr.h[1].f, hdr.h[2].f });
+        b.emit(hdr);
+    }
 }
 
 parser ParserE(packet_in packet,
