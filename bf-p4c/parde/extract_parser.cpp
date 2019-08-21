@@ -376,7 +376,7 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
     IR::BFN::ParserState* startState = getState(getStateName("start"), isLoopState);
 
     BlockInfoMapping* binfo = &arch->toBlockInfo;
-    cstring multiParserName = "";
+    IR::ID multiParserName;
     if (binfo) {
         auto bitr = binfo->begin();
         while (bitr != binfo->end()) {
@@ -393,6 +393,13 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
         }
     }
 
+    IR::ID parserName = parser->name;
+    if (arch->hasMultipleParsers) {
+        BUG_CHECK(!multiParserName.toString().isNullOrEmpty(),
+                "No multi parser block name generated for parser %1%", parser->name);
+        parserName = multiParserName;
+    }
+
     IR::BFN::Phase0 *phase0 = nullptr;
     if (parser->phase0) {
         phase0 = parser->phase0->clone();
@@ -405,7 +412,8 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
         else if (arch->hasMultipleParsers)
             phase0->tableName = multiParserName + "." + phase0->tableName;
     }
-    return new IR::BFN::Parser(parser->thread, startState, parser->name, phase0, parser->portmap);
+
+    return new IR::BFN::Parser(parser->thread, startState, parserName, phase0, parser->portmap);
 }
 
 bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,

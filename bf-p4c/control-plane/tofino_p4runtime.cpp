@@ -609,7 +609,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                     auto parserBlock = parser->to<IR::ParserBlock>();
                     if (hasUserPortMetadata.count(parserBlock) == 0) {  // no extern, add default
                         auto portMetadataFullName =
-                            getFullyQualifiedName(parserBlock, PortMetadata::name());
+                            getFullyQualifiedName(parserBlock, PortMetadata::name(), isMultiParser);
                         function(portMetadataFullName);
                     }
                 }
@@ -706,14 +706,27 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     // unique to the resource. For multi pipe scenarios this becomes relevant
     // since a resource can be shared across pipes but need to be addressed by
     // the control plane as separate resources.
-    cstring getFullyQualifiedName(const IR::Block *block, const cstring name) {
+    // Note, in some cases like multiparser blocks, the parser names are always
+    // arch names since the instantiations are always anonymous. In such cases
+    // we skip the control plane name  [ DRV-2939 ]
+    // E.g.
+    // P4:
+    // IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
+    //  MultiParserPipeline(ig_pipe0, SwitchIngress(), SwitchIngressDeparser(),
+    //                      eg_pipe0, SwitchEgress(), SwitchEgressDeparser()) pipe0;
+    // BF-RT JSON : pipe0.ig_pipe0.prsr0
+    // CTXT JSON : ig_pipe0.prsr0
+    cstring getFullyQualifiedName(const IR::Block *block, const cstring name,
+                                                bool skip_control_plane_name = false) {
         cstring block_name = "";
         cstring control_plane_name = "";
         cstring full_name = blockNamePrefixMap[block];
-        if (auto cont = block->getContainer()) {
-            block_name = cont->getName();
-            control_plane_name = cont->controlPlaneName();
-            full_name = prefix(full_name, control_plane_name);
+        if (!skip_control_plane_name) {
+            if (auto cont = block->getContainer()) {
+                block_name = cont->getName();
+                control_plane_name = cont->controlPlaneName();
+                full_name = prefix(full_name, control_plane_name);
+            }
         }
         if (!name.isNullOrEmpty())
             full_name = prefix(full_name, name);
@@ -830,7 +843,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 return;
             }
             hasUserPortMetadata.insert(parserBlock);
-            auto portMetadataFullName = getFullyQualifiedName(parserBlock, PortMetadata::name());
+            auto portMetadataFullName =
+                getFullyQualifiedName(parserBlock, PortMetadata::name(), isMultiParser);
             symbols->add(SymbolType::PORT_METADATA(), portMetadataFullName);
         }
     }
@@ -854,7 +868,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
-                auto name = getFullyQualifiedName(parserBlock, inst->name.originalName);
+                auto name = getFullyQualifiedName(parserBlock,
+                                        inst->name.originalName, isMultiParser);
                 symbols->add(SymbolType::VALUE_SET(), name);
             }
         }
@@ -1306,7 +1321,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         if (portMetadata) {
             if (blockNamePrefixMap.count(parserBlock)) {
                 auto portMetadataFullName =
-                    getFullyQualifiedName(parserBlock, PortMetadata::name());
+                    getFullyQualifiedName(parserBlock, PortMetadata::name(), isMultiParser);
                 addPortMetadata(symbols, p4info, *portMetadata, portMetadataFullName);
             }
         }
@@ -1333,7 +1348,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
-                auto namePrefix = getFullyQualifiedName(parserBlock, inst->name.originalName);
+                auto namePrefix =
+                    getFullyQualifiedName(parserBlock, inst->name.originalName, isMultiParser);
                 auto valueSet = ValueSet::from(namePrefix, inst, refMap,
                         typeMap, p4info->mutable_type_info());
                 if (valueSet) addValueSet(symbols, p4info, *valueSet);

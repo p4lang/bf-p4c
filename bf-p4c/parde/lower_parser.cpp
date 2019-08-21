@@ -921,30 +921,9 @@ struct ReplaceParserIR : public Transform {
                   "Didn't lower the start state?");
         prune();
 
-        // assume tna parser instance architecture name is
-        // ingress_parser<n> and egress_parser<n>
-        static std::vector<cstring> gressName = {"ingress", "egress", "ghost"};
-        cstring parserName = parser->name.toString();
-        if (!parser->pipeName.isNullOrEmpty())
-            parserName = parser->pipeName + "." + parserName;
-        auto pipe = findOrigCtxt<IR::BFN::Pipe>();
-        auto parsers = pipe->thread[parser->gress].parsers;
-        auto it = std::find_if(parsers.begin(), parsers.end(),
-                [&parser](const IR::BFN::AbstractParser *p) -> bool {
-            return p->to<IR::BFN::Parser>()->equiv(*parser->getNode()); });
-        if (it != parsers.end() && parser->portmap.size() != 0 /* true if multiple parsers */) {
-            static std::vector<cstring> mpGressName = {"ig", "eg", "ghost"};
-            if (parser->pipeName.isNullOrEmpty()) {
-                parserName = mpGressName[parser->gress] + "_prsr";
-                parserName = parserName + ".prsr" + cstring::to_cstring(it - parsers.begin());
-            } else {
-                parserName = parser->pipeName;
-            }
-        }
-
         auto* loweredParser =
           new IR::BFN::LoweredParser(parser->gress, computed.loweredStates.at(parser->start),
-                                     parser->phase0, parserName, parser->portmap);
+                                     parser->phase0, parser->name, parser->portmap);
 
         if (parser->gress == INGRESS) {
             loweredParser->hdrLenAdj = Device::pardeSpec().byteTotalIngressMetadataSize();
