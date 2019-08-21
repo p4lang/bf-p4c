@@ -1,6 +1,7 @@
 #include "elim_unused.h"
 #include <string.h>
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/log.h"
@@ -99,6 +100,95 @@ class ElimUnused::Instructions : public Transform {
     explicit Instructions(ElimUnused &self) : self(self) {}
 };
 
+/// Removes no-op tables that have the @hidden annotation.
+class ElimUnused::Tables : public MauTransform {
+    ElimUnused &self;
+
+ public:
+    const IR::Node* postorder(IR::MAU::Table* table) override {
+        // Don't remove the table unless it has the @hidden annotation.
+        std::vector<IR::ID> val;
+        if (!table->getAnnotation(IR::Annotation::hiddenAnnotation, val)) return table;
+
+        // Don't remove the table unless its gateway payload is a no-op.
+        if (table->uses_gateway_payload() && !isNoOp(table->gateway_payload)) return table;
+
+        // Don't remove the table unless all its match actions are empty.
+        if (!table->gateway_only()) {
+            for (auto& entry : table->actions) {
+                if (!isNoOp(entry.second)) return table;
+            }
+        }
+
+        // Don't remove the table if it has an attached table.
+        if (!table->attached.empty()) return table;
+
+        // Don't remove the table unless its "next" entries are all the same.
+        bool first = true;
+        const IR::MAU::TableSeq* theEntry = nullptr;
+        for (auto& entry : table->next) {
+            auto curEntry = normalize(entry.second);
+            if (first) {
+                theEntry = curEntry;
+                first = false;
+                continue;
+            }
+
+            if (*curEntry != *theEntry) return table;
+        }
+
+        if (theEntry && !theEntry->tables.empty()) {
+            // Don't remove the table unless all paths through the table have a "next" lookup.
+
+            // Handle the gateway-inhibited half of the table.
+            for (auto& gw : table->gateway_rows) {
+                auto tag = gw.second;
+                if (!tag || !table->next.count(tag)) return table;
+            }
+
+            // Handle the match table.
+            bool haveHitMiss = table->next.count("$hit") || table->next.count("$miss");
+            for (auto& kv : table->actions) {
+                auto action_name = kv.first;
+                auto& action = kv.second;
+
+                if (haveHitMiss) {
+                    if (!action->miss_only() && !table->next.count("$hit")) return table;
+                    if (!action->hit_only() && !table->next.count("$miss")) return table;
+                } else {
+                    if (!table->next.count(action_name) && !table->next.count("$default"))
+                        return table;
+                }
+            }
+
+            // Actually remove the table by replacing with theEntry.
+            LOG1("ELIM UNUSED table " << table->name << " IN UNIT " <<
+                 DBPrint::Brief << findContext<IR::BFN::Unit>());
+            return theEntry;
+        }
+
+        // Actually remove the table by replacing with nullptr.
+        LOG1("ELIM UNUSED table " << table->name << " IN UNIT " <<
+             DBPrint::Brief << findContext<IR::BFN::Unit>());
+        return nullptr;
+    }
+
+ private:
+    /// An action is a no-op if it is nullptr, or if it is empty and doesn't exit.
+    bool isNoOp(const IR::MAU::Action* action) {
+        return !action || action->action.empty() && !action->exitAction;
+    }
+
+    /// Normalizes a TableSeq* by turning nullptrs into empty sequences.
+    const IR::MAU::TableSeq* normalize(const IR::MAU::TableSeq* seq) {
+        static IR::MAU::TableSeq* empty = new IR::MAU::TableSeq();
+        return seq ? seq : empty;
+    }
+
+ public:
+    explicit Tables(ElimUnused& self) : self(self) {}
+};
+
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
 
@@ -155,6 +245,8 @@ ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defu
         LOGGING(4) ? new DumpParser("before_elim_unused") : nullptr,
         new PassRepeated({
             new Instructions(*this),
+            &defuse,
+            new Tables(*this),
             &defuse,
             new Headers(*this),
             &defuse}),

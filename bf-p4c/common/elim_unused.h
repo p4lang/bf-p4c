@@ -15,7 +15,10 @@ class ElimUnused : public PassManager {
     FieldDefUse         &defuse;
 
     class Instructions;
+    class CollectEmptyTables;
+    class Tables;
     class Headers;
+
  public:
     ElimUnused(const PhvInfo &phv, FieldDefUse &defuse);
 };
