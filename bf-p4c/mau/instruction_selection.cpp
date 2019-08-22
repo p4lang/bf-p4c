@@ -871,6 +871,18 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), rn);
     } else if (prim->name == "invalidate") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
+    } else if (prim->name == "min" || prim->name == "max") {
+        if (prim->operands.size() != 2) {
+            error(ErrorType::ERR_INVALID, "wrong number of operands to %2%", prim->srcInfo,
+                  prim->name);
+        } else if (!prim->type->is<IR::Type::Bits>()) {
+            error(ErrorType::ERR_INVALID, "non-numeric operrands to %2%", prim->srcInfo,
+                  prim->name);
+        } else {
+            cstring op = prim->name;
+            op += prim->type->to<IR::Type::Bits>()->isSigned ? 's' : 'u';
+            return new IR::MAU::Instruction(prim->srcInfo, op, new IR::TempVar(prim->type),
+                                            prim->operands.at(0), prim->operands.at(1)); }
     } else {
         WARNING("unhandled in InstSel: " << *prim); }
     return prim;
