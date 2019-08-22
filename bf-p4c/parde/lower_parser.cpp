@@ -1654,11 +1654,29 @@ struct LowerDeparserIR : public PassManager {
 
 /// Collect all containers that are written more than once by the parser.
 class ComputeMultiWriteContainers : public ParserModifier {
+    const CollectLoweredParserInfo& parser_info;
+
+ public:
+    explicit ComputeMultiWriteContainers(const CollectLoweredParserInfo& pi)
+        : parser_info(pi) { }
+
+ private:
     bool preorder(IR::BFN::LoweredExtractPhv* extract) override {
+        auto state = findOrigCtxt<IR::BFN::LoweredParserState>();
+
         if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
-            clear_on_write[extract->dest->container]++;
+            clear_on_write[extract->dest->container].push_back(state);
         else
-            bitwise_or[extract->dest->container]++;
+            bitwise_or[extract->dest->container].push_back(state);
+
+        return false;
+    }
+
+    bool preorder(IR::BFN::LoweredParserChecksum* csum) override {
+        auto state = findOrigCtxt<IR::BFN::LoweredParserState>();
+
+        if (csum->csum_err)
+            bitwise_or[csum->csum_err->container->container].push_back(state);
 
         return false;
     }
@@ -1668,39 +1686,66 @@ class ComputeMultiWriteContainers : public ParserModifier {
         return true;
     }
 
-    void postorder(IR::BFN::LoweredParser* parser) override {
-        for (auto bor : bitwise_or) {
-            if (bor.second > 1) {
-                parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(bor.first));
-                LOG4("mark " << bor.first << " as bitwise-or");
-            } else if (Device::currentDevice() == Device::JBAY) {
-                // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
-                // So if both are used, we need to mark the extract as a multi write.
-                if (bor.first.is(PHV::Size::b8)) {
-                    PHV::Container other(bor.first.type(), bor.first.index() ^ 1);
-                    if (bitwise_or.count(other)) {
-                        parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(bor.first));
-                        LOG4("mark " << bor.first << " as bitwise-or");
-                    }
-                }
+    bool has_non_mutex_writes(const IR::BFN::LoweredParser* parser,
+            const std::vector<const IR::BFN::LoweredParserState*>& states) {
+        for (unsigned i = 0; i < states.size(); i++) {
+            for (unsigned j = 0; j < states.size(); j++) {
+                if (i == j)
+                    continue;
+
+                if (states[i] == states[j])
+                    return true;
+
+                bool mutex = parser_info.graph(parser).is_mutex(states[i], states[j]);
+
+                if (!mutex)
+                    return true;
             }
         }
 
-        for (auto clr : clear_on_write) {
-            if (clr.second > 1) {
-                parser->clearOnWriteContainers.push_back(new IR::BFN::ContainerRef(clr.first));
-                LOG4("mark " << clr.first << " as clear-on-write");
+        return false;
+    }
+
+    std::vector<const IR::BFN::LoweredParserState*>
+    merge_states(const std::vector<const IR::BFN::LoweredParserState*>& a,
+                 const std::vector<const IR::BFN::LoweredParserState*>& b) {
+        std::vector<const IR::BFN::LoweredParserState*> merged = a;
+        merged.insert(merged.begin(), b.begin(), b.end());
+        return merged;
+    }
+
+    void detect_multi_writes(const IR::BFN::LoweredParser* parser,
+            const std::map<PHV::Container, std::vector<const IR::BFN::LoweredParserState*>>& writes,
+            IR::Vector<IR::BFN::ContainerRef>& results, const char* which) {
+        for (auto w : writes) {
+            if (has_non_mutex_writes(parser, w.second)) {
+                results.push_back(new IR::BFN::ContainerRef(w.first));
+                LOG4("mark " << w.first << " as " << which);
             } else if (Device::currentDevice() == Device::JBAY) {
-                if (clr.first.is(PHV::Size::b8)) {
-                    PHV::Container other(clr.first.type(), clr.first.index() ^ 1);
-                    if (clear_on_write.count(other)) {
-                        parser->clearOnWriteContainers.push_back(
-                            new IR::BFN::ContainerRef(clr.first));
-                        LOG4("mark " << clr.first << " as clear-on-write");
+                // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
+                // So if both are used, we need to mark the extract as a multi write.
+                if (w.first.is(PHV::Size::b8)) {
+                    PHV::Container other(w.first.type(), w.first.index() ^ 1);
+                    if (writes.count(other)) {
+                        auto merged = merge_states(w.second, writes.at(other));
+                        if (has_non_mutex_writes(parser, merged)) {
+                            results.push_back(new IR::BFN::ContainerRef(w.first));
+                            LOG4("mark " << w.first << " as " << which);
+                        }
                     }
                 }
             }
         }
+    }
+
+    void postorder(IR::BFN::LoweredParser* parser) override {
+        auto orig = getOriginal<IR::BFN::LoweredParser>();
+
+        detect_multi_writes(orig, bitwise_or,
+                            parser->bitwiseOrContainers, "bitwise-or");
+
+        detect_multi_writes(orig, clear_on_write,
+                            parser->clearOnWriteContainers, "clear-on-write");
 
         // validate
         for (auto bor : parser->bitwiseOrContainers) {
@@ -1713,7 +1758,8 @@ class ComputeMultiWriteContainers : public ParserModifier {
         }
     }
 
-    std::map<PHV::Container, unsigned> bitwise_or, clear_on_write;
+    std::map<PHV::Container,
+             std::vector<const IR::BFN::LoweredParserState*>> bitwise_or, clear_on_write;
 };
 
 // If a container that participates in ternary match is invalid, model(HW)
@@ -1893,6 +1939,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
     auto pragma_no_init = new PragmaNoInit(phv);
     auto compute_init_valid =
         new ComputeInitZeroContainers(phv, defuse, pragma_no_init->getFields());
+    auto parser_info = new CollectLoweredParserInfo;
 
     addPasses({
         pragma_no_init,
@@ -1900,7 +1947,8 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,
-        new ComputeMultiWriteContainers,
+        parser_info,
+        new ComputeMultiWriteContainers(*parser_info),
         new ComputeBufferRequirements,
         new CharacterizeParser
     });
