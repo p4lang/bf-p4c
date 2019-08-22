@@ -1249,10 +1249,6 @@ bool ActionAnalysis::TotalAlignment::verify_individual_alignments(PHV::Container
     if (container.is(PHV::Kind::mocha) || container.is(PHV::Kind::dark)) {
         if (!aligned())
             return false;
-    } else if (container.is(PHV::Kind::normal)) {
-        // Can either be non-contiguous or non-aligned, not both
-        if (!contiguous() && !aligned())
-            return false;
     }
     return true;
 }
@@ -1265,8 +1261,6 @@ bool ActionAnalysis::TotalAlignment::deposit_field_src1() const {
     return contiguous();
 }
 
-
-
 /**
  * Src2 of a deposit-field has to be be aligned, but not contiguous, as long as there is
  * only one hole within the deposit-field
@@ -1277,47 +1271,96 @@ bool ActionAnalysis::TotalAlignment::deposit_field_src2(PHV::Container container
     return !df_src2_mask(container).empty();
 }
 
-bitvec ActionAnalysis::ContainerAction::specialities() const {
+
+bool ActionAnalysis::TotalAlignment::is_byte_rotate_merge_src(PHV::Container container) const {
+    if (container.is(PHV::Size::b8))
+        return false;
+    for (size_t i = 0; i < container.size(); i += 8) {
+        bitvec write_bits_per_byte = (direct_write_bits | unused_container_bits).getslice(i, 8);
+        if (write_bits_per_byte.empty() || write_bits_per_byte.popcount() == 8)
+            continue;
+        return false;
+    }
+    return (right_shift % 8) == 0;
+}
+
+
+/**
+ * Based on what bits that are written and unused, this is the possible source mask bit by bit.
+ * Because of unused bits, the actual source mask can be a subset of this
+ */
+bitvec ActionAnalysis::TotalAlignment::brm_src_mask(PHV::Container container) const {
     bitvec rv;
-    for (auto &fa : field_actions) {
-        for (auto &read : fa.reads) {
-            if (read.type != ActionParam::ACTIONDATA)
-                continue;
-            if (read.is_conditional)
-                continue;
-            rv.setbit(read.speciality);
-        }
+    for (size_t i = 0; i < container.size(); i += 8) {
+        bitvec write_bits_per_byte = (direct_write_bits | unused_container_bits).getslice(i, 8);
+        BUG_CHECK(write_bits_per_byte.empty() || write_bits_per_byte.popcount() == 8, "Illegal "
+            "call of byte rotate merge src mask");
+        if (write_bits_per_byte.empty())
+            continue;
+        rv.setrange(i, 8);
     }
     return rv;
 }
 
 /**
- * Verifies that the set ContainerActions are possible to be translated to an instruction.
- * The following instruction are validated:
- *
- * deposit-field:
- *     dest = ((src1 & mask) << shift) | (src2 & ~mask)
- *
- * where the mask has to be a contiguous range wrapped around the container, i.e.
- * 2..7 or if the container size 13..1 (this goes around the container boundary).  The shift
- * has to guarantee that the range is contiguous on the destination
- *
- * bitmasked-set
- *     dest = (src1 & mask) | (src2 & ~mask)
- *
- * where the src1 must come from action data, and everything must be aligned.
- *
- * there are other instructions that are simpler versions of deposit-field, such as alu-a,
- * but the assembler can resolve many of these instructions from a set output in assembly
- *
- * The purpose of this function is to verify that a ContainerAction can be translated
- * to a deposit-field or bitmasked-set, and will return false if the action is impossible
- * in the ALU.  This also determines if the action cannot be output as a set.  With
- * a set operation, src2 (background) = destination, but in the case when this isn't true,
- * the full field must be translated in the compiler:
- *     deposit-field C0(lo..hi), C1(lo..hi), C2
+ * The byte mask appearing in the instruction
  */
-bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &container,
+bitvec ActionAnalysis::TotalAlignment::byte_rotate_merge_byte_mask(PHV::Container container) const {
+    BUG_CHECK(is_src1, "byte_rotate_merge_byte_mask can only be called on src1");
+    bitvec rv;
+    bitvec write = write_bits();
+    for (size_t i = 0; i < container.size(); i += 8) {
+        bitvec write_bits_per_byte = write_bits().getslice(i, 8);
+        BUG_CHECK(write_bits_per_byte.empty() || write_bits_per_byte.popcount() == 8, "Illegal "
+            "call of byte rotate merge src mask");
+        if (write_bits_per_byte.empty())
+            continue;
+        rv.setbit(i/8);
+    }
+    return rv;
+}
+
+/**
+ * @seealso verify_set_alignment for description of byte-rotate-merge
+ */
+bool ActionAnalysis::ContainerAction::is_byte_rotate_merge(PHV::Container container,
+        TotalAlignment &ad_alignment) {
+    if (container.is(PHV::Size::b8))
+        return false;
+    if (name == "to-bitmasked-set")
+        return false;
+    if (ad_sources()) {
+        if (!ad_alignment.is_byte_rotate_merge_src(container))
+            return false;
+    }
+
+    for (auto phv_ta : Values(phv_alignment)) {
+        if (!phv_ta.is_byte_rotate_merge_src(container))
+            return false;
+    }
+
+    convert_instr_to_byte_rotate_merge = true;
+    if (read_sources() == 1)
+        implicit_src2 = true;
+    return true;
+}
+
+/**
+ * Verifies that the instruction can be encoded as a deposit-field.  As mentioned above
+ * verify_set_alignment, deposit field is the following:
+ *  
+ * deposit-field:
+ *     dest = ((src1 << shift) & mask) | (src2 & ~mask)
+ *
+ * The mask is a contiguous range, and has a single lo and hi.  Thus if src1 is a contiguous
+ * range of data (which can go around the container boundary), then this is supportable.
+ * The range has to be contiguous after the shift.
+ *   
+ * In a deposit field, a source must at least either be aligned, or can be contiguous.  A
+ * source can be both.  A source that is not aligned must be src1, and a source that is
+ * not contiguous is src2.
+ */
+bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Container container,
         TotalAlignment &ad_alignment) {
     TotalAlignment *single_src_alignment = nullptr;
     if (ad_sources()) {
@@ -1327,72 +1370,158 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container &conta
             single_src_alignment = &phv_ta;
     }
 
-    bool max_ad_unaligned = ad_sources() ? 1 : 0;
-    bool max_phv_unaligned = ad_sources() ? 0 : 1;
-    bool max_ad_non_contiguous = 0;
-    bool max_phv_non_contiguous = counts[ActionParam::PHV] - max_phv_unaligned;
-
-    if ((ad_sources() && !ad_alignment.contiguous()) || name == "to-bitmasked-set") {
-        convert_instr_to_bitmasked_set = true;
-        max_ad_non_contiguous = 1;
-        max_ad_unaligned = 0;
-    } else if (read_sources() == 2) {
-        convert_instr_to_deposit_field = true;
-        is_deposit_field_variant = true;
-    // If the single PHV field in a deposit-field cannot be src1 due to non-contiguity,
-    // but can be src2 because it is aligned
-    } else if (read_sources() == 1 && single_src_alignment
-               && !single_src_alignment->deposit_field_src1()) {
-        if (single_src_alignment->deposit_field_src2(container)) {
-            convert_instr_to_deposit_field = true;
-            is_deposit_field_variant = true;
-            implicit_src1 = true;
-            max_phv_unaligned = 0;
-            max_phv_non_contiguous = 1;
-        } else {
-            return false;
-        }
-    // Generally in a single source set, this is translated to set C0(lo..hi), C1(lo..hi),
-    // but when the source is wrapped, the only way for the assembler to understand is
-    // an explicit deposit-field instruction.
-    //
-    // The deposit field for a single sourced wrapped source will be the following:
-    //
-    //    deposit-field C0(lo..hi), C1(lo), C0
-    //
-    // The assembler will not understand the C1 slice if lo > hi, but the deposit-field instruction
-    // technically only requires the lo bit to determine the right shift
-    } else if (read_sources() == 1 && single_src_alignment
-               && single_src_alignment->is_wrapped_shift(container)) {
-        convert_instr_to_deposit_field = true;
-        implicit_src2 = true;
-        is_deposit_field_variant = true;
-    } else {
-        is_deposit_field_variant = true;
-    }
-
     if (ad_sources()) {
-        if (!ad_alignment.aligned() && max_ad_unaligned == 0)
-            return false;
-        if (!ad_alignment.contiguous() && max_ad_non_contiguous == 0)
+        if (!ad_alignment.contiguous())
             return false;
     }
 
-    int phv_unaligned = 0;
+    int max_phv_non_aligned = ad_sources() ? 0 : 1;
+    int max_phv_non_contiguous = read_sources() - max_phv_non_aligned;
+
+    int phv_non_aligned = 0;
     int phv_non_contiguous = 0;
-    for (auto ta : Values(phv_alignment)) {
-        if (!ta.aligned()) {
-            phv_unaligned++;
-        }
-
-        if (!ta.contiguous())
-            phv_non_contiguous++;
+    for (auto phv_ta : Values(phv_alignment)) {
+        if (!phv_ta.aligned() && !phv_ta.contiguous())
+            return false;
+        phv_non_contiguous += phv_ta.contiguous() ? 0 : 1;
+        phv_non_aligned += phv_ta.aligned() ? 0 : 1;
     }
-    if (phv_unaligned > max_phv_unaligned)
+
+    if (read_sources() == 2) {
+        convert_instr_to_deposit_field = true;
+    } else if (read_sources() == 1 && single_src_alignment) {
+        if (!single_src_alignment->deposit_field_src1()) {
+            /**
+             * If the single PHV field in a deposit-field cannot be src1 due to non-contiguity,
+             * but can be src2 because it is aligned
+             */
+            if (single_src_alignment->deposit_field_src2(container)) {
+                convert_instr_to_deposit_field = true;
+                implicit_src1 = true;
+                max_phv_non_aligned = 0;
+                max_phv_non_contiguous = 1;
+            } else {
+                return false;
+            }
+        /**
+         * Generally in a single source set, this is translated to set C0(lo..hi), C1(lo..hi),
+         * but when the source is wrapped, the only way for the assembler to understand is
+         * an explicit deposit-field instruction.
+
+         * The deposit field for a single sourced wrapped source will be the following:
+         * 
+         * deposit-field C0(lo..hi), C1(lo), C0
+         * 
+         * The assembler will not understand the C1 slice if lo > hi, but the deposit-field
+         * instruction technically only requires the lo bit to determine the right shift
+         */
+        } else if (single_src_alignment->is_wrapped_shift(container)) {
+            convert_instr_to_deposit_field = true;
+            implicit_src2 = true;
+        }
+    } else {
+        return false;
+    }
+
+    if (phv_non_aligned > max_phv_non_aligned)
         return false;
     if (phv_non_contiguous > max_phv_non_contiguous)
         return false;
+    is_deposit_field_variant = true;
     return true;
+}
+
+/**
+ * Verifies that the set ContainerActions (which are translated from assignment operations)
+ * are possible to be translated to an instruction.
+ *
+ * The following instructions are possible encodings of assignment statements.  Note that all
+ * shifts are rotational, meaning that the container is rotated by this number of bits. 
+ *
+ * deposit-field:
+ *     dest = ((src1 << shift) & mask) | (src2 & ~mask)
+ *
+ * The mask is a contiguous range, and has a single lo and hi.  Thus if src1 is a contiguous
+ * range of data (which can go around the container boundary), then this is supportable.
+ * The range has to be contiguous after the shift.
+ *
+ * bitmasked-set:
+ *     dest = (src1 & mask) | (src2 & ~mask)
+ *
+ * where the src1 must come from action data, and everything must be aligned.  The mask
+ * is not required to be contiguous.  Instead the mask is stored as action data in the RAM
+ * entry.
+ *
+ * byte-rotate-merge:
+ *     dest = ((src1 << src1_shift) & mask) | ((src2 << src2_shift) & ~mask)
+ *
+ * The limitation is that src1_shift and src2_shift % 8 must == 0.  The mask is also a byte
+ * mask, requiring the entire byte to come from the source.
+ *
+ * The purpose of this function is to verify that a ContainerAction can be translated
+ * to one of these possible instructions, and will return false if the action is impossible
+ * in the ALU.  This also determines if the action cannot be output as a set in the assembly
+ * language.  With a set operation, src2 (background) = destination is implicit, but in the
+ * case when this isn't true, the full field must be translated in the compiler, i.e:
+ *     deposit-field C0(lo..hi), C1(lo..hi), C2
+ *
+ * Each of these operations have different constraints:
+ *     - Bitmasked-set requires both sources to be aligned
+ *     - Byte-Rotate-Merge has neither alignment or contiguous constraints, but requires
+ *       the shifts to be factors of 8 and each byte to be sourced by only one source
+ *     - Deposit-Field explained: @seealso set_deposit_field_variant
+ *
+ * The worst case is that an instruction is encoded as a bitmasked-set, as this requires
+ * double the action data that would be necessary in a different instruction.  Only when
+ * something is required to be a bitmasked-set is this instruction used
+ */
+bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container container,
+        TotalAlignment &ad_alignment) {
+    int non_aligned_phv_sources = 0;
+    int non_contiguous_phv_sources = 0;
+    int non_aligned_and_non_contiguous_sources = 0;
+
+    for (auto phv_ta : Values(phv_alignment)) {
+        non_aligned_phv_sources += phv_ta.aligned() ? 0 : 1;
+        non_contiguous_phv_sources += phv_ta.contiguous() ? 0 : 1;
+        non_aligned_and_non_contiguous_sources += phv_ta.aligned() || phv_ta.contiguous() ? 0 : 1;
+    }
+
+    int non_aligned_sources = non_aligned_phv_sources;
+    int non_contiguous_sources = non_contiguous_phv_sources;
+
+    if (ad_sources()) {
+        non_aligned_sources += ad_alignment.aligned() ? 0 : 1;
+        non_contiguous_sources += ad_alignment.contiguous() ? 0 : 1;
+        non_aligned_and_non_contiguous_sources +=
+            ad_alignment.aligned() || ad_alignment.contiguous() ? 0 : 1;
+    }
+
+    // If a source is both not aligned and not contiguous, the only supportable is a
+    // byte rotate merge
+    if (non_aligned_and_non_contiguous_sources > 0)
+        return is_byte_rotate_merge(container, ad_alignment);
+    if (non_aligned_sources == 2 || non_contiguous_sources == 2)
+        return is_byte_rotate_merge(container, ad_alignment);
+    if (ad_sources() && non_aligned_phv_sources > 0)
+        return is_byte_rotate_merge(container, ad_alignment);
+
+    if (ad_sources())
+        BUG_CHECK(non_aligned_phv_sources == 0, "Bug in alignment check for %s", to_string());
+
+    if (ad_sources() && !ad_alignment.contiguous()) {
+        if (is_byte_rotate_merge(container, ad_alignment))
+            return true;
+        convert_instr_to_bitmasked_set = true;
+        return true;
+    }
+
+    if (name == "to-bitmasked-set") {
+        convert_instr_to_bitmasked_set = true;
+        return true;
+    }
+
+    return verify_deposit_field_variant(container, ad_alignment);
 }
 
 void ActionAnalysis::ContainerAction::determine_src1() {
@@ -1409,15 +1538,27 @@ void ActionAnalysis::ContainerAction::determine_src1() {
     }
 
     // If no src1 has been assigned, then PHV is the src1 information.  If a PHV write and read
-    // bits are unaligned, then that PHV field is src1, else either PHV source could be
+    // bits are unaligned, then that PHV field is src1.  If a PHV source is not contiguous,
+    // in a deposit-field, then it can't be a src1.  Otherwise either PHV source could be
     // considered src1.
     if (!src1_assigned) {
         for (auto &tot_align_info : phv_alignment) {
             auto &tot_alignment = tot_align_info.second;
+            if (src1_assigned) break;
             if (!tot_alignment.aligned()) {
                 tot_alignment.is_src1 = true;
                 src1_assigned = true;
             }
+        }
+    }
+
+    if (!src1_assigned) {
+        for (auto &tot_align_info : phv_alignment) {
+            auto &tot_alignment = tot_align_info.second;
+            if (src1_assigned) break;
+            if (!tot_alignment.contiguous()) continue;
+            tot_alignment.is_src1 = true;
+            src1_assigned = true;
         }
     }
 
@@ -1431,13 +1572,25 @@ void ActionAnalysis::ContainerAction::determine_src1() {
     }
 }
 
-void ActionAnalysis::TotalAlignment::determine_df_implicit_bits(PHV::Container container) {
+void ActionAnalysis::TotalAlignment::set_implicit_bits_from_mask(bitvec mask,
+        PHV::Container container) {
     bitvec cont_mask(0, container.size());
-    bitvec mask = is_src1 ? df_src1_mask() : df_src2_mask(container);
-
     implicit_write_bits |= (mask & unused_container_bits);
     implicit_read_bits = (implicit_write_bits >> right_shift);
     implicit_read_bits |= (implicit_write_bits << (container.size() - right_shift)) & cont_mask;
+}
+
+void ActionAnalysis::TotalAlignment::determine_df_implicit_bits(PHV::Container container) {
+    bitvec mask = is_src1 ? df_src1_mask() : df_src2_mask(container);
+    set_implicit_bits_from_mask(mask, container);
+}
+
+void ActionAnalysis::TotalAlignment::determine_brm_implicit_bits(PHV::Container container,
+        bitvec src1_mask) {
+    bitvec mask = brm_src_mask(container);
+    BUG_CHECK(is_src1 == src1_mask.empty(), "Src1 always needs to be done first");
+    mask -= src1_mask;
+    set_implicit_bits_from_mask(mask, container);
 }
 
 
@@ -1470,6 +1623,35 @@ void ActionAnalysis::ContainerAction::determine_implicit_bits(PHV::Container con
             bitvec src2_write_bits = bitvec(0, container.size()) - ad_write_bits;
             ta.second.implicit_write_bits = src2_write_bits - ta.second.direct_write_bits;
         }
+    } else if (convert_instr_to_byte_rotate_merge) {
+        bitvec src1_mask;
+        bitvec src2_mask;
+        if (ad_sources()) {
+            ad_alignment.determine_brm_implicit_bits(container, src1_mask);
+            src1_mask = ad_alignment.write_bits();
+        } else {
+            for (auto &phv_ta : Values(phv_alignment)) {
+                if (!phv_ta.is_src1) continue;
+                phv_ta.determine_brm_implicit_bits(container, src1_mask);
+                src1_mask = phv_ta.write_bits();
+            }
+        }
+
+        if (implicit_src2) {
+            src2_mask = bitvec(0, container.size()) - src1_mask;
+        } else {
+            for (auto &phv_ta : Values(phv_alignment)) {
+                if (phv_ta.is_src1) continue;
+                phv_ta.determine_brm_implicit_bits(container, src1_mask);
+                src2_mask = phv_ta.write_bits();
+            }
+        }
+
+
+        BUG_CHECK((src1_mask & src2_mask).empty() &&
+                  (src1_mask | src2_mask).popcount() == static_cast<int>(container.size()) &&
+                  (src1_mask | src2_mask).is_contiguous(), "Byte rotate merge implicit bits "
+                  "incorrectly done");
     } else {
         for (auto &ta : phv_alignment) {
             ta.second.implicit_bits_full(container);
@@ -1528,6 +1710,20 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
 
     determine_implicit_bits(container, ad_alignment);
     return true;
+}
+
+bitvec ActionAnalysis::ContainerAction::specialities() const {
+    bitvec rv;
+    for (auto &fa : field_actions) {
+        for (auto &read : fa.reads) {
+            if (read.type != ActionParam::ACTIONDATA)
+                continue;
+            if (read.is_conditional)
+                continue;
+            rv.setbit(read.speciality);
+        }
+    }
+    return rv;
 }
 
 /** For nearly all instructions, the ALU operation acts over all bits in the container.  The only
@@ -2024,7 +2220,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
                              "over the entire container";
             return false;
         }
-    } else if (convert_instr_to_bitmasked_set) {
+    } else if (convert_instr_to_bitmasked_set || convert_instr_to_byte_rotate_merge) {
         error_code |= PARTIAL_OVERWRITE;
     }
 

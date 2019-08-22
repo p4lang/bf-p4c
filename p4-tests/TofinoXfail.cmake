@@ -1224,12 +1224,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
   )
 
-# P4C-2024 (Requires Byte Rotate Merge)
-p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_16/compile_only/p4c-2024.p4
-)
-
 # P4C doesn't support use_container_valid pragma?
 p4c_add_xfail_reason("tofino"
   "error: Field isValid is not a member of structure struct ingress_intrinsic_metadata_for_tm_t"

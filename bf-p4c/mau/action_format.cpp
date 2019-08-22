@@ -948,6 +948,8 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     PackingConstraint pc;
     if (_constraint == DEPOSIT_FIELD)
         pc = pc.expand(1, sec_size);
+    else if (_constraint == BYTE_ROTATE_MERGE)
+        pc = pc.expand(8, sec_size);
 
 
     RamSection *init_rv = new RamSection(sec_size, pc);
@@ -2323,6 +2325,8 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
         auto &cont_action = container_action_info.second;
 
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
+        if (cont_action.convert_instr_to_byte_rotate_merge)
+            alu_cons = BYTE_ROTATE_MERGE;
         if (cont_action.convert_instr_to_bitmasked_set)
             alu_cons = BITMASKED_SET;
         if (cont_action.action_data_isolated() || container.is(PHV::Kind::mocha))

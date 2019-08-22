@@ -847,6 +847,126 @@ bool CondMoveMux::equiv(Instruction *a_) {
         return false;
 }
 
+/**
+ * This instruction represents the Byte-Rotate-Merge instruction described in the
+ * uArch section 14.1.6.5 Byte-rotate-merge section.
+ */
+struct ByteRotateMerge : VLIWInstruction {
+    struct Decode : Instruction::Decode {
+        Decode() : Instruction::Decode("byte_rotate_merge") { alias("byte-rotate-merge"); }
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const;
+    };
+    Phv::Ref dest;
+    operand src1, src2;
+    bitvec byte_mask;
+    int src1_shift, src2_shift;
+    ByteRotateMerge(Table *tbl, const Table::Actions::Action *act, const value_t &d,
+        const value_t &s1, const value_t &s2, int s1s, int s2s, int bm)
+    : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d),
+      src1(tbl, act, s1), src2(tbl, act, s2), src1_shift(s1s), src2_shift(s2s), byte_mask(bm) {}
+
+    std::string name() { return "byte_rotate_merge"; }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) {
+        src1->pass2(slot/Phv::mau_groupsize());
+        src2->pass2(slot/Phv::mau_groupsize());
+    }
+    int encode();
+    bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+        src1.phvRead(fn); src2.phvRead(fn);
+    }
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: byte_rotate_merge " << dest << ", " << src1 << ", " << src2 << " "
+            << byte_mask;
+    }
+};
+
+/**
+ * Unlike deposit-field, because of the non-contiguity of both sources possibly, the
+ * full instruction with both sources, shifts and byte mask are required
+ */
+Instruction *ByteRotateMerge::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+       const VECTOR(value_t) &op) const {
+    if (op.size != 7) {
+        error(op[0].lineno, "%s requires 6 operands", op[0].s);
+        return 0;
+    }
+    if (!CHECKTYPE(op[4], tINT) || !CHECKTYPE(op[5], tINT) || !CHECKTYPE(op[6], tINT)) {
+        error(op[0].lineno, "%s requires operands 3-5 to be ints", op[0].s);
+        return 0;
+    }
+        
+    ByteRotateMerge *rv = new ByteRotateMerge(tbl, act, op[1], op[2], op[3], op[4].i,
+                                              op[5].i, op[6].i);
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+
+/**
+ * The shifts at most can be container.size / 8 and the byte mask bit count can be at most
+ * container.size / 8.
+ */
+Instruction *ByteRotateMerge::pass1(Table *tbl, Table::Actions::Action *) {
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "byte-rotate-merge dest can't be dark or mocha phv");
+        return this; }
+    if (dest->reg.size == 8) {
+        error(dest.lineno, "byte-rotate-merge invalid on 8 bit containers");
+        return this; }
+    if (byte_mask.max().index() > dest->reg.size / 8) {
+        error(dest.lineno, "byte-rotate-merge mask beyond container size bounds");
+        return this; }
+    if (src1_shift > dest->reg.size / 8) {
+        error(dest.lineno, "byte-rotate-merge src1_shift beyond container size bounds");
+        return this; }
+    if (src2_shift > dest->reg.size / 8) {
+        error(dest.lineno, "byte-rotate-merge src2_shift beyond container size bounds");
+        return this; }
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
+    src1->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
+    src2->pass1(tbl, slot/Phv::mau_groupsize());
+    if (src2.phvGroup() < 0) {
+        std::swap(src1, src2);
+        std::swap(src1_shift, src2_shift);
+        byte_mask = bitvec(0, dest->reg.size / 8) - byte_mask; 
+    }
+    if (src2.phvGroup() < 0)
+        error(lineno, "src2 must be phv register");
+    return this;
+}
+
+int ByteRotateMerge::encode() {
+    int bits = (0xa << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
+    bits |= (byte_mask.getrange(0, 4)) << 14;
+    bits |= (src1_shift << 21);
+    bits |= (src2_shift << 19);
+    if (options.isJBayTarget()) bits <<= 1;
+    return bits | src2.bits(slot/Phv::mau_groupsize());
+}
+
+bool ByteRotateMerge::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<ByteRotateMerge *>(a_)) {
+        return dest == a->dest && src1 == a->src1 && src2 == a->src2 && byte_mask == a->byte_mask
+               && src1_shift == a->src1_shift && src2_shift == a->src2_shift;
+    } else {
+        return false;
+    }
+}
+
 struct Set;
 
 struct DepositField : VLIWInstruction {
@@ -1205,6 +1325,7 @@ static ShiftOP::Decode   opSHL         ("shl",           0x0c,       false),
                          opSHRU        ("shru",          0x14,       false),
                          opFUNSHIFT    ("funnel-shift",  0x04,       true);
 static DepositField::Decode opDepositField;
+static ByteRotateMerge::Decode opByteRotateMerge;
 
 AluOP::Decode* Set::opA = &VLIW::opA;
 

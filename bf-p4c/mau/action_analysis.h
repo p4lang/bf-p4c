@@ -166,13 +166,19 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         bitvec df_src1_mask() const;
         bitvec df_src2_mask(PHV::Container container) const;
+        bitvec brm_src_mask(PHV::Container container) const;
+        bitvec byte_rotate_merge_byte_mask(PHV::Container container) const;
         bool contiguous() const;
 
         bool deposit_field_src1() const;
         bool deposit_field_src2(PHV::Container container) const;
+        bool is_byte_rotate_merge_src(PHV::Container container) const;
+
         bool verify_individual_alignments(PHV::Container &container);
         bool is_wrapped_shift(PHV::Container container, int *lo = nullptr, int *hi = nullptr) const;
+        void set_implicit_bits_from_mask(bitvec mask, PHV::Container container);
         void determine_df_implicit_bits(PHV::Container container);
+        void determine_brm_implicit_bits(PHV::Container container, bitvec src1_mask);
         void implicit_bits_full(PHV::Container container);
 
         int bitrange_size() const {
@@ -252,6 +258,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool verbose = false;
         bool convert_instr_to_deposit_field = false;  ///> determined by tofino_compliance check
         bool convert_instr_to_bitmasked_set = false;  ///> determined by tofino_compliance_check
+        bool convert_instr_to_byte_rotate_merge = false;
 
         bool is_deposit_field_variant = false;
         // If the src1 = dest, but isn't directly specified by the parameters.  Only necessary
@@ -411,8 +418,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool verify_only_read(const PhvInfo &phv);
         bool verify_possible(cstring &error_message, PHV::Container container,
                              cstring action_name, const PhvInfo &phv);
+        bool is_byte_rotate_merge(PHV::Container container, TotalAlignment &ad_alignment);
+        bool verify_deposit_field_variant(PHV::Container container, TotalAlignment &ad_alignment);
+        bool verify_set_alignment(PHV::Container, TotalAlignment &ad_alignment);
 
-        bool verify_set_alignment(PHV::Container &container, TotalAlignment &ad_alignment);
         void determine_src1();
         void determine_implicit_bits(PHV::Container container, TotalAlignment &ad_alignment);
         bool verify_alignment(PHV::Container &container);

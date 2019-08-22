@@ -138,6 +138,12 @@ class ExpressionsToHash : public MauTransform {
  */
 class MergeInstructions : public MauTransform, TofinoWriteContext {
  private:
+    struct ByteRotateMergeInfo {
+        int src1_shift = 0;
+        int src2_shift = 0;
+        bitvec src1_byte_mask;
+    };
+
     const PhvInfo &phv;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
@@ -167,6 +173,15 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
 
     IR::MAU::Instruction *dest_slice_to_container(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
+
+
+    void build_actiondata_source(ActionAnalysis::ContainerAction &cont_action,
+        const IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
+        PHV::Container container);
+    void build_phv_source(ActionAnalysis::ContainerAction &cont_action,
+        const IR::Expression **src1_p, const IR::Expression **src2_p, bitvec &src1_writebits,
+        bitvec &src2_writebits, ByteRotateMergeInfo &brm_info, PHV::Container container);
+
     IR::MAU::Instruction *build_merge_instruction(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
     void fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,

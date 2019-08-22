@@ -308,6 +308,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                 output_size = 16; }
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
             auto dest = prim->operands[idx];
+            output_size = std::min(dest->type->width_bits(), output_size);
             auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", dest,
                                                   MakeSlice(ao, bit, bit+output_size - 1));
             // Have to put these instructions at the highest level of the instruction

@@ -421,7 +421,7 @@ struct ALUParameter {
         : param(p), phv_bits(pb), right_shift(0) {}
 };
 
-enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD };
+enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD, BYTE_ROTATE_MERGE };
 
 struct UniqueLocationKey {
     cstring action_name;

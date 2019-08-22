@@ -339,6 +339,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         if (cont_action.operands() == cont_action.alignment_counts()) {
             if (!cont_action.convert_instr_to_deposit_field
                 && !cont_action.convert_instr_to_bitmasked_set
+                && !cont_action.convert_instr_to_byte_rotate_merge
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)
                 && !cont_action.adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)
                 && (cont_action.error_code & ~error_mask) == 0)
@@ -639,6 +640,91 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
     return rv;
 }
 
+void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction &cont_action,
+        const IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
+        PHV::Container container) {
+    IR::Vector<IR::Expression> components;
+    auto &adi = cont_action.adi;
+    if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
+        *src1_p = fill_out_hash_operand(cont_action);
+        src1_writebits = adi.alignment.write_bits();
+    } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
+        *src1_p = fill_out_rand_operand(cont_action);
+        src1_writebits = adi.alignment.write_bits();
+    } else if (cont_action.ad_renamed()) {
+        auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
+        fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
+                                    adi.action_data_name, mo);
+        *src1_p = mo;
+        src1_writebits = adi.alignment.write_bits();
+    } else {
+        bool single_action_data = true;
+        for (auto &field_action : cont_action.field_actions) {
+            for (auto &read : field_action.reads) {
+                if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
+                    continue;
+                if (read.is_conditional)
+                    continue;
+                BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
+                          "does require an alias");
+                *src1_p = read.expr;
+                src1_writebits = adi.alignment.write_bits();
+                single_action_data = false;
+            }
+        }
+    }
+
+    int wrapped_lo = 0;  int wrapped_hi = 0;
+    if (cont_action.convert_instr_to_byte_rotate_merge) {
+        brm_info.src1_shift = adi.alignment.right_shift / 8;
+        brm_info.src1_byte_mask = adi.alignment.byte_rotate_merge_byte_mask(container);
+    } else if (!cont_action.convert_instr_to_bitmasked_set
+        && adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+        // The alias begins at the first bit used in the action bus slot
+        wrapped_lo -= adi.alignment.direct_read_bits.min().index();
+        wrapped_hi -= adi.alignment.direct_read_bits.min().index();
+        *src1_p = MakeWrappedSlice(*src1_p, wrapped_lo, wrapped_hi, container.size());
+    }
+}
+
+void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_action,
+        const IR::Expression **src1_p, const IR::Expression **src2_p, bitvec &src1_writebits,
+        bitvec &src2_writebits, ByteRotateMergeInfo &brm_info, PHV::Container container) {
+    IR::Vector<IR::Expression> components;
+    for (auto &phv_ta : cont_action.phv_alignment) {
+        auto read_container = phv_ta.first;
+        auto read_alignment = phv_ta.second;
+        if (read_alignment.is_src1) {
+            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
+                                        read_container.toString(), mo);
+            *src1_p = mo;
+            src1_writebits = read_alignment.write_bits();
+            bitvec src1_read_bits = read_alignment.read_bits();
+            int wrapped_lo = 0;  int wrapped_hi = 0;
+            if (cont_action.convert_instr_to_byte_rotate_merge) {
+                brm_info.src1_shift = read_alignment.right_shift / 8;
+                brm_info.src1_byte_mask = read_alignment.byte_rotate_merge_byte_mask(container);
+            } else if (read_alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+                *src1_p = MakeWrappedSlice(*src1_p, wrapped_lo, wrapped_hi, container.size());
+            } else if (src1_read_bits.popcount() != static_cast<int>(read_container.size())) {
+                if (src1_read_bits.is_contiguous()) {
+                    *src1_p = MakeSlice(*src1_p, src1_read_bits.min().index(),
+                                        src1_read_bits.max().index());
+                }
+            }
+        } else {
+            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
+                                        read_container.toString(), mo);
+            *src2_p = mo;
+            src2_writebits = read_alignment.write_bits();
+            if (cont_action.convert_instr_to_byte_rotate_merge)
+                brm_info.src2_shift = read_alignment.right_shift / 8;
+        }
+    }
+}
+
 /** The purpose of this function is to morph together instructions over an individual container.
  *  If multiple field actions are contained within an individual container action, then they
  *  have to be merged into an individual ALU instruction.
@@ -679,6 +765,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     bitvec src1_writebits;
     bitvec src2_writebits;
     IR::Vector<IR::Expression> components;
+    ByteRotateMergeInfo brm_info;
 
     BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] <= 1, "At most "
               "one section of action data is allowed in a merge instruction");
@@ -688,44 +775,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
               "merge instructions, some constant was not converted to action data");
 
     if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
-        auto &adi = cont_action.adi;
-        if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
-            src1 = fill_out_hash_operand(cont_action);
-            src1_writebits = adi.alignment.write_bits();
-        } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
-            src1 = fill_out_rand_operand(cont_action);
-            src1_writebits = adi.alignment.write_bits();
-        } else if (cont_action.ad_renamed()) {
-            auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
-            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
-                                        adi.action_data_name, mo);
-            src1 = mo;
-            src1_writebits = adi.alignment.write_bits();
-        } else {
-            bool single_action_data = true;
-            for (auto &field_action : cont_action.field_actions) {
-                for (auto &read : field_action.reads) {
-                    if (read.type != ActionAnalysis::ActionParam::ACTIONDATA)
-                        continue;
-                    if (read.is_conditional)
-                        continue;
-                    BUG_CHECK(single_action_data, "Action data that shouldn't require an alias "
-                              "does require an alias");
-                    src1 = read.expr;
-                    src1_writebits = adi.alignment.write_bits();
-                    single_action_data = false;
-                }
-            }
-        }
-
-        int wrapped_lo = 0;  int wrapped_hi = 0;
-        if (!cont_action.convert_instr_to_bitmasked_set
-            && adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
-            // The alias begins at the first bit used in the action bus slot
-            wrapped_lo -= adi.alignment.direct_read_bits.min().index();
-            wrapped_hi -= adi.alignment.direct_read_bits.min().index();
-            src1 = MakeWrappedSlice(src1, wrapped_lo, wrapped_hi, container.size());
-        }
+        build_actiondata_source(cont_action, &src1, src1_writebits, brm_info, container);
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
         // Constant merged into a single constant over the entire container
         int constant_value = cont_action.ci.valid_instruction_constant(container.size());
@@ -741,33 +791,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     // Go through all PHV sources and create src1/src2 if a source is contained within these
     // PHV fields
-    for (auto &phv_ta : cont_action.phv_alignment) {
-        auto read_container = phv_ta.first;
-        auto read_alignment = phv_ta.second;
-        if (read_alignment.is_src1) {
-            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
-            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
-                                        read_container.toString(), mo);
-            src1 = mo;
-            src1_writebits = read_alignment.write_bits();
-            bitvec src1_read_bits = read_alignment.read_bits();
-            int wrapped_lo = 0;  int wrapped_hi = 0;
-            if (read_alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
-                src1 = MakeWrappedSlice(src1, wrapped_lo, wrapped_hi, container.size());
-            } else if (src1_read_bits.popcount() != static_cast<int>(read_container.size())) {
-                if (src1_read_bits.is_contiguous()) {
-                    src1 = MakeSlice(src1, src1_read_bits.min().index(),
-                                     src1_read_bits.max().index());
-                }
-            }
-        } else {
-            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
-            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
-                                        read_container.toString(), mo);
-            src2 = mo;
-            src2_writebits = read_alignment.write_bits();
-        }
-    }
+    build_phv_source(cont_action, &src1, &src2, src1_writebits, src2_writebits, brm_info,
+                     container);
 
     // Src1 is not sources from parameters, but instead is equal to the destination: BRIG-914
     if (cont_action.implicit_src1) {
@@ -797,6 +822,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         instr_name = "bitmasked-set";
     else if (cont_action.convert_instr_to_deposit_field)
         instr_name = "deposit-field";
+    else if (cont_action.convert_instr_to_byte_rotate_merge)
+        instr_name = "byte-rotate-merge";
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
@@ -809,6 +836,18 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     // Currently bitmasked-set requires at least 2 source operands, or it crashes
     if (cont_action.convert_instr_to_bitmasked_set && !src2)
         merged_instr->operands.push_back(dst);
+
+    // For a byte-rotate-merge, the last 3 opcodes are the src1 shift, the src2 shift,
+    // and the src1 byte mask
+    if (cont_action.convert_instr_to_byte_rotate_merge) {
+        merged_instr->operands.push_back(
+            new IR::Constant(IR::Type::Bits::get(container.size() / 16), brm_info.src1_shift));
+        merged_instr->operands.push_back(
+            new IR::Constant(IR::Type::Bits::get(container.size() / 16), brm_info.src2_shift));
+        merged_instr->operands.push_back(
+            new IR::Constant(IR::Type::Bits::get(container.size() / 8),
+                             brm_info.src1_byte_mask.getrange(0, container.size() / 8)));
+    }
     return merged_instr;
 }
 
