@@ -27,6 +27,8 @@ const IR::Node* RewriteActionSelector::postorder(IR::Declaration_Instance *di) {
             args->push_back(new IR::Argument(ap_path));
             args->push_back(inst->substitution.lookupByName("hash"));
             args->push_back(inst->substitution.lookupByName("mode"));
+            if (inst->substitution.lookupByName("reg"))
+                args->push_back(inst->substitution.lookupByName("reg"));
             args->push_back(new IR::Argument(
                         new IR::Constant(IR::Type_Bits::get(32),
                             StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE)));
