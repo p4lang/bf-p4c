@@ -84,7 +84,6 @@ endif()
 set (ENV{P4C_VERSION} "${BFN_P4C_VERSION} (SHA: ${BFN_P4C_GIT_SHA})")
 MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
-
 macro(get_schema_version schema_file schema_var)
   execute_process(
     COMMAND python3 -c "from ${schema_file} import get_schema_version;print(get_schema_version(), end='', flush=True)"
@@ -97,6 +96,16 @@ macro(get_schema_version schema_file schema_var)
   endif()
   set(${schema_var} ${__schema_version})
 endmacro(get_schema_version)
+# Now force cmake to rerun if any of the files that we depend on versions for
+# change: context and manifest for now
+# We generate a pair of dummy dependency files will be ignored
+set(SCHEMA_FILES
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/context_schema.py
+  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/manifest_schema.py
+  )
+foreach (f ${SCHEMA_FILES})
+  configure_file(${f} ${CMAKE_BINARY_DIR}/${f}.dep)
+endforeach()
 
 # If we're on GCC, use the gold linker if available.
 if (CMAKE_COMPILER_IS_GNUCC)

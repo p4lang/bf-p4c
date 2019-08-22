@@ -13,7 +13,11 @@
 /* Define to 1 if we include Tofino */
 #cmakedefine HAVE_TOFINO 1
 
+/* Schema version */
+#cmakedefine CONTEXT_SCHEMA_VERSION "@CONTEXT_SCHEMA_VERSION@"
+
 /* define the version */
 #define TFAS_VERSION "${BFN_P4C_VERSION}"
+
 
 #endif // __BFASM_CONFIG_H__
