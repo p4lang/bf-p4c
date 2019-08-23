@@ -390,10 +390,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-    "visitor returned non-MethodCallExpression type"
-    testdata/p4_16_samples/issue955.p4
-    )
-p4c_add_xfail_reason("tofino"
     "The hash offset must be a power of 2 in a hash calculation"
     testdata/p4_16_samples/issue1049-bmv2.p4
     )

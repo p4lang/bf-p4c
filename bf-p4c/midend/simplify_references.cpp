@@ -161,6 +161,9 @@ struct SimplifyHeaderValidMethods : public Transform {
             return replaceWithPOVWrite(statement, method, 1);
         else if (method->member == "setInvalid")
             return replaceWithPOVWrite(statement, method, 0);
+        else if (method->member == "isValid")
+            // "bare" call to isValid (ignoring return value) is a noop
+            return nullptr;
         return statement;
     }
 

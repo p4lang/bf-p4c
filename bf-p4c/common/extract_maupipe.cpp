@@ -155,9 +155,13 @@ class ConvertMethodCalls : public MauTransform {
     const IR::Primitive *postorder(IR::Primitive *prim) {
         if (prim->name == "method_call_init") {
             BUG_CHECK(prim->operands.size() == 1, "method call initialization failed");
-            auto first_operand = prim->operands[0];
-            BUG_CHECK(first_operand->is<IR::Primitive>(), "method call initialization mismatch");
-            return first_operand->to<IR::Primitive>();
+            if (auto *p = prim->operands.at(0)->to<IR::Primitive>())
+                return p;
+            else if (prim->operands.at(0)->is<IR::Member>())
+                // comes from a bare "isValid" call -- is a noop
+                return nullptr;
+            else
+                BUG("method call initialization mismatch: %s", prim);
         } else {
             return prim;
         }
