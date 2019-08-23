@@ -1022,9 +1022,13 @@ void AttachTables::InitializeStatefulAlus
         for (auto annot : ext->annotations->annotations) {
             if (annot->name == "initial_register_lo_value") {
                 salu->init_reg_lo = getConstant(annot);
+                warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
+                        "argument of the Register constructor instead", annot);
                 LOG4("Reg initial lo value: " << salu->init_reg_lo); }
             if (annot->name == "initial_register_hi_value") {
                 salu->init_reg_hi = getConstant(annot);
+                warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
+                        "argument of the Register constructor instead", annot);
                 LOG4("Reg initial hi value: " << salu->init_reg_hi); } }
         if (seltype) {
             salu->direct = false;
@@ -1048,6 +1052,19 @@ void AttachTables::InitializeStatefulAlus
             salu->width = regtype->arguments->at(0)->width_bits();
             if (auto str = regtype->arguments->at(0)->to<IR::Type_Struct>())
                 salu->dual = str->fields.size() > 1;
+            if (reg->arguments->size() > !salu->direct) {
+                auto *init = reg->arguments->at(!salu->direct)->expression;
+                // any malformed initial value should have been diagnoesd already, so no need
+                // for error messages here
+                if (auto *k = init->to<IR::Constant>()) {
+                    salu->init_reg_lo = k->asInt();
+                } else if (auto *l = init->to<IR::ListExpression>()) {
+                    if (l->size() >= 1) {
+                        if (auto *k = l->components.at(0)->to<IR::Constant>())
+                            salu->init_reg_lo = k->asInt(); }
+                    if (l->size() >= 2) {
+                        if (auto *k = l->components.at(1)->to<IR::Constant>())
+                            salu->init_reg_hi = k->asInt(); } } }
         } else {
             salu->width = 1; }
         if (auto cts = reg->annotations->getSingle("chain_total_size"))
