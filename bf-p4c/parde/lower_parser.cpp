@@ -30,6 +30,7 @@
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/resource.h"
+#include "lib/safe_vector.h"
 #include "lib/stringref.h"
 
 namespace {
@@ -1014,12 +1015,7 @@ struct LowerParserIR : public PassManager {
 
 /// Given a sequence of fields, construct a packing format describing how the
 /// fields will be laid out once they're lowered to containers.
-/// XXX(seth): If this were a permanent thing, it'd probably be better to
-/// integrate it into `lowerFields()` and put a bit more care into it, but we
-/// know that we're going to move this functionality to `extract_maupipe()`
-/// pretty soon when we switch to the TNA-style learning extern. This is just a
-/// short term hack to let us survive until then.
-const BFN::FieldPacking*
+const safe_vector<IR::BFN::DigestField>*
 computeControlPlaneFormat(const PhvInfo& phv,
                           const IR::Vector<IR::BFN::FieldLVal>& fields) {
     struct LastContainerInfo {
@@ -1031,7 +1027,8 @@ computeControlPlaneFormat(const PhvInfo& phv,
     };
 
     boost::optional<LastContainerInfo> last = boost::make_optional(false, LastContainerInfo());
-    auto* packing = new BFN::FieldPacking;
+    unsigned totalWidth = 0;
+    auto *packing = new safe_vector<IR::BFN::DigestField>();
 
     // Walk over the field sequence in network order and construct a
     // FieldPacking that reflects its structure, with padding added where
@@ -1055,34 +1052,38 @@ computeControlPlaneFormat(const PhvInfo& phv,
         // enumerates the slices in increasing order of their little endian
         // offset, which means that in terms of network order it walks the
         // slices backwards.
-        auto& firstSlice = slices.back();
-        const nw_bitrange firstContainerRange = firstSlice.container_bits()
-          .toOrder<Endian::Network>(firstSlice.container.size());
+        for (std::vector<alloc_slice>::reverse_iterator slice = slices.rbegin();
+                slice != slices.rend(); slice++) {
+            const nw_bitrange sliceContainerRange = slice->container_bits()
+                        .toOrder<Endian::Network>(slice->container.size());
 
-        // If we switched containers (or if this is the very first field),
-        // appending padding equivalent to the bits at the end of the previous
-        // container and the beginning of the new container that aren't
-        // occupied.
-        if (last && last->container != firstSlice.container) {
-            packing->appendPadding(last->remainingBitsInContainer);
-            packing->appendPadding(firstContainerRange.lo);
-        } else if (!last) {
-            packing->appendPadding(firstContainerRange.lo);
+            // unsigned startByte = totalWidth / 8;
+            unsigned startByte = 0;
+
+            // If we switched containers (or if this is the very first field),
+            // appending padding equivalent to the bits at the end of the previous
+            // container and the beginning of the new container that aren't
+            // occupied.
+            if (last && last->container != slice->container) {
+                totalWidth += last->remainingBitsInContainer;
+                totalWidth += sliceContainerRange.lo;
+            } else if (!last) {
+                totalWidth += sliceContainerRange.lo;
+            }
+            startByte = totalWidth / 8;
+            totalWidth += slice->width;
+
+            // Place the field slice in the packing format. The field name is
+            // used in assembly generation; hence, we use its external name.
+            packing->emplace_back(
+                    slice->field->externalName(), startByte,
+                    slice->field_hi() % 8, slice->width, slice->field_bit);
+
+            // Remember information about the container placement of the last slice
+            // in network order (the first one in `slices`) so we can add any
+            // necessary padding on the next pass around the loop.
+            last = LastContainerInfo{ slice->container, slice->container_bits().lo };
         }
-
-        // Place the entire field at once. We're assuming it was allocated
-        // contiguously, obviously; ValidateAllocation will have complained if
-        // it wasn't.  The field name is used in assembly generation; hence,
-        // we use its external name.
-        packing->appendField(fieldRef->field, firstSlice.field->externalName(),
-                             firstSlice.field->size);
-
-        // Remember information about the container placement of the last slice
-        // in network order (the first one in `slices`) so we can add any
-        // necessary padding on the next pass around the loop.
-        auto& lastSlice = slices.front();
-        last = LastContainerInfo{lastSlice.container,
-                                 lastSlice.container_bits().lo};
     }
 
     return packing;

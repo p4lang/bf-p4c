@@ -293,7 +293,7 @@ struct OutputDigests : public Inspector {
             BUG_CHECK(entry, "Digest table entry isn't a learning table "
                       "entry: %1%", digestEntry);
 
-            if (entry->controlPlaneFormat->fields.size() == 0) {
+            if (entry->controlPlaneFormat->size() == 0) {
                 out << " []" << std::endl;
                 continue;
             }
@@ -308,16 +308,14 @@ struct OutputDigests : public Inspector {
             // we don't put the digest ID in the IR representation of the table
             // entry.
             AutoIndent formatIndent(indent);
-            entry->controlPlaneFormat->forEachField<Endian::Network>(
-              [&](nw_bitrange range, const IR::Expression*, cstring fieldName) {
-                le_bitrange leRange = range.toOrder<Endian::Little>(
-                    entry->controlPlaneFormat->totalWidth);
-                out << indent << "- [ " << canon_name(fieldName)
-                              << ", " << range.loByte() + 1  // Start byte.
-                              << ", " << range.size()        // Field width.
-                              << ", " << (leRange.hi % 8)    // Start bit.
+            for (auto &f : *entry->controlPlaneFormat) {
+                out << indent << "- [ " << canon_name(f.fieldName)
+                              << ", " << f.startByte + 1            // Start byte.
+                              << ", " << f.fieldWidth               // Field width.
+                              << ", " << f.startBit                 // Start bit.
+                              << ", " << f.fieldOffset              // Field offset.
                               << "]" << std::endl;
-            });
+            }
         }
 
         const char* sep = "";

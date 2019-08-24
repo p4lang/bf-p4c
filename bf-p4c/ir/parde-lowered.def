@@ -416,14 +416,33 @@ class DigestTableEntry {
     inline Vector<BFN::ContainerRef> sources;
 }
 
+/// Digest Field contains information on how a field is placed within a
+/// phv container within a digest format. A digest format (controlPlaneFormat) is a
+/// collection of multiple digest fields placed in network order.
+class DigestField {
+    /// P4 Name of the digest field
+    cstring fieldName;
+    /// The start byte in digest format for field location in network order
+    unsigned startByte;
+    /// The start bit within byte in digest format for field location in network
+    /// order
+    unsigned startBit;
+    /// The width of field within the phv container
+    unsigned fieldWidth;
+    /// The field offset within the phv container
+    unsigned fieldOffset;
+#nodbprint
+}
+
 /// An entry in the learning digest table.
 class LearningTableEntry : DigestTableEntry {
 #noconstructor
 #emit
+    using DigestPacking = safe_vector<DigestField>;
     LearningTableEntry(int idx,
                        const IR::Vector<IR::BFN::ContainerRef>& sources,
                        cstring controlPlaneName,
-                       const ::BFN::FieldPacking* controlPlaneFormat)
+                       const DigestPacking* controlPlaneFormat)
       : DigestTableEntry(idx, sources), controlPlaneName(controlPlaneName),
         controlPlaneFormat(controlPlaneFormat) { }
 #end
@@ -436,7 +455,7 @@ class LearningTableEntry : DigestTableEntry {
 #emit
     /// The packing format for this type of learn quanta; this describes to the
     /// driver how the fields included in the learn quantum are laid out.
-    const ::BFN::FieldPacking* controlPlaneFormat;
+    const DigestPacking* controlPlaneFormat;
 #end
 }
 

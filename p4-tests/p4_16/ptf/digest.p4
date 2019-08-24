@@ -4,6 +4,13 @@
 typedef bit<48> MacAddr_t;
 typedef bit<9> PortId_t;
 
+// By default, ingress_port is placed in a 16 bit container, we use pragma to
+// force it into a 32 bit container. This causes the digest to be packed with
+// 'holes' since it is read in network order. This tests the bit/byte offsets
+// generated for 'learn_quanta' in context.json are correct for such a scenario.
+// P4C-2006
+@pa_container_size("ingress", "ig_intr_md.ingress_port", 32)
+
 header Ethernet_t {
     MacAddr_t dmac;
     MacAddr_t smac;

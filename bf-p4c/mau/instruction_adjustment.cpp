@@ -1426,7 +1426,7 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
         _actions->append(_action);
     }
 
-    _table->emplace("name", tname);
+    _table->emplace("name", canon_name(tname));
     if (alpm_preclassifier) {
         auto _match_attr = new Util::JsonObject();
         auto _pre_classifier = new Util::JsonObject();

@@ -820,6 +820,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Parser match register not allocated for"
   ../glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Unsupported syntax for parser counter: AssignmentStatement"
   extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
 )
 
