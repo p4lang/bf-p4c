@@ -130,45 +130,32 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_l0_profile" ${switch_p4_16_l0} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
- p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests"
+# We cannot run some tests in our environment as some interfaces referenced in the port
+# mapping file specified for bf-switch don't exist.
+ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_t0" ${SWITCH_P4_16}
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_t0"
          "all
          ^switch_tests.L3SVITest
-         ^switch_tests.L2FloodTest
-         ^switch_tests.IPv4MalformedPacketsTest
-         ^switch_tests.L3MulticastTest
-         ^switch_tests.L2StpTest
-         ^switch_tests.L2VlanTest
-         ^switch_tests.QoSTest
-         ^switch_hostif.HostIfPingTest
-         ^switch_hostif.HostIfRxTest
 	 ^switch_tests.L2LagTest")
- p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfPingTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfPingTest"
-         "switch_hostif.HostIfPingTest")
- p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_HostIfRxTest" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_HostIfRxTest"
-         "switch_hostif.HostIfRxTest")
- p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_IdentityHash" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_IdentityHash"
-         "switch_tests.L2FloodTest
-          switch_tests.IPv4MalformedPacketsTest
-          switch_tests.L3MulticastTest
-          switch_tests.L2StpTest
-          switch_tests.L2VlanTest
-          switch_tests.QoSTest"
-   )
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_a0" ${SWITCH_P4_16}
+    "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_a0"
+         "all
+         ^switch_tests.L3SVITest
+         ^switch_tests.L2LagTest")
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_b0" ${SWITCH_P4_16}
+    "${testExtraArgs} -arch tna -bfrt -profile b0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_b0"
+         "all
+         ^switch_tests.L3SVITest
+         ^switch_tests.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
-  "tofino/smoketest_switch_16_Tests"
-  "tofino/smoketest_switch_16_HostIfPingTest"
-  "tofino/smoketest_switch_16_HostIfRxTest"
-  "tofino/smoketest_switch_16_IdentityHash"
+  "tofino/smoketest_switch_16_Tests_t0"
+  "tofino/smoketest_switch_16_Tests_a0"
+  "tofino/smoketest_switch_16_Tests_b0"
   PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile"
   )
 
@@ -177,10 +164,9 @@ set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 120
 set_tests_properties("tofino/smoketest_switch_16_compile_a0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_b0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_Tests" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_HostIfPingTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_HostIfRxTest" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_IdentityHash" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_t0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_a0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_b0" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
