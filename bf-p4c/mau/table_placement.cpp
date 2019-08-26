@@ -1,5 +1,7 @@
 #include "bf-p4c/mau/table_placement.h"
 
+#include <boost/range/adaptor/reversed.hpp>
+
 #include <algorithm>
 #include <list>
 #include <sstream>
@@ -277,7 +279,7 @@ struct TablePlacement::Placed {
     int                         initial_stage_split = -1;
     int                         stage_split = -1;
     StageUseEstimate            use;
-    pointer_wrap<TableResourceAlloc>    resources;
+    TableResourceAlloc          resources;
     Placed(TablePlacement &self_, const IR::MAU::Table *t, const Placed *done)
         : self(self_), id(++uid_counter), prev(done), table(t) {
         if (t) { name = t->name; }
@@ -307,39 +309,29 @@ struct TablePlacement::Placed {
 
     void gateway_merge(const IR::MAU::Table*, cstring);
 
-    /// Update a Placed object to reflect resources (re)allocated in the same stage due
-    /// to another table being added to the stage.  Copy-on-write, so actually clones
-    /// and updates the clone if there are any changes.
-    const Placed *update_resources(Placed *latest, table_resource_t &prev_resources) const {
-        auto *new_prev = prev;
-        if (prev && prev->stage == stage)
-            new_prev = prev->update_resources(latest, prev_resources);
-        auto new_resources = prev_resources.at(table);
-        if (new_prev == prev && new_resources == resources && (!need_more || need_more_match))
-            return this;
-        auto *rv = new Placed(*this, new_resources);
-        rv->prev = new_prev;
-        if (rv->need_more && !rv->need_more_match) {
-            rv->need_more = false;
-            for (auto *ba : rv->table->attached) {
+    /// Update a Placed object to reflect attached tables being allocated in the same stage due
+    /// to another table being added to the stage.
+    void update_attached(Placed *latest) {
+        if (need_more && !need_more_match) {
+            need_more = false;
+            for (auto *ba : table->attached) {
                 if (ba->attached->direct) continue;
-                BUG_CHECK(rv->attached_entries.count(ba->attached),
+                BUG_CHECK(attached_entries.count(ba->attached),
                           "initial_stage_and_entries mismatch for %s", ba->attached);
                 auto it = latest->attached_entries.find(ba->attached);
                 if (it != latest->attached_entries.end()) {
-                    BUG_CHECK(rv->attached_entries[ba->attached] == 0 ||
-                              rv->attached_entries[ba->attached] == it->second,
+                    BUG_CHECK(attached_entries[ba->attached] == 0 ||
+                              attached_entries[ba->attached] == it->second,
                               "inconsistent size for %s", ba->attached);
-                    rv->attached_entries[ba->attached] = it->second; }
-                if (rv->attached_entries[ba->attached] < ba->attached->size)
-                    rv->need_more = true; }
-            if (!rv->need_more) {
-                LOG3("    " << rv->table->name << " is now also placed");
+                    attached_entries[ba->attached] = it->second; }
+                if (attached_entries[ba->attached] < ba->attached->size)
+                    need_more = true; }
+            if (!need_more) {
+                LOG3("    " << table->name << " is now also placed");
                 latest->complete_shared++;
-                rv->placed[self.tblInfo.at(rv->table).uid] = 1; } }
-        if (rv->prev)
-            rv->placed |= rv->prev->placed;
-        return rv; }
+                placed[self.tblInfo.at(table).uid] = 1; } }
+        if (prev)
+            placed |= prev->placed; }
 
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
         out << pl->name;
@@ -351,16 +343,7 @@ struct TablePlacement::Placed {
           match_placed(p.match_placed), need_more(p.need_more), need_more_match(p.need_more_match),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
-          stage_split(p.stage_split), use(p.use),
-          resources(p.resources ? new TableResourceAlloc(*p.resources) : nullptr)
-          { traceCreation(); }
-    Placed(const Placed &p, TableResourceAlloc *res)
-        : self(p.self), id(uid_counter++), prev(p.prev), group(p.group), name(p.name),
-          entries(p.entries), attached_entries(p.attached_entries), placed(p.placed),
-          match_placed(p.match_placed), need_more(p.need_more), need_more_match(p.need_more_match),
-          gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
-          logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
-          stage_split(p.stage_split), use(p.use), resources(res)
+          stage_split(p.stage_split), use(p.use), resources(p.resources)
           { traceCreation(); }
 
     const Placed *diff_prev(const Placed *new_prev) const {
@@ -570,19 +553,19 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
 }
 
 bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
-    next->resources->clear_ixbar();
+    next->resources.clear_ixbar();
     IXBar current_ixbar;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        current_ixbar.update(p->table, p->resources);
+        current_ixbar.update(p->table, &p->resources);
     }
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
 
-    if (!current_ixbar.allocTable(next->table, phv, *next->resources, next->use.preferred(),
+    if (!current_ixbar.allocTable(next->table, phv, next->resources, next->use.preferred(),
                                   action_format) ||
-        !current_ixbar.allocTable(next->gw, phv, *next->resources, next->use.preferred(),
+        !current_ixbar.allocTable(next->gw, phv, next->resources, next->use.preferred(),
                                   nullptr)) {
-        next->resources->clear_ixbar();
+        next->resources.clear_ixbar();
         error_message = "The table " + next->table->name + " could not fit within a single "
                         "input crossbar in an MAU stage";
         LOG3("    " << error_message);
@@ -591,15 +574,15 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
 
     IXBar verify_ixbar;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
-        verify_ixbar.update(p->table, p->resources);
-    verify_ixbar.update(next->table, next->resources);
+        verify_ixbar.update(p->table, &p->resources);
+    verify_ixbar.update(next->table, &next->resources);
     LOG7(IndentCtl::indent << IndentCtl::indent);
     LOG7(verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
 
     return true;
 }
 
-bool TablePlacement::try_alloc_mem(Placed *next, table_resource_t &prev_resources) {
+bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage) {
     Memories current_mem;
     // This is to guarantee for Tofino to have at least a table per gress within a stage, as
     // a path is required from the parser
@@ -622,36 +605,32 @@ bool TablePlacement::try_alloc_mem(Placed *next, table_resource_t &prev_resource
     if (shrink_lt)
         current_mem.shrink_allowed_lts();
 
-    int i = 0;
-    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev, ++i) {
-         current_mem.add_table(p->table, p->gw, prev_resources.at(p->table), p->use.preferred(),
-                               p->entries, p->stage_split); }
-    current_mem.add_table(next->table, next->gw, next->resources, next->use.preferred(),
+    for (auto *p : whole_stage) {
+        BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
+        current_mem.add_table(p->table, p->gw, &p->resources, p->use.preferred(),
+                              p->entries, p->stage_split);
+        p->resources.memuse.clear(); }
+    current_mem.add_table(next->table, next->gw, &next->resources, next->use.preferred(),
                           next->entries, next->stage_split);
-    next->resources->memuse.clear();
-    for (auto *prev_resource : Values(prev_resources)) {
-        prev_resource->memuse.clear();
-    }
-
+    next->resources.memuse.clear();
 
     if (!current_mem.allocate_all()) {
         error_message = "The table " + next->table->name + " could not fit in stage " +
                         std::to_string(next->stage) + " with " + std::to_string(next->entries)
                         + " entries";
         LOG3("    " << error_message);
-        next->resources->memuse.clear();
-        for (auto *prev_resource : Values(prev_resources)) {
-            prev_resource->memuse.clear();
-        }
+        next->resources.memuse.clear();
+        for (auto *p : whole_stage)
+            p->resources.memuse.clear();
         return false;
     }
 
     Memories verify_mem;
     if (shrink_lt)
         verify_mem.shrink_allowed_lts();
-    for (auto *prev_resource : Values(prev_resources))
-        verify_mem.update(prev_resource->memuse);
-    verify_mem.update(next->resources->memuse);
+    for (auto *p : whole_stage)
+        verify_mem.update(p->resources.memuse);
+    verify_mem.update(next->resources.memuse);
     LOG7(IndentCtl::indent << IndentCtl::indent);
     LOG7(verify_mem << IndentCtl::unindent << IndentCtl::unindent);
 
@@ -660,13 +639,13 @@ bool TablePlacement::try_alloc_mem(Placed *next, table_resource_t &prev_resource
 
 bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
-    next->resources->table_format.clear();
-    TableFormat current_format(*next->use.preferred(), next->resources->match_ixbar,
-                               next->resources->proxy_hash_ixbar, next->table,
+    next->resources.table_format.clear();
+    TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
+                               next->resources.proxy_hash_ixbar, next->table,
                                immediate_mask, gw_linked);
 
-    if (!current_format.find_format(&next->resources->table_format)) {
-        next->resources->table_format.clear();
+    if (!current_format.find_format(&next->resources.table_format)) {
+        next->resources.table_format.clear();
         error_message = "The selected pack format for table " + next->table->name + " could "
                         "not fit given the input xbar allocation";
         LOG3("    " << error_message);
@@ -683,18 +662,18 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
               "A non gateway table has a null action data format allocation");
 
     ActionDataBus current_adb;
-    next->resources->action_data_xbar.clear();
-    next->resources->meter_xbar.clear();
+    next->resources.action_data_xbar.clear();
+    next->resources.meter_xbar.clear();
 
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        current_adb.update(p->name, p->resources, p->table);
+        current_adb.update(p->name, &p->resources, p->table);
     }
     if (!current_adb.alloc_action_data_bus(next->table, next->use.preferred_action_format(),
-                                           *next->resources)) {
+                                           next->resources)) {
         error_message = "The table " + next->table->name + " could not fit in within the "
                         "action data bus";
         LOG3("    " << error_message);
-        next->resources->action_data_xbar.clear();
+        next->resources.action_data_xbar.clear();
         return false;
     }
 
@@ -702,19 +681,19 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
      * allocate meter output on adb
      */
     if (!current_adb.alloc_action_data_bus(next->table,
-            next->use.preferred_meter_format(), *next->resources)) {
+            next->use.preferred_meter_format(), next->resources)) {
         error_message = "The table " + next->table->name + " could not fit its meter "
                         " output in within the action data bus";
         LOG3(error_message);
-        next->resources->meter_xbar.clear();
+        next->resources.meter_xbar.clear();
         return false;
     }
 
     ActionDataBus adb_update;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        adb_update.update(p->name, p->resources, p->table);
+        adb_update.update(p->name, &p->resources, p->table);
     }
-    adb_update.update(next->name, next->resources, next->table);
+    adb_update.update(next->name, &next->resources, next->table);
     return true;
 }
 
@@ -723,30 +702,30 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
         return true;
 
     InstructionMemory imem;
-    next->resources->instr_mem.clear();
+    next->resources.instr_mem.clear();
 
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        imem.update(p->name, p->resources, p->table);
+        imem.update(p->name, &p->resources, p->table);
     }
 
     bool gw_linked = next->gw != nullptr;
-    if (!imem.allocate_imem(next->table, next->resources->instr_mem, phv, gw_linked)) {
+    if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked)) {
         error_message = "The table " + next->table->name + " could not fit within the "
                         "instruction memory";
         LOG3("    " << error_message);
-        next->resources->instr_mem.clear();
+        next->resources.instr_mem.clear();
         return false;
     }
 
     InstructionMemory verify_imem;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
-        verify_imem.update(p->name, p->resources, p->table);
+        verify_imem.update(p->name, &p->resources, p->table);
     }
-    verify_imem.update(next->name, next->resources, next->table);
+    verify_imem.update(next->name, &next->resources, next->table);
     return true;
 }
 
-bool TablePlacement::try_alloc_all(Placed *next, table_resource_t &prev_resources,
+bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
                                    const char *what, bool no_memory) {
     if (!pick_layout_option(next, false)) {
         LOG3("    " << what << " ixbar allocation did not fit");
@@ -759,7 +738,7 @@ bool TablePlacement::try_alloc_all(Placed *next, table_resource_t &prev_resource
         return false; }
     if (no_memory) return true;
     if (!(get_current_stage_use(next) <= StageUseEstimate::max()) ||
-        !try_alloc_mem(next, prev_resources)) {
+        !try_alloc_mem(next, whole_stage)) {
         LOG3("    " << what << " of memory allocation did not fit");
         return false; }
     return true;
@@ -965,25 +944,35 @@ safe_vector<TablePlacement::Placed *>
 
 TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         const StageUseEstimate &current) {
-    auto *min_placed = new Placed(*rv);
-    rv->resources = new TableResourceAlloc;
-    min_placed->resources = new TableResourceAlloc;
-    table_resource_t prev_resources;
-    error_message = "";
-    for (auto *p = rv->prev; p && p->stage == rv->prev->stage; p = p->prev) {
-        BUG_CHECK(prev_resources.count(p->table) == 0,
-                  "%s placed twice in stage %d", p->table, p->stage);
-        prev_resources[p->table] = p->resources->clone_ixbar(); }
     int furthest_stage = (rv->prev == nullptr) ? 0 : rv->prev->stage + 1;
     if (!initial_stage_and_entries(rv, furthest_stage)) {
         return nullptr;
     }
+
+    const Placed *done = rv->prev;
+    std::vector<Placed *> whole_stage;
+    error_message = "";
+    // clone the already-placed tables in this stage so they can be re-placed
+    for (const Placed **p = &rv->prev; *p && (*p)->stage == rv->stage; ) {
+        auto clone = new Placed(**p);
+        whole_stage.push_back(clone);
+        *p = clone;
+        p = &clone->prev; }
+    // update shared attached tables in the stage
+    for (auto *p : boost::adaptors::reverse(whole_stage))
+        p->update_attached(rv);
+    if (!whole_stage.empty()) {
+        BUG_CHECK(rv->prev && rv->prev->stage == rv->stage, "whole_placed invalid");
+        rv->placed |= rv->prev->placed;
+        BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
+
     int initial_entries = rv->entries;
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
     LOG3("  Initial stage is " << rv->stage);
     BUG_CHECK(rv->stage < 100, "too many stages");
 
+    auto *min_placed = new Placed(*rv);
     min_placed->entries = 1;
 
     if (!rv->table->created_during_tp) {
@@ -996,7 +985,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     // stages
 
     bool allocated = false;
-
 
     min_placed->stage = rv->stage;
     min_placed->initial_stage_split = rv->initial_stage_split;
@@ -1030,8 +1018,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             error_message = "splitting dleft tables not supported";
         }
 
-        if (!try_alloc_all(min_placed, prev_resources, "Min use") ||
-            !try_alloc_all(rv, prev_resources, "Table use", true))
+        if (!try_alloc_all(min_placed, whole_stage, "Min use") ||
+            !try_alloc_all(rv, whole_stage, "Table use", true))
             advance_to_next_stage = true;
 
         if (rv->prev && rv->stage == rv->prev->stage) {
@@ -1045,7 +1033,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         // rams until the table is able to be placed
         while (!advance_to_next_stage &&
                (!(rv->use <= avail) ||
-               (allocated = try_alloc_mem(rv, prev_resources)) == false)) {
+               (allocated = try_alloc_mem(rv, whole_stage)) == false)) {
             // If a table contains initialization for dark containers, it cannot be split into
             // multiple stages.
             if (rv->table->has_dark_init) {
@@ -1095,7 +1083,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             min_placed->stage++;
             min_placed->stage_split = min_placed->initial_stage_split;
             stage_current.clear();
-            prev_resources.clear();
+            for (auto *p : whole_stage) delete p;  // help garbage collector
+            whole_stage.clear();
+            rv->prev = min_placed->prev = done;
         }
     } while (!allocated && rv->stage <= furthest_stage);
 
@@ -1110,11 +1100,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         auto action_format = rv->use.preferred_action_format();
         BUG_CHECK(action_format != nullptr, "Action format could not be found for a "
                                             "particular layout option.");
-        rv->resources->action_format = *action_format;
+        rv->resources.action_format = *action_format;
         auto meter_format = rv->use.preferred_meter_format();
         BUG_CHECK(meter_format != nullptr, "Meter format could not be found for a "
                                            "particular layout option.");
-        rv->resources->meter_format = *meter_format;
+        rv->resources.meter_format = *meter_format;
     }
 
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
@@ -1138,10 +1128,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage <<
          (rv->need_more_match ? " (need more match)" : rv->need_more ? " (need more)" : ""));
-    if (rv->prev && rv->prev->stage == rv->stage) {
-        rv->prev = rv->prev->update_resources(rv, prev_resources);
-        rv->placed |= rv->prev->placed;
-        BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
 
     if (!rv->table->created_during_tp) {
         if (!rv->need_more_match) {
@@ -1823,7 +1809,7 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
         if (stage_table > 0 || lt > 0)
             table_part->remove_gateway();
         int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
-        table_set_resources(table_part, placed->resources->clone_rename(tbl, stage_table, lt),
+        table_set_resources(table_part, placed->resources.clone()->rename(tbl, stage_table, lt),
                             entries);  // table_part->ways[0].entries);
         if (!rv) {
             rv = table_part;
@@ -1868,7 +1854,7 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
         int per_row = RegisterPerWord(salu);
         int entries = placed->use.preferred()->dleft_hash_sizes[lt] * Memories::SRAM_DEPTH
                       * per_row;
-        table_set_resources(table_part, placed->resources->clone_rename(tbl, stage_table, lt),
+        table_set_resources(table_part, placed->resources.clone()->rename(tbl, stage_table, lt),
                             entries);
         if (lt != logical_tables - 1)
             table_part->next.clear();
@@ -2005,7 +1991,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
             select_layout_option(tbl, it->second->use.preferred());
-            add_attached_tables(tbl, it->second->use.preferred(), it->second->resources);
+            add_attached_tables(tbl, it->second->use.preferred(), &it->second->resources);
             if (gw_layout_used)
                 tbl->layout += gw_layout;
         }
@@ -2014,7 +2000,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         else if (tbl->for_dleft())
             return break_up_dleft(tbl, it->second);
         else
-            table_set_resources(tbl, it->second->resources, it->second->entries);
+            table_set_resources(tbl, it->second->resources.clone(), it->second->entries);
         return tbl;
     }
     int stage_table = 0;
@@ -2023,30 +2009,29 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
+        const Placed *pl = it->second;
         auto *table_part = tbl->clone();
         // When a gateway is merged against a split table, only the first table created from the
         // split must have the name of the merged gateway
         if (stage_table != 0) {
             table_part->gateway_name = cstring();
-            if (it->second->entries == 0) {
+            if (pl->entries == 0) {
                 // FIXME -- no entries in this stage, just attached tables?  For now skip these
                 continue; }
-            BUG_CHECK(stage_table == it->second->stage_split, "Splitting table %s cannot be "
+            BUG_CHECK(stage_table == pl->stage_split, "Splitting table %s cannot be "
                       "resolved for stage table %d", table_part->name, stage_table); }
-        select_layout_option(table_part, it->second->use.preferred());
-        add_attached_tables(table_part, it->second->use.preferred(), it->second->resources);
+        select_layout_option(table_part, pl->use.preferred());
+        add_attached_tables(table_part, pl->use.preferred(), &pl->resources);
         if (gw_layout_used)
             table_part->layout += gw_layout;
-        table_part->logical_id = it->second->logical_id;
-        table_part->stage_split = it->second->stage_split;
+        table_part->logical_id = pl->logical_id;
+        table_part->stage_split = pl->stage_split;
 
         if (table_part->layout.atcam) {
-            table_part = break_up_atcam(table_part, it->second, it->second->stage_split,
-                                        &atcam_last);
+            table_part = break_up_atcam(table_part, pl, pl->stage_split, &atcam_last);
         } else {
-            table_set_resources(table_part,
-                                it->second->resources->clone_rename(tbl, it->second->stage_split),
-                                it->second->entries);
+            table_set_resources(table_part, pl->resources.clone()->rename(tbl, pl->stage_split),
+                                pl->entries);
         }
         if (!rv) {
             rv = table_part;

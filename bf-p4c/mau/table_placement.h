@@ -26,7 +26,6 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct GroupPlace;
     struct Placed;
     typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
-    typedef ordered_map<const IR::MAU::Table *, TableResourceAlloc*>    table_resource_t;
 
  protected:
     typedef enum {
@@ -101,11 +100,11 @@ class TablePlacement : public MauTransform, public Backtrack {
                                           const StageUseEstimate &current,
                                           GatewayMergeChoices &gmc);
     Placed *try_place_table(Placed *rv, const StageUseEstimate &current);
-    bool try_alloc_all(Placed *next, table_resource_t &prev_resources, const char *what,
+    bool try_alloc_all(Placed *next, std::vector<Placed *> whole_stage, const char *what,
                        bool no_memory = false);
     bool try_alloc_ixbar(Placed *next);
     bool try_alloc_format(Placed *next, bool gw_linked);
-    bool try_alloc_mem(Placed *next, table_resource_t &prev_resources);
+    bool try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage);
     bool try_alloc_adb(Placed *next);
     bool try_alloc_imem(Placed *next);
     bool pick_layout_option(Placed *next, bool estimate_set);

@@ -23,25 +23,10 @@ struct TableResourceAlloc {
     MeterALU::Format::Use               meter_format;
     ActionDataBus::Use                  action_data_xbar, meter_xbar;
     InstructionMemory::Use              instr_mem;
-    TableResourceAlloc *clone_ixbar() const {
-        TableResourceAlloc *rv = new TableResourceAlloc;
-        rv->match_ixbar = match_ixbar;
-        rv->gateway_ixbar = gateway_ixbar;
-        rv->proxy_hash_ixbar = proxy_hash_ixbar;
-        rv->selector_ixbar = selector_ixbar;
-        rv->salu_ixbar = salu_ixbar;
-        rv->meter_ixbar = meter_ixbar;
-        rv->table_format = table_format;
-        // NOT cloning memuse
-        rv->action_format = action_format;
-        rv->hash_dists = hash_dists;
-        rv->action_data_xbar = action_data_xbar;
-        rv->meter_format = meter_format;
-        rv->instr_mem = instr_mem;
-        rv->meter_xbar = meter_xbar;
-        return rv; }
-    TableResourceAlloc *clone_rename(const IR::MAU::Table *tbl, int stage_table = -1,
-                                     int logical_table = -1) const;
+    TableResourceAlloc *clone() const { return new TableResourceAlloc(*this); }
+    TableResourceAlloc *rename(const IR::MAU::Table *tbl, int stage_table = -1,
+                               int logical_table = -1);
+
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();
