@@ -279,6 +279,8 @@ class ChecksumVerify : ParserChecksumPrimitive {
 class ChecksumGet : ParserChecksumPrimitive {
     dbprint { out << "get checksum " << declName; }
     FieldLVal dest;
+    // header end position relative to current state's input buffer
+    PacketRVal header_end_byte;
 }
 
 class ChecksumDepositToClot : ParserChecksumPrimitive {
@@ -300,8 +302,6 @@ class ChecksumAdd : ParserChecksumPrimitive {
 class ChecksumSubtract : ParserChecksumPrimitive {
     dbprint { out << "subtract " << source << " from checksum " << declName; }
     PacketRVal source;
-    /// original field in the packet, needed to compute header end position
-    Member field;
     // Indicates if even and odd byte in the field need to be swapped
     bool swap;
     bool isPayloadChecksum;

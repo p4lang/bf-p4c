@@ -562,6 +562,7 @@ struct RewriteParserStatements : public Transform {
         }
         return false;
     }
+
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
         auto* method = call->method->to<IR::Member>();
@@ -646,12 +647,13 @@ struct RewriteParserStatements : public Transform {
                 rv->push_back(add);
             } else {
                 bool isChecksum = isChecksumField(member, "payload_checksum");
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval, member,
+                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval,
                                                                swap, isChecksum);
+                lastChecksumSubtract = subtract;
+                lastSubtractField = member;
+
                 rv->push_back(subtract);
             }
-
-            // TODO(zma) checksum field can be metadata
         }
         return rv;
     }
@@ -824,6 +826,28 @@ struct RewriteParserStatements : public Transform {
         return e;
     }
 
+    int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract,
+                        const IR::Member* lastSubtractField) {
+        auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
+        int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
+        if (lastBitSubtract % 8 != 7) {
+            ::fatal_error("Checksum subtract ends at non-byte-aligned field %1%",
+                          lastSubtractField);
+        }
+
+        auto* headerRef = lastSubtractField->expr->to<IR::ConcreteHeaderRef>();
+        auto header = headerRef->baseRef();
+        int endPos = 0;
+        for (auto field :  header->type->fields) {
+            if (field->name == lastSubtractField->member) {
+                endPos = lastBitSubtract;
+            } else if (endPos > 0) {
+                endPos += field->type->width_bits();
+            }
+        }
+        return endPos;
+    }
+
     const IR::BFN::ParserPrimitive*
     preorder(IR::AssignmentStatement* s) override {
         if (s->left->type->is<IR::Type::Varbits>())
@@ -851,7 +875,14 @@ struct RewriteParserStatements : public Transform {
                         return verify;
                     } else if (method->member == "get") {
                         auto mem = lhs->to<IR::Member>();
-                        auto get = new IR::BFN::ChecksumGet(declName, new IR::BFN::FieldLVal(mem));
+                        if (!lastChecksumSubtract || !lastSubtractField) {
+                            ::fatal_error("Checksum \"get\" must have preceding \"subtract\""
+                                          " call in the same parser state");
+                        }
+                        auto endPos = getHeaderEndPos(lastChecksumSubtract, lastSubtractField);
+                        auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
+                        auto get = new IR::BFN::ChecksumGet(declName,
+                                              new IR::BFN::FieldLVal(mem), endByte);
                         return get;
                     }
                 }
@@ -920,12 +951,18 @@ struct RewriteParserStatements : public Transform {
     }
 
     P4::TypeMap* typeMap;
+
     const cstring stateName;
     const gress_t gress;
+
     unsigned currentBit = 0;
+
     // A bit offset counter for each checksum operation
     std::map<cstring, int> declNameToOffset;
     std::map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
+
+    const IR::Member* lastSubtractField = nullptr;
+    const IR::BFN::ChecksumSubtract* lastChecksumSubtract = nullptr;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list,

@@ -804,6 +804,25 @@ struct AllocateParserState : public ParserTransform {
                     }
                 }
             }
+
+            // Fix up for constraint that header end position must be less than the current state's
+            // shift amount for residual checksum. See MODEL-542.
+            std::vector<const IR::BFN::ParserPrimitive*> to_spill;
+            for (auto s : current_statements) {
+                if (auto get = s->to<IR::BFN::ChecksumGet>()) {
+                    if (get->header_end_byte->range.lo >= compute_max_shift_in_bits()) {
+                        spilled_statements.push_back(s);
+                        to_spill.push_back(s);
+                        LOG3("spill checksum get (end_pos < shift_amt)");
+                    }
+                }
+            }
+
+            for (auto s : to_spill) {
+                current_statements.erase(
+                    std::remove(current_statements.begin(), current_statements.end(), s),
+                    current_statements.end());
+            }
         }
 
         struct GetMinExtractBufferPos : Inspector {

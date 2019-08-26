@@ -472,7 +472,9 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
         } else if (kv.key == "shift") {
             shift = get_bool(kv.value);
         } else {
-             warning(kv.key.lineno, "ignoring unknown item %s in checksum", value_desc(kv.key)); } }
+             warning(kv.key.lineno, "ignoring unknown item %s in checksum", value_desc(kv.key));
+        }
+    }
 }
 
 bool Parser::Checksum::equiv(const Checksum &a) const {
@@ -964,6 +966,13 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 set.emplace_back(gress, kv.key, kv.value[1].i, ROTATE);
         } else {
             error(kv.key.lineno, "Syntax error");
+        }
+    }
+
+    for (auto c : csum) {
+        if (c.type == 1 && c.end) {
+            if (c.dst_bit_hdr_end_pos >= shift)  // see MODEL-542
+                error(c.lineno, "Residual checksum end_pos must be less than state shift amount");
         }
     }
 }

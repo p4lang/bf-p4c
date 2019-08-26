@@ -665,7 +665,17 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         for (auto& kv : csum_to_prims) {
             auto csum = lowerParserChecksum(parser, state, kv.first, kv.second);
-            loweredChecksums.push_back(csum);
+
+            bool hasEquiv = false;
+            for (auto c : loweredChecksums) {
+                if (c->equiv(*csum)) {
+                    hasEquiv = true;
+                    break;
+                }
+            }
+
+            if (!hasEquiv)
+                loweredChecksums.push_back(csum);
         }
 
         return loweredChecksums;
@@ -681,24 +691,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // swap register is 17 bit long
         BUG_CHECK(swap <= ((1 << 17) - 1), "checksum swap byte is out of input buffer");
         return swap;
-    }
-
-    int getHeaderEndPos(const IR::BFN::ChecksumSubtract* lastSubtract) {
-        auto v = lastSubtract->source->to<IR::BFN::PacketRVal>();
-        int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
-        BUG_CHECK(lastBitSubtract % 8 == 7,
-                "Fields in checksum subtract %1% are not byte-aligned", v);
-        auto* headerRef = lastSubtract->field->expr->to<IR::ConcreteHeaderRef>();
-        auto header = headerRef->baseRef();
-        int endPos = 0;
-        for (auto field :  header->type->fields) {
-            if (field->name == lastSubtract->field->member) {
-                endPos = lastBitSubtract;
-            } else if (endPos > 0) {
-                endPos += field->type->width_bits();
-            }
-        }
-        return endPos/8;
     }
 
     /// Create lowered HW checksum primitives that can be consumed by the assembler.
@@ -741,10 +733,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         int end_pos = 0;
         if (end) {
-            if (last->is<IR::BFN::ChecksumGet>()) {
-                auto last_subtract = checksums.rbegin()[1]->to<IR::BFN::ChecksumSubtract>();
-                end_pos = getHeaderEndPos(last_subtract);
-            }
+            if (auto get = last->to<IR::BFN::ChecksumGet>())
+                end_pos = get->header_end_byte->range.toUnit<RangeUnit::Byte>().lo;
         }
 
         auto csum = new IR::BFN::LoweredParserChecksum(
