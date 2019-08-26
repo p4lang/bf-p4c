@@ -428,7 +428,7 @@ bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         if (sizeConstant->value < 0) {
             ::error("valueset size must be a positive integer %1%", valueSet); }
         sz = sizeConstant->value.get_ui();
-        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->name.originalName, sz);
+        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->controlPlaneName(), sz);
     } else {
         match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
     }

@@ -179,14 +179,9 @@ struct ParserAsmSerializer : public ParserInspector {
         if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
             out << indent << const_val->value << ':' << std::endl;
         } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
-            auto parser = findContext<IR::BFN::LoweredParser>();
-            // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
-            // which is not used as a prefix for pvs names in backend
-            auto pvs_name = (parser && !is_v1Model) ?
-                parser->name + "." + pvs->name : pvs->name;
-            out << indent << "value_set " << pvs_name << " " << pvs->size << ":" << std::endl;
+            out << indent << "value_set " << pvs->name << " " << pvs->size << ":" << std::endl;
             AutoIndent indentMatch(indent);
-            out << indent << "handle: " << getPvsHandle(pvs_name) << std::endl;
+            out << indent << "handle: " << getPvsHandle(pvs->name) << std::endl;
             out << indent << "field_mapping" << ":" << std::endl;
             AutoIndent indentFieldMap(indent);
             for (const auto& m : pvs->mapping) {

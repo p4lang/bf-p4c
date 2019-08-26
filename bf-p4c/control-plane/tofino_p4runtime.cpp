@@ -869,7 +869,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
                 auto name = getFullyQualifiedName(parserBlock,
-                                        inst->name.originalName, isMultiParser);
+                                        inst->controlPlaneName(), true);
                 symbols->add(SymbolType::VALUE_SET(), name);
             }
         }
@@ -1349,7 +1349,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         for (auto s : parser->parserLocals) {
             if (auto inst = s->to<IR::P4ValueSet>()) {
                 auto namePrefix =
-                    getFullyQualifiedName(parserBlock, inst->name.originalName, isMultiParser);
+                    getFullyQualifiedName(parserBlock, inst->controlPlaneName(), true);
                 auto valueSet = ValueSet::from(namePrefix, inst, refMap,
                         typeMap, p4info->mutable_type_info());
                 if (valueSet) addValueSet(symbols, p4info, *valueSet);
