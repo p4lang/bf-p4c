@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          meta.dst_port });
         bit<32> tmp = learn_act.execute(addr, tmp2);
         meta.cache_id = tmp[17:6];
-        meta.learn = tmp2[19:4];
+        meta.learn = (bit<16>)tmp2;
     }
     table learn_match {
         actions = { do_learn_match; }

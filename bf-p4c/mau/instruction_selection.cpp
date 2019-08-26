@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/static_entries_const_prop.h"
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
@@ -291,33 +292,32 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         if (objType == "RegisterAction" && salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        unsigned idx = (method == "execute" && !direct_access) ? 2 : 1;
-        int output = 1;
-        int output_offsets[] = { 0, 64, 32, 96 };
 
-        for (; idx < prim->operands.size(); ++idx, ++output) {
+        int output_offsets[] = { 0, 64, 32, 96 };
+        auto makeInstr = [&](const IR::Expression *dest, int output) -> IR::MAU::Instruction * {
             BUG_CHECK(size_t(output) < sizeof(output_offsets)/sizeof(output_offsets[0]),
                       "too many outputs");
             int bit = output_offsets[output];
             int output_size = prim->type->width_bits();
-            if ((salu_inst->return_enum_words >> output) & 1) {
+            if ((salu_inst->return_predicate_words >> output) & 1) {
                 // an output enum encoded in the 16-bit predicate
                 BUG_CHECK(salu->pred_shift >= 0, "Not outputting predicate even though "
                           "its being used");
                 bit += 4 + salu->pred_shift;
-                output_size = 16; }
+                output_size = 1 << Device::statefulAluSpec().CmpUnits.size(); }
             auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
-            auto dest = prim->operands[idx];
             output_size = std::min(dest->type->width_bits(), output_size);
-            auto instr = new IR::MAU::Instruction(prim->srcInfo, "set", dest,
-                                                  MakeSlice(ao, bit, bit+output_size - 1));
+            return new IR::MAU::Instruction(prim->srcInfo, "set", dest,
+                                            MakeSlice(ao, bit, bit+output_size - 1));
+        };
+
+        unsigned idx = (method == "execute" && !direct_access) ? 2 : 1;
+        for (int output = 1; idx < prim->operands.size(); ++idx, ++output) {
             // Have to put these instructions at the highest level of the instruction
-            created_instrs.push_back(instr);
-        }
+            created_instrs.push_back(makeInstr(prim->operands[idx], output)); }
         rv = nullptr;
         if (!prim->type->is<IR::Type::Void>())
-            rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
-                                          new IR::MAU::AttachedOutput(prim->type, salu));
+            rv = makeInstr(new IR::TempVar(prim->type), 0);
     } else if (prim->name == "Counter.count") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);  // needed to setup the index

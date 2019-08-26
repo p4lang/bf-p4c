@@ -131,16 +131,31 @@ class CreateSaluApplyFunction : public Inspector {
                 return new IR::MethodCallExpression(attr->srcInfo,
                         new IR::Member(mu, "execute"), { new IR::Argument(self.math_input) });
             } else if (attr->name == "predicate") {
-                // combined_predicate is an 1-bit output equals to condition_lo | condition_hi
-                // if any of the condition_lo/hi is true, then the output is 1,
-                // otherwise, the output is 0. Therefore, when translating to P4-16 salu externs,
-                // the output of the stateful rv is translated to constant one when the condition
-                // is true, and zero if not.
-                return new IR::Constant(self.utype, 1);
+                auto *args = new IR::Vector<IR::Argument>;
+                if (self.cond_lo)
+                    args->push_back(new IR::Argument(self.cond_lo));
+                else if (self.cond_hi)
+                    args->push_back(new IR::Argument(new IR::BoolLiteral(false)));
+                if (self.cond_hi)
+                    args->push_back(new IR::Argument(self.cond_hi));
+                return new IR::MethodCallExpression(attr->srcInfo,
+                    new IR::Member(new IR::This, "predicate"), args);
             } else if (attr->name == "combined_predicate") {
-                WARN_CHECK(true, "combined_predicate is implemented as a 1-bit "
-                        "encoding of condition_hi || condition lo, check uarch documentation "
-                        "to verify the correctness");
+                // combined_predicate is an 1-bit output equal to any boolean function of
+                // the predicate results.  We translate to a conditional setting of the
+                // output to a constant 1, with the boolean function as the condition.
+                if (!self.pred) {
+                    /* documentation suggests that the predicate output will always be
+                     * "condition_hi || condition_lo", but we only use that if the user
+                     * does not explicitly set "output_predicate:" */
+                    if (self.cond_hi && self.cond_lo)
+                        self.pred = new IR::LOr(self.cond_hi, self.cond_lo);
+                    else if (self.cond_hi)
+                        self.pred = self.cond_hi;
+                    else if (self.cond_lo)
+                        self.pred = self.cond_lo;
+                    else
+                        self.pred = new IR::BoolLiteral(false); }
                 return new IR::Constant(self.utype, 1);
             } else {
                 error("Unrecognized attribute %s", attr);
@@ -161,10 +176,14 @@ class CreateSaluApplyFunction : public Inspector {
         if (prop->name == "condition_hi") {
             applyLoc = &prop->value->srcInfo;
             cond_hi = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+            if (!cond_hi->type->is<IR::Type::Boolean>())
+                cond_hi = new IR::Cast(IR::Type::Boolean::get(), cond_hi);
             return false;
         } else if (prop->name == "condition_lo") {
             applyLoc = &prop->value->srcInfo;
             cond_lo = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+            if (!cond_lo->type->is<IR::Type::Boolean>())
+                cond_lo = new IR::Cast(IR::Type::Boolean::get(), cond_lo);
             return false;
         } else if (prop->name == "math_unit_input") {
             applyLoc = &prop->value->srcInfo;

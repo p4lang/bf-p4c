@@ -83,7 +83,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          meta.dst_port });
         bit<32> tmp = learn_act_1.execute(addr, tmp2);
         meta.cache_id = tmp[17:6];
-        meta.learn = tmp2[19:4];
+        meta.learn = tmp2[15:0];
         meta.learn_stage = 1;
     }
     table learn_match_1 {
@@ -143,7 +143,7 @@ control ingress(inout headers hdr, inout metadata meta,
                                          hdr.ipv4.protocol, // meta.src_port,
                                          meta.dst_port });
         bit<32> tmp = learn_act_2.execute(addr, tmp2);
-        meta.learn = tmp2[19:4];
+        meta.learn = tmp2[15:0];
         meta.learn_stage = 2;
     }
     table learn_match_2 {

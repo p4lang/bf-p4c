@@ -352,7 +352,7 @@ control cache_stage(in headers hdr, in bit<16> sport, in bit<16> dport,
     bit<32> full_pred_result;
     bit<32> full_cid = learn_op.execute(search_addr, full_pred_result);
     cid = full_cid[31:6];
-    learn_result = full_pred_result[19:4];
+    learn_result = full_pred_result[15:0];
     flush_result = 0; /* Flush result set to 0 so next stage tries to flush. */
   }
 
@@ -365,7 +365,7 @@ control cache_stage(in headers hdr, in bit<16> sport, in bit<16> dport,
     bit<32> full_pred_result;
     bit<32> full_cid = flush_op.execute(search_addr, full_pred_result);
     flush_cid = full_cid[31:6];
-    flush_result = full_pred_result[19:4];
+    flush_result = full_pred_result[15:0];
   }
 
   action nop() { }

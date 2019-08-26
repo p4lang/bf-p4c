@@ -33,6 +33,8 @@ extern RegisterAction<T, I, U> {
     U execute_log(); /* execute at an index that increments each time */
     @synchronous(execute, execute_log)
     abstract void apply(inout T value, @optional out U rv);
+    U predicate(@optional in bool cmplo,
+                @optional in bool cmphi); /* return the 4-bit predicate value */
 }
 
 extern DirectRegisterAction<T, U> {
@@ -40,6 +42,8 @@ extern DirectRegisterAction<T, U> {
     U execute();
     @synchronous(execute)
     abstract void apply(inout T value, @optional out U rv);
+    U predicate(@optional in bool cmplo,
+                @optional in bool cmphi); /* return the 4-bit predicate value */
 }
 
 extern SelectorAction {

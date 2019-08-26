@@ -106,7 +106,7 @@ std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::LocalVar::use
 std::ostream &operator<<(std::ostream &out, CreateSaluInstruction::etype_t e) {
     static const char *names[] = { "NONE", "MINMAX_IDX", "IF", "MINMAX_SRC", "VALUE",
                                    "OUTPUT_ALUHI",  "OUTPUT", "MATCH" };
-    if (e < sizeof(names)/sizeof(names[0]))
+    if (size_t(e) < sizeof(names)/sizeof(names[0]))
         return out << names[e];
     else
         return out << "<invalid " << int(e) << ">"; }
@@ -316,7 +316,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
                 error(ErrorType::ERR_UNSUPPORTED, "Multiple enum return values", func);
             action->return_encoding = return_encoding =
                 new IR::MAU::SaluAction::ReturnEnumEncoding(rt);
-            action->return_enum_words |= 1 << out_word; }
+            return_enum_word = out_word; }
         if (params->parameters.at(i)->direction == IR::Direction::Out)
             out_word++; }
     return true;
@@ -355,6 +355,8 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     if (alu_hi_use > 1)
         error("%s: too many locals in RegisterAction", func->srcInfo);
     if (return_encoding) {
+        BUG_CHECK(action->return_predicate_words & (1 << return_enum_word),
+                  "%s salu return type mismatch", func->name);
         unsigned idx = 0;
         return_encoding->cmp_used = 0xffff;
         for (auto mask : cmp_mask) {
@@ -657,6 +659,33 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             else
                 address_subword = k->asInt(); }
     } else if (method == "predicate") {
+        operands.clear();
+        etype = IF;
+        BUG_CHECK(pred_operands.empty(), "internal state failure");
+        for (int i = 1; i < int(prim->operands.size()); ++i) {
+            const char *problem = nullptr;
+            visit(prim->operands.at(i), "arg");
+            if (auto *b = prim->operands.at(i)->to<IR::BoolLiteral>()) {
+                operands.clear();
+                operands.push_back(new IR::Constant(0));
+                setupCmp(b->value ? "equ" : "neq"); }
+            if (pred_operands.size() > 1) {
+                problem = "can only have one comparison per predicate argument";
+            } else if (pred_operands.size() < 1) {
+                problem = "can only compare one metadata field, one memory field and one constant";
+            } else if (auto *cmpreg = pred_operands.at(0)->to<IR::MAU::SaluCmpReg>()) {
+                if (cmpreg->index != i-1)
+                    problem = "does not match with other comparisons in the ALU, try putting "
+                              "this.predicate call first";
+            } else {
+                problem = "can only compare one metadata field, one memory field and one constant";
+            }
+            if (problem)
+                error("%spredicate too complex for stateful alu: %s",
+                      prim->operands.at(i)->srcInfo, problem);
+            pred_operands.clear(); }
+        operands.clear();
+        etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
         // auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
         // FIXME -- should shift up to the top 16 bits of the word to maximize space
@@ -1099,6 +1128,11 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             // 0 will be output if we don't drive it at all
             break;
         } else if (canOutputDirectly(operands.at(0))) {
+            if (auto *reg = operands.at(0)->to<IR::MAU::SaluReg>()) {
+                // explicit output of the predicate comes out shifted, so we need to
+                // let the rest of the compiler know when to unshift it.
+                if (reg->name == "predicate")
+                    action->return_predicate_words |= 1 << output_index; }
             // output it
         } else if (outputAluHi()) {
             // use ALU_HI to drive the output as it is otherwise unused
@@ -1135,6 +1169,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
                 if (comb_pred_width > salu->pred_shift + 4)
                     error("conflicting predicate output use in %s", salu); }
             operands.at(0) = new IR::MAU::SaluReg(IR::Type::Bits::get(psize), "predicate", false);
+            action->return_predicate_words |= 1 << output_index;
         } else {
             error("can't output %1% from a RegisterAction", operands.at(0)); }
         rv = setup_output();
@@ -1448,17 +1483,6 @@ const IR::BFN::ParserRVal *FixupStatefulAlu::UpdateEncodings::postorder(IR::BFN:
     if (auto k = e->source->to<IR::Constant>())
         return new IR::BFN::ConstantRVal(e->srcInfo, k);
     return e;
-}
-
-const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Primitive *prim) {
-    auto enum_type = prim->type->to<IR::Type_Enum>();
-    if (!enum_type) return prim;
-    auto dot = prim->name.find('.');
-    auto objType = dot ? prim->name.before(dot) : cstring();
-    BUG_CHECK(objType.endsWith("Action"), "%1% returning enum type?", prim);
-    // should check salu->pred_shift, but getting at the SALU here is hard
-    prim->type = IR::Type::Bits::get(self.pred_type_size + 4);
-    return MakeSlice(prim, 4, self.pred_type_size + 3);
 }
 
 const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Expression *exp) {

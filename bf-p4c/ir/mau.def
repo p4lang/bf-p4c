@@ -739,7 +739,9 @@ class SaluAction : VLIWInstruction {
         const ReturnEnumEncoding *merge(const ReturnEnumEncoding *a) const;
     }
     const ReturnEnumEncoding *return_encoding = nullptr;
-    unsigned return_enum_words = 0;  // which output words have the encoded enum (bitvec)
+    unsigned return_predicate_words = 0;  // which output words have the 1-hot encoded predicate
+    // output.  This is always shifted up by (at least) 4, so we need to insert a slice to
+    // downshift it properly
     // FIXME -- should be std::bitset<4>, but irgen chokes on that currently.
 
     visit_children {

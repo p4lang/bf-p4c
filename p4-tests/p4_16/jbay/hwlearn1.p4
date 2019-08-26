@@ -79,7 +79,7 @@ control ingress(inout headers hdr, inout metadata meta,
         bit<14> addr = lookup_hash.get({ hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.ipv4.protocol });
         bit<32> tmp = learn_act.execute(addr, tmp2);
         meta.cache_id = tmp[24:6];
-        meta.learn_pred = tmp2[19:4];
+        meta.learn_pred = tmp2[15:0];
     }
 
     table learn_match {

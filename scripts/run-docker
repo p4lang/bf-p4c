@@ -1,0 +1,19 @@
+#!/bin/sh
+
+tag=tofino
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    tofino_debug)
+        tag=$1
+        ;;
+    *)
+        echo 2>&2 "Unrecognized argument $1"
+        exit 1 ;;
+    esac
+done
+
+docker pull barefootnetworks/jarvis:$tag
+docker system prune -f
+docker images -f "dangling=true" -q | xargs -r docker rmi
+exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -it barefootnetworks/jarvis:$tag /bin/bash

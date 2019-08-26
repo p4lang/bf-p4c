@@ -759,7 +759,8 @@ extern DirectRegisterAction<T, U> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the 16-bit predicate value */
+    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -774,7 +775,8 @@ extern DirectRegisterAction2<T, U1, U2> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -789,7 +791,8 @@ extern DirectRegisterAction3<T, U1, U2, U3> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -804,7 +807,8 @@ extern DirectRegisterAction4<T, U1, U2, U3, U4> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -837,7 +841,8 @@ extern RegisterAction<T, H, U> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the 16-bit predicate value */
+    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -863,7 +868,8 @@ extern RegisterAction2<T, H, U1, U2> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -889,7 +895,8 @@ extern RegisterAction3<T, H, U1, U2, U3> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -917,7 +924,8 @@ extern RegisterAction4<T, H, U1, U2, U3, U4> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the 16-bit predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the 16-bit predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -935,7 +943,8 @@ extern LearnAction<T, H, D, U> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the predicate value */
+    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                @optional in bool cmp3); /* return the predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -950,7 +959,8 @@ extern LearnAction2<T, H, D, U1, U2> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -966,7 +976,8 @@ extern LearnAction3<T, H, D, U1, U2, U3> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -982,7 +993,8 @@ extern LearnAction4<T, H, D, U1, U2, U3, U4> {
     /* These routines can be called in apply method to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
     bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
@@ -1000,7 +1012,8 @@ extern MinMaxAction<T, H, U> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address(@optional bit<1> subword); /* return the match address */
-    U predicate(); /* return the predicate value */
+    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                @optional in bool cmp3); /* return the predicate value */
     bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
                 @optional in int<8> postmod);
     bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
@@ -1019,7 +1032,8 @@ extern MinMaxAction2<T, H, U1, U2> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
                 @optional in int<9> postmod);
     bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
@@ -1038,7 +1052,8 @@ extern MinMaxAction3<T, H, U1, U2, U3> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
                 @optional in int<9> postmod);
     bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
@@ -1057,7 +1072,8 @@ extern MinMaxAction4<T, H, U1, U2, U3, U4> {
     /* These routines can be called in apply/overflow/underflow methods to get these values
      * to assign to a return value, but generally no operations can be applied */
     U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(); /* return the predicate value */
+    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
+                   @optional in bool cmp3); /* return the predicate value */
     bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
                 @optional in int<9> postmod);
     bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,

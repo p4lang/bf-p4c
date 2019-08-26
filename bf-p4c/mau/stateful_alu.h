@@ -98,6 +98,7 @@ class CreateSaluInstruction : public Inspector {
     bool                                        assignDone = false;
     int                                         comb_pred_width = 0;
     IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
+    int                                         return_enum_word = -1;
 
     void clearFuncState();
     const IR::MAU::Instruction *createInstruction();
@@ -256,7 +257,6 @@ class FixupStatefulAlu : public PassManager {
         const IR::Operation::Relation *preorder(IR::Operation::Relation *) override;
         const IR::Expression *preorder(IR::Member *) override;
         const IR::Expression *preorder(IR::Expression *) override;
-        const IR::Expression *preorder(IR::Primitive *) override;
         const IR::BFN::ParserRVal *postorder(IR::BFN::SavedRVal *) override;
 
         explicit UpdateEncodings(FixupStatefulAlu &self) : self(self) {}
