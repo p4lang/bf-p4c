@@ -165,12 +165,15 @@ IR::Node* ValidToStkvalid::preorder(IR::BFN::Pipe* pipe) {
 }
 
 IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
+    LOG5("\tmember: " << member);
     auto* ref = member->expr->to<IR::HeaderStackItemRef>();
     // Skip everything but header stack validity fields (hdr[x].$valid).
     if (!ref || member->member.toString() != "$valid")
         return member;
 
     auto* stk = ref->baseRef();
+    if (!stack_info_->count(stk->name.toString()))
+        return member;
     auto info = stack_info_->at(stk->name.toString());
 
     auto* idxNode = ref->index()->to<IR::Constant>();
@@ -197,6 +200,7 @@ IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
 }
 
 IR::Node* ValidToStkvalid::postorder(IR::BFN::Extract* extract) {
+    LOG5("\textract: " << extract);
     // Check whether the destination is an extraction to a $stkvalid slice.  If
     // so, get the bit being written to.
     auto* fieldLVal = extract->dest->to<IR::BFN::FieldLVal>();

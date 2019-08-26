@@ -1504,3 +1504,15 @@ p4c_add_xfail_reason("tofino"
   "Unsupported on target"
   extensions/p4_tests/p4_16/compile_only/p4c-1819-neg.p4
 )
+
+# P4C-2076
+p4c_add_xfail_reason("tofino"
+  "error: : Currently the field .* in action .* is assigned in a way too complex for the compiler to currently handle."
+  extensions/p4_tests/p4_16/customer/arista/p4c-2076.p4
+)
+
+# P4C-2077
+p4c_add_xfail_reason("tofino"
+  "error: No PHV allocation for field used as a POV bit in the deparser"
+  extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
+)

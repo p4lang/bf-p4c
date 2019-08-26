@@ -108,8 +108,8 @@ struct HeaderStackInfo {
     auto end() -> decltype(Values(info).end()) { return Values(info).end(); }
     auto at(cstring n) const -> decltype(info.at(n)) { return info.at(n); }
     auto at(cstring n) -> decltype(info.at(n)) { return info.at(n); }
+    auto count(cstring n) -> decltype(info.count(n)) { return info.count(n);}
 };
-
 }  // namespace BFN
 
 /** Remove setValid when used to initialize a newly-pushed element of a header

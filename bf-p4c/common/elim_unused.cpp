@@ -102,8 +102,6 @@ class ElimUnused::Instructions : public Transform {
 
 /// Removes no-op tables that have the @hidden annotation.
 class ElimUnused::Tables : public MauTransform {
-    ElimUnused &self;
-
  public:
     const IR::Node* postorder(IR::MAU::Table* table) override {
         // Don't remove the table unless it has the @hidden annotation.
@@ -176,7 +174,7 @@ class ElimUnused::Tables : public MauTransform {
  private:
     /// An action is a no-op if it is nullptr, or if it is empty and doesn't exit.
     bool isNoOp(const IR::MAU::Action* action) {
-        return !action || action->action.empty() && !action->exitAction;
+        return !action || (action->action.empty() && !action->exitAction);
     }
 
     /// Normalizes a TableSeq* by turning nullptrs into empty sequences.
@@ -186,7 +184,7 @@ class ElimUnused::Tables : public MauTransform {
     }
 
  public:
-    explicit Tables(ElimUnused& self) : self(self) {}
+    explicit Tables(ElimUnused&) {}
 };
 
 class ElimUnused::Headers : public PardeTransform {
