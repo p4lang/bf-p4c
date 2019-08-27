@@ -28,7 +28,8 @@ string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
                             "checksum_pragma\\.p4" "port_vlan_mapping\\.p4"
                             "checksum\\.p4"
-                            "decaf_9\\.p4")
+                            "decaf_9\\.p4"
+                            "-FullTPHV")
 set (P4_14_SAMPLES "${P4TESTDATA}/p4_14_samples/*.p4")
 bfn_find_tests("${P4_14_SAMPLES}" p4_14_samples EXCLUDE "${P4_14_EXCLUDE_FILES}")
 

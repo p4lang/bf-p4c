@@ -92,7 +92,10 @@ p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITE
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -709,3 +712,65 @@ p4c_add_tofino_success_reason(
   "No phase 0 table found; skipping phase 0 translation"
   phase0_pragma_test
   )
+
+set (NON_PR
+  # Long running tests that can be run in nightly
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-128/02-FullPHV1.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-158/comp158.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-891/comp_891.p4
+  # Long running tests that can be run in nightly
+  ${P4TESTDATA}/p4_14_samples/03-FullPHV2.p4
+  ${P4TESTDATA}/p4_14_samples/05-FullTPHV.p4
+  ${P4TESTDATA}/p4_14_samples/06-FullTPHV1.p4
+  ${P4TESTDATA}/p4_14_samples/07-FullTPHV2.p4
+  # CUST_MUSS_PASS (run on Jenkins)
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1214.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-1832.p4
+  # Other XFails in compilers repo to run in nightly
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/conditional_constraints_infinite_loop.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-1757-neg.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/04-FullPHV3.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/test_config_101_switch_msdc.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1652.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/arista/p4c-1814.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1494.p4
+  # Other XFails in Glass repo to run in nightly
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_415_bridge_ing_intr.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
+)
+
+foreach(t IN LISTS NON_PR)
+  file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
+  p4c_add_test_label("tofino" "NON_PR_TOFINO" ${test_path})
+endforeach()

@@ -200,7 +200,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
 )
 
@@ -1391,11 +1390,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: PHV allocation was not successful"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
