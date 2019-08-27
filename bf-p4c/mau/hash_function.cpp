@@ -196,13 +196,11 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
     bfn_hash_algorithm_t hash_alg;
     hash_alg.hash_bit_width = 0;
     bool hash_error = false;
-    bool upper_bit_set = true;
 
     // Determines the crc functions through the 3rd party library
     if (standard_crcs_t.find(alg_name) != standard_crcs_t.end()) {
         initialize_algorithm(&hash_alg, CRC_DYN, msb, extend, standard_crcs_t.at(alg_name));
         crc_algorithm_set = true;
-        upper_bit_set = false;
     } else if (alg_name == "identity" || alg_name == "random") {
         mc_name = alg_name + "_hash";
     } else if (direct_crc_string_conversion(&hash_alg, alg_name, srcInfo)) {
@@ -229,15 +227,10 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
         mpz_class poly, init, final_xor;
         mpz_import(poly.get_mpz_t(), 1, 0, sizeof(hash_alg.poly), 0, 0, &hash_alg.poly);
 
-        if (!upper_bit_set) {
-             mpz_class upper_bit = 1;
-             upper_bit <<= hash_alg.hash_bit_width;
-             poly |= upper_bit;
-        }
         mpz_import(init.get_mpz_t(), 1, 0, sizeof(hash_alg.init), 0, 0, &hash_alg.init);
         mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(hash_alg.final_xor), 0, 0,
                    &hash_alg.final_xor);
-        auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width + 1);
+        auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width);
         args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
@@ -401,8 +394,8 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
             break;
         case 2:
             if (auto k = args->at(2)->expression->to<IR::Constant>()) {
-                poly = mpz_class(k->value / 2).get_ui();
-                size = k->type->width_bits() - 1;
+                size = k->type->width_bits();
+                poly = toKoopman(k->value.get_ui(), size);
             } else {
                 return false;
             }
@@ -425,7 +418,8 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     return true;
 }
 
-uint64_t convert_crc_polynomial_to_koopman(uint64_t poly, uint32_t width) {
+/* convert polynomial in tna to koopman representation used by backend */
+uint64_t IR::MAU::HashFunction::toKoopman(uint64_t poly, uint32_t width) {
     mpz_class koopman;
     mpz_import(koopman.get_mpz_t(), 1, 0, sizeof(poly), 0, 0, &poly);
     mpz_class upper_bit = 1;
@@ -452,7 +446,7 @@ bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     poly = (*it)->expression->to<IR::Constant>()->asUint64();
     LOG3("poly " << std::hex << poly << " size: " << size);
     // convert to koopman form.
-    poly = convert_crc_polynomial_to_koopman(poly, size);
+    poly = toKoopman(poly, size);
     LOG3("poly " << poly);
     std::advance(it, 1);
     reverse = (*it)->expression->to<IR::BoolLiteral>()->value;
