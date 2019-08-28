@@ -227,6 +227,41 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     varbit_field_to_extract_call[varbit_field] = call;
 }
 
+const IR::StructField* get_varbit_structfield(const IR::Member* member) {
+    auto header = member->expr->to<IR::Member>();
+    auto headerType = header->type->to<IR::Type_Header>();
+    for (auto field : headerType->fields) {
+        if (field->name == member->member) {
+            return field;
+        }
+    }
+    BUG("No varbit found in %1%", header);
+    return nullptr;
+}
+
+bool CollectVarbitExtract::preorder(const IR::AssignmentStatement* astmt) {
+    if (auto state = findContext<IR::ParserState>()) {
+        bool seen_varbit = state_to_varbit_header.count(state);
+        if (!seen_varbit) return false;
+        auto right = astmt->right;
+        if (right->is<IR::BFN::ReinterpretCast>()) {
+            right = right->to<IR::BFN::ReinterpretCast>()->expr;
+        }
+        auto mc = right->to<IR::MethodCallExpression>();
+        if (auto* method = mc->method->to<IR::Member>()) {
+            if (auto path = method->expr->to<IR::PathExpression>()) {
+                auto type = path->type->to<IR::Type_Extern>();
+                if (!type) return false;
+                if (type->name != "Checksum") return false;
+                if (method->member == "verify") {
+                    state_to_csum_verify[state] = astmt;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
     if (auto state = findContext<IR::ParserState>()) {
         bool seen_varbit = state_to_varbit_header.count(state);
@@ -256,15 +291,47 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                     P4C_UNIMPLEMENTED("%1%: current compiler implementation requires the"
                           " varbit header to be extracted last in the parser state", call);
                 }
+            } else if (method->member == "add" || method->member == "subtract") {
+                auto path = method->expr->to<IR::PathExpression>();
+                if (!path) return false;
+                auto type = path->type->to<IR::Type_Extern>();
+                if (!type) return false;
+                if (type->name != "Checksum") return false;
+
+                if (auto add_expr = (*call->arguments)[0]->expression->to<IR::ListExpression>()) {
+                    for (auto field : add_expr->components) {
+                        if (auto member = field->to<IR::Member>()) {
+                            if (member->type->is<IR::Type_Varbits>()) {
+                                if (method->member == "subtract") {
+                                    P4C_UNIMPLEMENTED("Checksum subtract is currently not "
+                                         "supported to have varbit fields %1%", call);
+                                }
+                                varbit_field_to_csum_call
+                                        [get_varbit_structfield(member)].insert(call);
+                            }
+                        }
+                    }
+                } else if (auto mem = (*call->arguments)[0]->expression->to<IR::Member>()) {
+                    if (auto header = mem->type->to<IR::Type_Header>()) {
+                        for (auto f : header->fields) {
+                            if (f->type->is<IR::Type_Varbits>()) {
+                                if (method->member == "subtract") {
+                                    P4C_UNIMPLEMENTED("Checksum subtract is currently not "
+                                         "supported to have varbit fields %1%", call);
+                                }
+                                varbit_field_to_csum_call[f].insert(call);
+                            }
+                        }
+                    }
+                }
             }
         } else if (auto path = call->method->to<IR::PathExpression>()) {
             if (path->path->name == "verify") {
                 auto verify_expr = (*call->arguments)[0]->expression;
                 state_to_verify_exprs[state].insert(verify_expr);
             }
-        }
+       }
     }
-
     return false;
 }
 
@@ -301,9 +368,24 @@ create_extract_statement(const IR::BFN::TnaParser* parser,
     auto packetInParam = parser->tnaParams.at("pkt");
     auto method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
     auto args = new IR::Vector<IR::Argument>(
-        { new IR::Argument(new IR::Member(path, header)) });
+         { new IR::Argument(new IR::Member(path, header)) });
     auto *callExpr = new IR::MethodCallExpression(method, args);
     return new IR::MethodCallStatement(callExpr);
+}
+
+static IR::MethodCallStatement*
+create_add_statement(const IR::Member* method,
+                     const IR::PathExpression* path,
+                     const IR::Type_Header* header) {
+    auto listVec = IR::Vector<IR::Expression>();
+    cstring headerName = create_instance_name(header->name);
+    for (auto f : header->fields) {
+        listVec.push_back(new IR::Member(f->type, new IR::Member(path, headerName), f->name));
+    }
+    auto args = new IR::Vector<IR::Argument>({ new IR::Argument(
+                new IR::ListExpression(listVec))});
+    auto addCall = new IR::MethodCallExpression(method, args);
+    return new IR::MethodCallStatement(addCall);
 }
 
 IR::ParserState*
@@ -320,6 +402,12 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     auto extract = create_extract_statement(parser, path, create_instance_name(header->name));
     statements.push_back(extract);
 
+    if (cve.varbit_field_to_csum_call.count(varbit_field)) {
+        for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
+            auto method = call->method->to<IR::Member>();
+            statements.push_back(create_add_statement(method, path, header));
+        }
+    }
     cstring name = "parse_" + varbit_field->name + "_" + cstring::to_cstring(length) + "b";
     auto branch_state = new IR::ParserState(name, statements, select);
 
@@ -359,6 +447,9 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
             match_to_branch_state[match] = branch_state;
         } else {
             IR::IndexedVector<IR::StatOrDecl> statements;
+            if (cve.state_to_csum_verify.count(state)) {
+                statements.push_back(cve.state_to_csum_verify.at(state));
+            }
             auto no_option_state = new IR::ParserState(no_option_state_name, statements,
                                                        state->selectExpression);
             match_to_branch_state[match] = no_option_state;
@@ -445,6 +536,16 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
         auto path = new IR::PathExpression(next_state->name);
         state->selectExpression = path;
     }
+    // Removing verify call from the original state
+    if (cve.state_to_csum_verify.count(orig)) {
+       IR::IndexedVector<IR::StatOrDecl> components;
+       for (auto a : orig->components) {
+           if (!cve.state_to_csum_verify.at(orig)->equiv(*a)) {
+               components.push_back(a);
+           }
+       }
+       state->components = components;
+    }
 
     return true;
 }
@@ -515,24 +616,23 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
 
 bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
     auto deparser = findContext<IR::BFN::TnaDeparser>();
-    if (deparser) {
-        IR::Vector<IR::Expression> components;
+    auto mc = findContext<IR::MethodCallExpression>();
+    IR::Vector<IR::Expression> components;
 
-        bool has_varbit = false;
+    bool has_varbit = false;
 
-        IR::Vector<IR::Type> varbit_types;
+    IR::Vector<IR::Type> varbit_types;
 
-        for (auto c : list->components) {
-            if (auto member = c->to<IR::Member>()) {
-                if (member->type->is<IR::Type_Varbits>()) {
-                    if (has_varbit)
-                        ::error("More than one varbit expressions in %1%", list);
+    for (auto c : list->components) {
+        if (auto member = c->to<IR::Member>()) {
+            if (member->type->is<IR::Type_Varbits>()) {
+                if (has_varbit)
+                    ::error("More than one varbit expressions in %1%", list);
 
+                auto type = member->expr->type->to<IR::Type_Header>();
+                auto varbit_field = cve.header_type_to_varbit_field.at(type);
+                if (deparser) {
                     has_varbit = true;
-
-                    auto type = member->expr->type->to<IR::Type_Header>();
-                    auto varbit_field = cve.header_type_to_varbit_field.at(type);
-
                     for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
                         auto path = member->expr->to<IR::Member>();
                         auto hdr = kv.second;
@@ -545,42 +645,46 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
 
                         components.push_back(hdr_field);
                     }
+                } else if (cve.varbit_field_to_csum_call.count(varbit_field)) {
+                    for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
+                        if (call->equiv(*mc)) {
+                            has_varbit = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!has_varbit)
+            components.push_back(c);
+    }
+    if (has_varbit) {
+        list->components = components;
+
+        if (auto tuple = list->type->to<IR::Type_Tuple>()) {
+            IR::Vector<IR::Type> types;
+
+            for (auto type : tuple->components) {
+                if (type->is<IR::Type_Varbits>()) {
+                    for (auto vt : varbit_types)
+                        types.push_back(vt);
+                } else {
+                    types.push_back(type);
                 }
             }
 
-            if (!has_varbit)
-                components.push_back(c);
-        }
+            if (mc) {
+                auto type_args = *(mc->typeArguments);
 
-        list->components = components;
-
-        if (has_varbit) {
-            auto mc = findContext<IR::MethodCallExpression>();
-
-            if (auto tuple = list->type->to<IR::Type_Tuple>()) {
-                IR::Vector<IR::Type> types;
-
-                for (auto type : tuple->components) {
-                    if (type->is<IR::Type_Varbits>()) {
-                        for (auto vt : varbit_types)
-                            types.push_back(vt);
-                    } else {
-                        types.push_back(type);
+                if (type_args.size() == 1) {
+                    auto tuple_type = type_args[0];
+                    if (auto name = tuple_type->to<IR::Type_Name>()) {
+                        auto tuple_name = name->path->name;
+                        tuple_types_to_rewrite[tuple_name] = types;
                     }
-                }
-
-                if (mc) {
-                    auto type_args = *(mc->typeArguments);
-
-                    if (type_args.size() == 1) {
-                        auto tuple_type = type_args[0];
-                        if (auto name = tuple_type->to<IR::Type_Name>()) {
-                            auto tuple_name = name->path->name;
-                            tuple_types_to_rewrite[tuple_name] = types;
-                        }
-                    } else if (type_args.size() > 1) {
-                        ::error("More than one type in type argument of %1%", list);
-                    }
+                } else if (type_args.size() > 1) {
+                    ::error("More than one type in type argument of %1%", list);
                 }
             }
         }

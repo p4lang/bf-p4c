@@ -98,8 +98,13 @@ class CollectVarbitExtract : public Inspector {
 
     std::map<const IR::ParserState*, const IR::Expression*> state_to_encode_var;
 
+    std::map<const IR::ParserState*, const IR::AssignmentStatement*> state_to_csum_verify;
+
     std::map<const IR::ParserState*,
              std::set<const IR::Expression*>> state_to_verify_exprs;
+
+    std::map<const IR::StructField*,
+             std::set<const IR::MethodCallExpression*>> varbit_field_to_csum_call;
 
     std::map<const IR::StructField*,
              std::map<unsigned, const IR::Constant*>> varbit_field_to_compile_time_constants;
@@ -136,6 +141,7 @@ class CollectVarbitExtract : public Inspector {
         const IR::Type_Header* hdr_type);
 
     bool preorder(const IR::MethodCallExpression*) override;
+    bool preorder(const IR::AssignmentStatement*) override;
 
  public:
     CollectVarbitExtract(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :

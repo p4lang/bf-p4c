@@ -73,7 +73,6 @@ parser IngressParser(packet_in      pkt,
     out ingress_intrinsic_metadata_t  ig_intr_md)
 {
     Checksum() ipv4_checksum;
-    
     /* This is a mandatory state, required by Tofino Architecture */
     state start {
         pkt.extract(ig_intr_md);
@@ -107,7 +106,6 @@ parser IngressParser(packet_in      pkt,
     state parse_ipv4 {
         pkt.extract(hdr.ipv4, ((bit<32>)hdr.ipv4.ihl - 32w5) * 32);
         ipv4_checksum.add(hdr.ipv4);
-
         meta.ipv4_checksum_err = (bit<1>)ipv4_checksum.verify();
         transition accept;
     }
@@ -132,63 +130,22 @@ control Ingress(
     action drop() {
         ig_dprsr_md.drop_ctl = 1;
     }
-
-    action l3_switch(PortId_t port, bit<48> new_mac_da, bit<48> new_mac_sa) {
-        hdr.ethernet.dst_addr = new_mac_da;
-        hdr.ethernet.src_addr = new_mac_sa;
-        hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
-        send(port);
-    }
     
-    table ipv4_host {
-        key = { hdr.ipv4.dst_addr : exact; }
-        actions = {
-            send; drop; l3_switch;
-            @defaultonly NoAction;
-        }
-        const default_action = NoAction();
-        size = 65536;
+    action change_ipv4() {
+        hdr.ipv4.src_addr = 0x01010102;
     }
-
-    table ipv4_lpm {
-        key     = { hdr.ipv4.dst_addr : lpm; }
-        actions = { send; drop; l3_switch; }
-        
-        default_action = send(64);
-        size           = 12288;
-    }
-    
-    /* The algorithm */
     apply {
         if (hdr.ipv4.isValid()) {
-            if (meta.ipv4_checksum_err == 0 && hdr.ipv4.ttl > 1) {
-                if (!ipv4_host.apply().hit) {
-                    ipv4_lpm.apply();
-                }
-            }
+            if (meta.ipv4_checksum_err == 0) {
+                change_ipv4();
+                send(0);
+            } else drop();
         }
     }
 }
 
 
     /*********************  D E P A R S E R  ************************/
-
-
-struct tuple_1 {
-    bit<4>      field_15;
-    bit<4>      field_16;
-    bit<8>      field_17;
-    bit<16>     field_18;
-    bit<16>     field_19;
-    bit<3>      field_20;
-    bit<13>     field_21;
-    bit<8>      field_22;
-    bit<8>      field_23;
-    bit<32>     field_24;
-    bit<32>     field_25;
-    varbit<320> field_26;
-}
-
 
 control IngressDeparser(packet_out pkt,
     /* User */
