@@ -197,7 +197,7 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
                 rep[0].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3);
             if ((mode >> PUSHPOP_BITS) & PUSHPOP_MASK)
                 rep[1].set_subfield(meter_group() | 0x4, 3*(m->logical_id % 8U), 3); }
-        if (mode)
+        if (address_used)
             adrdist.meter_alu_adr_range_check_icxbar_map[meter_group()] |= 1U << m->logical_id;
         if (offset_vpn) {
             if (!address_used)
