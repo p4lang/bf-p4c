@@ -660,23 +660,35 @@ const std::vector<PHV::Field::alloc_slice> PHV::Field::get_combined_alloc_bytes(
             // If all the alloc slices within the same container are contiguous (both in terms of
             // field slice range and container slice range), then combine all of them into a single
             // alloc_slice that we return.
-            bitvec container_bits;
-            bitvec field_bits;
+            safe_vector<std::pair<le_bitrange, le_bitrange>> field_cont_pairs;
             for (auto& slice : byte_and_slices.second) {
                 LOG3("\t  Slice: " << slice);
-                container_bits |= bitvec(slice.container_bit, slice.width);
-                field_bits |= bitvec(slice.field_bit, slice.width);
+                field_cont_pairs.emplace_back(slice.field_bits(), slice.container_bits());
             }
-            LOG3("\t\tContainer bits: " << container_bits << ", field bits: " << field_bits);
-            if (field_bits.is_contiguous() && container_bits.is_contiguous() &&
-                    container_bits.popcount() == field_bits.popcount()) {
-                alloc_slice* newCombinedSlice = new alloc_slice(this, container_and_byte.first,
-                        field_bits.min().index(), container_bits.min().index(),
-                        field_bits.popcount());
-                slicesToProcess.push_back(*newCombinedSlice);
-            } else {
-                for (auto& slice : byte_and_slices.second)
-                    slicesToProcess.push_back(slice);
+
+
+            std::sort(field_cont_pairs.begin(), field_cont_pairs.end(),
+                [](const std::pair<le_bitrange, le_bitrange> &a,
+                   const std::pair<le_bitrange, le_bitrange> &b) {
+                return a.first < b.first;
+            });
+
+            for (size_t i = 0; i < field_cont_pairs.size() - 1; i++) {
+                 auto a = field_cont_pairs[i];
+                 auto b = field_cont_pairs[i+1];
+                 if (a.first.hi + 1 == b.first.lo && a.second.hi + 1 == b.second.lo) {
+                     le_bitrange comb_fb = { a.first.lo, b.first.hi };
+                     le_bitrange comb_cb = { a.second.lo, b.second.hi };
+                     field_cont_pairs[i] = std::make_pair(comb_fb, comb_cb);
+                     field_cont_pairs.erase(field_cont_pairs.begin() + i + 1);
+                     i--;
+                 }
+            }
+
+            for (auto fb_cb_pair : field_cont_pairs) {
+                LOG3("\t  Combined Slice: " << fb_cb_pair.first << " " << fb_cb_pair.second);
+                slicesToProcess.emplace_back(this, container_and_byte.first, fb_cb_pair.first.lo,
+                                             fb_cb_pair.second.lo, fb_cb_pair.first.size());
             }
         }
     }
