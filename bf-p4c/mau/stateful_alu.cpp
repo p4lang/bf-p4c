@@ -33,6 +33,12 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
 }
 #endif
 
+cstring Device::StatefulAluSpec::cmpUnit(unsigned idx) const {
+    if (idx < CmpUnits.size())
+        return CmpUnits.at(idx);
+    return cstring("?" + std::to_string(idx) + "?");
+}
+
 static unsigned cmp_mask[4] = { 0xaaaa, 0xcccc, 0xf0f0, 0xff00 };
 
 static unsigned eval_predicate(const IR::Expression *exp) {
@@ -131,6 +137,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     LOG4("applyArg(" << pe << ", " << field << ") etype = " << etype);
     assert(dest == nullptr || !islvalue(etype));
     IR::Expression *e = nullptr;
+    auto argType = pe->type;
     int idx = 0, field_idx = 0;
     if (locals.count(pe->path->name.name)) {
         auto &local = locals.at(pe->path->name.name);
@@ -163,8 +170,9 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         BUG_CHECK(size_t(idx) < param_types->size(), "param index out of range"); }
     if (field_idx == 0 && field && regtype->is<IR::Type_StructLike>()) {
         for (auto f : regtype->to<IR::Type_StructLike>()->fields) {
-            if (f->name == field)
-                break;
+            if (f->name == field) {
+                argType = f->type;
+                break; }
             ++field_idx; }
         BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
     cstring name = field_idx ? "hi" : "lo";
@@ -202,7 +210,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
         else if (etype == MINMAX_SRC)
             name = "mem";
-        e = new IR::MAU::SaluReg(pe->type, name, field_idx > 0);
+        e = new IR::MAU::SaluReg(argType, name, field_idx > 0);
         break;
     case param_t::OUTPUT:       /* out rv; */
         if (islvalue(etype))
@@ -218,13 +226,13 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
-        e = new IR::MAU::SaluReg(pe->type, "phv_" + name, field_idx > 0);
+        e = new IR::MAU::SaluReg(argType, "phv_" + name, field_idx > 0);
         break;
     case param_t::LEARN:        /* in learn */
         if (islvalue(etype)) {
             error("Writing in param %s in %s not supported", pe, action_type_name);
             return false; }
-        e = new IR::MAU::SaluReg(pe->type, "learn", false);
+        e = new IR::MAU::SaluReg(argType, "learn", false);
         break;
     case param_t::MATCH:        /* out match */
         if (!islvalue(etype)) {
@@ -492,13 +500,27 @@ bool CreateSaluInstruction::preorder(const IR::Mux *mux) {
     return false;
 }
 
+void CreateSaluInstruction::doPrimary(const IR::Expression *e, const IR::PathExpression *pe,
+                                      cstring field) {
+    if (!pe || !applyArg(pe, field)) {
+        if (negate) e = new IR::Neg(e);
+        operands.push_back(e);
+        LOG4("primary operand: " << operands.back()); }
+    auto *reg = operands.empty() ? nullptr : operands.back()->to<IR::MAU::SaluReg>();
+    if (etype == IF && (!reg || reg->name != "learn") && e->type->is<IR::Type::Boolean>() &&
+        !getParent<IR::Operation::Relation>()) {
+        operands.push_back(new IR::Constant(0));
+        setupCmp("neq");
+        LOG4("  -- adding != 0 comparison"); }
+}
+
 bool CreateSaluInstruction::preorder(const IR::PathExpression *pe) {
-    if (!applyArg(pe, cstring())) {
-        if (negate)
-            operands.push_back(new IR::Neg(pe));
-        else
-            operands.push_back(pe);
-        LOG4("Path operand: " << operands.back()); }
+    doPrimary(pe, pe, cstring());
+    return false;
+}
+
+bool CreateSaluInstruction::preorder(const IR::Member *mem) {
+    doPrimary(mem, mem->expr->to<IR::PathExpression>(), mem->member);
     return false;
 }
 
@@ -518,18 +540,6 @@ bool CreateSaluInstruction::preorder(const IR::BoolLiteral *bl) {
     auto *c = new IR::Constant(bl->srcInfo, bl->value ? negate ? -1 : 1 : 0);
     LOG4("Constant operand: " << c);
     operands.push_back(c);
-    return false;
-}
-
-bool CreateSaluInstruction::preorder(const IR::Member *e) {
-    if (auto pe = e->expr->to<IR::PathExpression>()) {
-        if (applyArg(pe, e->member))
-            return false; }
-    if (negate)
-        operands.push_back(new IR::Neg(e));
-    else
-        operands.push_back(e);
-    LOG4("Member operand: " << operands.back());
     return false;
 }
 
@@ -585,6 +595,11 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
         error("%s%s must write back to memory", prim->srcInfo, prim->name);
     } else if (prim->name == "math_unit.execute" || prim->name == "MathUnit.execute") {
         BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
+        if (operands.size() > 0) {
+            if (auto *reg = operands.at(0)->to<IR::MAU::SaluReg>()) {
+                if (reg->hi)
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% can only output to "
+                          "lower half of memory", prim); } }
         visit(prim->operands.at(1), "math_input");
         operands.back() = new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table");
         LOG4("Math Unit operand: " << operands.back());

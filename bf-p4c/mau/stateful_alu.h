@@ -14,7 +14,7 @@ struct Device::StatefulAluSpec {
     int                         OutputWords;
     bool                        DivModUnit;
 
-    cstring cmpUnit(unsigned idx) const { return idx < CmpUnits.size() ? CmpUnits.at(idx) : "??"; }
+    cstring cmpUnit(unsigned idx) const;
 };
 
 /**
@@ -124,12 +124,14 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Statement *s) override {
         error("%s: statement too complex for register action", s->srcInfo);
         return false; }
-    bool preorder(const IR::PathExpression *) override;
+
+    void doPrimary(const IR::Expression *, const IR::PathExpression *, cstring);
+    bool preorder(const IR::PathExpression *pe) override;
+    bool preorder(const IR::Member *m) override;
 
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::BoolLiteral *) override;
     bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
-    bool preorder(const IR::Member *) override;
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::Primitive *) override;
     bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
