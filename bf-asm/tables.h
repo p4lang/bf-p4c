@@ -425,6 +425,7 @@ public:
             p4_params                           p4_params_list;
             bool                                default_allowed = false;
             bool                                default_only = false;
+            bool                                is_constant = false;
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
             int                                 next_table_encode = -1;

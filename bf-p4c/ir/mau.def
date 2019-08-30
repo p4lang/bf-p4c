@@ -683,6 +683,7 @@ class Action : VLIWInstruction {
     bool miss_action_only = false;
     bool init_default = false;
     bool default_allowed = false;
+    bool is_constant_action = false;
     // Currently if a table used hash distribution or the RNG, then the table must go
     // go through the hit pathway.  However, due to different driver implementation, this
     // could be different than being table_only, and thus it is left out of the

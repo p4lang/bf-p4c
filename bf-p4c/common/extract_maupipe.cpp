@@ -227,6 +227,8 @@ class DefaultActionInit : public MauModifier {
             act->init_default = true;
             if (args)
                 act->default_params = *args;
+            if (prop->isConstant)
+                act->is_constant_action = true;
         } else {
             if (def_only_annot)
                 error("%s: Action %s is marked as default only, but is not the default action",

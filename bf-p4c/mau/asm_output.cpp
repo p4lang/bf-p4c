@@ -1943,6 +1943,8 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
         if (!act->default_allowed || act->hit_path_imp_only)
             out << ", reason: " << act->disallowed_reason;
+        if (act->is_constant_action)
+            out << ", is_constant: " << act->is_constant_action;
         out << " }" << std::endl;
         out << indent << "- handle: 0x" << hex(act->handle) << std::endl;
         next_table(act, vliw_instr.mem_code);

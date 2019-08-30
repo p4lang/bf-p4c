@@ -1212,6 +1212,8 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                                 if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tSTR)) {
                                     if (p.key == "allowed")
                                         default_allowed = get_bool(p.value);
+                                    else if (p.key == "is_constant")
+                                        is_constant = get_bool(p.value);
                                     else if (p.key == "reason")
                                         default_disallowed_reason = p.value.s; } } }
                         default_only = a.key == "default_only_action";
@@ -1818,12 +1820,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
             action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
         // TODO: Need to be set through assembly
         action_cfg["is_compiler_added_action"] = false;
-
-        // \TODO(cc): constant_default_action is used by the driver in schema version 1.3.1
-        // to indicate which action is constant. This will need to be updated based on
-        // has_const_default, however, I could not find where that is set, so for now
-        // we just set it to false for all table actions.
-        action_cfg["constant_default_action"] = false;
+        action_cfg["constant_default_action"] = act.is_constant;
 
         // XXX(amresh): These will be set to 'true' & "" for a keyless table to
         // allow any action to be set as default by the control plane
