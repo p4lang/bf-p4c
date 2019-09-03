@@ -36,6 +36,7 @@ class ActionPhvConstraints : public Inspector {
     struct NumContainers {
         size_t num_allocated;
         size_t num_unallocated;
+        bool double_unallocated = false;
 
         explicit NumContainers(const size_t numAlloc, const size_t numUnalloc) :
             num_allocated(numAlloc), num_unallocated(numUnalloc) {}

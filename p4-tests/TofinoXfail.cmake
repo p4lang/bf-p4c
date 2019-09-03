@@ -469,6 +469,11 @@ p4c_add_xfail_reason("tofino"
   # p4smith generated file used to debug key with zero mask. Fails PHV for an unknown reason.
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
 
+  # p4smith mask issues - P4C-2093
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
+
   # broke by flexible packing PR
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
 
@@ -774,12 +779,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "direct attached objects must be enabled in all hit actions"
   testdata/p4_16_samples/psa-meter6.p4
-)
-
-# BRIG-923
-p4c_add_xfail_reason("tofino"
-  "error: ALU ops cannot operate on slices"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
 )
 
 # This test attempts to match on a field of `error` type.
@@ -1504,4 +1503,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: No PHV allocation for field used as a POV bit in the deparser"
   extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
+)
+
+# P4C-2091
+# Expected failure (negative test)
+p4c_add_xfail_reason("tofino"
+  "error.*PHV allocation was not successful"
+  extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )

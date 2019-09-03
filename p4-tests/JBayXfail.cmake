@@ -402,3 +402,10 @@ p4c_add_xfail_reason("tofino2"
   "AssignmentStatement: Cannot unify bit<.*> to bit<.*>"
   smoketest_switch_16_compile_l0_profile
 )
+
+# P4C-2091
+# Expected failure (negative test)
+p4c_add_xfail_reason("tofino2"
+  "error.*PHV allocation was not successful"
+  extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
+)

@@ -8,6 +8,7 @@ header_type hoping {
   }
 }
 
+
 header_type putties {
   fields {
     brigantines : 4;
@@ -28,6 +29,12 @@ header_type hatreds {
 
 header hoping adolfo;
 
+/*
+@pragma pa_container_size ingress freebies.guerras 16
+@pragma pa_container_size ingress freebies.concentric 16
+@pragma pa_atomic ingress freebies.concentric
+@pragma pa_atomic ingress freebies.guerras
+*/
 header putties freebies;
 
 header hatreds lucille;
@@ -108,13 +115,13 @@ field_list_calculation iciness {
   output_width : 16;
 }
 
-calculated_field freebies.guerras {
+/*calculated_field freebies.guerras {
   update iciness;
-  update iciness;
-  verify iciness;
-  update iciness;
+  // update iciness;
+  // verify iciness;
+  // update iciness;
 }
-
+*/
 action wavelengths() {
   modify_field(ig_intr_md_for_tm.ucast_egress_port, 1);
 }
@@ -122,22 +129,22 @@ action wavelengths() {
 action shebangs(physios, petioles) {
   add_header(adolfo);
   add_to_field(freebies.receivers, freebies.receivers);
-  bit_and(freebies.concentric, freebies.concentric, 3196849635614224227);
+  bit_and(freebies.concentric, freebies.concentric, 24227);
   add_header(freebies);
-  bit_or(freebies.guerras, freebies.guerras, 3118852013962153576);
+  bit_or(freebies.guerras, freebies.guerras, 576);
 }
 
 action ageism(holing, kilogram) {
   add_to_field(freebies.concentric, freebies.concentric);
-  add(freebies.guerras, 4611686018427387903, 2728446865345586695);
+  add(freebies.guerras, 7903, 95);
   bit_or(freebies.receivers, 3537577083758640751, 3684662727473020981);
 }
 
 action acadia(bespangle) {
   modify_field_rng_uniform(lucille.slaking, 0, 15);
   bit_or(freebies.receivers, 4611686018427387903, 120967943045954190);
-  bit_and(freebies.guerras, 4245896931873123217, freebies.guerras);
-  bit_and(freebies.concentric, 1459096803899544812, freebies.concentric);
+  bit_and(freebies.guerras, 23217, freebies.guerras);
+  bit_and(freebies.concentric, 14812, freebies.concentric);
   add_header(freebies);
   add_header(lucille);
   add_header(adolfo);
@@ -148,7 +155,7 @@ action secrets(alcoa) {
   subtract_from_field(freebies.receivers, freebies.receivers);
   add_to_field(freebies.concentric, freebies.guerras);
   remove_header(lucille);
-  bit_or(freebies.guerras, 1003429134393215338, 4611686018427387903);
+  bit_or(freebies.guerras, 15338, 4903);
   modify_field_rng_uniform(adolfo.particularize, 0, 63);
   modify_field(freebies.rating, 110422659);
   add_header(adolfo);
@@ -301,7 +308,7 @@ table rnas {
   reads {
     adolfo : valid;
     freebies.brigantines : exact;
-    freebies.tubelesss mask 0 : ternary;
+    freebies.tubelesss mask 0xFF : ternary;
     freebies.receivers : exact;
     freebies.concentric : exact;
   }
@@ -332,7 +339,7 @@ table signified {
     adolfo.particularize : exact;
     freebies : valid;
     freebies.receivers : exact;
-//    freebies.guerras mask 15 : exact;
+    freebies.guerras mask 15 : exact;
     freebies.rating mask 39 : exact;
     lucille.slaking : exact;
   }

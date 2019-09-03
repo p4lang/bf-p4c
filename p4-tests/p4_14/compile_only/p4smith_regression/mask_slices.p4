@@ -147,7 +147,7 @@ table satoris {
   reads {
     unique : valid;
     unique.briefness : exact;
-    // unique.wreckages mask 6 : exact;
+    unique.wreckages mask 6 : exact;
     friendships.science : exact;
     friendships.supervene : ternary;
   }
@@ -172,7 +172,7 @@ table tolyattis {
     unique : valid;
     unique.briefness : exact;
     unique.eruditely : exact;
-    // unique.wreckages mask 7 : exact;
+    unique.wreckages mask 7 : exact;
     friendships.science : exact;
     friendships.supervene : exact;
     friendships.almoners : exact;
@@ -185,7 +185,7 @@ table tolyattis {
 
 table died {
   reads {
-    // unique.wreckages mask 3 : lpm;
+    unique.wreckages mask 3 : lpm;
     friendships : valid;
   }
   actions {
@@ -202,19 +202,19 @@ table paleontologist {
 
 table theistic {
   actions {
-
+    
     }
   }
 
 table uruguays {
   reads {
     unique : valid;
-    // unique.briefness mask 4 : lpm;
+    unique.briefness mask 4 : lpm;
     unique.eruditely : exact;
     unique.wreckages : exact;
   }
   actions {
-
+    
   }
 }
 
@@ -233,20 +233,20 @@ table smuttinesss {
 
 table darvon {
   actions {
-
+    
     }
   }
 
 table ogles {
   actions {
-
+    
     }
   }
 
 table fajitass {
   reads {
     unique : valid;
-    // unique.briefness mask 3 : ternary;
+    unique.briefness mask 3 : ternary;
     friendships.science : exact;
     friendships.supervene : exact;
     friendships.almoners : exact;
@@ -309,7 +309,7 @@ table salt {
     unique.briefness : ternary;
     unique.eruditely : ternary;
     friendships : valid;
-    // friendships.supervene mask 31 : exact;
+    friendships.supervene mask 31 : exact;
   }
   actions {
     policies;
@@ -319,13 +319,13 @@ table salt {
 
 table trivia {
   actions {
-
+    
     }
   }
 
 table nonalignments {
   actions {
-
+    
     }
   }
 
@@ -334,16 +334,16 @@ table sleeping {
     friendships : valid;
     friendships.science : exact;
     friendships.supervene : exact;
-    // friendships.almoners mask 5 : exact;
+    friendships.almoners mask 5 : exact;
   }
   actions {
-
+    
   }
 }
 
 table renegotiations {
   actions {
-
+    
     }
   }
 
@@ -370,11 +370,10 @@ table blockaders {
 table reestablishing {
   reads {
     unique : valid;
-    // unique.wreckages mask 6 : ternary;
-    unique.wreckages : ternary;
+    unique.wreckages mask 6 : ternary;
   }
   actions {
-
+    
   }
 }
 
@@ -421,9 +420,9 @@ control ingress {
   } else {
     apply(milfords);
     if (((true or (friendships.almoners != friendships.almoners)) and
-        ((friendships.supervene != 503464789) and (unique.wreckages !=
+        ((friendships.supervene != 503464789) and (unique.wreckages != 
         0)))) {
-
+      
     }
   }
   if ((not((4000 == friendships.supervene)) or
@@ -435,7 +434,7 @@ control ingress {
         valid(unique)) or not(false))) {
       if ((not(valid(friendships)) or (false or
           (friendships.supervene != 2007885509)))) {
-
+        
       } else {
         apply(stalls);
         if (((1987 == friendships.almoners) or (3336 != friendships.supervene))) {

@@ -438,7 +438,10 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         const IR::MAU::Action* action,
         ActionPhvConstraints::PackingConstraints& packing_constraints) {
     ordered_set<PHV::Container> containerList;
+    ordered_map<PHV::FieldSlice, PHV::FieldSlice> readSlices;
     size_t num_unallocated = 0;
+    size_t doubleAllocatedCount = 0;
+    size_t doubleUnallocatedCount = 0;
     ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> unallocFieldToSlices;
     int stage = min_stage(action);
     for (auto slice : container_state) {
@@ -453,6 +456,15 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
                 continue; }
             const PHV::Field* fieldRead = operand.phv_used->field();
             le_bitrange rangeRead = operand.phv_used->range();
+            bool thisUnallocated = false;
+            if (readSlices.count(*(operand.phv_used))) {
+                LOG5("\t\t\t\t" << fieldRead->name << " [" << rangeRead.lo << ", " << rangeRead.hi
+                     << "] already read earlier for source " << readSlices.at(*(operand.phv_used)));
+                thisUnallocated = true;
+            } else {
+                readSlices[*(operand.phv_used)] = PHV::FieldSlice(slice.field(),
+                        slice.field_slice());
+            }
 
             LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
                     rangeRead.hi << "] into copacking_constraints for action " << action->name);
@@ -471,8 +483,10 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
             if (per_source_containers.size() == 0) {
                 LOG5("\t\t\t\tSource " << *(operand.phv_used) << " has not been allocated yet.");
                 unallocFieldToSlices[fieldRead].insert(*(operand.phv_used));
+                if (thisUnallocated) ++doubleUnallocatedCount;
             } else {
                 containerList.insert(per_source_containers.begin(), per_source_containers.end());
+                if (thisUnallocated) ++doubleAllocatedCount;
             }
         }
     }
@@ -487,10 +501,17 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
             ++num_unallocated;
         }
     }
-    LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size());
-    LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated);
-    LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated));
-    return NumContainers(containerList.size(), num_unallocated);
+    LOG5("\t\t\t\tDouble allocation, allocated: " << doubleAllocatedCount <<
+         ", unallocated: " << doubleUnallocatedCount);
+    LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size() + doubleAllocatedCount);
+    LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated + doubleUnallocatedCount);
+    LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated +
+         doubleAllocatedCount + doubleUnallocatedCount));
+    NumContainers rv(containerList.size() + doubleAllocatedCount, num_unallocated +
+            doubleUnallocatedCount);
+    if (doubleUnallocatedCount)
+        rv.double_unallocated = true;
+    return rv;
 }
 
 boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
@@ -1256,19 +1277,21 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
             // deposit-field found to be valid. So, the packing is valid without any other induced
             // constraints.
             return true; } }
+    bool requires_two_containers = sources.num_allocated == 2 ||
+        (sources.double_unallocated && sources.num_unallocated == 2);
 
     // If some field is not written to, then one of the sources for the move has to be the
     // container itself.
-    // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
-    if (num_fields_not_written_to && sources.num_allocated == 2) {
+    // If this requires two containers, this packing is not possible (TOO_MANY_SOURCES)
+    if (num_fields_not_written_to && requires_two_containers) {
         LOG5("\t\t\t\t" << num_fields_not_written_to << " fields not written in action "
                 << action->name << " will get clobbered.");
         return false; }
 
     // If some bits in the container are not written to, then one of the sources of the move has
     // to be the container itself.
-    // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
-    if (has_bits_not_written_to && sources.num_allocated == 2) {
+    // If requires two containers, this packing is not possible (TOO_MANY_SOURCES)
+    if (has_bits_not_written_to && requires_two_containers) {
         LOG5("\t\t\t\tSome unallocated bits in the container will get clobbered by writes in "
                 "action" << action->name);
         return false; }
