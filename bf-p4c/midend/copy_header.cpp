@@ -4,34 +4,48 @@
 namespace BFN {
 
 const IR::Node* DoCopyHeaders::postorder(IR::AssignmentStatement* statement) {
+    if (statement->right->to<IR::ListExpression>() ||
+            statement->right->to<IR::StructInitializerExpression>())
+        return statement;
     auto ltype = typeMap->getType(statement->left, true);
-    if (ltype->is<IR::Type_StructLike>()) {
-        if (auto strct = ltype->to<IR::Type_Header>()) {
-            if (statement->right->to<IR::ListExpression>() ||
-                    statement->right->to<IR::StructInitializerExpression>())
-                return statement;
-            auto retval = new IR::IndexedVector<IR::StatOrDecl>();
-            // add copy valid bit
-            auto validtype = IR::Type::Bits::get(1);
-            auto dst = new IR::Member(statement->srcInfo, validtype,
-                                      statement->left, "$valid");
-            auto src = new IR::Member(statement->srcInfo, validtype,
-                                      statement->right, "$valid");
-            retval->push_back(new IR::AssignmentStatement(statement->srcInfo, dst, src));
+    if (auto strct = ltype->to<IR::Type_Header>()) {
+        auto retval = new IR::IndexedVector<IR::StatOrDecl>();
+        // add copy valid bit
+        auto validtype = IR::Type::Bits::get(1);
+        auto dst = new IR::Member(statement->srcInfo, validtype,
+                                  statement->left, "$valid");
+        auto src = new IR::Member(statement->srcInfo, validtype,
+                                  statement->right, "$valid");
+        retval->push_back(new IR::AssignmentStatement(statement->srcInfo, dst, src));
+        BUG_CHECK(statement->right->is<IR::PathExpression>() ||
+                  statement->right->is<IR::Member>() ||
+                  statement->right->is<IR::ArrayIndex>(),
+                  "%1%: Unexpected operation when eliminating struct copying",
+                  statement->right);
 
-            for (auto f : strct->fields) {
-                BUG_CHECK(statement->right->is<IR::PathExpression>() ||
-                          statement->right->is<IR::Member>() ||
-                          statement->right->is<IR::ArrayIndex>(),
-                          "%1%: Unexpected operation when eliminating struct copying",
-                          statement->right);
-                auto right = new IR::Member(statement->right, f->name);
-                auto left = new IR::Member(statement->left, f->name);
-                retval->push_back(new IR::AssignmentStatement(statement->srcInfo, left, right));
-            }
-            return new IR::BlockStatement(statement->srcInfo, *retval);
+        for (auto f : strct->fields) {
+            auto right = new IR::Member(statement->right, f->name);
+            auto left = new IR::Member(statement->left, f->name);
+            retval->push_back(new IR::AssignmentStatement(statement->srcInfo, left, right));
         }
+        return new IR::BlockStatement(statement->srcInfo, *retval);
+    } else if (auto stk = ltype->to<IR::Type_Stack>()) {
+        auto size = stk->size->to<IR::Constant>();
+        BUG_CHECK(size && size->value > 0, "stack %s size is not positive constant", ltype);
+        auto retval = new IR::IndexedVector<IR::StatOrDecl>();
+        BUG_CHECK(statement->right->is<IR::PathExpression>() ||
+                  statement->right->is<IR::Member>() ||
+                  statement->right->is<IR::ArrayIndex>(),
+                  "%1%: Unexpected operation when eliminating stack copying",
+                  statement->right);
+        for (int i = 0; i < size->asInt(); ++i) {
+            auto right = new IR::ArrayIndex(statement->right, new IR::Constant(i));
+            auto left = new IR::ArrayIndex(statement->left, new IR::Constant(i));
+            retval->push_back(new IR::AssignmentStatement(statement->srcInfo, left, right));
+        }
+        return new IR::BlockStatement(statement->srcInfo, *retval);
     }
+
     return statement;
 }
 

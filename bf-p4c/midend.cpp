@@ -339,7 +339,6 @@ MidEnd::MidEnd(BFN_Options& options) {
     auto evaluator = new BFN::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
     cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
-    auto errorOnMethodCall = false;
     auto *enum_policy = new EnumOn32Bits;
 
     auto simplifyKeyPolicy =
@@ -376,12 +375,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),
-        // errorOnMethodCall argument in CopyStructures is defaulted to true.
-        // This means methods or functions returning structs will be flagged as
-        // an error. Here, we set this to false to allow such scenarios.
-        // E.g. Phase0 extern function returns a header struct.
         new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
-        new P4::CopyStructures(&refMap, &typeMap, errorOnMethodCall, typeChecking),
         // must run after copy structure
         new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap, typeChecking),

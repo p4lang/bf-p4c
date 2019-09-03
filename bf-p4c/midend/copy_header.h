@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
+#include "midend/copyStructures.h"
 
 namespace BFN {
 
@@ -28,10 +29,18 @@ class DoCopyHeaders : public Transform {
 
 class CopyHeaders : public PassRepeated {
  public:
-    CopyHeaders(P4::ReferenceMap*, P4::TypeMap* typeMap,
+    CopyHeaders(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                 P4::TypeChecking* typeChecking = nullptr) :
             PassManager({}) {
         CHECK_NULL(typeMap); setName("CopyHeaders");
+        passes.emplace_back(typeChecking);
+        passes.emplace_back(new P4::RemoveAliases(refMap, typeMap));
+        passes.emplace_back(typeChecking);
+        // errorOnMethodCall argument in CopyStructures is defaulted to true.
+        // This means methods or functions returning structs will be flagged as
+        // an error. Here, we set this to false to allow such scenarios.
+        // E.g. Phase0 extern function returns a header struct.
+        passes.emplace_back(new P4::DoCopyStructures(typeMap, /* errorOnMethodCall = */ false));
         passes.emplace_back(typeChecking);
         passes.emplace_back(new DoCopyHeaders(typeMap));
     }

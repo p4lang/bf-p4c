@@ -147,7 +147,6 @@ p4c_add_xfail_reason("tofino"
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
   "error: Assignment source cannot be evaluated in the parser"
-  testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
@@ -1389,6 +1388,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+  testdata/p4_16_samples/array-copy-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1501,8 +1501,14 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-2077
 p4c_add_xfail_reason("tofino"
-  "error: No PHV allocation for field used as a POV bit in the deparser"
+  "error: No PHV allocation for field used as a POV bit in the deparser|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
+)
+
+#P4C-2080
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Expression not found"
+  extensions/p4_tests/p4_16/compile_only/p4c-2080-min.p4
 )
 
 # P4C-2091
