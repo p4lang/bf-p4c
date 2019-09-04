@@ -242,7 +242,6 @@ set (BF_P4C_BACKEND_LIB_HDRS
   lib/error_type.h
   lib/pointer_wrapper.h
   lib/union_find.hpp
-  lib/vertex_weighted_coloring.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_LIB_HDRS}")
 
@@ -934,7 +933,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
