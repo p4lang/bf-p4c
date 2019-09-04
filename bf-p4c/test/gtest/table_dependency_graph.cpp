@@ -2409,12 +2409,12 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
  * following:
  *
  *                           Data
- *     A               C ------------> D
- *     |             exits             ^
- *     |               ^               |
- *     | Control       | Anti*         | Anti*
- *     v               |               |
- *     B ==============+---------------+
+ *     A               C ============> D
+ *     |             exits   Anti*
+ *     |               ^
+ *     | Control       | Anti*
+ *     v               |
+ *     B --------------+
  *
  *   * - induced by exit
  *
@@ -2698,6 +2698,140 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 0);
+}
+
+/**
+ * This tests the length of dependency chains induced by "exit". The dependency graph is the
+ * following:
+ *                                             Data
+ *       A               B               F ------------> G
+ *                       ^
+ *                      /|\
+ *             Control / | \ Control
+ *                    /  |  \
+ *                   v   v   v
+ *                  C    D    E
+ *                exits     exits
+ *
+ * with the following anti-dependency edges induced:
+ *
+ *   A -> C    A -> D    A -> E
+ *   C -> F    D -> F    E -> F
+ *   C -> G    D -> G    E -> G
+ *
+ * We expect the following chain lengths.
+ *
+ *   A: 1
+ *   B: 1
+ *   C: 1
+ *   D: 1
+ *   E: 1
+ *   F: 1
+ *   G: 0
+ */
+TEST_F(TableDependencyGraphTest, ExitGraph5) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action noop() { }
+
+                table node_a {
+                    actions = { noop; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+                action c() {}
+                action d() {}
+                action e() {}
+                table node_b {
+                    actions = { c; d; e; }
+                    key = { headers.h1.f2 : exact; }
+                }
+
+                action do_exit() { exit; }
+                table node_c {
+                    actions = { do_exit; }
+                    key = { headers.h1.f3 : exact; }
+                }
+
+                table node_d {
+                    actions = { noop; }
+                    key = { headers.h1.f4 : exact; }
+                }
+
+                table node_e {
+                    actions = { do_exit; }
+                    key = { headers.h1.f5 : exact; }
+                }
+
+                action set_f6(bit<8> v) { headers.h1.f6 = v; }
+                table node_f {
+                    actions = { set_f6; }
+                    key = { headers.h2.f7 : exact; }
+                }
+
+                table node_g {
+                    actions = { noop; }
+                    key = { headers.h1.f6 : exact; }
+                }
+
+                apply {
+                    node_a.apply();
+                    switch (node_b.apply().action_run) {
+                        c: { node_c.apply(); }
+                        d: { node_d.apply(); }
+                        e: { node_e.apply(); }
+                    }
+                    node_f.apply();
+                    node_g.apply();
+                }
+            )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e, *f, *g;
+    a = b = c = d = e = f = g = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        } else if (kv.first->name == "node_e_0") {
+            e = kv.first;
+        } else if (kv.first->name == "node_f_0") {
+            f = kv.first;
+        } else if (kv.first->name == "node_g_0") {
+            g = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+    EXPECT_NE(e, nullptr);
+    EXPECT_NE(f, nullptr);
+    EXPECT_NE(g, nullptr);
+
+    // Chain the dependence through the ANTI dependence
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(e), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(f), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(g), 0);
 }
 
 }  // namespace Test
