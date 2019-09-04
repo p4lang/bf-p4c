@@ -47,32 +47,63 @@ class DominatorAnalysis : public MauInspector {
     }
 };
 
-class InjectMetadataControlDependencies : public MauInspector {
+/// Common functionality for injecting dependencies into a DependencyGraph.
+class AbstractDependencyInjector : public MauInspector {
+ protected:
     bool tables_placed = false;
-    const PhvInfo &phv;
     DependencyGraph &dg;
-    FlowGraph &fg;
     const ControlPathwaysToTable &ctrl_paths;
-    std::map<cstring, const IR::MAU::Table *> name_to_table;
 
     Visitor::profile_t init_apply(const IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
-        name_to_table.clear();
         tables_placed = false;
         return rv;
     }
 
     bool preorder(const IR::MAU::Table *t) override {
-        name_to_table[t->name] = t;
         tables_placed |= t->is_placed();
         return true;
     }
+
+ public:
+    AbstractDependencyInjector(DependencyGraph &dg, const ControlPathwaysToTable &cp)
+        : dg(dg), ctrl_paths(cp) {}
+};
+
+class InjectMetadataControlDependencies : public AbstractDependencyInjector {
+    const PhvInfo &phv;
+    const FlowGraph &fg;
+    std::map<cstring, const IR::MAU::Table *> name_to_table;
+
+    Visitor::profile_t init_apply(const IR::Node *node) override {
+        auto rv = AbstractDependencyInjector::init_apply(node);
+        name_to_table.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *t) override {
+        auto rv = AbstractDependencyInjector::preorder(t);
+        name_to_table[t->name] = t;
+        return rv;
+    }
+
     void end_apply() override;
 
  public:
-    InjectMetadataControlDependencies(const PhvInfo &p, DependencyGraph &g, FlowGraph &f,
+    InjectMetadataControlDependencies(const PhvInfo &p, DependencyGraph &g, const FlowGraph &f,
             const ControlPathwaysToTable &cp)
-        : phv(p), dg(g), fg(f), ctrl_paths(cp) {}
+        : AbstractDependencyInjector(g, cp), phv(p), fg(f) { }
+};
+
+class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
+    const CalculateNextTableProp& cntp;
+
+    void postorder(const IR::MAU::Table* table) override;
+
+ public:
+    InjectActionExitAntiDependencies(DependencyGraph &g, const CalculateNextTableProp &cntp,
+            const ControlPathwaysToTable &cp)
+        : AbstractDependencyInjector(g, cp), cntp(cntp) { }
 };
 
 class TableFindInjectedDependencies : public PassManager {
@@ -80,6 +111,7 @@ class TableFindInjectedDependencies : public PassManager {
     DependencyGraph &dg;
     FlowGraph fg;
     ControlPathwaysToTable ctrl_paths;
+    CalculateNextTableProp cntp;
 
     profile_t init_apply(const IR::Node *root) override {
         auto rv = PassManager::init_apply(root);

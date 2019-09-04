@@ -24,27 +24,57 @@ class NextTable : public PassManager {
     NextTable();
 
  private:
+    class MultiAppliedTables : public MauInspector {
+        ordered_set<const IR::MAU::Table *> tables_visited;
+        ordered_set<const IR::MAU::Table *> repeated_tables;
+
+        profile_t init_apply(const IR::Node *n) override {
+            auto rv = MauInspector::init_apply(n);
+            tables_visited.clear();
+            repeated_tables.clear();
+            return rv;
+        }
+
+        bool preorder(const IR::MAU::Table *) override;
+
+     public:
+        bool multi_applied_table(const IR::MAU::Table *t) const {
+            BUG_CHECK(tables_visited.count(t) > 0, "Checking for a table %1% that was not found "
+                "on the visit", t->externalName());
+            return repeated_tables.count(t) > 0;
+        }
+
+        MultiAppliedTables() { visitDagOnce = false; }
+    };
+
+    MultiAppliedTables multi_applies;
+
     // Represents a long branch targeting a single destination (unique on destination)
     class LBUse {
-        bool extended;  // Whether this use has been extended
+        // @seealso: Comments in jbay_next_table.cpp:MultiAppliedTables::preorder
+        bool multiply_applied;
+
      public:
-        size_t fst, lst;  // First and last stages this tag is used on
+        ssize_t fst, lst;  // First and last stages this tag is used on
         const IR::MAU::Table* dest;  // The destination related with this use
         explicit LBUse(const IR::MAU::Table* d)  // Dummy constructor for lookup by destination
-                : extended(false), fst(0), lst(0), dest(d) {}
-        LBUse(const IR::MAU::Table* d, size_t f, size_t l)  // Construct a LBUse for a dest
-                : extended(false), fst(f), lst(l), dest(d) {}
-        bool operator<(const LBUse& r) const { return dest < r.dest; }  // Always unique on dest!
+                : multiply_applied(false), fst(-1), lst(-1), dest(d) {}
+        LBUse(const IR::MAU::Table* d, size_t f, size_t l, bool ma)  // Construct a LBUse for a dest
+                : multiply_applied(ma), fst(f), lst(l), dest(d) {}
+        // Always unique on dest, ensure that the < is deterministic
+        bool operator<(const LBUse& r) const {
+            return dest->unique_id() < r.dest->unique_id();
+        }
         bool operator&(const LBUse& a) const;  // Returns true if tags do have unmergeable overlap
         void extend(const IR::MAU::Table*);  // Extends this LB to a new source table
         // Returns true if on the same gress, false o.w.
         inline bool same_gress(const LBUse& r) const { return dest->thread() == r.dest->thread(); }
         // Returns true if this LB is targetable for DT, false o.w.
-        inline bool can_dt() const { return !extended; }
+        inline bool can_dt() const { return !multiply_applied; }
         inline gress_t thread() const { return dest->thread(); }
         friend std::ostream& operator<<(std::ostream& out, const LBUse& u) {
             out << "dest: " << u.dest->name << ", rng: " << u.fst << "->" << u.lst
-                << ", extended? " << u.extended;
+                << ", multiply_applied? " << u.multiply_applied;
             return out;
         }
     };

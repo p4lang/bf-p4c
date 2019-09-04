@@ -36,6 +36,24 @@ bool FindInitializationNode::isUninitializedDef(
     return false;
 }
 
+bool FindInitializationNode::ignoreDeparserUseForPacketField(
+        const PHV::Field* f,
+        const ordered_set<const IR::BFN::Unit*>& f_dominators) const {
+    if (!noInitPacketFields.isCandidateHeader(f->header())) return false;
+    auto& actions = noInitPacketFields.getActionsForCandidateHeader(f->header());
+    if (actions.size() > 1) return false;
+    ordered_set<const IR::BFN::Unit*> tables;
+    for (const auto* action : actions) {
+        auto t = tablesToActions.getTableForAction(action);
+        if (t)
+            tables.insert((*t)->to<IR::MAU::Table>());
+    }
+    if (tables.size() != f_dominators.size()) return false;
+    for (const auto* u : tables)
+        if (!f_dominators.count(u)) return false;
+    return true;
+}
+
 bool FindInitializationNode::summarizeUseDefs(
         const PHV::Field* f,
         const ordered_set<const IR::BFN::Unit*>& initPoints,
@@ -70,6 +88,10 @@ bool FindInitializationNode::summarizeUseDefs(
         // dominator for the read node (as that node is a candidate for initializing the value of
         // the metadata field).
         if (use.first->is<IR::BFN::Deparser>()) {
+            if (f->isPacketField() && ignoreDeparserUseForPacketField(f, f_dominators)) {
+                LOG3("\t\t\tIgnoring deparser use for auto alias packet field");
+                continue;
+            }
             f_dominators.insert(use.first);
             // nullptr indicates deparser to the getNonGatewayImmediateDominator() method.
             auto t = domTree.getNonGatewayImmediateDominator(nullptr, f->gress);
@@ -853,10 +875,13 @@ LiveRangeShrinking::LiveRangeShrinking(
         const ActionPhvConstraints& a,
         const BuildDominatorTree& d,
         const MauBacktracker& bt)
-    : initNode(d, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex, d.getFlowGraph(), bt) {
+    : noInitPacketFields(p),
+      initNode(d, p, u, g, i.getFields(), tableActionsMap, l, a, tableMutex,
+               d.getFlowGraph(), noInitPacketFields, bt) {
     addPasses({
         &tableMutex,
         &tableActionsMap,
+        &noInitPacketFields,
         &initNode
     });
 }

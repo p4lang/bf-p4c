@@ -1,5 +1,3 @@
-@pragma command_line --disable-init-metadata
-
 header_type wred_metadata_t {
     fields {
         index : 8;

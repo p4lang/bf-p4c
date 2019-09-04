@@ -405,6 +405,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/add_special_constraints.cpp
   phv/allocate_phv.cpp
   phv/asm_output.cpp
+  phv/auto_init_metadata.cpp
   phv/cluster_phv_operations.cpp
   phv/create_thread_local_instances.cpp
   phv/finalize_stage_allocation.cpp
@@ -460,6 +461,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/add_special_constraints.h
   phv/allocate_phv.h
   phv/asm_output.h
+  phv/auto_init_metadata.h
   phv/check_unallocated.h
   phv/cluster_phv_operations.h
   phv/create_thread_local_instances.h

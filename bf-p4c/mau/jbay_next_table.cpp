@@ -181,11 +181,12 @@ bool NextTable::LBUse::operator&(const LBUse& r) const {
 }
 
 void NextTable::LBUse::extend(const IR::MAU::Table* t) {
-    size_t st = t->stage();
-    BUG_CHECK(size_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
+    ssize_t st = t->stage();
+    BUG_CHECK(ssize_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
+    BUG_CHECK(multiply_applied, "Table %1% requires more than one long branch pathways is only "
+                                "applied once?", t->name);
     // If tables are in the same stage, we don't need to do anything
     if (st == fst) return;
-    extended = true;
     fst = st < fst ? st : fst;
 }
 
@@ -280,7 +281,8 @@ void NextTable::Prop::cross_prop(const NTInfo& nti) {
                 lb.extend(prev_t);
                 self.lbus.insert(lb);
             } else {  // Otherwise, create a new LBUse
-                self.lbus.insert(LBUse(rep, prev_st, i));
+                self.lbus.insert(
+                    LBUse(rep, prev_st, i, self.multi_applies.multi_applied_table(rep)));
             }
             self.dest_src[get_uid(rep)].insert(get_uid(prev_t));
             self.dest_ts[get_uid(rep)] = nti.ts;
@@ -322,7 +324,75 @@ void NextTable::Prop::end_apply() {
     LOG1("FINISHED NEXT TABLE PROPAGATION");
 }
 
-NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
+
+/**
+ * Currently, a compiler limitation in the compiler restricts certain long branches from
+ * being reduced via dummy tables.
+ *
+ * Let's use the following example:
+ *
+ *    if (t1.apply().hit) {
+ *         t3.apply();
+ *    } else if (t2.apply().hit) {
+ *         t3.apply();
+ *    }
+ *
+ * In this example, t3 is applied twice.  Let's use the following placement:
+ *
+ *     t1    t2          t3           TABLES
+ * -----------------------------------------------
+ *  0  1  2  3  4  5  6  7  8  (...)  STAGES
+ *     |                 |
+ * first_stage       last_stage
+ *
+ *
+ * Now if this was to be dummy tabled, the dummy tables would have to range from stage 2
+ * to stage 6.
+ *
+ * The original table sequence graph is:
+ *
+ *    t1    t2
+ *     \    |
+ *      \   |
+ *  $hit \  | $hit
+ *        \ |
+ *         t3 
+ *
+ * is now replaced by
+ *
+ *     t1    t2
+ *      |    /
+ *      |   /
+ * $hit |  / $hit
+ *      | /    
+ *     [ dummy2, dummy3, dummy4, dummy5, dummy6, t3]
+ *
+ * But this is illegal, as t2 would happen after dummy2 logical but precedes it in the
+ * table sequence.
+ *
+ * The TableGraph IR solution would be:
+ *     t1
+ *      |
+ *      | 
+ * $hit |
+ *      |    
+ *    [ dummy2, dummy3 ]    t2
+ *                  |       /
+ *         $default |      /
+ *                  |     / $hit
+ *                  |    /
+ *                [ dummy4, dummy5, dummy6, t3]
+ *
+ * but currently the long branch allocation does not have support for this, so we just prevent
+ * it from being dummy tabled.
+ */
+bool NextTable::MultiAppliedTables::preorder(const IR::MAU::Table *tbl) {
+    if (tables_visited.count(tbl))
+        repeated_tables.insert(tbl);
+    tables_visited.insert(tbl);
+    LOG1("   Table visited " << tbl->name);
+    return true;
+} NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
     // Clear old values
     self.stage_tags.clear();
@@ -404,7 +474,7 @@ void NextTable::LBAlloc::pretty_tags() {
             if (u.fst >= u.lst - 1) continue;  // skip reduced uses
             std::string spacer = gress_char[u.dest->thread()];
             stage_occ[u.fst] += "|" + spacer;
-            for (size_t i = u.fst + 1; i < u.lst; ++i) {
+            for (ssize_t i = u.fst + 1; i < u.lst; ++i) {
                 stage_occ[i] = spacer + spacer;
             }
             stage_occ[u.lst] = spacer + ">" + stage_occ[u.lst];
@@ -721,9 +791,12 @@ void NextTable::TagReduce::alloc_dt_mems() {
 
 // FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
 NextTable::NextTable() {
-    addPasses({new Prop(*this),
+    addPasses({&multi_applies,
+               new Prop(*this),
+               &multi_applies,
                new LBAlloc(*this),
                new TagReduce(*this),
+               &multi_applies,
                new Prop(*this),
                new LBAlloc(*this)});
 }

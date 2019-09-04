@@ -1522,11 +1522,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     seq_placed[idx] = true;
                     LOG3("    - skipping " << t->name << " as its already done");
                     continue; }
+                /*
                 if (grp->seq->deps[idx] - seq_placed) {
                     LOG3("    - skipping " << t->name << " as its dependent on: " <<
                          DumpSeqTables(grp->seq, grp->seq->deps[idx] - seq_placed));
                     done = false;
                     continue; }
+                */
 
                 bool should_skip = false;  // flag to continue; outer loop;
                 for (auto& grp_tbl : grp->seq->tables) {

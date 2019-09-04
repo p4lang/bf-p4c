@@ -123,7 +123,7 @@ const char *PragmaCommandLine::help = "@pragma command_line <cmd_line_option(s)>
     "  --metadata-overlay,\n"
     "  --placement,\n"
     "  --placement-order,\n"
-    "  --disable-init-metadata,\n"
+    "  --auto-init-metadata,\n"
     "  --decaf,\n"
     "  --infer-payload-offset";
 

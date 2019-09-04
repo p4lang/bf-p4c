@@ -209,6 +209,67 @@ void InjectMetadataControlDependencies::end_apply() {
     }
 }
 
+/**
+ * Adds anti-dependency edges for tables with exiting actions.
+ *
+ * In Tofino2, `exit()` is desugared into an assignment to an `hasExited` variable, which gets
+ * threaded through the program. This results in a read-write dependence between any table with an
+ * exiting action and all subsequent tables in the control flow. Here, we mimic this dependence for
+ * Tofino's benefit, except we use anti-dependency edges instead of flow dependency edges, and we
+ * add edges in a way that maintains the correct chain-length metric for tables.
+ *
+ * Edges are added as follows. For each table T with an exiting action, start at T and walk up to
+ * the top level of the pipe along all possible control-flow paths. For the table T' at each level
+ * (including T itself), let S be the table sequence containing T', and add the following
+ * anti-dependency edges:
+ *   - to T' from the next-table leaves of every predecessor of T' in S.
+ *   - from each next-table leaf of T' to every successor of T' in S.
+ */
+void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
+    if (tables_placed) return;
+    if (!table->has_exit_action()) return;
+
+    std::set<const IR::MAU::Table*> processed;
+
+    // Walk up to the top level of the pipe along each control-flow path to the table.
+    for (auto path : ctrl_paths.table_pathways.at(table)) {
+        const IR::MAU::Table* curTable = nullptr;
+        for (auto parent : path) {
+            if (auto t = parent->to<IR::MAU::Table>()) {
+                curTable = t;
+                continue;
+            }
+
+            auto tableSeq = parent->to<IR::MAU::TableSeq>();
+            if (!tableSeq) continue;
+
+            if (processed.count(curTable)) continue;
+
+            bool predecessor = true;  // Tracks whether "sibling" is a predecessor of "curTable".
+            for (auto sibling : tableSeq->tables) {
+                if (sibling == curTable) {
+                    predecessor = false;
+                    continue;
+                }
+
+                if (predecessor) {
+                    // Add an anti-dependency to curTable from each next-table leaf of the
+                    // predecessor.
+                    for (auto leaf : cntp.next_table_leaves.at(sibling)) {
+                        dg.add_edge(leaf, curTable, DependencyGraph::ANTI);
+                    }
+                } else {
+                    // Add an anti-dependency edge from each next-table leaf of curTable to the
+                    // successor.
+                    for (auto leaf : cntp.next_table_leaves.at(curTable)) {
+                        dg.add_edge(leaf, sibling, DependencyGraph::ANTI);
+                    }
+                }
+            }
+        }
+    }
+}
+
 TableFindInjectedDependencies
         ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d)
         : phv(p), dg(d) {
@@ -217,7 +278,9 @@ TableFindInjectedDependencies
         new InjectControlDependencies(dg, dominators),
         new FindFlowGraph(fg),
         &ctrl_paths,
-        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths)
+        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
+        &cntp,
+        new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths)
     });
 }
 

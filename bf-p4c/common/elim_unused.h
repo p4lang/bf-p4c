@@ -23,4 +23,33 @@ class ElimUnused : public PassManager {
     ElimUnused(const PhvInfo &phv, FieldDefUse &defuse);
 };
 
+class AbstractElimUnusedInstructions : public Transform {
+ protected:
+    const FieldDefUse& defuse;
+
+    /// Names of fields whose extracts have been eliminated.
+    std::set<cstring> eliminated;
+
+    const IR::MAU::StatefulAlu* preorder(IR::MAU::StatefulAlu* salu) override {
+        // Don't go through these.
+        prune();
+        return salu;
+    }
+
+    const IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
+        // Don't go through these.
+        prune();
+        return gr;
+    }
+
+    /// Determines whether the given extract, occurring in the given unit, should be eliminated.
+    virtual bool elim_extract(const IR::BFN::Unit* unit, const IR::BFN::Extract* extract) = 0;
+
+    const IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override;
+    const IR::BFN::FieldLVal* preorder(IR::BFN::FieldLVal* lval) override;
+
+    explicit AbstractElimUnusedInstructions(const FieldDefUse& defuse)
+      : defuse(defuse) { }
+};
+
 #endif /* BF_P4C_COMMON_ELIM_UNUSED_H_ */

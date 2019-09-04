@@ -6,64 +6,62 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/log.h"
 
-class ElimUnused::Instructions : public Transform {
-    ElimUnused &self;
+const IR::BFN::Extract*
+AbstractElimUnusedInstructions::preorder(IR::BFN::Extract* extract) {
+    auto unit = findOrigCtxt<IR::BFN::Unit>();
+    if (!unit) return extract;
 
-    std::set<cstring> eliminated;
+    // Do not eliminate extract that it is serialized from deparser so that its layout
+    // might be change due to phv allcoation.
+    // TODO(yumin): again, the reason we can not do it now is because that we do not have
+    // the `input buffer layout` stored with the parser state. Instead, we rely on all those
+    // primitives and shift and range to determine what is on the buffer, which has already
+    // created some troubles in ResolveComputed. Once we can do the input buffer layout
+    // refactoring, this can be removed as well, as long as from_marshaled is migrated onto
+    // input buffer layout as well.
+    if (extract->marshaled_from) {
+        return extract; }
 
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
-        prune();
-        return salu;
+    if (elim_extract(unit, extract)) {
+        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+            eliminated.insert(lval->toString());
+        LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
+        return nullptr;
     }
 
+    return extract;
+}
+
+const IR::BFN::FieldLVal*
+AbstractElimUnusedInstructions::preorder(IR::BFN::FieldLVal* lval) {
+    auto tcs = findOrigCtxt<IR::BFN::TotalContainerSize>();
+    if (!tcs) return lval;
+
+    if (eliminated.count(lval->toString())) {
+        LOG1("ELIM UNUSED " << lval << " IN UNIT " << DBPrint::Brief << tcs);
+        return nullptr;
+    }
+
+    return lval;
+}
+
+class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
     bool elim_extract(const IR::BFN::Unit* unit, const IR::Expression* field) {
-        if (!self.defuse.getUses(unit, field).empty())
-            return false;
-        return true;
+        return defuse.getUses(unit, field).empty();
     }
 
-    const IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
-        auto unit = findOrigCtxt<IR::BFN::Unit>();
-        if (!unit) return extract;
+    bool elim_extract(const IR::BFN::Unit* unit,
+                      const IR::BFN::Extract* extract) {
+        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+            return elim_extract(unit, lval->field);
 
-        // Do not eliminate extract that it is serialized from deparser so that its layout
-        // might be change due to phv allcoation.
-        // TODO(yumin): again, the reason we can not do it now is because that we do not have
-        // the `input buffer layout` stored with the parser state. Instead, we rely on all those
-        // primitives and shift and range to determine what is on the buffer, which has already
-        // created some troubles in ResolveComputed. Once we can do the input buffer layout
-        // refactoring, this can be removed as well, as long as from_marshaled is migrated onto
-        // input buffer layout as well.
-        if (extract->marshaled_from) {
-            return extract; }
-
-        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>()) {
-            if (elim_extract(unit, lval->field)) {
-                eliminated.insert(lval->toString());
-                LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
-                return nullptr;
-            }
-        }
-
-        return extract;
-    }
-
-    const IR::BFN::FieldLVal* preorder(IR::BFN::FieldLVal* lval) override {
-        auto tcs = findOrigCtxt<IR::BFN::TotalContainerSize>();
-        if (!tcs) return lval;
-
-        if (eliminated.count(lval->toString())) {
-            LOG1("ELIM UNUSED " << lval << " IN UNIT " << DBPrint::Brief << tcs);
-            return nullptr;
-        }
-
-        return lval;
+        return false;
     }
 
     const IR::BFN::ChecksumVerify* preorder(IR::BFN::ChecksumVerify* verify) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return verify;
-        if (verify->dest && !self.defuse.getUses(unit, verify->dest->field).empty())
+        if (verify->dest && !defuse.getUses(unit, verify->dest->field).empty())
             return verify;
 
         LOG1("ELIM UNUSED " << verify << " IN UNIT " << DBPrint::Brief << unit);
@@ -74,7 +72,7 @@ class ElimUnused::Instructions : public Transform {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return i;
         if (!i->operands[0]) return i;
-        if (!self.defuse.getUses(unit, i->operands[0]).empty()) return i;
+        if (!defuse.getUses(unit, i->operands[0]).empty()) return i;
         LOG1("ELIM UNUSED instruction " << i << " IN UNIT " << DBPrint::Brief << unit);
         return nullptr;
     }
@@ -92,12 +90,9 @@ class ElimUnused::Instructions : public Transform {
         return inst;
     }
 
-    const IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
-        prune();  // don't go through these.
-        return gr; }
-
  public:
-    explicit Instructions(ElimUnused &self) : self(self) {}
+    explicit Instructions(ElimUnused &self)
+      : AbstractElimUnusedInstructions(self.defuse) {}
 };
 
 /// Removes no-op tables that have the @hidden annotation.

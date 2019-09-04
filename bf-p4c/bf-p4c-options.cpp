@@ -129,9 +129,10 @@ BFN_Options::BFN_Options() {
     registerOption("--no-phv-privatization", nullptr,
         [this](const char *) { privatization = false; return true; },
         "Do not use TPHV/PHV privatization");
-    registerOption("--disable-init-metadata", nullptr,
-        [this](const char *) { disable_init_metadata = true; return true; },
-        "Disable metadata initialization");
+    registerOption("--auto-init-metadata", nullptr,
+        [this](const char *) { auto_init_metadata = true; return true; },
+        "Automatically initialize metadata to false or 0. This is always enabled for P4_14. "
+        "Initialization of individual fields can be disabled by using the pa_no_init annotation.");
     registerOption("--disable-dark-allocation", nullptr,
         [this](const char *) { disable_dark_allocation = true; return true; },
         "Disable allocation to dark containers");
@@ -246,6 +247,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     if (!processed) {
         processed = true;
+
+        // Always auto-initialize metadata for P4_14.
+        auto_init_metadata |=
+            langVersion == CompilerOptions::FrontendVersion::P4_14;
 
         Target t = { target, arch };
         if (!supportedTargets.count(t)) {
@@ -383,7 +388,7 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
         { "--metadata-overlay",         false },
         { "--placement",                true },
         { "--placement-order",          false },
-        { "--disable-init-metadata",    true },  // brig only
+        { "--auto-init-metadata",       true },  // brig only
         { "--decaf",                    true },  // brig only
         { "--infer-payload-offset",     true }
     };

@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-@command_line("--disable-init-metadata") struct wred_metadata_t {
+struct wred_metadata_t {
     bit<8> index;
 }
 

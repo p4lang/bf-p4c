@@ -66,7 +66,7 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
             continue;
 
         // check gress correct
-        if (!PHV::Pragmas::gressValid("pa_no_init", gress->value))
+        if (!PHV::Pragmas::gressValid(PragmaNoInit::name, gress->value))
             continue;
 
         auto field_name = gress->value + "::" + field_ir->value;

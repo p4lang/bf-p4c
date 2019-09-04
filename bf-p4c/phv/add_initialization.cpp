@@ -207,12 +207,29 @@ ComputeDarkInitialization::getInitializationInstructions(
 
 class AddDarkInitialization : public Transform {
  private:
+    const PhvInfo& phv;
     const ComputeDarkInitialization& initReqs;
 
     IR::Node* preorder(IR::MAU::Action* action) override {
         const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
+        ordered_set<PHV::FieldSlice> dests;
+        for (auto* prim : action->action) {
+            le_bitrange range;
+            const PHV::Field* f = phv.field(prim->operands[0], &range);
+            PHV::FieldSlice slice(f, range);
+            dests.insert(slice);
+            LOG5("Action " << action->name << " already writes " << slice);
+        }
         auto insts = initReqs.getInitializationInstructions(tbl, action);
         for (auto* prim : insts) {
+            le_bitrange range;
+            const PHV::Field* f = phv.field(prim->operands[0], &range);
+            PHV::FieldSlice slice(f, range);
+            if (dests.count(slice)) {
+                LOG4("Ignoring already added initialization " << slice << " to action " <<
+                     action->name << " and table " << (tbl ? tbl->name : "NO TABLE"));
+                continue;
+            }
             action->action.push_back(prim);
             LOG4("Adding instruction " << prim << " to action " << action->name << " and table "
                  << (tbl ? tbl->name : "NO TABLE"));
@@ -221,7 +238,8 @@ class AddDarkInitialization : public Transform {
     }
 
  public:
-    explicit AddDarkInitialization(const ComputeDarkInitialization& d) : initReqs(d) { }
+    explicit AddDarkInitialization(const PhvInfo& p, const ComputeDarkInitialization& d)
+        : phv(p), initReqs(d) { }
 };
 
 void ComputeDependencies::noteDependencies(
@@ -559,7 +577,7 @@ AddSliceInitialization::AddSliceInitialization(
         new AddMetadataInitialization(fieldToExpr, init, actionsMap),
         Device::currentDevice() == Device::JBAY ? &computeDarkInit : nullptr,
         Device::currentDevice() == Device::JBAY
-            ? new AddDarkInitialization(computeDarkInit) : nullptr,
+            ? new AddDarkInitialization(p, computeDarkInit) : nullptr,
         &dep,
         new MarkDarkInitTables(dep)
     });

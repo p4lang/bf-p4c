@@ -1,9 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_TRANSFORMS_AUTO_ALIAS_H_
 #define EXTENSIONS_BF_P4C_PHV_TRANSFORMS_AUTO_ALIAS_H_
 
+#include "lib/bitvec.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
-#include "p4c/lib/bitvec.h"
 
 class DetermineCandidateHeaders : public Inspector {
  private:

@@ -47,9 +47,20 @@ struct Use {
 struct UseDef {
     ordered_map<const Use*, std::vector<const Def*>> use_to_defs;
 
-    void add_def(const Use* use, const Def* def) {
+    void add_def(const PhvInfo& phv, const Use* use, const Def* def) {
         for (auto d : use_to_defs[use])
             if (d->equiv(def)) return;
+
+        if (auto buf = use->save->source->to<IR::BFN::InputBufferRVal>()) {
+            BUG_CHECK(buf->range.size() == def->rval->range.size(),
+                      "parser def and use size mismatch");
+        } else {
+            le_bitrange bits;
+            phv.field(use->save->source, &bits);
+            BUG_CHECK(bits.size() == def->rval->range.size(),
+                      "parser def and use size mismatch");
+        }
+
         use_to_defs[use].push_back(def);
     }
 
@@ -157,17 +168,18 @@ struct ResolveExtractSaves : Modifier {
 ///   Use: In which state are the select fields matched on?
 struct CollectParserUseDef : PassManager {
     struct CollectDefs : ParserInspector {
-        CollectDefs() { visitDagOnce = false; }
+        CollectDefs() { }
 
         std::map<const IR::BFN::ParserState*,
-                 std::set<const IR::BFN::InputBufferRVal*>> state_to_rvals;
+                 ordered_set<const IR::BFN::InputBufferRVal*>> state_to_rvals;
 
         std::map<const IR::BFN::InputBufferRVal*,
-                 std::set<const IR::Expression*>> rval_to_lvals;
+                 ordered_set<const IR::Expression*>> rval_to_lvals;
 
-        bool preorder(const IR::BFN::ParserState *) override {
-            visitOnce();  // only visit once, regardless of how many predecessors
-            return true;
+        Visitor::profile_t init_apply(const IR::Node* root) override {
+            state_to_rvals.clear();
+            rval_to_lvals.clear();
+            return ParserInspector::init_apply(root);
         }
 
         // XXX(zma) what if extract gets dead code eliminated?
@@ -197,9 +209,7 @@ struct CollectParserUseDef : PassManager {
                  const CollectParserInfo& pi,
                  const CollectDefs& d,
                  ParserUseDef& parser_use_def) :
-            phv(phv), parser_info(pi), defs(d), parser_use_def(parser_use_def) {
-                visitDagOnce = false;
-            }
+            phv(phv), parser_info(pi), defs(d), parser_use_def(parser_use_def) { }
 
         Visitor::profile_t init_apply(const IR::Node* root) override {
             parser_use_def.clear();
@@ -251,19 +261,26 @@ struct CollectParserUseDef : PassManager {
                 if (def_state == state || graph.is_ancestor(def_state, state)) {
                     for (auto rval : kv.second) {
                         for (auto lval : defs.rval_to_lvals.at(rval)) {
-                            le_bitrange bits;
-                            auto f = phv.field(lval);
-                            auto s = phv.field(saved, &bits);
+                            le_bitrange s_bits, f_bits;
+                            auto f = phv.field(lval, &f_bits);
+                            auto s = phv.field(saved, &s_bits);
 
                             if (f == s) {
-                                if (bits.size() == f->size) {
+                                if (s_bits.size() == f_bits.size()) {
                                     auto def = new Def(def_state, rval);
                                     rv.insert(def);
                                 } else {
-                                    nw_bitrange nw_bits = bits.toOrder<Endian::Network>(f->size);
-                                    auto slice_rval = rval->clone();
-                                    slice_rval->range.lo = rval->range.lo + nw_bits.lo;
-                                    slice_rval->range.hi = rval->range.lo + nw_bits.hi;
+                                    auto nw_f_bits = f_bits.toOrder<Endian::Network>(f->size);
+                                    auto nw_s_bits = s_bits.toOrder<Endian::Network>(s->size);
+
+                                    auto full_rval = rval->clone();
+                                    full_rval->range.lo -= nw_f_bits.lo;
+                                    full_rval->range.hi += f->size - nw_f_bits.hi + 1;
+
+                                    auto slice_rval = full_rval->clone();
+                                    slice_rval->range.lo += nw_s_bits.lo;
+                                    slice_rval->range.hi -= s->size - nw_s_bits.hi + 1;
+
                                     auto def = new Def(def_state, slice_rval);
                                     rv.insert(def);
                                 }
@@ -275,9 +292,6 @@ struct CollectParserUseDef : PassManager {
 
             return rv;
         }
-
-        bool preorder(const IR::BFN::Parser *) override { revisit_visited(); return true; }
-        bool preorder(const IR::BFN::ParserState *) override { visitOnce(); return true; }
 
         bool preorder(const IR::BFN::SavedRVal* save) override {
             auto parser = findOrigCtxt<IR::BFN::Parser>();
@@ -294,7 +308,7 @@ struct CollectParserUseDef : PassManager {
                 defs = find_defs(save->source, graph, state);
 
             for (auto def : defs)
-                parser_use_def[parser].add_def(use, def);
+                parser_use_def[parser].add_def(phv, use, def);
 
             if (!parser_use_def[parser].use_to_defs.count(use))
                 ::fatal_error("Use of uninitialized parser value %1%", use->print());

@@ -12,6 +12,7 @@
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "bf-p4c/phv/transforms/auto_alias.h"
 #include "bf-p4c/phv/utils/utils.h"
 
 /** Find the actions in which to initialize metadata fields after live range shrinking.
@@ -28,6 +29,7 @@ class FindInitializationNode : public Inspector {
     const ActionPhvConstraints&             actionConstraints;
     const TablesMutuallyExclusive&          tableMutex;
     const std::vector<FlowGraph*>&          flowGraph;
+    const DetermineCandidateHeaders&        noInitPacketFields;
     const MauBacktracker&                   tableAlloc;
 
     /// Actions where we cannot initialize metadata because they use hash distributions (and
@@ -47,6 +49,12 @@ class FindInitializationNode : public Inspector {
     /// @returns true if the def of field @f in unit @u is the definition corresponding to implicit
     /// initialization in the parser.
     bool isUninitializedDef(const PHV::Field* f, const FieldDefUse::locpair& def) const;
+
+    /// @returns true if @f is an auto-alias field that is only alive in the f_dominators and
+    /// therefore its deparser use can be ignored.
+    bool ignoreDeparserUseForPacketField(
+            const PHV::Field* f,
+            const ordered_set<const IR::BFN::Unit*>& f_dominators) const;
 
     /// Summarizes the uses and defs of field @f and stores the result in the associated map @units,
     /// contains both the list of units for usedef and the kind of access (read or write). Also
@@ -165,9 +173,11 @@ class FindInitializationNode : public Inspector {
             const ActionPhvConstraints& a,
             const TablesMutuallyExclusive& m,
             const std::vector<FlowGraph*>& fg,
+            const DetermineCandidateHeaders& c,
             const MauBacktracker& bt)
-        : domTree(d), phv(p), defuse(u), dg(g), noInit(i), tablesToActions(t), metaLiveMap(l),
-          actionConstraints(a), tableMutex(m), flowGraph(fg), tableAlloc(bt) { }
+        : domTree(d), phv(p), defuse(u), dg(g), noInit(i), tablesToActions(t),
+          metaLiveMap(l), actionConstraints(a), tableMutex(m), flowGraph(fg),
+          noInitPacketFields(c), tableAlloc(bt) { }
 };
 
 /** This pass is the pass manager for metadata initialization and provides external interfaces to
@@ -177,6 +187,7 @@ class LiveRangeShrinking : public PassManager {
  private:
     TablesMutuallyExclusive         tableMutex;
     MapTablesToActions              tableActionsMap;
+    DetermineCandidateHeaders       noInitPacketFields;
     FindInitializationNode          initNode;
 
  public:

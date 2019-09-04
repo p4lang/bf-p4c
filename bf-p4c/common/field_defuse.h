@@ -48,6 +48,9 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     /// All uses and all defs for each field.
     ordered_map<int, LocPairSet>      &located_uses, &located_defs;
 
+    /// Maps each def to the set of defs that it may overwrite.
+    ordered_map<locpair, LocPairSet>  &output_deps;
+
     /// All implicit parser zero initialization for each field.
     LocPairSet                        &parser_zero_inits;
 
@@ -95,6 +98,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
       defs(*new std::remove_reference<decltype(defs)>::type),
       located_uses(*new std::remove_reference<decltype(located_uses)>::type),
       located_defs(*new std::remove_reference<decltype(located_defs)>::type),
+      output_deps(*new std::remove_reference<decltype(output_deps)>::type),
       parser_zero_inits(*new std::remove_reference<decltype(parser_zero_inits)>::type),
       uninitialized_fields(*new std::remove_reference<decltype(uninitialized_fields)>::type)
       { joinFlows = true; visitDagOnce = false; }
@@ -125,6 +129,19 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
+
+    /// @return all defs that the given def may overwrite.
+    const LocPairSet &getOutputDeps(locpair def) const {
+        static const LocPairSet emptyset;
+        return output_deps.count(def) ? output_deps.at(def) : emptyset;
+    }
+    const LocPairSet &getOutputDeps(const IR::BFN::Unit *u, const IR::Expression *e) const {
+        return getOutputDeps(locpair(u, e));
+    }
+    const LocPairSet &getOutputDeps(const Visitor *v, const IR::Expression *e) const {
+        return getOutputDeps(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e));
+    }
+
     const ordered_set<const PHV::Field*> &getUninitializedFields() const {
         return uninitialized_fields; }
     bool hasNonDarkContext(locpair info) const {

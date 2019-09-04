@@ -725,6 +725,29 @@ control ingr(inout headers hdr, inout metadata md,
   }
 
   apply {
+    // Initialize metadata.
+    md.sport = 0;
+    md.dport = 0;
+    md.fid = 0;
+    md.cid = 0;
+    md.flush_cid = 0;
+    md.learn_requested = 0;
+    md.flush_requested = 0;
+    md.learn_res = 0;
+    md.flush_res = 0;
+    md.map_0_set = 0;
+    md.map_0_get = 0;
+    md.map_0_clr = 0;
+    md.map_0_get_clr = 0;
+    md.map_1_set = 0;
+    md.map_1_get = 0;
+    md.map_1_clr = 0;
+    md.map_1_get_clr = 0;
+    md.map_2_set = 0;
+    md.map_2_get = 0;
+    md.map_2_clr = 0;
+    md.map_2_get_clr = 0;
+    md.learn_event = 0;
 
     if (ig_intr_md.resubmit_flag == 0) {
       /* Send the packet out the same port it came in on. */

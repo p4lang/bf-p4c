@@ -37,6 +37,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     defuse.clear();
     located_uses.clear();
     located_defs.clear();
+    output_deps.clear();
     parser_zero_inits.clear();
     uninitialized_fields.clear();
     non_dark_refs.clear();
@@ -93,6 +94,14 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
     auto &info = field(f);
     LOG3("defuse: " << DBPrint::Brief << *unit <<
          " writing " << f->name << (partial ? " (partial)" : ""));
+
+    // Update output_deps with the new def.
+    locpair def(unit, e);
+    for (auto old_def : info.def) {
+        LOG4("  " << def << " overwrites " << old_def);
+        output_deps[def].insert(old_def);
+    }
+
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
@@ -115,7 +124,6 @@ void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
         info.def.clear(); }
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
-    locpair def(unit, e);
     non_dark_refs[def] |= needsIXBar;
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,

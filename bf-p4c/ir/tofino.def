@@ -60,6 +60,7 @@ class BFN::Pipe {
 
 #apply
     operator== { return metadata == a.metadata &&
+                        global_pragmas == a.global_pragmas &&
                         headerStackInfo == a.headerStackInfo &&
                         thread[0] == a.thread[0] &&
                         thread[1] == a.thread[1] &&

@@ -4,7 +4,6 @@
 #include "ir/ir.h"
 #include "lib/ordered_map.h"
 #include "lib/symbitmatrix.h"
-#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/table_summary.h"
 
 /** When backtracking, this class contains members that save the generated table placement (without
@@ -32,7 +31,7 @@ class MauBacktracker : public Backtrack {
     int maxStage = -1;
 
     /// @true if metadata initialization must be disabled.
-    bool metaInitDisable;
+    bool metaInitDisable = false;
 
     /// @true if PHV allocation must be redone while ignoring pack conflicts.
     bool ignorePackConflicts = false;
@@ -81,7 +80,7 @@ class MauBacktracker : public Backtrack {
     int numStages() const;
 
     /// Constructor takes mutually exclusive to be able to clear it before every PHV allocation pass
-    explicit MauBacktracker(SymBitMatrix& o, bool m = false) : overlay(o), metaInitDisable(m) {}
+    explicit MauBacktracker(SymBitMatrix& o) : overlay(o) {}
 };
 
 #endif /* BF_P4C_PHV_MAU_BACKTRACKER_H_ */

@@ -156,8 +156,8 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
         const IR::BFN::Unit* def_unit = def.first;
         // If the field is specified as pa_no_init, and it has an uninitialized read, we ignore the
         // compiler-inserted parser initialization.
-        if (noInitFields.count(f) && defuse.hasUninitializedRead(f->id)) {
-            if (def_unit->is<IR::BFN::ParserState>()) {
+        if (noInitFields.count(f)) {
+            if (def.second->is<ImplicitParserInit>()) {
                 LOG4("Ignoring def of field " << f << " with uninitialized read and def in "
                      "parser state " << DBPrint::Brief << def_unit);
                 continue;

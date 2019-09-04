@@ -525,7 +525,13 @@ class CalculateNextTableProp : public MauInspector {
     std::map<cstring, const IR::MAU::Table *> name_to_table;
 
  public:
+    /// Maps each table T to its set of next-table leaves, defined inductively. If T has no
+    /// next-table entries, then it is its own next-table leaf. Otherwise, the next-table leaves
+    /// are those of any table in the sub-trees rooted in T's next-table entries.
     NextTableLeaves next_table_leaves;
+
+    /// Maps each table T to its control-dominating set, which is T itself, and any table found in
+    /// the sub-trees rooted in T's next-table entries.
     ControlDominatingSet control_dom_set;
 
  private:
@@ -553,9 +559,11 @@ class ControlPathwaysToTable : public MauInspector {
                                        safe_vector<safe_vector<const IR::Node *>>>;
     using InjectPoints = safe_vector<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>>;
 
- private:
+    /// Maps each table T to a list of possible control paths from T out to the top-level of the
+    /// pipe.
     TablePathways table_pathways;
 
+ private:
     Visitor::profile_t init_apply(const IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         table_pathways.clear();

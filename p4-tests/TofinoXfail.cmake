@@ -207,6 +207,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -223,15 +224,19 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  switch_8.7_l3_heavy_int_leaf
-  switch_l3_heavy_int_leaf
-  switch_msdc_leaf_int
   switch_8.7_msdc_leaf_int
   switch_8.7_generic_int_leaf
-  switch_generic_int_leaf
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error occured while the compiler was allocating parser match registers for|Ran out of parser match registers for"
+  switch_8.7_l3_heavy_int_leaf
+  switch_generic_int_leaf
+  switch_msdc_leaf_int
+  switch_l3_heavy_int_leaf
 )
 
 # P4C-1400, P4C-1123
@@ -937,13 +942,6 @@ p4c_add_xfail_reason("tofino"
 # bigger problem is that the container conflict free table placement is 15 stages for the following
 # program.
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
-  )
-
-# P4C-1906
-p4c_add_xfail_reason("tofino"
-  "error.*Depth of way doesn't match number of rams|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   )
 
 p4c_add_xfail_reason("tofino"

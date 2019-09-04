@@ -1011,6 +1011,16 @@ CoreAllocation::tryAllocSliceList(
                 // XXX(Deep): P4C-1187
                 if (!is_mocha_or_dark && can_overlay(phv_i.metadata_mutex(), slice.field(),
                             alloced_slices)) {
+                    bool prevDeparserZero = std::all_of(alloced_slices.begin(),
+                            alloced_slices.end(), [](const PHV::AllocSlice& a) {
+                        return a.field()->is_deparser_zero_candidate();
+                    });
+                    if (prevDeparserZero && !slice.field()->is_deparser_zero_candidate()) {
+                        LOG5("    ...and cannot metadata overlay on deparsed zero container " << c);
+                        can_place = false;
+                        break;
+                    }
+
                     LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
                          " with metadata initialization.");
                     PHV::Allocation::MutuallyLiveSlices container_state =

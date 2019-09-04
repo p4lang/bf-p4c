@@ -22,7 +22,9 @@ p4c_find_tests("${P16_V1MODEL_FOR_TOFINO}" p16_v1tests INCLUDE "${P16_V1_INCLUDE
 set (P16_TNA_INCLUDE_PATTERNS "include.*(tofino|tna).p4" "main|common_tna_test")
 set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
-set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4")
+# p4c-1813.p4 and p4c-2030.p4 are handled separately so we can add
+# "--auto-init-metadata".
+set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1813\\.p4" "p4c-2030\\.p4")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
@@ -83,6 +85,12 @@ set (TOFINO_TNA_TEST_SUITES
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
+# p4_16/customer/arista/p4c-1813.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4" "-Xp4c=--auto-init-metadata")
+
+# p4_16/customer/arista/p4c-2030.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4" "-Xp4c=--auto-init-metadata")
+
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
   )
@@ -111,19 +119,19 @@ set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-on
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric ${ONOS_FABRIC_P4}
-    "${testExtraArgs} "
+    "${testExtraArgs} -Xp4c=--auto-init-metadata"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -DWITH_SPGW"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW"
     ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -DWITH_INT_TRANSIT"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT"
     ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -DWITH_SPGW -DWITH_INT_TRANSIT"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT"
     ${ONOS_FABRIC_PTF} "all")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)

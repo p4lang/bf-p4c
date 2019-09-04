@@ -41,6 +41,7 @@
 #include "bf-p4c/parde/resolve_parser_stack_index.h"
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/stack_push_shims.h"
+#include "bf-p4c/phv/auto_init_metadata.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/phv_analysis.h"
@@ -100,7 +101,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     defuse(phv),
     decaf(phv, uses, defuse, deps),
     bridged_fields(phv),
-    table_alloc(phv.field_mutex(), options.disable_init_metadata),
+    table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
     flexiblePacking = new FlexiblePacking(options, phv, uses, deps, bridged_fields,
                                           extracted_together, table_alloc);
@@ -176,6 +177,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         (options.no_deadcode_elimination == false) ? new ElimUnusedHeaderStackInfo : nullptr,
         (options.disable_parser_state_merging == false) ? new MergeParserStates : nullptr,
+        options.auto_init_metadata ? nullptr : new DisableAutoInitMetadata(defuse),
+        new RemoveMetadataInits(phv, defuse),
         new CollectPhvInfo(phv),
         new CheckParserMultiWrite(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),

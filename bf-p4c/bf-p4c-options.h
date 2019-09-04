@@ -23,7 +23,7 @@ class BFN_Options : public CompilerOptions {
     bool create_graphs = false;
     bool privatization = false;
     bool decaf = false;
-    bool disable_init_metadata = false;
+    bool auto_init_metadata = false;
     bool disable_parser_state_merging = false;
     bool backward_compatible = false;
     bool display_power_budget = false;

@@ -130,6 +130,11 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--skip-compilation",
                                     action="store", help="Skip compiling pipes whose name contains one of the"
                                                          "'pipeX' substring")
+        self._argGroup.add_argument("--auto-init-metadata",
+                                    action="store_true", default=False,
+                                    help="Automatically initialize metadata to false or 0. This "
+                                    "is always enabled for P4_14. Initialization of individual "
+                                    "fields can be disabled by using the pa_no_init annotation.");
         self._argGroup.add_argument("--disable-egress-latency-padding",
                                     action="store_true", help="Disables adding match"
                                     " dependent stages to the egress pipeline to "
@@ -281,6 +286,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.no_dead_code_elimination:
             self.add_command_option('compiler', '--no-dead-code-elimination')
+
+        if opts.auto_init_metadata:
+            self.add_command_option('compiler', '--auto-init-metadata')
 
         if opts.placement:
             self.add_command_option('compiler', '--placement=pragma')

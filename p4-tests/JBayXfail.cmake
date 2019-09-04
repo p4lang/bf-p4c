@@ -300,7 +300,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-1665
 p4c_add_xfail_reason("tofino2"
-  "The table.*with no key cannot have the action"
+  "Table placement cannot make any more progress"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 

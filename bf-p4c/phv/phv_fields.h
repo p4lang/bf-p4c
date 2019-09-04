@@ -134,9 +134,9 @@ class Field : public LiftLess<Field> {
     static constexpr char const *DARK_PRIVATIZE_SUFFIX = "$dark";
 
     /** Field name, following this scheme:
-     *   - "header.field"
-     *   - "header.field[i]" where "i" is a positive integer
-     *   - "header.$valid"
+     *   - "gress::header.field"
+     *   - "gress::header.field[i]" where "i" is a positive integer
+     *   - "gress::header.$valid"
      */
     cstring         name;
 

@@ -19,14 +19,14 @@ set (SWITCH_P4_16_C0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_c0
 file (RELATIVE_PATH switch_p4_16_c0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_C0})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_c0_profile" ${switch_p4_16_c0} "${testExtraArgs}" "-DC0_PROFILE
-  -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -tofino2 -arch t2na")
+  -I${SWITCH_P4_16_INC} -tofino2 -arch t2na")
 p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_c0_profile")
 
 set (SWITCH_P4_16_D0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_d0.p4)
 file (RELATIVE_PATH switch_p4_16_d0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_D0})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_d0_profile" ${switch_p4_16_d0} "${testExtraArgs}" "-DD0_PROFILE
-  -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-init-metadata\" -tofino2 -arch t2na")
+  -I${SWITCH_P4_16_INC} -tofino2 -arch t2na")
 p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_d0_profile")
 
 # Running switch-16 PTF tests on default profile
