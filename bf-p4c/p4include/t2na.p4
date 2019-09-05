@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef _JBAY_NATIVE_ARCHITECTURE_P4_
-#define _JBAY_NATIVE_ARCHITECTURE_P4_
+#ifndef _TOFINO2_NATIVE_ARCHITECTURE_P4_
+#define _TOFINO2_NATIVE_ARCHITECTURE_P4_
 
 #include "core.p4"
 #include "tofino2.p4"
@@ -85,4 +85,4 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
     @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
     @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
 
-#endif  /* _JBAY_NATIVE_ARCHITECTURE_P4_ */
+#endif  /* _TOFINO2_NATIVE_ARCHITECTURE_P4_ */

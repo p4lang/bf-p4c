@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef JBAY_P4_
-#define JBAY_P4_
+#ifndef TOFINO2_P4_
+#define TOFINO2_P4_
 
 #include<core.p4>
 
@@ -1181,4 +1181,4 @@ extern Alpm {
     Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
 }
 
-#endif  /* _JBAY_P4_ */
+#endif  /* _TOFINO2_P4_ */
