@@ -31,6 +31,14 @@ safe_vector<ActionData::Format::Use> LayoutChoices::get_action_formats(const IR:
     return af_by_type.at(type);
 }
 
+std::ostream &operator<<(std::ostream &out, LayoutChoices::FormatType_t type) {
+    switch (type) {
+    case LayoutChoices::NORMAL: out << "NORMAL"; break;
+    case LayoutChoices::SPLIT_ATTACHED: out << "SPLIT_ATTACHED"; break;
+    default: out << "FormatType_t(" << int(type) << ")"; break; }
+    return out;
+}
+
 bool DoTableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }

@@ -741,9 +741,19 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     // Because the table is const, the layout options must be copied into the Object
     logical_ids = 1;
     layout_options.clear();
+    LayoutChoices::FormatType_t format_type = LayoutChoices::NORMAL;
     if (!tbl->created_during_tp) {
-        layout_options = lc->get_layout_options(tbl, LayoutChoices::NORMAL);
-        action_formats = lc->get_action_formats(tbl, LayoutChoices::NORMAL);
+        for (auto *ba : tbl->attached) {
+            if (!ba->attached->direct && attached_entries.at(ba->attached) < ba->attached->size) {
+                format_type = LayoutChoices::SPLIT_ATTACHED;
+                break; } }
+        layout_options = lc->get_layout_options(tbl, format_type);
+        if (layout_options.empty()) {
+            // no layouts available?  Fall back to NORMAL for now
+            format_type = LayoutChoices::NORMAL;
+            layout_options = lc->get_layout_options(tbl, format_type); }
+        BUG_CHECK(tbl->gateway_only() || !layout_options.empty(), "No layout options for %s", tbl);
+        action_formats = lc->get_action_formats(tbl, format_type);
         meter_format = lc->get_attached_formats(tbl);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
@@ -763,6 +773,9 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     BUG_CHECK(tbl->gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
     determine_initial_layout_option(tbl, entries, attached_entries, table_placement);
     // FIXME: This is a quick hack to handle tables with only a default action
+
+    LOG2("StageUseEstimate(" << tbl->name << ", " << entries << ", " << format_type << ") " <<
+         layout_options.size() << " layouts");
 }
 
 bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
@@ -772,23 +785,27 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
 
     if (tbl->layout.ternary) {
         preferred_index++;
-        if (preferred_index == layout_options.size())
-            return false;
+        if (preferred_index == layout_options.size()) {
+            LOG2("    adjust_choices: no more ternary layouts");
+            return false; }
+        LOG2("    adjust_choices: try ternary layout " << preferred_index);
         return true;
     }
 
     // A hash action table cannot be split, without adding a PHV.  Thus it is just removed
     if (layout_options[preferred_index].layout.hash_action) {
         layout_options.erase(layout_options.begin() + preferred_index);
-        if (layout_options.size() == 0)
-            return false;
+        if (layout_options.size() == 0) {
+            LOG2("    adjust_choices: no more layouts after removing hash_action");
+            return false; }
     } else if (layout_options[preferred_index].previously_widened) {
+        LOG2("    adjust_choices: previously_widened");
         return false;
     } else {
         layout_options[preferred_index].way.width++;
         layout_options[preferred_index].previously_widened = true;
+        LOG2("    adjust_choices: widen the exact match way");
     }
-
 
     for (auto &lo : layout_options) {
         lo.clear_mems();

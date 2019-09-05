@@ -123,10 +123,11 @@ struct ActionDataBus {
         void clear() {
             action_data_locs.clear();
             clobber_locs.clear();
+            rng_locs.clear();
         }
 
         bool empty() const {
-            return action_data_locs.empty() && clobber_locs.empty();
+            return action_data_locs.empty() && clobber_locs.empty() && rng_locs.empty();
         }
 
         struct RandomNumberGenerator {

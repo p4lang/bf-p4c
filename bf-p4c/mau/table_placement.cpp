@@ -333,6 +333,13 @@ struct TablePlacement::Placed {
         if (prev)
             placed |= prev->placed; }
 
+    // update the action/meter formats in the TableResourceAlloc to match the StageUseEstimate
+    void update_formats() {
+        if (auto *af = use.preferred_action_format())
+            resources.action_format = *af;
+        if (auto *mf = use.preferred_meter_format())
+            resources.meter_format = *mf; }
+
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
         out << pl->name;
         return out; }
@@ -727,12 +734,31 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
 
 bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
                                    const char *what, bool no_memory) {
+    // FIXME -- for some reason, if we reallocate the format/ixbar/adb for other tables in
+    // stage 0 when trying to place a starter pistol (even though that alocation ends up
+    // unchanged), placement of memory for the starter pistol may then fail.  So we hack
+    // not doing the reallication (just) for starter pistols to avoid the problem.
+    if (!next->table->created_during_tp) {
+        for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (!pick_layout_option(p, false)) {
+                LOG3("    redo of " << p->name << " ixbar allocation did not fit");
+                return false; } } }
     if (!pick_layout_option(next, false)) {
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
+    if (!next->table->created_during_tp) {
+        for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (!try_alloc_adb(p)) {
+                LOG3("    redo of " << p->name << " action data bus did not fit");
+                return false; } } }
     if (!try_alloc_adb(next)) {
         LOG3("    " << what << " of action data bus did not fit");
         return false; }
+    if (!next->table->created_during_tp) {
+        for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (!try_alloc_imem(p)) {
+                LOG3("    redo of " << p->name << " instruction memory did not fit");
+                return false; } } }
     if (!try_alloc_imem(next)) {
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
@@ -1102,16 +1128,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             rv->need_more = true;
             break; } }
 
+    rv->update_formats();
     if (!rv->table->gateway_only()) {
-        auto action_format = rv->use.preferred_action_format();
-        BUG_CHECK(action_format != nullptr, "Action format could not be found for a "
-                                            "particular layout option.");
-        rv->resources.action_format = *action_format;
-        auto meter_format = rv->use.preferred_meter_format();
-        BUG_CHECK(meter_format != nullptr, "Meter format could not be found for a "
-                                           "particular layout option.");
-        rv->resources.meter_format = *meter_format;
-    }
+        BUG_CHECK(rv->use.preferred_action_format() != nullptr,
+                  "Action format could not be found for a particular layout option.");
+        BUG_CHECK(rv->use.preferred_meter_format() != nullptr,
+                  "Meter format could not be found for a particular layout option."); }
+    for (auto *t : whole_stage)
+        t->update_formats();
 
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
     if (rv->stage > furthest_stage) {
@@ -1182,6 +1206,7 @@ const TablePlacement::Placed *
             cstring t_name = "$" + toString(current_gress) + "_starter_pistol";
             auto t = new IR::MAU::Table(t_name, current_gress);
             t->created_during_tp = true;
+            LOG4("Adding starter pistol for " << current_gress);
             auto *rv = new Placed(*this, t, last_placed);
             rv = try_place_table(rv, current);
             if (rv->stage != 0) {

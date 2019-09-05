@@ -86,6 +86,8 @@ class LayoutChoices {
     }
 };
 
+extern std::ostream &operator<<(std::ostream &, LayoutChoices::FormatType_t);
+
 /** Checks to see if the action(s) have hash distribution or rng access somewhere */
 class GetActionRequirements : public MauInspector {
     bool _hash_dist_needed = false;
