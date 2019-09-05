@@ -762,8 +762,10 @@ bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) {
     auto *t = rv->table;
-    rv->entries = 512;  // default number of entries -- FIXME does this really make sense?
     if (t->match_table) {
+        rv->entries = 512;  // default number of entries -- FIXME does this really make sense?
+        if (t->layout.no_match_data())
+            rv->entries = 1;
         if (t->layout.pre_classifier)
             rv->entries = t->layout.pre_classifer_number_entries;
         else if (auto k = t->match_table->getConstantProperty("size"))
@@ -786,6 +788,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                           t, t->layout.ixbar_width_bits, rv->entries);
             }
         }
+    } else {
+        rv->entries = 1;  // gateway entries?  FIXME does this really make sense?
+                // Can't be 0 even though there are not any match entries, as that will fail in
+                // the test below for "match fully placed but still needs attached"
     }
     /* Not yet placed tables that share an attached table with this table -- if any of them
      * have a dependency that prevents placement in the current stage, we want to defer */
@@ -1433,7 +1439,7 @@ bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
          return true;
 
     for (auto pp : partly_placed) {
-        if (pp == tbl || placed->is_match_placed(tbl))
+        if (pp == tbl || placed->is_match_placed(tbl) || placed->is_match_placed(pp))
             continue;
         if (!mutex(pp, tbl) && !siaa.mutex_through_ignore(pp, tbl)) {
             LOG3("  - skipping " << tbl->name << " as it is not mutually "

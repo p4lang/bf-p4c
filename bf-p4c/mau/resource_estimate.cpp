@@ -710,7 +710,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
                   "hash tables");
         options_to_dleft_entries(tbl, attached_entries); }
     if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
-        entries = 512;
+        entries = 1;
         preferred_index = 0;
     } else if (tbl->layout.atcam) {
         options_to_atcam_entries(tbl, entries);
@@ -747,9 +747,10 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         meter_format = lc->get_attached_formats(tbl);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
-    // A hash action table currently cannot be split across stages, thus if the table has
-    // been previously been placed, the current stage table cannot be hash action
-    if (prev_placed) {
+    // A hash action table currently cannot be split across stages if it does an action lookup,
+    // thus if the table has been previously been placed and has multiple entries (is not a
+    // no_match table), the current stage table cannot be hash action
+    if (prev_placed && entries > 1) {
         auto it = layout_options.begin();
         while (it != layout_options.end()) {
             if (it->layout.hash_action)
@@ -759,6 +760,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         }
     }
 
+    BUG_CHECK(tbl->gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
     determine_initial_layout_option(tbl, entries, attached_entries, table_placement);
     // FIXME: This is a quick hack to handle tables with only a default action
 }
