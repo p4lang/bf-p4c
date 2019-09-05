@@ -9,7 +9,6 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/midend/simplify_references.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -1604,7 +1603,6 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
         /// IR::BFN::Pipe objects. If all the above passes can be moved to an earlier midend
         /// pass, then the passes below can possibily be removed.
         simplifyReferences,
-        new CopyHeaderEliminator(),
     });
 }
 
