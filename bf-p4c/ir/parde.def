@@ -8,47 +8,15 @@
 
 namespace BFN {
 
-/// Superclass for all unresolved header stack indices.
-abstract UnresolvedStackRef : Expression {
-#emit
-    /// The next available id.
-    static size_t nextId;
-#end
+class UnresolvedHeaderStackIndex : Expression {
+    IR::ID index;
 
-#noconstructor
-    UnresolvedStackRef(Util::SourceInfo si) : Expression(si), id(nextId++) { }
-    UnresolvedStackRef() : id(nextId++) { }
+    validate {
+        BUG_CHECK(index == "next" || index == "last",
+            "Unexpected header stack index %1%", index);
+    }
 
-    /// @return a clone of this UnresolvedStackRef which does not compare equal
-    /// to the original or to any other existing UnresolvedStackRef.
-    UnresolvedStackRef makeFresh() const { return clone()->makeFresh(); }
-    UnresolvedStackRef makeFresh() {
-        id = nextId++;
-        return this; }
-
-    size_t id;
-}
-
-/// An unresolved reference to a header stack's '.next' property. This is a
-/// placeholder until we can resolve it into a concrete index.
-class UnresolvedStackNext : UnresolvedStackRef {
-#noconstructor
-    UnresolvedStackNext(Util::SourceInfo si) : UnresolvedStackRef(si) { }
-    UnresolvedStackNext() { }
-
-    dbprint { out << "(unresolved next #" << id << ")"; }
-    toString { return "next"; }
-}
-
-/// An unresolved reference to a header stack's '.last' property. This is a
-/// placeholder until we can resolve it into a concrete index.
-class UnresolvedStackLast : UnresolvedStackRef {
-#noconstructor
-    UnresolvedStackLast(Util::SourceInfo si) : UnresolvedStackRef(si) { }
-    UnresolvedStackLast() { }
-
-    dbprint { out << "(unresolved last #" << id << ")"; }
-    toString { return "last"; }
+    dbprint { out << index; }
 }
 
 /// A value that can *conceptually* be read from in the parser. This is a

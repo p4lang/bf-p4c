@@ -323,7 +323,7 @@ template<> void Parser::State::Match::Clot::write_config(
 
 template<> void Parser::State::Match::write_counter_config(
     Target::Tofino::parser_regs::_memory::_ml_ea_row &ea_row) const {
-    ea_row.ctr_amt_idx = ctr_amt_idx;
+    ea_row.ctr_amt_idx = ctr_instr ? ctr_instr->addr : ctr_imm_amt;
     ea_row.ctr_ld_src = ctr_ld_src;
     ea_row.ctr_load = ctr_load;
 }

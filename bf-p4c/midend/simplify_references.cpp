@@ -224,15 +224,13 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         if (!type) BUG("%1% is not a header stack ref", idx->type);
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right);
     }
+
     const IR::Expression* preorder(IR::Member* member) override {
         auto type = member->type->to<IR::Type_Header>();
         if (!type) return member;
-        if (member->member == "next")
+        if (member->member == "next" || member->member == "last")
             return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::BFN::UnresolvedStackNext);
-        if (member->member == "last")
-            return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::BFN::UnresolvedStackLast);
+                          new IR::BFN::UnresolvedHeaderStackIndex(member->member));
         return member;
     }
 };

@@ -148,15 +148,15 @@ struct ParserAsmSerializer : public ParserInspector {
 
             out << indent << "match: ";
             const char *sep = "[ ";
-            for (const auto& r : state->select->regs) {
-                out << sep << r;
-                sep = ", ";
-            }
             for (const auto& c : state->select->counters) {
                 if (c->is<IR::BFN::ParserCounterIsZero>())
                     out << sep << "ctr_zero";
                 else if (c->is<IR::BFN::ParserCounterIsNegative>())
                     out << sep << "ctr_neg";
+                sep = ", ";
+            }
+            for (const auto& r : state->select->regs) {
+                out << sep << r;
                 sep = ", ";
             }
             out << " ]" << std::endl;

@@ -8,6 +8,8 @@
 #include "bf-p4c/parde/parser_info.h"
 #include "device.h"
 
+using namespace Parser;
+
 // If the start state has selects, we need to insert a dummy state
 // before it where we can insert the save instructions.
 struct InsertInitSaveState : public ParserTransform {
@@ -48,7 +50,7 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         auto src = parser_info.graph(parser).get_src(orig);
 
         auto cnt = orig_state_to_stall_cnt[src->name]++;
-        cstring name = src->name + ".$stall_" + cstring::to_cstring(cnt);
+        cstring name = src->name + ".$oob_stall_" + cstring::to_cstring(cnt);
         auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
 
         LOG2("created stall state for out of buffer select on "
@@ -69,16 +71,29 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         }
     };
 
+    const IR::BFN::ParserState* get_next_state(const IR::BFN::Transition* t) {
+        if (t->next) {
+            return t->next;
+        } else if (t->loop) {
+            auto parser = findOrigCtxt<IR::BFN::Parser>();
+            return parser_info.graph(parser).get_state(t->loop);
+        } else {
+            return nullptr;
+        }
+    }
+
     bool has_oob_save(const IR::BFN::Transition* t) {
-        if (!t->next)
+        if (auto next = get_next_state(t)) {
+            GetMaxSavedRVal max_save;
+
+            next->selects.apply(max_save);
+            next->statements.apply(max_save);
+
+            return int(t->shift + (max_save.rv + 7) / 8) >
+                   Device::pardeSpec().byteInputBufferSize();
+        } else {
             return false;
-
-        GetMaxSavedRVal max_save;
-
-        t->next->selects.apply(max_save);
-        t->next->statements.apply(max_save);
-
-        return int(t->shift + (max_save.rv + 7) / 8) > Device::pardeSpec().byteInputBufferSize();
+        }
     }
 
     IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
@@ -116,7 +131,7 @@ class MatcherAllocator : public Visitor {
              std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
 
     // The register slices that this select should match against.
-    std::map<const IR::BFN::SavedRVal*,
+    std::map<const Use*,
              std::vector<std::pair<MatchRegister, nw_bitrange>>> save_reg_slices;
 
  private:
@@ -182,6 +197,13 @@ class MatcherAllocator : public Visitor {
                 for (auto pred : graph.predecessors().at(use_state)) {
                     for (auto t : graph.transitions(pred, use_state))
                         def_transition_to_state[t] = use_state;
+                }
+
+                for (auto& kv : graph.loopbacks()) {
+                    if (kv.first.second == use_state->name) {
+                        for (auto t : kv.second)
+                            def_transition_to_state[t] = use_state;
+                    }
                 }
             } else {  // case 2: def states are ancestor states
                 for (auto def_state : def_states) {
@@ -656,7 +678,6 @@ class MatcherAllocator : public Visitor {
             nw_byterange group_range = group->get_range(def_state).toUnit<RangeUnit::Byte>();
 
             if (src_state != def_state) {
-                BUG_CHECK(transition->next == def_state, "whoa");
                 auto shift = transition->shift;
                 group_range = group_range.shiftedByBytes(shift);
             }
@@ -697,8 +718,8 @@ class MatcherAllocator : public Visitor {
         for (auto use : group->members) {
             auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
 
-            if (save_reg_slices.count(use->save)) {
-                bool eq = equiv(save_reg_slices.at(use->save), reg_slices);
+            if (save_reg_slices.count(use)) {
+                bool eq = equiv(save_reg_slices.at(use), reg_slices);
 
                 BUG_CHECK(eq, "select has different allocations based on the use context: %1%",
                           use->print());
@@ -708,7 +729,7 @@ class MatcherAllocator : public Visitor {
                 // The thing is I'm not really sure how the subsequent Modifier can
                 // perform a context based revisit on the IR::BFN::Select node.
             } else {
-                save_reg_slices[use->save] = reg_slices;
+                save_reg_slices[use] = reg_slices;
             }
         }
     }
@@ -798,8 +819,6 @@ struct InsertSaveAndSelect : public ParserModifier {
                 transition->saves.push_back(save);
                 auto state = findContext<IR::BFN::ParserState>();
 
-                BUG_CHECK(transition->next, "insert save on transition to <end>?");
-
                 LOG4("insert " << save << " on " << state->name << " -> "
                                << transition->next->name);
             }
@@ -807,13 +826,18 @@ struct InsertSaveAndSelect : public ParserModifier {
     }
 
     void postorder(IR::BFN::SavedRVal* save) override {
-        auto* orig = getOriginal<IR::BFN::SavedRVal>();
-        if (rst.save_reg_slices.count(orig)) {
-            save->reg_slices = rst.save_reg_slices.at(orig);
-        } else {
-            auto select = findContext<IR::BFN::Select>();
-            BUG("Parser match register not allocated for %1%", select->p4Source);
+        auto state = findContext<IR::BFN::ParserState>();
+        auto use = new Use(state, save);
+
+        for (auto& kv : rst.save_reg_slices) {
+            if (kv.first->equiv(use)) {
+                save->reg_slices = kv.second;
+                return;
+            }
         }
+
+        auto select = findContext<IR::BFN::Select>();
+        BUG("Parser match register not allocated for %1%", select->p4Source);
     }
 
     const MatcherAllocator& rst;
@@ -959,9 +983,18 @@ class MatchLayout {
         int shift = 0;
         match_t rv;
         for (const auto& src : boost::adaptors::reverse(sources)) {
-            rv = orTwo(rv, shiftLeft(values[src], shift));
-            shift += sizes.at(src);
+            if (!src.startsWith("ctr_")) {
+                rv = orTwo(rv, shiftLeft(values[src], shift));
+                shift += sizes.at(src);
+            }
         }
+        for (const auto& src : boost::adaptors::reverse(sources)) {
+            if (src.startsWith("ctr_")) {
+                rv = orTwo(rv, shiftLeft(values[src], shift));
+                shift += sizes.at(src);
+            }
+        }
+
         rv = setDontCare(rv);
         return rv;
     }

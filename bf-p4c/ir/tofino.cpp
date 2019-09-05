@@ -1,6 +1,5 @@
 #include "ir/ir.h"
 
-/* static */ size_t IR::BFN::UnresolvedStackRef::nextId = 0;
 /* static */ size_t IR::BFN::ContainerRef::nextId = 0;
 
 IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,

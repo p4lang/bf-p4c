@@ -102,6 +102,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/desugar_varbit_extract.cpp
   midend/normalize_params.cpp
   midend/param_binding.cpp
+  midend/parser_graph.cpp
   midend/simplify_emit_args.cpp
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
@@ -354,7 +355,6 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/infer_payload_offset.cpp
-  parde/resolve_parser_stack_index.cpp
   parde/split_parser_state.cpp
   parde/p4i/gen_parser_json.cpp
   )
@@ -386,7 +386,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/parde_spec.h
   parde/infer_payload_offset.h
   parde/phase0.h
-  parde/resolve_parser_stack_index.h
   parde/parde_utils.h
   parde/parser_info.h
   parde/split_parser_state.h

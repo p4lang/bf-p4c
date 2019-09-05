@@ -3,7 +3,7 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "lib/exceptions.h"
 
-bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
+bool AddParserMetadata::preorder(IR::BFN::Parser *parser) {
     switch (parser->gress) {
         case INGRESS: addIngressMetadata(parser); break;
         case EGRESS:  addEgressMetadata(parser);  break;
@@ -13,7 +13,7 @@ bool AddParserMetadataShims::preorder(IR::BFN::Parser *parser) {
     return true;
 }
 
-void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     // This state initializes some special metadata and serves as an entry
     // point.
     auto *igParserMeta =
@@ -52,7 +52,7 @@ void AddParserMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
+void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
     auto* egParserMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
 
@@ -75,7 +75,7 @@ void AddParserMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-bool AddDeparserMetadataShims::preorder(IR::BFN::Deparser *d) {
+bool AddDeparserMetadata::preorder(IR::BFN::Deparser *d) {
     switch (d->gress) {
         case INGRESS: addIngressMetadata(d); break;
         case EGRESS:  addEgressMetadata(d);  break;
@@ -107,7 +107,7 @@ void addDeparserParam(IR::BFN::Deparser* deparser,
 
 }  // namespace
 
-void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
+void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
     addDeparserParamRename(d, tmMeta, "ucast_egress_port", "egress_unicast_port");
     addDeparserParamRename(d, tmMeta, "bypass_egress", "bypss_egr");
@@ -150,7 +150,7 @@ void AddDeparserMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
 #endif
 }
 
-void AddDeparserMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
+void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
     auto* outputMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
     addDeparserParamRename(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");

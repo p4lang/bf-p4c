@@ -38,7 +38,6 @@
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
-#include "bf-p4c/parde/resolve_parser_stack_index.h"
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/auto_init_metadata.h"

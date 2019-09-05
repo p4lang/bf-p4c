@@ -116,7 +116,7 @@ class Parser {
             int         offset = 0, shift = 0, buf_req = -1;
             bool        offset_reset = false;
 
-            int ctr_amt_idx = 0, ctr_ld_src = 0, ctr_load = 0;
+            int ctr_imm_amt = 0, ctr_ld_src = 0, ctr_load = 0;
             CounterInit* ctr_instr = nullptr;
 
             PriorityUpdate      priority;

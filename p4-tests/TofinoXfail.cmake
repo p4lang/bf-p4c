@@ -250,9 +250,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/tagalong_mdinit_switch.p4
 )
 
-# Issue with PHV::Field on header stack.
 p4c_add_xfail_reason("tofino"
-  "No PhvInfo::header for header named"
+  "error: Use of uninitialized parser value"
   testdata/p4_16_samples/issue692-bmv2.p4
 )
 
@@ -377,6 +376,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
   testdata/p4_16_samples/issue512.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -396,13 +396,6 @@ p4c_add_xfail_reason("tofino"
     "The hash offset must be a power of 2 in a hash calculation"
     testdata/p4_16_samples/issue1049-bmv2.p4
     )
-
-p4c_add_xfail_reason("tofino"
-  "Ran out of tcam space in .* parser"
-  testdata/p4_14_samples/issue583.p4
-  # Intended to test infinite recursive in tryAllocSliceList.
-  extensions/p4_tests/p4_14/compile_only/conditional_constraints_infinite_loop.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Both .* require the .* address hardware, and cannot be on the same table"
@@ -491,12 +484,6 @@ p4c_add_xfail_reason("tofino"
 
   ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
   )
-
-# We can't (without some complex acrobatics) support conditional computed
-# checksums on Tofino. In P4-14, these are operations of the form:
-#   update ipv4_checksum if(ipv4.ihl == 5);
-# Glass's Tofino backend rejects these programs as well; they're really designed
-# for BMV2.
 
 p4c_add_xfail_reason("tofino"
   "Tofino only supports 1-bit checksum update condition in the deparser"
@@ -739,15 +726,25 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/basseterre_0.p4
 )
 
-
 # BRIG-584
 p4c_add_xfail_reason("tofino"
-  "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
+  "Extracted field ingress::local_metadata.f received an incomplete allocation"
   extensions/p4_tests/p4_16/stf/extract_slice.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Table placement cannot make any more progress."
   ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug: Resizing ClosedRange to zero size"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1815.p4
 )
 
@@ -819,16 +816,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1989-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Parser match register not allocated for"
-  ../glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Unsupported syntax for parser counter: AssignmentStatement"
-  extensions/p4_tests/p4-programs/internal_p4_14/pctr/pctr.p4
-)
-
 # test program error
 p4c_add_xfail_reason("tofino"
   "The random declaration .* min size must be zero"
@@ -898,6 +885,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/serializer2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4  # P4C-1372
+  extensions/p4_tests/p4_16/compile_only/p4c-1970.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1286,7 +1274,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_4.p4  # frontend p4-14 to 16 translation bug?
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1405,6 +1392,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"

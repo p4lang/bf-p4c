@@ -1097,7 +1097,7 @@ struct InsertParserCounterStall : public ParserTransform {
     void insert_stall_state(IR::BFN::Transition* t) {
         auto src = findContext<IR::BFN::ParserState>();
 
-        cstring name = src->name + ".$stall";
+        cstring name = src->name + ".$ctr_stall";
         auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
 
         LOG2("created stall state for counter select on "

@@ -10,9 +10,9 @@
  * needs to be extracted by the parser before applying the user-supplied parser.
  */
 
-class AddParserMetadataShims : public ParserModifier {
+class AddParserMetadata : public ParserModifier {
  public:
-    explicit AddParserMetadataShims(const IR::BFN::Pipe* pipe, bool isV1)
+    explicit AddParserMetadata(const IR::BFN::Pipe* pipe, bool isV1)
             : pipe(pipe), isV1(isV1) { CHECK_NULL(pipe); }
 
  private:
@@ -25,9 +25,9 @@ class AddParserMetadataShims : public ParserModifier {
     bool isV1;
 };
 
-class AddDeparserMetadataShims : public DeparserModifier {
+class AddDeparserMetadata : public DeparserModifier {
  public:
-    explicit AddDeparserMetadataShims(const IR::BFN::Pipe* pipe)
+    explicit AddDeparserMetadata(const IR::BFN::Pipe* pipe)
         : pipe(pipe) { CHECK_NULL(pipe); }
 
     bool preorder(IR::BFN::Deparser *) override;

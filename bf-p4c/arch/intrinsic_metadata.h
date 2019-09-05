@@ -24,6 +24,17 @@ class AddMetadataFields : public Transform {
  public:
     AddMetadataFields() { setName("AddIntrinsicMetadata"); }
 
+    struct RewritePathToStartState : public Modifier {
+        cstring newName;
+        explicit RewritePathToStartState(cstring name) : newName(name) { }
+
+        bool preorder(IR::Path* path) override {
+            if (path->name == "start")
+                path->name = newName;
+            return false;
+        }
+    };
+
     /// Rename the start state of the given parser and return it. This will
     /// leave the parser without a start state, so the caller must create a new
     /// one.
@@ -43,6 +54,8 @@ class AddMetadataFields : public Transform {
             ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
                                  new IR::StringLiteral(IR::ParserState::start));
         parser->states.push_back(newState);
+
+        parser->states = *(parser->states.apply(RewritePathToStartState(cstring("__") + newName)));
 
         return newState;
     }

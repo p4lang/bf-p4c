@@ -29,9 +29,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
-
-    # frontend p4-14 to 16 translation bug?
-    extensions/p4_tests/p4_14/stf/parser_counter_4.p4
   )
 
   p4c_add_xfail_reason("tofino2"
@@ -78,11 +75,6 @@ p4c_add_xfail_reason("tofino2"
   "Field clone_spec is not a member of structure struct standard_metadata"
   extensions/p4_tests/p4_16/compile_only/clone-bmv2.p4
   extensions/p4_tests/p4_16/compile_only/clone-bmv2-i2e-and-e2e.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Ran out of tcam space in .* parser"
-  testdata/p4_14_samples/issue583.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -216,7 +208,7 @@ p4c_add_xfail_reason("tofino2"
 
 # BRIG-584
 p4c_add_xfail_reason("tofino2"
-  "Unimplemented compiler support.*: Cannot extract to a field slice in the parser"
+  "ingress::local_metadata.f received an incomplete allocation"
   extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
 

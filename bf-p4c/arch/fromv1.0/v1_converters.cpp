@@ -1,4 +1,7 @@
 #include "v1_converters.h"
+
+#include <boost/range/adaptor/reversed.hpp>
+
 #include "v1_program_structure.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/common/utils.h"
@@ -692,6 +695,7 @@ static bool isParserCounter(const IR::Member* member) {
     return false;
 }
 
+/// get field's alignment (lo, hi) in little-endian
 static std::pair<unsigned, unsigned> getAlignLoHi(const IR::Member* member) {
     auto header = member->expr->type->to<IR::Type_Header>();
 
@@ -699,14 +703,17 @@ static std::pair<unsigned, unsigned> getAlignLoHi(const IR::Member* member) {
 
     unsigned bits = 0;
 
-    for (auto field : header->fields) {
+    for (auto field : boost::adaptors::reverse(header->fields)) {
         auto size = field->type->width_bits();
 
-        if (size > 8)
-            ::fatal_error("Parser counter load field more than 8 bits: %1%", member);
+        if (field->name == member->member) {
+            if (size > 8) {
+                ::fatal_error("Parser counter load field is of width %1% bits"
+                      " which is greater than what HW supports (8 bits): %2%", size, member);
+            }
 
-        if (field->name == member->member)
             return {bits % 8, (bits + size - 1) % 8};
+        }
 
         bits += size;
     }
@@ -767,7 +774,13 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
                                   new IR::Argument(add) });
                 } else if (auto* shl = add->left->to<IR::Shl>()) {
                     if (auto* rot = shl->right->to<IR::Constant>()) {
-                        if (auto* field = shl->left->to<IR::Member>()) {
+                        auto* field = shl->left->to<IR::Member>();
+                        if (!field) {
+                            if (auto cast = shl->left->to<IR::Cast>())
+                                field = cast->expr->to<IR::Member>();
+                        }
+
+                        if (field) {
                             if (!rot->fitsUint() || rot->asUnsigned() >> 8)
                                 cannotFit(stmt, "multiply");
 
@@ -778,8 +791,13 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
                             std::tie(lo, hi) = getAlignLoHi(field);
 
                             auto shr = new IR::Constant(counterWidth, 8 - rot->asUnsigned() - lo);
+
+                            unsigned rot_hi = std::min(hi + rot->asUnsigned(), 7u);
+
                             auto mask = new IR::Constant(maskWidth,
-                              Device::currentDevice() == Device::TOFINO ? hi : (1 << (hi + 1)) - 1);
+                                            Device::currentDevice() == Device::TOFINO ?
+                                                rot_hi : (1 << (rot_hi + 1)) - 1);
+
                             auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
                             methodCall = new IR::MethodCallStatement(
@@ -829,7 +847,7 @@ struct ParserCounterSelectCaseConverter : Transform {
         bool needsCast = false;
 
         const IR::Expression* convert(const IR::Constant* c,
-                                      bool toBool = true, bool check = true) {
+                bool toBool = true, bool negate = true, bool check = true) {
             auto val = c->asUnsigned();
 
             if (check) {
@@ -841,16 +859,16 @@ struct ParserCounterSelectCaseConverter : Transform {
             }
 
             if (toBool)
-                return new IR::BoolLiteral(~val);
+                return new IR::BoolLiteral(negate ? ~val : val);
             else
-                return new IR::Constant(IR::Type::Bits::get(1), ~val & 1);
+                return new IR::Constant(IR::Type::Bits::get(1), (negate ? ~val : val)  & 1);
         }
 
         const IR::Node* preorder(IR::Mask* mask) override {
             prune();
 
             mask->left = convert(mask->left->to<IR::Constant>(), false);
-            mask->right = convert(mask->right->to<IR::Constant>(), false, false);
+            mask->right = convert(mask->right->to<IR::Constant>(), false, false, false);
 
             needsCast = true;
 

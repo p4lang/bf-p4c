@@ -6,6 +6,8 @@
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parser_info.h"
 
+namespace Parser {
+
 struct Def {
     const IR::BFN::ParserState* state = nullptr;
     const IR::BFN::InputBufferRVal* rval = nullptr;
@@ -99,7 +101,9 @@ struct UseDef {
     }
 };
 
-struct ParserUseDef : std::map<const IR::BFN::Parser*, UseDef> { };
+}  // namespace Parser
+
+struct ParserUseDef : std::map<const IR::BFN::Parser*, Parser::UseDef> { };
 
 struct ResolveExtractSaves : Modifier {
     const PhvInfo& phv;
@@ -217,11 +221,11 @@ struct CollectParserUseDef : PassManager {
         }
 
         // defs have absolute offsets from current state
-        ordered_set<Def*>
+        ordered_set<Parser::Def*>
         find_defs(const IR::BFN::InputBufferRVal* rval,
                   const IR::BFN::ParserGraph& graph,
                   const IR::BFN::ParserState* state) {
-            ordered_set<Def*> rv;
+            ordered_set<Parser::Def*> rv;
 
             if (rval->range.lo < 0) {  // def is in an earlier state
                 if (graph.predecessors().count(state)) {
@@ -241,7 +245,7 @@ struct CollectParserUseDef : PassManager {
 
                 return rv;
             } else if (rval->range.lo >= 0) {  // def is in this state
-                auto def = new Def(state, rval);
+                auto def = new Parser::Def(state, rval);
                 rv.insert(def);
             }
 
@@ -249,11 +253,11 @@ struct CollectParserUseDef : PassManager {
         }
 
         // multiple defs in earlier states with no absolute offsets from current state
-        ordered_set<Def*>
+        ordered_set<Parser::Def*>
         find_defs(const IR::Expression* saved,
                   const IR::BFN::ParserGraph& graph,
                   const IR::BFN::ParserState* state) {
-            ordered_set<Def*> rv;
+            ordered_set<Parser::Def*> rv;
 
             for (auto& kv : defs.state_to_rvals) {
                 auto def_state = kv.first;
@@ -267,7 +271,7 @@ struct CollectParserUseDef : PassManager {
 
                             if (f == s) {
                                 if (s_bits.size() == f_bits.size()) {
-                                    auto def = new Def(def_state, rval);
+                                    auto def = new Parser::Def(def_state, rval);
                                     rv.insert(def);
                                 } else {
                                     auto nw_f_bits = f_bits.toOrder<Endian::Network>(f->size);
@@ -281,7 +285,7 @@ struct CollectParserUseDef : PassManager {
                                     slice_rval->range.lo += nw_s_bits.lo;
                                     slice_rval->range.hi -= s->size - nw_s_bits.hi + 1;
 
-                                    auto def = new Def(def_state, slice_rval);
+                                    auto def = new Parser::Def(def_state, slice_rval);
                                     rv.insert(def);
                                 }
                             }
@@ -300,7 +304,7 @@ struct CollectParserUseDef : PassManager {
 
             auto use = parser_use_def[parser].get_use(state, save);
 
-            ordered_set<Def*> defs;
+            ordered_set<Parser::Def*> defs;
 
             if (auto buf = save->source->to<IR::BFN::InputBufferRVal>())
                 defs = find_defs(buf, graph, state);

@@ -7,13 +7,13 @@
 
 #include "ir/ir.h"
 #include "lib/log.h"
+#include "bf-p4c/midend/parser_graph.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/resolve_parser_stack_index.h"
 #include "bf-p4c/parde/gen_deparser.h"
 
 namespace BFN {
@@ -84,15 +84,15 @@ struct ParserPragmas : public Inspector {
             return false;
 
             auto max_loop = exprs[0]->to<IR::Constant>();
-            if (!max_loop || max_loop->asInt() < 1) {
-                ::warning("@pragma max_loop_depth must >= 1, skipping: %1%", annot);
+            if (!max_loop || max_loop->asUnsigned() == 0) {
+                ::warning("@pragma max_loop_depth must be greater than one, skipping: %1%", annot);
                 return false;
             }
 
             ::warning("Parser state %1% will be unrolled up to %2% "
                       "times due to @pragma max_loop_depth.", ps->name, max_loop->asInt());
 
-            max_loop_depth[ps] = max_loop->asInt();
+            max_loop_depth[ps] = max_loop->asUnsigned();
         } else if (pragma_name == "dont_unroll") {
             ::warning("Parser state %1% will not be unrolled because of @pragma dont_unroll",
                        ps->name);
@@ -108,149 +108,6 @@ struct ParserPragmas : public Inspector {
     std::map<const IR::ParserState*, unsigned> max_loop_depth;
 
     std::set<cstring> dont_unroll;
-};
-
-/// A helper type that represents a transition in the parse graph that led to
-/// the current state.
-struct AncestorTransition {
-    AncestorTransition(const IR::BFN::ParserState* state,
-                       const IR::BFN::Transition* transition)
-        : state(state), transition(transition) { }
-
-    /// An ancestor state.
-    const IR::BFN::ParserState* state;
-
-    /// The outgoing edge of the ancestor state that we traversed to reach the
-    /// current state.
-    const IR::BFN::Transition* transition;
-
-    /// A map from extract destination names to the number of times the
-    /// destination is extracted in this state.
-    std::map<cstring, unsigned> extracts;
-
-    /// True if this state contains at least some valid extracts.
-    bool isValid = true;
-};
-
-/// The stack of transitions we traversed to reach the current state.
-struct TransitionStack {
-    /// Push a new transition onto the stack.
-    /// @return true if this is a valid transition, or false if the transition
-    /// is invalid and we should stop generating the parse graph at this point.
-    bool push(const IR::BFN::ParserState* state,
-              const IR::BFN::Transition* transition) {
-        transitionStack.emplace_back(state, transition);
-        auto& newTransition = transitionStack.back();
-
-        // If a state extracts a header which isn't part of a header stack, we don't
-        // allow it to be part of a loop. Such a loop would trigger an error at
-        // runtime anyway since the parser can't overwrite a PHV container it has
-        // already written to.
-        unsigned badExtractCount = 0;
-        unsigned goodExtractCount = 0;
-        unsigned extractCount = 0;
-        forAllMatching<IR::BFN::Extract>(&state->statements,
-                      [&](const IR::BFN::Extract* extract) {
-            extractCount++;
-            cstring destName;
-            unsigned allowedExtracts;
-            auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-            if (!lval) return;
-            std::tie(destName, allowedExtracts) = analyzeDest(lval->field);
-            if (extractTotals[destName] >= allowedExtracts) {
-                LOG2(state->name << ": too many extracts for " << destName);
-                badExtractCount++;
-                return;
-            }
-            extractTotals[destName]++;
-            newTransition.extracts[destName]++;
-            goodExtractCount++;
-        });
-
-        BUG_CHECK(badExtractCount + goodExtractCount == extractCount,
-                  "Lost track of an extract?");
-
-        // If the new transition contains extracts but none of them are legal,
-        // it's not valid. The parser will stop here at runtime.
-        if (extractCount > 0 && goodExtractCount == 0)
-            newTransition.isValid = false;
-
-        // We'll also stop here if the stack has gotten too deep.
-        if (transitionStack.size() > 255)
-            newTransition.isValid = false;
-
-        return newTransition.isValid;
-    }
-
-    void pop() {
-        for (auto& extractItem : transitionStack.back().extracts) {
-            cstring destName = extractItem.first;
-            unsigned count = extractItem.second;
-            BUG_CHECK(extractTotals[destName] >= count,
-                      "Lost track of some extracts?");
-            extractTotals[destName] -= count;
-        }
-
-        transitionStack.pop_back();
-    }
-
-    const AncestorTransition& back() const {
-        BUG_CHECK(!transitionStack.empty(), "Peeking an empty TransitionStack?");
-        return transitionStack.back();
-    }
-
-    size_t size() const { return transitionStack.size(); }
-
-    bool alreadyVisited(const IR::BFN::ParserState* state) const {
-        return std::any_of(transitionStack.begin(), transitionStack.end(),
-                           [&](const AncestorTransition& t) { return t.state == state; });
-    }
-
- private:
-    /// @return a string representation of the provided extract destination and
-    /// the number of times that the destination may be extracted to on a given
-    /// path through the parse graph.
-    std::pair<cstring, unsigned> analyzeDest(const IR::Expression* dest) {
-        if (dest->is<IR::TempVar>())
-            return std::make_pair(dest->toString(), 1);
-        if (dest->is<IR::Slice>()) {
-            P4C_UNIMPLEMENTED("Cannot extract to a field slice in the parser: %1%", dest);
-        } else if (!dest->is<IR::Member>() && !dest->is<IR::ConcreteHeaderRef>()) {
-            ::warning("Unexpected extract destination: %1%", dest);
-            return std::make_pair(dest->toString(), 1);
-        }
-        if (auto* hdrRef = dest->to<IR::ConcreteHeaderRef>()) {
-            auto destName = hdrRef->baseRef()->name;
-            int allowedExtracts = hdrRef->baseRef()->type->to<IR::Type_Header>()
-                                          ->annotations->annotations.size();
-            return std::make_pair(destName, std::max(allowedExtracts, 0));
-        }
-        auto* member = dest->to<IR::Member>();
-        if (!member->expr->is<IR::HeaderStackItemRef>())
-            return std::make_pair(dest->toString(), 1);
-        auto* itemRef = member->expr->to<IR::HeaderStackItemRef>();
-        auto destName = itemRef->base()->toString() + "." + member->member;
-        auto allowedExtracts = itemRef->base()->type->to<IR::Type_Stack>()
-                                              ->size->to<IR::Constant>()->asInt();
-        return std::make_pair(destName, std::max(allowedExtracts, 0));
-    }
-
-    std::vector<AncestorTransition> transitionStack;
-    std::map<cstring, unsigned> extractTotals;
-};
-
-struct AutoPushTransition {
-    AutoPushTransition(TransitionStack& transitionStack,
-                       const IR::BFN::ParserState* state,
-                       const IR::BFN::Transition* transition)
-        : transitionStack(transitionStack)
-        , isValid(transitionStack.push(state, transition))
-    { }
-
-    ~AutoPushTransition() { transitionStack.pop(); }
-
-    TransitionStack& transitionStack;
-    bool isValid;
 };
 
 // Rewrite p4-14's "current(a,b)" or p4-16's "pkt.lookahead<switch_pkt_src_t>()"
@@ -274,7 +131,7 @@ rewriteLookahead(P4::TypeMap* typeMap,
           sliceRange.toOrder<Endian::Network>(width)
                     .intersectWith(StartLen(0, width));
         if (lookaheadInterval.empty())
-            ::error("Slice is empty: %1%", slice);
+            ::fatal_error("Slice is empty: %1%", slice);
 
         auto lookaheadRange = *toClosedRange(lookaheadInterval);
         finalRange = lookaheadRange.shiftedByBits(bitShift);
@@ -299,20 +156,210 @@ static bool isExtern(const IR::Member* method, cstring externName) {
     return false;
 }
 
+/// Collect loop information in the frontend parser IR.
+///   - Where are the loops?
+///   - What is the depth (max iterations) of each loop?
+struct ParserLoopsInfo {
+    /// Infer loop depth by looking at the stack size of stack references in the
+    /// state.
+    struct GetMaxLoopDepth : public Inspector {
+        bool has_next = false;
+        int max_loop_depth = -1;
+
+        bool preorder(const IR::HeaderStackItemRef* ref) override {
+            auto stack_size = ref->base()->type->to<IR::Type_Stack>()
+                                         ->size->to<IR::Constant>()->asInt();
+
+            if (max_loop_depth == -1)
+                max_loop_depth = stack_size;
+            else
+                max_loop_depth = std::min(max_loop_depth, stack_size);
+
+            return true;
+        }
+
+        bool preorder(const IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+            if (unresolved->index == "next")
+                has_next = true;
+
+            return false;
+        }
+    };
+
+    ParserLoopsInfo(P4::TypeMap* typeMap, P4::ReferenceMap* refMap,
+                    const IR::BFN::TnaParser* parser) {
+        P4ParserGraphs pg(refMap, typeMap, false);
+        parser->apply(pg);
+
+        loops = pg.compute_loops(parser);
+
+        LOG2("detected " << loops.size() << " loops in " << parser->thread << " parser");
+
+        if (LOGGING(2)) {
+            unsigned id = 0;
+            for (auto& loop : loops) {
+                std::clog << "loop " << id++ << " : [ ";
+                for (auto s : loop)
+                    std::clog << s << " ";
+                std::clog << " ]" << std::endl;
+            }
+        }
+
+        for (auto& loop : loops) {
+            for (auto s : loop) {
+                auto state = pg.get_state(parser, s);
+                GetMaxLoopDepth mld;
+                state->apply(mld);
+
+                max_loop_depth[s] = mld.max_loop_depth;
+                LOG3("inferred loop depth " << max_loop_depth[s] << " for " << s);
+
+                if (mld.max_loop_depth > 1 && mld.has_next)
+                    has_next.insert(s);
+            }
+        }
+    }
+
+    std::set<std::set<cstring>> loops;
+    std::map<cstring, int> max_loop_depth;
+    std::set<cstring> has_next;   // states that have stack "next" references
+
+    const std::set<cstring>* find_loop(cstring state) const {
+        for (auto& loop : loops) {
+            if (loop.count(state))
+                return &loop;
+        }
+
+        return nullptr;
+    }
+
+    /// Returns true if the state is on loop that does not have "next" reference.
+    /// It's always safe to keep the simple loops (as opposed to unrolled) as these
+    /// do not need to PHV allocation to be at strided offset.
+    bool is_on_simple_loop(cstring state) const {
+        auto loop = find_loop(state);
+        if (!loop) return false;
+
+        for (auto s : *loop) {
+            if (has_next.count(s))
+                return false;
+        }
+
+        return true;
+    }
+};
+
+/// Keeps track of visited states which are all ancestors
+/// to the current state.
+struct AncestorStates {
+    /// We maintain the visited states in a stack as we visit
+    /// in a DFS order.
+    std::vector<const IR::BFN::ParserState*> stack;
+
+    /// Encounter this state, push to stack.
+    void push(const IR::BFN::ParserState* state) {
+        stack.push_back(state);
+    }
+
+    /// Done visiting this state and all of its descendants, pop it
+    /// off the stack.
+    void pop() {
+        stack.pop_back();
+    }
+
+    bool visited(const IR::BFN::ParserState* state) const {
+        return std::find(stack.begin(), stack.end(), state) != stack.end();
+    }
+
+    /// Given the state with the original name, check on the visited
+    /// stack that how many times this state has been unrolled.
+    unsigned getCurrentIteration(cstring origName) const {
+        unsigned it = 0;
+        for (auto s : stack) {
+            if (s->name == origName || s->name.startsWith(origName + ".$it"))
+                it++;
+        }
+        return it;
+    }
+
+    struct GetHeaderStackIndex : public Inspector {
+        cstring header;
+        int rv = -1;
+
+        explicit GetHeaderStackIndex(cstring hdr) : header(hdr) { }
+
+        bool preorder(const IR::HeaderStackItemRef* ref) override {
+            auto hdr = ref->baseRef()->name;
+
+            if (hdr == header) {
+                auto index = ref->index()->to<IR::Constant>();
+                rv = index->asUnsigned();
+            }
+
+            return false;
+        }
+
+        void postorder(const IR::MethodCallStatement* statement) override {
+            auto* call = statement->methodCall;
+            if (auto* method = call->method->to<IR::Member>()) {
+                if (method->member == "extract") {
+                    auto dest = (*call->arguments)[0]->expression;
+                    auto hdr = dest->to<IR::HeaderRef>();
+
+                    if (!hdr->is<IR::HeaderStackItemRef>()) {
+                        if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
+                            rv = 0;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    int getCurrentIndex(cstring header) {
+        int rv = -1;
+
+        for (auto state : stack) {
+            GetHeaderStackIndex getHeaderStackIndex(header);
+            state->p4State->apply(getHeaderStackIndex);
+
+            // XXX(zma) taking a shortcut here of computing current index
+            // by getting the max index of all references of the header
+            // on current ancestor stack. This is incorrect if there are
+            // multiple inconsistent previous indices that may lead to the
+            // current state, in which case, it's an user error (cannot
+            // consistently resolve the header stack index). The right thing
+            // to do is look at the parse graph and check the indices of all
+            // previous references are consistent.
+            if (getHeaderStackIndex.rv > rv)
+                rv = getHeaderStackIndex.rv;
+        }
+
+        return rv + 1;
+    }
+};
+
+/// Converts frontend parser IR into backend IR
 class GetBackendParser {
  public:
     explicit GetBackendParser(P4::TypeMap *typeMap,
                               P4::ReferenceMap *refMap,
-                              const ParserPragmas& pg) :
-        typeMap(typeMap), refMap(refMap), parserPragmas(pg) { }
+                              ParseTna* arch,
+                              const IR::BFN::TnaParser* parser) :
+            typeMap(typeMap), refMap(refMap), arch(arch), parser(parser),
+            parserLoopsInfo(typeMap, refMap, parser) {
+        parser->apply(parserPragmas);
+    }
 
-    const IR::BFN::Parser* extract(const IR::BFN::TnaParser* parser, ParseTna *arch);
+    const IR::BFN::Parser* createBackendParser();
 
-    bool addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
+    void addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
                        const IR::P4ValueSet* valueSet = nullptr);
 
  private:
-    IR::BFN::ParserState* getState(cstring name, bool& isLoopState);
+    IR::BFN::ParserState* convertBody(IR::BFN::ParserState* state);
+
+    IR::BFN::ParserState* convertState(cstring name, bool& isLoopState);
 
     // For v1model, compiler may insert parser states, e.g. if @pragma packet_entry is specified.
     // Therefore, the program "start" state may not be the true start state.
@@ -344,36 +391,47 @@ class GetBackendParser {
     const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
                                       nw_bitrange& bitrange);
 
-    TransitionStack                             transitionStack;
+    std::map<cstring, IR::BFN::ParserState*>    backendStates;
+    std::map<IR::BFN::ParserState*, const IR::ParserState*> origP4States;
 
-    std::map<cstring, IR::BFN::ParserState *>   states;
-    std::map<cstring, int>                      max_loop_depth;
+    std::map<cstring, unsigned>                 max_loop_depth;   // state name tp depth
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
     P4::TypeMap*      typeMap;
     P4::ReferenceMap* refMap;
-    const ParserPragmas& parserPragmas;
+    ParseTna*         arch;
+    const IR::BFN::TnaParser* parser;
+
+    ParserPragmas parserPragmas;
+    ParserLoopsInfo parserLoopsInfo;
+
+    // used to keep track of visiter ancestor states at the current state
+    AncestorStates ancestors;
 };
 
 const IR::BFN::Parser*
-GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
-    forAllMatching<IR::ParserState>(parser, [&](const IR::ParserState* state) {
+GetBackendParser::createBackendParser() {
+    for (auto state : parser->states) {
         auto stateName = getStateName(state);
 
         if (state->name == "accept" || state->name == "reject")
-            return false;
+            continue;
 
-        states[stateName] =
-          new IR::BFN::ParserState(state,
+        auto backendState = new IR::BFN::ParserState(state,
                                    createThreadName(parser->thread, stateName),
                                    parser->thread);
+
+        backendStates[stateName] = backendState;
+        origP4States[backendState] = state;
+
         if (parserPragmas.max_loop_depth.count(state))
             max_loop_depth[stateName] = parserPragmas.max_loop_depth.at(state);
-        return true;
-    });
+        else if (parserLoopsInfo.max_loop_depth.count(state->name))
+            max_loop_depth[stateName] = parserLoopsInfo.max_loop_depth.at(state->name);
+    }
 
     bool isLoopState = false;
-    IR::BFN::ParserState* startState = getState(getStateName("start"), isLoopState);
+    IR::BFN::ParserState* startState = convertState(getStateName("start"), isLoopState);
 
     BlockInfoMapping* binfo = &arch->toBlockInfo;
     IR::ID multiParserName;
@@ -416,43 +474,135 @@ GetBackendParser::extract(const IR::BFN::TnaParser* parser, ParseTna *arch) {
     return new IR::BFN::Parser(parser->thread, startState, parserName, phase0, parser->portmap);
 }
 
-bool GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
+void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
                                      int shift, cstring nextState, const IR::P4ValueSet* valueSet) {
+    LOG4("addTransition: " << state->name << " -> " << nextState);
+
     IR::BFN::ParserMatchValue* match_value_ir = nullptr;
     if (valueSet) {
         // Convert IR::Constant to unsigned int.
         size_t sz = 0;
         auto sizeConstant = valueSet->size->to<IR::Constant>();
-        if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
-            ::error("valueset should have an integer as size %1%", valueSet); }
-        if (sizeConstant->value < 0) {
-            ::error("valueset size must be a positive integer %1%", valueSet); }
-        sz = sizeConstant->value.get_ui();
+        if (sizeConstant == nullptr || !sizeConstant->fitsUint())
+            ::fatal_error("parser value set should have an unsigned integer as size %1%", valueSet);
+        sz = sizeConstant->asUnsigned();
         match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->controlPlaneName(), sz);
     } else {
         match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
     }
     auto* transition = new IR::BFN::Transition(match_value_ir, shift, nullptr);
 
-    AutoPushTransition newTransition(transitionStack, state, transition);
-    if (newTransition.isValid) {
-        bool isLoopState = false;
+    ancestors.push(state);
 
-        auto next = getState(getStateName(nextState), isLoopState);
+    bool isLoopState = false;
+    auto next = convertState(getStateName(nextState), isLoopState);
 
-        if (isLoopState)
-            transition->loop = next->name;
-        else
-            transition->next = next;
+    if (isLoopState)
+        transition->loop = next->name;
+    else
+        transition->next = next;
 
-        state->transitions.push_back(transition);
-
-        return true;
-    }
-
-    return false;  // One bad transition means the whole state's bad.
+    state->transitions.push_back(transition);
+    ancestors.pop();
 }
 
+/// Resolves the "next" and "last" stack references according to the spec.
+/// Call this on the frontend IR::ParserState node; will resolve all
+/// IR::BFN::UnresolvedHeaderStackIndex into concrete indices.
+struct ResolveHeaderStackIndex : public Transform {
+    const IR::BFN::ParserState* state;
+    AncestorStates& ancestors;
+
+    /// Local map of header to stack index.
+    /// The stack index can be advanced multiple times in the current state.
+    std::map<cstring, int> headerToCurrentIndex;
+
+    bool stackOutOfBound = false;
+
+    ResolveHeaderStackIndex(const IR::BFN::ParserState* s, AncestorStates& ans) :
+        state(s), ancestors(ans) { }
+
+    bool isStackOutOfBound(const IR::HeaderStackItemRef* ref, int index) {
+        auto stackSize = ref->base()->type->to<IR::Type_Stack>()
+                                     ->size->to<IR::Constant>()->asInt();
+
+        return index < 0 || index >= stackSize;
+    }
+
+    /// Returns the current stack index of the header.
+    /// Looks into the visited ancestor states and see what's the current index.
+    /// If not found in ancestor states, we are visiting this header for the first
+    /// time.
+    int getCurrentIndex(cstring header) {
+        int currentIndex = -1;
+
+        if (headerToCurrentIndex.count(header)) {
+            currentIndex = headerToCurrentIndex.at(header);
+        } else {
+            currentIndex = ancestors.getCurrentIndex(header);
+            headerToCurrentIndex[header] = currentIndex;
+        }
+
+        return currentIndex;
+    }
+
+    IR::Node* postorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        if (auto* method = call->method->to<IR::Member>()) {
+            if (method->member == "extract") {
+                auto dest = (*call->arguments)[0]->expression;
+                auto hdr = dest->to<IR::HeaderRef>();
+
+                if (!hdr->is<IR::HeaderStackItemRef>()) {
+                    auto header = hdr->to<IR::ConcreteHeaderRef>()->ref->name;
+
+                    int currentIndex = getCurrentIndex(header);
+
+                    // For normal header, we allow single extract.
+                    if (currentIndex > 0) {
+                        stackOutOfBound = true;
+                    }
+                }
+            }
+        }
+
+        return statement;
+    }
+
+    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+        auto ref = findContext<IR::HeaderStackItemRef>();
+        auto header = ref->baseRef()->name;
+
+        int currentIndex = getCurrentIndex(header);
+
+        // "last" refers to the previous index from the current index
+        if (unresolved->index == "last")
+            currentIndex--;
+
+        if (isStackOutOfBound(ref, currentIndex))
+            stackOutOfBound = true;
+
+        LOG4("resolved " << header << " stack index " << unresolved->index
+                         << " to " << currentIndex);
+
+        auto resolved = new IR::Constant(currentIndex);
+
+        auto statement = findContext<IR::MethodCallStatement>();
+        if (statement) {
+            auto call = statement->methodCall;
+            if (auto method = call->method->to<IR::Member>()) {
+                // "next" is "automatically advanced on each successful call to extract"
+                if (method->member == "extract" && unresolved->index == "next") {
+                    headerToCurrentIndex[header]++;
+                }
+            }
+        }
+
+        return resolved;
+    }
+};
+
+/// Rewrites frontend parser IR statements to the backend ones.
 struct RewriteParserStatements : public Transform {
     RewriteParserStatements(P4::TypeMap* typeMap, cstring stateName, gress_t gress)
         : typeMap(typeMap), stateName(stateName), gress(gress) { }
@@ -527,14 +677,14 @@ struct RewriteParserStatements : public Transform {
                   "Wrong number of arguments for method call: %1%", statement);
 
         if (!bits->is<IR::Constant>()) {
-            ::error("Advancing by a non-constant distance is not supported on "
+            ::fatal_error("Advancing by a non-constant distance is not supported on "
                     "%1%: %2%", Device::name(), bits);
             return nullptr;
         }
 
         auto bitOffset = bits->to<IR::Constant>()->asInt();
         if (bitOffset < 0) {
-            ::error("Advancing by a negative distance is not supported on "
+            ::fatal_error("Advancing by a negative distance is not supported on "
                     "%1%: %2%", Device::name(), bits);
             return nullptr;
         }
@@ -938,7 +1088,7 @@ struct RewriteParserStatements : public Transform {
         }
 
         if (!canEvaluateInParser(rhs)) {
-            ::error("Assignment source cannot be evaluated in the parser: %1%", rhs);
+            ::fatal_error("Assignment source cannot be evaluated in the parser: %1%", rhs);
             return nullptr;
         }
 
@@ -1044,7 +1194,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
                         return new IR::BFN::Select(
                             new IR::BFN::ParserCounterIsNegative(declName), call);
                     } else {
-                        ::error("illegal parser counter expr in select");
+                        ::fatal_error("Illegal parser counter expression: %1%", selectExpr);
                     }
                 }
             }
@@ -1093,44 +1243,73 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
     return new IR::BFN::Select(new IR::BFN::SavedRVal(selectExpr), selectExpr);
 }
 
-IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState) {
-    if (states.count(name) == 0) {
-        if (name != "accept" && name != "reject")
-            ::error("No definition for parser state %1%", name);
+IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopState) {
+    LOG4("convert state: " << name);
+
+    if (name == "accept" || name == "reject")
         return nullptr;
-    }
 
-    // Check if we've already reached this state on this path, and if so, make
-    // sure that the resulting loop is legal.
-    auto* state = states[name];
-    if (transitionStack.alreadyVisited(state)) {
-        LOG2("parser state " << name << " is in a loop");
+    BUG_CHECK(backendStates.count(name), "No definition for parser state %1%", name);
 
-        if (parserPragmas.dont_unroll.count(name)) {
+    auto* state = backendStates[name];
+
+    if (ancestors.visited(state)) {
+        LOG3("parser state " << name << " is in a loop");
+
+        if (parserPragmas.dont_unroll.count(name) ||
+            parserLoopsInfo.is_on_simple_loop(name)) {
             isLoopState = true;
             return state;
         }
 
-        if (max_loop_depth.count(name)) {
-            max_loop_depth[name]--;
-            // no more loop is allowed
-            if (max_loop_depth.at(name) == 0)
-                return nullptr;
+        BUG_CHECK(max_loop_depth.count(name), "unable to infer loop bound for %1%?", name);
+
+        auto origName = getStateName(name);
+        auto iteration = ancestors.getCurrentIteration(createThreadName(state->gress, origName));
+
+        if (max_loop_depth.at(name) == iteration) {
+            // reached max loop depth, no more unrolling is allowed
+            // TODO handle stack out of bound (transition to reject and setup parser error)
+            return nullptr;
         }
-        // We're inside a loop. We don't want loops in the actual IR graph, so
-        // we'll unroll the loop by creating a new, empty instance of this
-        // state, which we'll convert again.
-        auto originalName = state->p4State->controlPlaneName();
-        auto unrolledName = cstring::make_unique(states, originalName);
-        state = new IR::BFN::ParserState(state->p4State,
-                                         createThreadName(state->gress, unrolledName),
-                                         state->gress);
-        states[unrolledName] = state;
+
+        auto iterationSuffix = ".$it" + cstring::to_cstring(iteration);
+        auto unrolledName = origName + iterationSuffix;
+
+        if (backendStates.count(unrolledName)) {
+            // current iteration already unrolled, reuse this state
+            return backendStates.at(unrolledName);
+        } else {
+            // unroll current iteration by creating a new empty instance of this
+            // state, which we'll convert again.
+            auto newName = cstring::make_unique(backendStates, unrolledName);
+
+            state = new IR::BFN::ParserState(origP4States.at(state),
+                                             createThreadName(state->gress, newName),
+                                             state->gress);
+            backendStates[newName] = state;
+            return convertBody(state);
+        }
     } else if (!state->transitions.empty()) {
         // We've already generated the matches for this state, so we know we've
         // already converted it; just return.
         return state;
     }
+
+    return convertBody(state);
+}
+
+IR::BFN::ParserState*
+GetBackendParser::convertBody(IR::BFN::ParserState* state) {
+    ResolveHeaderStackIndex resolveHeaderStackIndex(state, ancestors);
+    auto resolved = state->p4State->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
+
+    if (resolveHeaderStackIndex.stackOutOfBound) {
+        LOG4("stack out of bound at " << state->name);
+        return nullptr;
+    }
+
+    state->p4State = resolved;
 
     BUG_CHECK(state->p4State != nullptr,
               "Converting a parser state that didn't come from the frontend?");
@@ -1139,8 +1318,10 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
     RewriteParserStatements rewriteStatements(typeMap,
                                               state->p4State->controlPlaneName(),
                                               state->gress);
+
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
+
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
 
@@ -1159,8 +1340,6 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
 
     auto shift = bitsAdvanced.nextByte();
 
-    LOG2("GetParser::state(" << name << ")");
-
     // case 1: no select
     if (!state->p4State->selectExpression) return state;
 
@@ -1172,8 +1351,8 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
 
     // case 3: unconditional transition, e.g. accept/reject
     if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
-        bool ok = addTransition(state, match_t(), shift, path->path->name);
-        return ok ? state : nullptr;
+        addTransition(state, match_t(), shift, path->path->name);
+        return state;
     }
 
     // case 4: we have a select expression. Lower it to Tofino IR.
@@ -1183,9 +1362,6 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
 
     auto& selectExprs = p4Select->select->components;
     auto& selectCases = p4Select->selectCases;
-
-    // FIXME multiple exprs can share match if they reside in same byte
-    // FIXME duplicated match exprs, is this legal in the language?
 
     int matchSize = 0;
 
@@ -1206,8 +1382,7 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
                           shift, selectCase->state->path->name, pvs);
         } else {
             auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExprs);
-            bool ok = addTransition(state, matchVal, shift, selectCase->state->path->name);
-            if (!ok) return nullptr;
+            addTransition(state, matchVal, shift, selectCase->state->path->name);
         }
     }
 
@@ -1215,11 +1390,8 @@ IR::BFN::ParserState* GetBackendParser::getState(cstring name, bool& isLoopState
 }
 
 void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {
-    ParserPragmas pg;
-    parser->apply(pg);
-
-    GetBackendParser gp(typeMap, refMap, pg);
-    auto backendParser = gp.extract(parser, arch);
+    GetBackendParser gp(typeMap, refMap, arch, parser);
+    auto backendParser = gp.createBackendParser();
     rv->thread[parser->thread].parsers.push_back(backendParser);
 }
 
@@ -1241,15 +1413,8 @@ ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useV1model) :
     Logging::PassManager("parser", Logging::Mode::AUTO) {
     setName("ProcessParde");
     addPasses({
-        // Attempt to resolve header stack ".next" and ".last" members.
-        // XXX(seth): Also, generating the egress deparser from the egress parser
-        // correctly requires that we've resolved header stack indices, but that's
-        // an artifact of the IR conversion and it's not something that should not
-        // be happening at this layer anyway.
-        new ResolveHeaderStackValues,
-        // Add shims for intrinsic metadata.
-        new AddParserMetadataShims(rv, useV1model),
-        new AddDeparserMetadataShims(rv),
+        new AddParserMetadata(rv, useV1model),
+        new AddDeparserMetadata(rv),
     });
 }
 

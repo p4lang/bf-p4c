@@ -348,7 +348,7 @@ template<> void Parser::State::Match::write_counter_config(
         ea_row.ctr_op = 0;
     }
 
-    ea_row.ctr_amt_idx = ctr_amt_idx;
+    ea_row.ctr_amt_idx = ctr_instr ? ctr_instr->addr : ctr_imm_amt;
 
     // TODO -- counter stack config
     // ea_row.ctr_op = 1; (load ctr from stack top and add imm)

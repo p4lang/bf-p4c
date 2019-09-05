@@ -15,15 +15,7 @@ header data_t d;
 
 parser start {
     extract(a);
-    set_metadata(ig_prsr_ctrl.parser_counter, a.f * 4 - 10);
-
-    // front-end translate this to: (is this expected or is it a bug?)
-    //
-    // a.f * 4 + 6
-
-    // [--Werror=type-error] error: *: Cannot operate on values with different widths 4 and 8
-    //
-    // set_metadata(ig_prsr_ctrl.parser_counter, latest.f * 4 - 10);
+    set_metadata(ig_prsr_ctrl.parser_counter, a.f * 8w4 - 10);
 
     return select(a.n) {
         0xb : parse_b;

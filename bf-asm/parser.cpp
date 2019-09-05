@@ -893,14 +893,14 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             } else if (kv.value.type == tCMD) {
                 if (kv.value[0] == "inc" || kv.value[0] == "increment") {
                     if (CHECKTYPE(kv.value[1], tINT))
-                        ctr_amt_idx = kv.value[1].i;
+                        ctr_imm_amt = kv.value[1].i;
                 } else if (kv.value[0] == "dec" || kv.value[0] == "decrement") {
                     if (CHECKTYPE(kv.value[1], tINT))
-                        ctr_amt_idx = ~kv.value[1].i + 1;
+                        ctr_imm_amt = ~kv.value[1].i + 1;
                 } else if (kv.value[0] == "load") {
                     if (CHECKTYPE(kv.value[1], tINT)) {
                         ctr_load = 1;
-                        ctr_amt_idx = kv.value[1].i;
+                        ctr_imm_amt = kv.value[1].i;
                     }
                 }
             } else {
@@ -1482,7 +1482,7 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    if (ctr_instr || ctr_load || ctr_amt_idx)
+    if (ctr_instr || ctr_load || ctr_imm_amt)
         write_counter_config(ea_row);
     else if (def)
         def->write_counter_config(ea_row);

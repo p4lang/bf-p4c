@@ -5,7 +5,7 @@
 #include "bf-p4c/midend/parser_graph.h"
 #include "bf-p4c/midend/parser_utils.h"
 
-typedef std::map<const IR::Declaration*, std::set<const IR::ParserState*>> DeclToStates;
+typedef std::map<const IR::Declaration*, std::set<cstring>> DeclToStates;
 
 namespace BFN {
 namespace V1 {
@@ -286,7 +286,7 @@ class InsertParserChecksums : public Inspector {
                                                               { new IR::Argument(f) });
 
                     structure->ingressParserStatements[stateName].push_back(addCall);
-                    translate->ingressVerifyDeclToStates[decl].insert(state);
+                    translate->ingressVerifyDeclToStates[decl].insert(state->name);
                 }
             }
         }
@@ -300,7 +300,7 @@ class InsertParserChecksums : public Inspector {
                                                               { new IR::Argument(destfield) });
 
                 structure->ingressParserStatements[stateName].push_back(addCall);
-                translate->ingressVerifyDeclToStates[decl].insert(state);
+                translate->ingressVerifyDeclToStates[decl].insert(state->name);
             }
         }
     }
@@ -488,13 +488,13 @@ class InsertChecksumError : public PassManager {
 
         explicit ComputeEndStates(InsertChecksumError* self) : self(self) { }
 
-        void printStates(const std::set<const IR::ParserState*>& states) {
+        void printStates(const std::set<cstring>& states) {
             for (auto s : states)
-                std::cout << "   " << s->name << std::endl;
+                std::cout << "   " << s << std::endl;
         }
 
         std::set<cstring>
-        computeChecksumEndStates(const std::set<const IR::ParserState*>& calcStates) {
+        computeChecksumEndStates(const std::set<cstring>& calcStates) {
             auto& parserGraphs = self->translate->parserGraphs;
 
             if (LOGGING(3)) {
@@ -502,15 +502,15 @@ class InsertChecksumError : public PassManager {
                 printStates(calcStates);
             }
 
-            std::set<const IR::ParserState*> endStates;
+            std::set<cstring> endStates;
 
             // A calculation state is a verification end state if no other state of the
             // same calculation is its descendant. Otherwise, include all of the state's
             // children states that are not a calculation state.
 
-            for (auto* a : calcStates) {
+            for (auto a : calcStates) {
                 bool isEndState = true;
-                for (auto* b : calcStates) {
+                for (auto b : calcStates) {
                     if (parserGraphs.is_ancestor(a, b)) {
                         isEndState = false;
                         break;
@@ -520,11 +520,11 @@ class InsertChecksumError : public PassManager {
                     endStates.insert(a);
                 } else {
                     if (parserGraphs.succs.count(a)) {
-                        for (auto* succ : parserGraphs.succs.at(a)) {
+                        for (auto succ : parserGraphs.succs.at(a)) {
                             if (calcStates.count(succ))
                                 continue;
 
-                            for (auto* s : calcStates) {
+                            for (auto s : calcStates) {
                                 if (!parserGraphs.is_ancestor(succ, s)) {
                                     endStates.insert(succ);
                                 }
@@ -541,11 +541,7 @@ class InsertChecksumError : public PassManager {
                 printStates(endStates);
             }
 
-            std::set<cstring> rv;
-            for (auto s : endStates)
-                rv.insert(s->name);
-
-            return rv;
+            return endStates;
         }
 
         bool preorder(const IR::BFN::TnaParser* parser) override {
@@ -592,9 +588,12 @@ class InsertChecksumError : public PassManager {
 
                 for (auto kv : self->translate->ingressVerifyDeclToStates) {
                     for (auto s : kv.second) {
-                        if (s->name == state->name) {
+                        if (s == state->name) {
                             isCalcState = true;
-                            break; } } }
+                            break;
+                        }
+                    }
+                }
 
                 if (!isCalcState)
                     return path;

@@ -16,14 +16,13 @@ class P4ParserGraphs: public graphs::ParserGraphs {
                 auto* src = t->sourceState;
                 auto* dst = t->destState;
 
-                preds[dst].insert(src);
-                succs[src].insert(dst);
+                preds[dst->name].insert(src->name);
+                succs[src->name].insert(dst->name);
             }
         }
     }
 
-    bool is_descendant_impl(const IR::ParserState* a, const IR::ParserState* b,
-                            std::set<const IR::ParserState*>& visited) const {
+    bool is_descendant_impl(cstring a, cstring b, std::set<cstring>& visited) const {
         if (!a || !b || a == b)
             return false;
 
@@ -49,14 +48,23 @@ class P4ParserGraphs: public graphs::ParserGraphs {
         graphs::ParserGraphs(refMap, typeMap, cstring()), dumpDot(dumpDot) { }
 
     /// Is "a" a descendant of "b"?
-    bool is_descendant(const IR::ParserState* a, const IR::ParserState* b) const {
-        std::set<const IR::ParserState*> visited;
+    bool is_descendant(cstring a, cstring b) const {
+        std::set<cstring> visited;
         return is_descendant_impl(a, b, visited);
     }
 
     /// Is "a" an ancestor of "b"?
-    bool is_ancestor(const IR::ParserState* a, const IR::ParserState* b) const {
+    bool is_ancestor(cstring a, cstring b) const {
         return is_descendant(b, a);
+    }
+
+    const IR::ParserState*
+    get_state(const IR::P4Parser* parser, cstring state) const {
+        for (auto s : states.at(parser)) {
+            if (s->name == state)
+                return s;
+        }
+        return nullptr;
     }
 
     /// a kludge due to base class's lack of state -> parser reverse map
@@ -64,7 +72,7 @@ class P4ParserGraphs: public graphs::ParserGraphs {
     get_parser(const IR::ParserState* state) const {
         for (auto& kv : states) {
             for (auto s : kv.second)
-                if (s == state)
+                if (s->name == state->name)
                     return kv.first;
         }
 
@@ -78,14 +86,20 @@ class P4ParserGraphs: public graphs::ParserGraphs {
         auto parser = get_parser(state);
 
         for (auto s : states.at(parser)) {
-            if (is_descendant(s, state))
+            if (is_descendant(s->name, state->name))
                 rv.insert(s);
         }
 
         return rv;
     }
 
-    std::map<const IR::ParserState*, ordered_set<const IR::ParserState*>> preds, succs;
+    std::set<std::set<cstring>>
+    compute_strongly_connected_components(const IR::P4Parser* parser) const;
+
+    std::set<std::set<cstring>>
+    compute_loops(const IR::P4Parser* parser) const;
+
+    std::map<cstring, ordered_set<cstring>> preds, succs;
 
     bool dumpDot;
 };
