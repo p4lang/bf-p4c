@@ -30,6 +30,7 @@ struct Def {
 struct Use {
     const IR::BFN::ParserState* state = nullptr;
     const IR::BFN::SavedRVal* save = nullptr;
+    const IR::Expression* p4Source = nullptr;
 
     Use(const IR::BFN::ParserState* s,
         const IR::BFN::SavedRVal* save) : state(s), save(save) { }
@@ -41,7 +42,9 @@ struct Use {
 
     std::string print() const {
         std::stringstream ss;
-        ss << " [ " << state->name << " : " << save->source << " ]";
+        ss << " [ " << state->name << " : " << save->source;
+        if (p4Source) ss << " " << p4Source;
+        ss << " ]";
         return ss.str();
     }
 };
@@ -67,8 +70,11 @@ struct UseDef {
     }
 
     const Use*
-    get_use(const IR::BFN::ParserState* state, const IR::BFN::SavedRVal* save) const {
+    get_use(const IR::BFN::ParserState* state,
+            const IR::BFN::SavedRVal* save,
+            const IR::BFN::Select* select) const {
         auto temp = new Use(state, save);
+        if (select) temp->p4Source = select->p4Source;
         for (auto& kv : use_to_defs)
             if (kv.first->equiv(temp))
                 return kv.first;
@@ -300,9 +306,11 @@ struct CollectParserUseDef : PassManager {
         bool preorder(const IR::BFN::SavedRVal* save) override {
             auto parser = findOrigCtxt<IR::BFN::Parser>();
             auto state = findOrigCtxt<IR::BFN::ParserState>();
+            auto select = findOrigCtxt<IR::BFN::Select>();
+
             auto& graph = parser_info.graph(parser);
 
-            auto use = parser_use_def[parser].get_use(state, save);
+            auto use = parser_use_def[parser].get_use(state, save, select);
 
             ordered_set<Parser::Def*> defs;
 
@@ -350,8 +358,9 @@ struct CopyPropParserDef : public ParserModifier {
     get_absolute_def(const IR::BFN::SavedRVal* save) {
         auto parser = findOrigCtxt<IR::BFN::Parser>();
         auto state = findOrigCtxt<IR::BFN::ParserState>();
+        auto select = findOrigCtxt<IR::BFN::Select>();
 
-        auto use = parser_use_def.at(parser).get_use(state, save);
+        auto use = parser_use_def.at(parser).get_use(state, save, select);
         auto defs = parser_use_def.at(parser).use_to_defs.at(use);
 
         if (defs.size() == 1) {
