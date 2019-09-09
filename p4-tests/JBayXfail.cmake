@@ -175,10 +175,9 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "This program violates action constraints imposed by Tofino2"
+  "Compiler Bug.*More than one field written to .* in action"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
-
 
 # These tests fail at runtime with the driver
 if (PTF_REQUIREMENTS_MET)
