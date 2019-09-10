@@ -171,10 +171,6 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
                   "Consider rewriting the variable length expression to reduce "
                   "the number of possible runtime values: %1%", call);
         return false;
-    } else if (branches_needed > 20) {  // choose 20 based on IP/TCP options
-        ::warning("Varbit extract requires %1% parser branches to implement. "
-                  "Consider rewriting the variable length expression to reduce "
-                  "the number of possible runtime values: %2%", branches_needed, call);
     }
 
     LOG2(varsize_expr << " needs " << branches_needed << "to implement");
