@@ -14,6 +14,11 @@ class SplitAlpm : public Transform {
     const IR::MAU::Table* create_atcam(IR::MAU::Table* table, IR::TempVar* tv,
             unsigned partition_count, unsigned partition_index_bits,
             unsigned subtrees_per_partition);
+    bool values_through_pragmas(const IR::MAU::Table *tbl, int &number_of_partitions,
+            int &number_subtrees_par_partition);
+    bool values_through_impl(const IR::MAU::Table *tbl, int &number_of_partitions,
+            int &number_subtrees_per_partition);
+
  public:
     static const cstring ALGORITHMIC_LPM_PARTITIONS;
     static const cstring ALGORITHMIC_LPM_SUBTREES_PER_PARTITION;

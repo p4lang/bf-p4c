@@ -61,10 +61,10 @@ const IR::MAU::Table* SplitAlpm::create_atcam(IR::MAU::Table* tbl, IR::TempVar* 
     return clone;
 }
 
-const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
-    if (!tbl->match_table)
-        return tbl;
 
+bool SplitAlpm::values_through_pragmas(const IR::MAU::Table *tbl,
+                                       int &number_partitions,
+                                       int &number_subtrees_per_partition) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("alpm")) {
         ERROR_CHECK(s->expr.size() > 0, "%s: Please provide a valid alpm "
@@ -77,11 +77,8 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
             ::error("%s: Please provide a valid alpm for table %s", tbl->srcInfo, tbl->name);
         }
     } else {
-        return tbl;
+        return false;
     }
-
-    auto number_partitions = 1024;
-    auto number_subtrees_per_partition = 2;
 
     if (auto s = annot->getSingle(ALGORITHMIC_LPM_PARTITIONS)) {
         ERROR_CHECK(s->expr.size() > 0, "%s: Please provide a valid %s "
@@ -116,6 +113,31 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
                     ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, pragma_val->value, tbl->name);
         }
     }
+    return ::errorCount() == 0;
+}
+
+
+bool SplitAlpm::values_through_impl(const IR::MAU::Table *tbl,
+                                    int &number_partitions,
+                                    int &number_subtrees_per_partition) {
+    if (tbl->match_table->properties->getProperty("alpm") == nullptr)
+        return false;
+    number_partitions = tbl->layout.partition_count;
+    number_subtrees_per_partition = tbl->layout.subtrees_per_partition;
+    return true;
+}
+
+const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
+    if (!tbl->match_table)
+        return tbl;
+
+    /// default values when only @pragma alpm is defined
+    int number_partitions = 1024;
+    int number_subtrees_per_partition = 2;
+
+    if (!values_through_impl(tbl, number_partitions, number_subtrees_per_partition) &&
+        !values_through_pragmas(tbl, number_partitions, number_subtrees_per_partition))
+        return tbl;
 
     auto partition_index_bits = ::ceil_log2(number_partitions);
     auto pre_classifer_number_entries = number_partitions * number_subtrees_per_partition;
