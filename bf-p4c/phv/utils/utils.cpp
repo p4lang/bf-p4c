@@ -1279,6 +1279,35 @@ bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {
     return true;
 }
 
+bool PHV::SuperCluster::isSliceable() const {
+    int sc_width = 0;
+    for (const auto* slice_list : slice_lists()) {
+        int size = std::accumulate(slice_list->begin(), slice_list->end(), 0,
+                [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
+        if (slice_list->front().field()->exact_containers()) {
+            sc_width = (sc_width < size) ? size : sc_width;
+            if (size == 8)
+                return false; } }
+    if (!exact_containers()) return true;
+    for (const auto* slice_list : slice_lists()) {
+        int min_no_split = INT_MAX;
+        int max_no_split = -1;
+        int offset = 0;
+        for (auto& slice : *slice_list) {
+            offset += slice.size();
+            if (!slice.field()->no_split()) continue;
+            int start = offset - slice.size();
+            min_no_split = (min_no_split > start) ? start : min_no_split;
+            max_no_split = (max_no_split < offset) ? offset : max_no_split;
+        }
+        // Found no split slice in this slice list.
+        if (min_no_split != INT_MAX && max_no_split != -1) {
+            int roundupSize = 8 * ROUNDUP(max_no_split, 8);
+            if (min_no_split < 8 && roundupSize >= sc_width)
+                return false; } }
+    return true;
+}
+
 const ordered_set<const PHV::SuperCluster::SliceList*>&
 PHV::SuperCluster::slice_list(const PHV::FieldSlice& slice) const {
     static const ordered_set<const SliceList*> empty;

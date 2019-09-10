@@ -1206,7 +1206,7 @@ CoreAllocation::tryAllocSliceList(
         }
 
         action_constraints = actions_i.can_pack(perContainerAlloc, candidate_slices,
-                actual_container_state, initActions);
+                actual_container_state, initActions, super_cluster);
         bool creates_new_container_conflicts =
             actions_i.creates_container_conflicts(actual_container_state, initActions,
                     meta_init_i.getTableActionsMap());
@@ -2742,7 +2742,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     std::map<const PHV::SuperCluster*, int> n_valid_starts;
     std::map<const PHV::SuperCluster*, int> n_required_length;
     std::set<const PHV::SuperCluster*> pounder_clusters;
-    std::set<const PHV::SuperCluster*> non_slicable;
+    std::set<const PHV::SuperCluster*> non_sliceable;
     std::set<const PHV::SuperCluster*> has_pov;
     std::map<const PHV::SuperCluster*, int> n_extracted_uninitialized;
     std::map<const PHV::SuperCluster*, size_t> n_container_size_pragma;
@@ -2838,19 +2838,11 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         pounder_clusters.insert(super_cluster);
     }
 
-    // calc non_slicable clusters
+    // calc non_sliceable clusters
     // i.e. 8-bit and exact container required.
-    for (const auto* super_cluster : cluster_groups) {
-        for (const auto* slice_list : super_cluster->slice_lists()) {
-            BUG_CHECK(slice_list->size() > 0, "empty slice list");
-            int length = std::accumulate(
-                    slice_list->begin(), slice_list->end(), 0,
-                    [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
-            if (slice_list->front().field()->exact_containers()
-                && length == 8) {
-                non_slicable.insert(super_cluster);
-                break; }
-        } }
+    for (const auto* super_cluster : cluster_groups)
+        if (!super_cluster->isSliceable())
+            non_sliceable.insert(super_cluster);
 
     // calc required_length, i.e. max(max{fieldslice.size()}, {slicelist.size()}).
     for (const auto* super_cluster : cluster_groups) {
@@ -2888,8 +2880,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             return has_no_pack.count(l) > has_no_pack.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
             return has_no_split.count(l) > has_no_split.count(r); }
-        if (non_slicable.count(l) != non_slicable.count(r)) {
-            return non_slicable.count(l) > non_slicable.count(r); }
+        if (non_sliceable.count(l) != non_sliceable.count(r)) {
+            return non_sliceable.count(l) > non_sliceable.count(r); }
         if (bool(l->exact_containers()) != bool(r->exact_containers())) {
             return bool(l->exact_containers()) > bool(r->exact_containers()); }
         // if it's header fields
@@ -2932,9 +2924,9 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         for (const auto& v : cluster_groups) {
             ++i;
             logs << i << "th "<< " [";
-            logs << "is_no_pack: "             << has_no_pack.count(v) << ", ";
-            logs << "is_no_split: "            << has_no_split.count(v) << ", ";
-            logs << "is_non_slicable: "       << non_slicable.count(v) << ", ";
+            logs << "is_no_pack: "            << has_no_pack.count(v) << ", ";
+            logs << "is_no_split: "           << has_no_split.count(v) << ", ";
+            logs << "is_non_sliceable: "      << non_sliceable.count(v) << ", ";
             logs << "is_exact_container: "    << v->exact_containers() << ", ";
             logs << "is_pounderable: "        << pounder_clusters.count(v) << ", ";
             logs << "required_length: "       << n_required_length[v] << ", ";

@@ -938,7 +938,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
@@ -1185,9 +1184,10 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/noviflow/DRV-1092/drv_1092.p4
   )
 
-# P4C-1397
 p4c_add_xfail_reason("tofino"
-  "Total size of containers used for.*POV allocation is .*b, greater than the allowed limit of 256b|./p4c TIMEOUT"
+  "./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/arista/p4c-2058.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
   )
 
 # Valid XFAIL
@@ -1487,12 +1487,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : Currently the field .* in action .* is assigned in a way too complex for the compiler to currently handle."
   extensions/p4_tests/p4_16/customer/arista/p4c-2076.p4
-)
-
-# P4C-2077
-p4c_add_xfail_reason("tofino"
-  "error: No PHV allocation for field used as a POV bit in the deparser|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
 )
 
 #P4C-2080

@@ -776,6 +776,7 @@ set (NON_PR
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 
 foreach(t IN LISTS NON_PR)

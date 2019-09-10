@@ -1069,13 +1069,29 @@ bool ActionPhvConstraints::is_bitmasked_set(
 }
 
 bool ActionPhvConstraints::pack_conflicts_present(
-        const PHV::Allocation::MutuallyLiveSlices& container_state) const {
+        const PHV::Allocation::MutuallyLiveSlices& container_state,
+        const std::vector<PHV::AllocSlice>& slices,
+        const PHV::SuperCluster& sc) const {
+    // Check that none of the new slices have pack conflicts with the already allocated slices
+    // (container_state).
     for (auto sl1 : container_state) {
-        for (auto sl2 : container_state) {
+        for (auto sl2 : slices) {
             if (sl1.field() == sl2.field()) continue;
             if (hasPackConflict(sl1.field(), sl2.field())) {
                 LOG5("\t\t\t" << sl1.field()->name << " cannot be packed in the same stage with " <<
                      sl2.field()->name);
+                return true; } } }
+    // If the supercluster is not sliceable, this is all we check.
+    if (!sc.isSliceable()) return false;
+
+    // If the supercluster is further sliceable, we also check the pack conflicts between slices
+    // within the candidate set.
+    for (auto sl1 : slices) {
+        for (auto sl2 : slices) {
+            if (sl1.field() == sl2.field()) continue;
+            if (hasPackConflict(sl1.field(), sl2.field())) {
+                LOG5("\t\t\tAllocation candidate " << sl1.field()->name << " cannot be packed in "
+                     "the same stage with " << sl2.field()->name);
                 return true; } } }
     return false;
 }
@@ -1419,7 +1435,8 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         const PHV::Allocation& alloc,
         std::vector<PHV::AllocSlice>& slices,
         PHV::Allocation::MutuallyLiveSlices& original_container_state,
-        const PHV::Allocation::LiveRangeShrinkingMap& initActions) {
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions,
+        const PHV::SuperCluster& sc) {
     PHV::Allocation::ConditionalConstraints rv;
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
@@ -1459,14 +1476,14 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (LOGGING(6))
         constraint_tracker.print_field_ordering(slices);
 
+    // Check if table placement induced any no pack constraints on fields that are candidates for
+    // packing. If yes, packing not possible.
+    if (pack_conflicts_present(container_state, slices, sc))
+        return boost::none;
+
     // Create candidate packing
     for (auto slice : slices)
         container_state.insert(slice);
-
-    // Check if table placement induced any no pack constraints on fields that are candidates for
-    // packing. If yes, packing not possible.
-    if (pack_conflicts_present(container_state))
-        return boost::none;
 
     // Check if any of the fields are stateful ALU writes and check the data bus alignment
     // constraints.
