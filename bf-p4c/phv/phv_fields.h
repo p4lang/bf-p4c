@@ -312,6 +312,8 @@ class Field : public LiftLess<Field> {
                                                        /// PHV.
     bool            deparser_zero_i = false;           /// true if the field is a candidate for the
                                                        /// deparser zero optimization.
+    bool            write_force_immediate_i = false;   /// true if the field is written by action
+                                                       /// data in a force_immediate table.
     ordered_set<int> wide_arith_start_bit_;            /// Set of start bits of wide arithmetic
                                                        /// operations.  For example, if a program
                                                        /// had ipv6.dstAddr[127:64] += 1 and
@@ -406,6 +408,8 @@ class Field : public LiftLess<Field> {
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
     bool exact_containers() const                          { return exact_containers_i; }
     void set_exact_containers(bool b)                      { exact_containers_i = b; }
+    void set_written_in_force_immediate(bool b)            { write_force_immediate_i = b; }
+    bool written_in_force_immediate_table() const          { return write_force_immediate_i; }
 
     bool no_split() const;
     void set_no_split(bool b);

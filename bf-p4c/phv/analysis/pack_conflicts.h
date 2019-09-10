@@ -72,6 +72,8 @@ class PackConflicts : public PassManager {
         });
     }
 
+    void addPackConflict(const PHV::Field* f1, const PHV::Field* f2);
+
     bool hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const;
 
     bool writtenInSameStageDifferentTable(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;

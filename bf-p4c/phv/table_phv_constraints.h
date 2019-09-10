@@ -3,7 +3,9 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/pragma/pa_container_size.h"
 
 /** This class enforces the following constraints related to match key sizes for ternary match
@@ -18,24 +20,40 @@
 
 class TernaryMatchKeyConstraints : public MauModifier {
  private:
-     static constexpr unsigned BITS_IN_BYTE = 8;
-     static constexpr unsigned TERNARY_MATCH_KEY_BITS_THRESHOLD = 64;
-     static constexpr unsigned MAX_EXACT_MATCH_KEY_BYTES = 128;
-     static constexpr size_t MAX_TERNARY_MATCH_KEY_BITS = (44 * 12) - 4;
+    static constexpr unsigned BITS_IN_BYTE = 8;
+    static constexpr unsigned TERNARY_MATCH_KEY_BITS_THRESHOLD = 64;
+    static constexpr unsigned MAX_EXACT_MATCH_KEY_BYTES = 128;
+    static constexpr size_t MAX_TERNARY_MATCH_KEY_BITS = (44 * 12) - 4;
 
-     PhvInfo      &phv;
+    PhvInfo      &phv;
 
-     profile_t init_apply(const IR::Node* root) override;
-     bool preorder(IR::MAU::Table* tbl) override;
-     void end_apply() override;
+    profile_t init_apply(const IR::Node* root) override;
+    bool preorder(IR::MAU::Table* tbl) override;
+    void end_apply() override;
 
-     bool isATCAM(IR::MAU::Table* tbl) const;
-     bool isTernary(IR::MAU::Table* tbl) const;
+    bool isATCAM(IR::MAU::Table* tbl) const;
+    bool isTernary(IR::MAU::Table* tbl) const;
 
-     void calculateTernaryMatchKeyConstraints(const IR::MAU::Table* tbl) const;
+    void calculateTernaryMatchKeyConstraints(const IR::MAU::Table* tbl) const;
 
  public:
-     explicit TernaryMatchKeyConstraints(PhvInfo &p) : phv(p) {}
+    explicit TernaryMatchKeyConstraints(PhvInfo &p) : phv(p) { }
+};
+
+class CollectForceImmediateFields : public MauInspector {
+ private:
+    PhvInfo                         &phv;
+    const ActionPhvConstraints      &actions;
+    PackConflicts             &pack;
+
+    bool preorder(const IR::MAU::Action* action) override;
+
+ public:
+    explicit CollectForceImmediateFields(
+            PhvInfo& p,
+            const ActionPhvConstraints& a,
+            PackConflicts& c)
+        : phv(p), actions(a), pack(c) { }
 };
 
 /** This class is meant to gather PHV constraints enforced by MAU and the way fields are used in
@@ -44,9 +62,13 @@ class TernaryMatchKeyConstraints : public MauModifier {
   */
 class TablePhvConstraints : public PassManager {
  public:
-    explicit TablePhvConstraints(PhvInfo& p) {
+    explicit TablePhvConstraints(
+            PhvInfo& p,
+            const ActionPhvConstraints& a,
+            PackConflicts& c) {
         addPasses({
-            new TernaryMatchKeyConstraints(p)
+            new TernaryMatchKeyConstraints(p),
+            new CollectForceImmediateFields(p, a, c)
         });
     }
 };

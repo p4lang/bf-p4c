@@ -166,6 +166,10 @@ unsigned PackConflicts::size() const {
     return fieldNoPack.size();
 }
 
+void PackConflicts::addPackConflict(const PHV::Field* f1, const PHV::Field* f2) {
+    fieldNoPack(f1->id, f2->id) = true;
+}
+
 bool PackConflicts::hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const {
     LOG6(this << " " << fieldNoPack(f1->id, f2->id) << " Checking for " << f1->name << " (" <<
             f1->id << ") and " << f2->name << " (" << f2->id << ")");

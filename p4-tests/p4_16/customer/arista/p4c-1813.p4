@@ -1690,7 +1690,7 @@ control Marquand(inout Belview Kempton, inout Beaverdam GunnCity) {
         GunnCity.Boerne.Basic = Nucla;
     }
     @idletime_precision(1)
-    // @force_immediate(1)
+    @force_immediate(1)
     table Tillson {
         idle_timeout = true;
         actions = {
@@ -1707,7 +1707,7 @@ control Marquand(inout Belview Kempton, inout Beaverdam GunnCity) {
         size = 512;
         default_action = Castle();
     }
-    // @force_immediate(1)
+    @force_immediate(1)
     table Micro {
         actions = {
             Aguila();
@@ -1772,7 +1772,7 @@ control Lattimore(inout Belview Cheyenne, inout Beaverdam Pacifica) {
         Forepaugh(Anita);
     }
     @idletime_precision(1)
-    // @force_immediate(1)
+    @force_immediate(1)
     table Cairo {
         idle_timeout = true;
         actions = {
@@ -1790,7 +1790,7 @@ control Lattimore(inout Belview Cheyenne, inout Beaverdam Pacifica) {
         default_action = WildRose();
     }
     @action_default_only("WildRose")
-    // @force_immediate(1)
+    @force_immediate(1)
     table Exeter {
         actions = {
             Kellner();
@@ -2331,7 +2331,7 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
     }
     @ways(2) @atcam_partition_index("Boerne.Basic")
     @atcam_number_partitions(1024)
-    // @force_immediate(1)
+    @force_immediate(1)
     @action_default_only("Blakeman")
     table Kelliher {
         actions = {
@@ -2349,7 +2349,7 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
         default_action = Blakeman();
     }
     @idletime_precision(1)
-    // @force_immediate(1)
+    @force_immediate(1)
     @action_default_only("Palco") table Hopeton {
         idle_timeout = true;
         actions = {
@@ -2397,7 +2397,7 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
         default_action = Melder();
     }
 
-    // @force_immediate(1)
+    @force_immediate(1)
     table Lyman {
         actions = {
             FourTown();
@@ -2415,7 +2415,7 @@ control Barnwell(inout Belview Tulsa, inout Beaverdam Cropper) {
     }
     @action_default_only("Brownson")
     @idletime_precision(1)
-    // @force_immediate(1)
+    @force_immediate(1)
     table BirchRun {
         idle_timeout = true;
         actions = {

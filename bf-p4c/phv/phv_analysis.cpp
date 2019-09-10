@@ -84,12 +84,12 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // table allocation (only useful if we backtracked from table placement to PHV
             // allocation)
             &pack_conflicts,
+            &action_constraints,
             // Collect constraints related to the way fields are used in tables.
-            new TablePhvConstraints(phv),
+            new TablePhvConstraints(phv, action_constraints, pack_conflicts),
             // Collect constraints related to the way fields are used in the parser/deparser.
             new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
             &critical_path_clusters,
-            &action_constraints,
             // This has to be the last pass in the analysis phase as it adds artificial constraints
             // to fields and uses results of some of the above passes (specifically
             // action_constraints).

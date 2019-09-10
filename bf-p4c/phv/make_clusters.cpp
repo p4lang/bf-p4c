@@ -829,7 +829,8 @@ void Clustering::MakeSuperClusters::end_apply() {
                                // We must create slice lists for all metadata fields that are
                                // involved in wide arithmetic to ensure that the slices of those
                                // fields can bbe placed adjacently.
-                               || kv.first->used_in_wide_arith() || is_exact_containers;
+                               || kv.first->used_in_wide_arith() || is_exact_containers
+                               || kv.first->written_in_force_immediate_table();
 
         // XXX(hanw): if any slice of a field is already assigned to a slice
         // list, do not create additional slice list from the field.  This is

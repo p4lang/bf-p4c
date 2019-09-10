@@ -85,3 +85,35 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
         }
     }
 }
+
+bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {
+    const auto* tbl = findContext<IR::MAU::Table>();
+    if (!tbl) return true;
+    if (!tbl->is_force_immediate()) return true;
+    LOG3("\t  Action " << action->name << " belongs to force_immediate table " << tbl->name);
+    auto writtenFields = actions.actionWrites(action);
+    ordered_set<const PHV::Field*> fields;
+    for (const auto* f : writtenFields) {
+        if (actions.written_by_ad_constant(f, action)) {
+            fields.insert(f);
+            if (!f->metadata) continue;
+            PHV::Field* field = phv.field(f->id);
+            field->set_written_in_force_immediate(true);
+            LOG3("\t\tSetting written in force immediate property for " << f->name);
+        }
+    }
+    if (fields.size() == 0) return true;
+    LOG3("\t\tListing fields written by action data/constant in this action:");
+    for (auto* f : fields)
+        LOG3("\t\t  " << f);
+    for (const auto* f1 : fields) {
+        for (const auto* f2 : writtenFields) {
+            if (f1 == f2) continue;
+            if (pack.hasPackConflict(f1, f2)) continue;
+            LOG3("\t\tAdding pack conflict between " << f1->name << " and " << f2->name);
+            pack.addPackConflict(f1, f2);
+        }
+    }
+    return true;
+}
+
