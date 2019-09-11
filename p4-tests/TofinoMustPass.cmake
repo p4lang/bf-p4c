@@ -2,11 +2,11 @@
 set (SWITCH_VERSION 8.7)
 
 set (TOFINO_MUST_PASS_TESTS
-  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
-  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
   extensions/p4_tests/p4_14/ptf/easy_exact.p4
-  extensions/p4_tests/p4_14/ptf/easy.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
+  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
+  extensions/p4_tests/p4_14/ptf/easy.p4
   extensions/p4_tests/p4_14/ptf/ecmp_pi.p4
   extensions/p4_tests/p4_14/ptf/ternary_match_constant_action_data.p4
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
@@ -15,40 +15,40 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4
 
   # p4-tests programs
-  extensions/p4_tests/p4-programs/programs/basic_swithching/basic_switching.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/action_spec_format/action_spec_format.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4
   extensions/p4_tests/p4-programs/internal_p4_14/emulation/emulation.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_mem_test/mau_mem_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/mau_tcam_test/mau_tcam_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/multi_thread_test/multi_thread_test.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/multicast_scale/multicast_scale.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/range/range.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_taken_default_ingress/simple_l3_checksum_taken_default_ingress.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/tcam_search/tcam_search.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/tofino_diag/tofino_diag.p4
+  extensions/p4_tests/p4-programs/programs/basic_swithching/basic_switching.p4
+  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
+  extensions/p4_tests/p4-programs/programs/default_entry/default_entry.p4
+  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
+  extensions/p4_tests/p4-programs/programs/dkm/dkm.p4
+  extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
+  extensions/p4_tests/p4-programs/programs/dyn_hash/dyn_hash.p4
+  extensions/p4_tests/p4-programs/programs/ecmp_pi/ecmp_pi.p4
   extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
+  extensions/p4_tests/p4-programs/programs/iterator/iterator.p4
+  extensions/p4_tests/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
   extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
   extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/p4-programs/programs/parser_error/parser_error.p4
+  extensions/p4_tests/p4-programs/programs/parser_intr_md/parser_intr_md.p4
   extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
+  extensions/p4_tests/p4-programs/programs/perf_test/perf_test.p4
   extensions/p4_tests/p4-programs/programs/pgrs/pgrs.p4
+  extensions/p4_tests/p4-programs/programs/pvs/pvs.p4
   extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
   extensions/p4_tests/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
-  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/tcam_search/tcam_search.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_mem_test/mau_mem_test.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/multi_thread_test/multi_thread_test.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/simple_l3_checksum_taken_default_ingress/simple_l3_checksum_taken_default_ingress.p4
-  extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_tcam_test/mau_tcam_test.p4
-  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4
-  extensions/p4_tests/p4-programs/programs/ecmp_pi/ecmp_pi.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/action_spec_format/action_spec_format.p4
-  extensions/p4_tests/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
-  extensions/p4_tests/p4-programs/programs/dkm/dkm.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/range/range.p4
-  extensions/p4_tests/p4-programs/programs/parser_intr_md/parser_intr_md.p4
-  extensions/p4_tests/p4-programs/programs/pvs/pvs.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/tofino_diag/tofino_diag.p4
-  extensions/p4_tests/p4-programs/programs/dyn_hash/dyn_hash.p4
-  extensions/p4_tests/p4-programs/programs/iterator/iterator.p4
   extensions/p4_tests/p4-programs/programs/stats_pi/stats_pi.p4
-  extensions/p4_tests/p4-programs/programs/parser_error/parser_error.p4
-  extensions/p4_tests/p4-programs/programs/default_entry/default_entry.p4
-  extensions/p4_tests/p4-programs/internal_p4_14/multicast_scale/multicast_scale.p4
-  extensions/p4_tests/p4-programs/programs/perf_test/perf_test.p4
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
   smoketest_programs_alpm_test
   smoketest_programs_basic_ipv4
   smoketest_programs_dkm
@@ -56,14 +56,14 @@ set (TOFINO_MUST_PASS_TESTS
   smoketest_programs_exm_direct_1
   smoketest_programs_exm_indirect_1
   smoketest_programs_exm_smoke_test
-  smoketest_programs_stful
-  smoketest_programs_meters
   smoketest_programs_hash_driven
+  smoketest_programs_meters
+  smoketest_programs_stful
 
   # p4-tests tna programs
+  p4_16_programs_tna_32q_2pipe
   p4_16_programs_tna_32q_multiprogram_a
   p4_16_programs_tna_32q_multiprogram_b
-  p4_16_programs_tna_32q_2pipe
   p4_16_programs_tna_action_profile
   p4_16_programs_tna_action_selector
   p4_16_programs_tna_counter
@@ -85,17 +85,24 @@ set (TOFINO_MUST_PASS_TESTS
   p4_16_programs_tna_ternary_match
 
   # Switch compile only
-  switch_dc_basic
-  switch_ent_dc_general
-  switch_msdc
+  smoketest_switch_16_compile_a0_profile
+  smoketest_switch_16_compile_b0_profile
+  smoketest_switch_16_compile_l0_profile
+  smoketest_switch_16_compile
   switch_${SWITCH_VERSION}_dc_basic
   switch_${SWITCH_VERSION}_ent_dc_general
   switch_${SWITCH_VERSION}_msdc
-  smoketest_switch_16_compile
+  switch_dc_basic
+  switch_ent_dc_general
+  switch_msdc
 
   # Customer profiles
   extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
-  extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1812.p4
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
 )

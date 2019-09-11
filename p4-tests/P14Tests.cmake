@@ -163,12 +163,12 @@ set (P14_TEST_SUITES
   # TODO: Add them with different names if we need both
   #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c1/*/*.p4
   #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/c2/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/cisco/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/ixia/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/zte/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/embedway/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/microsoft/*/*.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/tudarmstadt/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/cisco/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/ixia/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/zte/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/embedway/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/microsoft/*/*.p4
+  #${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/tudarmstadt/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
   ${BFN_TESTS_LIST}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4

@@ -4,13 +4,6 @@ set (JBAY_XFAIL_TESTS
   # or open a new one.
   )
 
-# All ptf tests xfail due to lack of jbay driver support...
-p4c_add_xfail_reason("tofino2"
-  "ERROR:PTF runner:Error when running PTF tests"
-  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
-  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  )
-
 # Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
 # implementation
 p4c_add_xfail_reason("tofino2"
@@ -48,8 +41,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("tofino2"
     "Assertion .* failed"  # model asserts
-   extensions/p4_tests/p4_14/stf/decaf_8.p4 # clot?
    extensions/p4_tests/p4_14/stf/decaf_1.p4 # 16-bit container repeated in FD
+   extensions/p4_tests/p4_14/stf/decaf_8.p4 # clot?
    )
 
 endif() # HARLYN_STF
@@ -79,13 +72,13 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
-  testdata/p4_14_samples/source_routing.p4
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -185,7 +178,6 @@ if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*"
   extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
-  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
   extensions/p4_tests/p4_14/ptf/easy_no_match.p4
   tor.p4
   extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
@@ -201,8 +193,8 @@ endif() # PTF_REQUIREMENTS_MET
 
 p4c_add_xfail_reason("tofino2"
   "Could not place table .*: The table .* could not fit"
-   extensions/p4_tests/p4_14/stf/stateful3.p4
-   testdata/p4_14_samples/counter5.p4
+  extensions/p4_tests/p4_14/stf/stateful3.p4
+  testdata/p4_14_samples/counter5.p4
 )
 
 # BRIG-584
@@ -251,12 +243,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Cannot find declaration for"
-  testdata/p4_14_samples/issue576.p4
-  testdata/p4_14_samples/TLV_parsing.p4
-  )
-
-p4c_add_xfail_reason("tofino2"
   "Varbit field size expression evaluates to non byte-aligned value"
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
   )
@@ -278,15 +264,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Nested checksum updates is currently unsupported"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-)
-
-# P4C-1645
-p4c_add_xfail_reason("tofino2"
-  "Expected packet was not received"
-  fabric
-  fabric-DWITH_SPGW
-  fabric-DWITH_INT_TRANSIT
-  fabric-DWITH_SPGW-DWITH_INT_TRANSIT
 )
 
 # P4C-1665
@@ -314,40 +291,20 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Ran out of parser match registers for"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Compiler Bug: No read or write detected for allocated slice"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "Metadata initialization analysis incorrect.  Live ranges between .* and .* overlap|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Slice point cannot be -1 at this point"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Parser match register not allocated for .*"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -367,26 +324,25 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
+  "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
+)
+
+p4c_add_xfail_reason("tofino2"
   "Field .* is not a member of structure header .*"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Use of uninitialized parser value:"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
+  "Use of uninitialized parser value"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "Name '.*' is used for multiple Register objects in the P4Info message"
   p4_16_internal_p4_16_t2na_fifo
   p4_16_internal_p4_16_t2na_pgr
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Unsupported on target.*This action requires hash, which can only be done through the hit pathway.  However, because the table requires programming action data, the driver may need to change at runtime, and the driver can only currently program the miss pathway.|error: PHV allocation creates a container action impossible within a Tofino ALU"
-  p4_16_internal_p4_16_hwlrn
 )
 
 p4c_add_xfail_reason("tofino2"

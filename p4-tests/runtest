@@ -393,7 +393,11 @@ if $run_ptf || $run_stf2ptf; then
     if [ $arch = "tna" ] || [ $arch = "t2na" ]; then
         P4C_ARGS="$P4C_ARGS --p4runtime-force-std"
     fi
-    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xassembler='--pipe0'"
+    if [ ${device} = "tofino2" ]; then
+        P4C_ARGS="$P4C_ARGS -DCPU_PORT=0 -Xassembler='--pipe0'"
+    else
+        P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xassembler='--pipe0'"
+    fi
     BASE_IF_INDEX=0
     NUM_IFACES=8
     # Default ports for Tofino2 have offset 8

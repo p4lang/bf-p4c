@@ -683,7 +683,7 @@ const char *PragmaSelectorEnableScramble::help = "@pragma selector_enable_scramb
 const char *PragmaSymmetric::name = "symmetric";
 const char *PragmaSymmetric::description =
     "Specifies the symmetric hash fields.";
-const char *PragmaSymmetric::help = "@pragma symmetric field_1, field_2 0\n"
+const char *PragmaSymmetric::help = "@pragma symmetric field_1, field_2\n"
     "+attached to P4 hash extern\n"
     "\n"
     "Specifies that the two fields specified are to be considered symmetric "

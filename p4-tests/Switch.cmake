@@ -132,12 +132,6 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
 
 # We cannot run some tests in our environment as some interfaces referenced in the port
 # mapping file specified for bf-switch don't exist.
- p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_t0" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_t0"
-         "all
-         ^switch_tests.L3SVITest
-	 ^switch_tests.L2LagTest")
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_a0" ${SWITCH_P4_16}
     "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_a0"
@@ -150,23 +144,29 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
          "all
          ^switch_tests.L3SVITest
          ^switch_tests.L2LagTest")
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_t0" ${SWITCH_P4_16}
+   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_t0"
+         "all
+         ^switch_tests.L3SVITest
+         ^switch_tests.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
-  "tofino/smoketest_switch_16_Tests_t0"
   "tofino/smoketest_switch_16_Tests_a0"
   "tofino/smoketest_switch_16_Tests_b0"
+  "tofino/smoketest_switch_16_Tests_t0"
   PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile"
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_a0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_b0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_Tests_t0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests_a0" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_16_Tests_b0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_t0" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}

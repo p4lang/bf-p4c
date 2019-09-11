@@ -24,7 +24,7 @@ set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
 # p4c-1813.p4 and p4c-2030.p4 are handled separately so we can add
 # "--auto-init-metadata".
-set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1813\\.p4" "p4c-2030\\.p4")
+set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1813\\.p4" "p4c-2030\\.p4" "p4c-1812\\.p4")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
@@ -91,19 +91,23 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_
 # p4_16/customer/arista/p4c-2030.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4" "-Xp4c=--auto-init-metadata")
 
+# p4_16/customer/extreme/p4c-1812.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4" "-Xp4c=--auto-init-metadata")
+
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
   )
 p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # Add labels for tests to be run as MUST PASS in Jenkins
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4")
-p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1812.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -732,50 +736,58 @@ set (NON_PR
   ${P4TESTDATA}/p4_14_samples/06-FullTPHV1.p4
   ${P4TESTDATA}/p4_14_samples/07-FullTPHV2.p4
   # CUST_MUSS_PASS (run on Jenkins)
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1214.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1562-1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1572-b1.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-1832.p4
   # Other XFails in compilers repo to run in nightly
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/conditional_constraints_infinite_loop.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-1757-neg.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/04-FullPHV3.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/conditional_constraints_infinite_loop.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/test_config_101_switch_msdc.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1652.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/arista/p4c-1814.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-1757-neg.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1494.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1652.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2058.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2076.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2077.p4
   # Other XFails in Glass repo to run in nightly
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_415_bridge_ing_intr.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-726/comp_726.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-729/ipu.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/mau/COMPILER-815/int_heavy.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1065/comp_1065.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-136/06-FullTPHV1.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_294_parser_loop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/phv/test_config_415_bridge_ing_intr.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
+  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 

@@ -30,15 +30,6 @@ p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
 p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_d0_profile")
 
 # Running switch-16 PTF tests on default profile
-p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_t1" ${SWITCH_P4_16}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
-# Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
-bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_t1"
-        "all
-        ^switch_tests.L3SVITest
-        ^switch_tests.L2LagTest
-        ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_c0" ${SWITCH_P4_16}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile c0_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
@@ -57,21 +48,30 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_d0"
         ^switch_tests.L2LagTest
         ^switch_tests.L3ECMPTest
         ^switch_tests.L3MulticastTest")
+p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_t1" ${SWITCH_P4_16}
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile t1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+# Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
+bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_t1"
+        "all
+        ^switch_tests.L3SVITest
+        ^switch_tests.L2LagTest
+        ^switch_tests.L3ECMPTest
+        ^switch_tests.L3MulticastTest")
 
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
-  "tofino2/smoketest_switch_16_Tests_t1"
   "tofino2/smoketest_switch_16_Tests_c0"
   "tofino2/smoketest_switch_16_Tests_d0"
+  "tofino2/smoketest_switch_16_Tests_t1"
   PROPERTIES DEPENDS "tofino2/smoketest_switch_16_compile"
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile_c0_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile_d0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_Tests_t1" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_c0" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_d0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino2/smoketest_switch_16_Tests_t1" PROPERTIES TIMEOUT 3600)
