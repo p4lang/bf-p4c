@@ -1159,6 +1159,7 @@ class CollectPhvFields : public Inspector {
         PHV::Field* f = phv.field(pad);
         f->set_exact_containers(true);
         f->set_deparsed(true);
+        f->set_emitted(true);
         f->set_ignore_alloc(true);
         return false;
     }
@@ -1438,6 +1439,7 @@ class MarkPaddingAsDeparsed : public Inspector {
 
             if (lastDeparsed && field->is_padding()) {
                 field->set_deparsed(true);
+                field->set_emitted(true);
                 LOG5("    marking as deparsed " << field);
             }
 
@@ -1524,6 +1526,7 @@ class CollectPardeConstraints : public Inspector {
         // XXX(cole): These two constraints will be subsumed by deparser schema.
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
+        src_field->set_emitted(true);
 
         if (!src_field->privatized()) return;
 

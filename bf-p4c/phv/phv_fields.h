@@ -190,6 +190,9 @@ class Field : public LiftLess<Field> {
     /// bridged metadata.
     bool            overlayable = false;
 
+    /// True if this field is emitted by the deparser onto the wire.
+    bool            emitted_i = false;
+
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
         Field *member_field;
@@ -290,7 +293,10 @@ class Field : public LiftLess<Field> {
     bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
                                                        /// set by PHV_Field_Operations
     bool            parsed_i = false;                  /// true if parsed field
-    bool            deparsed_i = false;                /// true if deparsed field
+    bool            deparsed_i = false;                /// true if field has the deparsed PHV
+                                                       /// constraint. NB: fields with this
+                                                       /// constraint are not necessarily emitted.
+                                                       /// See @ref emitted_i.
     bool            no_pack_i = false;                 /// prevents field from being placed in a
                                                        /// container with any other field
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
@@ -393,6 +399,9 @@ class Field : public LiftLess<Field> {
     bool is_fixed_size_header() const                      { return fixed_size_i; }
     void set_fixed_size_header(bool f)                     { fixed_size_i = f; }
 
+    bool emitted() const                                   { return emitted_i; }
+    void set_emitted(bool b)                               { emitted_i = b; }
+
     //
     // constraints
     //
@@ -400,6 +409,8 @@ class Field : public LiftLess<Field> {
     void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
     bool parsed() const                                    { return parsed_i; }
     void set_parsed(bool b)                                { parsed_i = b; }
+    /// NB: Fields satisfying the deparsed constraint are not necessarily emitted. To determine
+    /// whether a field is emitted by the deparser onto the wire, see @ref emitted.
     bool deparsed() const                                  { return deparsed_i; }
     void set_deparsed(bool b)                              { deparsed_i = b; }
     bool no_pack() const                                   { return no_pack_i; }

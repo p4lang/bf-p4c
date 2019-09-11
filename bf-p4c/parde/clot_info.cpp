@@ -296,8 +296,8 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
         return false;
     }
 
-    if (!field->deparsed() && !is_checksum(field)) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: not deparsed and not a checksum");
+    if (!field->emitted() && !is_checksum(field)) {
+        LOG6("  Field " << field->name << " can't be in a CLOT: not emitted and not a checksum");
         return false;
     }
 
