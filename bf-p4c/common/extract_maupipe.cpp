@@ -28,7 +28,8 @@ static int getConstant(const IR::Argument* arg) {
     return arg->expression->to<IR::Constant>()->asInt();
 }
 
-static int getConstant(const IR::Annotation* annotation) {
+static int64_t getConstant(const IR::Annotation* annotation,
+                           int64_t min = INT_MIN, uint64_t max = INT_MAX) {
     if (annotation->expr.size() != 1) {
         ::error("%1% should contain a constant", annotation);
         return 0;
@@ -38,7 +39,14 @@ static int getConstant(const IR::Annotation* annotation) {
         ::error("%1% should contain a constant", annotation);
         return 0;
     }
-    return constant->asInt();
+    int64_t rv = constant->asUint64();
+    if (max <= INT64_MAX || min < 0) {
+        if (rv < min || (rv >= 0 && uint64_t(rv) > max))
+            ::error("%1% out of range", annotation);
+    } else {
+        if (uint64_t(rv) < uint64_t(min) || uint64_t(rv) > max)
+            ::error("%1% out of range", annotation); }
+    return rv;
 }
 
 static cstring getString(const IR::Annotation* annotation) {
@@ -1022,12 +1030,12 @@ void AttachTables::InitializeStatefulAlus
         // p4_16 programs these are passed in as optional stateful params
         for (auto annot : ext->annotations->annotations) {
             if (annot->name == "initial_register_lo_value") {
-                salu->init_reg_lo = getConstant(annot);
+                salu->init_reg_lo = getConstant(annot, INT_MIN, UINT_MAX);
                 warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
                         "argument of the Register constructor instead", annot);
                 LOG4("Reg initial lo value: " << salu->init_reg_lo); }
             if (annot->name == "initial_register_hi_value") {
-                salu->init_reg_hi = getConstant(annot);
+                salu->init_reg_hi = getConstant(annot, INT_MIN, UINT_MAX);
                 warning(ErrorType::WARN_DEPRECATED, "%s is deprecated, use the initial_value "
                         "argument of the Register constructor instead", annot);
                 LOG4("Reg initial hi value: " << salu->init_reg_hi); } }
