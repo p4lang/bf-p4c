@@ -111,10 +111,10 @@ class ConvertMethodCalls : public MauTransform {
             /* FIXME(CTD) -- duplicates SimplifyHeaderValidMethods a bit, as this may (will?)
              * run before that, and it can't deal with MAU::TypedPrimitives */
             if (name == "isValid") {
-                return new IR::Member(mc->srcInfo, IR::Type::Bits::get(1), recv, "$valid");
+                return new IR::Member(mc->srcInfo, mc->type, recv, "$valid");
             } else if (name == "setValid" || name == "setInvalid") {
-                recv = new IR::Member(IR::Type::Bits::get(1), recv, "$valid");
-                extra_arg = new IR::Constant(IR::Type::Bits::get(1), name == "setValid");
+                recv = new IR::Member(mc->type, recv, "$valid");
+                extra_arg = new IR::Constant(mc->type, name == "setValid");
                 name = "modify_field"; }
         } else if (auto em = mi->to<P4::ExternMethod>()) {
             name = em->actualExternType->name + "." + em->method->name;
