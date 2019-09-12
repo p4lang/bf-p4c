@@ -83,7 +83,7 @@ die() {
 
 run() {
     if $verbose; then
-        echo >&2 "$TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT $@"
+        echo >&2 $TIME_COMMAND $TIMEOUT_COMMAND $TIMEOUT "$@"
     fi
 
     # `timeout` can't be killed by ctrl^c when run inside a bash script, so we
@@ -140,9 +140,9 @@ findbin() {
 P4C="${P4C:-./p4c}"
 P4C_pd=""
 testdir=tofino
-filter_P4C_ARGS=""
+filter_P4C_ARGS=()
 keep_PTF_LOGS=""
-for p4c_arg in $P4C_ARGS; do
+for p4c_arg in $P4C_ARGS[@]; do
     if [ "$p4c_arg" = "-norun" ]; then
         run_stf=false
     elif [ "$p4c_arg" = "-ptf" ]; then
@@ -155,14 +155,14 @@ for p4c_arg in $P4C_ARGS; do
         TIME_COMMAND="time"
     elif [ "$p4c_arg" = "-v" ]; then
         if $verbose; then
-            filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+            filter_P4C_ARGS+=($p4c_arg)
         fi
         verbose=true
-    else
-        filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+    elif [ -n "$p4c_arg" ]; then
+        filter_P4C_ARGS+=($p4c_arg)
     fi
 done
-P4C_ARGS="$filter_P4C_ARGS"
+P4C_ARGS=("${filter_P4C_ARGS[@]}")
 P4PPFLAGS=""
 out_ext=""
 
@@ -278,7 +278,7 @@ while [ $# -gt 1 ]; do
         run_stf=false
         ;;
     -v) if $verbose; then
-            P4C_ARGS="$P4C_ARGS $1"
+            P4C_ARGS+=("$1")
         fi
         verbose=true
         ;;
@@ -286,14 +286,14 @@ while [ $# -gt 1 ]; do
         if [ -d $testdir${1#-} ]; then
             testdir="$testdir${1#-}"
         fi
-        P4C_ARGS="$P4C_ARGS $1"
+        P4C_ARGS+=("$1")
         ;;
     -D*)
         out_ext=$out_ext$1
-        P4C_ARGS="$P4C_ARGS $1"
+        P4C_ARGS+=("$1")
         P4PPFLAGS="$P4PPFLAGS $1"
         ;;
-    *)  P4C_ARGS="$P4C_ARGS $1"
+    *)  P4C_ARGS+=("$1")
         ;;
     esac
     shift
@@ -319,12 +319,13 @@ if [[ ! -x $P4C  &&  ! -x $P4C_pd ]]; then
 fi
 
 # turn on compiler debug info and context json validation, regardless
-P4C_ARGS="$P4C_ARGS -g"
+P4C_ARGS+=("-g")
 
 p4_version=""
-if [ $(expr "$P4C_ARGS" : ".*--std") -gt 0 ]; then
-    offset=$(expr "$P4C_ARGS" : ".*--std ")
-    p4_version=${P4C_ARGS:$offset:5}
+p4c_args_concat="${P4C_ARGS[@]}"
+if [ $(expr "$p4c_args_concat" : ".*--std") -gt 0 ]; then
+    offset=$(expr "$p4c_args_concat" : ".*--std ")
+    p4_version=${p4c_args_concat:$offset:5}
 else
     # guess the version based on the file name
     if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
@@ -332,19 +333,19 @@ else
     else
         p4_version="p4-14"
     fi
-    P4C_ARGS="$P4C_ARGS --std $p4_version"
+    P4C_ARGS+=(--std $p4_version)
 fi
 
-if [ $(expr "$P4C_ARGS" : ".*--arch") -eq 0 ]; then
+if [ $(expr "$p4c_args_concat" : ".*--arch") -eq 0 ]; then
     if [[ $p4_version = "p4-14" ]]; then
-        P4C_ARGS="$P4C_ARGS --arch v1model"
+        P4C_ARGS+=(--arch v1model)
     else
-        P4C_ARGS="$P4C_ARGS --arch ${arch}"
+        P4C_ARGS+=(--arch ${arch})
     fi
 fi
 
-if [ $(expr "$P4C_ARGS" : ".*--target") -eq 0 ]; then
-    P4C_ARGS="$P4C_ARGS --target ${target}"
+if [ $(expr "$p4c_args_concat" : ".*--target") -eq 0 ]; then
+    P4C_ARGS+=(--target ${target})
 fi
 
 has_stf=false
@@ -379,24 +380,24 @@ fi
 
 if $p4info; then
     p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
-    P4C_ARGS="$P4C_ARGS --p4runtime-files $p4runtime_out"
+    P4C_ARGS+=(--p4runtime-files $p4runtime_out)
 fi
 
 if $run_bfrt; then
     bfrt_out=$testdir/${name}${out_ext}.out/bf-rt.json
-    P4C_ARGS="$P4C_ARGS --bf-rt-schema $bfrt_out"
+    P4C_ARGS+=(--bf-rt-schema $bfrt_out)
 fi
 
 if $run_ptf || $run_stf2ptf; then
     # --p4runtime-force-std is required for TNA programs for which we run PTF
     # tests
     if [ $arch = "tna" ] || [ $arch = "t2na" ]; then
-        P4C_ARGS="$P4C_ARGS --p4runtime-force-std"
+        P4C_ARGS+=(--p4runtime-force-std)
     fi
     if [ ${device} = "tofino2" ]; then
-        P4C_ARGS="$P4C_ARGS -DCPU_PORT=0 -Xassembler='--pipe0'"
+        P4C_ARGS+=(-DCPU_PORT=0 -Xassembler='--pipe0')
     else
-        P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xassembler='--pipe0'"
+        P4C_ARGS+=(-DCPU_PORT=320 -Xassembler='--pipe0')
     fi
     BASE_IF_INDEX=0
     NUM_IFACES=8
@@ -406,18 +407,21 @@ if $run_ptf || $run_stf2ptf; then
     fi
     for ifaceIdx in $(seq $BASE_IF_INDEX $(($BASE_IF_INDEX+$NUM_IFACES-1))); do
         PORT_NAME="FP_PORT_${ifaceIdx}"
-        P4C_ARGS="$P4C_ARGS -D${PORT_NAME}=${ifaceIdx}"
+        P4C_ARGS+=(-D${PORT_NAME}=${ifaceIdx})
     done
 fi
 
 # if we don't have PTF or STF tests to run, we can skip the linking step
 # to save time
 if ! $run_ptf && ! $has_stf && ! $force_link; then
-    P4C_ARGS="$P4C_ARGS --no-link"
+    P4C_ARGS+=(--no-link)
 fi
 
 if $debug; then
-    $P4C -# $P4C_ARGS $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
+    if $verbose; then
+        echo $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
+    fi
+    $P4C -# "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out | while read cmd rest; do
         if [[ -z $rest && $cmd =~ :$ ]]; then
             continue # skip the label
         elif [[ $cmd = parse ]]; then
@@ -429,10 +433,13 @@ if $debug; then
         else
             db=""
         fi
+        set -o noglob
+        # don't try to expand wildcards in -T as files...
         if $verbose; then
             echo $db $cmd $rest
         fi
         </dev/tty $db $cmd $rest
+        set +o noglob
     done
     exit
 fi
@@ -440,7 +447,7 @@ fi
 # Not sure why the below lines are required, commenting for now.
 # TODO: Remove if not required. Else, enable.
 #if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
-#    if run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out; then
+#    if run $P4C ${P4C_ARGS[@]} $file -o $testdir/${name}${out_ext}.out; then
 #        echo >&2 "$P4C did not give an error when expected"
 #        exit 1
 #    fi
@@ -485,11 +492,7 @@ fi
 
 # Run P4C and extract pipes
 native_compile() {
-    local p4c_args=$1
-    local file=$2
-    local p4c_out=$3
-
-    run $P4C $p4c_args $file -o $p4c_out || die
+    run $P4C "$@" || die
     # find all pipe names from manifest.json in current compilation
     pipes=$(${MANIFEST_CONFIG} --pipe ${manifest})
 }
@@ -542,7 +545,7 @@ check_bfa() {
 # PD or BFRT runs the compiler as part of the p4-build make, so we skip running it here
 # However, BFRT tests are PTF tests, and bfrt is used to generate the API.
 if ! $run_pd && ! $run_ptf && ! $run_bfrt ; then
-    native_compile "$P4C_ARGS" $file $testdir/${name}${out_ext}.out
+    native_compile "${P4C_ARGS[@]}" $file -o $testdir/${name}${out_ext}.out
 
     # compress cfg.json files if they exist
     compress_cfg_json $p4_version $pipes
@@ -764,7 +767,7 @@ fi
 if $run_ptf && ! $run_bfrt ; then
     set_env
 
-    native_compile "$P4C_ARGS" $file $testout
+    native_compile "${P4C_ARGS[@]}" $file -o $testout
 
     if [ $p4_version == "p4-16" ]; then
         conf_args="--name $name --device $device --testdir $testout $installdiropt --pipe ${pipes}"
@@ -848,7 +851,7 @@ if $run_bfrt ; then
                 $ports_json_file \
                 $PTF_EXTRA_ARGS"
     else
-        native_compile "$P4C_ARGS" $file $testout
+        native_compile "${P4C_ARGS[@]}" $file -o $testout
     fi
 
     if [ -n "$PTF_CMD" ]; then
