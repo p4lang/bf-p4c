@@ -3268,7 +3268,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         |= determine_final_xor(&(alloc_req.func->algorithm), phv, hdh.galois_start_bit_to_p4_hash,
                                rv.use.field_list_order, rv.use.total_input_bits());
     rv.use.type = IXBar::Use::HASH_DIST;
-    rv.use.used_by = name;
+    rv.use.used_by = tbl->match_table->externalName();
     rv.use.hash_dist_type = alloc_req.dest;
 }
 

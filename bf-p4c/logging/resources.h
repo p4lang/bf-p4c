@@ -195,13 +195,11 @@ class Visualization : public Inspector {
 
     explicit Visualization(const ClotInfo& clot);
 
-    /// Skeleton to generate a "usages" node.
+    /// Skeleton to generate a "usage" node.
     /// In case the argument is the empty string, we output "--UNUSED--"
-    static void usagesToCtxJson(Util::JsonObject *parent,
-                                const std::string &used_by,
+    static Util::JsonObject* createUsageNode(const std::string &used_by,
                                 const std::string &used_for = "",
                                 const std::string &detail = "") {
-        auto *usages = new Util::JsonArray();
         auto *use = new Util::JsonObject();
         if (!used_by.empty()) {
             // Strip the leading . as p4i shouldn't see it
@@ -213,6 +211,18 @@ class Visualization : public Inspector {
         } else {
             use->emplace("used_by", new Util::JsonValue("--UNUSED--"));
         }
+        return use;
+    }
+
+    /// Skeleton to generate a "usages" node.
+    static void usagesToCtxJson(Util::JsonObject *parent,
+                                const std::string &used_by,
+                                const std::string &used_for = "",
+                                const std::string &detail = "") {
+        auto *usages = new Util::JsonArray();
+        // Strip the leading . as p4i shouldn't see it
+        std::string used_by_new = used_by.substr(used_by[0] == '.'? 1 : 0);
+        auto *use = createUsageNode(used_by_new, used_for, detail);
         usages->append(use);
         parent->emplace("usages", usages);
     }
@@ -220,24 +230,27 @@ class Visualization : public Inspector {
     /// The vector version of the usages node, where there are multiple
     /// used_for usages.
     static void usagesToCtxJson(Util::JsonObject *parent,
-                                std::set<std::string> *used_by,
-                                std::set<std::string> *used_for,
+                                const std::set<std::string> *used_by,
+                                const std::set<std::string> *used_for,
                                 const std::string &detail) {
         auto *usages = new Util::JsonArray();
         if (!used_by->empty()) {
-            // we need to output an element in the usages array for the cross-product of
-            // used_by and used_for. The detail set is the collection of all details.
-            for (auto each_use : *used_by)
+            for (auto each_use : *used_by) {
+                // Strip the leading . as p4i shouldn't see it
+                auto use_by = each_use.substr(each_use[0] == '.' ? 1 : 0);
+                if (used_for == NULL || used_for->empty()) {
+                    auto *use = createUsageNode(use_by, "", detail);
+                    usages->append(use);
+                    continue;
+                }
+                // we need to output an element in the usages array for the
+                // cross-product of used_by and used_for. The detail set is the
+                // collection of all details.
                 std::for_each(used_for->begin(), used_for->end(),
-                              [usages, each_use, detail] (const std::string& u) {
-                    auto *use = new Util::JsonObject();
-                    // Strip the leading . as p4i shouldn't see it
-                    auto use_by = each_use.substr(each_use[0] == '.' ? 1 : 0);
-                    use->emplace("used_by", new Util::JsonValue(use_by));
-                    use->emplace("used_for", new Util::JsonValue(u));
-                    if (!detail.empty())
-                        use->emplace("detail", new Util::JsonValue(detail));
+                              [usages, use_by, detail] (const std::string& u) {
+                    auto *use = createUsageNode(use_by, u, detail);
                     usages->append(use); });
+            }
         } else {
             auto *use = new Util::JsonObject();
             use->emplace("used_by", new Util::JsonValue("--UNUSED--"));
