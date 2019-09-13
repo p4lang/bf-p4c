@@ -707,7 +707,6 @@ bool Memories::analyze_tables(mem_info &mi) {
 bool Memories::mem_info::constraint_check(int lt_allowed) const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
            Memories::TABLES_MAX
-        || result_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
         || tind_tables > Memories::TERNARY_TABLES_MAX
         || action_tables > Memories::ACTION_TABLES_MAX
         || action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT

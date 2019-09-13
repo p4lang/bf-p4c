@@ -600,12 +600,11 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
             for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
                 gress_in_stage[p->table->gress] = true;
             }
-        }
-
-        gress_in_stage[next->table->gress] = true;
-        for (int gress_i = 0; gress_i < 2; gress_i++) {
-            if (table_in_gress[gress_i] && !gress_in_stage[gress_i])
-                shrink_lt = true;
+            gress_in_stage[next->table->gress] = true;
+            for (int gress_i = 0; gress_i < 2; gress_i++) {
+                if (table_in_gress[gress_i] && !gress_in_stage[gress_i])
+                    shrink_lt = true;
+            }
         }
     }
 
