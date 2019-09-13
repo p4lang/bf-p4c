@@ -23,7 +23,7 @@
 #include "tofino2.p4"
 
 // The following declarations provide a template for the programmable blocks in
-// JBay.
+// Tofino2.
 
 parser IngressParserT<H, M>(
     packet_in pkt,
