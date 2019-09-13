@@ -998,6 +998,58 @@ class ResolveParserConstants : public ParserTransform {
         phv(phv), clotInfo(clotInfo) { }
 };
 
+// If after parser lowering, a state is empty and has unconditional transition
+// leaving the state, we can safely eliminate this state.
+struct ElimEmptyState : public ParserTransform {
+    bool is_empty(const IR::BFN::ParserState* state) {
+        if (!state->selects.empty())
+            return false;
+
+        if (!state->statements.empty())
+            return false;
+
+        for (auto t : state->transitions) {
+            if (!t->saves.empty())
+                return false;
+        }
+
+        if (state->name.endsWith("$ctr_stall"))  // compiler generated stall
+            return false;
+
+        return true;
+    }
+
+    const IR::BFN::Transition*
+    get_unconditional_transition(const IR::BFN::ParserState* state) {
+        if (state->transitions.size() == 1) {
+            auto t = state->transitions[0];
+            if (auto match = t->value->to<IR::BFN::ParserConstMatchValue>()) {
+                if (match->value == match_t()) {
+                    return t;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    IR::Node* preorder(IR::BFN::Transition* transition) override {
+        if (transition->next && is_empty(transition->next)) {
+            if (auto next = get_unconditional_transition(transition->next)) {
+                if (transition->shift + next->shift <= Device::pardeSpec().byteInputBufferSize()) {
+                    transition->next = next->next;
+                    transition->shift += next->shift;
+
+                    auto state = findContext<IR::BFN::ParserState>();
+                    LOG3("elim empty state " << state->name);
+                }
+            }
+        }
+
+        return transition;
+    }
+};
+
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
@@ -1011,6 +1063,7 @@ struct LowerParserIR : public PassManager {
             new ParserCopyProp(phv),
             new SplitParserState(phv, clotInfo),
             new AllocateParserMatchRegisters(phv),
+            new ElimEmptyState,
             allocateParserChecksums,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
             computeLoweredParserIR,
