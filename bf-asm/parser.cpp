@@ -323,7 +323,7 @@ void Parser::process() {
                         start_state[j].ptr[0] = state; }
                 all.insert(all.begin(), state); }
         if (parser_error.lineno >= 0)
-            if (parser_error.check())
+            if (parser_error.check() && parser_error.gress() == gress)
                 phv_use[gress][parser_error->reg.uid] = 1; }
     if (ghost_parser && ghost_parser.check()) {
         if (ghost_parser.size() != 32)

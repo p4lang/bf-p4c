@@ -892,6 +892,23 @@ struct ComputeLoweredParserIR : public ParserInspector {
         loweredStates[state] = loweredState;
     }
 
+    void end_apply() override {
+        for (const auto& f : phv) {
+            auto ctxt = PHV::AllocContext::PARSER;
+            if (f.name == "ingress::ig_intr_md_from_prsr.parser_err") {
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                    BUG_CHECK(!igParserError, "parser error allocated to multiple containers?");
+                    igParserError = new IR::BFN::ContainerRef(alloc.container);
+                });
+            } else if (f.name == "egress::eg_intr_md_from_prsr.parser_err") {
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                    BUG_CHECK(!egParserError, "parser error allocated to multiple containers?");
+                    egParserError = new IR::BFN::ContainerRef(alloc.container);
+                });
+            }
+        }
+    }
+
     const PhvInfo& phv;
     ClotInfo& clotInfo;
     const AllocateParserChecksums& checksumAlloc;

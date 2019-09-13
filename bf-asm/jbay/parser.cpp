@@ -376,9 +376,6 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
         for (auto csum : checksum_use[i])
             if (csum) csum->write_config(regs, this); }
 
-    // FIXME -- what fixed initialization of parser buffer regs do we need?
-    // FIXME -- see tofino/parser.cpp init_common_regs for ideas
-
     if (gress == EGRESS) {
         regs.egress.epbreg.chan0_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan1_group.chnl_ctrl.meta_opt = meta_opt;
@@ -410,28 +407,28 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
 
     regs.main[gress].hdr_len_adj.amt = hdr_len_adj;
 
-    /* err_phv_cfg register 
-     * This reg has a reset value on enable bit of 1
-     *
-     * Identifier Title         Bit     Access Reset    Description
-     * en         Enable        [23]    R/W      1      Enable Error PHV output
-     * 
-     * This means it is enabled by default during hw bringup. 
-     * However, when the register is enabled, the dst container also must be set. 
-     *
-     * Identifier Title         Bit     Access Reset    Description
-     * dst        Destination   [31:24] R/W      0      Destination PHV container
-     *
-     * If dst is not set, it will assume the reset value '0' and cause problems
-     * while running tests.
-     *
-     * Since currently this support is not added by the compiler & assembler, we
-     * disable the register.
-     */
-    regs.main[INGRESS].err_phv_cfg[0].en = 0;
-    regs.main[INGRESS].err_phv_cfg[1].en = 0;
-    regs.main[EGRESS].err_phv_cfg[0].en = 0;
-    regs.main[EGRESS].err_phv_cfg[1].en = 0;
+    if (parser_error.lineno >= 0) {
+        for (auto i : {0, 1}) {
+            regs.main[gress].err_phv_cfg[i].en = 1;
+            regs.main[gress].err_phv_cfg[i].dst = parser_error->reg.parser_id();
+            regs.main[gress].err_phv_cfg[i].no_tcam_match_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].partial_hdr_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].ctr_range_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].timeout_iter_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].timeout_cycle_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].src_ext_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].phv_owner_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].multi_wr_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].aram_mbe_en = 1;
+            regs.main[gress].err_phv_cfg[i].fcs_err_en = 1;
+            regs.main[gress].err_phv_cfg[i].csum_mbe_en = 1;
+        }
+    } else {
+        // en has a reset value of 1 and that is why we have to explicitly disable it
+        // otherwise dst will assume default value of 0
+        for (auto i : {0, 1})
+            regs.main[gress].err_phv_cfg[i].en = 0;
+    }
 
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
     for (auto &reg : regs.merge.ll1.i_start_table)

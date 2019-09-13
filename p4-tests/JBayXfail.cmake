@@ -24,6 +24,13 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway4.p4
   )
 
+  # P4C-2141
+  p4c_add_xfail_reason("tofino2"
+    "error: deposit-field dest can't be dark or mocha phv|mismatch from expected"
+    extensions/p4_tests/p4_14/stf/parser_error.p4
+    extensions/p4_tests/p4_16/stf/parser_error.p4
+  )
+
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected.* at byte .*"
     # Needs stateful init regs support in simple test harness, this test passes
