@@ -190,9 +190,9 @@ void ActionDataBus::reserve_immed_csr(int start_byte) {
  */
 bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
         const bitvec full_words_bitmasked, Use &use, cstring name) {
-    LOG2(" Total Layouts for Action Data Table");
+    LOG2("     Total Layouts for Action Data Table");
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
+        LOG2("      Layout for type " << i << " is " << total_layouts[i]);
     }
     bitvec byte_layout = total_layouts[ActionData::BYTE];
     bitvec half_layout = total_layouts[ActionData::HALF];
@@ -213,7 +213,7 @@ bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
                 ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Byte Section");
+    LOG3("\tAllocated Byte Section");
 
     max = half_layout.max().index();
 
@@ -224,7 +224,7 @@ bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
                 ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Half Section");
+    LOG3("\tAllocated Half Section");
 
     max = full_layout.max().index();
 
@@ -238,7 +238,7 @@ bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
                 ActionData::ACTION_DATA_TABLE);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Full Section");
+    LOG3("\tAllocated Full Section");
     return true;
 }
 
@@ -247,9 +247,9 @@ bool ActionDataBus::alloc_ad_table(const ActionData::BusInputs total_layouts,
 // meter output for tables in the same stage.
 bool ActionDataBus::alloc_meter_output(ActionData::BusInputs total_layouts, Use &use,
         cstring name) {
-    LOG2(" Total Layouts for Meter Output");
+    LOG2("    Total Layouts for Meter Output");
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
+        LOG2("      Layout for type " << i << " is " << total_layouts[i]);
     }
     bitvec byte_layout = total_layouts[ActionData::BYTE];
     bitvec half_layout = total_layouts[ActionData::HALF];
@@ -270,7 +270,7 @@ bool ActionDataBus::alloc_meter_output(ActionData::BusInputs total_layouts, Use 
                 ActionData::METER_ALU);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Byte Section");
+    LOG3("\tAllocated Byte Section");
 
     max = half_layout.max().index();
 
@@ -281,7 +281,7 @@ bool ActionDataBus::alloc_meter_output(ActionData::BusInputs total_layouts, Use 
                 ActionData::METER_ALU);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Half Section");
+    LOG3("\tAllocated Half Section");
 
     max = full_layout.max().index();
 
@@ -295,7 +295,7 @@ bool ActionDataBus::alloc_meter_output(ActionData::BusInputs total_layouts, Use 
                 ActionData::METER_ALU);
         if (!allocated) return false;
     }
-    LOG3("    Allocated Full Section");
+    LOG3("\tAllocated Full Section");
     return true;
 }
 
@@ -418,9 +418,24 @@ bool ActionDataBus::find_location(bitvec combined_adjacent, int diff, int initia
     return found;
 }
 
-/** Reserves the action data bus space within the bitvecs, and adds it to the Use structure
- *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with
- *  the correct name for the assembly output.
+/**
+ * Reserves the action data bus space within the bitvecs, and adds it to the Use structure
+ * for the region.  Must only reserve the spaces for the actual bytes, and comes up with
+ * the correct name for the assembly output.
+ *
+ * Parameters are:
+ *    use - the action_data_xbar::use resource to save data into
+ *    type - whether the data is headed to BYTE, HALF, or FULL ALU
+ *    adjacent - the bytes in this region of action data table output that are headed to
+ *        the type of ALU
+ *    combined_adjacent - the bytes in the region that are headed to any BYTE, HALF, or FULL
+ *        ALU, as this are always muxed onto the action data bus
+ *    start_byte - the least significant byte of the action data bus that the data is to be
+ *        muxed onto
+ *    byte_offset - the least significant byte position in the action data RAM / immediate
+ *        data that holds this data
+ *    source - what region the data is sourced from, i.e. a home row action bus or immediate
+ *    name - name of the table/salu reserving data
  */
 void ActionDataBus::reserve_space(Use &use, ActionData::SlotType_t type, bitvec adjacent,
                                   bitvec combined_adjacent, int start_byte, int byte_offset,
@@ -428,18 +443,24 @@ void ActionDataBus::reserve_space(Use &use, ActionData::SlotType_t type, bitvec 
     bitvec shift_mask = combined_adjacent << start_byte;
     total_in_use |= shift_mask;
 
+    // Action data on the action data bus currently reserves the entire ADB slot.
+    // Other reservations due to clobbering don't have to be the same size
     // The actual slots that have action data
-    for (auto bitpos : adjacent) {
-        if (bitpos % find_byte_sz(type) != 0) continue;
-        Loc loc(start_byte + bitpos, type);
-        use.action_data_locs.emplace_back(loc, byte_offset + bitpos, source);
+    for (int i = 0; i < combined_adjacent.max().index() + 1; i += find_byte_sz(type)) {
+        bitvec curr_req = adjacent.getslice(i, find_byte_sz(type));
+        if (curr_req.empty()) continue;
+        BUG_CHECK(curr_req.popcount() == find_byte_sz(type), "From action format this should "
+            "currently always reserve the whole slot.");
+        Loc loc(start_byte + i, type);
+        use.action_data_locs.emplace_back(loc, byte_offset + i, curr_req, source);
     }
 
     // The slots that have to be reserved because of other container types
-    for (auto bitpos : (combined_adjacent - adjacent)) {
-        if (bitpos % find_byte_sz(type) != 0) continue;
-        Loc loc(start_byte + bitpos, type);
-        use.clobber_locs.emplace_back(loc, byte_offset + bitpos, source);
+    for (int i = 0; i < combined_adjacent.max().index() + 1; i += find_byte_sz(type)) {
+        bitvec curr_req = (combined_adjacent - adjacent).getslice(i, find_byte_sz(type));
+        if (curr_req.empty()) continue;
+        Loc loc(start_byte + i, type);
+        use.clobber_locs.emplace_back(loc, byte_offset + i, curr_req, source);
     }
 
     for (auto bitpos : shift_mask) {
@@ -878,9 +899,9 @@ bool ActionDataBus::alloc_shared_immed(Use &use, ActionData::BusInputs layouts, 
  */
 bool ActionDataBus::alloc_immediate(const ActionData::BusInputs total_layouts, Use &use,
         cstring name) {
-    LOG2(" Total Layouts for Action Format Immediate");
+    LOG2("    Total Layouts for Action Format Immediate");
     for (int i = 0; i < ActionData::SLOT_TYPES; i++) {
-        LOG2(" Layout for type " << i << " is " << total_layouts[i]);
+        LOG2("      Layout for type " << i << " is " << total_layouts[i]);
     }
 
     auto type = ActionData::BYTE;
@@ -889,18 +910,18 @@ bool ActionDataBus::alloc_immediate(const ActionData::BusInputs total_layouts, U
 
     bool found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
-    LOG3("    Allocate Byte Section" << " " << layout << " " << combined_layout);
+    LOG3("\tAllocate Byte Section" << " " << layout << " " << combined_layout);
 
     type = ActionData::HALF;
     layout = total_layouts[type];
     found = alloc_unshared_immed(use, type, layout, combined_layout, name);
     if (!found) return false;
-    LOG3("    Allocate Half Section" << " " << layout << " " << combined_layout);
+    LOG3("\tAllocate Half Section" << " " << layout << " " << combined_layout);
 
     ActionData::BusInputs layouts = total_layouts;
     found = alloc_shared_immed(use, layouts, name);
     if (!found) return false;
-    LOG3("    Allocate Full Section");
+    LOG3("\tAllocate Full Section");
     return true;
 }
 
@@ -987,9 +1008,11 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         }
     }
 
-    LOG2(" Initial Action Data Bus");
-    LOG2(" " << hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32))
-         << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
+    LOG2("  Initial Action Data Bus");
+    LOG2("    " << hex(total_in_use.getrange(96, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(64, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(32, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(0, 32), 8, '0'));
 
     auto &ad_xbar = alloc.action_data_xbar;
 
@@ -1013,8 +1036,12 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
 
     LOG2(" Action data bus for " << tbl->name);
     for (auto &rs : ad_xbar.action_data_locs) {
-        LOG2(" Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
+        LOG2("    Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
              << rs.location.type);
+    }
+    for (auto &rs : ad_xbar.clobber_locs) {
+        LOG2("    Reserved clobber " << rs.location.byte << " for offset "
+             << rs.byte_offset << " of type " << rs.location.type);
     }
 
     return true;
@@ -1048,7 +1075,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     auto pos = allocated_attached.find(am);
     if (pos != allocated_attached.end()) {
         alloc.meter_xbar = pos->second;
-        LOG2(" Action data bus shared on meter_adr user " << am->name);
+        LOG2("    Action data bus shared on meter_adr user " << am->name);
         return true; }
 
 
@@ -1061,9 +1088,11 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
         }
     }
 
-    LOG2(" Initial Action Data Bus");
-    LOG2(" " << hex(total_in_use.getrange(96, 32)) << "|" << hex(total_in_use.getrange(64, 32))
-         << "|" << hex(total_in_use.getrange(32, 32)) << "|" << hex(total_in_use.getrange(0, 32)));
+    LOG2("  Initial Action Data Bus");
+    LOG2("    " << hex(total_in_use.getrange(96, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(64, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(32, 32), 8, '0')
+         << "|" << hex(total_in_use.getrange(0, 32), 8, '0'));
 
     auto &meter_xbar = alloc.meter_xbar;
 
@@ -1074,10 +1103,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
     bool allocated = alloc_meter_output(use->meter_alu_bus_inputs, meter_xbar, tbl->name);
     if (!allocated) return false;
 
-    LOG2(" Action data bus for " << tbl->name);
+    LOG2("  Action data bus for " << tbl->name);
     for (auto &rs : meter_xbar.action_data_locs) {
-        LOG2(" Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
+        LOG2("    Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
              << rs.location.type);
+    }
+
+    for (auto &rs : meter_xbar.clobber_locs) {
+        LOG2("    Reserved clobber " << rs.location.byte << " for offset "
+             << rs.byte_offset << " of type " << rs.location.type);
     }
 
     return true;
@@ -1086,13 +1120,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
 void ActionDataBus::update(cstring name, const Use::ReservedSpace &rs) {
     int byte_sz = find_byte_sz(rs.location.type);
     for (int i = rs.location.byte; i < rs.location.byte + byte_sz; i++) {
+        if (rs.bytes_used.getbit(i - rs.location.byte) == false)
+            continue;
         if (!total_use[i].isNull() && total_use[i] != name)
             BUG("Conflicting alloc in the action data xbar between %s and %s at byte %d",
                 name, total_use[i], rs.location.byte);
         total_use[i] = name;
     }
 
-    total_in_use.setrange(rs.location.byte, byte_sz);
+    total_in_use |= rs.bytes_used << rs.location.byte;
     int output = byte_to_output(rs.location.byte, rs.location.type);
     cont_use[rs.location.type][output] = name;
     cont_in_use[rs.location.type].setbit(output);

@@ -107,11 +107,13 @@ struct ActionDataBus {
         struct ReservedSpace {
             Loc location;
             int byte_offset = -1;  ///> Bytes from the lsb of the Action Data Format
+            bitvec bytes_used;  ///> Not all of the bytes in the slot may necessarily be used,
+                                ///> if they don't contain action data
             ActionData::Location_t source = ActionData::ALL_LOCATIONS;  ///> Is IMMED, ADT or METER
-            ReservedSpace(Loc l, int bo)
-                : location(l), byte_offset(bo) {}
-            ReservedSpace(Loc l, int bo, ActionData::Location_t src)
-                : location(l), byte_offset(bo), source(src) {}
+            ReservedSpace(Loc l, int bo, bitvec bu)
+                : location(l), byte_offset(bo), bytes_used(bu) {}
+            ReservedSpace(Loc l, int bo, bitvec bu, ActionData::Location_t src)
+                : location(l), byte_offset(bo), bytes_used(bu), source(src) {}
             void dbprint(std::ostream &out) const {
                 out << "Source:Offset " << source << ":" << byte_offset << " : " << location;
             }
