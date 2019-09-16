@@ -14,7 +14,7 @@
 
 class GenerateParserP4iJson : public ParserInspector {
     const ClotInfo& clotInfo;
-    std::vector<P4iParser> parsers;
+    std::map<cstring, P4iParser*> parsers;
     std::vector<P4iParserClotUsage> clot_usage;
     bool collected;
 
@@ -48,25 +48,25 @@ class GenerateParserP4iJson : public ParserInspector {
 
     /// A parser match is a parser state.
     bool preorder(const IR::BFN::LoweredParserState* state) override;
+    bool preorder(const IR::BFN::LoweredParser* parser) override;
     void end_apply() override { collected = true; }
 
  public:
     explicit GenerateParserP4iJson(const ClotInfo& clotInfo)
-        : clotInfo(clotInfo), parsers(2), clot_usage(2), collected(false) {
+        : clotInfo(clotInfo), clot_usage(2), collected(false) {
         bool using_clots = Device::currentDevice() == Device::JBAY && BackendOptions().use_clot;
 
-        for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
-            parsers[gress].parser_id = 0;
-            parsers[gress].n_states = 256;
-            parsers[gress].gress = cstring::to_cstring(gress);
-
-            if (!using_clots) continue;
-
-            clot_usage[gress].gress = gress;
-            clot_usage[gress].num_clots = Device::numClots();
-        }
-
+        // Once Multi Parser support is added in T2NA, clot support will have
+        // ClotInfo per parser and the code below should change to use a vector
+        // of clots per parser similar to P4iParser. Currently this assumes a
+        // single parser scenario
         if (using_clots) {
+            // Initialize clot structures for ingress & egress
+            for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
+                clot_usage[gress].gress = gress;
+                clot_usage[gress].num_clots = Device::numClots();
+            }
+
             // Populate information for CLOT-eligible fields.
             for (auto field : *clotInfo.clot_eligible_fields()) {
                 P4iFieldAlloc field_alloc;
@@ -94,7 +94,11 @@ class GenerateParserP4iJson : public ParserInspector {
 
     Util::JsonArray* getParsersJson() const {
         BUG_CHECK(collected, "Calling ParserJsonGen without run pass");
-        return toJsonArray(parsers);
+        Util::JsonArray* parsersJson = new Util::JsonArray();
+        for (auto &p : parsers) {
+            parsersJson->push_back(p.second->toJson());
+        }
+        return parsersJson;
     }
 
     Util::JsonArray* getClotsJson() const {

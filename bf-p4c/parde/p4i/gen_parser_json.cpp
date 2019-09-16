@@ -160,15 +160,27 @@ void GenerateParserP4iJson::generateClotInfo(const IR::BFN::LoweredParserMatch* 
     }
 }
 
+bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParser* parser) {
+    LOG1("parser : " << parser->name);
+    P4iParser *p = new P4iParser();
+    p->parser_name   = parser->name;
+    p->parser_id     = parser->portmap.size() > 0 ? parser->portmap[0] : 0;
+    p->n_states      = Device::pardeSpec().numTcamRows();
+    p->gress         = ::toString(parser->gress);
+    parsers[parser->name] = p;
+    return true;
+}
+
 bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     auto parser_ir = findContext<IR::BFN::LoweredParser>();
     BUG_CHECK(parser_ir, "state does not belong to a parser? %1%", state);
+    BUG_CHECK(parsers.count(parser_ir->name) > 0, "Parser %1% not added to map", parser_ir->name);
+    P4iParser *p = parsers[parser_ir->name];
 
     // auto prev_state = findContext<IR::BFN::LoweredParserState>();
     for (const auto* match : state->transitions) {
         LOG1("State Match: " << match);
-        parsers[parser_ir->gress].states.push_back(
-                generateStateTransitionByMatch(match->next, state, match));
+        p->states.push_back(generateStateTransitionByMatch(match->next, state, match));
     }
 
     if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
@@ -188,7 +200,7 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
             phase0.table_name = ig_p0->tableName;
             phase0.action_name = ig_p0->actionName;
         }
-        parsers[parser_ir->gress].phase0 = phase0;
+        p->phase0 = phase0;
     }
 
     return true;

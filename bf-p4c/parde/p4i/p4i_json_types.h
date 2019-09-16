@@ -191,6 +191,7 @@ struct P4iPhase0 : ToJsonObject {
 };
 
 struct P4iParser : ToJsonObject {
+    cstring parser_name;
     int parser_id;  // required, enum=range(0, 18), Parser ID
     cstring gress;  // required, enum=["ingress", "egress"], The gress this parser belongs to.
     int n_states;    // required, number of states available in the parser (TCAM rows).
