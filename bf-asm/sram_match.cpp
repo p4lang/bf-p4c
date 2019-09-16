@@ -30,6 +30,41 @@ static unsigned tofino_bytemask(int lo, int hi) {
     return rv;
 }
 
+/**
+* Determining the result bus for an entry, if that entry has no overhead.  The result bus
+* is still needed to get the direct address location to find action data / run an
+* instruction, etc.
+*
+* This section maps the allocation scheme used in the TableFormat::Use in p4c, found
+* in the function result_bus_words
+*/
+void SRamMatchTable::no_overhead_determine_result_bus_usage() {
+    bitvec result_bus_words;
+
+    for (int i = 0; i < (int)group_info.size(); i++) {
+        BUG_CHECK(group_info[i].overhead_word < 0);
+        if (group_info[i].match_group.size() == 1) {
+            group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
+            result_bus_words.setbit(group_info[i].result_bus_word);
+        }
+    }
+
+    for (int i = 0; i < (int)group_info.size(); i++) {
+        if (group_info[i].overhead_word < 0 && group_info[i].match_group.size() > 1) {
+            bool result_bus_set = false;
+            for (auto match_group : group_info[i].match_group) {
+                if (result_bus_words.getbit(match_group.first)) {
+                    group_info[i].result_bus_word = match_group.first;
+                    result_bus_set = true;
+                }
+            }
+            if (!result_bus_set)
+                group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
+            LOG1("  format group " << i << " no overhead multiple match groups");
+        }
+    }
+}
+
 void SRamMatchTable::verify_format() {
     if (format->log2size < 7)
         format->log2size = 7;
@@ -134,7 +169,9 @@ void SRamMatchTable::verify_format() {
     if (hit_next.size() > 1 && !format->field("next") && !format->field("action"))
         error(format->lineno, "No 'next' field in format");
     if (error_count > 0) return;
-    bitvec result_bus_words;
+
+    
+
     for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
             for (auto &mgrp : group_info[i].match_group) {
@@ -143,17 +180,24 @@ void SRamMatchTable::verify_format() {
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
                 word_info[mgrp.first].push_back(i); }
         // Determining the result bus word, where the overhead is supposed to be
-        if (group_info[i].overhead_word < 0) {
-            if (group_info[i].match_group.size() == 1) {
-                group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
-                result_bus_words.setbit(group_info[i].result_bus_word);
-                LOG1("  format group " << i << " no overhead single match group");
-            }
-        } else {
-            group_info[i].result_bus_word = group_info[i].overhead_word;
-            LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word
-                 << " at bit " << group_info[i].overhead_bit); }
     }
+
+
+    bool has_overhead_word = false;
+    bool overhead_word_set = false;
+    for (int i = 0; i < (int)group_info.size(); i++) {
+        if (overhead_word_set)
+            BUG_CHECK((group_info[i].overhead_word >= 0) == has_overhead_word);
+        if (group_info[i].overhead_word >= 0) {
+            has_overhead_word = true;
+            group_info[i].result_bus_word = group_info[i].overhead_word;
+        }
+        overhead_word_set = true;
+    }
+
+
+    if (!has_overhead_word)
+        no_overhead_determine_result_bus_usage();
 
     /**
      * Determining the result bus for an entry, if that entry has no overhead.  The result bus
@@ -163,20 +207,6 @@ void SRamMatchTable::verify_format() {
      * This section maps the allocation scheme used in the TableFormat::Use in p4c, found
      * in the function result_bus_words
      */
-    for (int i = 0; i < (int)group_info.size(); i++) {
-        if (group_info[i].overhead_word < 0 && group_info[i].match_group.size() > 1) {
-            bool result_bus_set = false;
-            for (auto match_group : group_info[i].match_group) {
-                if (result_bus_words.getbit(match_group.first)) {
-                    group_info[i].result_bus_word = match_group.first;
-                    result_bus_set = true;
-                }
-            }
-            if (!result_bus_set)
-                group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
-            LOG1("  format group " << i << " no overhead multiple match groups");
-        }
-    }
 
     for (int i = 0; i < (int)group_info.size(); i++) {
         LOG1("  masks: " << hexvec(group_info[i].tofino_mask));

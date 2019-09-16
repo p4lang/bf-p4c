@@ -2,6 +2,50 @@
 #include "memories.h"
 
 /**
+ * For ATCAM specifically, only one result bus is alloweed per match.  This is due to the
+ * priority ranking.  Each RAM can at most hold 5 entries, and those entries, numbered 0-4
+ * are ranked in a priority.
+ *
+ * Because multiple entries could potentially match within an ATCAM table, (unlike exact or
+ * proxy hash), the entry with the highest priority (i.e. 4 > 3) will win.
+ *
+ * Other rules apply to these priority structures.  Entries 0 and 1 are the only entries
+ * allowed to be shared across multiple RAMs.  This is described in uArch section 6.4.3.1
+ * Exact Match Physical Row Result Generation, and by the register match.merge.col.hitmap_ouptut.
+ *
+ * Thus in order to maintain sanity, the entries published in the table format are numbered
+ * 0 .. highest entries <= 4.  The numbered entries are the priority ranking of these entries,
+ * specifically only for ATCAM.
+ *
+ * When the ATCAM table has overhead, the result bus is easy to determine.  However, when
+ * there is no overhead, the result bus is more difficult and must be wherever any entry
+ * 2-4 resides.
+ *
+ * This matches bf-asm function 
+ */
+bitvec TableFormat::Use::no_overhead_atcam_result_bus_words() const {
+    bitvec rv;
+    int rb_word = -1;
+    int shared_across_boundaries = 0;
+    BUG_CHECK(!match_groups.empty(), "ATCAM table has no match data?");
+    for (auto it = match_groups.rbegin(); it != match_groups.rend(); it++) {
+        bitvec match_mask = it->match_bit_mask();
+        int min_word = match_mask.min().index() / SINGLE_RAM_BITS;
+        int max_word = match_mask.max().index() / SINGLE_RAM_BITS;
+        if (rb_word < 0)
+            rb_word = min_word;
+        if (min_word != max_word)
+            shared_across_boundaries++;
+        else if (rb_word != min_word)
+            shared_across_boundaries++;
+    }
+    BUG_CHECK(shared_across_boundaries <= MAX_SHARED_GROUPS, "ATCAM table has illegitimate "
+        "format.  All words must chain to the same result bus");
+    rv.setbit(rb_word);
+    return rv;
+}
+
+/**
  * Result buses are required by SRAM based tables to get data from the RAM to match central.
  * This includes both overhead data, and vpn based data.  The result bus itself is an 83 bit
  * bus, 64 bits for bits 0-63 of the RAM line that matches, and 19 bits for a direct address
@@ -13,6 +57,9 @@
  *        a result bus.  If an entry is within a single RAM section, then this RAM requires
  *        a result bus.  If an entry is split across multiple RAMs, then one of those words
  *        requires a result bus
+ *
+ * This matches the considerations in bf-asm/sram_match/verify_format and
+ * bf-asm/sram_match/no_overhead_determine_result_bus_words
  */
 bitvec TableFormat::Use::result_bus_words() const {
     bitvec rv;
@@ -27,7 +74,14 @@ bitvec TableFormat::Use::result_bus_words() const {
             if (!overhead_mask.getslice(i, SINGLE_RAM_BITS).empty())
                 rv.setbit(word);
         }
+
+        if (only_one_result_bus)
+            BUG_CHECK(rv.popcount() == 1, "An ATCAM table can at most only have one result bus");
         return rv;
+    }
+
+    if (only_one_result_bus) {
+        return no_overhead_atcam_result_bus_words();
     }
 
     for (auto match_group : match_groups) {
@@ -95,6 +149,8 @@ bool TableFormat::analyze_layout_option() {
                                              layout_option.way_sizes.end());
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
     }
+
+    use->only_one_result_bus = tbl->layout.atcam;
 
     // Initialize all information
     overhead_groups_per_RAM.resize(layout_option.way.width, 0);
@@ -1845,6 +1901,8 @@ bool TableFormat::allocate_all_ternary_match() {
  * vector determine the ranking of these entries in the assembler.  Thus after the match bits
  * have been determined for each entry, the compiler reorders them so that the split entries
  * are the first entries in the vector.
+ *
+ * @seealso comments on no_overhead_atcam_result_bus_words
  */
 void TableFormat::redistribute_entry_priority() {
     safe_vector<size_t> multi_ram_entries;

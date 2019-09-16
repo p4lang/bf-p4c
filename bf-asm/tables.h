@@ -947,6 +947,7 @@ protected:
     void add_hash_functions(json::map &stage_tbl) const override;
     virtual void gen_ghost_bits(int hash_function_number, json::vector &ghost_bits_to_hash_bits,
         json::vector &ghost_bits_info) const { }
+    virtual void no_overhead_determine_result_bus_usage();
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     virtual void setup_word_ixbar_group();
@@ -1053,6 +1054,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     unsigned get_partition_action_handle() const {
         if (p4_table) return p4_table->get_partition_action_handle();
         return 0; }
+    void no_overhead_determine_result_bus_usage() override;
     std::string get_partition_field_name() const {
         if (!p4_table) return "";
         auto name = p4_table->get_partition_field_name();

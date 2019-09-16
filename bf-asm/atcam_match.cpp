@@ -124,6 +124,8 @@ void AlgTcamMatchTable::setup_column_priority() {
  * Guarantees that the order of the entries provided in the ATCAM table format are order
  * in HW priority 0-4, (where in HW entry 4 will be favored).  This is required to guarantee that
  * the entries in the ATCAM pack format are in priority order for the driver.
+ *
+ * @seealso bf-p4c/mau/table_format.cpp - no_overhead_atcam_result_bus_words
  */
 void AlgTcamMatchTable::verify_entry_priority() {
     int result_bus_word = -1;
@@ -133,6 +135,12 @@ void AlgTcamMatchTable::verify_entry_priority() {
             result_bus_word = group_info[i].result_bus_word;
         } else if (result_bus_word != group_info[i].result_bus_word) {
             error(format->lineno, "ATCAM tables can at most have only one overhead word");
+            return;
+        }
+        auto mg_it = group_info[i].match_group.find(result_bus_word); 
+        if (mg_it == group_info[i].match_group.end() || mg_it->second != i) {
+            error(format->lineno, "Each ATCAM entry must coordinate its entry with the "
+                                  "correct priority");
             return;
         }
     }
@@ -148,6 +156,45 @@ void AlgTcamMatchTable::verify_entry_priority() {
             return;
         }
     }
+
+
+}
+
+/**
+ * @seealso bf-p4c/mau/table_format.cpp - no_overhead_atcam_result_bus_words.  This matches
+ * this function exactly
+ */
+void AlgTcamMatchTable::no_overhead_determine_result_bus_usage() {
+    int result_bus_word = -1;
+    int shared_groups = 0;
+    for (int i = group_info.size() - 1; i >= 0; i--) {
+        if (result_bus_word == -1) {
+            result_bus_word = group_info[i].match_group.begin()->first;
+        } 
+        bool is_shared_group = false;
+
+        if (group_info[i].match_group.size() > 1)
+            is_shared_group = true;
+        else if (group_info[i].match_group.begin()->first != result_bus_word)
+            is_shared_group = true;
+
+        if (is_shared_group) {
+            if (i > 1)
+                error(format->lineno, "ATCAM chaining of shared groups is not correct");
+            shared_groups++;
+        }
+
+        group_info[i].result_bus_word = result_bus_word;
+        group_info[i].match_group[result_bus_word] = i;
+    }
+
+    word_info[result_bus_word].clear();
+    for (int i = 0; i < (int)(group_info.size()); i++) {
+        word_info[result_bus_word].push_back(i);
+    }
+
+    if (shared_groups > 2)
+        error(format->lineno, "ATCAM cannot safely send hit signals to same result bus");
 }
 
 void AlgTcamMatchTable::verify_format() {

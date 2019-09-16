@@ -101,6 +101,7 @@ struct TableFormat {
             TCAM_use() {}
         };
 
+        bool only_one_result_bus = false;
         safe_vector<match_group_use> match_groups;
         safe_vector<TCAM_use> tcam_use;
         int split_midbyte = -1;
@@ -155,6 +156,7 @@ struct TableFormat {
             return match_groups[0].mask[NEXT].popcount();
         }
 
+        bitvec no_overhead_atcam_result_bus_words() const;
         bitvec result_bus_words() const;
     };
 
