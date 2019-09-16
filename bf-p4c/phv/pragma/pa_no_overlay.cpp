@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include <string>
 #include <numeric>
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "lib/log.h"
 
@@ -70,7 +71,7 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
     // coordination of ingress deparser and egress parser (TODO).
     for (auto& nf : phv_i.get_all_fields()) {
         std::string f_name(nf.first.c_str());
-        if (f_name.find("compiler_generated_meta") != std::string::npos
+        if (f_name.find(BFN::COMPILER_META) != std::string::npos
          && f_name.find("residual_checksum_") != std::string::npos) {
             fields.insert(&nf.second);
         }

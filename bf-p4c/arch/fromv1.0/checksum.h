@@ -340,7 +340,7 @@ class InsertParserChecksums : public Inspector {
 
         if (needBridging && !translate->bridgedResidualChecksums.count(destfield)) {
             auto *compilerMetadataPath =
-                    new IR::PathExpression("compiler_generated_meta");
+                    new IR::PathExpression(COMPILER_META);
 
             auto *compilerMetadataDecl = const_cast<IR::Type_Struct*>(
                 structure->type_declarations.at("compiler_generated_metadata_t")

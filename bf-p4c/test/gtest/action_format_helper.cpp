@@ -647,7 +647,7 @@ void RandomNumberMultipleActions() {
 }
 
 /**
- * Test to make sure RandomNumbers overlap function works properly 
+ * Test to make sure RandomNumbers overlap function works properly
  */
 void RandomNumberOverlaps() {
     ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 1});
@@ -687,7 +687,6 @@ void RandomNumberOverlaps() {
 /**
  */
 void RandomNumberRamSection() {
-    cstring null_rand_name;
     ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 3});
     ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand1", "act1", {4, 7});
     ActionData::RandomPadding *pad = new ActionData::RandomPadding(4);

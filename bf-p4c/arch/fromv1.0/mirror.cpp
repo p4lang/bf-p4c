@@ -1,5 +1,6 @@
 #include "mirror.h"
 
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/device.h"
 #include "frontends/p4/cloner.h"
@@ -218,11 +219,11 @@ class AddMirroredFieldListParser : public Transform {
 
         statements->push_back(
             ParserUtils::createSetMetadata(parser,
-                             "compiler_generated_meta", "clone_digest_id", 4, digestId));
+                             BFN::COMPILER_META, "clone_digest_id", 4, digestId));
 
         statements->push_back(
             ParserUtils::createSetMetadata(parser,
-                             "compiler_generated_meta", "clone_src", 4, cloneSrc));
+                             BFN::COMPILER_META, "clone_src", 4, cloneSrc));
 
         // Create a state that extracts the fields in this field list.
         cstring name = "mirror_field_list_" + cstring::to_cstring(gress) + "_" +

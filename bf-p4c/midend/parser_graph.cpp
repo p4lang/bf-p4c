@@ -28,12 +28,12 @@ P4ParserGraphs::compute_strongly_connected_components(const IR::P4Parser* parser
   }
 
   std::vector<int> component(num_vertices(g)), discover_time(num_vertices(g));
-  int num = strong_components(g, make_iterator_property_map(component.begin(),
-                                 get(vertex_index, g)));
+  strong_components(g, make_iterator_property_map(component.begin(),
+                                                  get(vertex_index, g)));
 
   std::map<unsigned, std::set<cstring>> cid_to_sccs;
 
-  for (int i = 0; i != component.size(); ++i)
+  for (unsigned i = 0; i != component.size(); ++i)
     cid_to_sccs[component[i]].insert(id_to_state[i]);
 
   std::set<std::set<cstring>> sccs;

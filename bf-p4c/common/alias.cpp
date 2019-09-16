@@ -1,4 +1,5 @@
 #include <sstream>
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
 
@@ -13,13 +14,13 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
     LOG5("Header type: " << h->type);
     cstring hName = h->name;
     // Ignore compiler generated metadata because the user is not going to apply a pragma on those.
-    if (hName.startsWith("ingress::compiler_generated_meta") ||
-        hName.startsWith("egress::compiler_generated_meta"))
+    if (hName.startsWith("ingress::" + BFN::COMPILER_META) ||
+        hName.startsWith("egress::" + BFN::COMPILER_META))
         return true;
     for (auto f : h->type->fields) {
         cstring name = h->name + "." + f->name;
         // Ignore compiler generated metadata fields that belong to different headers.
-        if (name.endsWith("$always_deparse") || name.endsWith("^bridged_metadata_indicator"))
+        if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
             continue;
         IR::Member* mem = gen_fieldref(h, f->name);
         if (!mem) continue;

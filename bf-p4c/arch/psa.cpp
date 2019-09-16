@@ -109,7 +109,7 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
         // add bridged_metadata header
         cgm->fields.push_back(
-            new IR::StructField("^bridged_metadata",
+            new IR::StructField(BFN::BRIDGED_MD,
                 typeMap->getTypeType(structure->bridge.p4Type, true)));
 
         cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
@@ -158,7 +158,7 @@ class AnalyzeProgram : public Inspector {
             for (auto f : bridge_md_type->to<IR::Type_StructLike>()->fields) {
                 structure->addMetadata(EGRESS,
                     MetadataField{param->name, f->name, f->type->width_bits()},
-                    MetadataField{"^bridged_metadata", f->name,
+                    MetadataField{BFN::BRIDGED_MD, f->name,
                         f->type->width_bits(), true /* isCG */});
             }
             structure->bridgedType = bridge_md_type;
@@ -222,7 +222,7 @@ class AnalyzeProgram : public Inspector {
             for (auto f : bridge_md_type->to<IR::Type_StructLike>()->fields) {
                 structure->addMetadata(INGRESS,
                     MetadataField{param->name, f->name, f->type->width_bits()},
-                    MetadataField{"^bridged_metadata", f->name,
+                    MetadataField{BFN::BRIDGED_MD, f->name,
                                   f->type->width_bits(), true /* isCG */});
                 bridged_fields.emplace(new IR::StructField(f->name,
                             IR::Type::Bits::get(f->type->width_bits())));
@@ -291,32 +291,32 @@ struct TranslatePacketPathIfStatement : public Transform {
                     generated_metadata = "__resubmit_data";
                     auto expr = new IR::LAnd(
                         new IR::Member(
-                            new IR::PathExpression("compiler_generated_meta"), IR::ID("drop")),
+                            new IR::PathExpression(COMPILER_META), IR::ID("drop")),
                         new IR::Member(
-                            new IR::PathExpression("compiler_generated_meta"), IR::ID("resubmit")));
+                            new IR::PathExpression(COMPILER_META), IR::ID("resubmit")));
                     return expr;
                 } else if (path->name == "psa_clone_i2e") {
                     generated_metadata = "__clone_i2e_data";
                     auto expr = new IR::Member(
-                        new IR::PathExpression("compiler_generated_meta"), IR::ID("clone_i2e"));
+                        new IR::PathExpression(COMPILER_META), IR::ID("clone_i2e"));
                     return expr;
                 } else if (path->name == "psa_clone_e2e") {
                     generated_metadata = "__clone_e2e_data";
                     auto expr = new IR::Member(
-                        new IR::PathExpression("compiler_generated_meta"), IR::ID("clone_e2e"));
+                        new IR::PathExpression(COMPILER_META), IR::ID("clone_e2e"));
                     return expr;
                 } else if (path->name == "psa_recirculate") {
                     generated_metadata = "__recirculate_data";
                     // FIXME: !istd.drop && (edstd.egress_port == PORT_RECIRCULATE)
                     auto expr = new IR::LNot(new IR::Member(
-                        new IR::PathExpression("compiler_generated_meta"), IR::ID("drop")));
+                        new IR::PathExpression(COMPILER_META), IR::ID("drop")));
                     return expr;
                 } else if (path->name == "psa_normal") {
                     auto expr = new IR::LAnd(
                         new IR::LNot(new IR::Member(
-                            new IR::PathExpression("compiler_generated_meta"), IR::ID("drop"))),
+                            new IR::PathExpression(COMPILER_META), IR::ID("drop"))),
                         new IR::LNot(new IR::Member(
-                            new IR::PathExpression("compiler_generated_meta"),
+                            new IR::PathExpression(COMPILER_META),
                             IR::ID("resubmit"))));
                     return expr;
                 }
@@ -332,14 +332,14 @@ struct TranslatePacketPathIfStatement : public Transform {
         auto pathname = expr->path->name;
 
         if (pathname == info.paramNameInParser) {
-            auto path = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
                                        IR::ID(generated_metadata));
             auto member = new IR::Member(path, membername);
             return member;
         }
 
         if (pathname == info.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
                                        IR::ID(generated_metadata));
             auto member = new IR::Member(path, membername);
             return member;
@@ -635,19 +635,19 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "drop", 1},
-                               MetadataField{"compiler_generated_meta", "drop", 1});
+                               MetadataField{COMPILER_META, "drop", 1});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "multicast_group", 16},
                                MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "egress_port", 9},
                                MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "resubmit", 1},
-                               MetadataField{"compiler_generated_meta", "resubmit", 1});
+                               MetadataField{COMPILER_META, "resubmit", 1});
         structure->addMetadata(INGRESS, MetadataField{"ostd", "clone", 1},
-                               MetadataField{"compiler_generated_meta", "clone_i2e", 1});
+                               MetadataField{COMPILER_META, "clone_i2e", 1});
         structure->addMetadata(INGRESS,
                                MetadataField{"istd", "packet_path", 0},
-                               MetadataField{"compiler_generated_meta", "packet_path", 0});
+                               MetadataField{COMPILER_META, "packet_path", 0});
 
         structure->addMetadata(EGRESS,
                                MetadataField{"istd", "egress_port", 9},
@@ -660,14 +660,14 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md_from_prsr", "egress_parser_err", 3});
         structure->addMetadata(EGRESS,
                                MetadataField{"ostd", "drop", 1},
-                               MetadataField{"compiler_generated_meta", "drop", 1});
+                               MetadataField{COMPILER_META, "drop", 1});
         structure->addMetadata(EGRESS, MetadataField{"ostd", "clone", 1},
-                               MetadataField{"compiler_generated_meta", "clone_e2e", 1});
+                               MetadataField{COMPILER_META, "clone_e2e", 1});
         structure->addMetadata(EGRESS,
                                MetadataField{"istd", "packet_path", 0},
-                               MetadataField{"compiler_generated_meta", "packet_path", 0});
+                               MetadataField{COMPILER_META, "packet_path", 0});
         structure->addMetadata(MetadataField{"ostd", "clone_session_id", 10},
-                               MetadataField{"compiler_generated_meta", "mirror_id", 10});
+                               MetadataField{COMPILER_META, "mirror_id", 10});
     }
 
     void analyzeTofinoModel() {

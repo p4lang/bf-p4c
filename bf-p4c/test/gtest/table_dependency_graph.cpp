@@ -1576,7 +1576,7 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
  *        CONTROL     V
  *    C ------------> D
  *
- *          
+ *
  * Through next table propagation, in Tofino (not Tofino2), an ANTI dependency exists between
  * table A and C, (which is captured by the TableSeqDeps information)
  */
@@ -1848,7 +1848,7 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
 
     apply {
         if (!node_a.apply().hit) {
-            node_b.apply(); 
+            node_b.apply();
             node_c.apply();
         }
     }
@@ -1981,51 +1981,51 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
             action set_f1(bit<8> f1) {
               headers.h1.f1 = f1;
             }
-            
+
             action set_f2(bit<8> f2) {
               headers.h1.f2 = f2;
             }
-            
+
             table node_a {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
             }
-            
+
             table node_b {
               actions = { set_f1; }
                 key = { headers.h1.f2 : exact; }
             }
-            
+
             table node_c {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
             }
-            
+
             table node_d {
               actions = { set_f1; }
                 key = { headers.h1.f3 : exact; }
             }
-            
+
             table node_e {
               actions = { set_f1; }
                 key = { headers.h1.f1 : exact; headers.h1.f2 : exact; }
             }
-            
+
             table node_f {
               actions = { set_f1; }
                 key = { headers.h1.f3 : exact; }
             }
-            
+
             table node_g {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
             }
-            
+
             table node_h {
               actions = { set_f2; }
                 key = { headers.h1.f2 : exact; }
             }
-            
+
             apply {
               if (node_a.apply().hit) {
                 node_b.apply();
@@ -2142,11 +2142,11 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
     action set_f1(bit<8> f1) {
         headers.h1.f1 = f1;
     }
-    
+
     action set_f2(bit<8> f2) {
         headers.h1.f2 = f2;
     }
-    
+
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
@@ -2201,7 +2201,7 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
     }
-    
+
     apply {
         if (node_a.apply().hit) {
             node_b.apply();
@@ -2325,7 +2325,7 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
  *   * - induced by exit
  *
  * We expect the following chain lengths.
- * 
+ *
  *   A: 1
  *   B: 1
  *   C: 1
@@ -2419,7 +2419,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
  *   * - induced by exit
  *
  * We expect the following chain lengths.
- * 
+ *
  *   A: 1
  *   B: 1
  *   C: 1
@@ -2513,7 +2513,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
  *   * - induced by exit
  *
  * We expect the following chain lengths.
- * 
+ *
  *   A: 1
  *   B: 1
  *   C: 1
@@ -2621,7 +2621,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
  *   * - induced by exit
  *
  * We expect the following chain lengths.
- * 
+ *
  *   A: 1
  *   B: 1
  *   C: 1

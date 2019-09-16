@@ -314,7 +314,7 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     ASSERT_EQ(1u, extractionState->transitions.size());
     EXPECT_EQ(finalState, extractionState->transitions[0]->next);
     EXPECT_TRUE(extractionState->transitions[0]->shift);
-    EXPECT_EQ(static_cast<int>((packing.totalWidth / 8)),
+    EXPECT_EQ(static_cast<unsigned int>((packing.totalWidth / 8)),
               extractionState->transitions[0]->shift);
 
     // Verify that the state reproduces the packing and has the structure we

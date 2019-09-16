@@ -33,7 +33,7 @@ void CollectBridgedFields::end_apply() {
     for (const auto& f : phv) {
         if (f.gress == EGRESS) continue;
         // Indicator does not need to be initialzed in mau.
-        if (f.name.endsWith("^bridged_metadata_indicator")) continue;
+        if (f.name.endsWith(BFN::BRIDGED_MD_INDICATOR)) continue;
 
         if (f.bridged && !bridged_to_orig.count(f.name)) {
             LOG5("Missing initialzation of bridged field: " << f);

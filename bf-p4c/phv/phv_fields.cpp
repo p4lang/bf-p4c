@@ -3,6 +3,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <string>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -849,7 +850,7 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     if (field_i->padding) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
-    if (f_name.find("compiler_generated_meta") != std::string::npos &&
+    if (f_name.find(BFN::COMPILER_META) != std::string::npos &&
         f_name.find("residual_checksum_") != std::string::npos) {
         return true;
     }
@@ -1134,7 +1135,7 @@ class CollectPhvFields : public Inspector {
     bool preorder(const IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
         // bridged_metadata_indicator must be placed in 8-bit container
-        if (tv->name.endsWith("^bridged_metadata_indicator")) {
+        if (tv->name.endsWith(BFN::BRIDGED_MD_INDICATOR)) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_exact_containers(true);
@@ -1172,7 +1173,7 @@ class CollectPhvFields : public Inspector {
     void end_apply() override {
         for (auto& f : phv) {
             std::string f_name(f.name.c_str());
-            if (f_name.find("compiler_generated_meta") != std::string::npos
+            if (f_name.find(BFN::COMPILER_META) != std::string::npos
              && f_name.find("residual_checksum_") != std::string::npos) {
                 f.set_exact_containers(true);
                 f.set_no_pack(true);

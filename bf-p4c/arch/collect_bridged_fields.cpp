@@ -2,6 +2,7 @@
 
 #include <boost/range/adaptor/sliced.hpp>
 
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
@@ -275,7 +276,7 @@ void CollectBridgedFields::end_apply() {
                 LOG1("Not Bridging field: " << fieldName << " marked by pa_do_not_bridge");
             } else {
                 std::string f_name(fieldName.c_str());
-                if (f_name.find("compiler_generated_meta") != std::string::npos
+                if (f_name.find(COMPILER_META) != std::string::npos
                     && (f_name.find("mirror_source") != std::string::npos ||
                         f_name.find("mirror_id") != std::string::npos)) {
                     continue;

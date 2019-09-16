@@ -1,3 +1,4 @@
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/phv/add_special_constraints.h"
 
 bool AddSpecialConstraints::preorder(const IR::BFN::DeparserParameter* param) {
@@ -48,7 +49,7 @@ void AddSpecialConstraints::end_apply() {
     // Mirror metadata allocation constraint:
     for (auto gress : {INGRESS, EGRESS}) {
         auto* mirror_id = phv_i.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
+                cstring::to_cstring(gress) + "::" + BFN::COMPILER_META + ".mirror_id");
         if (mirror_id) {
             mirror_id->set_no_split(true);
             mirror_id->set_deparsed_bottom_bits(true);
@@ -56,7 +57,7 @@ void AddSpecialConstraints::end_apply() {
                 pragmas_i.pa_container_sizes().add_constraint(mirror_id, {PHV::Size::b16}); }
         }
         auto* mirror_src = phv_i.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
+                cstring::to_cstring(gress) + "::" + BFN::COMPILER_META + ".mirror_source");
         if (mirror_src) {
             mirror_src->set_no_split(true);
             mirror_src->set_deparsed_bottom_bits(true);

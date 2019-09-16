@@ -598,7 +598,7 @@ struct RewritePhase0IfPresent : public Transform {
         state->components.clear();
 
         // Add "pkt.extract(compiler_generated_meta.__phase0_data)"
-        auto cgMeta = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMeta = tnaContext->tnaParams.at(COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
@@ -845,4 +845,3 @@ IR::Node* ConvertPhase0AssignToExtract::preorder(IR::AssignmentStatement* stmt) 
     return stmt; }
 
 }  // namespace BFN
-

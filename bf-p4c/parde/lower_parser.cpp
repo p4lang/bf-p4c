@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/slice.h"
@@ -1373,7 +1374,7 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
             unsigned swap = 0;
             bool isResidualChecksum = false;
             std::string f_name(phv_field->name.c_str());
-            if (f_name.find("compiler_generated_meta") != std::string::npos
+            if (f_name.find(BFN::COMPILER_META) != std::string::npos
              && f_name.find("residual_checksum_") != std::string::npos)
                 isResidualChecksum = true;
 

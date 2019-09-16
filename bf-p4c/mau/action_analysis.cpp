@@ -1052,7 +1052,8 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 bool init = initialize_alignment(write, read, cont_action, init_error_message,
                                                  container, action_name);
                 if (!init && error_verbose) {
-                    ::warning("%s: %s", init_error_message, cstring::to_cstring(cont_action));
+                    ::warning("%1%: %2% %3%", tbl, init_error_message,
+                              cstring::to_cstring(cont_action));
                     warning = true;
                 }
                 total_init &= init;
@@ -1064,7 +1065,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         cstring error_message;
         bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
         if (!verify && error_verbose) {
-            ::warning("%s: %s", error_message, cstring::to_cstring(cont_action));
+            ::warning("%1%: %2% %3%", tbl, error_message, cstring::to_cstring(cont_action));
             warning = true;
         }
         check_constant_to_actiondata(cont_action, container);
@@ -1348,14 +1349,14 @@ bool ActionAnalysis::ContainerAction::is_byte_rotate_merge(PHV::Container contai
 /**
  * Verifies that the instruction can be encoded as a deposit-field.  As mentioned above
  * verify_set_alignment, deposit field is the following:
- *  
+ *
  * deposit-field:
  *     dest = ((src1 << shift) & mask) | (src2 & ~mask)
  *
  * The mask is a contiguous range, and has a single lo and hi.  Thus if src1 is a contiguous
  * range of data (which can go around the container boundary), then this is supportable.
  * The range has to be contiguous after the shift.
- *   
+ *
  * In a deposit field, a source must at least either be aligned, or can be contiguous.  A
  * source can be both.  A source that is not aligned must be src1, and a source that is
  * not contiguous is src2.
@@ -1409,9 +1410,9 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
          * an explicit deposit-field instruction.
 
          * The deposit field for a single sourced wrapped source will be the following:
-         * 
+         *
          * deposit-field C0(lo..hi), C1(lo), C0
-         * 
+         *
          * The assembler will not understand the C1 slice if lo > hi, but the deposit-field
          * instruction technically only requires the lo bit to determine the right shift
          */
@@ -1436,7 +1437,7 @@ bool ActionAnalysis::ContainerAction::verify_deposit_field_variant(PHV::Containe
  * are possible to be translated to an instruction.
  *
  * The following instructions are possible encodings of assignment statements.  Note that all
- * shifts are rotational, meaning that the container is rotated by this number of bits. 
+ * shifts are rotational, meaning that the container is rotated by this number of bits.
  *
  * deposit-field:
  *     dest = ((src1 << shift) & mask) | (src2 & ~mask)

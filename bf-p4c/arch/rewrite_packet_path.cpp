@@ -4,6 +4,7 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/ordered_set.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "psa_program_structure.h"
 #include "rewrite_packet_path.h"
 
@@ -71,7 +72,7 @@ struct RewriteResubmit : public Transform {
         // clear existing statements
         state->components.clear();
 
-        auto cgMeta = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
@@ -103,14 +104,14 @@ struct RewriteResubmit : public Transform {
         }
 
         if (pathname == resubmit.paramNameInParser) {
-            auto path = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
                                        IR::ID("__resubmit_data"));
             auto member = new IR::Member(path, membername);
             return member;
         }
 
         if (pathname == resubmit.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
                                        IR::ID("__resubmit_data"));
             auto member = new IR::Member(path, membername);
             return member;
@@ -161,7 +162,7 @@ struct RewriteRecirculate : public Transform {
         // clear existing statements
         state->components.clear();
 
-        auto cgMeta = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
@@ -189,7 +190,7 @@ struct RewriteRecirculate : public Transform {
 
         if (node->path->name == recirculate.paramNameInParser ||
             node->path->name == recirculate.paramNameInDeparser) {
-            return new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            return new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
                                   IR::ID("__recirculate_data"));
         }
         return node;
@@ -251,7 +252,7 @@ struct RewriteClone : public Transform {
         // clear existing statements
         state->components.clear();
 
-        auto cgMeta = tnaContext->tnaParams.at("compiler_generated_meta");
+        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
         auto *method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
         auto *member = new IR::Member(new IR::PathExpression(cgMeta), IR::ID(metadata));
@@ -279,7 +280,7 @@ struct RewriteClone : public Transform {
 
     const IR::Node* preorder(IR::PathExpression* node) override {
         if (node->path->name == clone.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression("compiler_generated_meta"),
+            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
                     IR::ID(metadata));
             return path;
         }

@@ -5,6 +5,7 @@
 #include "bf-p4c/device.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/midend/parser_utils.h"
 
@@ -159,7 +160,7 @@ class AddMetadataFields : public Transform {
         IR::Vector<IR::SelectCase> branchTo;
         if (start_i2e_mirrored || start_e2e_mirrored || start_coalesced)
             selectOn.push_back(new IR::Member(
-                new IR::PathExpression(new IR::Path("compiler_generated_meta")), "instance_type"));
+                new IR::PathExpression(new IR::Path(COMPILER_META)), "instance_type"));
         if (start_i2e_mirrored) {
             BUG_CHECK(selMap.count("start_i2e_mirrored") != 0,
                       "Couldn't find the start_i2e_mirrored state?");
@@ -297,4 +298,3 @@ class AddIntrinsicMetadata : public PassManager {
 }  // namespace BFN
 
 #endif /* BF_P4C_ARCH_INTRINSIC_METADATA_H_ */
-

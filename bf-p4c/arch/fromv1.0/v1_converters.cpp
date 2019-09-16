@@ -4,6 +4,7 @@
 
 #include "v1_program_structure.h"
 #include "lib/ordered_map.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 
@@ -58,8 +59,8 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingress", paramList);
@@ -148,8 +149,8 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egress", paramList);
@@ -208,8 +209,8 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingressDeparserImpl", paramList);
@@ -300,8 +301,8 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egressDeparserImpl", paramList);
@@ -367,8 +368,8 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("ingressParserImpl", paramList);
@@ -452,8 +453,8 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
     IR::IndexedVector<IR::Declaration> parserLocals;

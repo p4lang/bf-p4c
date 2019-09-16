@@ -7,6 +7,7 @@
 #include "frontends/p4/typeMap.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
@@ -106,7 +107,7 @@ class ExtractDeparser : public DeparserInspector {
             }
 
             IR::Vector<IR::BFN::FieldLVal> sources;
-            auto compilerMetadataHdr = getMetadataType(rv, "compiler_generated_meta");
+            auto compilerMetadataHdr = getMetadataType(rv, COMPILER_META);
             auto mirrorId = gen_fieldref(compilerMetadataHdr, "mirror_id");
             sources.push_back(new IR::BFN::FieldLVal(mirrorId));
             auto dummy = new IR::BFN::DigestFieldList(0, sources, nullptr);

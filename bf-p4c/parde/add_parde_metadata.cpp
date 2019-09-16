@@ -1,4 +1,5 @@
 #include "bf-p4c/parde/add_parde_metadata.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/common/ir_utils.h"
 #include "lib/exceptions.h"
@@ -21,7 +22,7 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     auto *alwaysDeparseBit =
             new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto *bridgedMetadataIndicator =
-            new IR::TempVar(IR::Type::Bits::get(8), false, "^bridged_metadata_indicator");
+            new IR::TempVar(IR::Type::Bits::get(8), false, BFN::BRIDGED_MD_INDICATOR);
     auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
     auto *globalVersion = gen_fieldref(igParserMeta, "global_ver");
 

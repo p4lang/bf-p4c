@@ -47,7 +47,7 @@ void IgnoreTableDeps::end_apply() {
             } else {
                 ::warning(BFN::ErrorType::WARN_PRAGMA_USE, "%1%: The ignore_table_dependency "
                    "value %2% on table %3% does not have a corresponding backend match",
-                   tbl->srcInfo, pragma_val, tbl->externalName());
+                   tbl, pragma_val, tbl->externalName());
                 continue;
             }
             ignore_dep_map[tbl].insert(ign_tbl);

@@ -5,6 +5,7 @@
 #include <iterator>
 #include <sstream>
 
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv.h"
@@ -677,7 +678,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // Mirror metadata allocation constraint check:
     for (auto gress : {INGRESS, EGRESS}) {
         const auto* mirror_id = phv.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_id");
+                cstring::to_cstring(gress) + "::" + BFN::COMPILER_META + ".mirror_id");
         if (mirror_id && phv.get_alloc(mirror_id).size()) {
             const auto& id_alloc = phv.get_alloc(mirror_id);
             BUG_CHECK(id_alloc.size() == 1,
@@ -689,7 +690,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         const auto* mirror_src = phv.field(
-                cstring::to_cstring(gress) + "::" + "compiler_generated_meta.mirror_source");
+                cstring::to_cstring(gress) + "::" + BFN::COMPILER_META + ".mirror_source");
         if (mirror_src && phv.get_alloc(mirror_src).size()) {
             const auto& src_alloc = phv.get_alloc(mirror_src);
             BUG_CHECK(src_alloc.size() == 1,
@@ -826,7 +827,7 @@ Visitor::profile_t ValidateActions::init_apply(const IR::Node *root) {
 void ValidateActions::end_apply() {
     cstring error_message;
     if (phv_alloc)
-        error_message = "PHV allocation creates a container action impossible within a Tofino ALU";
+        error_message = "PHV allocation creates an invalid container action within a Tofino ALU";
     else
         error_message = "Instruction selection creates an instruction that the rest of the "
                         "compiler cannot correctly interpret";

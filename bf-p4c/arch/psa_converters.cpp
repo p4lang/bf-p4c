@@ -92,8 +92,8 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("ingressParserImpl", paramList);
@@ -163,8 +163,8 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
@@ -221,8 +221,8 @@ const IR::Node* IngressControlConverter::postorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingress", paramList);
@@ -311,8 +311,8 @@ const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egress", paramList);
@@ -374,8 +374,8 @@ const IR::Node* IngressDeparserConverter::postorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingressDeparserImpl", paramList);
@@ -460,8 +460,8 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     // add compiler generated struct
     path = new IR::Path("compiler_generated_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
-    tnaParams.emplace("compiler_generated_meta", param->name);
+    param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
+    tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egressDeparserImpl", paramList);
@@ -545,7 +545,7 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         if (it != nameMap.end()) {
             IR::Expression* expr;
             if (it->second.isCG) {
-                auto path = new IR::PathExpression("compiler_generated_meta");
+                auto path = new IR::PathExpression(COMPILER_META);
                 expr = new IR::Member(path, it->second.structName);
             } else {
                 expr = new IR::PathExpression(it->second.structName);

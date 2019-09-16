@@ -6,6 +6,12 @@
 
 namespace BFN {
 
+static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta";
+static const cstring BRIDGED_MD = "__bfp4c_bridged_metadata";
+static const cstring BRIDGED_MD_HEADER = "__bfp4c_bridged_metadata_header";
+static const cstring BRIDGED_MD_FIELD = "__bfp4c_fields";
+static const cstring BRIDGED_MD_INDICATOR = "__bfp4c_bridged_metadata_indicator";
+
 struct AddTnaBridgeMetadata : public PassManager {
     AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };

@@ -3176,7 +3176,7 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
         bitvec total_post_expand_bits, unsigned hash_table_input,
-        const IR::MAU::Table* tbl, cstring name) {
+        const IR::MAU::Table* tbl, cstring /* name */) {
     use.ir_allocations.emplace_back();
     auto &rv = use.ir_allocations.back();
     ContByteConversion               map_alloc;

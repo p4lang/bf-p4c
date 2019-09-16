@@ -8,6 +8,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/midend/simplify_references.h"
@@ -1557,7 +1558,7 @@ class ExtractMetadata : public Inspector {
             // compiler_generated_metadata
             if (size > 6) {
                 md = mau->getApplyParameters()->parameters.at(6);
-                rv->metadata.addUnique("compiler_generated_meta",
+                rv->metadata.addUnique(COMPILER_META,
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
         } else if (gress == EGRESS) {

@@ -8,6 +8,7 @@
 #include "midend/eliminateSerEnums.h"
 #include "bf-p4c/midend.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
 #include "bf-p4c/arch/program_structure.h"
@@ -70,7 +71,7 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md", "pkt_length", 16});
 
         structure->addMetadata(MetadataField{"standard_metadata", "clone_spec", 32},
-                               MetadataField{"compiler_generated_meta", "mirror_id",
+                               MetadataField{COMPILER_META, "mirror_id",
                                              Device::cloneSessionIdWidth()});
 
         structure->addMetadata(INGRESS,
@@ -92,7 +93,7 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"eg_intr_md_from_prsr", "parser_err", 1, 12});
 
         structure->addMetadata(MetadataField{"standard_metadata", "instance_type", 32},
-                               MetadataField{"compiler_generated_meta", "instance_type", 32});
+                               MetadataField{COMPILER_META, "instance_type", 32});
 
         structure->addMetadata(INGRESS,
                                MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3},
@@ -152,12 +153,12 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(
                 EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
-                MetadataField{"compiler_generated_meta", "clone_src", 4});
+                MetadataField{COMPILER_META, "clone_src", 4});
 
         structure->addMetadata(
                 EGRESS,
                 MetadataField{"eg_intr_md_from_parser_aux", "clone_digest_id", 4},
-                MetadataField{"compiler_generated_meta", "clone_digest_id", 4});
+                MetadataField{COMPILER_META, "clone_digest_id", 4});
 
         structure->addMetadata(
                 EGRESS,
@@ -1155,7 +1156,7 @@ class ConstructSymbolTable : public Inspector {
                 new IR::PathExpression(isIngress ? "ig_intr_md_for_dprsr"
                                                  : "eg_intr_md_for_dprsr");
         auto *compilerMetadataPath =
-                new IR::PathExpression("compiler_generated_meta");
+                new IR::PathExpression(COMPILER_META);
 
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the

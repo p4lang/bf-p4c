@@ -18,12 +18,6 @@
 namespace BFN {
 namespace {
 
-static const cstring COMPILER_META = "compiler_generated_meta";
-static const cstring BRIDGED_MD = "^bridged_metadata";
-static const cstring BRIDGED_MD_HEADER = "^bridged_metadata_header";
-static const cstring BRIDGED_MD_FIELD = "^fields";
-static const cstring BRIDGED_MD_INDICATOR = "^bridged_metadata_indicator";
-
 struct BridgeIngressToEgress : public Transform {
     BridgeIngressToEgress(const ordered_set<FieldRef>& fieldsToBridge,
                           const ordered_map<FieldRef, BridgedFieldInfo>& fieldInfo,

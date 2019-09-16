@@ -191,7 +191,7 @@ control deparse(packet_out packet, in Headers headers) {
 }
 
 control my_egress(inout Headers headers, inout Metadata meta,
-    inout standard_metadata_t sm) { 
+    inout standard_metadata_t sm) {
 %MAU2%
 }
 
@@ -235,45 +235,45 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(3)
      table t2 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(0)
      table t3 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(5)
      table t4 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
     apply {
         if (t1.apply().hit) {
             t2.apply();
@@ -286,7 +286,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), 2);
+    ASSERT_EQ(nt->get_num_lbs(), 2UL);
 }
 
 /* Checks that the tightest on-gress merge occurs correctly. One use ends on 3 and the other begins
@@ -301,45 +301,45 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(3)
      table t2 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(3)
      table t3 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(6)
      table t4 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
     apply {
         if (t1.apply().hit) {
             t2.apply();
@@ -367,23 +367,23 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(3)
      table t2 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
     apply {
         if (t1.apply().hit) {
             t2.apply();
@@ -398,18 +398,18 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
         key = {
             headers.h1.f1: exact;
         }
- 
+
         actions = {
             noop;
         }
     }
- 
+
     @stage(6)
     table t4 {
         key = {
             headers.h1.f1: exact;
         }
- 
+
         actions = {
             noop;
         }
@@ -438,23 +438,23 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
      @stage(3)
      table t2 {
          key = {
              headers.h1.f1: exact;
          }
- 
+
          actions = {
              noop;
          }
      }
- 
+
     apply {
         if (t1.apply().hit) {
             t2.apply();
@@ -469,18 +469,18 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
         key = {
             headers.h1.f1: exact;
         }
- 
+
         actions = {
             noop;
         }
     }
- 
+
     @stage(7)
     table t4 {
         key = {
             headers.h1.f1: exact;
         }
- 
+
         actions = {
             noop;
         }
@@ -503,206 +503,206 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t17 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t18 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
-    
+
+
     apply {
       if (t1.apply().hit) {
         t2.apply();
@@ -747,206 +747,206 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(4)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(10)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(7)
     table t17 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t18 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
-    
+
+
     apply {
       if (t1.apply().hit) {
         t2.apply();
@@ -990,206 +990,206 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(6)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(4)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(10)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(5)
     table t17 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t18 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
-    
+
+
     apply {
       if (t1.apply().hit) {
         t2.apply();
@@ -1233,178 +1233,178 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(4)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(10)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1440,24 +1440,24 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
 )"),
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(7)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(10)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1483,178 +1483,178 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(4)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(10)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1690,24 +1690,24 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
 )"),
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(7)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1734,178 +1734,178 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(4)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(7)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1916,18 +1916,18 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(3)
     table t18 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -1966,24 +1966,24 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
 )"),
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(2)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(6)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -2009,178 +2009,178 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
     auto test = createNextTableCase(
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(0)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t3 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t4 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t5 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t6 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t7 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t8 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t9 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t10 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t11 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t12 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(0)
     table t13 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t14 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(7)
     table t15 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(13)
     table t16 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -2191,18 +2191,18 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(3)
     table t18 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
@@ -2241,24 +2241,24 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
 )"),
             P4_SOURCE(P4Headers::NONE, R"(
     action noop() { }
-    
+
     @stage(2)
     table t1 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }
     }
-    
+
     @stage(8)
     table t2 {
       key = {
       headers.h1.f1: exact;
       }
-     
+
         actions = {
                    noop;
       }

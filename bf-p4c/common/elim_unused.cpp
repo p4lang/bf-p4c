@@ -51,7 +51,7 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
     }
 
     bool elim_extract(const IR::BFN::Unit* unit,
-                      const IR::BFN::Extract* extract) {
+                      const IR::BFN::Extract* extract) override {
         if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
             return elim_extract(unit, lval->field);
 
