@@ -46,7 +46,8 @@ ENV P4C_RUNTIME_DEPS cpp \
 
 ENV DEV_PKGS vim \
              gdb \
-             telnet
+             telnet \
+             distcc
 
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \

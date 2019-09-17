@@ -4,6 +4,7 @@ import os
 import sys
 import csv
 import argparse
+import shutil
 import config
 import database
 sys.path.append("..")
@@ -128,6 +129,27 @@ def process_metrics(tests, metrics_db, metrics_outdir, ts, update, failed):
         print test, test_result
     return final_result
 
+def find_file(path, filename):
+    for root, dirs, files in os.walk(path):
+        if filename in files:
+            return True
+    return False
+
+def remove_empty_directories(tests):
+    mGlass = config.Glass()
+    mP4C = config.P4C()
+    for mTest in tests:
+        for p4c in [mGlass, mP4C]:
+            if mTest.skip_opt and p4c.name in mTest.skip_opt:
+                continue
+            # Check for manifest.json if out_dir exists:
+            out_dir = os.path.join(mTest.out_path, p4c.name)
+            if os.path.isdir(out_dir):
+                is_p4i_outputs = find_file(out_dir, 'manifest.json')
+                if not is_p4i_outputs:
+                    print 'Compilation not successful, removing', out_dir
+                    shutil.rmtree(out_dir)
+
 # Generate and run the test matrix for Glass and P4C compilation
 # and context.json validation
 def main():
@@ -168,6 +190,7 @@ def main():
     p4c_res, p4c_failed = run_test_matrix('P4C', config.P4C_TEST_CMD)
     print 'Completed P4C tests: ' + str(p4c_res)
     print '='*120
+    remove_empty_directories(tests)
     if args.process_metrics:
         metrics_db = database.metricstable()
         result = process_metrics(tests, metrics_db, args.out_dir, ts, args.update_metrics, p4c_failed)   
