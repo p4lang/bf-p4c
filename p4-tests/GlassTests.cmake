@@ -26,6 +26,12 @@ p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_ARISTA_PR}")
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\" -Xp4c=\"--disable-pragma=pa_container_size\"")
 
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4"
+  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+
+p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4"
+  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
+
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")
 
@@ -112,12 +118,10 @@ set (GTS_ARISTA
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-548/case2895.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-548/case3011.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-559/case2987.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-567/case2807.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-568/case3026.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-568/case3026dce.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-575/case3041.p4
-  ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-577/comp577.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-579/case3085.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-585/comp585.p4

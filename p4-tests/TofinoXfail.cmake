@@ -182,6 +182,14 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-447/case2527.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-448/case2526.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-451/case2537.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-477/case2602.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-483/case2619.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-503/case2678.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-505/case2690.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-548/case2895.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-650/case3597.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-666/case3696.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-725/comp_725.p4
   ../glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
   ../glass/testsuite/p4_tests/netscout/P4C-1605/filter_bf_p414.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-733/ipu_ingress.p4
@@ -275,6 +283,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/kindlings_0.p4
   testdata/p4_16_samples/issue1544-bmv2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588dce.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-818/case4954_new_fail.p4
   )
 
 # BRIG_132
@@ -447,20 +456,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-276/case1844.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-326/case2035.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-437/case2387_1.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-477/case2602.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-483/case2619.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-503/case2678.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-505/case2690.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-548/case2895.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-608/case3263.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-674/case3730.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-721/case4015.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-725/comp_725.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-752/test_config_372_init_issue.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-786/comp_786.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-799/case4571.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-818/case4954_new_fail.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-818/case4954.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-823/pipeline2-failing.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-883/case5521.p4
@@ -928,6 +928,7 @@ p4c_add_xfail_reason("tofino"
   "Unsupported primitive modify_field_with_hash_based_offset"
   ../glass/testsuite/p4_tests/arista/COMPILER-635/case3468.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-637/case3478.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-648/comp648.p4
   )
 
 # Valid XFAIL
@@ -1138,8 +1139,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "./p4c TIMEOUT"
+  "tofino supports up to 12 stages, using 13|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/arista/p4c-2058.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No PHV allocation for field used as a POV bit in the deparser|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/arista/p4c-2077.p4
   )
 
@@ -1304,10 +1309,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/arista/COMPILER-1105/case8039.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1113/case8138.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-567/case2807.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-579/case3085.p4
   ../glass/testsuite/p4_tests/mau/test_config_235_funnel_shift.p4
 )
 
@@ -1536,7 +1537,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-2127
 p4c_add_xfail_reason("tofino"
-  "recursion failure"
+  "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/arista/COMPILER-1170/case8862.p4
 )
 
@@ -1563,8 +1564,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/arista/COMPILER-228/case1644.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-567/case2807.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-579/case3085.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-585/comp585.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-589/comp589.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-608/case3263.p4
 )
 
 # P4C-1538
@@ -1589,4 +1596,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "At this point in the compilation typechecking should not infer new types anymore, but it did"
   ../glass/testsuite/p4_tests/keysight/COMPILER-924/case5801.p4
+)
+
+# P4C-1906
+p4c_add_xfail_reason("tofino"
+  "Depth of way doesn't match number of rams in table|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )

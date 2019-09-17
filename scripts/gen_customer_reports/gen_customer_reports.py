@@ -22,9 +22,12 @@ def display_log(filename):
         for line in fr.readlines():
             print(line.strip())
 
-def copy_report(report):
-    dest_path = os.path.join(config.MNT_DIR, os.path.basename(report))
-    shutil.copy2(report, dest_path) 
+def copy_reports(report, log):
+    dest_report_path = os.path.join(config.MNT_DIR, os.path.basename(report))
+    shutil.copy2(report, dest_report_path)
+    dest_log_path = os.path.join(config.MNT_DIR, os.path.basename(log))
+    shutil.copy2(log, dest_log_path)
+     
 
 # Run ctest
 def run_ctest(target, test_suite):
@@ -46,8 +49,10 @@ def process_logs(target, test_suite, log_time):
     report_tab = target + '_' + test_suite
     print ("Processing", out_file)
     ProcessLog(out_file, report, report_tab)
+    log = report.replace('.xlsx', '.log')
+    shutil.copy2(out_file, log)
     print ("Report at", report) 
-    copy_report(report)
+    copy_reports(report, log)
 
 # Run the ctest for a given test suite (reg ex) and generate excel report
 def main():

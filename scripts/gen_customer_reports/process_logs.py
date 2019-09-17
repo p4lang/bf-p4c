@@ -14,6 +14,13 @@ log_keywords = ['error:', 'unallocated', 'failed', 'Compiler Bug',
                 'CRASH', 'Unimplemented', 'Cannot allocate',
                 'unsatisfiable', 'TIMEOUT']
 
+class test_stats(object):
+    def __init__(self):
+        self.count = 0
+        self.pass_count = 0
+        self.fail_count = 0
+        self.xfail_in_ctest = 0
+    
 def gen_report(tb, db, tabname):
     ts = tb.add_worksheet(tabname)
     bold = tb.add_format({'bold': True})
@@ -30,18 +37,23 @@ def gen_report(tb, db, tabname):
     ts.write_string(0, 2, 'Result', bold)
     ts.write_string(0, 3, 'Log', bold)
     ts.write_string(0, 4, 'Comments', bold)
-    count = 1
+    stats = test_stats()
+    stats.count = 1
     for test in db:
-        ts.write_number(count, 0, count)
-        ts.write_string(count, 1, db[test]['Name'])
+        ts.write_number(stats.count, 0, stats.count)
+        ts.write_string(stats.count, 1, db[test]['Name'])
         if db[test]['Result'] == "PASS":
-            ts.write_string(count, 2, db[test]['Result'], green)
+            ts.write_string(stats.count, 2, db[test]['Result'], green)
+            stats.pass_count += 1
         else:
-            ts.write_string(count, 2, db[test]['Result'], red)
-        ts.write_string(count, 3, '\n'.join(db[test]['Log']), text_format)
+            ts.write_string(stats.count, 2, db[test]['Result'], red)
+            stats.fail_count += 1
+        ts.write_string(stats.count, 3, '\n'.join(db[test]['Log']), text_format)
         if db[test]['Comments']:
-            ts.write_string(count, 4, db[test]['Comments'], text_format)
-        count += 1
+            ts.write_string(stats.count, 4, db[test]['Comments'], text_format)
+            stats.xfail_in_ctest += 1
+        stats.count += 1
+    return stats
 
 def get_test_results(filename):
     db = OrderedDictWithDict()
@@ -79,8 +91,26 @@ def get_test_results(filename):
             db[tc] = test_info
     return db
 
+def gen_summary(tb, tabname, results):
+    curr_row = results.count + 1
+    ts = tb.get_worksheet_by_name(tabname)
+    bold = tb.add_format({'bold': True})
+    ts.write_string(curr_row, 1, 'Test Summary', bold)
+    ts.write_string(curr_row + 1, 1, 'Total tests:')
+    ts.write_number(curr_row + 1, 2, results.count - 1)
+    ts.write_string(curr_row + 2, 1, 'Total pass:')
+    ts.write_number(curr_row + 2, 2, results.pass_count)
+    ts.write_string(curr_row + 3, 1, 'Total fail:')
+    ts.write_number(curr_row + 3, 2, results.fail_count)
+    ts.write_string(curr_row + 4, 1, 'Tests already xfailed in ctest:')
+    ts.write_number(curr_row + 4, 2, results.xfail_in_ctest)
+    if results.fail_count != results.xfail_in_ctest:
+        ts.write_string(curr_row + 5, 1, 'New test failures/Modified xfails:')
+        ts.write_number(curr_row + 5, 2, (results.fail_count - results.xfail_in_ctest))
+
 def ProcessLog(out_file, report, report_tab):
     tb = xlsxwriter.Workbook(report)
     data = get_test_results(out_file)
-    gen_report(tb, data, report_tab)
+    results = gen_report(tb, data, report_tab)
+    gen_summary(tb, report_tab, results)
     tb.close()
