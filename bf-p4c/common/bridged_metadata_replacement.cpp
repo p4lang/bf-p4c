@@ -1,3 +1,4 @@
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bridged_metadata_replacement.h"
 
 Visitor::profile_t CollectBridgedFields::init_apply(const IR::Node* root) {

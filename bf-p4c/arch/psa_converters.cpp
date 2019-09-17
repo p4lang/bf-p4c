@@ -1,3 +1,4 @@
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/psa_converters.h"
 #include "bf-p4c/arch/psa_program_structure.h"
 #include "bf-p4c/arch/program_structure.h"
