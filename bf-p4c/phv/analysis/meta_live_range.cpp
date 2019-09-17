@@ -113,18 +113,9 @@ void MetadataLiveRange::setFieldLiveMap(const PHV::Field* f) {
     // Set live range for every def of the field.
     for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
         const IR::BFN::Unit* def_unit = def.first;
-        // If the field is specified as pa_no_init, and it has an uninitialized read, we ignore the
-        // compiler-inserted parser initialization.
-        if (noInitFields.count(f) && defuse.hasUninitializedRead(f->id)) {
-            if (def_unit->is<IR::BFN::ParserState>()) {
-                LOG2("Ignoring def of field " << f << " with uninitialized read and def in "
-                     "parser state " << DBPrint::Brief << def_unit);
-                continue;
-            }
-        }
-        // If the field is not specified as pa_no_init and has a def in the parser:
         // If the definition is of type ImplicitParserInit, then it was added to account for
-        // uninitialized reads, and can be safely ignored.
+        // uninitialized reads, and can be safely ignored. Account for all other parser
+        // initializations, as long as the field is not marked notParsed.
         if (def_unit->is<IR::BFN::ParserState>() || def_unit->is<IR::BFN::Parser>()) {
             // If the def is an implicit read inserted only for metadata fields to account for
             // uninitialized reads, then ignore that initialization.
@@ -208,7 +199,7 @@ void MetadataLiveRange::end_apply() {
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
-        if (noInitFields.count(&f)) {
+        if (noInitFields.count(&f) && !noOverlay.count(&f)) {
             fieldsConsidered.insert(&f);
             continue;
         }
