@@ -226,7 +226,6 @@ class CharacterizePower: public MauInspector {
   bool display_power_budget_;
   bool disable_power_check_ = false;
   bool debug_info_ = false;
-  std::string logFileName_;
 
   // First tables in the relevant control flow.
   const IR::MAU::Table* ingress_root_;
@@ -236,6 +235,10 @@ class CharacterizePower: public MauInspector {
   std::stack<UniqueId> egress_worst_case_path_;
   double ingress_worst_power_ = 0.0;
   double egress_worst_power_ = 0.0;
+  // If this placement is more than device stages, no binary will
+  // be produced.  If that's the case, allow BFA and context.json to be
+  // created, so logs will be generated.
+  bool exceeds_stages_ = false;
 
   // map from UniqueId to Boolean indicating
   // if it will run at EOP.

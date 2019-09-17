@@ -166,6 +166,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-282/case1864.p4
@@ -239,11 +240,6 @@ p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   testdata/p4_16_samples/issue692-bmv2.p4
 )
-
-p4c_add_xfail_reason("tofino"
-  "error.*Power worst case estimated budget exceeded by*"
-  extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "error.*Field is extracted in the parser into multiple containers"
@@ -1138,7 +1134,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_1.p4
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_2.p4
   ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_3.p4
-  ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_4.p4 
+  ../glass/testsuite/p4_tests/noviflow/P4C-1984/p4c_1984_4.p4
   )
 
 p4c_add_xfail_reason("tofino"

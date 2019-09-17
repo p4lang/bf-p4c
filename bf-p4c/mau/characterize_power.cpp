@@ -185,7 +185,7 @@ void CharacterizePower::end_apply(const IR::Node *root) {
         std::ofstream myfile;
         auto logDir = BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->id);
         if (logDir) {
-          myfile.open(Util::PathName(logDir).join(logFileName_).toString());
+          myfile.open(Util::PathName(logDir).join("mau.power.log").toString());
           myfile << "+-----------------------------------------------------------+";
           myfile << std::endl;
           myfile << "|  Compiler version: " << BF_P4C_VERSION;
@@ -229,17 +229,18 @@ void CharacterizePower::end_apply(const IR::Node *root) {
           error_msg += "and/or splitting large tables may help.\n";
 
 #if BAREFOOT_INTERNAL
-          if (no_power_check_ || (disable_power_check_ && excess < (excess_threshold_ + eps))) {
+          if (exceeds_stages_ || no_power_check_ ||
+            (disable_power_check_ && excess < (excess_threshold_ + eps))) {
 #else
-          if (disable_power_check_ && excess < (excess_threshold_ + eps)) {
+          if (exceeds_stages_ || (disable_power_check_ && excess < (excess_threshold_ + eps))) {
 #endif
               std::string warn_msg = "Power check explicitly disabled.\n";
               warn_msg += "The generated binary can potentially cause the device to ";
               warn_msg += "exceed the published max power.\n";
               warn_msg += "Please make sure this profile is fully tested to confirm ";
               warn_msg += "system functionality under worst case conditions.\n";
-              WARNING(warn_msg);
-              WARNING(error_msg);
+              ::warning("%s", warn_msg);
+              ::warning("%s", error_msg);
           } else {
               ::error("%s", error_msg);
           }
@@ -248,7 +249,6 @@ void CharacterizePower::end_apply(const IR::Node *root) {
 
 bool CharacterizePower::preorder(const IR::BFN::Pipe *p) {
   LOG4("Working on pipe " << p->id);
-  logFileName_ = "mau.power_pipe" + std::to_string(p->id) + ".log";
   ingress_root_ = nullptr;
   egress_root_ = nullptr;
   gress_to_graph_.emplace(INGRESS, new SimpleTableGraph("ingress"));
@@ -257,7 +257,7 @@ bool CharacterizePower::preorder(const IR::BFN::Pipe *p) {
   return true;
 }
 
-void CharacterizePower::postorder(const IR::BFN::Pipe *) {
+void CharacterizePower::postorder(const IR::BFN::Pipe *p) {
   // Propagate shared memory accesses to tables that they were not attached to.
   add_unattached_memory_accesses();
 
@@ -293,6 +293,9 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *) {
       compute_stage_dependencies(pipe);  // must be called before compute latency
       if (display_power_budget_) {
         std::string fname = g->name_ + ".power.dot";
+        auto logDir = BFNContext::get().getOutputDirectory("graphs", p->id);
+        if (logDir)
+          fname = logDir + "/" + g->name_ + ".power.dot";
         g->to_dot(fname);
       }
 
@@ -425,6 +428,10 @@ bool CharacterizePower::preorder(const IR::MAU::Table *t) {
 void CharacterizePower::postorder(const IR::MAU::Table *t) {
     uint16_t logical_table_id = t->logical_id;
     uint16_t stage = getStage(logical_table_id, t->gress);
+    if ((logical_table_id / 16) >= Device::numStages()) {
+      exceeds_stages_ = true;
+      return;
+    }
     stage_to_tables_[stage].push_back(t);
     auto my_unique_id = t->unique_id();
     table_unique_id_to_gress_.emplace(my_unique_id, toString(t->gress));
@@ -1442,6 +1449,22 @@ cstring CharacterizePower::printLatency() {
               }
           }
       }
+
+      while (!egress_worst_case_path_.empty()) {
+        auto uniq_id = egress_worst_case_path_.top();
+        egress_worst_case_path_.pop();
+        if (table_unique_id_to_power_summary_.find(uniq_id) !=
+            table_unique_id_to_power_summary_.end()) {
+          auto pwr_summary = table_unique_id_to_power_summary_.at(uniq_id);
+          if (pwr_summary.weight > 0) {
+            if (pwr_summary.weight > 0) {
+              total_egress_weight += pwr_summary.weight;
+              local_egress_path.push_back(uniq_id);
+            }
+          }
+        }
+      }
+
       for (uint16_t st = Device::numStages(); st < (2 * Device::numStages()); ++st) {
           dep_t dep = stage_dependency_to_previous_.at(st);
           if (dep != DEP_MATCH) {
@@ -1465,21 +1488,6 @@ cstring CharacterizePower::printLatency() {
                   }
               }
           }
-      }
-
-      while (!egress_worst_case_path_.empty()) {
-        auto uniq_id = egress_worst_case_path_.top();
-        egress_worst_case_path_.pop();
-        if (table_unique_id_to_power_summary_.find(uniq_id) !=
-            table_unique_id_to_power_summary_.end()) {
-          auto pwr_summary = table_unique_id_to_power_summary_.at(uniq_id);
-          if (pwr_summary.weight > 0) {
-            if (pwr_summary.weight > 0) {
-              total_egress_weight += pwr_summary.weight;
-              local_egress_path.push_back(uniq_id);
-            }
-          }
-        }
       }
 
       /* ----------------------------------------
