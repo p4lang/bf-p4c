@@ -6,7 +6,6 @@ int MauBacktracker::numInvoked = 0;
 
 bool MauBacktracker::backtrack(trigger &trig) {
     if (trig.is<PHVTrigger::failure>()) {
-        tables.clear();
         auto t = dynamic_cast<PHVTrigger::failure *>(&trig);
         LOG1("Backtracking caught at MauBacktracker");
         // The OR operation ensures that live range analysis and metadata initialization, once
@@ -16,6 +15,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
         firstRoundFit |= t->firstRoundFit;
         // If we are directed to ignore pack conflicts, then do not note down the previous table
         // placement.
+        LOG4("Already existing tables size: " << tables.size());
         if (!ignorePackConflicts) {
             if (tables.size() > 0) {
                 // There exists already a table placement from a previous round without container
@@ -23,6 +23,7 @@ bool MauBacktracker::backtrack(trigger &trig) {
                 for (auto entry : tables)
                     prevRoundTables[entry.first] = entry.second;
             }
+            tables.clear();
             for (auto entry : t->tableAlloc) {
                 tables[entry.first] = entry.second;
                 for (int st : entry.second)
@@ -44,7 +45,10 @@ const IR::Node *MauBacktracker::apply_visitor(const IR::Node* root, const char *
     LOG1("  Should pack conflicts be ignored? " << (ignorePackConflicts ? "YES" : "NO"));
     ++numInvoked;
     overlay.clear();
+    LOG4("    Size of this round tables: " << tables.size());
+    LOG4("    Size of previous round tables: " << prevRoundTables.size());
     if (firstRoundFit) {
+        LOG4("  Clearing all logging");
         tables.clear();
         prevRoundTables.clear(); }
     if (LOGGING(4) && numInvoked != 1)
