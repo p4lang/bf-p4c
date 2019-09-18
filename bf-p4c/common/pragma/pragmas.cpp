@@ -823,7 +823,7 @@ const char *PragmaDisableDeparseZero::name = "pa_disable_deparse_0_optimization"
 const char *PragmaDisableDeparseZero::description = "To be documented";  // FIXME
 const char *PragmaDisableDeparseZero::help = "To be documented";
 
-const char *PragmaNotDeparsed::name = "pa_not_deparsed";
+const char *PragmaNotDeparsed::name = "not_deparsed";
 const char *PragmaNotDeparsed::description =
     "Specifies that the header instance should not be deparsed.";
 const char *PragmaNotDeparsed::help = "@pragma not_deparsed[a][b] [ingress/egress]\n"
@@ -839,7 +839,7 @@ const char *PragmaNotDeparsed::help = "@pragma not_deparsed[a][b] [ingress/egres
     "Note that PHV allocation also uses this to help shrink packet field "
     "liveness.";
 
-const char *PragmaNotParsed::name = "pa_not_parsed";
+const char *PragmaNotParsed::name = "not_parsed";
 const char *PragmaNotParsed::description =
     "Specifies that the header is not parsed.";
 const char *PragmaNotParsed::help = "@pragma not_parsed [ingress/egress]\n"

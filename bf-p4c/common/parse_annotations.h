@@ -115,8 +115,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaSolitary, PARSE_PAIR, StringLiteral, extPragma);
         // FIXME: is DisableDeparseZero internal?
         BFN_PARSE(PragmaDisableDeparseZero, PARSE_PAIR, StringLiteral, intPragma);
-        BFN_PARSE(PragmaNotDeparsed, PARSE_PAIR, StringLiteral, extPragma);
-        BFN_PARSE(PragmaNotParsed, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE(PragmaNotDeparsed, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaNotParsed, PARSE, StringLiteral, extPragma);
     }
 };
 
