@@ -189,8 +189,10 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     void fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
         ActionAnalysis::ActionParam::type_t type, cstring match_name,
         IR::MAU::MultiOperand *mo);
-    const IR::Expression *fill_out_hash_operand(ActionAnalysis::ContainerAction &cont_action);
-    const IR::Expression *fill_out_rand_operand(ActionAnalysis::ContainerAction &cont_action);
+    const IR::Expression *fill_out_hash_operand(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action);
+    const IR::Expression *fill_out_rand_operand(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action);
     const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:

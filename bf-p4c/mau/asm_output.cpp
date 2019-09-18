@@ -2058,15 +2058,21 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     void handle_hash_dist(const IR::Expression *expr) {
         int lo = -1; int hi = -1;
         const IR::MAU::HashDist *hd = nullptr;
+        bool is_wrapped = false;
         if (auto sl = expr->to<IR::Slice>()) {
             hd = sl->e0->to<IR::MAU::HashDist>();
             lo = sl->getL();
             hi = sl->getH();
+        } else if (auto wr_sl = expr->to<IR::MAU::WrappedSlice>()) {
+            hd = wr_sl->e0->to<IR::MAU::HashDist>();
+            lo = wr_sl->getL();
+            is_wrapped = true;
         } else {
             hd = expr->to<IR::MAU::HashDist>();
             lo = 0;
             hi = hd->type->width_bits() - 1;
         }
+
         BUG_CHECK(hd && !hd->units.empty(), "Hash Dist object %1% not correctly converted in "
                   "InstructionAdjustment", hd);
         out << sep << "hash_dist(";
@@ -2075,7 +2081,9 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             out << sep2 << unit;
             sep2 = ", ";
         }
-        out << sep2 << lo << ".." << hi;
+        out << sep2 << lo;
+        if (!is_wrapped)
+            out << ".." << hi;
         out << ")";
     }
 
@@ -2083,10 +2091,15 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
     void handle_random_number(const IR::Expression *expr) {
         int lo = -1;  int hi = -1;
         const IR::MAU::RandomNumber *rn = nullptr;
+        bool is_wrapped = false;
         if (auto sl = expr->to<IR::Slice>()) {
             rn = sl->e0->to<IR::MAU::RandomNumber>();
             lo = sl->getL();
             hi = sl->getH();
+        } else if (auto wr_sl = expr->to<IR::MAU::WrappedSlice>()) {
+            rn = wr_sl->e0->to<IR::MAU::RandomNumber>();
+            lo = wr_sl->getL();
+            is_wrapped = true;
         } else {
             rn = expr->to<IR::MAU::RandomNumber>();
             lo = 0;
@@ -2097,7 +2110,10 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                   "assembly");
         out << sep << "rng(";
         out << rn->rng_unit << ", ";
-        out << lo << ".." << hi << ")";
+        out << lo;
+        if (!is_wrapped)
+            out << ".." << hi;
+        out << ")";
         sep = ", ";
     }
 
@@ -2124,8 +2140,14 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
 
     bool preorder(const IR::MAU::WrappedSlice *sl) override {
         assert(sep);
-        auto mo = sl->e0->to<IR::MAU::MultiOperand>();
-        visit(mo);
+        if (auto mo = sl->e0->to<IR::MAU::MultiOperand>()) {
+            visit(mo);
+        } else if (sl->e0->is<IR::MAU::HashDist>()) {
+            handle_hash_dist(sl);
+            return false;
+        } else {
+            BUG("Only HashDist, RandomNumber, and MultiOperands can be wrapped");
+        }
         out << "(" << sl->getL() << ")";
         return false;
     }

@@ -723,10 +723,17 @@ bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAc
         return false;
 
     auto &adi = cont_action.adi;
+    int bits_seen = 0;
     safe_vector<le_bitrange> slot_bits_brs = alu_param->slot_bits_brs(container);
+
     for (auto slot_bits : slot_bits_brs) {
+        int write_hi = write_bits.hi - bits_seen;
+        int write_lo = write_hi - slot_bits.size() + 1;
+        le_bitrange mini_write_bits = { write_lo, write_hi };
+        bits_seen += slot_bits.size();
+
         if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-            adi.alignment.add_alignment(write_bits, slot_bits);
+            adi.alignment.add_alignment(mini_write_bits, slot_bits);
             cstring name = "$special";
             adi.initialize(name, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
             cont_action.counts[ActionParam::ACTIONDATA] = 1;
@@ -735,7 +742,7 @@ bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAc
             cont_action.counts[ActionParam::ACTIONDATA]++;
         } else {
             adi.field_affects++;
-            adi.alignment.add_alignment(write_bits, slot_bits);
+            adi.alignment.add_alignment(mini_write_bits, slot_bits);
         }
         adi.specialities.setbit(read.speciality);
     }

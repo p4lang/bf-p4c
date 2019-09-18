@@ -500,8 +500,8 @@ const IR::Constant *MergeInstructions::find_field_action_constant(
  * immed_lo/immed_hi to use, as well as the input_xbar alloc, in order to understand which
  * unit coordinates to hash_dist lo/hash_dist hi
  */
-const IR::Expression *
-        MergeInstructions::fill_out_hash_operand(ActionAnalysis::ContainerAction &cont_action) {
+const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action) {
     auto tbl = findContext<IR::MAU::Table>();
     auto &adi = cont_action.adi;
     BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST) &&
@@ -509,18 +509,16 @@ const IR::Expression *
               "Can only create hash dist from hash dist associated objects");
 
     bitvec op_bits_used_bv = adi.alignment.read_bits();
-    BUG_CHECK(op_bits_used_bv.is_contiguous(), "Hash Dist cannot be discontiguous in an action");
-    le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
-    le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
+    bitvec immed_bits_used_bv = op_bits_used_bv << (adi.start * 8);
 
     // Find out which sections of immediate sections and then coordinate to these to the
     // hash dist sections
     bitvec hash_dist_units_used;
     for (int i = 0; i < 2; i++) {
-        le_bitrange immed_range = { i * IXBar::HASH_DIST_BITS, (i+1) * IXBar::HASH_DIST_BITS - 1 };
-        if (immed_range.overlaps(immed_bits_used))
+        if (!immed_bits_used_bv.getslice(i * IXBar::HASH_DIST_BITS, IXBar::HASH_DIST_BITS).empty())
             hash_dist_units_used.setbit(i);
     }
+
     BUG_CHECK(!hash_dist_units_used.empty(), "Hash Dist in %s has no allocation", cont_action);
 
     IR::Vector<IR::Expression> hash_dist_parts;
@@ -541,8 +539,18 @@ const IR::Expression *
         hd->units.push_back(tbl_hash_dists.at(bit));
     }
 
+    int wrapped_lo = 0;  int wrapped_hi = 0;
+    // Wrapping the slice in the function outside
+    if (adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+        return hd;
+    }
+
+    BUG_CHECK(immed_bits_used_bv.is_contiguous(), "Hash Dist object must be contiguous, if it "
+          "not a Wrapped Sliced");
     // If a single hash dist object is used, only the 16 bit slices are necessary, so start
     // at the first position
+    le_bitrange immed_bits_used = { immed_bits_used_bv.min().index(),
+                                    immed_bits_used_bv.max().index() };
     int hash_dist_bits_shift = (immed_bits_used.lo / IXBar::HASH_DIST_BITS);
     hash_dist_bits_shift *= IXBar::HASH_DIST_BITS;
     le_bitrange hash_dist_bits_used = immed_bits_used.shiftedByBits(-1 * hash_dist_bits_shift);
@@ -554,21 +562,30 @@ const IR::Expression *
  * The RNG_unit is assigned in this particular function (coordinated through ActionAnalysis)
  * and the rng allocation in the action data bus
  */
-const IR::Expression *
-         MergeInstructions::fill_out_rand_operand(ActionAnalysis::ContainerAction &cont_action) {
+const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action) {
     auto tbl = findContext<IR::MAU::Table>();
     auto &adi = cont_action.adi;
     BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM) &&
               adi.specialities.popcount() == 1,
               "Can only create random number from random number associated objects");
-    bitvec op_bits_used_bv = adi.alignment.read_bits();
-    le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
-    le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
 
     int unit = tbl->resources->rng_unit();
     auto *rn = new IR::MAU::RandomNumber(tbl->srcInfo,
                                           IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
                                           "hw_rng");
+
+    int wrapped_lo = 0;  int wrapped_hi = 0;
+    // Wrapping the slice in the function outside
+    if (adi.alignment.is_wrapped_shift(container, &wrapped_lo, &wrapped_hi)) {
+        return rn;
+    }
+
+    bitvec op_bits_used_bv = adi.alignment.read_bits();
+    BUG_CHECK(op_bits_used_bv.is_contiguous(), "Random Number must be contiguous if it is not a "
+        "wrapped slice");
+    le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
+    le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
     rn->rng_unit = unit;
     return MakeSlice(rn, immed_bits_used.lo, immed_bits_used.hi);
 }
@@ -646,10 +663,10 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
     IR::Vector<IR::Expression> components;
     auto &adi = cont_action.adi;
     if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
-        *src1_p = fill_out_hash_operand(cont_action);
+        *src1_p = fill_out_hash_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
     } else if (adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM)) {
-        *src1_p = fill_out_rand_operand(cont_action);
+        *src1_p = fill_out_rand_operand(container, cont_action);
         src1_writebits = adi.alignment.write_bits();
     } else if (cont_action.ad_renamed()) {
         auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);

@@ -1560,6 +1560,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-262/case1804.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "No state named .* in .* parser"
+  extensions/p4_tests/p4_16/compile_only/p4c-2153.p4
+)
+
 # P4C-923
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices|./p4c TIMEOUT"
