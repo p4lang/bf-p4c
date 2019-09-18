@@ -271,6 +271,26 @@ class ExcludeMAUOverlays : public MauInspector {
     explicit ExcludeMAUOverlays(PhvInfo& p, const FindAddedHeaderFields& a)
         : phv(p), addedFields(a) { }
 };
+
+/** Prevent overlaying of all fields that are emitted depending on the same POV bit.
+  */
+class ExcludeDeparserOverlays : public Inspector {
+ private:
+    PhvInfo&                        phv;
+    ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> povToFieldsMap;
+
+    profile_t init_apply(const IR::Node* root) override {
+        povToFieldsMap.clear();
+        return Inspector::init_apply(root);
+    }
+
+    bool preorder(const IR::BFN::EmitField* emit) override;
+    void end_apply() override;
+
+ public:
+    explicit ExcludeDeparserOverlays(PhvInfo& p) : phv(p) { }
+};
+
 /** Checksum is calculated only when the checksum destination field is valid.
  * So we need to make sure that the fields included in checksum should  not overlap any other
  * live fields when checksum destination is live. We do this my giving all the checksum fields
@@ -324,6 +344,7 @@ class MutexOverlay : public PassManager {
             new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),
             Device::currentDevice() == Device::TOFINO ? new ExcludeCsumOverlays(phv) : nullptr,
             new ExcludeMAUOverlays(phv, addedFields),
+            new ExcludeDeparserOverlays(phv),
             new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())
         });
     }

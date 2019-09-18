@@ -231,6 +231,26 @@ bool ExcludeCsumOverlays::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
     return false;
 }
 
+bool ExcludeDeparserOverlays::preorder(const IR::BFN::EmitField* emit) {
+    const auto* source = phv.field(emit->source->field);
+    const auto* pov = phv.field(emit->povBit->field);
+    povToFieldsMap[pov].insert(source);
+    return true;
+}
+
+void ExcludeDeparserOverlays::end_apply() {
+    for (const auto& kv : povToFieldsMap) {
+        LOG3("\t  Marking fields emitted based on POV field: " << kv.first->name);
+        for (const auto* f1 : kv.second) {
+            for (const auto* f2 : kv.second) {
+                if (f1 == f2) continue;
+                phv.removeFieldMutex(f1, f2);
+                LOG3("\t\t" << f1->name << ", " << f2->name);
+            }
+        }
+    }
+}
+
 Visitor::profile_t MarkMutexPragmaFields::init_apply(const IR::Node* root) {
     // Mark fields specified by pa_mutually_exclusive pragmas
     const ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>>& parsedPragma =
