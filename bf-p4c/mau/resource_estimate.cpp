@@ -799,13 +799,19 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
             LOG2("    adjust_choices: no more layouts after removing hash_action");
             return false; }
     } else if (layout_options[preferred_index].previously_widened) {
-        LOG2("    adjust_choices: previously_widened");
-        return false;
+        layout_options.erase(layout_options.begin() + preferred_index);
+        LOG2("    adjust_choices: previously_widened.  Erasing");
     } else {
         layout_options[preferred_index].way.width++;
         layout_options[preferred_index].previously_widened = true;
         LOG2("    adjust_choices: widen the exact match way");
     }
+
+    if (layout_options.size() == 0) {
+        LOG2("    adjust_choices: no more layout choices as all have been widened");
+        return false;
+    }
+
 
     for (auto &lo : layout_options) {
         lo.clear_mems();
