@@ -142,8 +142,10 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
-  "Ran out of parser match registers"
+  "error: Parser match .* too large, Tofino only supports 32 bits"
+  testdata/p4_14_samples/source_routing.p4
   testdata/p4_16_samples/issue995-bmv2.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -415,7 +417,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_14_samples/source_routing.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
 
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
@@ -1106,9 +1107,8 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
-  "Ran out of parser match registers"
+  "error: Parser match .* too large, Tofino only supports 32 bits"
   ../glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
   testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   )
 

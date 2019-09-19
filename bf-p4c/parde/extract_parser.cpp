@@ -1369,7 +1369,10 @@ GetBackendParser::convertBody(IR::BFN::ParserState* state) {
         nw_bitrange bitrange;
         state->selects.pushBackOrAppend(rewriteSelectExpr(selectExpr, bitShift, bitrange));
         matchSize += selectExpr->type->width_bits();
-    }
+        if (matchSize > 32) {
+            error(ErrorType::ERR_OVERLIMIT,
+                  "Parser match %1% too large, Tofino only supports 32 bits", selectExpr);
+            break; } }
 
     // Generate the outgoing transitions.
     for (auto selectCase : selectCases) {
