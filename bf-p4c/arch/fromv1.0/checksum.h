@@ -387,8 +387,8 @@ class InsertParserChecksums : public Inspector {
                 decl = parserResidualChecksumDecls->at(rc);
             }
             const IR::Expression* constant = nullptr;
-            std::vector<const IR::Expression*> exprList;
             for (auto extract : extracts) {
+                std::vector<const IR::Expression*> exprList;
                 for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                     if (f->is<IR::Constant>()) {
                         constant = f;
