@@ -106,67 +106,67 @@ set (SWITCH_P4_16_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/switch_16)
 set (SWITCH_P4_16_INC ${SWITCH_P4_16_ROOT}/p4src/shared)
 set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 
-set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch.p4)
+set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x0.p4)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 
-set (SWITCH_P4_16_A0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_a0.p4)
-file (RELATIVE_PATH switch_p4_16_a0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_A0})
+set (SWITCH_P4_16_X1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x1.p4)
+file (RELATIVE_PATH switch_p4_16_x1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X1})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_a0_profile" ${switch_p4_16_a0} "${testExtraArgs}" "-DA0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_a0_profile")
+  "smoketest_switch_16_compile_x1_profile" ${switch_p4_16_x1} "${testExtraArgs}" "-DX1_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x1_profile")
 
-set (SWITCH_P4_16_B0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_b0.p4)
-file (RELATIVE_PATH switch_p4_16_b0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_B0})
+set (SWITCH_P4_16_X2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x2.p4)
+file (RELATIVE_PATH switch_p4_16_x2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X2})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_b0_profile" ${switch_p4_16_b0} "${testExtraArgs}" "-DB0_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_b0_profile")
+  "smoketest_switch_16_compile_x2_profile" ${switch_p4_16_x2} "${testExtraArgs}" "-DX2_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x2_profile")
 
-set (SWITCH_P4_16_L0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_profile_l0.p4)
-file (RELATIVE_PATH switch_p4_16_l0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_L0})
+set (SWITCH_P4_16_X3 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x3.p4)
+file (RELATIVE_PATH switch_p4_16_x3 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X3})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16_l0} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
-p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_l0_profile")
+  "smoketest_switch_16_compile_x3_profile" ${switch_p4_16_x3} "${testExtraArgs}" "-DX3_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
 
 # We cannot run some tests in our environment as some interfaces referenced in the port
 # mapping file specified for bf-switch don't exist.
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_a0" ${SWITCH_P4_16}
-    "${testExtraArgs} -arch tna -bfrt -profile a0_tofino -to 3600" ${SWITCH_P4_16_PTF})
-  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_a0"
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x1" ${SWITCH_P4_16_X1}
+    "${testExtraArgs} -arch tna -bfrt -profile x1_tofino -to 3600" ${SWITCH_P4_16_PTF})
+  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x1"
          "all
          ^switch_tests.L3SVITest
          ^switch_tests.L2LagTest")
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_b0" ${SWITCH_P4_16}
-    "${testExtraArgs} -arch tna -bfrt -profile b0_tofino -to 3600" ${SWITCH_P4_16_PTF})
-  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_b0"
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x2" ${SWITCH_P4_16_X2}
+    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 3600" ${SWITCH_P4_16_PTF})
+  bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
          "all
          ^switch_tests.L3SVITest
          ^switch_tests.L2LagTest")
-  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_t0" ${SWITCH_P4_16}
-   "${testExtraArgs} -arch tna -bfrt -profile t0_tofino -to 3600" ${SWITCH_P4_16_PTF})
- bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_t0"
+  p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x0" ${SWITCH_P4_16}
+   "${testExtraArgs} -arch tna -bfrt -profile x0_tofino -to 3600" ${SWITCH_P4_16_PTF})
+ bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x0"
          "all
          ^switch_tests.L3SVITest
          ^switch_tests.L2LagTest")
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
 set_tests_properties(
-  "tofino/smoketest_switch_16_Tests_a0"
-  "tofino/smoketest_switch_16_Tests_b0"
-  "tofino/smoketest_switch_16_Tests_t0"
+  "tofino/smoketest_switch_16_Tests_x1"
+  "tofino/smoketest_switch_16_Tests_x2"
+  "tofino/smoketest_switch_16_Tests_x0"
   PROPERTIES DEPENDS "tofino/smoketest_switch_16_compile"
   )
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
-set_tests_properties("tofino/smoketest_switch_16_compile_a0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_b0_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_x1_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_Tests_a0" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_Tests_b0" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_Tests_t0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}
