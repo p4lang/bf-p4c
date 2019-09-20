@@ -316,6 +316,8 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
+        } else if (kv.key == "context_json") {
+            setup_context_json(kv.value);
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column"
                    || kv.key == "word") {
             /* already done in setup_layout */

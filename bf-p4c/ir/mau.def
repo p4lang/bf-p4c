@@ -641,9 +641,13 @@ class Instruction : Primitive {
 }
 
 /// The IR::MAU::Action argument.
-class ActionArg : Expression {
+class ActionArg : Expression, IAnnotated {
     cstring     action_name;
     ID          name;
+    optional Annotations        annotations = Annotations::empty;
+
+    Annotations getAnnotations() const override { return annotations; }
+
     ActionArg { if (!srcInfo) srcInfo = name.srcInfo; }
     dbprint { out << action_name << ':' << name; }
     toString { return name.toString(); }
@@ -674,7 +678,7 @@ abstract VLIWInstruction {
 
 /// The Action part of an action table -- basically a single VLIW instruction, which is a
 /// set of instructions on different PHV containers that all run simultaneously
-class Action : VLIWInstruction {
+class Action : VLIWInstruction, IAnnotated {
     optional ID                 name;
     unsigned                    handle = 0;
     inline Vector<Primitive>    action = {};
@@ -704,6 +708,8 @@ class Action : VLIWInstruction {
     cstring externalName() const;
     bool hit_only() const { return default_allowed == false; }
     bool miss_only() const { return miss_action_only == true; }
+
+    Annotations getAnnotations() const override { return annotations; }
 
     toString { return name.toString(); }
     validate {

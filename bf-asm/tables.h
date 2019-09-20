@@ -83,6 +83,7 @@ protected:
     virtual void setup(VECTOR(pair_t) &data) = 0;
     virtual void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type);
     virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
+    void setup_context_json(value_t &);
     void setup_layout(std::vector<Layout> &, const VECTOR(pair_t) &data, const char *subname = "");
     int setup_layout_attrib(std::vector<Layout> &, const value_t &data,
                             const char *what, int Layout::*attr);
@@ -393,6 +394,7 @@ public:
         bool defaulted;
         bool is_valid;
         std::string type;
+        std::unique_ptr<json::map> context_json;
         p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",std::string v = "", bool d = false, bool i = false, unsigned s = 0) :
             name(n), start_bit(s), position(p), bit_width(bw), bit_width_full(bwf), default_value(v), defaulted(d), is_valid(i), type(t) {}
     };
@@ -438,6 +440,7 @@ public:
             // assembly order.
             int                                 position_in_assembly = -1;
             bool                                minmax_use = false;  // jbay sful min/max
+            std::unique_ptr<json::map>          context_json;
             Action(Table *, Actions *, pair_t &, int);
             enum mod_cond_loc_t { MC_ADT, MC_IMMED };
             void setup_mod_cond_values(value_t &map);

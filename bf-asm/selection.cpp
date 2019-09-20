@@ -54,6 +54,8 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
             push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
             push_back(p4_info, "handle", std::move(kv.value));
+        } else if (kv.key == "context_json") {
+            setup_context_json(kv.value);
         } else if (kv.key == "row" || kv.key == "logical_row" ||
                    kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */

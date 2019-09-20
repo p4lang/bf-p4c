@@ -173,6 +173,8 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                         error(lb.key.lineno, "Duplicate long branch tag %" PRIi64, lb.key.i);
                     else
                         long_branch.emplace(lb.key.i, lb.value); } }
+        } else if (kv.key == "context_json") {
+            setup_context_json(kv.value);
         } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||
                    (kv.key.type == tVEC && range_match != NONE))
         {

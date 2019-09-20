@@ -465,6 +465,11 @@ public:
         for (auto &e: *this)
             m->emplace(e.first ? e.first->clone().release() : nullptr, clone_ptr(e.second));
         return std::unique_ptr<map>(m); }
+
+    /// Merges the given map into this one and returns this map. For any key collisions, if both
+    /// have a map, then they are merged recursively; if both have a vector, then the one in the
+    /// given map is appended to the one in this map; otherwise, the entry in the given map
+    /// replaces the entry in this one.
     map &merge(const map &a);
 };
 

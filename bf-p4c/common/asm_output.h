@@ -155,6 +155,14 @@ template<class VEC>
 emit_vector_formatter<VEC> emit_vector(const VEC &v, const char *sep = ", ") {
     return emit_vector_formatter<VEC>{v, sep}; }
 
+bool has_user_annotation(const IR::IAnnotated* node);
+
+/// Formats BFA for a user annotation to be ultimately included in context.json.
+void emit_user_annotation_context_json(std::ostream &out,
+                                       indent_t indent,
+                                       const IR::IAnnotated* node,
+                                       bool emit_dash = false);
+
 template<class T> inline auto operator<<(std::ostream &out, const T &obj) ->
         decltype((void)obj.print(out), out)
 { obj.print(out); return out; }

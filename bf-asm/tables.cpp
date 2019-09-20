@@ -550,14 +550,23 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                 if ((CHECKTYPE(v.key, tSTR)) && (CHECKTYPE(v.value, tMAP))) {
                     p4_param p(v.key.s);
                     for (auto &w : v.value.map) {
-                        if (CHECKTYPE(w.key, tSTR) && CHECKTYPE2(w.value, tSTR, tINT)) {
-                            if (w.key == "type") p.type = w.value.s;
-                            else if (w.key == "size") p.bit_width = w.value.i;
-                            else if (w.key == "full_size") p.bit_width_full = w.value.i;
-                            else if (w.key == "alias") p.alias = w.value.s;
-                            else if (w.key == "key_name") p.key_name = w.value.s;
-                            else if (w.key == "start_bit") p.start_bit = w.value.i;
-                            else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
+                        if (!CHECKTYPE(w.key, tSTR)) continue;
+
+                        if (w.key == "type" && CHECKTYPE(w.value, tSTR))
+                            p.type = w.value.s;
+                        else if (w.key == "size" && CHECKTYPE(w.value, tINT))
+                            p.bit_width = w.value.i;
+                        else if (w.key == "full_size" && CHECKTYPE(w.value, tINT))
+                            p.bit_width_full = w.value.i;
+                        else if (w.key == "alias" && CHECKTYPE(w.value, tSTR))
+                            p.alias = w.value.s;
+                        else if (w.key == "key_name" && CHECKTYPE(w.value, tSTR))
+                            p.key_name = w.value.s;
+                        else if (w.key == "start_bit" && CHECKTYPE(w.value, tINT))
+                            p.start_bit = w.value.i;
+                        else if (w.key == "context_json" && CHECKTYPE(w.value, tMAP))
+                            p.context_json = toJson(w.value.map);
+                        else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); }
                     // Determine position in p4_param_order. Repeated fields get
                     // the same position which is set on first occurrence.
                     // Driver relies on position to order fields. The case when
@@ -573,13 +582,22 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             p.position = pp.position;
                             break; } }
                     if (!ppFound) p.position = position++;
-                    p4_params_list.emplace_back(p); } } }
+                    p4_params_list.emplace_back(std::move(p)); } } }
     } else if (kv.key == "context_json") {
-        if (CHECKTYPE(kv.value, tMAP))
-            context_json = toJson(kv.value.map);
+        setup_context_json(kv.value);
     } else
         return false;
     return true;
+}
+
+void Table::setup_context_json(value_t &v) {
+    if (!CHECKTYPE(v, tMAP)) return;
+
+    auto map = toJson(v.map);
+    if (context_json)
+        context_json->merge(*map);
+    else
+        context_json = std::move(map);
 }
 
 /** check two tables to see if they can share ram.
@@ -1201,11 +1219,31 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
             for (auto &a : i.map)
                 if (CHECKTYPE(a.key, tSTR)) {
                     if (a.key == "p4_param_order") {
-                        if CHECKTYPE(a.value, tMAP) {
-                            unsigned position = 0;
-                            for (auto &p : a.value.map) {
-                                if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tINT))
-                                    p4_params_list.emplace_back(p.key.s, position++, p.value.i); } }
+                        if (!CHECKTYPE(a.value, tMAP)) continue;
+
+                        unsigned position = 0;
+                        for (auto &v : a.value.map) {
+                            if (!(CHECKTYPE(v.key, tSTR) && CHECKTYPE2(v.value, tINT, tMAP)))
+                                continue;
+
+                            if (v.value.type == tINT) {
+                                p4_params_list.emplace_back(v.key.s, position++, v.value.i);
+                            } else {
+                                p4_param p(v.key.s, position++);
+                                for (auto &w : v.value.map) {
+                                    if (!CHECKTYPE(w.key, tSTR)) continue;
+                                    if (w.key == "width" && CHECKTYPE(w.value, tINT))
+                                        p.bit_width = w.value.i;
+                                    else if (w.key == "context_json" && CHECKTYPE(w.value, tMAP))
+                                        p.context_json = toJson(w.value.map);
+                                    else
+                                      error(lineno, "Incorrect param type %s in p4_param_order",
+                                            w.key.s);
+                                }
+
+                                p4_params_list.emplace_back(std::move(p));
+                            }
+                        }
                     } else if (a.key == "default_action" || a.key == "default_only_action") {
                         if CHECKTYPE(a.value, tMAP) {
                             for (auto &p : a.value.map) {
@@ -1231,6 +1269,10 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                     } else if (a.key == "mod_cond_value") {
                         if (CHECKTYPE(a.value, tMAP)) {
                             setup_mod_cond_values(a.value);
+                        }
+                    } else if (a.key == "context_json") {
+                        if (CHECKTYPE(a.value, tMAP)) {
+                            context_json = toJson(a.value.map);
                         }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
@@ -1841,6 +1883,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         for (auto &att : act.attached)
             gen_override(action_cfg, att);
         action_cfg["is_action_meter_color_aware"] = act.is_color_aware();
+        if (act.context_json) action_cfg.merge(*act.context_json.get());
         if (!act_json_present)
             actions_cfg.push_back(std::move(action_cfg));
     }
@@ -1875,6 +1918,8 @@ void Table::Actions::Action::add_p4_params(json::vector &cfg, bool include_defau
         if (include_default && a.defaulted)
             param["default_value"] = a.default_value;
         param["bit_width"] = a.bit_width;
+        if (a.context_json)
+            param.merge(*a.context_json.get());
         cfg.push_back(std::move(param));
         start_bit += a.bit_width;
     }
@@ -2188,7 +2233,9 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
 }
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) const {
-    return p4_table->base_tbl_cfg(out, size, this);
+    auto tbl = p4_table->base_tbl_cfg(out, size, this);
+    if (context_json) add_json_node_to_table(*tbl, "user_annotations");
+    return tbl;
 }
 
 json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const {
@@ -2648,6 +2695,7 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             param["field_name"] = fieldname;
             if (!p.alias.empty())
                 param["alias"] = p.alias;
+            if (p.context_json) param.merge(*p.context_json.get());
             params.push_back(std::move(param));
             if (p.type == "range")
                 tbl["uses_range"] = true; } }

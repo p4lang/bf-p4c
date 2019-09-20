@@ -15,7 +15,9 @@ namespace BFN {
     Pragma::registerPragma(p, internal);                                                     \
     }
 
-// wrapper for PARSE_EMPTY, PARSE_EXPRESSION_LIST, and PARSE_SKIP
+// wrapper for PARSE_EMPTY, PARSE_CONSTANT_OR_STRING_LITERAL, PARSE_EXPRESSION_LIST,
+// PARSE_CONSTANT_LIST, PARSE_CONSTANT_OR_STRING_LITERAL_LIST, PARSE_STRING_LITERAL_LIST and
+// PARSE_SKIP
 #define BFN_PARSE_EMPTY(pragmaClass, parse, internal) {                                      \
     auto p = new Pragma(pragmaClass::name, pragmaClass::description, pragmaClass::help);     \
     std::pair<cstring, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name);          \
@@ -95,6 +97,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
 
         BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it
         BFN_PARSE(PragmaUseHashAction, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaUserAnnotation, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaWays, PARSE, Expression, extPragma);
 
         BFN_PARSE(PragmaRed,    PARSE, Expression, intPragma);

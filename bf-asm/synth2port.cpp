@@ -29,6 +29,8 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
             p4_table = P4Table::get(p4type, kv.value.map);
+    } else if (kv.key == "context_json") {
+        setup_context_json(kv.value);
     } else if (kv.key == "format" || kv.key == "row" || kv.key == "logical_row" ||
                kv.key == "column" || kv.key == "bus") {
         /* already done in setup_layout */

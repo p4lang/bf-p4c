@@ -21,6 +21,8 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
                       value_desc(kv.value));
         } else if (kv.key == "per_flow_enable") {
             per_flow_enable = get_bool(kv.value);
+        } else if (kv.key == "context_json") {
+            setup_context_json(kv.value);
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else

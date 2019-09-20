@@ -1916,15 +1916,34 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
 
     void action_context_json(const IR::MAU::Action *act) {
         if (act->args.size() > 0) {
-            size_t list_index = 0;
-            out << indent << "- p4_param_order: { ";
+            // Use the more verbose, multiline format if we have user annotations.
+            bool verbose = false;
+            for (auto arg : act->args)
+                verbose |= has_user_annotation(arg);
+
+            out << indent++ << "- p4_param_order:";
+            if (verbose) out << std::endl;
+            else
+              out << " { ";
+
+            bool first = true;
             for (auto arg : act->args) {
-                out << arg->name << ": ";
-                out << arg->type->width_bits();
-                if (list_index != act->args.size() - 1)
-                    out << ", ";
-                list_index++; }
-            out << " }" << std::endl; }
+                if (verbose) {
+                    out << indent++ << arg->name << ":" << std::endl;
+                    out << indent << "width: " << arg->type->width_bits() << std::endl;
+                    emit_user_annotation_context_json(out, indent, arg);
+                    indent--;
+                } else {
+                    if (!first) out << ", ";
+                    out << arg->name << ": " << arg->type->width_bits();
+                }
+
+                first = false;
+            }
+
+            if (!verbose) out << " }" << std::endl;
+            indent--;
+        }
     }
     bool preorder(const IR::MAU::Action *act) override {
         for (auto call : act->stateful_calls) {
@@ -1950,6 +1969,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         next_table(act, vliw_instr.mem_code);
         mod_cond_value(act);
         is_empty = true;
+        emit_user_annotation_context_json(out, indent, act, true);
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
             is_empty = false;
@@ -2693,8 +2713,23 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         if (slices.empty())
             slices[0] = full_size;
 
+        // Whether the BFA output for this match component will be split across multiple lines.
+        // This results in code that is more complex, but maintains compactness and readability of
+        // the BFA for the common case when we don't have user annotations.
+        bool multiline = has_user_annotation(ixbar_read);
+        auto item_sep = [&](std::ostream &out) -> std::ostream & {
+            if (multiline) out << std::endl << indent;
+            else
+                out << ", ";
+            return out;
+        };
+
         for (auto sl : slices) {
-            out << indent << canon_name(name) << ": ";
+            out << indent++ << canon_name(name) << ":";
+            if (multiline) out << std::endl << indent;
+            else
+              out << " { ";
+
             // 'atcam_partition_index' match type is synonym to 'exact' match
             // from the context.json's perspective.  It carries one more bit of
             // information about which field is used as the
@@ -2702,12 +2737,12 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             // low-level driver via the 'partition_field_name' attribute under
             // the algorithm tcam node. As a result, we print
             // 'atcam_partition_index' as 'exact' here.
-            if (ixbar_read->match_type.name == "atcam_partition_index") {
-                out << "{ type: " << "exact" << ", ";
-            } else {
-                out << "{ type: " << ixbar_read->match_type.name << ", ";
-            }
-            out << "size: " << sl.second << ", ";
+            auto match_type = ixbar_read->match_type.name;
+            if (match_type == "atcam_partition_index") match_type = "exact";
+            out << "type: " << match_type << item_sep;
+
+            out << "size: " << sl.second << item_sep;
+
             // Slices are used in keys (only) in p4-16, while masks are used
             // (only) in p4-14. For BF-RT, we consider a slice with an
             // annotation  as a separate field and set the size and full_size to
@@ -2723,10 +2758,13 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             // }
             out << "full_size: " << full_size;
             if (setKeyName)
-                out << ", key_name: \"" << canon_name(annName) << "\"";
+                out << item_sep << "key_name: \"" << canon_name(annName) << "\"";
             if (start_bit > 0)
-                out << ", start_bit: " << start_bit;
-            out << " }" << std::endl;
+                out << item_sep << "start_bit: " << start_bit;
+            if (multiline) out << std::endl;
+            emit_user_annotation_context_json(out, indent, ixbar_read);
+            if (!multiline) out << " }" << std::endl;
+            indent--;
         }
 
         p4_param_index++;
@@ -3047,6 +3085,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             emit_atcam_match(out, indent, tbl);
     }
     emit_indirect_res_context_json(out, indent, tbl);
+    emit_user_annotation_context_json(out, indent, tbl->match_table);
 
     NextTableSet next_hit;
     NextTableSet gw_miss;
@@ -3536,6 +3575,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
             out << indent << "- { threshold: " << counter->threshold <<
                  ", interval: " << counter->interval << " }" << std::endl; }
     }
+    emit_user_annotation_context_json(out, indent, counter);
     return false;
 }
 

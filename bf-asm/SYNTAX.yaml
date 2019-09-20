@@ -279,6 +279,9 @@ stage <constant> <thread>:
             [- next_table: <int> | <name> ]
                # the next table to run when the entry misses with this action
             [- next_table_miss: <name> ]
+            [- context_json: ... ]
+                # any keys/vector/values here are converted to json and output
+                # into the context.json info for this action verbatim
             - <instruction> <operands>
         selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
             # selection table to use
@@ -323,8 +326,15 @@ stage <constant> <thread>:
             # order of match params as seen in p4 program
             # PD generated has same order and needs to match context
             # json output
-            <name>: { type: <table-type>, size: <int> } ...
+            <name>:
                 # param names with their types and size info
+                type: <table-type>
+                size: <int>
+                ...
+                context_json:
+                    # any keys/vector/values here are converted to json and
+                    # output into the context.json info for this match param
+                    # verbatim
         context_json:
             # any keys/vector/values here are converted to json and output into
             # the context.json info for this table verbatim
@@ -582,6 +592,12 @@ stage <constant> <thread>:
                     # defines a name as an alias for (a slice of) something else
             [- p4_param_order: '{' param_name : <int>, ... '}' ]
                 # Param order specifying param name and width for context json (p4_parameters)
+            [- p4_param_order:
+                param_name:
+                    width: <int>
+                    context_json: #anything
+              ... ]
+                # Alternative syntax for specifying param order when attaching context_json
             [- default_action: '{' allowed: true|false, reason: <string> '}' ]
             - <instruction> <operands>
         p4: # information about P4 level tables and control plane API

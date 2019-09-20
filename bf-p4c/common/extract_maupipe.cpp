@@ -302,7 +302,11 @@ static const IR::MAU::Action *createActionFunction(const IR::P4Action *ac,
     for (auto param : *ac->parameters->getEnumerator()) {
         if ((param->direction == IR::Direction::None) ||
             ((!args || arg_idx >= args->size()) && param->direction == IR::Direction::In)) {
-            auto arg = new IR::MAU::ActionArg(param->srcInfo, param->type, rv->name, param->name);
+            auto arg = new IR::MAU::ActionArg(param->srcInfo,
+                                              param->type,
+                                              rv->name,
+                                              param->name,
+                                              param->getAnnotations());
             aas.add_arg(arg);
             rv->args.push_back(arg);
         } else {
@@ -1311,19 +1315,20 @@ class GetBackendTables : public MauInspector {
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
-                          int p4_param_order, boost::optional<cstring> ann,
+                          int p4_param_order, const IR::Annotations *annotations,
                           boost::optional<cstring> partition_index) {
+        boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
+        if (auto nameAnn = annotations->getSingle(IR::Annotation::nameAnnotation))
+            name_annotation = IR::Annotation::getName(nameAnn);
+
         auto slices = convertMaskToSlices(mask);
         for (auto slice : slices) {
             auto ixbar_read = new IR::MAU::TableKey(slice, match_id);
             ixbar_read->from_mask = true;
             if (ixbar_read->for_match())
                 ixbar_read->p4_param_order = p4_param_order;
-            if (ann) {
-                ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
-                   IR::Annotation::nameAnnotation,
-                   new IR::StringLiteral(*ann)); }
-            if (partition_index && ann && (*partition_index == *ann))
+            ixbar_read->annotations = annotations;
+            if (partition_index && name_annotation && (*partition_index == *name_annotation))
                 ixbar_read->partition_index = true;
             tt->match_key.push_back(ixbar_read);
         }
@@ -1343,11 +1348,6 @@ class GetBackendTables : public MauInspector {
             partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
 
         for (auto key_elem : key->keyElements) {
-            // Get name annotation, if present.
-            boost::optional<cstring> ann = boost::make_optional(false, cstring());
-            if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
-                ann = IR::Annotation::getName(nameAnn);
-
             auto key_expr = key_elem->expression;
             IR::ID match_id(key_elem->matchType->srcInfo, key_elem->matchType->path->name);
             if (auto *b_and = key_expr->to<IR::BAnd>()) {
@@ -1361,24 +1361,28 @@ class GetBackendTables : public MauInspector {
                              b_and->srcInfo, b_and);
                 if (mask == nullptr)
                     continue;
-                setup_match_mask(tt, mask, match_id, p4_param_order, ann, partition_index);
+                setup_match_mask(tt, mask, match_id, p4_param_order, key_elem->getAnnotations(),
+                                 partition_index);
             } else if (auto *mask = key_expr->to<IR::Mask>()) {
-                setup_match_mask(tt, mask, match_id, p4_param_order, ann, partition_index);
+                setup_match_mask(tt, mask, match_id, p4_param_order, key_elem->getAnnotations(),
+                                 partition_index);
             } else if (match_id.name == "atcam_partition_index") {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
                 ixbar_read->partition_index = true;
                 ixbar_read->p4_param_order = p4_param_order;
+                ixbar_read->annotations = key_elem->getAnnotations();
                 tt->match_key.push_back(ixbar_read);
             } else {
                 auto ixbar_read = new IR::MAU::TableKey(key_expr, match_id);
                 if (ixbar_read->for_match())
                     ixbar_read->p4_param_order = p4_param_order;
-                if (ann) {
-                    ixbar_read->annotations = ixbar_read->annotations->addAnnotationIfNew(
-                       IR::Annotation::nameAnnotation,
-                       new IR::StringLiteral(*ann));
-                }
-                if (partition_index && ann && (*partition_index == *ann))
+                ixbar_read->annotations = key_elem->getAnnotations();
+
+                boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
+                if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
+                    name_annotation = IR::Annotation::getName(nameAnn);
+
+                if (partition_index && name_annotation && (*partition_index == *name_annotation))
                     ixbar_read->partition_index = true;
                 tt->match_key.push_back(ixbar_read);
             }

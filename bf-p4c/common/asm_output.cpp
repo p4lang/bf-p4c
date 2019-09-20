@@ -1,4 +1,5 @@
 #include "asm_output.h"
+#include "pragma/all_pragmas.h"
 
 StringRef trim_asm_name(StringRef name) {
     if (auto *p = name.findlast('['))
@@ -142,3 +143,46 @@ safe_vector<Slice> Slice::split(const safe_vector<Slice> &vec,
     return rv;
 }
 
+bool has_user_annotation(const IR::IAnnotated* node) {
+    if (!node) return false;
+    for (auto* annotation : node->getAnnotations()->annotations) {
+        if (annotation->name == PragmaUserAnnotation::name) return true;
+    }
+
+    return false;
+}
+
+void emit_user_annotation_context_json(std::ostream &out,
+                                       indent_t indent,
+                                       const IR::IAnnotated* node,
+                                       bool emit_dash) {
+    if (!node) return;
+
+    bool emitted_header = false;
+    for (auto* annotation : node->getAnnotations()->annotations) {
+        if (annotation->name != PragmaUserAnnotation::name) continue;
+
+        if (!emitted_header) {
+            out << indent++ << (emit_dash ? "- " : "") << "context_json" << ":" << std::endl;
+            out << indent++ << "user_annotations:" << std::endl;
+            emitted_header = true;
+        }
+
+        bool emitted_elts = false;
+        for (auto* expr : annotation->expr) {
+            auto str = expr->to<IR::StringLiteral>();
+            BUG_CHECK(str, "User annotation not a string literal: %1%", expr);
+
+            auto cur_elt = str->value;
+
+            if (!emitted_elts) out << indent << "- [";
+            else
+              out << ", ";
+
+            out << "\"" << cur_elt.escapeJson() << "\"";
+            emitted_elts = true;
+        }
+
+        if (emitted_elts) out << "]" << std::endl;
+    }
+}

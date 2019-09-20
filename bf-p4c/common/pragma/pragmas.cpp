@@ -771,6 +771,19 @@ const char *PragmaUseHashAction::help = "@pragma use_hash_action 1\n"
     "off the optimization, even if it is preferred.  All other values are "
     "ignored.";
 
+const char *PragmaUserAnnotation::name = "user_annotation";
+const char *PragmaUserAnnotation::description =
+    "Specifies a list of strings that should be passed through to context.json.";
+const char *PragmaUserAnnotation::help = "@pragma user_annotation str_1 .. str_N\n"
+    "+attached to P4 action declarations\n"
+    "+attached to P4 action parameters\n"
+    "+attached to P4 extern instantiations\n"
+    "+attached to P4 table declarations\n"
+    "+attached to P4 table match keys\n"
+    "\n"
+    "Provides a list of strings to be passed through to the context.json representation of the "
+    "associated P4 program element.";
+
 const char *PragmaWays::name = "ways";
 const char *PragmaWays::description =
     "Specifies the number of ways for an exact match table";

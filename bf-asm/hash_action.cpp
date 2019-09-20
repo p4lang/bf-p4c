@@ -176,7 +176,7 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
     json::map hash_function;
     json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
     for (auto it = p4_params_list.rbegin(); it != p4_params_list.rend(); it++) {
-        auto p4_param = *it;
+        auto& p4_param = *it;
         for (size_t i = p4_param.start_bit; i < p4_param.start_bit + p4_param.bit_width; i++) {
             json::map hash_bit;
             hash_bit["hash_bit"] = hash_bit_index;
