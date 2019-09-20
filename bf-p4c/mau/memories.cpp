@@ -706,20 +706,66 @@ bool Memories::analyze_tables(mem_info &mi) {
 
 bool Memories::mem_info::constraint_check(int lt_allowed) const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
-           Memories::TABLES_MAX
-        || tind_tables > Memories::TERNARY_TABLES_MAX
-        || action_tables > Memories::ACTION_TABLES_MAX
-        || action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
-        || match_RAMs + action_RAMs + tind_RAMs > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS
-        || ternary_tables > Memories::TERNARY_TABLES_MAX
-        || ternary_TCAMs > Memories::TCAM_ROWS * Memories::TCAM_COLUMNS
-        || stats_tables > Memories::STATS_ALUS
-        || meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS
-        || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
-           Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS
-        || logical_tables > lt_allowed) {
-        return false;
-    }
+        Memories::TABLES_MAX) {
+        LOG6(" match_tables(" << match_tables << ") + no_match_tables(" <<
+            no_match_tables << ") + ternary_tables(" << ternary_tables <<
+            ") + independent_gw_tables(" << independent_gw_tables <<
+            ") > Memories::TABLES_MAX(" << Memories::TABLES_MAX << ")");
+        return false; }
+
+    if (tind_tables > Memories::TERNARY_TABLES_MAX) {
+        LOG6(" tind_tables(" << tind_tables << ") > Memories::TERNARY_TABLES_MAX("
+            << Memories::TERNARY_TABLES_MAX << ")");
+        return false; }
+
+    if (action_tables > Memories::ACTION_TABLES_MAX) {
+        LOG6(" action_tables(" << action_tables << ") > Memories::ACTION_TABLES_MAX("
+            << Memories::ACTION_TABLES_MAX << ")");
+        return false; }
+
+    if (action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT) {
+        LOG6(" action_bus_min(" << action_bus_min << ") > Memories::SRAM_ROWS("
+            << Memories::SRAM_ROWS << ") * Memories::BUS_COUNT(" <<
+            Memories::BUS_COUNT << ")");
+        return false; }
+
+    if (match_RAMs + action_RAMs + tind_RAMs > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS) {
+        LOG6(" match_RAMs(" << match_RAMs << ") + action_RAMs(" << action_RAMs
+            << ") + tind_RAMs(" << tind_RAMs << ") > Memories::SRAM_ROWS(" <<
+            Memories::SRAM_ROWS << ") * Memories::SRAM_COLUMNS(" << Memories::SRAM_COLUMNS
+            << ")");
+        return false; }
+
+    if (ternary_tables > Memories::TERNARY_TABLES_MAX) {
+        LOG6(" ternary_tables(" << ternary_tables << ") > Memories::TERNARY_TABLES_MAX("
+            << Memories::TERNARY_TABLES_MAX << ")");
+        return false; }
+
+    if (stats_tables > Memories::STATS_ALUS) {
+        LOG6(" stats_tables(" << stats_tables << ") > Memories::STATS_ALUS("
+            << Memories::STATS_ALUS << ")");
+        return false; }
+
+    if (meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS) {
+        LOG6(" meter_tables(" << meter_tables << ") + stateful_tables(" <<
+            stateful_tables << ") + selector_tables(" << selector_tables <<
+            ") > Memories::METER_ALUS(" << Memories::METER_ALUS << ")");
+        return false; }
+
+    if (meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
+        Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS) {
+        LOG6(" meter_RAMs(" << meter_RAMs << ") + stats_RAMs(" << stats_RAMs <<
+            ") + stateful_RAMs(" << stateful_RAMs << ") + selector_RAMs(" << selector_RAMs
+            << ") + idletime_RAMs(" << idletime_RAMs << ") > Memories::MAPRAM_COLUMNS("
+            << Memories::MAPRAM_COLUMNS << ") * Memories::SRAM_ROWS(" <<
+            Memories::SRAM_ROWS << ")");
+        return false; }
+
+    if (logical_tables > lt_allowed) {
+        LOG6(" logical_tables(" << logical_tables << ") > lt_allowed(" <<
+           lt_allowed << ")");
+        return false; }
+
     return true;
 }
 
