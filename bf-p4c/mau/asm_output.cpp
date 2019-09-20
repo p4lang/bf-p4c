@@ -2084,6 +2084,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << sep2 << lo;
         if (!is_wrapped)
             out << ".." << hi;
+        // This extra lo has to be printed out because the hash_dist has to understand this as
+        // a range from deposit-field, even though the only thing that matters in this source
+        // is the first lo, the range of the deposit-field is determined on the destination
+        // See p4c-2153
+        else
+            out << ".." << lo;
         out << ")";
     }
 
@@ -2113,6 +2119,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         out << lo;
         if (!is_wrapped)
             out << ".." << hi;
+        // This extra lo has to be printed out because the hash_dist has to understand this as
+        // a range from deposit-field, even though the only thing that matters in this source
+        // is the first lo, the range of the deposit-field is determined on the destination
+        // See p4c-2153
+        else
+            out << ".." << lo;
         out << ")";
         sep = ", ";
     }
