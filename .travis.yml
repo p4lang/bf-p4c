@@ -9,6 +9,10 @@ branches:
   - master
   - stable
 
+before_install:
+  - nproc
+  - free -m
+
 # do not need to clone the submodules since we're using the docker image
 # build by Jenkins
 git:
