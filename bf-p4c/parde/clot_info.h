@@ -543,7 +543,7 @@ class CollectClotInfo : public Inspector {
         clotInfo.checksum_dests_.insert(f);
 
         for (auto s : emit->sources) {
-            auto src = phv.field(s->field);
+            auto src = phv.field(s->field->field);
             clotInfo.field_to_checksum_updates_[src].push_back(emit);
         }
 

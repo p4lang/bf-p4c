@@ -453,29 +453,40 @@ void write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
     write_checksum_entry(entry, mask, swap, id, reg);
     entry.pov = pov;
 }
+template<class POV>
+int jbay_csum_pov_config(Phv::Ref povRef, POV &pov_cfg,
+                         ordered_map<const Phv::Register *, unsigned> &pov,
+                         std::map<unsigned, unsigned> &pov_map, unsigned prev_byte) {
+    unsigned bit = pov.at(&povRef->reg) + povRef->lo;
+    if (pov_map.count(bit)) return prev_byte;
+    for (unsigned i = 0; i < prev_byte; ++i) {
+        if (pov_cfg.byte_sel[i] == bit/8U) {
+            pov_map[bit] = i*8U + bit%8U;
+            break; } }
+    if (pov_map.count(bit)) return prev_byte;
+    pov_map[bit] = prev_byte*8U + bit%8U;
+    pov_cfg.byte_sel[prev_byte++] = bit/8U;
+    return prev_byte;
+}
 
 template<class CSUM, class POV, class ENTRIES>
 void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, int unit,
         Deparser::ChecksumUnit &data, ordered_map<const Phv::Register *, unsigned> &pov) {
-    std::map<unsigned, unsigned>        pov_map;
-    unsigned byte = 0, mapped[4];
+    std::map<unsigned, unsigned> pov_map;
+    unsigned byte = 0;
     for (auto &val : data.entries) {
         if (!val.pov) {
             error(val.val.lineno, "POV bit required for Tofino2");
-            continue; }
-        unsigned bit = pov.at(&val.pov->reg) + val.pov->lo;
-        if (pov_map.count(bit)) continue;
-        for (unsigned i = 0; i < byte; ++i) {
-            if (pov_cfg.byte_sel[i] == bit/8U) {
-                pov_map[bit] = i*8U + bit%8U;
-                break; } }
-        if (pov_map.count(bit)) continue;
+            continue;
+        }
+        byte = jbay_csum_pov_config(val.pov, pov_cfg, pov, pov_map, byte);
         if (byte == 4) {
             error(val.pov.lineno, "POV bits for checksum %d don't fit in 4 bytes", unit);
             return; }
-        pov_map[bit] = byte*8U + bit%8U;
-        pov_cfg.byte_sel[byte++] = bit/8U; }
-
+    }
+    if (data.pov) {
+        byte = jbay_csum_pov_config(data.pov, pov_cfg, pov, pov_map, byte);
+    }
     unsigned tag_idx = 0;
     for (auto &val : data.entries) {
         if (!val.pov) continue;
@@ -504,9 +515,10 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     // This opens up optimization opportunities where we can selectively
     // combine a set of header checksums depending which ones are valid in
     // the packet.
-    csum.phv_entry[unit].pov = pov_map.begin()->second;
-    csum.phv_entry[unit].vld = 1;
-
+    if (data.pov) {
+        csum.phv_entry[unit].pov = pov_map.at(pov.at(&data.pov->reg) + data.pov->lo);
+        csum.phv_entry[unit].vld = 1;
+    }
     csum.zeros_as_ones.en = data.zeros_as_ones_en;
 
     // FIXME -- use/set csum.csum_constant?

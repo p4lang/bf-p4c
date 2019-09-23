@@ -531,7 +531,7 @@ struct InsertParserClotChecksums : public PassManager {
                 if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
                    int idx = 0;
                     for (auto source : csum->sources) {
-                        auto field = phv.field(source->field);
+                        auto field = phv.field(source->field->field);
                         if (auto* clot = clotInfo.fully_allocated(field)) {
                             checksum_field_to_clot[field] = clot;
                             checksum_field_to_offset[field] =

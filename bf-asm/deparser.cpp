@@ -261,8 +261,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 if (kv.value.type == tVEC && kv.value.vec.size == 0) continue;
                 collapse_list_of_maps(kv.value);
                 if (!CHECKTYPE(kv.value, tMAP)) continue;
-                for (auto &ent : kv.value.map)
+                for (auto &ent : kv.value.map) {
                     dictionary[gress].emplace_back(gress, ent.key, ent.value);
+                }
             } else if (kv.key == "pov") {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
@@ -276,7 +277,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     int unit = kv.key[1].i;
                     if (unit < 0) error(kv.key.lineno, "Invalid checksum unit %d", unit);
                     for (auto &ent : kv.value.map) {
-                        if (ent.key == "zeros_as_ones") {
+                        if (ent.key == "pov") {
+                           checksum_unit[gress][unit].pov = ::Phv::Ref(gress, DEPARSER_STAGE, ent.value);
+                        } else if (ent.key == "zeros_as_ones") {
                            checksum_unit[gress][unit].zeros_as_ones_en = ent.value.i;
                         } else if (ent.key == "clot") {
                             checksum_unit[gress][unit].entries.emplace_back(gress, ent.key[1].i, ent.value);

@@ -77,7 +77,7 @@ struct CollectInvalidatedHeaders : public Inspector {
 
     bool preorder(const IR::BFN::EmitChecksum* checksum) override {
         for (auto source : checksum->sources) {
-            auto field = phv.field(source->field);
+            auto field = phv.field(source->field->field);
 
             if (invalidated_field_to_pov_bit.count(field)) {
                 auto pov_bit = invalidated_field_to_pov_bit.at(field);

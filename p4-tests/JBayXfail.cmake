@@ -36,11 +36,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
-    # residual checksum still needs work for JBay
-    extensions/p4_tests/p4_14/stf/update_checksum_6.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
-    extensions/p4_tests/p4_14/stf/update_checksum_9.p4
 
     # header in loop state cannot be in CLOT (no static ordering)
     extensions/p4_tests/p4_16/stf/parser_counter_12.p4

@@ -1,5 +1,9 @@
 #include <core.p4>
+#if __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
+#endif
 header sample_h {
     bit<16> a;
     bit<16> b;
@@ -47,7 +51,27 @@ control Ingress(inout headers_t hdr,
     action act() {
         ig_intr_tm_md.ucast_egress_port = 1;
     }
-    apply{ act();}
+
+    action sample2() {
+        hdr.sample2.a = 0x4444;
+        hdr.sample2.b = 0x1111;
+        hdr.sample2.c = 0x2222;
+    }
+
+    action sample3() {
+        hdr.sample3.a = 0x4444;
+        hdr.sample3.b = 0x2222;
+        hdr.sample3.c = 0x1111;
+    }
+       
+    apply{
+        act();
+        if (hdr.sample2.isValid()) {
+            sample2();
+        } else if (hdr.sample3.isValid()) {
+            sample3();
+        }
+    }
 }
 
 control IgDeparser(packet_out packet,

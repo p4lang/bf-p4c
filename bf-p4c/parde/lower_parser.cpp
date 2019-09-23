@@ -1365,7 +1365,7 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
                                                       const IR::BFN::EmitChecksum* emitChecksum) {
     std::map<PHV::Container, unsigned> containerToSwap;
     for (auto &sourceToOffset : emitChecksum->source_index_to_offset) {
-        auto* phv_field = phv.field(emitChecksum->sources[sourceToOffset.first]->field);
+        auto* phv_field = phv.field(emitChecksum->sources[sourceToOffset.first]->field->field);
         PHV::FieldUse use(PHV::FieldUse::READ);
         std::vector<alloc_slice> slices = phv.get_alloc(phv_field, nullptr,
                 PHV::AllocContext::DEPARSER, &use);
@@ -1407,29 +1407,67 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     IR::BFN::ChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum) {
         // Allocate a checksum unit and generate the configuration for it.
         auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
-
+        auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
+        unitConfig->zeros_as_ones = emitChecksum->zeros_as_ones;
         IR::Vector<IR::BFN::ContainerRef> phvSources;
         std::vector<Clot> clotSources;
 
-        std::tie(phvSources, clotSources) =
-            lowerFields(phv, clotInfo, emitChecksum->sources);
-
-        auto* loweredPovBit = lowerSingleBit(phv,
-                                             emitChecksum->povBit,
-                                             PHV::AllocContext::DEPARSER);
-        auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
-        for (auto* source : phvSources) {
-            auto* input = new IR::BFN::ChecksumPhvInput(source);
-            input->swap = containerToSwap[source->container];
-            if (Device::currentDevice() == Device::JBAY)
-                input->povBit = loweredPovBit;
-            unitConfig->phvs.push_back(input);
+        if (Device::currentDevice() == Device::TOFINO) {
+            IR::Vector<IR::BFN::FieldLVal> checksumFields;
+            for (auto f : emitChecksum->sources) {
+                checksumFields.push_back(f->field);
+            }
+            std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, checksumFields);
+            for (auto* source : phvSources) {
+                auto* input = new IR::BFN::ChecksumPhvInput(source);
+                input->swap = containerToSwap[source->container];
+                unitConfig->phvs.push_back(input);
+            }
+        } else if (Device::currentDevice() == Device::JBAY) {
+            std::vector<const IR::BFN::FieldLVal*> groupPov;
+            ordered_map<IR::Vector<IR::BFN::FieldLVal>*, const IR::BFN::FieldLVal*> groups;
+            const IR::BFN::FieldLVal* lastPov = nullptr;
+            // Since the information about mapping of field to pov is lost after lowering
+            // the fields due to container merging, we will lower the fields in groups.
+            // Each group of fields will have same pov bit
+            IR::Vector<IR::BFN::FieldLVal>* newGroup = nullptr;
+            for (auto f : emitChecksum->sources) {
+                if (lastPov && lastPov->equiv(*f->povBit)) {
+                    newGroup->push_back(f->field);
+                } else {
+                    // Since a new group will be created, nothing will be added in old group.
+                    // Adding it in a map with corresponding POV
+                    if (newGroup) {
+                        groups[newGroup] = lastPov;
+                    }
+                    newGroup = new IR::Vector<IR::BFN::FieldLVal>();
+                    newGroup->push_back(f->field);
+                    lastPov = f->povBit;
+                }
+            }
+            groups[newGroup] = lastPov;
+            int groupidx = 0;
+            for (auto& group : groups) {
+                phvSources.clear();
+                clotSources.clear();
+                std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, *group.first);
+                auto povBit = lowerSingleBit(phv, group.second,
+                                                  PHV::AllocContext::DEPARSER);
+                for (auto* source : phvSources) {
+                    auto* input = new IR::BFN::ChecksumPhvInput(source);
+                    input->swap = containerToSwap[source->container];
+                    input->povBit = povBit;
+                    unitConfig->phvs.push_back(input);
+                }
+                for (auto source : clotSources) {
+                    auto* input = new IR::BFN::ChecksumClotInput(source, povBit);
+                    unitConfig->clots.push_back(input);
+                }
+                groupidx++;
+            }
+            unitConfig->povBit = lowerSingleBit(phv, emitChecksum->povBit,
+                                           PHV::AllocContext::DEPARSER);
         }
-        for (auto source : clotSources) {
-            auto* input = new IR::BFN::ChecksumClotInput(source, loweredPovBit);
-            unitConfig->clots.push_back(input);
-        }
-        unitConfig->zeros_as_ones = emitChecksum->zeros_as_ones;
         return unitConfig;
     }
 

@@ -224,6 +224,7 @@ parser SwitchEgressParser(
     state parse_bridged_metadata{
         pkt.extract(hdr.brid_md);
         eg_md.eg_brid_md.udp_checksum_b_md = hdr.brid_md.udp_checksum_b_md;
+        eg_md.eg_brid_md.setValid();
         transition parse_ethernet;
 
     }

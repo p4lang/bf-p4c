@@ -511,6 +511,7 @@ class ChecksumUnitConfig {
 
     /// To indicate is zeros_as_ones feature is used
     bool zeros_as_ones = false;
+    optional NullOK BFN::ContainerBitRef povBit;
 }
 
 /// The lowered representation of the deparser. This representation is

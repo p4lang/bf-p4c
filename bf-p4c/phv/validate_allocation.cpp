@@ -295,10 +295,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             std::map<PHV::Container, std::vector<Slice>> checksumAllocations;
             for (auto* source : emitChecksum->sources) {
                 le_bitrange sourceFieldBits;
-                auto* sourceField = phv.field(source->field, &sourceFieldBits);
+                auto* sourceField = phv.field(source->field->field, &sourceFieldBits);
                 if (!sourceField) {
                     ::error("No PHV allocation for field used in computed "
-                            "checksum: %1%", source);
+                            "checksum: %1%", source->field);
                     continue;
                 }
                 if (sourceField->metadata && sourceField->no_pack()) {

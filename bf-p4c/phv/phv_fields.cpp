@@ -1280,7 +1280,8 @@ struct ComputeFieldAlignments : public Inspector {
         for (auto* emitPrimitive : deparser->emits) {
             if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
                 for (auto &sourceToOffset : checksum->source_index_to_offset) {
-                     auto phv_field = phv.field(checksum->sources[sourceToOffset.first]->field);
+                     auto phv_field = phv.field(
+                                      checksum->sources[sourceToOffset.first]->field->field);
                      if (phv_field->metadata && phv_field->size % 8) {
                          phv_field->updateAlignment(FieldAlignment(le_bitrange(
                            StartLen((sourceToOffset.second + phv_field->size), phv_field->size))));
@@ -1506,7 +1507,7 @@ class CollectPardeConstraints : public Inspector {
 
     void postorder(const IR::BFN::EmitChecksum* checksum) override {
         for (const auto* flval : checksum->sources) {
-            PHV::Field* f = phv.field(flval->field);
+            PHV::Field* f = phv.field(flval->field->field);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_is_checksummed(true);
             if (f->metadata && f->size % 8) {

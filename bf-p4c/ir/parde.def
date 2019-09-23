@@ -526,13 +526,22 @@ class EmitClot : Emit {
     Clot* clot = nullptr;
 #end
 }
+// Will be used only for as an entry in deparser checksum list
+class ChecksumEntry {
+    dbprint {
+        out << "checksum entry " << field->field->toString() << " if "
+            << povBit->field->toString();
+    }
+    FieldLVal field;
+    FieldLVal povBit;
+}
 
 /// A deparser computed checksum operation. This instructs the deparser to
 /// compute the checksum of a group of fields and write the result into the
 /// output packet.
 class EmitChecksum : Emit {
     /// The fields from which the checksum will be computed.
-    inline Vector<FieldLVal> sources;
+    inline Vector<ChecksumEntry> sources;
     /// source_index is the index to a FieldLVal in the vector sources defined above.
     /// Each index corresponds to an offset of the FieldVal in the checksum list.
     optional std::map<int, int> source_index_to_offset;

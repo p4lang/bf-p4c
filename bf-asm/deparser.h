@@ -88,6 +88,7 @@ public:
     struct ChecksumUnit {
         std::vector<ChecksumVal> entries;
         bool zeros_as_ones_en = false;
+        Phv::Ref pov;
     };
 
     struct FDEntry;

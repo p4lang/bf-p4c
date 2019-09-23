@@ -222,7 +222,7 @@ bool ExcludeCsumOverlays::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
     for (auto& field : allFields) {
         if (phv.isFieldMutex(checksumDest, &field.second)) continue;
         for (auto sourceField : emitChecksum->sources) {
-            auto csumPhvField = phv.field(sourceField->field);
+            auto csumPhvField = phv.field(sourceField->field->field);
             LOG3("\t  Mark as non mutually exclusive: " << csumPhvField->name <<
                 ", " << field.first << " due to " << checksumDest->name  << " checksum update");
             phv.removeFieldMutex(csumPhvField, &field.second);

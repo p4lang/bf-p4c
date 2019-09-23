@@ -131,9 +131,12 @@ struct OutputChecksums : public Inspector {
     explicit OutputChecksums(std::ostream& out) : out(out), indent(1) { }
 
     bool preorder(const IR::BFN::ChecksumUnitConfig* checksum) override {
-        out << indent << "checksum " << checksum->unit << ":" << std::endl;
+        out << indent << "checksum " << checksum->unit << ": " << std::endl;
 
         AutoIndent checksumIndent(indent);
+        if (checksum->povBit) {
+            out << indent <<  "- " << "pov: " <<  checksum->povBit << std::endl;
+        }
         if (checksum->zeros_as_ones)
             out << indent << "- " << "zeros_as_ones: " << checksum->zeros_as_ones << std::endl;
         for (auto* input : checksum->phvs) {
