@@ -1102,7 +1102,6 @@ CoreAllocation::tryAllocSliceList(
                     can_place = false;
                     break; }
             } else {
-                LOG5("    ...can place slice at this position.");
                 new_candidate_slices.push_back(slice);
             }
         }
@@ -1243,7 +1242,14 @@ CoreAllocation::tryAllocSliceList(
                     const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
 
                     // Disregard slices that aren't in slice lists.
-                    if (slice_lists.size() == 0) continue;
+                    if (!slice_list && slice_lists.size() == 0) continue;
+                    if (slice_list && slice_lists.size() == 0) {
+                        LOG5("    ...but slice " << slice_and_pos.first << " is not in a "
+                             "slice list, while other slices in the same conditional constraint "
+                             "is in a slice list.");
+                        can_place = false;
+                        break;
+                    }
 
                     // If a slice is in multiple slice lists, abort.
                     // XXX(cole): This is overly constrained.
@@ -2530,6 +2536,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     return allocated_sc;
 }
 
+
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::slice_clusters(
         const std::list<PHV::SuperCluster*>& cluster_groups,
@@ -2539,33 +2546,65 @@ BruteForceAllocationStrategy::slice_clusters(
     auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
     for (auto* sc : cluster_groups) {
         LOG5("PRESLICING " << sc);
-        auto it = PHV::SlicingIterator(sc,
-                core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
-        std::set<const PHV::Field*> unsatisfiable_fields;
-        auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
-        if (!it.done()) {
-            // Try until we find one satisfies pa_container_size pragmas.
-            while (!it.done()) {
-                pa_container_sizes.adjust_requirements(*it);
-                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
-                if (unsatisfiable_fields.size() > 0) {
-                    LOG5("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
-                    for (const auto* f : unsatisfiable_fields)
-                        LOG5("\t" << f);
-                }
-                if (unsatisfiable_fields.size() == 0) {
-                    break; }
-                ++it; }
-            // If failed to find it, use the first slicing as pre-slicing.
-            if (it.done()) {
-                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+        try {
+            auto it = PHV::SlicingIterator(sc,
+                    core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
+            std::set<const PHV::Field*> unsatisfiable_fields;
+            auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
+            if (!it.done()) {
+                // Try until we find one satisfies pa_container_size pragmas.
+                while (!it.done()) {
+                    pa_container_sizes.adjust_requirements(*it);
+                    unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+                    if (unsatisfiable_fields.size() > 0) {
+                        LOG5("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
+                        for (const auto* f : unsatisfiable_fields) LOG5("\t" << f);
+                    }
+                    if (unsatisfiable_fields.size() == 0) {
+                        break; }
+                    ++it; }
+                // If failed to find it, use the first slicing as pre-slicing.
+                if (it.done()) {
+                    unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
+                    for (const auto* f : unsatisfiable_fields) {
+                        if (meter_color_dests.count(f)) {
+                            if (f->size > 8)
+                                P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
+                                        "of meter color destination field %1% to an 8-bit "
+                                        "container. However, meter color destination %1% with size "
+                                        "%2% bits cannot be split based on its use. Therefore, it "
+                                        "cannot be allocated to an 8-bit container. Suggest using a"
+                                        " meter color destination that is less than or equal to 8b "
+                                        "in size.", f->name, f->size);
+                            else
+                                P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
+                                        "of meter color destination field %1% to an 8-bit "
+                                        "container. However, %1% cannot be allocated to an 8-bit "
+                                        "container.", f->name);
+                        }
+                    }
+                    ::error("Cannot find a slicing to satisfy @pa_container_size for fields in the "
+                            "following groups of fields:\n%1%", cstring::to_cstring(sc));
+                    it = PHV::SlicingIterator(sc,
+                            core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
+                    unsliceable.push_back(sc); }
+
+                LOG5("--- into new slices -->");
+                for (auto* new_sc : *it) {
+                    LOG5(new_sc);
+                    rst.push_back(new_sc); }
+            } else {
+                unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
+                if (unsatisfiable_fields.size() > 0)
+                    LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
                 for (const auto* f : unsatisfiable_fields) {
+                    LOG6("\t" << f);
                     if (meter_color_dests.count(f)) {
                         if (f->size > 8)
                             P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
                                     "of meter color destination field %1% to an 8-bit container. "
                                     "However, meter color destination %1% with size %2% bits "
-                                    "must be marked as no_split, and can therefore, not be "
+                                    "cannot be split based on its use. Therefore, it cannot be "
                                     "allocated to an 8-bit container. Suggest using a meter color "
                                     "destination that is less than or equal to 8b in size.",
                                     f->name, f->size);
@@ -2576,43 +2615,17 @@ BruteForceAllocationStrategy::slice_clusters(
                                     f->name);
                     }
                 }
-                ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
-                        cstring::to_cstring(sc));
-                it = PHV::SlicingIterator(sc,
-                        core_alloc_i.pragmas().pa_container_sizes().field_to_sizes());
-                unsliceable.push_back(sc); }
-
-            LOG5("--- into new slices -->");
-            for (auto* new_sc : *it) {
-                LOG5(new_sc);
-                rst.push_back(new_sc); }
-        } else {
-            unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields({ sc });
-            if (unsatisfiable_fields.size() > 0)
-                LOG6("Found " << unsatisfiable_fields.size() << " unsatisfiable fields.");
-            for (const auto* f : unsatisfiable_fields) {
-                LOG6("\t" << f);
-                if (meter_color_dests.count(f)) {
-                    if (f->size > 8)
-                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation "
-                                "of meter color destination field %1% to an 8-bit container. "
-                                "However, meter color destination %1% with size %2% bits "
-                                "must be marked as no_split, and can therefore, not be "
-                                "allocated to an 8-bit container. Suggest using a meter color "
-                                "destination that is less than or equal to 8b in size.",
-                                f->name, f->size);
-                    else
-                        P4C_UNIMPLEMENTED("Currently the compiler only supports allocation of "
-                                "meter color destination field %1% to an 8-bit container. "
-                                "However, %1% cannot be allocated to an 8-bit container.",
-                                f->name);
-                }
+                if (unsatisfiable_fields.size() > 0)
+                    ::error("Cannot find a slicing to satisfy @pa_container_size: \n%1%",
+                            cstring::to_cstring(sc));
+                LOG5("    ...but preslicing failed");
+                unsliceable.push_back(sc);
             }
-            if (unsatisfiable_fields.size() > 0)
-                ::error("No way to slice the following to satisfy @pa_container_size: \n%1%",
-                        cstring::to_cstring(sc));
-            LOG5("    ...but preslicing failed");
-            unsliceable.push_back(sc); } }
+        } catch (const Util::CompilerBug& e) {
+            BUG("The compiler failed in slicing the following group of fields related by "
+                "parser alignment and MAU constraints\n%1%", sc);
+        }
+    }
     return rst;
 }
 

@@ -10,6 +10,8 @@
 #include <tofino.p4>
 #include <tna.p4>
 
+// P4C-923: Issue with handling concatenation operation in instruction adjustment
+@pa_container_size("ingress", "ig_intr_md_for_tm.mcast_grp_a", 16)
 struct Sahuarita {
     bit<16> Exeter;
     bit<16> Tocito;

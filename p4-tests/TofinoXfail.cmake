@@ -205,6 +205,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-362/icmp_typecode.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -800,6 +801,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+# P4C-2188
+  extensions/p4_tests/p4_16/customer/noviflow/p4c-1332.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -851,7 +854,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1371
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
-  "No way to slice the following to satisfy @pa_container_size"
+  "Cannot find a slicing to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   ../glass/testsuite/p4_tests/phv/test_config_227_set_meta_packing.p4
@@ -1608,4 +1611,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Depth of way doesn't match number of rams in table|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
+)
+
+# P4C-2188
+p4c_add_xfail_reason("tofino"
+  "The compiler failed in slicing the following group of fields|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/noviflow/p4c-1834.p4
 )

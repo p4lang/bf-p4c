@@ -99,7 +99,9 @@ set (TOFINO_MUST_PASS_TESTS
   # Customer profiles
   extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4
+# extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4

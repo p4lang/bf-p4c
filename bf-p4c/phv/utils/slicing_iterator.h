@@ -105,6 +105,12 @@ class SlicingIterator {
     int sentinel_idx_i;
     std::list<PHV::SuperCluster*> cached_i;
 
+    /// Map of field slices to their corresponding to rotational cluster slices. Needed because we
+    /// might slice in the middle of fields when imposing MAU constraints.
+    ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>> sliceToRotSlices;
+    ordered_map<PHV::FieldSlice, std::vector<PHV::FieldSlice>> sliceToSliceLists;
+    ordered_set<PHV::FieldSlice> noSplitSlices;
+
     /// Number of different slicings tried by the slicing iterator.
     uint64_t num_slicings;
 
@@ -139,7 +145,8 @@ class SlicingIterator {
         ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         ordered_map<FieldSlice, int>& exactSliceListSize,
         const ordered_set<FieldSlice>& paddingFields,
-        const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset);
+        ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+        ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap);
 
     /** Consider a slice list, [a, b, c, d, e], where each field a-e are 8b wide. If the constraint
       * on c is that it must be a part of a 24b slice list, possible resulting slice lists are:
@@ -157,6 +164,28 @@ class SlicingIterator {
             const int minSize,
             const FieldSlice& candidate) const;
 
+    boost::optional<FieldSlice> getBestSlicingPoint(
+            const std::vector<FieldSlice>& list,
+            const int minSize,
+            const FieldSlice& candidate) const;
+
+    void breakUpSlice(
+            std::vector<FieldSlice>& list,
+            const PHV::FieldSlice& slicingPoint,
+            ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+            ordered_map<FieldSlice, int>& exactSliceListSize,
+            ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+            ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap);
+
+    void updateSliceLists(
+            std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
+            ordered_map<FieldSlice, int>& exactSliceListSize,
+            const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) const;
+
+    void updateSliceListInformation(
+            PHV::FieldSlice& candidate,
+            bool sliceAfter);
+
     /// Update the slice related data structures: @exactSliceListSize, @alreadyProcessedSlices, and
     /// @sliceLocations for the case where we want to slice the slice list immediate before @point.
     int processSliceListBefore(
@@ -172,7 +201,8 @@ class SlicingIterator {
     void break_24b_slice_lists(
             ordered_map<FieldSlice, int>& exactSliceListSize,
             ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
-            const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset);
+            const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
+            const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap);
 
     /// Break the single 24b slice list represented by @sliceListToProcess into a 16b and 8b slice,
     /// such that the slicing point for the original slice list falls on slice boundaries, if
