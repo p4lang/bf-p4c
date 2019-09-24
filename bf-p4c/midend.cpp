@@ -49,7 +49,7 @@
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
 #include "bf-p4c/midend/simplify_nested_if.h"
-#include "bf-p4c/midend/simplify_emit_args.h"
+#include "bf-p4c/midend/simplify_args.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 

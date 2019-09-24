@@ -1,4 +1,4 @@
-#include "simplify_emit_args.h"
+#include "simplify_args.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/midend/path_linearizer.h"
 
@@ -255,52 +255,129 @@ IR::ListExpression* FlattenHeader::flatten_list(const IR::ListExpression* args) 
     return new IR::ListExpression(components);
 }
 
-const IR::Node *EliminateEmitHeaders::preorder(IR::MethodCallExpression* mce) {
-    auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap, true);
-    if (auto em = mi->to<P4::ExternMethod>()) {
-        auto extName = em->actualExternType->name;
-        if (extName == "Digest" || extName == "Mirror" || extName == "Resubmit")
-            return mce; }
-    prune();
-    return mce;
+const IR::Node* RewriteTypeArguments::preorder(IR::Type_Struct* typeStruct) {
+    for (auto& t : eeh->rewriteTupleType) {
+        if (typeStruct->name == t.first) {
+             typeStruct->fields = {};
+             int i = 0;
+             for (auto type : t.second) {
+                 cstring name = t.first + "_field_" + cstring::to_cstring(i);
+                 auto field = new IR::StructField(name, type);
+                 typeStruct->fields.push_back(field);
+                 i++;
+             }
+        }
+    }
+    return typeStruct;
 }
 
-const IR::Node *EliminateEmitHeaders::preorder(IR::Argument *arg) {
-    const IR::Type *type = nullptr;
-    if (auto path = arg->expression->to<IR::PathExpression>()) {
-        if (path->type->is<IR::Type_StructLike>())
-            type = path->type->to<IR::Type_StructLike>();
-        else
-            return arg;
-    } else if (auto mem = arg->expression->to<IR::Member>()) {
-        if (mem->type->is<IR::Type_StructLike>())
-            type = mem->type->to<IR::Type_StructLike>();
-        else
-            return arg; }
-
-    if (!type) return arg;
-
-    cstring type_name;
-    auto fieldList = IR::IndexedVector<IR::NamedExpression>();
-    if (auto header = type->to<IR::Type_Header>()) {
-        for (auto f : header->fields) {
-            auto mem = new IR::Member(arg->expression, f->name);
-            fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
-        type_name = header->name;
-    } else if (auto st = type->to<IR::Type_Struct>()) {
-        for (auto f : st->fields) {
-            auto mem = new IR::Member(arg->expression, f->name);
-            fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
-        type_name = st->name;
-    } else {
-        ::error(ErrorType::ERR_UNEXPECTED, " type as emit parameter %1%", arg);
+const IR::Node* RewriteTypeArguments::preorder(IR::MethodCallExpression* mc) {
+    if (eeh->rewriteOtherType.empty())
+        return mc;
+    for (auto& type : eeh->rewriteOtherType) {
+        if (type.first->equiv(*mc)) {
+            auto* typeArguments = new IR::Vector<IR::Type>();
+            typeArguments->push_back(type.second);
+            mc->typeArguments = typeArguments;
+        }
     }
+    return mc;
+}
 
-    if (fieldList.size() > 0)
-        return new IR::Argument(arg->srcInfo,
-                new IR::StructInitializerExpression(new IR::Type_Name(type_name), fieldList));
+const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
+    auto mc = findContext<IR::MethodCallExpression>();
+    if (!mc) return arg;
+    auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
+    auto em = mi->to<P4::ExternMethod>();
+    if (!em) return arg;
+    cstring extName = em->actualExternType->name;
+    if (extName == "Checksum") {
+        auto fieldVectorList = IR::Vector<IR::Expression>();
+        auto origlist = IR::Vector<IR::Expression>();
+        if (arg->expression->is<IR::ListExpression>()) {
+            origlist = arg->expression->to<IR::ListExpression>()->components;
+        } else if (auto c = arg->expression->to<IR::Member>()) {
+            origlist.push_back(c);
+        }
+        for (auto expr : origlist) {
+            if (auto header = expr->type->to<IR::Type_Header>()) {
+                for (auto f : header->fields)
+                    fieldVectorList.push_back(new IR::Member(f->type, expr, f->name));
+            } else if (auto st = expr->type->to<IR::Type_Struct>()) {
+                for (auto f : st->fields)
+                    fieldVectorList.push_back(new IR::Member(f->type, expr, f->name));
+            } else if (auto concat = expr->to<IR::Concat>()) {
+                IR::Vector<IR::Expression> concatList;
+                elimConcat(concatList, concat);
+                fieldVectorList.append(concatList);
+            } else if (expr->is<IR::Member>() || expr->is<IR::Constant>() ||
+                       expr->is<IR::PathExpression>()) {
+                fieldVectorList.push_back(expr);
+            } else {
+                ::error(ErrorType::ERR_UNEXPECTED, " type as %1% parameter %2%", extName, expr);
+            }
+        }
+        if (fieldVectorList.size()) {
+            auto list = new IR::ListExpression(fieldVectorList);
+            if (mc->typeArguments->size()) {
+                if (auto type = mc->typeArguments->at(0)->to<IR::Type_Name>()) {
+                    rewriteTupleType[type->path->name] =
+                                 list->type->to<IR::Type_Tuple>()->components;
+                } else {
+                    rewriteOtherType[mc] = list->type;
+                }
+            }
+            return (new IR::Argument(arg->srcInfo, list));
+        }
+    } else if (extName == "Digest" || extName == "Mirror" || extName == "Resubmit") {
+        const IR::Type *type = nullptr;
+        if (auto path = arg->expression->to<IR::PathExpression>()) {
+            if (path->type->is<IR::Type_StructLike>())
+                type = path->type->to<IR::Type_StructLike>();
+            else
+                return arg;
+        } else if (auto mem = arg->expression->to<IR::Member>()) {
+            if (mem->type->is<IR::Type_StructLike>())
+                type = mem->type->to<IR::Type_StructLike>();
+            else
+                return arg; }
 
+        if (!type) return arg;
+
+        cstring type_name;
+        auto fieldList = IR::IndexedVector<IR::NamedExpression>();
+        if (auto header = type->to<IR::Type_Header>()) {
+            for (auto f : header->fields) {
+                auto mem = new IR::Member(arg->expression, f->name);
+                fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
+            type_name = header->name;
+        } else if (auto st = type->to<IR::Type_Struct>()) {
+            for (auto f : st->fields) {
+                auto mem = new IR::Member(arg->expression, f->name);
+                fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
+            type_name = st->name;
+        } else {
+            ::error(ErrorType::ERR_UNEXPECTED, " type as emit parameter %1%", arg);
+        }
+
+        if (fieldList.size() > 0)
+            return new IR::Argument(arg->srcInfo,
+                    new IR::StructInitializerExpression(new IR::Type_Name(type_name), fieldList));
+    }
     return arg;
 }
 
+void EliminateHeaders::elimConcat(IR::Vector<IR::Expression>& output, const IR::Concat* expr) {
+     if (!expr)
+         return;
+     if (expr->left->is<IR::Concat>())
+         elimConcat(output, expr->left->to<IR::Concat>());
+     else
+         output.push_back(expr->left);
+
+     if (expr->right->is<IR::Concat>())
+         elimConcat(output, expr->right->to<IR::Concat>());
+     else
+         output.push_back(expr->right);
+}
 }  // namespace BFN

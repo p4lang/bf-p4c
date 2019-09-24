@@ -103,7 +103,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/normalize_params.cpp
   midend/param_binding.cpp
   midend/parser_graph.cpp
-  midend/simplify_emit_args.cpp
+  midend/simplify_args.cpp
   midend/simplify_nested_if.cpp
   midend/simplify_references.cpp
   midend/type_categories.cpp
@@ -127,7 +127,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/parser_graph.h
   midend/parser_utils.h
   midend/rewrite_egress_intrinsic_metadata_header.h
-  midend/simplify_emit_args.h
+  midend/simplify_args.h
   midend/simplify_nested_if.h
   midend/simplify_references.h
   midend/type_categories.h

@@ -307,18 +307,6 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                             }
                         }
                     }
-                } else if (auto mem = (*call->arguments)[0]->expression->to<IR::Member>()) {
-                    if (auto header = mem->type->to<IR::Type_Header>()) {
-                        for (auto f : header->fields) {
-                            if (f->type->is<IR::Type_Varbits>()) {
-                                if (method->member == "subtract") {
-                                    P4C_UNIMPLEMENTED("Checksum subtract is currently not "
-                                         "supported to have varbit fields %1%", call);
-                                }
-                                varbit_field_to_csum_call[f].insert(call);
-                            }
-                        }
-                    }
                 }
             }
         } else if (auto path = call->method->to<IR::PathExpression>()) {

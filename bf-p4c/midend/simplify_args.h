@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_EMIT_ARGS_H_
-#define EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_EMIT_ARGS_H_
+#ifndef EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
+#define EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -62,18 +62,26 @@ class FlattenHeader : public Modifier {
 /**
  * Assume header type are flattend, no nested struct.
  */
-class EliminateEmitHeaders : public Transform {
+class EliminateHeaders : public Transform {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
 
  public:
-    EliminateEmitHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-        refMap(refMap), typeMap(typeMap) { setName("EliminateEmitHeaders"); }
-
-    const IR::Node* preorder(IR::MethodCallExpression* mce) override;
-    const IR::Node* preorder(IR::Argument *arg) override;
+    EliminateHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
+        refMap(refMap), typeMap(typeMap) { setName("EliminateHeaders"); }
+    std::map<cstring, IR::Vector<IR::Type>> rewriteTupleType;
+    std::map<const IR::MethodCallExpression* , const IR::Type*> rewriteOtherType;
+    const IR::Node* preorder(IR::Argument* arg) override;
+    void elimConcat(IR::Vector<IR::Expression>& output, const IR::Concat* expr);
 };
 
+class RewriteTypeArguments : public Transform {
+     const EliminateHeaders* eeh;
+ public:
+    explicit RewriteTypeArguments(const EliminateHeaders* eeh) : eeh(eeh) {}
+    const IR::Node* preorder(IR::Type_Struct* type_struct) override;
+    const IR::Node* preorder(IR::MethodCallExpression* mc) override;
+};
 /**
  * This pass manager performs the following simplification on headers
  * and emit() methods.
@@ -119,10 +127,13 @@ class EliminateEmitHeaders : public Transform {
 class SimplifyEmitArgs : public PassManager {
  public:
     SimplifyEmitArgs(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        auto eliminateHeaders = new EliminateHeaders(refMap, typeMap);
+        auto rewriteTypeArguments = new RewriteTypeArguments(eliminateHeaders);
         passes.push_back(new FlattenHeader(typeMap));
         passes.push_back(new P4::ClearTypeMap(typeMap));
         passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
-        passes.push_back(new EliminateEmitHeaders(refMap, typeMap));
+        passes.push_back(eliminateHeaders);
+        passes.push_back(rewriteTypeArguments);
         passes.push_back(new P4::ClearTypeMap(typeMap));
         passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         passes.push_back(new PadFlexibleField(refMap, typeMap)),
@@ -133,4 +144,4 @@ class SimplifyEmitArgs : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_EMIT_ARGS_H_ */
+#endif /* EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_ */

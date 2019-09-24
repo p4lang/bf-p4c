@@ -225,27 +225,6 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             offset += source->type->width_bits();
             LOG4("checksum update includes field:" << source);
 
-        } else if (auto* header = source->to<IR::ConcreteHeaderRef>()) {
-            auto headerRef = header->baseRef();
-            if (offset % 8 && checkIncorrectCsumFields(lastFieldHeaderRef, headerRef)) {
-                std::stringstream msg;
-                msg << "In checksum update list, fields before the header " << header
-                    << " do not add up to a multiple of 8 bits. Total bits until " << header
-                    << " : " << offset;
-                ::fatal_error("%1% %2%", source->srcInfo, msg.str());
-            }
-
-            for (auto field : headerRef->type->fields) {
-                auto* member = new IR::Member(field->type, header, field->name);
-                auto* povBit = new IR::Member(IR::Type::Bits::get(1),
-                                      header, "$valid");
-                fields->push_back(new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(member),
-                                                             new IR::BFN::FieldLVal(povBit)));
-                fieldsToOffset[fields->size() - 1] = offset;
-                LOG4("checksum update includes field:" << field);
-                offset += member->type->width_bits();
-            }
-            lastFieldHeaderRef = headerRef;
         } else {
             :: error("Invalid entry in checksum calculation %1%", source);
         }

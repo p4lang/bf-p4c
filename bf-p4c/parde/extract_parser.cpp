@@ -737,12 +737,6 @@ struct RewriteParserStatements : public Transform {
                 list.push_back(member);
             } else if (auto constant = srcComp->to<IR::Constant>()) {
                 list.push_back(constant);
-            } else if (auto headerRef = srcComp->to<IR::ConcreteHeaderRef>()) {
-                auto header = headerRef->baseRef();
-                for (auto field : header->type->fields) {
-                    auto* member = new IR::Member(src->srcInfo, headerRef, field->name);
-                    list.push_back(member);
-                }
             }
         }
 

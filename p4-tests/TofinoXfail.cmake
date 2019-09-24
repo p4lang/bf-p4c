@@ -1344,6 +1344,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
   testdata/p4_16_samples/issue355-bmv2.p4
+  testdata/p4_16_samples/issue1765-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
