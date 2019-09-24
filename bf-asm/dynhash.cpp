@@ -22,11 +22,15 @@ class DynHash : public Section {
     void process() {
         if (_dynhashFileName.empty()) return;
         std::ifstream inputFile(_dynhashFileName);
-        inputFile >> _dynhash;
         if (!inputFile) {
-            warning(lineno, "%s: not valid dynhash json representation",
-                    _dynhashFileName.c_str());
-            _dynhash.reset(new json::map());
+            warning(lineno, "%s: can't read file", _dynhashFileName.c_str());
+        } else {
+            inputFile >> _dynhash;
+            if (!inputFile) {
+                warning(lineno, "%s: not valid dynhash json representation",
+                        _dynhashFileName.c_str());
+                _dynhash.reset(new json::map());
+            }
         }
     }
 

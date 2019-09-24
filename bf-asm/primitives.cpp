@@ -22,11 +22,15 @@ class Primitives : public Section {
     void process() {
         if (_primitivesFileName.empty()) return;
         std::ifstream inputFile(_primitivesFileName);
-        inputFile >> _primitives;
         if (!inputFile) {
-            warning(lineno, "%s: not valid primitives json representation",
-                    _primitivesFileName.c_str());
-            _primitives.reset(new json::map());
+            warning(lineno, "%s: can't read file", _primitivesFileName.c_str());
+        } else {
+            inputFile >> _primitives;
+            if (!inputFile) {
+                warning(lineno, "%s: not valid primitives json representation",
+                        _primitivesFileName.c_str());
+                _primitives.reset(new json::map());
+            }
         }
     }
 
