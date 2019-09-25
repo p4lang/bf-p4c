@@ -148,7 +148,7 @@ void ExcludeAliasedHeaderFields::excludeAliasedField(const IR::Expression* alias
 
 void ExcludeDeparsedIntrinsicMetadata::end_apply() {
     for (auto& f : phv) {
-        if (f.pov || f.deparsed_to_tm()) {
+        if (f.pov || f.deparsed_to_tm() || f.is_invalidate_from_arch()) {
             LOG1("Marking field as never overlaid: " << f);
             neverOverlay.setbit(f.id); } }
 }

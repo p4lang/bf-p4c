@@ -1,13 +1,5 @@
 #include "phv/analysis/meta_live_range.h"
 
-const ordered_set<cstring> MetadataLiveRange::noInitIntrinsicFields =
-{"ingress::ig_intr_md_for_dprsr.digest_type",
-    "ingress::ig_intr_md_for_dprsr.resubmit_type",
-    "ingress::ig_intr_md_for_dprsr.mirror_type",
-    "egress::ig_intr_md_for_dprsr.digest_type",
-    "egress::ig_intr_md_for_dprsr.resubmit_type"
-};
-
 cstring MetadataLiveRange::printAccess(int access) {
     switch (access) {
         case 1: return "R";
@@ -199,15 +191,15 @@ void MetadataLiveRange::end_apply() {
     // Set of fields whose live ranges must be calculated.
     ordered_set<const PHV::Field*> fieldsConsidered;
     for (const PHV::Field& f : phv) {
+        // Ignore metadata fields marked as no_init because initialization would cause their
+        // container to become valid.
+        if (f.is_invalidate_from_arch()) continue;
         if (noInitFields.count(&f) && !noOverlay.count(&f)) {
             fieldsConsidered.insert(&f);
             continue;
         }
         // POV bits are always live, so ignore.
         if (f.pov) continue;
-        // Ignore metadata fields marked as no_init because initialization would cause their
-        // container to become valid.
-        if (noInitIntrinsicFields.count(f.name)) continue;
         // Ignore pa_no_overlay fields.
         if (noOverlay.count(&f)) continue;
         // Ignore unreferenced fields because they are not allocated anyway.
