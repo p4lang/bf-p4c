@@ -1243,12 +1243,15 @@ void PHV::SlicingIterator::breakUpSlice(
     std::vector<PHV::FieldSlice> postSlicingList;
     for (; it != list.end(); it++) {
         size += it->size();
+        int preSlicingListSize = 0;
         if (it->field() != slicingPoint.field()) {
             preSlicingList.push_back(*it);
+            preSlicingListSize += it->size();
             continue;
         }
         if (!it->range().overlaps(slicingPoint.range())) {
             preSlicingList.push_back(*it);
+            preSlicingListSize += it->size();
             continue;
         }
         toBeErased = &(*it);
@@ -1261,6 +1264,7 @@ void PHV::SlicingIterator::breakUpSlice(
         PHV::FieldSlice leftSlice(it->field(), le_bitrange(StartLen(it->range().lo,
                         slicingPoint.range().lo - it->range().lo)));
         preSlicingList.push_back(leftSlice);
+        preSlicingListSize += leftSlice.size();
         LOG5("\t\t\t\t  Left slice: " << leftSlice);
         LOG5("\t\t\t\t  Original slice offset: " << originalSliceOffset[*it].first << ", "
              << originalSliceOffset[*it].second);
@@ -1271,7 +1275,7 @@ void PHV::SlicingIterator::breakUpSlice(
         }
         postSlicingList.push_back(slicingPoint);
         if (exactSliceListSize.count(*it)) {
-            exactSliceListSize[leftSlice] = size - rightSize;
+            exactSliceListSize[leftSlice] = preSlicingListSize;
             exactSliceListSize[slicingPoint] = rightSize;
         }
         int slicePoint = -1;
