@@ -876,6 +876,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     priority,
                     loweredStates[transition->next]);
 
+            loweredMatch->stride = state->stride;
+
             if (transition->loop)
                 loweredMatch->loop = transition->loop;
 
@@ -1754,11 +1756,13 @@ struct LowerDeparserIR : public PassManager {
 
 /// Collect all containers that are written more than once by the parser.
 class ComputeMultiWriteContainers : public ParserModifier {
+    const PhvInfo& phv;
     const CollectLoweredParserInfo& parser_info;
 
  public:
-    explicit ComputeMultiWriteContainers(const CollectLoweredParserInfo& pi)
-        : parser_info(pi) { }
+    ComputeMultiWriteContainers(const PhvInfo& ph,
+                                const CollectLoweredParserInfo& pi)
+        : phv(ph), parser_info(pi) { }
 
  private:
     bool preorder(IR::BFN::LoweredExtractPhv* extract) override {
@@ -1814,12 +1818,15 @@ class ComputeMultiWriteContainers : public ParserModifier {
         return merged;
     }
 
-    void detect_multi_writes(const IR::BFN::LoweredParser* parser,
+    std::set<PHV::Container>
+    detect_multi_writes(const IR::BFN::LoweredParser* parser,
             const std::map<PHV::Container, std::vector<const IR::BFN::LoweredParserState*>>& writes,
-            IR::Vector<IR::BFN::ContainerRef>& results, const char* which) {
+            const char* which) {
+        std::set<PHV::Container> results;
+
         for (auto w : writes) {
             if (has_non_mutex_writes(parser, w.second)) {
-                results.push_back(new IR::BFN::ContainerRef(w.first));
+                results.insert(w.first);
                 LOG4("mark " << w.first << " as " << which);
             } else if (Device::currentDevice() == Device::JBAY) {
                 // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
@@ -1829,33 +1836,47 @@ class ComputeMultiWriteContainers : public ParserModifier {
                     if (writes.count(other)) {
                         auto merged = merge_states(w.second, writes.at(other));
                         if (has_non_mutex_writes(parser, merged)) {
-                            results.push_back(new IR::BFN::ContainerRef(w.first));
+                            results.insert(w.first);
                             LOG4("mark " << w.first << " as " << which);
                         }
                     }
                 }
             }
         }
+
+        return results;
     }
 
     void postorder(IR::BFN::LoweredParser* parser) override {
         auto orig = getOriginal<IR::BFN::LoweredParser>();
 
-        detect_multi_writes(orig, bitwise_or,
-                            parser->bitwiseOrContainers, "bitwise-or");
+        auto bitwise_or_containers = detect_multi_writes(orig, bitwise_or, "bitwise-or");
 
-        detect_multi_writes(orig, clear_on_write,
-                            parser->clearOnWriteContainers, "clear-on-write");
+        auto clear_on_write_containers =
+            detect_multi_writes(orig, clear_on_write, "clear-on-write");
 
-        // validate
-        for (auto bor : parser->bitwiseOrContainers) {
-            for (auto clr : parser->clearOnWriteContainers) {
-                if (bor->container == clr->container) {
-                    BUG("Container cannot be both clear-on-write and bitwise-or: %1%",
-                         clr->container);
-                }
+        for (const auto& f : phv) {
+            if (f.gress != parser->gress) continue;
+
+            if (f.name.endsWith("$stkvalid")) {
+                auto ctxt = PHV::AllocContext::PARSER;
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                    bitwise_or_containers.insert(alloc.container);
+                });
             }
         }
+
+        // validate
+        for (auto c : bitwise_or_containers) {
+            if (clear_on_write_containers.count(c))
+                BUG("Container cannot be both clear-on-write and bitwise-or: %1%", c);
+        }
+
+        for (auto c : bitwise_or_containers)
+            parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(c));
+
+        for (auto c : clear_on_write_containers)
+            parser->clearOnWriteContainers.push_back(new IR::BFN::ContainerRef(c));
     }
 
     std::map<PHV::Container,
@@ -2048,7 +2069,7 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,
         parser_info,
-        new ComputeMultiWriteContainers(*parser_info),
+        new ComputeMultiWriteContainers(phv, *parser_info),
         new ComputeBufferRequirements,
         new CharacterizeParser
     });

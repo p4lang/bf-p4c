@@ -42,7 +42,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
               tableActionsMap, alloc),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
               domTree, alloc),
-      clustering(phv, uses, pack_conflicts, action_constraints) {
+      clustering(phv, uses, pack_conflicts, action_constraints),
+      strided_headers(phv) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -113,9 +114,13 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &clustering,
             new PhvInfo::DumpPhvFields(phv, uses),
             &table_ids,
+
+            &strided_headers,
+
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     field_to_parser_states, parser_critical_path, critical_path_clusters,
-                    table_alloc, meta_init, dark_live_range, table_ids),
+                    table_alloc, meta_init, dark_live_range, table_ids,
+                    strided_headers),
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse
         }); }

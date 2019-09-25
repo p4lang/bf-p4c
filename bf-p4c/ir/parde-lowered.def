@@ -252,6 +252,9 @@ class LoweredParserMatch {
     /// Next state to transition to (null means terminal state)
     NullOK LoweredParserState next;
 
+    /// If true, extract at stridded offset on state re-entry
+    bool stride = false;
+
 #emit
     cstring loop;
 #end

@@ -9,11 +9,13 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 struct InferWriteMode : public ParserModifier {
+    const PhvInfo& phv;
     const CollectParserInfo& parser_info;
     const MapFieldToParserStates& field_to_states;
 
-    InferWriteMode(const CollectParserInfo& pi, const MapFieldToParserStates& fs) :
-        parser_info(pi), field_to_states(fs) { }
+    InferWriteMode(const PhvInfo& ph, const CollectParserInfo& pi,
+                   const MapFieldToParserStates& fs) :
+        phv(ph), parser_info(pi), field_to_states(fs) { }
 
     std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
 
@@ -255,8 +257,14 @@ struct InferWriteMode : public ParserModifier {
 
     bool preorder(IR::BFN::Extract* extract) override {
         auto orig = getOriginal<IR::BFN::Extract>();
+
         if (extract_to_write_mode.count(orig))
             extract->write_mode = extract_to_write_mode.at(orig);
+
+        auto dest = phv.field(extract->dest->field);
+        if (dest && dest->name.endsWith("$stkvalid"))
+            extract->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
+
         return false;
     }
 
@@ -425,7 +433,7 @@ struct FixupMirroredIntrinsicMetadata : public PassManager {
 CheckParserMultiWrite::CheckParserMultiWrite(const PhvInfo& phv) : phv(phv) {
     auto parser_info = new CollectParserInfo;
     auto field_to_states = new MapFieldToParserStates(phv);
-    auto infer_write_mode = new InferWriteMode(*parser_info, *field_to_states);
+    auto infer_write_mode = new InferWriteMode(phv, *parser_info, *field_to_states);
     auto fixup_mirrored_intrinsic = new FixupMirroredIntrinsicMetadata(phv);
 
     bool needs_fixup = Device::currentDevice() == Device::TOFINO &&

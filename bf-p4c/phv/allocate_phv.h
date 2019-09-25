@@ -8,6 +8,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/collect_strided_headers.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv.h"
@@ -414,6 +415,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const ClotInfo& clot_i;
     ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
+    const CollectStridedHeaders& strided_headers_i;
 
  public:
     BruteForceAllocationStrategy(const CoreAllocation& alloc,
@@ -421,10 +423,12 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                  const CalcParserCriticalPath& ccp,
                                  const CalcCriticalPathClusters& cpc,
                                  const ClotInfo& clot,
-                                 ordered_set<cstring>& bf)
+                                 ordered_set<cstring>& bf,
+                                 const CollectStridedHeaders& hs)
         : AllocationStrategy(alloc, out), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
-          bridgedFieldsWithAlignmentConflicts(bf) { }
+          bridgedFieldsWithAlignmentConflicts(bf),
+          strided_headers_i(hs) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -441,6 +445,9 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
             const std::list<PHV::SuperCluster*>& cluster_groups_input,
             std::list<PHV::SuperCluster*>& deparser_zero_superclusters) const;
 
+    std::list<PHV::SuperCluster*>
+    create_strided_clusters(const std::list<PHV::SuperCluster*>& cluster_groups) const;
+
     std::list<PHV::SuperCluster*> crush_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups);
 
@@ -456,6 +463,23 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
 
     /// Sort list of superclusters into the order in which they should be allocated.
     void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
+
+    bool tryAllocSlicing(const std::list<PHV::SuperCluster*>& slicing,
+                    const std::list<PHV::ContainerGroup *>& container_groups,
+                    PHV::Transaction& slicing_alloc);
+
+    bool tryAllocStride(const std::list<PHV::SuperCluster*>& stride,
+                        const std::list<PHV::ContainerGroup *>& container_groups,
+                        PHV::Transaction& stride_alloc);
+
+    bool tryAllocStrideWithLeaderAllocated(
+            const std::list<PHV::SuperCluster*>& stride,
+            PHV::Transaction& leader_alloc);
+
+    bool tryAllocSlicingStrided(unsigned num_strides,
+                    const std::list<PHV::SuperCluster*>& slicing,
+                    const std::list<PHV::ContainerGroup *>& container_groups,
+                    PHV::Transaction& slicing_alloc);
 
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
@@ -521,6 +545,7 @@ class AllocatePHV : public Inspector {
     // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const MapTablesToIDs table_ids_i;
+    const CollectStridedHeaders& strided_headers_i;
 
     // Set of bridged metadata fields that were found to have alignment conflicts during PHV
     // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
@@ -597,14 +622,16 @@ class AllocatePHV : public Inspector {
                 const MauBacktracker& alloc,
                 LiveRangeShrinking& meta_init,
                 DarkOverlay& dark,
-                const MapTablesToIDs& t)
+                const MapTablesToIDs& t,
+                const CollectStridedHeaders& hs)
         : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
                 meta_init, dark, field_to_parser_states, parser_critical_path, alloc),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.field_mutex()), pragmas_i(pragmas),
           parser_critical_path_i(parser_critical_path),
-          critical_path_clusters_i(critical_cluster), table_ids_i(t) { }
+          critical_path_clusters_i(critical_cluster), table_ids_i(t),
+          strided_headers_i(hs) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

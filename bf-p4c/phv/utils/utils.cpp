@@ -1434,6 +1434,15 @@ bool PHV::SuperCluster::contains(const PHV::FieldSlice& slice) const {
     return false;
 }
 
+ordered_set<PHV::FieldSlice> PHV::SuperCluster::slices() const {
+    ordered_set<PHV::FieldSlice> rst;
+    for (auto * cluster : clusters_i) {
+        for (auto sl : cluster->slices())
+            rst.insert(sl);
+    }
+    return rst;
+}
+
 /// @returns true if all slices lists and slices are smaller than 32b and no
 /// slice list contains more than one slice per aligned cluster.
 

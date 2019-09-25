@@ -28,7 +28,13 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino2"
     "error: deposit-field dest can't be dark or mocha phv|mismatch from expected"
     extensions/p4_tests/p4_14/stf/parser_error.p4
-    extensions/p4_tests/p4_16/stf/parser_error.p4
+    extensions/p4_tests/p4_16/stf/parser_error.p4)
+
+  # needs strided CLOT alloc
+  p4c_add_xfail_reason("tofino2"
+    ".* expected packet.* on port .* not seen|shorter than expected"
+    extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+    extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   )
 
   p4c_add_xfail_reason("tofino2"

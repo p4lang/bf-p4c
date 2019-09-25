@@ -24,6 +24,7 @@
 #include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/phv/collect_strided_headers.h"
 
 /** This is the main PHV allocation pass manager.
   */
@@ -66,6 +67,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     ordered_set<const PHV::Field*> deparser_zero_fields;
     /// Tables To IDs used in PHV analysis.
     MapTablesToIDs table_ids;
+    /// Collect header stacks that need strided allocation
+    CollectStridedHeaders strided_headers;
 
  public:
     PHV_AnalysisPass(

@@ -401,6 +401,10 @@ class ParserState : Unit {
 
     cstring name;
     gress_t gress;
+
+    /// If true, extract at stridded offset on state re-entry
+    bool stride = false;
+
     inline Vector<ParserPrimitive> statements;
     inline Vector<Select> selects;
     inline Vector<Transition> transitions;

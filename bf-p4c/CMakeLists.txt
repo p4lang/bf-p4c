@@ -460,6 +460,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/auto_init_metadata.h
   phv/check_unallocated.h
   phv/cluster_phv_operations.h
+  phv/collect_strided_headers.h
   phv/create_thread_local_instances.h
   phv/parser_extract_balance_score.h
   phv/finalize_stage_allocation.h

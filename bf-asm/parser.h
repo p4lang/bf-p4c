@@ -113,8 +113,8 @@ class Parser {
             std::string value_set_name;
             int         value_set_size = 0;
             int         value_set_handle = -1;
-            int         offset = 0, shift = 0, buf_req = -1;
-            bool        offset_reset = false;
+            int         offset_inc = 0, shift = 0, buf_req = -1;
+            bool        offset_rst = false;
 
             int ctr_imm_amt = 0, ctr_ld_src = 0, ctr_load = 0;
             CounterInit* ctr_instr = nullptr;

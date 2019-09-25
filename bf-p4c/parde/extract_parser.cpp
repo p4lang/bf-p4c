@@ -187,7 +187,7 @@ struct ParserLoopsInfo {
     };
 
     ParserLoopsInfo(P4::TypeMap* typeMap, P4::ReferenceMap* refMap,
-                    const IR::BFN::TnaParser* parser) {
+                const IR::BFN::TnaParser* parser, const ParserPragmas& pm) : parserPragmas(pm) {
         P4ParserGraphs pg(refMap, typeMap, false);
         parser->apply(pg);
 
@@ -220,6 +220,8 @@ struct ParserLoopsInfo {
         }
     }
 
+    const ParserPragmas& parserPragmas;
+
     std::set<std::set<cstring>> loops;
     std::map<cstring, int> max_loop_depth;
     std::set<cstring> has_next;   // states that have stack "next" references
@@ -233,19 +235,34 @@ struct ParserLoopsInfo {
         return nullptr;
     }
 
-    /// Returns true if the state is on loop that does not have "next" reference.
-    /// It's always safe to keep the simple loops (as opposed to unrolled) as these
-    /// do not need to PHV allocation to be at strided offset.
-    bool is_on_simple_loop(cstring state) const {
+    /// Returns true if the state is on loop that has "next" reference.
+    bool has_next_on_loop(cstring state) const {
         auto loop = find_loop(state);
         if (!loop) return false;
 
         for (auto s : *loop) {
             if (has_next.count(s))
-                return false;
+                return true;
         }
 
-        return true;
+        return false;
+    }
+
+    bool dont_unroll(cstring state) const {
+        auto loop = find_loop(state);
+        if (!loop) return false;
+
+        for (auto s : *loop) {
+            if (parserPragmas.dont_unroll.count(s))
+                return true;
+        }
+
+        return !has_next_on_loop(state);
+    }
+
+    /// state is on loop that requires strided allocation
+    bool need_strided_allocation(cstring state) const {
+        return dont_unroll(state) && has_next.count(state);
     }
 };
 
@@ -347,7 +364,7 @@ class GetBackendParser {
                               ParseTna* arch,
                               const IR::BFN::TnaParser* parser) :
             typeMap(typeMap), refMap(refMap), arch(arch), parser(parser),
-            parserLoopsInfo(typeMap, refMap, parser) {
+            parserLoopsInfo(typeMap, refMap, parser, parserPragmas) {
         parser->apply(parserPragmas);
     }
 
@@ -516,6 +533,7 @@ struct ResolveHeaderStackIndex : public Transform {
     /// Local map of header to stack index.
     /// The stack index can be advanced multiple times in the current state.
     std::map<cstring, int> headerToCurrentIndex;
+    std::set<cstring> resolvedHeaders;
 
     bool stackOutOfBound = false;
 
@@ -585,6 +603,8 @@ struct ResolveHeaderStackIndex : public Transform {
         LOG4("resolved " << header << " stack index " << unresolved->index
                          << " to " << currentIndex);
 
+        resolvedHeaders.insert(header);
+
         auto resolved = new IR::Constant(currentIndex);
 
         auto statement = findContext<IR::MethodCallStatement>();
@@ -621,6 +641,8 @@ struct RewriteParserStatements : public Transform {
 
         auto* hdr = dest->to<IR::HeaderRef>();
         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
+
+        auto header = hdr->baseRef()->name;
 
         if (gress == EGRESS &&
             hdr_type->getAnnotation("not_extracted_in_egress") != nullptr) {
@@ -661,9 +683,11 @@ struct RewriteParserStatements : public Transform {
         // Generate an extract operation for the POV bit.
         auto* type = IR::Type::Bits::get(1);
         auto* validBit = new IR::Member(type, hdr, "$valid");
-        rv->push_back(new IR::BFN::Extract(srcInfo, validBit,
-                        new IR::BFN::ConstantRVal(type, 1)));
 
+        auto* extractValidBit = new IR::BFN::Extract(srcInfo, validBit,
+                        new IR::BFN::ConstantRVal(type, 1));
+
+        rv->push_back(extractValidBit);
         return rv;
     }
 
@@ -1247,11 +1271,16 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
 
     auto* state = backendStates[name];
 
+    if (parserLoopsInfo.need_strided_allocation(name)) {
+        state->stride = true;
+        LOG3("mark " << name << " as strided");
+    }
+
     if (ancestors.visited(state)) {
         LOG3("parser state " << name << " is in a loop");
 
-        if (parserPragmas.dont_unroll.count(name) ||
-            parserLoopsInfo.is_on_simple_loop(name)) {
+        if (parserLoopsInfo.dont_unroll(name)) {
+            LOG3("keeping " << name << " as a loop");
             isLoopState = true;
             return state;
         }
@@ -1274,6 +1303,8 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
             // current iteration already unrolled, reuse this state
             return backendStates.at(unrolledName);
         } else {
+            LOG3("unrolling " << name << " as " << unrolledName);
+
             // unroll current iteration by creating a new empty instance of this
             // state, which we'll convert again.
             auto newName = cstring::make_unique(backendStates, unrolledName);
@@ -1310,8 +1341,8 @@ GetBackendParser::convertBody(IR::BFN::ParserState* state) {
 
     // Lower the parser statements from frontend IR to backend IR.
     RewriteParserStatements rewriteStatements(typeMap,
-                                              state->p4State->controlPlaneName(),
-                                              state->gress);
+                                    state->p4State->controlPlaneName(),
+                                    state->gress);
 
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));

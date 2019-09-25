@@ -1871,8 +1871,8 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 //
 
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &slice) {
-    out << slice.container << slice.container_bits() << " <-- " << PHV::FieldSlice(slice.field,
-            slice.field_bits());
+    out << slice.container << " " << slice.container_bits() << " <-- "
+        << PHV::FieldSlice(slice.field, slice.field_bits());
     if (Device::currentDevice() == Device::JBAY) {
         out << " live at [" << slice.min_stage.first << slice.min_stage.second << ", " <<
             slice.max_stage.first << slice.max_stage.second << "]";

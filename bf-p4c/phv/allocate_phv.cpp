@@ -498,7 +498,7 @@ boost::optional<bitvec> CoreAllocation::satisfies_constraints(
         if (cluster.okIn(t.kind()))
             isOkIn = true; }
     if (!isOkIn) {
-        LOG5("    ...but cluster cannot be placed in " << group.width() << "PHV containers");
+        LOG5("    ...but cluster cannot be placed in " << group.width() << " containers");
         return boost::none; }
 
     // Check that a valid start alignment exists for containers of this size.
@@ -944,7 +944,8 @@ CoreAllocation::tryAllocSliceList(
         // are allocated to the same container.
         if (previous_container != PHV::Container() && previous_container != c) {
             LOG5("    ...but some slices were already allocated to " << previous_container);
-            continue; }
+            continue;
+        }
 
         // true if field slices can be placed in this container.
         bool can_place = true;
@@ -1917,7 +1918,8 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     AllocationStrategy *strategy =
         new BruteForceAllocationStrategy(core_alloc_i, report, parser_critical_path_i,
                                          critical_path_clusters_i, clot_i,
-                                         bridgedFieldsWithAlignmentConflicts);
+                                         bridgedFieldsWithAlignmentConflicts,
+                                         strided_headers_i);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
     // Later we can try different strategies,
@@ -2646,6 +2648,61 @@ BruteForceAllocationStrategy::remove_deparser_zero_superclusters(
     return rst;
 }
 
+/// Check if the supercluster has field slice that requires strided
+/// allocation. Merge all related stride superclusters.
+std::list<PHV::SuperCluster*>
+BruteForceAllocationStrategy::create_strided_clusters(
+        const std::list<PHV::SuperCluster*>& cluster_groups) const {
+    std::list<PHV::SuperCluster*> rst;
+
+    for (auto g : cluster_groups) {
+        const ordered_set<const PHV::Field*>* strided_group = nullptr;
+        auto g_slices = g->slices();
+
+        for (auto sl : g_slices) {
+            strided_group = strided_headers_i.get_strided_group(sl.field());
+
+            if (strided_group) {
+                if (g_slices.size() != 1) {
+                    ::error("Field %1% requires strided allocation"
+                            " but has conflicting constraints on it.", sl.field()->name);
+                }
+                break;
+            }
+        }
+
+        if (strided_group) {
+            bool merged = false;
+
+            for (auto r : rst) {
+                auto r_slices = r->slices();
+                for (auto sl : r_slices) {
+                    if (strided_group->count(sl.field())) {
+                        if (r_slices.begin()->range() == g_slices.begin()->range()) {
+                            rst.remove(r);
+                            auto m = r->merge(g);
+                            m->needsStridedAlloc(true);
+                            rst.push_back(m);
+                            merged = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (merged)
+                    break;
+            }
+
+            if (!merged)
+                rst.push_back(g);
+        } else {
+            rst.push_back(g);
+        }
+    }
+
+    return rst;
+}
+
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::remove_singleton_slicelist_metadata(
         const std::list<PHV::SuperCluster*>& cluster_groups) const {
@@ -2710,6 +2767,8 @@ BruteForceAllocationStrategy::tryAllocation(
     cluster_groups = remove_deparser_zero_superclusters(cluster_groups,
             deparser_zero_superclusters);
 
+    cluster_groups = create_strided_clusters(cluster_groups);
+
     // Sorting clusters must happen after the deparser zero superclusters are removed.
     sortClusters(cluster_groups);
 
@@ -2743,7 +2802,9 @@ BruteForceAllocationStrategy::tryAllocation(
         writeTransactionSummary(rst, allocated_clusters);
         return AllocResult(AllocResultCode::FAIL, std::move(rst), std::move(cluster_groups));
     } else {
-        return AllocResult(AllocResultCode::SUCCESS, std::move(rst), std::move(cluster_groups)); }
+        report_i << "BruteForceStrategy Allocation Successful.\n";
+        return AllocResult(AllocResultCode::SUCCESS, std::move(rst), std::move(cluster_groups));
+    }
 }
 
 void
@@ -2952,6 +3013,254 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         LOG5("========== end Sorted SuperClusters ============="); }
 }
 
+/// Check if the giving slicing is valid for strided allocation.
+/// To be valid for strided allocation, all fields within cluster
+/// must have same slicing.
+bool is_valid_stride_slicing(std::list<PHV::SuperCluster*>& slicing) {
+    // XXX(zma) somehow for the singleton case, the slicing iterator
+    // does not slice further, manually break each slice into its own
+    // supercluster here ... yuck!
+    if (slicing.size() == 1)  {
+        auto sc = slicing.front();
+
+        std::list<PHV::SuperCluster*> sliced;
+
+        BUG_CHECK(sc->clusters().size() == sc->slice_lists().size(),
+                  "malformed supercluster? %1%", sc);
+
+        auto cit = sc->clusters().begin();
+        auto sit = sc->slice_lists().begin();
+
+        while (cit != sc->clusters().end()) {
+            auto scc = new PHV::SuperCluster({*cit}, {*sit});
+            sliced.push_back(scc);
+            cit++;
+            sit++;
+        }
+
+        slicing = sliced;
+
+        return true;
+    }
+
+    for (auto x : slicing) {
+        bool found_equiv = false;
+
+        for (auto y : slicing) {
+            if (x == y)
+                continue;
+
+            if (x->slices().begin()->range() == y->slices().begin()->range()) {
+                found_equiv = true;
+                break;
+            }
+        }
+
+        if (!found_equiv)
+            return false;
+    }
+
+    return true;
+}
+
+bool
+BruteForceAllocationStrategy::tryAllocSlicing(const std::list<PHV::SuperCluster*>& slicing,
+                                          const std::list<PHV::ContainerGroup *>& container_groups,
+                                          PHV::Transaction& slicing_alloc) {
+    LOG4("Try alloc slicing:");
+
+    // Place all slices, then get score for that placement.
+    bool succeeded = true;
+
+    for (auto* sc : slicing) {
+        // Find best container group for this slice.
+        auto best_slice_score = AllocScore::make_lowest();
+        boost::optional<PHV::Transaction> best_slice_alloc = boost::none;
+
+        for (PHV::ContainerGroup* container_group : container_groups) {
+            LOG4("Try container group: " << container_group);
+
+            if (auto partial_alloc =
+                    core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
+                        bridgedFieldsWithAlignmentConflicts)) {
+                AllocScore score = AllocScore(*partial_alloc,
+                        core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                        core_alloc_i.field_to_parser_states(),
+                        core_alloc_i.parser_critical_path());
+                LOG4("    ...SUPERCLUSTER score: " << score);
+                if (!best_slice_alloc || score > best_slice_score) {
+                    best_slice_score = score;
+                    best_slice_alloc = partial_alloc;
+                }
+            }
+        }
+
+        // Break if this slice couldn't be placed.
+        if (best_slice_alloc == boost::none) {
+            LOG4("...but these SUPERCLUSTER Uid: " << sc->uid
+                << " slices could not be placed.");
+            succeeded = false;
+            break;
+        }
+
+        // Otherwise, update the score.
+        slicing_alloc.commit(*best_slice_alloc);
+    }
+
+    return succeeded;
+}
+
+std::vector<std::list<PHV::SuperCluster*>>
+reorder_slicing_as_strides(unsigned num_strides,
+                           const std::list<PHV::SuperCluster*>& slicing) {
+    std::vector<PHV::SuperCluster*> vec;
+    for (auto sl : slicing)
+        vec.push_back(sl);
+
+    std::vector<std::list<PHV::SuperCluster*>> strides;
+
+    for (unsigned i = 0; i < num_strides; i++) {
+        std::list<PHV::SuperCluster*> stride;
+        for (unsigned j = 0; j < slicing.size() / num_strides; j++) {
+            stride.push_back(vec[j * num_strides + i]);
+        }
+        strides.push_back(stride);
+    }
+
+    if (LOGGING(4)) {
+        LOG4("After strided reordering:");
+        for (auto& stride : strides) {
+            int i = 0;
+            LOG4("stride " << i++ << " :");
+            for (auto* sc : stride)
+                LOG4(sc);
+        }
+    }
+
+    return strides;
+}
+
+bool
+BruteForceAllocationStrategy::tryAllocStride(const std::list<PHV::SuperCluster*>& stride,
+                                          const std::list<PHV::ContainerGroup *>& container_groups,
+                                          PHV::Transaction& stride_alloc) {
+    LOG4("Try alloc slicing stride");
+
+    auto best_score = AllocScore::make_lowest();
+    boost::optional<PHV::Transaction> best_alloc = boost::none;
+
+    auto leader = stride.front();
+
+    for (PHV::ContainerGroup* container_group : container_groups) {
+        LOG4("Try container group: " << container_group);
+
+        auto leader_alloc = core_alloc_i.tryAlloc(stride_alloc, *container_group, *leader,
+                                                  bridgedFieldsWithAlignmentConflicts);
+        if (leader_alloc) {
+            // alloc rest
+            if (tryAllocStrideWithLeaderAllocated(stride, *leader_alloc)) {
+                AllocScore score = AllocScore(*leader_alloc,
+                        core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
+                        core_alloc_i.field_to_parser_states(),
+                        core_alloc_i.parser_critical_path());
+
+                if (!best_alloc || score > best_score) {
+                    best_score = score;
+                    best_alloc = leader_alloc;
+                }
+            }
+        }
+    }
+
+    if (best_alloc == boost::none) {
+        LOG4("Failed to allocate slicing stride");
+        return false;
+    }
+
+    stride_alloc.commit(*best_alloc);
+    return true;
+}
+
+bool
+BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
+        const std::list<PHV::SuperCluster*>& stride,
+        PHV::Transaction& leader_alloc) {
+    auto leader = stride.front();
+    auto slices = leader->slices();
+    auto status = leader_alloc.getTransactionStatus();
+
+    PHV::Container prev;
+
+    for (auto& kv : status) {
+        for (auto sl : kv.second.slices) {
+            if (sl.field() == slices.begin()->field() &&
+                sl.field_slice() == slices.begin()->range()) {
+                if (prev)
+                    BUG("strided slice gets allocated into multiple containers? %1%", sl);
+
+                prev = sl.container();
+            }
+        }
+    }
+
+    for (auto* sc : stride) {
+        if (sc == leader)
+            continue;
+
+        PHV::Container curr(prev.type(), prev.index() + 1);
+
+        if (leader_alloc.getStatus(curr) == boost::none) {
+            LOG4("falling off the cliff with " << curr);
+            return false;
+        }
+
+        PHV::ContainerGroup cg(curr.type().size(), {curr});
+
+        auto sc_alloc = core_alloc_i.tryAlloc(leader_alloc, cg, *sc,
+                                              bridgedFieldsWithAlignmentConflicts);
+
+        if (!sc_alloc) {
+            LOG4("failed to alloc next stride slice in " << curr);
+            return false;
+        }
+
+        LOG4("allocated next stride slice in " << curr);
+        leader_alloc.commit(*sc_alloc);
+        prev = curr;
+    }
+
+    return true;
+}
+
+bool
+BruteForceAllocationStrategy::tryAllocSlicingStrided(unsigned num_strides,
+                                          const std::list<PHV::SuperCluster*>& slicing,
+                                          const std::list<PHV::ContainerGroup *>& container_groups,
+                                          PHV::Transaction& slicing_alloc) {
+    LOG4("Try alloc slicing strided: (num_stride = " << num_strides << ")");
+
+    auto strides = reorder_slicing_as_strides(num_strides, slicing);
+
+    int i = 0;
+    for (auto& stride : strides) {
+        auto stride_alloc = slicing_alloc.makeTransaction();
+        bool succeeded = tryAllocStride(stride, container_groups, stride_alloc);
+
+        if (succeeded) {
+            slicing_alloc.commit(stride_alloc);
+            LOG4("alloc stride " << i << " ok");
+        } else {
+            LOG4("Failed to alloc stride " << i);
+            return false;
+        }
+        i++;
+    }
+
+    LOG4("All strides allocated!");
+
+    return true;
+}
+
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                         std::list<PHV::SuperCluster*>& cluster_groups,
@@ -2970,12 +3279,11 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         });
     }
 
-    const int MAX_SLICING_TRY = 65535;
     std::stringstream alloc_history;
     std::list<PHV::SuperCluster*> allocated;
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
         alloc_history << "TRYING to allocate " << cluster_group;
-        LOG5("TRYING to allocate " << cluster_group);
+        LOG4("TRYING to allocate " << cluster_group);
         auto best_score = AllocScore::make_lowest();
         boost::optional<PHV::Transaction> best_alloc = boost::none;
         boost::optional<std::list<PHV::SuperCluster*>> best_slicing = boost::none;
@@ -2987,52 +3295,57 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         if (slice_it.done())
             LOG4("    ...but there are no valid slicings");
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
+
+        int MAX_SLICING_TRY = 65535;
+
+        /// XXX(zma) strided cluster can have many slices in the supercluster
+        /// and the number of slicing can blow up (need a better way to stop
+        /// than this crude heuristic).
+        if (cluster_group->needsStridedAlloc())
+            MAX_SLICING_TRY = 128;
+
         while (!slice_it.done()) {
-            auto slicing_alloc = rst.makeTransaction();
+            auto slicing = *slice_it;
 
             if (LOGGING(4)) {
-                LOG4("Trying to allocate these SUPERCLUSTER slices:");
-                for (auto* sc : *slice_it)
-                    LOG4(sc); }
+                LOG4("Slicing attempt: " << n_tried);
+                for (auto* sc : slicing)
+                    LOG4(sc);
+            }
 
             // If the current slicing does not satisfy pa_container_size requirements, then ignore
             // and go to the next slice. This is required to ensure that later slicings (after
             // pre-slicing) respect the pa_container_size pragma.
             std::set<const PHV::Field*> unsatisfiable_fields =
-                pa_container_sizes.unsatisfiable_fields(*slice_it);
+                pa_container_sizes.unsatisfiable_fields(slicing);
+
             if (unsatisfiable_fields.size() > 0) {
                 ++slice_it;
-                continue; }
+                LOG4("Container size unsatisfiable slicing, continue ...");
+                continue;
+            }
+
+            if (cluster_group->needsStridedAlloc()) {
+                if (!is_valid_stride_slicing(slicing)) {
+                    ++slice_it;
+                    LOG4("Invalid stride slicing, continue ...");
+                    continue;
+                }
+            }
+
+            LOG4("Valid slicing, try to place all slices in slicing:");
 
             // Place all slices, then get score for that placement.
-            bool succeeded = true;
-            for (auto* sc : *slice_it) {
-                // Find best container group for this slice.
-                auto best_slice_score = AllocScore::make_lowest();
-                boost::optional<PHV::Transaction> best_slice_alloc = boost::none;
-                for (PHV::ContainerGroup* container_group : container_groups) {
-                    LOG4(container_group);
-                    if (auto partial_alloc =
-                            core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
-                                bridgedFieldsWithAlignmentConflicts)) {
-                        AllocScore score = AllocScore(*partial_alloc,
-                                core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
-                                core_alloc_i.field_to_parser_states(),
-                                core_alloc_i.parser_critical_path());
-                        LOG4("    ...SUPERCLUSTER score: " << score);
-                        if (!best_slice_alloc || score > best_slice_score) {
-                            best_slice_score = score;
-                            best_slice_alloc = partial_alloc; } } }
+            auto slicing_alloc = rst.makeTransaction();
+            bool succeeded = false;
 
-                // Break if this slice couldn't be placed.
-                if (best_slice_alloc == boost::none) {
-                    LOG4("...but these SUPERCLUSTER Uid: " << sc->uid
-                        << " slices could not be placed.");
-                    succeeded = false;
-                    break; }
-
-                // Otherwise, update the score.
-                slicing_alloc.commit(*best_slice_alloc); }
+            if (cluster_group->needsStridedAlloc()) {
+                unsigned num_strides = slicing.size() / cluster_group->slices().size();
+                succeeded = tryAllocSlicingStrided(num_strides,
+                                                   slicing, container_groups, slicing_alloc);
+            } else {
+                succeeded = tryAllocSlicing(slicing, container_groups, slicing_alloc);
+            }
 
             // If allocation succeeded, check the score.
             auto slicing_score = AllocScore(slicing_alloc,
@@ -3042,20 +3355,23 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
             if (LOGGING(4)) {
                 LOG4("Best SUPERCLUSTER score for this slicing: " << slicing_score);
                 LOG4("For the following SUPERCLUSTER slices: ");
-                for (auto* sc : *slice_it)
-                    LOG4(sc); }
+                for (auto* sc : slicing)
+                    LOG4(sc);
+            }
             if (succeeded && (!best_alloc || slicing_score > best_score)) {
                 best_score = slicing_score;
                 best_alloc = slicing_alloc;
-                best_slicing = *slice_it;
+                best_slicing = slicing;
                 LOG4("...and this is the best score seen so far.");
             }
 
-            // Try the next slice.
+            // Try the next slicing.
             ++slice_it;
             ++n_tried;
             if (n_tried >= MAX_SLICING_TRY) {
-                break; }
+                LOG4("Exceeding max slicing attempts " << MAX_SLICING_TRY << ", stop!");
+                break;
+            }
         }
 
         // If any allocation was found, commit it.
@@ -3065,7 +3381,9 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
                 LOG4("by slicing it into the following superclusters:");
                 for (auto* sc : *best_slicing)
                     LOG5(sc);
-                LOG4("SCORE: " << best_score); }
+                LOG4("SCORE: " << best_score);
+            }
+
             rst.commit(*best_alloc);
             allocated.push_back(cluster_group);
             alloc_history << "SUCCESSFULLY" << std::endl;
@@ -3076,8 +3394,8 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
             LOG4(rst.getTransactionSummary());
             alloc_history << "FAILED" << std::endl;
             alloc_history << rst.getTransactionSummary() << std::endl;
-        } }
-
+        }
+    }
 
     // XXX(cole): There must be a better way to remove elements from a list
     // while iterating, but `it = clusters_i.erase(it)` skips elements.

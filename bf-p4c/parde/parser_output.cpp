@@ -228,6 +228,9 @@ struct ParserAsmSerializer : public ParserInspector {
         if (match->bufferRequired)
             out << indent << "buf_req: " << *match->bufferRequired << std::endl;
 
+        if (match->stride)
+            out << indent << "offset_inc: 1" << std::endl;
+
         out << indent << "next: ";
         if (match->next)
             out << canon_name(match->next->name);

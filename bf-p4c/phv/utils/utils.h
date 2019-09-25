@@ -656,12 +656,12 @@ class ConcreteAllocation : public Allocation {
 class Transaction : public Allocation {
     const Allocation* parent_i;
 
+ public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
     boost::optional<ContainerStatus> getStatus(PHV::Container c) const override;
 
- public:
     /// Uniform abstraction for accessing field state.
     /// @returns the FieldStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
@@ -1133,6 +1133,7 @@ class SuperCluster : public ClusterStats {
     size_t aggregate_size_i = 0;
     size_t num_pack_conflicts_i = 0;
     bool hasDeparsedFields_i = false;
+    bool needsStridedAlloc_i = false;
 
  public:
     SuperCluster(
@@ -1232,11 +1233,19 @@ class SuperCluster : public ClusterStats {
     /// wire or the TM).
     bool deparsed() const override { return hasDeparsedFields_i; }
 
+    /// @returns true if this super cluster needs strided allocation
+    bool needsStridedAlloc() const { return needsStridedAlloc_i; }
+
+    void needsStridedAlloc(bool val) { needsStridedAlloc_i = val; }
+
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;
 
     /// @returns true if this cluster contains @slice.
     bool contains(const PHV::FieldSlice& slice) const override;
+
+    /// @returns all field slices in this cluster
+    ordered_set<PHV::FieldSlice> slices() const;
 
     /// @returns the gress requirement of this cluster.
     gress_t gress() const override { return gress_i; }

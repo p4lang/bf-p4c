@@ -923,6 +923,12 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if ((shift = kv.value.i) < 0 || shift > PARSER_INPUT_BUFFER_SIZE)
                 error(kv.value.lineno, "shift value %d out of range", shift);
+        } else if (kv.key == "offset_inc") {
+            if (offset_inc)
+                error(kv.key.lineno, "Multiple offset_inc settings in match");
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if ((offset_inc = kv.value.i) != 1)
+                error(kv.value.lineno, "currently only offset_inc of 1 is supported");
         } else if (kv.key == "buf_req") {
             if (buf_req >= 0)
                 error(kv.key.lineno, "Multiple buf_req settings in match");
@@ -980,8 +986,8 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
 Parser::State::Match::Match(int l, gress_t gress, State *n) : lineno(l)
 {
     /* build a default match for a synthetic start state */
-    offset = shift = 0;
-    offset_reset = true;
+    offset_inc = shift = 0;
+    offset_rst = true;
     next.name = n->name;
     next.ptr.push_back(n);
 }
@@ -1506,12 +1512,12 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     for (auto &c : csum) {
         action_row.csum_en[c.unit] = 1;
         action_row.csum_addr[c.unit] = c.addr; }
-    if (offset || offset_reset) {
-        action_row.dst_offset_inc = offset;
-        action_row.dst_offset_rst = offset_reset;
+    if (offset_inc || offset_rst) {
+        action_row.dst_offset_inc = offset_inc;
+        action_row.dst_offset_rst = offset_rst;
     } else if (def) {
-        action_row.dst_offset_inc = def->offset;
-        action_row.dst_offset_rst = def->offset_reset; }
+        action_row.dst_offset_inc = def->offset_inc;
+        action_row.dst_offset_rst = def->offset_rst; }
     if (priority)
         priority.write_config(action_row);
     if (hdr_len_inc_stop)
@@ -1520,8 +1526,10 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
     for (auto &c : csum) c.write_output_config(regs, pa, output_map, used);
+    if (offset_inc) for (auto &s : set) s.flags |= ROTATE;
     for (auto &s : set) s.write_output_config(regs, output_map, used);
     if (def) for (auto &s : def->set) s.write_output_config(regs, output_map, used);
+    if (offset_inc) for (auto &s : save) s.flags |= OFFSET;
     for (auto &s : save)
         max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
     if (def) for (auto &s : def->save)
