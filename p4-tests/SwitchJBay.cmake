@@ -11,10 +11,10 @@ p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-I${SWITCH_P4_16_INC} -tofino2 -arch t2na")
 
 # Need to confirm the p4 path once a new profile is created for L0 on tofino2
-set (SWITCH_P4_16_L0 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x3.p4)
-file (RELATIVE_PATH switch_p4_16_l0 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_L0})
+set (SWITCH_P4_16_Y3 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y3.p4)
+file (RELATIVE_PATH switch_p4_16_y3 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y3})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_l0_profile" ${switch_p4_16_l0} "${testExtraArgs}" "-DL0_PROFILE -I${SWITCH_P4_16_INC} -tofino2 -arch t2na")
+  "smoketest_switch_16_compile_y3_profile" ${switch_p4_16_y3} "${testExtraArgs}" "-DY3_PROFILE -I${SWITCH_P4_16_INC} -tofino2 -arch t2na")
 
 set (SWITCH_P4_16_Y1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y1.p4)
 file (RELATIVE_PATH switch_p4_16_y1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_Y1})
@@ -71,7 +71,7 @@ set_tests_properties(
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino2/smoketest_switch_16_compile_y1_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino2/smoketest_switch_16_compile_l0_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino2/smoketest_switch_16_compile_y3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y1" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT 3600)
