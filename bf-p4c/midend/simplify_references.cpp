@@ -4,6 +4,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/midend/param_binding.h"
+#include "bf-p4c/common/utils.h"
 
 namespace {
 
@@ -14,6 +15,7 @@ class ApplyParamBindings : public Transform {
     const IR::Node *preorder(IR::Type_Control *n) override { prune(); return n; }
     const IR::Expression *postorder(IR::PathExpression *pe) override;
     const IR::Expression *postorder(IR::Member *mem) override;
+    const IR::Node *postorder(IR::MAU::SaluAction *salu) override;
 
  public:
     ApplyParamBindings(ParamBinding* bindings, const P4::ReferenceMap* refMap)
@@ -58,6 +60,13 @@ const IR::Expression *ApplyParamBindings::postorder(IR::Member *mem) {
     } else {
         LOG3("not collapsing " << mem << " (not an iref)"); }
     return mem;
+}
+
+const IR::Node *ApplyParamBindings::postorder(IR::MAU::SaluAction *salu) {
+    // Also transform p4func for the benefit of p4v.
+    visit(salu->p4func, "p4func");
+
+    return Transform::postorder(salu);
 }
 
 class SplitComplexInstanceRef : public Transform {
@@ -109,8 +118,13 @@ const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
 
 class RemoveInstanceRef : public Transform {
     std::map<cstring, const IR::Expression *>   created_tempvars;
+
  public:
-    RemoveInstanceRef() { dontForwardChildrenBeforePreorder = true; }
+    RemoveInstanceRef() : RemoveInstanceRef(std::map<cstring, const IR::Expression *>()) { }
+    explicit RemoveInstanceRef(std::map<cstring, const IR::Expression *> created_tempvars)
+            : created_tempvars(created_tempvars) {
+        dontForwardChildrenBeforePreorder = true;
+    }
     const IR::Expression *preorder(IR::InstanceRef *ir) override {
         if (!ir->obj) {
             const IR::Expression *rv = nullptr;
@@ -127,6 +141,13 @@ class RemoveInstanceRef : public Transform {
         } else {
             LOG2("RemoveInstanceRef not removing " << ir->name.name);
             return ir; } }
+
+    const IR::Node *postorder(IR::MAU::SaluAction *salu) {
+        // Also transform p4func for the benefit of p4v.
+        visit(salu->p4func, "p4func");
+
+        return Transform::postorder(salu);
+    }
 };
 
 /**
