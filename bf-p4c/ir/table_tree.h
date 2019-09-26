@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "lib/hex.h"
 #include "lib/indent.h"
+#include "lib/n4.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
 
@@ -64,7 +65,7 @@ class TableTree {
         for (auto &at : tbl->attached) {
             if (at->attached->direct) continue;
             out << indent << at->attached->kind() << " " << at->attached->name
-                << " " << (at->attached->size/1024U) << "K" << std::endl; }
+                << " " << n4(at->attached->size) << std::endl; }
         for (auto &n : tbl->next)
             next[n.second].push_back(n.first);
         for (auto &n : next)

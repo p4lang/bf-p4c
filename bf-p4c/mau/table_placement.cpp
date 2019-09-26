@@ -333,6 +333,37 @@ struct TablePlacement::Placed {
         if (prev)
             placed |= prev->placed; }
 
+    // update the 'placed' bitvec to reflect tables that were previously partly placed and
+    // are now fully placed.
+    void update_for_partly_placed(const ordered_set<const IR::MAU::Table *> &partly_placed) {
+        for (auto *pp : partly_placed) {
+            if (placed[self.tblInfo.at(pp).uid]) continue;  // already done
+            if (!match_placed[self.tblInfo.at(pp).uid]) continue;  // not yet done match
+            bool check = false;
+            // don't bother to recheck tables for which we have not added any attached entries
+            for (auto *ba : pp->attached) {
+                if (ba->attached->direct) continue;
+                if (attached_entries.count(ba->attached)) {
+                    check = true;
+                    break; } }
+            if (!check) continue;
+            bool need_more = false;
+            for (auto *ba : pp->attached) {
+                if (ba->attached->direct) continue;
+                int size = 0;
+                for (const Placed *p = this; p; p = p->prev) {
+                    if (p->attached_entries.count(ba->attached)) {
+                        size += p->attached_entries.at(ba->attached);
+                        if (size >= ba->attached->size)
+                            break; } }
+                if (size < ba->attached->size) {
+                    need_more = true;
+                    break; } }
+            if (!need_more) {
+                LOG3("    " << pp->name << " is now also placed");
+                complete_shared++;
+                placed[self.tblInfo.at(pp).uid] = 1; } } }
+
     // update the action/meter formats in the TableResourceAlloc to match the StageUseEstimate
     void update_formats() {
         if (auto *af = use.preferred_action_format())
@@ -1626,6 +1657,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 done = false;
                 for (auto pl : pl_vec) {
                     pl->group = grp;
+                    pl->update_for_partly_placed(partly_placed);
                     trial.push_back(pl);
                 }
             }

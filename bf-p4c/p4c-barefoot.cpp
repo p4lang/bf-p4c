@@ -197,12 +197,15 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
 
     auto pipeName = maupipe->name;
     BFN::Backend backend(options, maupipe->id);
+#if BFP4C_CATCH_EXCEPTIONS
     try {
+#endif  // BFP4C_CATCH_EXCEPTIONS
         maupipe = maupipe->apply(backend);
         bool success = maupipe != nullptr;
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), success);
         if (maupipe)
             maupipe->apply(as);
+#if BFP4C_CATCH_EXCEPTIONS
     } catch (...) {
         GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), false);
         if (maupipe)
@@ -212,6 +215,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
             std::cerr << "Failed." << std::endl;
         throw;
     }
+#endif  // BFP4C_CATCH_EXCEPTIONS
 }
 
 int main(int ac, char **av) {
