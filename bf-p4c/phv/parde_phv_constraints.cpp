@@ -23,8 +23,13 @@ bool PardePhvConstraints::preorder(const IR::BFN::Extract* extract) {
         // constraint, because stack validity bits cannot be split into multiple containers.
         // Instead, rely on split parser states to initialize this metadata container.
         if (field->size > 8 && field->pov) {
-            LOG1("\tCannot add 8b restriction to stack validity field " << field->name << " of size"
+            LOG3("\tCannot add 8b restriction to stack validity field " << field->name << " of size"
                  << field->size << "b.");
+            return true;
+        }
+        if (field->size > 8 && field->no_split()) {
+            LOG3("\tCannot add 8b restriction to field " << field->name << " already marked "
+                 "atomic");
             return true;
         }
         LOG1("\tAdding 8b container size constraint to field: " << field->name);
@@ -57,8 +62,13 @@ bool PardePhvConstraints::preorder(const IR::BFN::Extract* extract) {
         // `do-not-allocate-to-a-particular-container-size` constraint in PHV.
         if (diff > MAX_CONSTANT_WINDOW) {
             if (field->size > 8 && field->pov) {
-                LOG1("\tCannot add 8b restriction to stack validity field " << field->name << " of "
+                LOG3("\tCannot add 8b restriction to stack validity field " << field->name << " of "
                      "size " << field->size << "b.");
+                return true;
+            }
+            if (field->size > 8 && field->no_split()) {
+                LOG3("\tCannot add 8b restriction to field " << field->name << " already marked "
+                     "atomic");
                 return true;
             }
             LOG1("\tAdding 8b container size constraint to field: " << field->name);

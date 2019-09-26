@@ -810,13 +810,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 
-# Negative test. Constant extractor destination whose sources need more than 3 bits to express must
-# go 8b containers.
-p4c_add_xfail_reason("tofino"
-  "error.*Tofino requires the field to go to 8b containers because of hardware constraints."
-  extensions/p4_tests/p4_16/compile_only/constant_extract_neg.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "The table .* with no key cannot have the action .*"
   ../glass/testsuite/p4_tests/phv/COMPILER-961/jk_msdc.p4
