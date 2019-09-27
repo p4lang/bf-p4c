@@ -444,7 +444,7 @@ static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
     hashFunc.extend = extendValue->to<IR::BoolLiteral>()->value;
     hashFunc.reverse = reverseValue->to<IR::BoolLiteral>()->value;
     hashFunc.poly = coeffValue->to<IR::Constant>()->asUint64();
-    hashFunc.size = coeffValue->to<IR::Constant>()->type->width_bits() - 1;
+    hashFunc.size = coeffValue->to<IR::Constant>()->type->width_bits();
     hashFunc.init = initValue->to<IR::Constant>()->asUint64();
     hashFunc.final_xor = xorValue->to<IR::Constant>()->asUint64();
     hashFunc.type = IR::MAU::HashFunction::CRC;
