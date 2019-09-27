@@ -76,6 +76,8 @@ class MauBacktracker : public Backtrack {
         return noPackFields.count(name);
     }
 
+    bool happensBefore(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
+
     /// @returns the number of stages in the table allocation
     int numStages() const;
 

@@ -26,8 +26,10 @@ bool MauBacktracker::backtrack(trigger &trig) {
             tables.clear();
             for (auto entry : t->tableAlloc) {
                 tables[entry.first] = entry.second;
-                for (int st : entry.second)
+                for (int logical_id : entry.second) {
+                    int st = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
                     maxStage = (maxStage < st) ? st : maxStage; }
+            }
         }
         LOG4("Inserted tables size: " << tables.size());
         return true;
@@ -86,7 +88,9 @@ MauBacktracker::inSameStage(
     BUG_CHECK(t2Stages.size() > 0, "No allocation for table %2%", t2->name);
     for (int a : t1Stages) {
         for (int b : t2Stages) {
-            if (a == b) rs.insert(a); } }
+            int stage_a = a / NUM_LOGICAL_TABLES_PER_STAGE;
+            int stage_b = b / NUM_LOGICAL_TABLES_PER_STAGE;
+            if (stage_a == stage_b) rs.insert(stage_a); } }
     return rs;
 }
 
@@ -94,9 +98,12 @@ void MauBacktracker::printTableAlloc() const {
     if (!LOGGING(3)) return;
     LOG4("Printing Table Placement Before PHV Allocation Pass");
     LOG4("Stage | Table Name");
-    for (auto tbl : tables)
-        for (int st : tbl.second)
+    for (auto tbl : tables) {
+        for (int logical_id : tbl.second) {
+            int st = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
             LOG4(boost::format("%5d") % st << " | " << tbl.first);
+        }
+    }
 }
 
 bool MauBacktracker::hasTablePlacement() const {
@@ -104,12 +111,32 @@ bool MauBacktracker::hasTablePlacement() const {
 }
 
 ordered_set<int> MauBacktracker::stage(const IR::MAU::Table* t) const {
-    ordered_set<int> emptySet;
-    if (tables.size() == 0) return emptySet;
+    ordered_set<int> rs;
+    if (tables.size() == 0) return rs;
     cstring tableName = TableSummary::getTableName(t);
-    if (!tables.count(tableName))
-        return emptySet;
-    return tables.at(tableName);
+    if (!tables.count(tableName)) return rs;
+    for (auto logical_id : tables.at(tableName))
+        rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
+    return rs;
+}
+
+bool MauBacktracker::happensBefore(
+        const IR::MAU::Table* t1,
+        const IR::MAU::Table* t2) const {
+    if (tables.size() == 0) return true;
+    if (maxStage == -1 || maxStage >= Device::numStages()) return true;
+    cstring tableName1 = TableSummary::getTableName(t1);
+    cstring tableName2 = TableSummary::getTableName(t2);
+    if (!tables.count(tableName1) || !tables.count(tableName2)) return true;
+    for (auto logical_id_1 : tables.at(tableName1)) {
+        for (auto logical_id_2 : tables.at(tableName2)) {
+            if (logical_id_1 >= logical_id_2) return false;
+            int stage1 = logical_id_1 / NUM_LOGICAL_TABLES_PER_STAGE;
+            int stage2 = logical_id_2 / NUM_LOGICAL_TABLES_PER_STAGE;
+            if (stage1 >= stage2) return false;
+        }
+    }
+    return true;
 }
 
 int MauBacktracker::numStages() const {

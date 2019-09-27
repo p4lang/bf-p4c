@@ -106,6 +106,7 @@ bool FindInitializationNode::summarizeUseDefs(
             const auto* t = use.first->to<IR::MAU::Table>();
             // Only insert the current table as the dominator node if it is a non-gateway table.
             bool addReadNode = false;
+            LOG3("\t\t\tFound table use: " << t->name);
             if (!t->gateway_only()) {
                 addReadNode = true;
                 // If the field is marked no-init, then we do not actually need to consider the
@@ -184,16 +185,22 @@ FindInitializationNode::getTableUsesForField(
 bool FindInitializationNode::increasesDependenceCriticalPath(
         const IR::MAU::Table* use,
         const IR::MAU::Table* init) const {
+    LOG7("\t\t\t  use: " << use->name << ", init: " << init->name);
     int use_stage = dg.min_stage(use);
     int init_stage = dg.min_stage(init);
     int init_dep_tail = dg.dependence_tail_size_control_anti(init);
-    LOG7("\t\tuse_stage: " << use_stage << ", init_stage: " << init_stage << ", init_dep_tail: " <<
-         init_dep_tail);
+    LOG7("\t\t\t  use_stage: " << use_stage << ", init_stage: " << init_stage << ", init_dep_tail: "
+            << init_dep_tail);
     if (use_stage < init_stage) return false;
     int new_init_stage = use_stage + 1;
-    LOG7("\t\tnew_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
-    if (new_init_stage + init_dep_tail > maxStages)
+    LOG7("\t\t\t  new_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
+    if (new_init_stage + init_dep_tail > maxStages) return true;
+    // If in a previous round of table placement, use table was allocated earlier than the init
+    // table t, then do not initialize here.
+    if (!tableAlloc.happensBefore(use, init)) {
+        LOG5("\t\t\t  Disabling this metadata init because of previous round.");
         return true;
+    }
     return false;
 }
 
@@ -302,9 +309,11 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
     // Initializing at table t requires that there is a dependence now from the previous uses of
     // table to table t. Return boost::none if this initialization would result in an increase in
     // the maximum number of stages in the dependence graph.
-    for (const auto* prevUse : prevUses)
+    for (const auto* prevUse : prevUses) {
+        LOG6("\t\tPrevious use: " << prevUse->name << ", init table: " << t->name);
         if (increasesDependenceCriticalPath(prevUse, t))
             return boost::none;
+    }
     PHV::Allocation::ActionSet actions;
     // If the table t is mutually exclusive with any of the tables that are the uses of field f,
     // then do not initialize in this table.

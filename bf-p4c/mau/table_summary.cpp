@@ -91,7 +91,7 @@ void TableSummary::throwBacktrackException() {
         maxStage = (maxStage < stage) ? stage : maxStage;
         if (max_stages[entry.second->gress] < stage)
             max_stages[entry.second->gress] = stage;
-        tableAlloc[tableNames[entry.second->name]].insert(stage); }
+        tableAlloc[tableNames[entry.second->name]].insert(entry.first); }
     // maxStage is counted from 0 to n-1
     ++maxStage;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] += 1;
@@ -109,7 +109,8 @@ void TableSummary::throwBacktrackException() {
             int const & (*min)(int const &, int const &) = std::min<int>;
             // If a gateway is merged with a P4 table split into multiple stages, then the placement
             // of the gateway is always in the earliest stage into which the P4 table has been split
-            int minStage = std::accumulate(stages.begin(), stages.end(), maxStage + 1, min);
+            int minStage = std::accumulate(stages.begin(), stages.end(),
+                    (maxStage + 1) * NUM_LOGICAL_TABLES_PER_STAGE, min);
             tableAlloc[tableNames[entry.second]].insert(minStage);
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
@@ -190,7 +191,9 @@ const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {
     ordered_set<int> rs;
     cstring tbl_name = getTableName(tbl);
     if (!tableAlloc.count(tbl_name)) return rs;
-    return tableAlloc.at(tbl_name);
+    for (auto logical_id : tableAlloc.at(tbl_name))
+        rs.insert(logical_id / NUM_LOGICAL_TABLES_PER_STAGE);
+    return rs;
 }
 
 void TableSummary::printTablePlacement() {
@@ -200,8 +203,10 @@ void TableSummary::printTablePlacement() {
     TablePrinter tp(ss, {"Stage", "Table Name"}, TablePrinter::Align::LEFT);
 
     for (auto tbl : tableAlloc) {
-        for (int st : tbl.second)
-            tp.addRow({std::to_string(st), std::string(tbl.first.c_str())});
+        for (int logical_id : tbl.second) {
+            int stage = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
+            tp.addRow({std::to_string(stage), std::string(tbl.first.c_str())});
+        }
     }
 
     tp.print();
