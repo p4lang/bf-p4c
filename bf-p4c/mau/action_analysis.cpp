@@ -18,6 +18,7 @@ std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
       CONSTANT_MISMATCH,
       TOO_MANY_PHV_SOURCES,
       IMPOSSIBLE_ALIGNMENT,
+      ILLEGAL_OVERWRITE,
       MAU_GROUP_MISMATCH,
       PHV_AND_ACTION_DATA,
       MULTIPLE_SHIFTS,
@@ -2219,6 +2220,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
 
     bool check_overwrite = !(is_from_set() && container.is(PHV::Kind::normal));
+    check_overwrite |= (is_from_set() && read_sources() == 2);
 
     if (check_overwrite) {
         bool total_overwrite_possible = verify_overwritten(container, phv);
@@ -2228,7 +2230,8 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
                              "over the entire container";
             return false;
         }
-    } else if (convert_instr_to_bitmasked_set || convert_instr_to_byte_rotate_merge) {
+    }
+    if (convert_instr_to_bitmasked_set || convert_instr_to_byte_rotate_merge) {
         error_code |= PARTIAL_OVERWRITE;
     }
 

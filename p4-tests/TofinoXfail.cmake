@@ -206,6 +206,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
 )
 
 p4c_add_xfail_reason("tofino"

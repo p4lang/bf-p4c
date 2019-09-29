@@ -1905,6 +1905,17 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                          " slice would (conservatively) need to be aligned at the same position in "
                          "the same container.");
                     return boost::none; } }
+
+            // If a slice that is part of the conditional constraints is already allocated, we do
+            // not need to actually add the allocated slice to the conditional constraints list.
+            // This is because the constraint related to the allocation of the slice to the relevant
+            // container is already captured in the container parameter of the unallocated slices
+            // within the conditional constraint data.
+            if (alloc.slices(packing_slice.field(), packing_slice.range()).size() != 0) {
+                LOG5("\t\t\tPacking slice " << packing_slice << " already been allocated.");
+                continue;
+            }
+
             placements[packing_slice] = StartLen(bitPosition, packing_slice.size());
 
             // Set the required bit position.
