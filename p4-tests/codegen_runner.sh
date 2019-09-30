@@ -10,7 +10,9 @@
 set -o pipefail
 
 verbose=false
-device="tofino"
+check_bfa=false
+check_context=false
+keep_files=false
 
 die() {
     if [ $# -gt 0 ]; then
@@ -45,28 +47,38 @@ P4C=./p4c
 P4C_ARGS=""
 testdir=codegen
 out_ext=""
+regex=""
 
 while [ $# -gt 1 ]; do
     case $1 in
     -h|-help|--help)
         echo >&2 "p4c test runner options"
         echo >&2 "   -v             verbose -- print commands before running them"
-        echo >&2 "   -tofino        target tofino"
-        echo >&2 "   -tofino2       target jbay"
+        echo >&2 "   -bfa           check bfa"
+        echo >&2 "   -context       check context.json"
+        echo >&2 "   -keep-files    keep the output files"
+        echo >&2 "   -regex         search for regex in bfa or context.json"
         echo >&2 "other arguments passed to p4c-barefoot:"
         $P4C --help
         exit 0
-        ;;
-    -tofino)
-        device="tofino"
-        ;;
-    -jbay)
-        device="tofino2"
         ;;
     -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"
         fi
         verbose=true
+        ;;
+    -bfa)
+        check_bfa=true
+        ;;
+    -context)
+        check_context=true
+        ;;
+    -keep-files)
+        keep_files=true
+        ;;
+    -regex)
+        regex=$2
+        shift
         ;;
     --*)
         if [ -d $testdir${1#-} ]; then
@@ -84,10 +96,15 @@ while [ $# -gt 1 ]; do
     shift
 done
 
+if ! $check_bfa && ! $check_context; then
+    die "Need either -bfa or -context to know what to check!"
+fi
+
 if [ ! -r $1 ]; then
     die "Can't read $1"
 fi
 file=$1
+
 
 if [[ "$file" =~ ^"$srcdir/" || "$srcdir" == "." ]]; then
     testdir=$testdir/$(dirname ${file#$srcdir/})
@@ -102,53 +119,42 @@ name=$(basename $file .p4)
 # turn on compiler debug info, regardless
 P4C_ARGS="$P4C_ARGS -g"
 
-if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    # XXX(cole): This is a hack.  There are some P4_16 tests written
-    # against the v1model architecture; in the future, this will be
-    # deprecated, and only translated P4_14 programs will use the
-    # v1model architecture.  Even better, eventually architecture
-    # files might include enough information to uniquely identify the
-    # target, making the "--target" flag obsolete.  For the time
-    # being, we grep for "v1model.p4" to determine whether a test uses
-    # the v1model or TNA architecture.
-    # XXX(zma) assuming tofino and jbay have same arch for now
-    # XXX (calin): these arguments should be passed in by the caller
-    if grep -q "tofino.p4" "$file"; then
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch tna"
-    else
-        P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
-    fi
-    P4C_ARGS="$P4C_ARGS -x p4-16"
-else
-    P4C_ARGS="$P4C_ARGS --target ${device} --arch v1model"
-    P4C_ARGS="$P4C_ARGS -x p4-14"
-fi
-
 if [ ! -x $P4C ]; then
     die "Can't find $P4C"
 fi
 
 # delete old outputs so we don't get confused if they're not overwritten
-rm -f $testdir/$name${out_ext}.bfa
-rm -f $testdir/$name${out_ext}.out/${device}.bin
-rm -f $testdir/$name${out_ext}.out/${device}.bin.gz
-rm -f $testdir/$name${out_ext}.out/*.log
-rm -f $testdir/$name${out_ext}.out/*.log.gz
+rm -rf $testdir/$name${out_ext}.out/*
 
 run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out || die
 
-# cleanup
-rm -f $testdir/$name${out_ext}.out/${device}.bin
-rm -f $testdir/$name${out_ext}.out/*.cfg.json
-for f in $testdir/$name${out_ext}.out/*.log; do
-    if [ -r $f ]; then
-        gzip -f $f
-    fi
-done
-
-if [ ! -r $testdir/$name${out_ext}.out/$name.bfa ]; then
-    echo >&2 "$P4C did not give an error but did not generate output either"
-    exit 1
+p4version=$(grep p4_version $testdir/${name}${out_ext}.out/manifest.json | \
+                awk '{print $2;}' | tr -d '\",')
+if [[ $p4version == 'p4-16' ]]; then
+    pipe=$(grep pipe_name $testdir/${name}${out_ext}.out/manifest.json | \
+                awk '{print $2;}' | tr -d '\",')
+    outdir=$testdir/${name}${out_ext}.out/$pipe
 else
-    cat $testdir/$name${out_ext}.out/$name.bfa
+    outdir=$testdir/${name}${out_ext}.out
+fi
+
+if $check_bfa && [ -r $outdir/$name.bfa ]; then
+    if [[ "x$regex" != "x" ]]; then
+        grep $regex $outdir/$name.bfa
+    else
+        cat $outdir/$name.bfa
+    fi
+fi
+
+if $check_context && [ -r $outdir/context.json ]; then
+    if [[ "x$regex" != "x" ]]; then
+        grep $regex $outdir/context.json
+    else
+        cat $outdir/context.json
+    fi
+fi
+
+# cleanup
+if ! $keep_files; then
+    rm -rf $testdir/$name${out_ext}.out
 fi

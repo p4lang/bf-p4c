@@ -53,6 +53,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaCommandLine, PARSE, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaCritical, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaDefaultPortmap, PARSE_EXPRESSION_LIST, intPragma);
+        BFN_PARSE(PragmaDisableAtomicModify, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaDontTranslateExternMethod, PARSE, StringLiteral, intPragma);
         BFN_PARSE(PragmaDynamicTableKeyMasks, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaEntriesWithRanges, PARSE, Expression, extPragma);

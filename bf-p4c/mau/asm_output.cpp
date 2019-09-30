@@ -2628,11 +2628,21 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     // Output 'disable_atomic_modify' pragma if present. This will to be plugged
     // into the context json for the driver. COMPILER-944
     if (auto m = tbl->match_table) {
-        for (auto annot : m->annotations->annotations)
-            if (annot->name == "disable_atomic_modify"
-                    && annot->expr.size() > 0
-                    && annot->expr[0]->to<IR::Constant>()->asInt() == 1)
-                out << ", disable_atomic_modify : true";
+        if (auto a = m->getAnnotations()->getSingle("disable_atomic_modify")) {
+            if (a->expr.size() > 0 && a->expr[0]->to<IR::Constant>()) {
+                auto val = a->expr[0]->to<IR::Constant>()->asInt();
+                if (val == 1) out << ", disable_atomic_modify : true";
+                else if (val == 0) out << ", disable_atomic_modify : false";
+                else
+                    ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                              "Annotation ignored because parameter %1% is invalid. "
+                              "Only the values 0 and 1 are valid.",
+                            a->expr[0]);
+            } else {
+                ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                          "%1%: disable_atomic_modify annotation ignored. Invalid parameters.", a);
+            }
+        }
     }
     out << " }" << std::endl;
 

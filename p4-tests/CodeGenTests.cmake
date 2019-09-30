@@ -17,11 +17,19 @@ set(CODEGEN_RUNNER ${CMAKE_CURRENT_SOURCE_DIR}/codegen_runner.sh)
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("codegen" ${CODEGEN_RUNNER} FALSE
-  "switch_dc_basic_uses_phase0" ${switchtest} "${testExtraArgs} -Tphase0:5" "-DDC_BASIC_PROFILE")
+  "switch_dc_basic_uses_phase0" ${switchtest} "${testExtraArgs}" "-DDC_BASIC_PROFILE -Tphase0:5")
 p4c_add_codegen_success_reason(
     "_ingress_port_mapping will be used as the phase 0 table"
     switch_dc_basic_uses_phase0
 )
+
+set (P416_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes)
+p4c_add_test_with_args("codegen" ${CODEGEN_RUNNER} FALSE
+  "p4c-2214" extensions/p4_tests/p4_16/compile_only/p4c-2214.p4
+  "-bfa -regex disable_atomic_modify"
+  "--std p4-16 --target tofino --arch v1model -I${P416_INCLUDE_PATH}")
+p4c_add_codegen_success_reason ("name: ingress.flg2, disable_atomic_modify : true" p4c-2214)
+
 
 # p4c_add_codegen_success_reason (
 #   "\\\\$phase0:"
@@ -32,5 +40,3 @@ p4c_add_codegen_success_reason(
 #   "ethernet.\\\\$valid: B31\\\\(6\\\\)"
 #   testdata/p4_16_samples/flag_lost-bmv2.p4
 #   )
-
-

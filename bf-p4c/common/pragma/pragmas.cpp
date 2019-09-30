@@ -131,6 +131,17 @@ const char *PragmaDefaultPortmap::name = "default_portmap";
 const char *PragmaDefaultPortmap::description = "To be documented";  // FIXME
 const char *PragmaDefaultPortmap::help = "To be documented";
 
+const char *PragmaDisableAtomicModify::name = "disable_atomic_modify";
+const char *PragmaDisableAtomicModify::description =
+    "Do not reserve any table entries to handle atomic table modifications.";
+const char *PragmaDisableAtomicModify::help = "@disable_atomic_modify(1)\n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "By default, tables reserve at least one table entry to handle table\n"
+    "modifications atomically. This annotation, with a value of 1 instructs\n"
+    " the compiler and the driver to not reserve such entries. A 0 indicates\n"
+    "to enable reserving entries.  All other values are ignored.";
+
 const char *PragmaDontTranslateExternMethod::name = "dont_translate_extern_method";  // FIXME
 const char *PragmaDontTranslateExternMethod::description = "To be documented";
 const char *PragmaDontTranslateExternMethod::help = "To be documented";
