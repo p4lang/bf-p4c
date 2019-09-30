@@ -2649,7 +2649,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             continue;
         auto *expr = ixbar_read->expr;
         std::map<int, int> slices;
-        bool isSlice = false;
         if (auto slice = expr->to<IR::Slice>()) {
             expr = slice->e0;
             auto hi = slice->e1->to<IR::Constant>();
@@ -2664,7 +2663,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
             BUG_CHECK(v_lo <= v_hi, "Invalid match key slice range %1% %2%", v_lo, v_hi);
 
             slices.emplace(v_lo, v_hi - v_lo + 1);
-            isSlice = true;
         }
 
         auto phv_field = phv.field(expr);
@@ -2702,7 +2700,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                           "%1%: Table key name not supported.  "
                           "Replacing \"%2%\" with \"%3%\".", tbl, annName, newAnnName);
                 annName = newAnnName;
-                isSlice = true;
             }
 
             LOG3(ann << ": setting external annName of key " << ixbar_read
@@ -2753,9 +2750,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                         != cstring::to_cstring(canon_name(annName)));
             }
             auto start_bit = sl.first;
-            // if (isSlice && setKeyName) {
-            //     full_size = sl.second;
-            // }
             out << "full_size: " << full_size;
             if (setKeyName)
                 out << item_sep << "key_name: \"" << canon_name(annName) << "\"";
@@ -3812,8 +3806,15 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     if (salu->underflow) out << indent << "underflow: " << salu->underflow << std::endl;
     if (!salu->instruction.empty()) {
         out << indent++ << "actions:" << std::endl;
-        for (auto act : Values(salu->instruction))
+        for (auto act : Values(salu->instruction)) {
+            // Ideally, this check should never fail as an empty action is validated in
+            // 'CheckStatefulAlu' earlier in backend.
+            BUG_CHECK((act->action.size() > 0),
+                " Stateful %1% must have instructions assigned for action '%1%'."
+                " Please verify the action is valid.",
+                salu, act);
             act->apply(EmitAction(self, out, tbl, indent));
+        }
         --indent; }
 
     if (salu->pred_shift >= 0)

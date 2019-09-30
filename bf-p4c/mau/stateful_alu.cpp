@@ -294,19 +294,19 @@ void CreateSaluInstruction::clearFuncState() {
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
     static std::vector<param_t>         empty_params;
     BUG_CHECK(!action && !params && !return_encoding, "Nested function?");
-    cstring name = reg_action->name;
+    IR::ID name = reg_action->name;
     if (func->name != "apply") {
-        name += "$" + func->name;
+        name.name += "$" + func->name;
         if (func->name == "overflow") {
             if (salu->overflow)
                 error("%s: Conflicting overflow function for Register", func->srcInfo);
             else
-                salu->overflow = name; }
+                salu->overflow = name.name; }
         if (func->name == "underflow") {
             if (salu->underflow)
                 error("%s: Conflicting underflow function for Register", func->srcInfo);
             else
-                salu->underflow = name; } }
+                salu->underflow = name.name; } }
     const char *tail = action_type_name.c_str() + action_type_name.size();
     while (std::isdigit(tail[-1])) --tail;
     param_types = &function_param_types.at(std::make_pair(action_type_name.before(tail),
@@ -315,7 +315,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     LOG5(func);
     action = new IR::MAU::SaluAction(func->srcInfo, name, func);
     action->annotations = reg_action->annotations;
-    salu->instruction.addUnique(name, action);
+    salu->instruction.addUnique(name.name, action);
     params = func->type->parameters;
     int out_word = 0;
     for (auto i = 1U; i < params->parameters.size(); ++i) {
@@ -1328,6 +1328,9 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
 
     const IR::MAU::SaluAction *first = nullptr;;
     for (auto salu_action : Values(salu->instruction)) {
+        ERROR_CHECK((salu_action->action.size() > 0), ErrorType::ERR_EXPECTED,
+            "stateful action '%2%' to have instructions assigned."
+            " Please verify the action is valid.", salu, salu_action->name);
         auto chain = salu_action->annotations->getSingle("chain_address");
         if (first) {
             if (salu->chain_vpn != (chain != nullptr))

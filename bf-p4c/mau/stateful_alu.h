@@ -216,7 +216,7 @@ class CheckStatefulAlu : public MauModifier {
 };
 
 class FixupStatefulAlu : public PassManager {
-    /** When a SaluAction (RegisterAction) returns an enum type friom its execute
+    /** When a SaluAction (RegisterAction) returns an enum type from its execute
      * method (out arg from the apply method), we use the 'predicate' output to output
      * a 4 bit (tofino) or 16 bit (tofinof2) one-hot encoding of all the predicate tests
      * in the action, and encode the enum that way.  This results in a mask value for

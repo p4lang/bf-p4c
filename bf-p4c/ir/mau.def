@@ -722,7 +722,7 @@ class Action : VLIWInstruction, IAnnotated {
 /// "simultaneously" in different ALUs (certain ALUs are actually later in the pipeline)
 /// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
 class SaluAction : VLIWInstruction {
-    cstring                     name;
+    IR::ID                      name;
     inline Vector<Primitive>    action = {};
     safe_vector<ActionArg>      args = {};
     optional Annotations        annotations = Annotations::empty;
