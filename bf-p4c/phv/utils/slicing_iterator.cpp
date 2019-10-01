@@ -550,11 +550,22 @@ int PHV::SlicingIterator::populate_initial_maps(
 
 void PHV::SlicingIterator::updateSliceListInformation(
         PHV::FieldSlice& candidate,
+        const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap,
+        const ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         bool sliceAfter) {
     bool foundCandidate = false;
     std::vector<PHV::FieldSlice> beforeSlicingPoint;
     std::vector<PHV::FieldSlice> afterSlicingPoint;
+    std::vector<PHV::FieldSlice> realSlicesToConsider;
     for (auto& slice : sliceToSliceLists.at(candidate)) {
+        if (!replaceSlicesMap.count(slice)) {
+            realSlicesToConsider.push_back(slice);
+        } else {
+            for (auto& res_slice : replaceSlicesMap.at(slice))
+                realSlicesToConsider.push_back(res_slice);
+        }
+    }
+    for (auto& slice : realSlicesToConsider) {
         if (slice == candidate) foundCandidate = true;
         if (!foundCandidate) {
             beforeSlicingPoint.push_back(slice);
@@ -563,6 +574,7 @@ void PHV::SlicingIterator::updateSliceListInformation(
             beforeSlicingPoint.push_back(slice);
             LOG6("\t\t\t  Before slicing point for candidate: " << slice);
         } else {
+            if (sliceLocations.at(slice).first == -1) continue;
             afterSlicingPoint.push_back(slice);
             LOG6("\t\t\t  After slicing point: " << slice);
         }
@@ -911,7 +923,8 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     newSliceBoundaryFoundRight = true;
                     required_slices_i.setbit(right);
                     LOG5("\t  Slicing after slice " << candidate);
-                    updateSliceListInformation(candidate, true /* after */);
+                    updateSliceListInformation(candidate, replaceSlicesMap, sliceLocations,
+                            true /* after */);
                 }
                 bool slicesLeftToProcess = carryOverAfterSlice > 0;
                 // If no new slice boundary is found, then we do not need to update any of the slice

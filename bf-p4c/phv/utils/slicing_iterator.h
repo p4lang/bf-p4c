@@ -184,6 +184,8 @@ class SlicingIterator {
 
     void updateSliceListInformation(
             PHV::FieldSlice& candidate,
+            const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap,
+            const ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
             bool sliceAfter);
 
     /// Update the slice related data structures: @exactSliceListSize, @alreadyProcessedSlices, and

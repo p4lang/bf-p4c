@@ -762,6 +762,8 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-1832.p4
+  # Customer Tests to run in nightly
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2218.p4
   # Other XFails in compilers repo to run in nightly
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/04-FullPHV3.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/compile_only/conditional_constraints_infinite_loop.p4
