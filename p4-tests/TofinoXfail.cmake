@@ -1606,3 +1606,9 @@ p4c_add_xfail_reason("tofino"
   "The compiler failed in slicing the following group of fields|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1834.p4
 )
+
+# P4C-2221
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*Found extract.*to a non-field object"
+  extensions/p4_tests/p4_16/compile_only/p4c-2153.p4
+)

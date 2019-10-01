@@ -46,10 +46,6 @@ class FindInitializationNode : public Inspector {
     bool preorder(const IR::MAU::Table* tbl) override;
     bool preorder(const IR::MAU::Action* act) override;
 
-    /// @returns true if the def of field @f in unit @u is the definition corresponding to implicit
-    /// initialization in the parser.
-    bool isUninitializedDef(const PHV::Field* f, const FieldDefUse::locpair& def) const;
-
     /// @returns true if @f is an auto-alias field that is only alive in the f_dominators and
     /// therefore its deparser use can be ignored.
     bool ignoreDeparserUseForPacketField(

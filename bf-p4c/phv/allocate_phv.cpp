@@ -1156,9 +1156,9 @@ CoreAllocation::tryAllocSliceList(
             // Get the initialization actions for all the field slices that are candidates for
             // allocation and in the parent transaction.
             auto initPointsForTransaction = perContainerAlloc.getInitPoints(field_slice);
-            if (initPointsForTransaction.size() > 0)
-                initActions[field_slice.field()].insert(initPointsForTransaction.begin(),
-                        initPointsForTransaction.end());
+            if (initPointsForTransaction && initPointsForTransaction->size() > 0)
+                initActions[field_slice.field()].insert(initPointsForTransaction->begin(),
+                        initPointsForTransaction->end());
         }
         // Get the initialization actions that were determined as part of the current transaction.
         if (initNodes)
@@ -1191,9 +1191,9 @@ CoreAllocation::tryAllocSliceList(
             // Get initialization actions for all other slices in this container and not overlaying
             // with the candidate fields.
             auto initPointsForTransaction = perContainerAlloc.getInitPoints(field_slice);
-            if (initPointsForTransaction.size() > 0)
-                initActions[field_slice.field()].insert(initPointsForTransaction.begin(),
-                        initPointsForTransaction.end());
+            if (initPointsForTransaction && initPointsForTransaction->size() > 0)
+                initActions[field_slice.field()].insert(initPointsForTransaction->begin(),
+                        initPointsForTransaction->end());
         }
 
         if (initActions.size() > 0)
@@ -1762,22 +1762,24 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
         for (PHV::AllocSlice slice : container_and_slices.second.slices) {
             auto* f = slice.field();
             auto init_points = alloc.getInitPoints(slice);
+            static ordered_set<const IR::MAU::Action*> emptySet;
             auto* allocated_slice = f->add_and_return_alloc(
                     slice.field(),
                     slice.container(),
                     slice.field_slice().lo,
                     slice.container_slice().lo,
                     slice.field_slice().size(),
-                    init_points);
+                    init_points ? *init_points : emptySet);
             auto minLive = slice.getEarliestLiveness();
             auto maxLive = slice.getLatestLiveness();
             allocated_slice->min_stage = std::make_pair(minLive.first, minLive.second);
             allocated_slice->max_stage = std::make_pair(maxLive.first, maxLive.second);
 
-            if (init_points.size() > 0) {
-                LOG5("\tAdding initialization points for field slice: " << slice.field()->name <<
-                     " " << slice);
-                for (const auto* a : init_points)
+            if (init_points) {
+                allocated_slice->has_meta_init = true;
+                LOG5("\tAdding " << init_points->size() << " initialization points for field "
+                     "slice: " << slice.field()->name << " " << slice);
+                for (const auto* a : *init_points)
                     LOG4("    Action: " << a->name); }
             phv.add_container_to_field_entry(slice.container(), f);
             const auto* initPrimitive = slice.getInitPrimitive();
@@ -1850,6 +1852,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
                                                   slice.field_bit,
                                                   slice.container_bit,
                                                   new_width, new_init_points);
+                new_slice.has_meta_init = slice.has_meta_init | last->has_meta_init;
                 new_slice.min_stage = slice.min_stage;
                 new_slice.max_stage = slice.max_stage;
                 new_slice.init_i = slice.init_i;

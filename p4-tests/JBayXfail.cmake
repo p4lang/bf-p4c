@@ -103,6 +103,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "This action requires hash, which can only be done through the hit pathway"
   testdata/p4_14_samples/acl1.p4
+  p4_16_internal_p4_16_hwlrn
 )
 
 p4c_add_xfail_reason("tofino2"

@@ -218,6 +218,7 @@ class Field : public LiftLess<Field> {
         int field_bit, container_bit, width;
         // Set of actions where this slice may need to be initialized. Set is empty if
         // initialization is not required for this slice.
+        bool                   has_meta_init = false;
         ordered_set<const IR::MAU::Action*> init_points;
         StageAndAccess         min_stage;
         StageAndAccess         max_stage;

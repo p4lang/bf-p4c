@@ -28,14 +28,6 @@ bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
     return true;
 }
 
-bool FindInitializationNode::isUninitializedDef(
-        const PHV::Field* f,
-        const FieldDefUse::locpair& def) const {
-    if (!defuse.hasUninitializedRead(f->id)) return false;
-    if (def.second->is<ImplicitParserInit>()) return true;
-    return false;
-}
-
 bool FindInitializationNode::ignoreDeparserUseForPacketField(
         const PHV::Field* f,
         const ordered_set<const IR::BFN::Unit*>& f_dominators) const {
@@ -61,7 +53,7 @@ bool FindInitializationNode::summarizeUseDefs(
         ordered_set<const IR::BFN::Unit*>& f_dominators) const {
     // Note all units where field f is defined.
     for (auto& def : defuse.getAllDefs(f->id)) {
-        if (isUninitializedDef(f, def)) {
+        if (def.second->is<ImplicitParserInit>()) {
             LOG5("\t\t\tSkipping because uninitialized read at " << DBPrint::Brief <<
                     def.first);
             continue;
@@ -228,12 +220,14 @@ bool FindInitializationNode::mayViolatePackConflict(
     for (const PHV::AllocSlice& slice : container_state) {
         if (slice.field() == initField) continue;
         auto initPoints = alloc.getInitPoints(slice);
-        for (const auto* act : initPoints) {
-            auto t = tablesToActions.getTableForAction(act);
-            if (!t) continue;
-            initTablesForExistingFields.insert(*t);
-            LOG5("\t\t  Need to check def of field " << initField->name << " against the table "
-                 << (*t)->name << " where " << slice << " is initialized.");
+        if (initPoints) {
+            for (const auto* act : *initPoints) {
+                auto t = tablesToActions.getTableForAction(act);
+                if (!t) continue;
+                initTablesForExistingFields.insert(*t);
+                LOG5("\t\t  Need to check def of field " << initField->name << " against the table "
+                        << (*t)->name << " where " << slice << " is initialized.");
+            }
         }
         for (auto& def : defuse.getAllDefs(slice.field()->id)) {
             const auto* t = def.first->to<IR::MAU::Table>();
@@ -608,7 +602,8 @@ FindInitializationNode::findInitializationNodes(
         ordered_set<const IR::BFN::Unit*> alreadyInitializedUnits;
         for (auto& slice : field_to_slices.at(f)) {
             auto initPointsForTransaction = alloc.getInitPoints(slice);
-            for (const auto* action : initPointsForTransaction) {
+            if (!initPointsForTransaction) continue;
+            for (const auto* action : *initPointsForTransaction) {
                 auto initTable = tablesToActions.getTableForAction(action);
                 BUG_CHECK(initTable, "Action %1% does not have an associated table", action->name);
                 LOG3("\t\tSlice " << slice << " initialized in action " << action->name <<
@@ -646,14 +641,6 @@ FindInitializationNode::findInitializationNodes(
             continue;
         }
 
-        // Fields marked by pa_no_init do not require initialization.
-        if (noInit.count(f)) {
-            LOG3("\t\tField " << f->name << " marked no_init. No initialization required.");
-            initPoints[f] = emptySet;
-            seenFields.insert(f);
-            continue;
-        }
-
         LOG3("\t  Checking if " << f->name << " needs initialization.");
         ordered_map<const PHV::Field*, ordered_set<const IR::BFN::Unit*>> g_units;
         // Check against each field initialized so far in this container.
@@ -686,6 +673,14 @@ FindInitializationNode::findInitializationNodes(
                 return boost::none;
             }
             LOG3("\t\t  No.");
+        }
+
+        // Fields marked by pa_no_init do not require initialization.
+        if (noInit.count(f)) {
+            LOG3("\t\tField " << f->name << " marked no_init. No initialization required.");
+            initPoints[f] = emptySet;
+            seenFields.insert(f);
+            continue;
         }
 
         if (LOGGING(1)) {

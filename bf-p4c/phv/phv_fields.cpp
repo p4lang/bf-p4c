@@ -1470,6 +1470,7 @@ class CollectPardeConstraints : public Inspector {
         auto lval = extract->dest->to<IR::BFN::FieldLVal>();
         if (lval) {
             auto f = phv.field(lval->field);
+            BUG_CHECK(f, "Found extract %1% to a non-field object", lval->field);
             f->set_parsed(true);
             LOG3("\tMarking " << f->name << " as parsed");
         }

@@ -7,6 +7,7 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_mutex.h"
 
 /** A helper class that maps PHV::Field to an IR::Expression.
   * It also provides a helper function to generate an IR::MAU::Instruction* to initialize a field to
@@ -139,6 +140,7 @@ class ComputeDependencies : public Inspector {
     const ComputeFieldsRequiringInit&           fieldsForInit;
     const FieldDefUse&                          defuse;
     const MetadataLiveRange&                    liverange;
+    const TablesMutuallyExclusive&              tableMutex;
 
     ordered_set<cstring>                        initTableNames;
 
@@ -174,8 +176,9 @@ class ComputeDependencies : public Inspector {
             const MapTablesToActions& a,
             const ComputeFieldsRequiringInit& i,
             const FieldDefUse& d,
-            const MetadataLiveRange& r)
-        : phv(p), dg(g), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r) { }
+            const MetadataLiveRange& r,
+            const TablesMutuallyExclusive& m)
+        : phv(p), dg(g), actionsMap(a), fieldsForInit(i), defuse(d), liverange(r), tableMutex(m) { }
 
     bool isInitTable(const IR::MAU::Table* tbl) const {
         return initTableNames.count(tbl->name);
@@ -207,6 +210,7 @@ class MarkDarkInitTables : public Transform {
   */
 class AddSliceInitialization : public PassManager {
  private:
+    TablesMutuallyExclusive     tableMutex;
     MapTablesToActions          actionsMap;
     MapFieldToExpr              fieldToExpr;
     ComputeFieldsRequiringInit  init;

@@ -54,11 +54,11 @@ Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) 
     for (auto& f : phv) {
         for (auto& slice : f.get_alloc()) {
             // For each alloc slice in the field, check if metadata initialization is required.
-            if (slice.init_points.size() == 0) continue;
+            if (!slice.has_meta_init) continue;
             LOG4("\t  Need to initialize " << f.name << " : " << slice);
+            fieldsForInit.insert(slice.field);
             for (const auto* act : slice.init_points) {
                 actionInits[act].push_back(slice);
-                fieldsForInit.insert(slice.field);
                 LOG4("\t\tInitialize at action " << act->name);
             }
         }
@@ -246,8 +246,27 @@ void ComputeDependencies::noteDependencies(
         const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
         const ordered_map<PHV::AllocSlice, ordered_set<const IR::MAU::Table*>>& initNodes) {
     for (auto& kv : slices) {
-        if (!initNodes.count(kv.first)) continue;
-        for (const auto* initTable : initNodes.at(kv.first)) {
+        ordered_set<const IR::MAU::Table*> initTables;
+        bool noInitFieldFound = false;
+        if (!initNodes.count(kv.first)) {
+            noInitFieldFound = true;
+            LOG5("\tNo init for slice: " << kv.first << ". Have to find uses.");
+            for (auto& use : defuse.getAllUses(kv.first.field()->id)) {
+                const auto* useTable = use.first->to<IR::MAU::Table>();
+                if (!useTable) continue;
+                LOG5("\t  Use table for " << kv.first << " : " << useTable->name);
+                initTables.insert(useTable);
+            }
+            for (auto& def : defuse.getAllDefs(kv.first.field()->id)) {
+                const auto* defTable = def.first->to<IR::MAU::Table>();
+                if (!defTable) continue;
+                LOG5("\t  Def table for " << kv.first << " : " << defTable->name);
+                initTables.insert(defTable);
+            }
+        } else {
+            initTables.insert(initNodes.at(kv.first).begin(), initNodes.at(kv.first).end());
+        }
+        for (const auto* initTable : initTables) {
             // initTable = Table where writeSlice is initialized.
             for (const auto& readSlice : kv.second) {
                 // For each slice that shares containers with write slice (kv.first)
@@ -256,6 +275,10 @@ void ComputeDependencies::noteDependencies(
                     if (!readTable) continue;
                     LOG5("\tInit unit for " << kv.first << " : " << initTable->name);
                     LOG5("\t  Read unit for " << readSlice << " : " << readTable->name);
+                    if (noInitFieldFound && tableMutex(readTable, initTable)) {
+                        LOG5("\t\tIgnoring dependency because of mutually exclusive tables");
+                        continue;
+                    }
                     if (readTable != initTable) {
                         phv.addMetadataDependency(readTable, initTable);
                         LOG2("\t" << readTable->name << " --> " << initTable->name);
@@ -568,9 +591,10 @@ AddSliceInitialization::AddSliceInitialization(
         FieldDefUse& d,
         const DependencyGraph& g,
         const MetadataLiveRange& r)
-    : fieldToExpr(p), init(p), dep(p, g, actionsMap, init, d, r),
+    : fieldToExpr(p), init(p), dep(p, g, actionsMap, init, d, r, tableMutex),
       computeDarkInit(p, actionsMap, fieldToExpr) {
     addPasses({
+        &tableMutex,
         &actionsMap,
         &fieldToExpr,
         &init,
