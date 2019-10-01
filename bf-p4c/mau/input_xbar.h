@@ -852,8 +852,7 @@ struct IXBar {
     void determineHashDistInUse(int hash_group, bitvec &units_in_use, bitvec &hash_bits_in_use);
     void buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, unsigned hash_table_input, const IR::MAU::Table* tbl,
-        cstring name);
+        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring name);
     void lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_group,
         unsigned hash_table_input, int asm_unit, bitvec hash_bits_used, HashDistDest_t dest,
         cstring name);

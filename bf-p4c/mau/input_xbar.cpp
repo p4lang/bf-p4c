@@ -3175,8 +3175,7 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  */
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, unsigned hash_table_input,
-        const IR::MAU::Table* tbl, cstring /* name */) {
+        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring /* name */) {
     use.ir_allocations.emplace_back();
     auto &rv = use.ir_allocations.back();
     ContByteConversion               map_alloc;
@@ -3263,7 +3262,11 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     rv.dest = alloc_req.dest;
     rv.created_hd = alloc_req.created_hd;
     rv.dyn_hash_name = alloc_req.func->dyn_hash_name;
-    rv.use.hash_table_inputs[hash_group] = hash_table_input;
+    // P4C-2169 : The hash_table_inputs value is computed for each HashDistIRUse
+    // object vs. HashDistUse, as each HashDistIRUse is output individually.
+    // This is the requirement for assembly generation. The HashDistUse
+    // requirements are just the OR of all of its HashDistIRUse hash_tables
+    rv.use.hash_table_inputs[hash_group] = rv.use.compute_hash_tables();
     rv.use.hash_seed[hash_group]
         |= determine_final_xor(&(alloc_req.func->algorithm), phv, hdh.galois_start_bit_to_p4_hash,
                                rv.use.field_list_order, rv.use.total_input_bits());
@@ -3443,7 +3446,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     int asm_unit = three_unit_section * 3 + unit;
     for (auto &alloc_req : alloc_reqs) {
         buildHashDistIRUse(alloc_req, use, all_reqs, phv, hash_group, hash_bits_used,
-            bits_in_use, hash_table_input, tbl, name);
+            bits_in_use, tbl, name);
     }
     lockInHashDistArrays(&alloced, hash_group, hash_table_input, asm_unit, hash_bits_used, dest,
                          name);
