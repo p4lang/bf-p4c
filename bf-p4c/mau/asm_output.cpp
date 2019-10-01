@@ -1561,7 +1561,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 auto at = back_at->attached;
                 auto *mtr = at->to<IR::MAU::Meter>();
                 if (mtr == nullptr) continue;
-                out << tbl->unique_id(mtr) << " color";
+                out << find_attached_name(tbl, mtr) << " color";
                 break;
             }
         } else {

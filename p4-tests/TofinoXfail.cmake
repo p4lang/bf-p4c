@@ -1514,12 +1514,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/microsoft/COMPILER-991/vag6589.p4
 )
 
-# P4C-2124
-p4c_add_xfail_reason("tofino"
-  "No format field or table named"
-  ../glass/testsuite/p4_tests/tudarmstadt/COMPILER-616/case3331.p4
-)
-
 #P4C-2080
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Expression not found"
