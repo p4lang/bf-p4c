@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/static_entries_const_prop.h"
+#include "ir/pattern.h"
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
@@ -2078,6 +2079,14 @@ const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
     return sl;
 }
 
+// Simplify "actionArg != 0 ? f0 : f1" to "actionArg ? f0 : f1"
+const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
+    Pattern::Match<IR::MAU::ActionArg> aa;
+    if ((0 != aa).match(mux->e0))
+        mux->e0 = aa;
+    return mux;
+}
+
 /** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
  *  above EliminateAllButLastWrite
  */
@@ -2086,6 +2095,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new UnimplementedRegisterMethodCalls,
     new HashGenSetup(phv, options),
     new Synth2PortSetup(phv),
+    new SimplifyConditionalActionArg(),
     new DoInstructionSelection(phv),
     new StatefulAttachmentSetup(phv),
     new MeterSetup(phv),

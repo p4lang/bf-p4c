@@ -484,6 +484,12 @@ class GuaranteeHashDistSize : public PassManager {
     }
 };
 
+class SimplifyConditionalActionArg : public MauTransform {
+ public:
+     SimplifyConditionalActionArg() {}
+     const IR::Node* postorder(IR::Mux* prim) override;
+};
+
 class InstructionSelection : public PassManager {
  public:
     InstructionSelection(const BFN_Options&, PhvInfo &);
