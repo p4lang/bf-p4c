@@ -1,9 +1,9 @@
 
-/* mau stage template specializations for jbay -- #included directly in top-level stage.cpp */
+/* mau stage template specializations for cloudbreak -- #included directly in top-level stage.cpp */
 
 
 template<>
-void Stage::gen_configuration_cache(Target::JBay::mau_regs &regs, json::vector &cfg_cache) {
+void Stage::gen_configuration_cache(Target::Cloudbreak::mau_regs &regs, json::vector &cfg_cache) {
     Stage::gen_configuration_cache_common(regs, cfg_cache);
 
     static unsigned i_pdddelay;
@@ -61,29 +61,8 @@ void Stage::gen_configuration_cache(Target::JBay::mau_regs &regs, json::vector &
     }
 }
 
-/* disable power gating configuration for specific MAU regs to weedout delay programming
- * issues. We dont expect to call this function in the normal usage of JBay - this is
- * only for emulator debug/bringup
- */
-template<class REGS>
-static void disable_jbay_power_gating(REGS &regs) {
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= 0x1;
-        regs.dp.xbar_hash.xbar.mau_match_input_xbar_ternary_match_enable[gress] |= 0x1;
-    }
-
-    auto &xbar_power_ctl = regs.dp.match_input_xbar_din_power_ctl;
-    auto &actionmux_power_ctl = regs.dp.actionmux_din_power_ctl;
-    for(int side=0; side < 2; side++) {
-      for(int reg=0; reg < 16; reg++) {
-        xbar_power_ctl[side][reg] |= 0x3FF;
-        actionmux_power_ctl[side][reg] |= 0x3FF;
-      }
-    }
-}
-
-template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
-    write_common_regs<Target::JBay>(regs);
+template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
+    write_common_regs<Target::Cloudbreak>(regs);
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (stageno == 0) {
@@ -125,7 +104,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP)
             merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
         else {
-            /* last stage in JBay must be always set as match-dependent on deparser */
+            /* last stage in Cloudbreak must be always set as match-dependent on deparser */
             if (stageno == AsmStage::numstages()-1) {
                 merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
             } else {
@@ -133,10 +112,6 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             }
         }
     }
-    
-    for (gress_t gress : Range(INGRESS, EGRESS))
-        if (table_use[gress] & USE_TCAM)
-            regs.tcams.tcam_piped |= options.match_compiler ? 3 : 1 << gress;
 
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         regs.cfg_regs.amod_pre_drain_delay[gress] = pipelength(gress) - 9;
@@ -214,7 +189,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     }
 }
 
-void AlwaysRunTable::write_regs(Target::JBay::mau_regs &regs) {
+void AlwaysRunTable::write_regs(Target::Cloudbreak::mau_regs &regs) {
     if (gress == EGRESS)
         regs.dp.imem_word_read_override.imem_word_read_override_egress = 1;
     else

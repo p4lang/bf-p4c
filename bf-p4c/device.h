@@ -9,7 +9,11 @@
 
 class Device {
  public:
-    enum Device_t { TOFINO, JBAY };
+    enum Device_t { TOFINO, JBAY,
+#if HAVE_CLOUDBREAK
+    CLOUDBREAK,
+#endif
+    };
     /**
      * Initialize the global device context for the provided target - e.g.
      * "Tofino" or "JBay".
@@ -171,5 +175,47 @@ class JBayUDevice : public JBayDevice {
 };
 
 #endif /* HAVE_JBAY */
+
+#if HAVE_CLOUDBREAK
+class CloudbreakDevice : public Device {
+    const CloudbreakPhvSpec phv_;
+    const CloudbreakPardeSpec parde_;
+
+ protected:
+#ifdef EMU_OVERRIDE_STAGE_COUNT
+    const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
+#else
+    const int NUM_MAU_STAGES = 20;
+#endif
+
+ public:
+    CloudbreakDevice() : Device("Tofino2"), parde_() {}
+    Device::Device_t device_type() const override {
+        // return Device::CLOUDBREAK;
+        // FIXME -- need to update everyone who called device_type to understand CLOUDBREAK
+        // hack using JBAY for now
+        return Device::JBAY; }
+    cstring get_name() const override { return "Tofino3"; }
+    int getNumPipes() const override { return 4; }
+    int getNumPortsPerPipe() const override { return 4; }
+    int getNumChannelsPerPort() const override { return 18; }
+    int getNumStages() const override { return NUM_MAU_STAGES; }
+    int getLongBranchTags() const override { return 8; }
+    unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
+    unsigned getMaxResubmitId() const override { return 8; }
+    unsigned getMaxDigestId() const override { return 8; }
+    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
+    int getCloneSessionIdWidth() const override { return 8; }
+    int getQueueIdWidth() const override { return 7; }
+    int getPortBitWidth() const override { return 9; }
+    int getNumMaxChannels() const override {
+        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
+
+    const PhvSpec& getPhvSpec() const override { return phv_; }
+    const PardeSpec& getPardeSpec() const override { return parde_; }
+    const StatefulAluSpec& getStatefulAluSpec() const override;
+    bool getIfMemoryCoreSplit() const override { return true; }
+};
+#endif /* HAVE_CLOUDBREAK */
 
 #endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */

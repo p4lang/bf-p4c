@@ -7,6 +7,9 @@
 /* Define to 1 if you have the ucontext.h header */
 #cmakedefine HAVE_UCONTEXT_H 1
 
+/* Define to 1 if we include Cloudbreak */
+#cmakedefine HAVE_CLOUDBREAK 1
+
 /* Define to 1 if we include JBay */
 #cmakedefine HAVE_JBAY 1
 

@@ -10,10 +10,13 @@
 #include "top_level.h"
 #include "vector.h"
 
-#include "tofino/parser.cpp"    // tofino template specializations
+#include "tofino/parser.cpp"            // tofino template specializations
 #if HAVE_JBAY
-#include "jbay/parser.cpp"      // jbay template specializations
+#include "jbay/parser.cpp"              // jbay template specializations
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/parser.cpp"        // cloudbreak template specializations
+#endif // HAVE_CLOUDBREAK
 
 class AsmParser : public Section {
     std::vector<Parser*> parser[2];     // INGRESS, EGRESS
@@ -720,7 +723,7 @@ const char* Parser::match_key_loc_name(int loc) {
         if (loc == 0 || loc == 1) return "half";
         if (loc == 2) return "byte0";
         if (loc == 3) return "byte1";
-    } else if (options.isJBayTarget()) {
+    } else {
         if (loc == 0) return "byte0";
         if (loc == 1) return "byte1";
         if (loc == 2) return "byte2";
@@ -744,7 +747,7 @@ int Parser::match_key_loc(const char* key) {
         if (!strcmp(key, "half") || !strcmp(key, "half0")) return 0;
         if (!strcmp(key, "byte0")) return 2;
         if (!strcmp(key, "byte1")) return 3;
-    } else if (options.isJBayTarget()) {
+    } else {
         if (!strcmp(key, "byte0")) return 0;
         if (!strcmp(key, "byte1")) return 1;
         if (!strcmp(key, "byte2")) return 2;

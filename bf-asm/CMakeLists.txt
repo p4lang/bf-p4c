@@ -240,6 +240,11 @@ if (ENABLE_JBAY)
   set (HAVE_JBAY 1)
   set (BFASM_LIBS ${BFASM_LIBS} regs_jbay)
 endif()
+if (ENABLE_CLOUDBREAK)
+  add_subdirectory (cloudbreak)
+  set (HAVE_CLOUDBREAK 1)
+  set (BFASM_LIBS ${BFASM_LIBS} regs_cb)
+endif()
 
 # Other configuration files that need to be generated
 configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/config.h")

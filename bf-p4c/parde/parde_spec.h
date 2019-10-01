@@ -163,4 +163,42 @@ class JBayPardeSpec : public PardeSpec {
 };
 #endif /* HAVE_JBAY */
 
+#if HAVE_CLOUDBREAK
+class CloudbreakPardeSpec : public PardeSpec {
+ public:
+    size_t bytePhase0Size() const override { return 16; }
+    size_t byteIngressPrePacketPaddingSize() const override { return 8; }
+
+    const std::map<unsigned, unsigned>& extractorSpec() const override {
+        static const std::map<unsigned, unsigned> extractorSpec = {
+            {16, 20}
+        };
+        return extractorSpec;
+    }
+
+    const std::vector<MatchRegister> matchRegisters() const override {
+        return { MatchRegister("byte0"),
+                 MatchRegister("byte1"),
+                 MatchRegister("byte2"),
+                 MatchRegister("byte3") };
+    }
+
+    // TBD
+    int numParsers() const override { return 36; }
+    int numTcamRows() const override { return 256; }
+
+    unsigned maxClotsPerState() const override { return 2; }
+
+    // Cap max size to 56 as a workaround of TF2LAB-44
+    unsigned byteMaxClotSize() const override { return 56;  /* 64 */ }
+
+    unsigned numClotsPerGress() const override { return 64; }
+    unsigned maxClotsLivePerGress() const override { return 16; }
+    unsigned byteInterClotGap() const override { return 3; }
+    unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
+
+    unsigned numDeparserConstantBytes() const override { return 8; }
+};
+#endif /* HAVE_CLOUDBREAK */
+
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_ */

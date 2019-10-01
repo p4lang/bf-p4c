@@ -251,6 +251,13 @@ template<> void SelectionTable::setup_physical_alu_map(Target::JBay::mau_regs &r
     merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
 }
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+template<> void SelectionTable::setup_physical_alu_map(Target::Cloudbreak::mau_regs &regs,
+                                                       int type, int bus, int alu) {
+    auto &merge = regs.rams.match.merge;
+    merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
+}
+#endif // HAVE_CLOUDBREAK
 
 template<class REGS>
 void SelectionTable::write_regs(REGS &regs) {
@@ -372,6 +379,15 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
         4 | alu, 3*(logical_id % 8U), 3);
 }
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_regs &regs,
+                                                      int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
+    merge.mau_logical_to_meter_alu_map[logical_id/8U] |= (1U << alu) << ((logical_id%8U) * 4);
+    merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
+        4 | alu, 3*(logical_id % 8U), 3);
+}
+#endif // HAVE_CLOUDBREAK
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     // Stage table size reflects how many RAM lines are available for the selector, according

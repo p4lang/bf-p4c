@@ -222,5 +222,8 @@ inline unsigned Phv::mau_groupsize() { return phv.target->mau_groupsize(); }
 #if HAVE_JBAY
 #include "jbay/phv.h"
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/phv.h"
+#endif // HAVE_CLOUDBREAK
 
 #endif /* _phv_h_ */

@@ -319,4 +319,9 @@ class JBayPhvSpec : public PhvSpec {
     static AddressSpec _physicalParserAddresses;
 };
 
+#ifdef HAVE_CLOUDBREAK
+class CloudbreakPhvSpec : public JBayPhvSpec {
+};
+#endif /* HAVE_CLOUDBREAK */
+
 #endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

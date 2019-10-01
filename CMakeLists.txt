@@ -11,6 +11,7 @@ project (BFN_P4C)
 
 OPTION(ENABLE_STATIC_LIBS OFF)
 OPTION(ENABLE_JBAY "Enable JBay" ON)
+OPTION(ENABLE_CLOUDBREAK "Enable Cloudbreak" OFF)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable test genration" ON)
 OPTION(FIXED_LIBDYNHASH "Use future version of the Dynamic hash library" OFF)

@@ -416,6 +416,9 @@ void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const
 #if HAVE_JBAY
 #include "jbay/deparser.cpp"      // jbay template specializations
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/deparser.cpp"      // cloudbreak template specializations
+#endif // HAVE_CLOUDBREAK
 
 /* The following uses of specialized templates must be after the specialization... */
 void Deparser::output(json::map& map) {

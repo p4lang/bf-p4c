@@ -1190,6 +1190,9 @@ public:
         auto def_action_params = indirect ? indirect->get_default_action_parameters() : nullptr;
         return def_action_params; }
     bitvec compute_reachable_tables() override;
+
+ private:
+    template<class REGS> void tcam_table_map(REGS &regs, int row, int col);
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

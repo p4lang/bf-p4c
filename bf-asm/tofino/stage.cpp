@@ -51,6 +51,10 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
     }
 
+    for (gress_t gress : Range(INGRESS, EGRESS))
+        if (table_use[gress] & USE_TCAM)
+            regs.tcams.tcam_piped |= options.match_compiler ? 3 : 1 << gress;
+
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
     if (options.match_compiler) {

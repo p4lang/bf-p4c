@@ -412,6 +412,9 @@ static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base
 #if HAVE_JBAY
 #include "jbay/gateway.cpp"
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/gateway.cpp"
+#endif // HAVE_CLOUDBREAK
 
 template<class REGS>
 void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {

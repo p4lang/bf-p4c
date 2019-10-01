@@ -533,8 +533,9 @@ int parity(unsigned v) {
 struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
-    template<class REGS>
-    void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+#if HAVE_JBAY || HAVE_CLOUDBREAK
+    template<class REGS> void write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act);
+#endif
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
@@ -542,6 +543,9 @@ struct VLIWInstruction : Instruction {
 #if HAVE_JBAY
 #include "jbay/instruction.cpp"
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/instruction.cpp"
+#endif // HAVE_CLOUDBREAK
 
 struct AluOP : VLIWInstruction {
     const struct Decode : Instruction::Decode {
@@ -678,8 +682,8 @@ void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
 }
 
 int AluOP::encode() {
-    int rv = (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    if (options.isJBayTarget()) rv <<= 1;
+    int rv = (opc->opcode << 6) | src1.bits(slot/Phv::mau_groupsize());
+    rv <<= Target::INSTR_SRC2_BITS();
     return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool AluOP::equiv(Instruction *a_) {
@@ -833,8 +837,8 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int CondMoveMux::encode() {
-    int rv = (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    if (options.isJBayTarget()) rv <<= 1;
+    int rv = (cond << 11) | (opc->opcode << 6) | src1.bits(slot/Phv::mau_groupsize());
+    rv <<= Target::INSTR_SRC2_BITS();
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
     return rv | (cond & 0x40 ? src2.bits(slot/Phv::mau_groupsize()) : 0);
@@ -950,11 +954,11 @@ Instruction *ByteRotateMerge::pass1(Table *tbl, Table::Actions::Action *) {
 }
 
 int ByteRotateMerge::encode() {
-    int bits = (0xa << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    bits |= (byte_mask.getrange(0, 4)) << 14;
-    bits |= (src1_shift << 21);
-    bits |= (src2_shift << 19);
-    if (options.isJBayTarget()) bits <<= 1;
+    int bits = (0xa << 6) | src1.bits(slot/Phv::mau_groupsize());
+    bits |= (byte_mask.getrange(0, 4)) << 10;
+    bits |= (src1_shift << 17);
+    bits |= (src2_shift << 15);
+    bits <<= Target::INSTR_SRC2_BITS();
     return bits | src2.bits(slot/Phv::mau_groupsize());
 }
 
@@ -1036,24 +1040,24 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize()))
                     % dest->reg.size;
-    int bits = (1 << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
-    bits |= dest->hi << 11;
-    bits |= rot << 16;
+    int bits = (1 << 6) | src1.bits(slot/Phv::mau_groupsize());
+    bits |= dest->hi << 7;
+    bits |= rot << 12;
     switch (Phv::reg(slot)->size) {
     case 8:
-        bits |= (dest->lo & 3) << 14;
-        bits |= (dest->lo & ~3) << 17;
+        bits |= (dest->lo & 3) << 10;
+        bits |= (dest->lo & ~3) << 13;
         break;
     case 16:
-        bits |= (dest->lo & 1) << 15;
-        bits |= (dest->lo & ~1) << 19;
+        bits |= (dest->lo & 1) << 11;
+        bits |= (dest->lo & ~1) << 15;
         break;
     case 32:
-        bits |= dest->lo << 21;
+        bits |= dest->lo << 17;
         break;
     default:
         BUG(); }
-    if (options.isJBayTarget()) bits <<= 1;
+    bits <<= Target::INSTR_SRC2_BITS();
     return bits | src2.bits(slot/Phv::mau_groupsize());
 }
 bool DepositField::equiv(Instruction *a_) {
@@ -1127,8 +1131,8 @@ int Set::encode() {
     int rv = src.bits(slot/Phv::mau_groupsize());
     switch (dest->reg.type) {
     case Phv::Register::NORMAL:
-        rv = (opA->opcode << 10) | (rv << 4);
-        if (options.isJBayTarget()) rv <<= 1;
+        rv |= (opA->opcode << 6);
+        rv <<= Target::INSTR_SRC2_BITS();
         rv |= (slot & 0xf);
         break;
     case Phv::Register::MOCHA:
@@ -1272,9 +1276,9 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int ShiftOP::encode() {
-    int rv = (shift << 16) | (opc->opcode << 10);
-    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/Phv::mau_groupsize()) << 4;
-    if (options.isJBayTarget()) rv <<= 1;
+    int rv = (shift << 12) | (opc->opcode << 6);
+    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/Phv::mau_groupsize());
+    rv <<= Target::INSTR_SRC2_BITS();
     return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool ShiftOP::equiv(Instruction *a_) {

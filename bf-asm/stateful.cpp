@@ -267,8 +267,11 @@ unsigned StatefulTable::determine_shiftcount(Table::Call &call, int group, unsig
 }
 
 #include "tofino/stateful.cpp"
-#if HAVE_JBAY
+#if HAVE_JBAY || HAVE_CLOUDBREAK
 #include "jbay/stateful.cpp"
+#endif /* HAVE_JBAY */
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/stateful.cpp"
 #endif /* HAVE_JBAY */
 
 template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Actions::Action *act) {

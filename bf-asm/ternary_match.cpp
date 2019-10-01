@@ -335,6 +335,18 @@ template<class REGS> inline static void tcam_ghost_enable(REGS &regs, int row, i
     regs.tcams.col[col].tcam_ghost_thread_en[row] = 1; }
 template<> void tcam_ghost_enable(Target::Tofino::mau_regs &regs, int row, int col) {}
 
+template<class REGS> void TernaryMatchTable::tcam_table_map(REGS &regs, int row, int col) {
+    if (tcam_id >= 0) {
+        if (!((chain_rows[col] >> row) & 1))
+            regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row; }
+}
+#ifdef HAVE_CLOUDBREAK
+template<> void TernaryMatchTable::tcam_table_map(Target::Cloudbreak::mau_regs &regs,
+                                                  int row, int col) {
+    // FIXME -- figure out how to program tcam_map_oxbar_ctl
+}
+#endif
+
 template<class REGS>
 void TernaryMatchTable::write_regs(REGS &regs) {
     LOG1("### Ternary match table " << name() << " write_regs");
@@ -376,9 +388,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             if (match[word].byte_group >= 0)
                 setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
-            if (tcam_id >= 0) {
-                if (!((chain_rows[col] >> row.row) & 1))
-                    regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; } }
+            tcam_table_map(regs, row.row, col); }
         if (++word == match.size()) word = 0; }
     if (tcam_id >= 0)
         setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);

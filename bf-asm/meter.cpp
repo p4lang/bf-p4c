@@ -560,6 +560,7 @@ void MeterTable::write_regs(REGS &regs) {
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << home->row/4U; }
 }
 
+// FIXME -- refactor these specializations better
 template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs &regs,
                                                         int logical_id, int alu) {
     auto &merge = regs.rams.match.merge;
@@ -621,6 +622,37 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
 #endif // HAVE_JBAY
+
+#if HAVE_CLOUDBREAK
+template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_regs &regs,
+                                                        int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
+    if (!color_maprams.empty()) {
+        merge.mau_mapram_color_map_to_logical_ctl[alu] |= 1 << logical_id;
+        // Determining which buses to send the color mapram address to
+        if (color_mapram_addr == IDLE_MAP_ADDR) {
+            adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
+            for (auto lo : color_maprams) {
+                 int bus_index = lo.bus;
+                 if (color_maprams[0].row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
+                     bus_index += IDLETIME_BUSSES_PER_HALF;
+                 adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+                     .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);
+            }
+
+        } else if (color_mapram_addr == STATS_MAP_ADDR) {
+            for (auto lo : color_maprams) {
+                adrdist.adr_dist_stats_adr_icxbar_ctl[logical_id] |= (1U << (lo.row / 2));
+                adrdist.packet_action_at_headertime[0][lo.row / 2] = 1;
+            }
+        } else {
+            BUG();
+        }
+    }
+    adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
+}
+#endif // HAVE_CLOUDBREAK
 
 void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff

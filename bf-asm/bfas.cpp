@@ -32,7 +32,7 @@ option_t options = {
     .hash_parity_enabled = false,
     .high_availability_enabled = true,
     .match_compiler = false,
-#if HAVE_JBAY
+#if HAVE_JBAY || HAVE_CLOUDBREAK
     .singlewrite = true,
 #else
     .singlewrite = false,

@@ -346,6 +346,7 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(t ? (obj*)new True() : (obj*)new False()); }
             return t; }
+        bool operator=(void *);  // not defined to avoid converting pointers to bool
         bool operator==(string &str) {
             if (key) return false;
             assert(iter != self.end());
@@ -439,6 +440,8 @@ private:
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, std::move(i)); }
+        template <class T> bool is() const {
+            return !key && dynamic_cast<T *>(iter->second.get()) != nullptr; }
         template <class T> T &to() {
             if (key) iter = self.emplace(key.release(), mkuniq<T>()).first;
             return dynamic_cast<T &>(*iter->second); }

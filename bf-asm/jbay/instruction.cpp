@@ -1,10 +1,10 @@
-/* JBay template specializations for instructions #included in instruction.cpp
+/* JBay overloads for instructions #included in instruction.cpp
  * WARNING -- this is included in an anonymous namespace, as VLIWInstruction is 
  * in that anonymous namespace */
 
-template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
-        Table *tbl, Table::Actions::Action *act)
-{
+// This template works for JBay and Cloudbreak...
+template<typename REGS>
+void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
              tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
@@ -111,5 +111,5 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
 
 void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
         Table *tbl, Table::Actions::Action *act) {
-    write_regs<Target::JBay::mau_regs>(regs, tbl, act);
+    write_regs_2<Target::JBay::mau_regs>(regs, tbl, act);
 }

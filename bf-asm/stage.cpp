@@ -369,6 +369,9 @@ int Stage::pred_cycle(gress_t gress) {
 #ifdef HAVE_JBAY
 #include "jbay/stage.cpp"
 #endif /* HAVE_JBAY */
+#ifdef HAVE_CLOUDBREAK
+#include "cloudbreak/stage.cpp"
+#endif /* HAVE_CLOUDBREAK */
 
 template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &regs) {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
@@ -412,9 +415,6 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             this[1].stage_dep[INGRESS] == ACTION_DEP;
         regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable =
             this[1].stage_dep[EGRESS] == ACTION_DEP; }
-    for (gress_t gress : Range(INGRESS, EGRESS))
-        if (table_use[gress] & USE_TCAM)
-            regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 
     /* Error handling related */
     for (gress_t gress : Range(INGRESS, EGRESS)) {

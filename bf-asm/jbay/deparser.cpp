@@ -96,6 +96,13 @@ HO_I_INTRINSIC_RENAME(yid, xid_l2, YES)
 HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_0, hash1, YES)
 HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
 
+#undef EI_INTRINSIC
+#undef HO_E_INTRINSIC
+#undef II_INTRINSIC
+#undef II_INTRINSIC_RENAME
+#undef HO_I_INTRINSIC
+#undef HO_I_INTRINSIC_RENAME
+
 /** Macros to build Digest::Type objects for JBay --
  * JBAY_SIMPLE_DIGEST: basic digest that appears one place in the config
  * JBAY_ARRAY_DIGEST: config is replicated across Header+Output slices

@@ -811,5 +811,8 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
 #if HAVE_JBAY
 #include "jbay/salu_inst.cpp"
 #endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/salu_inst.cpp"
+#endif // HAVE_CLOUDBREAK
 
 }  // end namespace StatefulAlu

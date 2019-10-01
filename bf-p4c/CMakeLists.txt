@@ -21,6 +21,9 @@ add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
 if (ENABLE_JBAY)
   add_definitions("-DHAVE_JBAY=1")
 endif()
+if (ENABLE_CLOUDBREAK)
+  add_definitions("-DHAVE_CLOUDBREAK=1")
+endif()
 if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
@@ -777,8 +780,32 @@ if (ENABLE_JBAY)
   add_dependencies(p4c_driver remove_p4_14_for_jbay)
 endif (ENABLE_JBAY)
 
+if (ENABLE_CLOUDBREAK)
+  set (CLOUDBREAK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino3.cfg)
+  set_source_files_properties (${CLOUDBREAK_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
+  if (NOT ENABLE_BAREFOOT_INTERNAL)
+    # Remove the P4-14 support for JBay
+    add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
+      COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg > ${CLOUDBREAK_TARGET_CFG_FILE}
+      COMMENT "Removing P4-14, and PSA support for Tofino3"
+      )
+  else()
+    add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg ${CLOUDBREAK_TARGET_CFG_FILE}
+      COMMENT "Copying Tofino3 config"
+      )
+  endif()
+  add_custom_target(remove_p4_14_for_cb ALL DEPENDS ${CLOUDBREAK_TARGET_CFG_FILE})
+  add_dependencies(p4c_driver remove_p4_14_for_cb)
+endif (ENABLE_CLOUDBREAK)
+
 install (FILES ${DRIVER_FILES} ${JBAY_TARGET_CFG_FILE} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
+
+if (ENABLE_CLOUDBREAK)
+  install (FILES ${CLOUDBREAK_TARGET_CFG_FILE}
+    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
+endif (ENABLE_CLOUDBREAK)
 
 # install the tools that generate logging
 set (INTERFACES_DIR ${BFN_P4C_SOURCE_DIR}/compiler_interfaces)

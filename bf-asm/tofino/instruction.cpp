@@ -1,10 +1,9 @@
-/* Tofino template specializations for instructions #included in instruction.cpp
+/* Tofino overloads for instructions #included in instruction.cpp
  * WARNING -- this is included in an anonymous namespace, as VLIWInstruction is 
  * in that anonymous namespace */
 
-template<> void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
-        Table *tbl, Table::Actions::Action *act)
-{
+void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
+        Table *tbl, Table::Actions::Action *act) {
     if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
              tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
@@ -40,8 +39,3 @@ template<> void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
     phvRead([&](const Phv::Slice &sl) {
         set_power_ctl_reg(power_ctl, sl.reg.mau_id()); });
 }
-
-void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
-        Table *tbl, Table::Actions::Action *act) {
-    write_regs<Target::Tofino::mau_regs>(regs, tbl, act);
-}  

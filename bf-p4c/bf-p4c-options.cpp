@@ -218,6 +218,11 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2m", "t2na"},
         {"tofino2u", "tna"},
         {"tofino2u", "t2na"},
+  #if HAVE_CLOUDBREAK
+        {"tofino3", "v1model"},
+        {"tofino3", "tna"},
+        {"tofino3", "t2na"},
+  #endif /* HAVE_CLOUDBREAK */
     };
 
     // !!!!!!!!!!!!
