@@ -3362,6 +3362,11 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
 }
 
 bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col) {
+    // P4C-2211: Proxy Hash Tables cannot share a search bus with a gateway, as the input
+    // from the xbar cannot be merged onto the same bus.  See uArch 6.2.3. Exact Match Row
+    // Vertical/Horizontal (VH) XBars
+    if (exact_ta->layout_option->layout.proxy_hash)
+        return false;
     auto search_bus = sram_search_bus[row][col];
     BUG_CHECK(exact_ta->table_format->ixbar_group_per_width.count(search_bus.hash_group) > 0,
               "Miscoordination of what hash groups are on the search bus vs. what hash "

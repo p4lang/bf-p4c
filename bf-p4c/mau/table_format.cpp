@@ -165,38 +165,37 @@ bool TableFormat::analyze_layout_option() {
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
     if (tbl->layout.proxy_hash) {
         analyze_proxy_hash_option(per_RAM);
-        return true;
-    }
-
-    auto total_info = match_ixbar.bits_per_search_bus();
-
-    for (auto gi : total_info[0].all_group_info)
-         LOG4("   Group info " << gi);
-
-    single_match = *(match_ixbar.match_hash()[0]);
-    if (!is_match_entry_wide()) {
-        bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
-        if (!rv) return false;
     } else {
-        bool rv = analyze_wide_layout_option(total_info[0].all_group_info);
-        if (!rv) return false;
-    }
+        auto total_info = match_ixbar.bits_per_search_bus();
 
+        for (auto gi : total_info[0].all_group_info)
+             LOG4("   Group info " << gi);
 
-    for (auto &hi : total_info) {
-        safe_vector<int> ixbar_groups;
-        std::sort(hi.all_group_info.begin(), hi.all_group_info.end(),
-            [=](const IXBar::Use::GroupInfo &a, IXBar::Use::GroupInfo &b) {
-            return a.search_bus < b.search_bus;
-        });
-
-        for (auto sb : search_bus_per_width) {
-            if (sb >= 0)
-                ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
-            else
-                ixbar_groups.push_back(-1);
+        single_match = *(match_ixbar.match_hash()[0]);
+        if (!is_match_entry_wide()) {
+            bool rv = analyze_skinny_layout_option(per_RAM, total_info[0].all_group_info);
+            if (!rv) return false;
+        } else {
+            bool rv = analyze_wide_layout_option(total_info[0].all_group_info);
+            if (!rv) return false;
         }
-        use->ixbar_group_per_width[hi.hash_group] = ixbar_groups;
+
+
+        for (auto &hi : total_info) {
+            safe_vector<int> ixbar_groups;
+            std::sort(hi.all_group_info.begin(), hi.all_group_info.end(),
+                [=](const IXBar::Use::GroupInfo &a, IXBar::Use::GroupInfo &b) {
+                return a.search_bus < b.search_bus;
+            });
+
+            for (auto sb : search_bus_per_width) {
+                if (sb >= 0)
+                    ixbar_groups.push_back(hi.all_group_info[sb].ixbar_group);
+                else
+                    ixbar_groups.push_back(-1);
+            }
+            use->ixbar_group_per_width[hi.hash_group] = ixbar_groups;
+        }
     }
 
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
