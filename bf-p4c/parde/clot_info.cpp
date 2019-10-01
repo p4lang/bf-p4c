@@ -1537,8 +1537,8 @@ class GreedyClotAllocator : public Visitor {
     Visitor::profile_t init_apply(const IR::Node* root) override {
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
-            auto pipe = root->to<IR::BFN::Pipe>();
-            log = new Logging::FileLog(pipe->id, "parser.log");
+            if (auto pipe = root->to<IR::BFN::Pipe>())
+                log = new Logging::FileLog(pipe->id, "parser.log");
         }
 
         // Make sure we clear our state from previous invocations of the visitor.
@@ -1579,8 +1579,8 @@ class GreedyClotAllocator : public Visitor {
             allocate(candidates);
         }
 
-        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        Logging::FileLog parserLog(pipe->id, "parser.log");
+        if (auto *pipe = root->to<IR::BFN::Pipe>())
+            Logging::FileLog parserLog(pipe->id, "parser.log");
 
         LOG2(clotInfo.print());
 
@@ -1588,7 +1588,8 @@ class GreedyClotAllocator : public Visitor {
     }
 
     void end_apply() override {
-        Logging::FileLog::close(log);
+        if (log)
+            Logging::FileLog::close(log);
         Visitor::end_apply();
     }
 
@@ -1611,8 +1612,8 @@ Visitor::profile_t ClotAdjuster::init_apply(const IR::Node* root) {
 
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {
-        auto pipe = root->to<IR::BFN::Pipe>();
-        log = new Logging::FileLog(pipe->id, "parser.log");
+        if (auto pipe = root->to<IR::BFN::Pipe>())
+            log = new Logging::FileLog(pipe->id, "parser.log");
     }
 
     return result;
@@ -1622,13 +1623,15 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     clotInfo.adjust_clots(phv);
 
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-    Logging::FileLog parserLog(pipe->id, "parser.log");
+    if (pipe)
+        Logging::FileLog parserLog(pipe->id, "parser.log");
     LOG1(clotInfo.print(&phv));
 
     return root;
 }
 
 void ClotAdjuster::end_apply(const IR::Node*) {
-    Logging::FileLog::close(log);
+    if (log)
+        Logging::FileLog::close(log);
     Visitor::end_apply();
 }

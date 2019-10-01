@@ -334,6 +334,8 @@ static boost::optional<cstring> transformMatchType(p4configv1::MatchField_MatchT
 static boost::optional<cstring> transformOtherMatchType(std::string matchType) {
     if (matchType == "atcam_partition_index")
         return cstring("ATCAM");
+    else if (matchType == "dleft_hash")
+        return cstring("DLEFT_HASH");
     else
         return boost::none;
 }
@@ -537,8 +539,15 @@ class TypeSpecParser {
                     return;
                 }
                 type = makeTypeBytes(typeEnum->second.underlying_type().bitwidth());
-            } else if (fSpec.has_bitstring() && fSpec.bitstring().has_bit()) {
-                type = makeTypeBytes(fSpec.bitstring().bit().bitwidth());
+            } else if (fSpec.has_bitstring()) {
+                if (fSpec.bitstring().has_bit())
+                    type = makeTypeBytes(fSpec.bitstring().bit().bitwidth());
+                else if (fSpec.bitstring().has_int_())
+                    type = makeTypeBytes(fSpec.bitstring().int_().bitwidth());
+                else if (fSpec.bitstring().has_varbit())
+                    type = makeTypeBytes(fSpec.bitstring().varbit().max_bitwidth());
+            } else if (fSpec.has_bool_()) {
+                type = makeTypeBool(1);
             }
 
             if (!type) {

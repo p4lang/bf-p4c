@@ -12,6 +12,7 @@
 
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/ir/gress.h"
 #include "lib/cstring.h"
 #include "lib/path.h"
 
@@ -26,6 +27,15 @@ namespace Logging {
 class Manifest : public Inspector {
     using Writer = rapidjson::PrettyWriter<rapidjson::StringBuffer>;
     using PathAndType = std::pair<cstring, cstring>;
+
+    // to use PathAndType as std::set
+    struct PathCmp {
+        bool operator()(const PathAndType& lhs, const PathAndType& rhs) const {
+            auto l = std::string(lhs.first) + std::string(lhs.second);
+            auto r = std::string(rhs.first) + std::string(rhs.second);
+            return std::less<std::string>()(l, r);
+        }
+    };
 
  private:
     /// the collection of inputs for the program
@@ -48,32 +58,38 @@ class Manifest : public Inspector {
             _path(path), _gress(gress), _type(type), _format(format) {}
 
         void serialize(Writer &writer) {
-            static std::map<gress_t, cstring> gress2string = {
-                { INGRESS, "ingress" },
-                { EGRESS, "egress" },
-                { GHOST, "ghost" }};
             writer.StartObject();
             writer.Key("path");
             writer.String(_path.c_str());
             writer.Key("gress");
-            writer.String(gress2string.at(_gress).c_str());
+            writer.String(toString(_gress).c_str());
             writer.Key("graph_type");
             writer.String(_type.c_str());
             writer.Key("graph_format");
             writer.String(_format.c_str());
             writer.EndObject();
         }
+
+        cstring getHash() const {
+            return _path + toString(_gress) + _type + _format;
+        }
+    };
+
+    struct GraphOutputCmp {
+        bool operator()(const GraphOutput& lhs, const GraphOutput& rhs) const {
+            return std::less<const char *>()(lhs.getHash().c_str(), rhs.getHash().c_str());
+        }
     };
 
     /// the collection of outputs for each pipe
     struct OutputFiles {
-        cstring                                  _context;  // path to the context file
-        cstring                                  _binary;   // path to the binary file
+        cstring                               _context;  // path to the context file
+        cstring                               _binary;   // path to the binary file
         // pairs of path and resource type
-        std::vector<PathAndType> _resources;
+        std::set<PathAndType, PathCmp>        _resources;
         // pairs of path and log type
-        std::vector<PathAndType> _logs;
-        std::vector<GraphOutput>                 _graphs;
+        std::set<PathAndType, PathCmp>        _logs;
+        std::set<GraphOutput, GraphOutputCmp> _graphs;
 
         void serialize(Writer &writer) {
             writer.Key("files");
@@ -191,6 +207,9 @@ class Manifest : public Inspector {
     void setPipe(int pipe_id, cstring pipe_name) {
         _pipeId = pipe_id;
         _pipes.emplace(_pipeId, pipe_name);
+        // and add implicitly add the pipe outputs so that even if there are no
+        // files produced by the compiler, we get the pipe structure. P4C-2160
+        getPipeOutputs(pipe_id);
     }
 
     void setSuccess(bool success) { _success = success; }
@@ -201,19 +220,19 @@ class Manifest : public Inspector {
     }
     void addResources(int pipe, cstring path, cstring type = "resources") {
         auto *files = getPipeOutputs(pipe);
-        files->_resources.push_back(PathAndType(path, type));
+        files->_resources.insert(PathAndType(path, type));
     }
     void addGraph(int pipe, cstring graphType, cstring graphName, gress_t gress) {
         auto path = BFNContext::get().getOutputDirectory("graphs", pipe)
             .substr(_options.outputDir.size()+1) + "/" + graphName + ".dot";
         auto *files = getPipeOutputs(pipe);
-        files->_graphs.push_back(GraphOutput(path, gress, graphType));
+        files->_graphs.insert(GraphOutput(path, gress, graphType));
     }
     void addLog(int pipe, cstring logType, cstring logName) {
         auto path = BFNContext::get().getOutputDirectory("logs", pipe)
             .substr(_options.outputDir.size()+1) + "/" + logName;
         auto *files = getPipeOutputs(pipe);
-        files->_logs.push_back(PathAndType(path, logType));
+        files->_logs.insert(PathAndType(path, logType));
     }
     void addArchitecture(const BFN::ProgramThreads &threads) {
         _threads.insert(threads.cbegin(), threads.cend());

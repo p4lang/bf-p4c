@@ -31,16 +31,14 @@ class PassManager : public ::PassManager {
             return ::PassManager::init_apply(root);
 
         static int invocation = 0;
-        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        if (pipe == nullptr)
-            pipe = findContext<IR::BFN::Pipe>();
-        if (_logMode == Logging::Mode::CREATE) {
-            _logFile = new Logging::FileLog(pipe->id,
-                                            _logFilePrefix + std::to_string(invocation) + ".log",
-                                            _logMode);
-            ++invocation;
-        } else {
-            _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _logMode);
+        if (auto pipe = root->to<IR::BFN::Pipe>()) {
+            if (_logMode == Logging::Mode::CREATE) {
+                auto logFileName = _logFilePrefix + std::to_string(invocation) + ".log";
+                _logFile = new Logging::FileLog(pipe->id, logFileName, _logMode);
+                ++invocation;
+            } else {
+                _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _logMode);
+            }
         }
         return ::PassManager::init_apply(root);
     }

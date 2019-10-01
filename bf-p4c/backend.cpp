@@ -50,12 +50,6 @@
 #include "bf-p4c/phv/analysis/dark.h"
 #include "bf-p4c/phv/utils/live_range_report.h"
 
-// Set the default base directory for logging files
-// This will be overwritten by FileLog::setOutputDir in main, however, the
-// static member needs to be initialized here because it needs to be define in the backend library
-// so that gtest resolves all symbols.
-cstring Logging::FileLog::outputDir = "./";
-
 namespace BFN {
 
 /**

@@ -163,6 +163,11 @@ for p4c_arg in $P4C_ARGS[@]; do
     fi
 done
 P4C_ARGS=("${filter_P4C_ARGS[@]}")
+# add support to add more arguments through env variables
+# this should allow us to add arguments in cmake after we add the test.
+if [ ! -z ${CTEST_P4C_ARGS} ]; then
+   P4C_ARGS+=${CTEST_P4C_ARGS}
+fi
 P4PPFLAGS=""
 out_ext=""
 

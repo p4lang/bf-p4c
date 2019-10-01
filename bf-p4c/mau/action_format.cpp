@@ -931,7 +931,7 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
 /**
  * This function creates from a RamSection with it's isolated ALU information.  This is
  * the initial state from which the RamSections can be condensed and determined
- * where the are in RAM. 
+ * where the are in RAM.
  */
 const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
     if (has_param<MeterColor>())
@@ -2297,7 +2297,7 @@ void Format::create_split_param(const IR::MAU::Action *act) {
     if (auto *ir_arg = expr->to<IR::MAU::ActionArg>()) {
         le_bitrange range = { 0, ir_arg->type->width_bits() - 1 };
         param = new Argument(ir_arg->name.name, range);
-    } else if (auto *ir_con = expr->to<IR::Constant>()) {
+    } else if (expr->to<IR::Constant>()) {
         return;
     } else {
         BUG("A split parameter must either be an action data argument or a constant");

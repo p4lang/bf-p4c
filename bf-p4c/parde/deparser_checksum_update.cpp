@@ -630,7 +630,7 @@ struct InsertChecksumConditions : public Transform {
                     match_to_action_param[match | i] = action_param;
                 }
             }
-            for (unsigned match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
+            for (int match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
                 if (!match_to_action_param.count(match))
                     match_to_action_param[match] = 1;
             }

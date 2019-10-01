@@ -122,8 +122,10 @@ class BarefootBackend(BackendDriver):
                                     const="__default__", default=None)
         self._argGroup.add_argument("--archive-source", action="store_true", default=False,
                                     help="Add source outputs to the archive.")
-        self._argGroup.add_argument("--bf-rt-schema", action="store",
+        self._argGroup.add_argument("--bf-rt-schema", action="store", default=None,
                                     help="Generate and write BF-RT JSON schema  to the specified file")
+        self._argGroup.add_argument("--no-bf-rt-schema", action="store_true", default=False,
+                                    help="Do not generate the BF-RT JSON schema")
         self._argGroup.add_argument("--backward-compatible",
                                     action="store_true", default=False,
                                     help="Set compiler to be backward compatible with p4c-tofino")
@@ -345,11 +347,16 @@ class BarefootBackend(BackendDriver):
                                                                                  parde_logging,
                                                                                  bridge_logging,
                                                                                  ixbar_logging))
+        if opts.bf_rt_schema is None and opts.language == 'p4-16' and \
+           not (self._arch == 'v1model' or self._arch == 'psa' or opts.no_bf_rt_schema):
+            opts.bf_rt_schema = "{}/bfrt.json".format(self._output_directory)
+
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
             self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
-            self._commandsEnabled.append('bf-rt-verifier')
+            if 'compiler' in self._commandsEnabled:
+                self._commandsEnabled.append('bf-rt-verifier')
 
         if opts.p4runtime_force_std_externs:
             self.add_command_option('compiler', '--p4runtime-force-std-externs')
@@ -703,7 +710,6 @@ class BarefootBackend(BackendDriver):
         rc_bfa = 0  # accumulate assembler errors
         if run_assembler:
             self.parseManifest()
-
             # We need to make a copy of the list to get a copy of any additional parameters
             # that were added on the command line (-Xassembler)
             self._saved_assembler_params = list(self._commands['assembler'])
@@ -719,8 +725,9 @@ class BarefootBackend(BackendDriver):
                 unique_table_offset += 1
 
                 # We always need a  context.json -- TODO: need to make sure it is generated
+                pipeName = 'pipe' if self._dry_run else pipe['pipe_name']
                 context = 'context.json' if self.language == 'p4-14' else \
-                           os.path.join(pipe['pipe_name'], 'context.json')
+                           os.path.join(pipeName, 'context.json')
                 pipe['context'] = os.path.join(self._output_directory, context)
                 self.contexts[pipe['pipe_id']] = context
                 # Although the context.json schema has an optional compile_command and

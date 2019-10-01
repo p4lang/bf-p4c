@@ -789,7 +789,7 @@ ControlPathwaysToTable::InjectPoints
  *
  * if (t1.apply().hit) {
  *     t2.apply();
- * } 
+ * }
  *
  * if (t3.apply().hit) {
  *     t4.apply();
@@ -1155,7 +1155,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
 }
 
 Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
-    auto rv = PassManager::init_apply(node);
+    auto rv = Logging::PassManager::init_apply(node);
     dg.clear();
     if (!passContext.isNullOrEmpty())
         LOG1("FindDependencyGraph : " << passContext);

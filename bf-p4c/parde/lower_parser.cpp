@@ -1039,7 +1039,8 @@ struct ElimEmptyState : public ParserTransform {
     IR::Node* preorder(IR::BFN::Transition* transition) override {
         if (transition->next && is_empty(transition->next)) {
             if (auto next = get_unconditional_transition(transition->next)) {
-                if (transition->shift + next->shift <= Device::pardeSpec().byteInputBufferSize()) {
+                if (int(transition->shift + next->shift) <=
+                    Device::pardeSpec().byteInputBufferSize()) {
                     transition->next = next->next;
                     transition->shift += next->shift;
 

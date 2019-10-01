@@ -29,24 +29,24 @@ enum Mode {
 class FileLog {
  private:
     std::basic_streambuf<char>* clog_buff = nullptr;
-    std::ofstream *log;
-    static cstring outputDir;
+    std::ofstream *log = nullptr;
 
-    static cstring name2type(cstring logName) {
+    static const cstring& name2type(cstring logName) {
+        static const cstring unknown("Unknown");
         static const std::map<cstring, cstring> logNames2Type = {
-            {"flexible_packing", "parser"},
+            {"decaf",               "parser"},
+            {"flexible_packing",    "parser"},
+            {"ixbar",               "mau"},
             {"parser.characterize", "parser"},
-            {"parser", "parser"},
-            {"decaf", "parser"},
-            {"phv_allocation", "phv"},
-            {"table_", "mau"},
-            {"ixbar", "mau"}
+            {"parser",              "parser"},
+            {"phv_allocation",      "phv"},
+            {"table_",              "mau"}
         };
 
         for (auto &logType : logNames2Type)
             if (logName.startsWith(logType.first))
                 return logType.second;
-        return cstring("Unknown");
+        return unknown;
     }
 
     static std::set<cstring> filesWritten;
@@ -66,8 +66,7 @@ class FileLog {
         if (logDir) {
             auto fileName = Util::PathName(logDir).join(logName).toString();
             LOG1("Open logfile " << fileName << " append: " << append);
-            if (!append)
-                Manifest::getManifest().addLog(pipe, name2type(logName), logName);
+            Manifest::getManifest().addLog(pipe, name2type(logName), logName);
             clog_buff = std::clog.rdbuf();
             auto flags = std::ios_base::out;
             if (append) flags |= std::ios_base::app;
@@ -98,8 +97,6 @@ class FileLog {
         delete log;
         log = nullptr;
     }
-
-    static void setOutputDir(cstring &outDir) { outputDir = outDir; }
 };
 }  // end namespace Logging
 

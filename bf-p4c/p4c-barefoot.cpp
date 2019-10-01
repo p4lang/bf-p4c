@@ -246,7 +246,6 @@ int main(int ac, char **av) {
         return INVOCATION_ERROR;
 
     options.setInputFile();
-    Logging::FileLog::setOutputDir(options.outputDir);
     Device::init(options.target);
 
 #if BFP4C_CATCH_EXCEPTIONS

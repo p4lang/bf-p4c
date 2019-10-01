@@ -505,8 +505,8 @@ class CollectClotInfo : public Inspector {
 
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
-            auto pipe = root->to<IR::BFN::Pipe>();
-            log = new Logging::FileLog(pipe->id, "parser.log");
+            if (auto pipe = root->to<IR::BFN::Pipe>())
+                log = new Logging::FileLog(pipe->id, "parser.log");
         }
 
         return rv;
