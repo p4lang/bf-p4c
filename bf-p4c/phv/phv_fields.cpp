@@ -969,6 +969,10 @@ bool PHV::Field::no_split() const {
     return false;
 }
 
+bool PHV::Field::has_no_split_at_pos() const {
+    return (no_split_ranges_i.size() > 0);
+}
+
 void PHV::Field::set_no_split(bool b) {
     if (b) {
         set_no_split_at(le_bitrange(StartLen(0, size)));

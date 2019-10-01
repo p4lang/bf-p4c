@@ -426,6 +426,7 @@ class Field : public LiftLess<Field> {
     bool no_split() const;
     void set_no_split(bool b);
     bool no_split_at(int pos) const;
+    bool has_no_split_at_pos() const;
     void set_no_split_at(le_bitrange range);  // The indicated slice cannot be split.
     bool used_in_wide_arith() const { return wide_arith_start_bit_.size() > 0; }
 

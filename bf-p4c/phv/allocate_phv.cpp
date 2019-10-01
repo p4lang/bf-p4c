@@ -2887,7 +2887,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                 for (const auto& slice : ali->slices()) {
                     if (slice.field()->no_pack()) {
                         has_no_pack.insert(super_cluster); }
-                    if (slice.field()->no_split()) {
+                    if (slice.field()->no_split() || slice.field()->has_no_split_at_pos()) {
                         has_no_split.insert(super_cluster); } }
             } } }
 
