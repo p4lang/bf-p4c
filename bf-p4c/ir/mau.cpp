@@ -290,8 +290,8 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     stats_addr += a.stats_addr;
     action_addr += a.action_addr;
     ghost_bytes += a.ghost_bytes;
-    partition_bits += partition_bits;
-    partition_count += partition_count;
+    partition_bits += a.partition_bits;
+    partition_count += a.partition_count;
     return *this;
 }
 
