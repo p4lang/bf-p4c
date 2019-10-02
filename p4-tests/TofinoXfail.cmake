@@ -1612,3 +1612,10 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Found extract.*to a non-field object"
   extensions/p4_tests/p4_16/compile_only/p4c-2153.p4
 )
+
+# BA-102 Failures
+# P4C-2216
+p4c_add_xfail_reason("tofino"
+  "Overwritting an already written bit"
+  ba102_simple_l3_mcast_checksum
+)

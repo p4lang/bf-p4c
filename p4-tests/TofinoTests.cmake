@@ -553,6 +553,7 @@ foreach(t IN LISTS ba102_tests)
   get_filename_component(p4name ${t} NAME)
   string (REGEX REPLACE ".p4" "" testname ${p4name})
   # TODO: Only one ptf test available, figure out how to run p4-16 pd test in our env
+  file(RELATIVE_PATH testfile ${P4C_SOURCE_DIR} ${t})
   p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE ba102_${testname} ${testfile} "${testExtraArgs}" "-arch tna -bfrt -force-link")
   p4c_add_test_label("tofino" "BA-102" ba102_${testname})
   set_tests_properties("tofino/ba102_${testname}" PROPERTIES RUN_SERIAL 1)
