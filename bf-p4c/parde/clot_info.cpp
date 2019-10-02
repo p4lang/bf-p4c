@@ -315,7 +315,7 @@ bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
 
     if (!extracts_full_width(field)) {
         LOG6("  Field " << field->name << " can't be in a CLOT: its full width is not extracted "
-             << "by the parser");
+             << "from the packet by the parser");
         return false;
     }
 
@@ -387,7 +387,12 @@ bool ClotInfo::extracts_full_width(const PHV::Field* field) const {
         return false;
 
     bool have_packet_extract = false;
-    for (auto state : field_to_parser_states_.at(field)) {
+    for (auto& entry : field_to_parser_states_.at(field)) {
+        auto& state = entry.first;
+        auto& source = entry.second;
+
+        if (!source->to<IR::BFN::PacketRVal>()) return false;
+
         if (auto range = field_range(state, field)) {
             have_packet_extract = true;
             if (field->size != range->size()) return false;
@@ -441,7 +446,9 @@ bool ClotInfo::is_modified(const PHV::Field* field) const {
 
     // Recursively check if the field is packed with a modified field in the same header.
     if (field_to_parser_states_.count(field)) {
-        for (auto state : field_to_parser_states_.at(field)) {
+        for (auto& entry : field_to_parser_states_.at(field)) {
+            auto& state = entry.first;
+
             if (!field_to_byte_idx.count(state)) continue;
             auto byte_indices = field_to_byte_idx.at(state);
 

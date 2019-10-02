@@ -82,9 +82,11 @@ class ClotInfo {
     ordered_map<const IR::BFN::ParserState*,
                 std::vector<const PHV::Field*>> parser_state_to_fields_;
 
-    /// Maps fields to all states that extract the field, regardless of source.
+    /// Maps fields to all states that extract the field, regardless of source. Each state is
+    /// further mapped to the source from which the field is extracted.
     ordered_map<const PHV::Field*,
-                std::set<const IR::BFN::ParserState*>> field_to_parser_states_;
+                std::unordered_map<const IR::BFN::ParserState*,
+                                   const IR::BFN::ParserRVal*>> field_to_parser_states_;
 
     /// Maps the fields extracted from the packet in each state to the state-relative byte indices
     /// occupied by the field.
@@ -229,7 +231,7 @@ class ClotInfo {
                    const IR::BFN::ParserState* state) {
         LOG4("adding " << f->name << " to " << state->name << " (source " << source << ")");
         parser_state_to_fields_[state].push_back(f);
-        field_to_parser_states_[f].insert(state);
+        field_to_parser_states_[f][state] = source;
 
         if (auto rval = source->to<IR::BFN::PacketRVal>())
             field_range_[state][f] = rval->range;
@@ -334,7 +336,8 @@ class ClotInfo {
     bool can_end_clot(const FieldSliceExtractInfo* extract_info) const;
 
     /// Determines whether a field extracts its full width whenever it is extracted from the
-    /// packet. Returns false if the field is not extracted from the packet in any state.
+    /// packet. Returns false if, in any state, the field is not extracted from the packet or is
+    /// extracted from a non-packet source.
     bool extracts_full_width(const PHV::Field* field) const;
 
     /// Memoization table for @ref is_modified.

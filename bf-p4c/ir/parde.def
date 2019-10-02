@@ -164,8 +164,8 @@ class ExtractClot : Extract {
 
     validate {
         BUG_CHECK(source->to<IR::BFN::PacketRVal>(),
-                  "ExtractClot source is not a PacketRVal: %1%",
-                  source);
+                  "ExtractClot source for %1% is not a PacketRVal: %2%",
+                  dest, source);
     }
 }
 
