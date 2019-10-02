@@ -256,6 +256,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/attached_info.cpp
   mau/attached_output.cpp
   mau/characterize_power.cpp
+  mau/dynamic_dep_metrics.cpp
   mau/dynhash.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
@@ -286,7 +287,6 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/table_seqdeps.cpp
   mau/table_summary.cpp
   mau/table_injected_deps.cpp
-  mau/upward_downward_prop.cpp
   mau/table_flow_graph.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
@@ -301,6 +301,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/attached_info.h
   mau/attached_output.h
   mau/characterize_power.h
+  mau/dynamic_dep_metrics.h
   mau/dynhash.h
   mau/default_next.h
   mau/field_use.h
@@ -327,6 +328,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/stateful_alu.h
   mau/static_entries_const_prop.h
   mau/table_dependency_graph.h
+  mau/table_flow_graph.h
   mau/table_format.h
   mau/table_layout.h
   mau/table_mutex.h
@@ -334,8 +336,6 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/table_seqdeps.h
   mau/table_summary.h
   mau/table_injected_deps.h
-  mau/upward_downward_prop.h
-  mau/table_flow_graph.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 
@@ -929,6 +929,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp

@@ -4,12 +4,12 @@
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
+#include "bf-p4c/mau/dynamic_dep_metrics.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/mau/upward_downward_prop.h"
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;
@@ -35,15 +35,20 @@ class TablePlacement : public MauTransform, public Backtrack {
         SHARED_TABLES,
         PRIORITY,
         DOWNWARD_PROP_DSC,
-        UPWARD_PROP_DSC,
         LOCAL_DSC,
         LOCAL_DS,
         LOCAL_TD,
+        DOWNWARD_DOM_FRONTIER,
+        DOWNWARD_TD,
+        NEXT_TABLE_OPEN,
+        CDS_PLACEABLE,
+        CDS_PLACE_COUNT,
+        AVERAGE_CDS_CHAIN,
         DEFAULT
     } choice_t;
 
  private:
-    // Note that this is for the UpwardDownward propagation, and refers to their match portion being
+    // Note that this is for the DynamicDepMetrics, and refers to their match portion being
     // fully placed.  In order to truly successfully split tables, some information is necessary to
     // capture the potential dependencies removed or added by moving the stateful operation to a
     // later stage
@@ -58,8 +63,9 @@ class TablePlacement : public MauTransform, public Backtrack {
     GatewayMergeChoices gateway_merge_choices(const IR::MAU::Table *table);
 
     struct TableInfo;
-    UpwardDownwardPropagation *upward_downward_prop;
     void log_choice(const Placed *t, const Placed *best, choice_t choice);
+    CalculateNextTableProp ntp;
+    ControlPathwaysToTable con_paths;
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     struct TableSeqInfo;
@@ -74,6 +80,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const PhvInfo &phv;
     const LayoutChoices &lc;
     const SharedIndirectAttachedAnalysis &siaa;
+    DynamicDependencyMetrics ddm;
     bool ignoreContainerConflicts = false;
     bool alloc_done = false;
     cstring error_message;

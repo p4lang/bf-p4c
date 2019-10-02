@@ -84,7 +84,8 @@ TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
                                const TablesMutuallyExclusive &m, const PhvInfo &p,
                                const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
                                TableSummary &summary_)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), summary(summary_) {}
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d),
+  summary(summary_) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
     // If a table does not fit in the available stages, then TableSummary throws an exception.
@@ -105,6 +106,8 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     placed_tables_for_dep_analysis.clear();
     placed_table_names.clear();
     summary.clearPlacementErrors();
+    root->apply(ntp);
+    root->apply(con_paths);
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
@@ -116,7 +119,6 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
         Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
                                                   INGRESS);  // this should be both really!
     }
-    upward_downward_prop = new UpwardDownwardPropagation(*deps);
     return MauTransform::init_apply(root);
 }
 
@@ -556,6 +558,9 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estim
 
 bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
                                      int &tcams_left, int min_entries) {
+    if (next->table->gateway_only() || next->table->match_key.empty())
+        return false;
+
     auto t = next->table;
     if (t->for_dleft()) {
         error("Table %1%: cannot split dleft hash tables", t);
@@ -567,8 +572,9 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
                                                 next->attached_entries);
     } else if (!t->layout.ternary) {
         if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries,
-                                                    next->attached_entries))
+                                                    next->attached_entries)) {
             return false;
+        }
     } else {
         next->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, next->entries,
                                                next->attached_entries); }
@@ -1020,6 +1026,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         whole_stage.push_back(clone);
         *p = clone;
         p = &clone->prev; }
+
+
     // update shared attached tables in the stage
     for (auto *p : boost::adaptors::reverse(whole_stage))
         p->update_attached(rv);
@@ -1198,7 +1206,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         if (rv->gw)
             rv->placed[tblInfo.at(rv->gw).uid] = true;
     }
-
     return rv;
 }
 
@@ -1356,28 +1363,50 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
     const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
 
-    upward_downward_prop->update_placed_tables(placed_tables_for_dep_analysis);
-    const auto& downward_prop_score = upward_downward_prop->get_downward_prop_unplaced_score(
-        a_table_to_use, b_table_to_use);
-    const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
-        a_table_to_use, b_table_to_use);
-    const auto& local_gw_score = upward_downward_prop->get_local_score(
-        a_table_to_use, b_table_to_use);
-    const auto& local_score = upward_downward_prop->get_local_score(a->table, b->table);
+    if (a_table_to_use == b_table_to_use) {
+        a_table_to_use = a->table;
+        b_table_to_use = b->table;
+    }
 
+    ddm.update_placed_tables(&placed_tables_for_dep_analysis);
+    const auto down_score = ddm.get_downward_prop_score(a_table_to_use, b_table_to_use);
 
-    LOG5("      Stage A is " << a->name << " with calculated stage " << a->stage <<
+    ordered_set<const IR::MAU::Table *> already_placed_a;
+    for (auto p = a->prev; p && p->stage == a->stage; p = p->prev) {
+        if (p->table)
+            already_placed_a.emplace(p->table);
+        if (p->gw)
+            already_placed_a.emplace(p->gw);
+    }
+
+    ordered_set<const IR::MAU::Table *> already_placed_b;
+    for (auto p = b->prev; p && p->stage == b->stage; p = p->prev) {
+        if (p->table) {
+            already_placed_b.emplace(p->table);
+        }
+        if (p->gw)
+            already_placed_b.emplace(p->gw);
+    }
+
+    LOG5("      Stage A is " << a->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
+         " with calculated stage " << a->stage <<
          ", provided stage " << a->table->get_provided_stage(&a->stage) <<
          ", priority " << a->table->get_placement_priority());
-    LOG5("        downward prop score " << downward_prop_score.first);
-    LOG5("        upward prop score " << upward_prop_score.first);
-    LOG5("        local score " << local_score.first);
-    LOG5("      Stage B is " << b->name << " with calculated stage " << b->stage <<
+    LOG5("        downward prop score " << down_score.first);
+    LOG5("        local dep score " << deps->stage_info.at(a_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier " << deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier);
+    LOG5("        can place cds in stage "
+          << ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a));
+
+    LOG5("      Stage B is " << b->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
+         " with calculated stage " << b->stage <<
          ", provided stage " << b->table->get_provided_stage(&b->stage) <<
          ", priority " << b->table->get_placement_priority());
-    LOG5("        downward prop score " << downward_prop_score.second);
-    LOG5("        upward prop score " << upward_prop_score.second);
-    LOG5("        local score " << local_score.second);
+    LOG5("        downward prop score " << down_score.second);
+    LOG5("        local dep score " << deps->stage_info.at(b_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier " << deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier);
+    LOG5("        can place cds in stage "
+          << ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b));
 
     choice = CALC_STAGE;
     if (a->stage < b->stage) return true;
@@ -1409,44 +1438,92 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (a->complete_shared > b->complete_shared) return true;
     if (a->complete_shared < b->complete_shared) return false;
 
-    choice = NEED_MORE;
-    if (b->need_more_match && !a->need_more_match) return true;
-    if (a->need_more_match && !b->need_more_match) return false;
-
-    int a_deps_stages_control = downward_prop_score.first.deps_stages_control_anti;
-    int b_deps_stages_control = downward_prop_score.second.deps_stages_control_anti;
-
+    ///> Downward Propagation - @seealso dynamic_dep_matrix
     choice = DOWNWARD_PROP_DSC;
-    // if the tables need to be in THIS stage, we reverse the sense of this test, as
-    // the longer downward prop is likely to have tables that will force advancing to next
-    // stage before placing them, which will then fail the provided stage.
-    if (a_deps_stages_control > b_deps_stages_control) return !provided_stage;
-    if (a_deps_stages_control < b_deps_stages_control) return provided_stage;
+    if (down_score.first > down_score.second) return !provided_stage;
+    if (down_score.first < down_score.second) return provided_stage;
 
-    int a_stages_upward_prop = upward_prop_score.first.deps_stages_control_anti;
-    int b_stages_upward_prop = upward_prop_score.second.deps_stages_control_anti;
+    ///> Downward Dominance Frontier - for definition,
+    ///> see TableDependencyGraph::DepStagesThruDomFrontier
+    choice = DOWNWARD_DOM_FRONTIER;
+    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier == 0 &&
+        deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier != 0)
+        return true;
+    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0 &&
+        deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier == 0)
+        return false;
 
-    choice = UPWARD_PROP_DSC;
-    if (a_stages_upward_prop > b_stages_upward_prop) return true;
-    if (a_stages_upward_prop < b_stages_upward_prop) return false;
-
-    int a_local = local_gw_score.first.deps_stages_control_anti;
-    int b_local = local_gw_score.second.deps_stages_control_anti;
-
+    ///> Direct Dependency Chain without propagation
+    int a_local = deps->stage_info.at(a_table_to_use).dep_stages_control_anti;
+    int b_local = deps->stage_info.at(b_table_to_use).dep_stages_control_anti;
     choice = LOCAL_DSC;
     if (a_local > b_local) return true;
     if (a_local < b_local) return false;
 
-    int a_deps_stages = local_gw_score.first.deps_stages;
-    int b_deps_stages = local_gw_score.second.deps_stages;
 
+    ///> If the control dominating set is completely placeable
+    choice = CDS_PLACEABLE;
+    if (ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a) &&
+        !ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b))
+        return true;
+
+    if (ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b) &&
+        !ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a))
+        return false;
+
+    ///> If the table needs more match entries.  This can help pack more logical tables earlier
+    ///> that have higher stage requirements
+    choice = NEED_MORE;
+    if (b->need_more_match && !a->need_more_match) return true;
+    if (a->need_more_match && !b->need_more_match) return false;
+
+    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0) {
+        choice = CDS_PLACE_COUNT;
+        int comp = ddm.placeable_cds_count(a_table_to_use, already_placed_a) -
+                   ddm.placeable_cds_count(b_table_to_use, already_placed_b);
+        if (comp != 0)
+            return comp > 0;
+    }
+
+    ///> Original dependency metric.  Feels like it should be deprecated
+    int a_deps_stages = deps->stage_info.at(a_table_to_use).dep_stages;
+    int b_deps_stages = deps->stage_info.at(b_table_to_use).dep_stages;
     choice = LOCAL_DS;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
+    ///> Total dependencies with dominance frontier summed
+    int a_dom_frontier_deps = ddm.total_deps_of_dom_frontier(a_table_to_use);
+    int b_dom_frontier_deps = ddm.total_deps_of_dom_frontier(b_table_to_use);
+    choice = DOWNWARD_TD;
+    if (a_dom_frontier_deps > b_dom_frontier_deps) return true;
+    if (b_dom_frontier_deps > a_dom_frontier_deps) return false;
+
+    ///> Average chain length of all tables within the dominance frontier
+    double a_average_cds_deps = ddm.average_cds_chain_length(a_table_to_use);
+    double b_average_cds_deps = ddm.average_cds_chain_length(b_table_to_use);
+    choice = AVERAGE_CDS_CHAIN;
+    if (a_average_cds_deps > b_average_cds_deps) return true;
+    if (b_average_cds_deps > a_average_cds_deps) return false;
+
+
+    ///> If the entirety of the control dominating set is placed vs. not
+    choice = NEXT_TABLE_OPEN;
+    int a_next_tables_in_use = a_table_to_use == a->gw ? 1 : 0;
+    int b_next_tables_in_use = b_table_to_use == b->gw ? 1 : 0;
+
+    int a_dom_set_size = ntp.control_dom_set.at(a_table_to_use).size() - 1;
+    int b_dom_set_size = ntp.control_dom_set.at(b_table_to_use).size() - 1;;
+
+    if (a_dom_set_size <= a_next_tables_in_use && b_dom_set_size > b_next_tables_in_use)
+        return true;
+    if (a_dom_set_size > a_next_tables_in_use && b_dom_set_size <= b_next_tables_in_use)
+        return false;
+
+    ///> Local dependencies
     choice = LOCAL_TD;
-    int a_total_deps = local_score.first.total_deps;
-    int b_total_deps = local_score.second.total_deps;
+    int a_total_deps = deps->happens_before_dependences(a->table).size();
+    int b_total_deps = deps->happens_before_dependences(b->table).size();
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
@@ -1683,6 +1760,9 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
 
         choice_t choice = DEFAULT;
         for (auto t : trial) {
+            if (t->prev) {
+                LOG1("  Check point now " << t->prev << " " << (t->prev->prev == nullptr));
+            }
             if (!best || is_better(t, best, choice)) {
                 log_choice(t, best, choice);
                 best = t;
@@ -1741,13 +1821,24 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
  * is_better decision info.
  */
 std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
-    static const char* choice_names[] = { "earlier stage calculated", "earlier stage provided",
-                "more stages needed", "completes more shared tables", "user-provided priority",
-                "longer downward prop control-included dependence tail chain",
-                "longer upward prop control-included dependence tail chain",
-                "longer local control-included dependence tail chain",
-                "longer control-excluded dependence tail chain",
-                "fewer total dependencies", "default choice" };
+    static const char* choice_names[] = {
+        "earlier stage calculated",
+        "earlier stage provided",
+        "more stages needed",
+        "completes more shared tables",
+        "user-provided priority",
+        "longer downward prop control-included dependence tail chain",
+        "longer local control-included dependence tail chain",
+        "longer control-excluded dependence tail chain",
+        "fewer total dependencies",
+        "longer downward dominance frontier dependence chain",
+        "fewer total dependencies in dominance frontier",
+        "direct control dependency difference",
+        "control dom set is placeable in this stage",
+        "control dom set has more placeable tables",
+        "average chain length of control dom set",
+        "default choice"
+         };
     if (choice < sizeof(choice_names) / sizeof(choice_names[0])) {
         out << choice_names[choice];
     } else {

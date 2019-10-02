@@ -13,7 +13,6 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/mau/upward_downward_prop.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
@@ -691,368 +690,6 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     EXPECT_EQ(dg.dependence_tail_size(t12), 0);
 }
 
-struct Scores {
-    std::array<std::array<int, UpwardDownwardPropagation::NUM_HEURISTICS>,
-               UpwardDownwardPropagation::NUM_PROP_TYPES> data;
-    Scores(std::initializer_list<std::initializer_list<int>> l) {
-        EXPECT_EQ(l.size(), data.size());
-        int i = 0;
-        for (auto sl : l) {
-            EXPECT_EQ(sl.size(), data[i].size());
-            int j = 0;
-            for (auto s : sl) data[i][j++] = s;
-            i++;
-        }
-    }
-};
-
-void validate_scores(UpwardDownwardPropagation* upward_downward_prop,
-                     const IR::MAU::Table *a_table_to_use, const IR::MAU::Table *b_table_to_use,
-                     Scores &a_score, Scores &b_score,
-                     ordered_set<const IR::MAU::Table*> &placed_tables) {
-    upward_downward_prop->update_placed_tables(placed_tables);
-    constexpr int num_prop_types = UpwardDownwardPropagation::NUM_PROP_TYPES;
-    constexpr int num_heuristics = UpwardDownwardPropagation::NUM_HEURISTICS;
-    const auto& downward_prop_score = upward_downward_prop->get_downward_prop_unplaced_score(
-        a_table_to_use, b_table_to_use);
-    const auto& upward_prop_score = upward_downward_prop->get_upward_prop_unplaced_score(
-        a_table_to_use, b_table_to_use);
-    const auto& local_score = upward_downward_prop->get_local_score(
-        a_table_to_use, b_table_to_use);
-    for (int i = 0; i < num_prop_types; i++) {
-        for (int j = 0; j < num_heuristics; j++) {
-            std::pair<UpwardDownwardPropagation::PlaceScore,
-                      UpwardDownwardPropagation::PlaceScore> calc_score;
-            if (i == UpwardDownwardPropagation::DOWNWARD) {
-                calc_score = downward_prop_score;
-            } else if (i == UpwardDownwardPropagation::UPWARD) {
-                calc_score = upward_prop_score;
-            } else if (i == UpwardDownwardPropagation::LOCAL) {
-                calc_score = local_score;
-            } else {
-                EXPECT_EQ(true, false);
-            }
-
-            int calc_a, calc_b, true_a, true_b;
-            true_a = a_score.data[i][j];
-            true_b = b_score.data[i][j];
-            if (j == UpwardDownwardPropagation::DEPS_STAGES_CONTROL_ANTI) {
-                calc_a = calc_score.first.deps_stages_control_anti;
-                calc_b = calc_score.second.deps_stages_control_anti;
-            } else if (j == UpwardDownwardPropagation::DEPS_STAGES) {
-                calc_a = calc_score.first.deps_stages;
-                calc_b = calc_score.second.deps_stages;
-            } else if (j == UpwardDownwardPropagation::TOTAL_DEPS) {
-                calc_a = calc_score.first.total_deps;
-                calc_b = calc_score.second.total_deps;
-            } else {
-                EXPECT_EQ(true, false);
-            }
-            EXPECT_EQ(calc_a, true_a);
-            EXPECT_EQ(calc_b, true_b);
-        }
-    }
-}
-
-/*
-Tests the following graph, where
-tables on bottom are dependent on those on top:
-Alpha beta gamma chain is independent from other chain
-
-              A
-            /   \
-        ---B     C
-       /  / \   / \
-      /  X   Y X2 Y2
-     Z1
-     |
-     Z2
-     |
-     Z3
-
-Alpha -> Beta -> Gamma
-*/
-
-TEST_F(TableDependencyGraphTest, UpwardDownwardProp) {
-    auto test = createTableDependencyGraphTestCase(
-        P4_SOURCE(P4Headers::NONE, R"(
-    action setb1(bit<32> val) { headers.h2.b1 = val; }
-    action setf2(bit<32> val) { headers.h2.f2 = val; }
-    action noop() { }
-
-    table A {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table B {
-        key = { headers.h2.f1 : exact; }
-        actions = { setb1; }
-    }
-
-    table C {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table X {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table Y {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table X2 {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table Y2 {
-        key = { headers.h2.f1: exact; }
-        actions = { noop; }
-    }
-
-    table Z1 {
-        key = { headers.h2.b1: exact; }
-        actions = { setb1; }
-    }
-
-    table Z2 {
-        key = { headers.h2.b1: exact; }
-        actions = { setb1; }
-    }
-
-    table Z3 {
-        key = { headers.h2.b1: exact; }
-        actions = { setb1; }
-    }
-
-    table alpha {
-        key = { headers.h2.f2: exact; }
-        actions = { setf2; }
-    }
-
-    table beta {
-        key = { headers.h2.f2: exact; }
-        actions = { setf2; }
-    }
-
-    table gamma {
-        key = { headers.h2.f2: exact; }
-        actions = { setf2; }
-    }
-
-    apply {
-        if (A.apply().hit) {
-            if (B.apply().hit) {
-                X.apply();
-            }
-            else {
-                Y.apply();
-            }
-        }
-        else {
-            if (C.apply().hit) {
-                X2.apply();
-            }
-            else {
-                Y2.apply();
-            }
-        }
-        Z1.apply();
-        Z2.apply();
-        Z3.apply();
-
-        alpha.apply();
-        beta.apply();
-        gamma.apply();
-    }
-)"));
-    ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
-    FieldDefUse defuse(phv);
-    DependencyGraph dg;
-
-    test->pipe = runMockPasses(test->pipe, phv, defuse);
-
-    auto *find_dg = new FindDependencyGraph(phv, dg);
-    // Keeping the old non logical deps (as this is how the original calculation was made),
-    // and will be the way forward on JBay
-    find_dg->set_add_logical_deps(false);
-    test->pipe->apply(*find_dg);
-    UpwardDownwardPropagation *upward_downward_prop = new UpwardDownwardPropagation(dg);
-    const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma;
-    a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A_0") {
-            a = kv.first;
-        } else if (kv.first->name == "B_0") {
-            b = kv.first;
-        } else if (kv.first->name == "C_0") {
-            c = kv.first;
-        } else if (kv.first->name == "X_0") {
-            x = kv.first;
-        } else if (kv.first->name == "Y_0") {
-            y = kv.first;
-        } else if (kv.first->name == "X2_0") {
-            x2 = kv.first;
-        } else if (kv.first->name == "Y2_0") {
-            y2 = kv.first;
-        } else if (kv.first->name == "Z1_0") {
-            z1 = kv.first;
-        } else if (kv.first->name == "Z2_0") {
-            z2 = kv.first;
-        } else if (kv.first->name == "Z3_0") {
-            z3 = kv.first;
-        } else if (kv.first->name == "alpha_0") {
-            alpha = kv.first;
-        } else if (kv.first->name == "beta_0") {
-            beta = kv.first;
-        } else if (kv.first->name == "gamma_0") {
-            gamma = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(x, nullptr);
-    EXPECT_NE(y, nullptr);
-    EXPECT_NE(x2, nullptr);
-    EXPECT_NE(y2, nullptr);
-    EXPECT_NE(z1, nullptr);
-    EXPECT_NE(z2, nullptr);
-    EXPECT_NE(z3, nullptr);
-    EXPECT_NE(alpha, nullptr);
-    EXPECT_NE(beta, nullptr);
-    EXPECT_NE(gamma, nullptr);
-
-    ordered_set<const IR::MAU::Table*> placed_tables;
-
-    // These cases validate the consistency of the internal data structures.
-    // Some of the comparisons they test may not be possible in an actual
-    // table placement run, and the placed set is not updated in this
-    // part of the test.
-
-    // Scores (from left to right) are: deps_stages_control, deps_stages, total_deps
-    // See definition of PlaceScore in upward_downward_prop for details
-    Scores a_score(std::initializer_list<std::initializer_list<int>>(
-                       {{0, 0, 0},     // Downward prop scores
-                        {0, 0, 0},     // Upward prop scores
-                        {0, 0, 0}}));  // Local score
-    Scores b_score(std::initializer_list<std::initializer_list<int>>(
-                       {{3, 3, 0},     // Downward prop scores
-                        {0, 0, 0},     // Upward prop scores
-                        {0, 0, 0}}));  // Local score
-    validate_scores(upward_downward_prop, x2, y, a_score, b_score, placed_tables);
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{0, 0, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{0, 0, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    validate_scores(upward_downward_prop, x, y, a_score, b_score, placed_tables);
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{3, 3, 0},
-                   {1, 1, 0},
-                   {1, 1, 1}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {2, 2, 0},
-                   {2, 2, 2}});
-    validate_scores(upward_downward_prop, z2, alpha, a_score, b_score, placed_tables);
-
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{3, 3, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {2, 2, 0},
-                   {2, 2, 2}});
-    validate_scores(upward_downward_prop, c, alpha, a_score, b_score, placed_tables);
-
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{3, 3, 0},
-                   {3, 3, 0},
-                   {3, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {1, 1, 0},
-                   {1, 1, 1}});
-    validate_scores(upward_downward_prop, a, beta, a_score, b_score, placed_tables);
-
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{3, 3, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {2, 2, 0},
-                   {2, 2, 2}});
-    validate_scores(upward_downward_prop, x2, alpha, a_score, b_score, placed_tables);
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{3, 3, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {1, 1, 0},
-                   {1, 1, 1}});
-    validate_scores(upward_downward_prop, y, beta, a_score, b_score, placed_tables);
-
-    // These cases validate more realistic placement considerations, with the placed
-    // set manipulated to mimic the tables that would have been placed earlier.
-
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{2, 2, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{1, 1, 0},
-                   {1, 1, 0},
-                   {1, 1, 1}});
-    placed_tables.clear();
-    placed_tables.insert(a);
-    placed_tables.insert(b);
-    placed_tables.insert(alpha);
-    validate_scores(upward_downward_prop, y, beta, a_score, b_score, placed_tables);
-
-    placed_tables.clear();
-    placed_tables.insert(z1);
-    placed_tables.insert(a);
-    placed_tables.insert(b);
-    placed_tables.insert(c);
-    placed_tables.insert(x);
-    placed_tables.insert(y);
-    placed_tables.insert(x2);
-    placed_tables.insert(y2);
-    placed_tables.insert(alpha);
-    placed_tables.insert(beta);
-    a_score = std::initializer_list<std::initializer_list<int>>(
-                  {{1, 1, 0},
-                   {1, 1, 0},
-                   {1, 1, 1}});
-    b_score = std::initializer_list<std::initializer_list<int>>(
-                  {{0, 0, 0},
-                   {0, 0, 0},
-                   {0, 0, 0}});
-    validate_scores(upward_downward_prop, z2, gamma, a_score, b_score, placed_tables);
-}
-
-
 /*
 Tests the following graph, where
 tables on bottom are dependent on those on top:
@@ -1352,6 +989,212 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
     EXPECT_EQ(dg.min_stage(b), 1);
     EXPECT_EQ(dg.min_stage(c), 1);
     EXPECT_EQ(dg.min_stage(d), 1);
+}
+
+/**
+ * The dependency graph is the following:
+ *
+ *     A                C
+ *     |                |
+ *     | Data           | Control
+ *     |                | Data
+ *     V     Anti       V
+ *     B -------------> D
+ *
+ * Thus the min stage of D must be 1, as the min stage of B is 1, and the ANTI dependency
+ * pushes the min stage of D forward.
+ */
+TEST_F(TableDependencyGraphTest, DomFrontier1) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f3(bit<8> f3) {
+        headers.h1.f3 = f3;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    action set_f6(bit<8> f6) {
+        headers.h1.f6 = f6;
+    }
+
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f4; }
+        key = { headers.h1.f2 : exact;
+                headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f5; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f3; }
+        key = { headers.h1.f1 : exact;
+                headers.h1.f5 : exact;
+                headers.h1.f6 : exact; }
+    }
+
+    apply {
+        node_a.apply();
+        node_b.apply();
+        if (node_c.apply().hit) {
+            node_d.apply();
+        }
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 1);
+    EXPECT_EQ(dg.min_stage(d), 2);
+    EXPECT_EQ(dg.stage_info.at(c).dep_stages_dom_frontier, 1);
+}
+
+/**
+ * The dependency graph is the following:
+ *
+ *     A ---------------------
+ *     | Data      |          |
+ *     | Control   | Control  | Control
+ *     |           |          | 
+ *     V   Anti    V   Data   V
+ *     B --------> C -------> D
+ *
+ * Thus the min stage of D must be 1, as the min stage of B is 1, and the ANTI dependency
+ * pushes the min stage of D forward.
+ */
+TEST_F(TableDependencyGraphTest, DomFrontier2) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action set_f2(bit<8> f2) {
+        headers.h1.f2 = f2;
+    }
+
+    action set_f3(bit<8> f3) {
+        headers.h1.f3 = f3;
+    }
+
+    action set_f4(bit<8> f4) {
+        headers.h1.f4 = f4;
+    }
+
+    action set_f5(bit<8> f5) {
+        headers.h1.f5 = f5;
+    }
+
+    action set_f6(bit<8> f6) {
+        headers.h1.f6 = f6;
+    }
+
+    table node_a {
+        actions = { set_f2; }
+        key = { headers.h1.f1 : exact; }
+    }
+
+    table node_b {
+        actions = { set_f4; }
+        key = { headers.h1.f2 : exact;
+                headers.h1.f3 : exact; }
+    }
+
+    table node_c {
+        actions = { set_f3; }
+        key = { headers.h1.f1 : exact;
+                headers.h1.f5 : exact; }
+    }
+
+    table node_d {
+        actions = { set_f6; }
+        key = { headers.h1.f3 : exact;
+                headers.h1.f5 : exact; }
+    }
+
+    apply {
+        if (node_a.apply().hit) {
+            node_b.apply();
+            node_c.apply();
+            node_d.apply();
+        }
+    } )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a, *b, *c, *d, *e;
+    a = b = c = d = e = nullptr;
+    for (const auto& kv : dg.stage_info) {
+        if (kv.first->name == "node_a_0") {
+            a = kv.first;
+        } else if (kv.first->name == "node_b_0") {
+            b = kv.first;
+        } else if (kv.first->name == "node_c_0") {
+            c = kv.first;
+        } else if (kv.first->name == "node_d_0") {
+            d = kv.first;
+        }
+    }
+
+    EXPECT_NE(a, nullptr);
+    EXPECT_NE(b, nullptr);
+    EXPECT_NE(c, nullptr);
+    EXPECT_NE(d, nullptr);
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 1);
+    EXPECT_EQ(dg.min_stage(c), 1);
+    EXPECT_EQ(dg.min_stage(d), 2);
+    EXPECT_EQ(dg.stage_info.at(a).dep_stages_dom_frontier, 2);
 }
 
 /**

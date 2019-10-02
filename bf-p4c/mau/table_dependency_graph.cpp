@@ -563,7 +563,8 @@ void FindDataDependencyGraph::flow_merge(Visitor &v) {
  * resulting vector is generally used to do a breadth-first traversal of the tables
  */
 std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
+FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
+        DependencyGraph *local_dg) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
 
@@ -574,18 +575,24 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
     std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
 
     // Build initial n_depending_on, and happens_after_work_map
-    const auto& dep_graph = dg.g;
-    auto& happens_after_work_map = dg.happens_after_work_map;
-    auto& happens_before_work_map = dg.happens_before_work_map;
+    const auto& dep_graph = local_dg ? local_dg->g : dg.g;
+    auto &curr_dg = local_dg ? *local_dg : dg;
+
+
+    auto &happens_after_work_map = curr_dg.happens_after_work_map;
+    auto &happens_before_work_map = curr_dg.happens_before_work_map;
     happens_after_work_map.clear();
     happens_before_work_map.clear();
+
     for (boost::tie(v, v_end) = boost::vertices(dep_graph);
          v != v_end;
          ++v) {
         n_depending_on[*v] = 0;
-        const IR::MAU::Table* label_table = dg.get_vertex(*v);
+
+        const IR::MAU::Table* label_table = curr_dg.get_vertex(*v);
         happens_after_work_map[label_table] = {};
-        happens_before_work_map[label_table] = {}; }
+        happens_before_work_map[label_table] = {};
+    }
 
     for (boost::tie(out, out_end) = boost::edges(dep_graph);
          out != out_end;
@@ -616,14 +623,15 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
             auto out_edge_itr_pair = out_edges(v, dep_graph);
             auto& out = out_edge_itr_pair.first;
             auto& out_end = out_edge_itr_pair.second;
-            const auto* table = dg.get_vertex(v);
+            const auto* table = curr_dg.get_vertex(v);
             for (; out != out_end; ++out) {
                 if ((include_anti || dep_graph[*out] != DependencyGraph::ANTI)
                     && (include_control || dep_graph[*out] != DependencyGraph::CONTROL)
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_OUTPUT
                     && dep_graph[*out] != DependencyGraph::REDUCTION_OR_READ) {
                     auto vertex_later = boost::target(*out, dep_graph);
-                    const auto* table_later = dg.get_vertex(vertex_later);
+                    const auto* table_later = curr_dg.get_vertex(vertex_later);
+
                     happens_after_work_map[table_later].insert(table);
                     happens_after_work_map[table_later].insert(
                             happens_after_work_map[table].begin(),
@@ -636,6 +644,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags) {
         processed.insert(this_generation.begin(), this_generation.end());
         rst.emplace_back(std::move(this_generation));
     }
+
 
     for (const auto& kv : happens_after_work_map) {
         auto* table = kv.first;
@@ -714,8 +723,9 @@ bool ControlPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
  */
 ControlPathwaysToTable::InjectPoints
         ControlPathwaysToTable::get_inject_points(const IR::MAU::Table *a,
-        const IR::MAU::Table *b) const {
+        const IR::MAU::Table *b, bool tbls_only) const {
     InjectPoints rv;
+
     for (safe_vector<const IR::Node *> a_path : table_pathways.at(a)) {
         for (safe_vector<const IR::Node *> b_path : table_pathways.at(b)) {
             // Attempting to find the first divergence
@@ -748,6 +758,8 @@ ControlPathwaysToTable::InjectPoints
             if (a_first_div->is<IR::MAU::TableSeq>()) {
                 BUG_CHECK(b_first_div->is<IR::MAU::TableSeq>(), "The first divergence is not "
                     "the same IR node, thus the IR tree is inconsistent");
+                if (!tbls_only)
+                    rv.emplace_back(a_first_div, b_first_div);
                 continue;
             }
 
@@ -763,6 +775,80 @@ ControlPathwaysToTable::InjectPoints
         }
     }
     return rv;
+}
+
+
+void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
+    auto &dom_frontier = ntp.control_dom_set.at(tbl);
+    if (dom_frontier.size() == 1) {
+        dg.stage_info[tbl].dep_stages_dom_frontier = 0;
+        return;
+    }
+
+    DependencyGraph local_dg;
+    std::map<const IR::MAU::Table *, DependencyGraph::Graph::vertex_descriptor> local_labelToVertex;
+    for (auto cd_tbl : dom_frontier) {
+        local_dg.add_vertex(cd_tbl);
+    }
+
+    for (auto cd_tbl : dom_frontier) {
+        auto src_v = dg.labelToVertex.at(cd_tbl);
+        auto out_edge_itr_pair = boost::out_edges(src_v, dg.g);
+        auto &out = out_edge_itr_pair.first;
+        auto &out_end = out_edge_itr_pair.second;
+        for (; out != out_end; ++out) {
+            auto dst_v = boost::target(*out, dg.g);
+            auto second_tbl = dg.get_vertex(dst_v);
+            if (dom_frontier.count(second_tbl) == 0)
+                continue;
+            local_dg.add_edge(cd_tbl, second_tbl, dg.g[*out]);
+        }
+    }
+
+    auto topo_rst =
+        self.calc_topological_stage(DependencyGraph::CONTROL | DependencyGraph::ANTI, &local_dg);
+
+
+    typename DependencyGraph::Graph::edge_iterator edges, edges_end;
+    local_dg.dep_type_map.clear();
+    for (boost::tie(edges, edges_end) = boost::edges(local_dg.g); edges != edges_end; ++edges) {
+        const IR::MAU::Table* src = local_dg.get_vertex(boost::source(*edges, local_dg.g));
+        const IR::MAU::Table* dst = local_dg.get_vertex(boost::target(*edges, local_dg.g));
+        if ((local_dg.dep_type_map.count(src) == 0) ||
+            (local_dg.dep_type_map.at(src).count(dst) == 0)
+            || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONTROL)
+            || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_READ)
+            || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::REDUCTION_OR_OUTPUT)
+            || (local_dg.dep_type_map.at(src).at(dst) == DependencyGraph::ANTI)) {
+            local_dg.dep_type_map[src][dst] = local_dg.g[*edges];
+        }
+    }
+
+    for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
+        for (const auto& vertex : topo_rst[i]) {
+            const IR::MAU::Table* table = local_dg.get_vertex(vertex);
+            auto& happens_later = local_dg.happens_before_work_map[table];
+            local_dg.stage_info[table].dep_stages_control_anti =
+                std::accumulate(happens_later.begin(), happens_later.end(), 0,
+                        [&] (int sz, const IR::MAU::Table* later) {
+                    int stage_addition = 0;
+                    if (local_dg.dep_type_map.count(table)
+                        && local_dg.dep_type_map.at(table).count(later)
+                        && local_dg.dep_type_map.at(table).at(later) != DependencyGraph::CONTROL
+                        && local_dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_READ
+                        && local_dg.dep_type_map.at(table).at(later) !=
+                           DependencyGraph::REDUCTION_OR_OUTPUT
+                        && local_dg.dep_type_map.at(table).at(later) != DependencyGraph::ANTI) {
+                        stage_addition = 1;
+                    }
+                    return std::max(sz, local_dg.stage_info[later].dep_stages_control_anti
+                                        + stage_addition);
+            });
+        }
+    }
+    dg.stage_info[tbl].dep_stages_dom_frontier
+        = local_dg.stage_info.at(tbl).dep_stages_control_anti;
 }
 
 /**
@@ -831,7 +917,8 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
                 for (auto frontier_leaf : table_nt_leaves) {
                     if (mutex(table_later, frontier_leaf)) continue;
                     for (auto table_seq_pair : inject_points) {
-                         edges_to_add.insert(std::make_pair(frontier_leaf, table_seq_pair.second));
+                         auto tbl = table_seq_pair.second->to<IR::MAU::Table>();
+                         edges_to_add.insert(std::make_pair(frontier_leaf, tbl));
                     }
                 }
             }
@@ -1150,6 +1237,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         new GatherReductionOrReqs(red_info),
         new TableFindInjectedDependencies(phv, dg),
         new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
+        new DepStagesThruDomFrontier(ntp, dg, *this),
         new PrintPipe
     });
 }
@@ -1164,6 +1252,7 @@ Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
 
 void FindDependencyGraph::end_apply(const IR::Node *root) {
     finalize_dependence_graph();
+
     LOG2(dg);
     if (BackendOptions().create_graphs && dotFile != "") {
         auto pipeId = root->to<IR::BFN::Pipe>()->id;

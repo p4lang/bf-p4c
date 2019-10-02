@@ -164,7 +164,8 @@ struct DependencyGraph {
         dep_stages,         // Number of tables that depend on this table and
                             // must be placed in a stage after it.
         dep_stages_control,
-        dep_stages_control_anti;
+        dep_stages_control_anti,
+        dep_stages_dom_frontier;
     };
 
     ordered_map<const IR::MAU::Table*, StageInfo> stage_info;
@@ -220,7 +221,7 @@ struct DependencyGraph {
         } else {
             auto v = boost::add_vertex(label, g);
             labelToVertex[label] = v;
-            stage_info[label] = {0, 0, 0, 0};
+            stage_info[label] = {0, 0, 0, 0, 0};
             return v; }
     }
 
@@ -557,7 +558,7 @@ class ControlPathwaysToTable : public MauInspector {
  public:
     using TablePathways = ordered_map<const IR::MAU::Table *,
                                        safe_vector<safe_vector<const IR::Node *>>>;
-    using InjectPoints = safe_vector<std::pair<const IR::MAU::Table *, const IR::MAU::Table *>>;
+    using InjectPoints = safe_vector<std::pair<const IR::Node *, const IR::Node *>>;
 
     /// Maps each table T to a list of possible control paths from T out to the top-level of the
     /// pipe.
@@ -573,7 +574,22 @@ class ControlPathwaysToTable : public MauInspector {
     bool preorder(const IR::MAU::Table *) override;
 
  public:
-    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b,
+        bool tbls_only = true) const;
+};
+
+class FindDependencyGraph;
+
+class DepStagesThruDomFrontier : public MauInspector {
+    const CalculateNextTableProp &ntp;
+    DependencyGraph &dg;
+    FindDependencyGraph &self;
+
+    void postorder(const IR::MAU::Table *) override;
+
+ public:
+    DepStagesThruDomFrontier(const CalculateNextTableProp &n, DependencyGraph &d,
+        FindDependencyGraph &s) : ntp(n), dg(d), self(s) {}
 };
 
 class PrintPipe : public MauInspector {
@@ -586,8 +602,6 @@ class PrintPipe : public MauInspector {
 
 class FindDependencyGraph : public Logging::PassManager {
     bool _add_logical_deps = true;
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
-    calc_topological_stage(unsigned deps_flag = 0);
 
     /** Check that no ingress table ever depends on an egress table happening
      * first. */
@@ -610,6 +624,8 @@ class FindDependencyGraph : public Logging::PassManager {
     void end_apply(const IR::Node *root) override;
 
  public:
+    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     void set_add_logical_deps(bool add) { _add_logical_deps = add; }
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "",
         cstring passContext = "");

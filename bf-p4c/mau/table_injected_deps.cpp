@@ -194,12 +194,12 @@ void InjectMetadataControlDependencies::end_apply() {
             LOG3("  Injecting ANTI dep between " << first_table << " and " << second_table
                  << " due to metadata initializaation");
             for (auto inject_point : inject_points) {
-                LOG3("  Metadata inject points " << inject_point.first->name << " "
-                     << inject_point.second->name << " from tables " << first_table << " "
-                     << second_table);
-                BUG_CHECK(fg.can_reach(inject_point.first, inject_point.second), "Metadata "
-                     "initialization analysis incorrect.  Cannot inject dependency between %s "
-                     "and %s", inject_point.first, inject_point.second);
+                auto inj1 = inject_point.first->to<IR::MAU::Table>();
+                auto inj2 = inject_point.second->to<IR::MAU::Table>();
+                LOG3("  Metadata inject points " << inj1->name << " " << inj2->name
+                     << " from tables " << first_table << " " << second_table);
+                BUG_CHECK(fg.can_reach(inj1, inj2), "Metadata initialization analysis incorrect.  "
+                     "Cannot inject dependency between %s and %s", inj1, inj2);
                 // Instead of adding injection points at the control point, just going to
                 // rely on the metadata check in table placement, as this could eventually be
                 // replaced, along with TableSeqDeps, with a function call

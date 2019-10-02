@@ -168,6 +168,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
   extensions/p4_tests/p4-programs/internal_p4_14/clpm/clpm.p4
   extensions/p4_tests/p4-programs/internal_p4_14/fr_test/fr_test.p4
   extensions/p4_tests/p4-programs/internal_p4_14/netcache/netcache.p4
@@ -206,6 +207,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
 )
 
@@ -1492,6 +1494,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Failed to place tables that Register .* is attached to in the same stage"
   ../glass/testsuite/p4_tests/medialinks/COMPILER-682/case3764.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
 # P4C-2126
