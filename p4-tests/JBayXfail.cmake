@@ -366,3 +366,4 @@ p4c_add_xfail_reason("tofino2"
   "error.*PHV allocation was not successful"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
+

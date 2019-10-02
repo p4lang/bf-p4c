@@ -12,18 +12,95 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::P4Control* control) {
     return control;
 }
 
+std::vector<int>* DoSimplifyNestedIf::checkTypeAndGetVec(const IR::Statement* stmt) {
+    const IR::MethodCallStatement* methodStmt = nullptr;
+    if (auto bstmt = stmt->to<IR::BlockStatement>()) {
+        for (auto b : bstmt->components) {
+            methodStmt = b->to<IR::MethodCallStatement>();
+        }
+    } else {
+        methodStmt = stmt->to<IR::MethodCallStatement>();
+    }
+    if (!methodStmt) return nullptr;
+    auto methodCall = methodStmt->methodCall->to<IR::MethodCallExpression>();
+    auto method = methodCall->method->to<IR::Member>();
+    if (!method) return nullptr;
+    auto expr = method->expr->to<IR::PathExpression>();
+    if (!expr) return nullptr;
+    const IR::Type_Extern* typeEx = nullptr;
+    if (auto type = expr->type->to<IR::Type_SpecializedCanonical>()) {
+        typeEx = type->baseType->to<IR::Type_Extern>();
+    } else {
+        typeEx = expr->type->to<IR::Type_Extern>();
+    }
+    if (!typeEx) return nullptr;
+    if (typeEx->name == "Mirror") {
+        return mirrorType;
+    } else if (typeEx->name == "Resubmit") {
+        return resubmitType;
+    } else if (typeEx->name == "Digest") {
+        return digestType;
+    }
+    return nullptr;
+}
+
+void DoSimplifyNestedIf::addInArray(std::vector<int>* typeVec,
+                                 const IR::Expression* condition) {
+    if (auto neq = condition->to<IR::LNot>()) {
+        condition = neq->expr;
+    }
+    if (auto cond = condition->to<IR::Operation_Binary>()) {
+        auto constant = cond->right->to<IR::Constant>();
+        typeVec->at(constant->asInt()) = 1;
+    }
+    return;
+}
+
+void DoSimplifyNestedIf::setExtraStmts(std::vector<int>* typeVec,
+                                       const IR::Statement* stmt,
+                                       const IR::Expression* condition) {
+    if (auto neq = condition->to<IR::LNot>()) {
+            condition = neq->expr;
+    }
+    if (auto cond = condition->to<IR::Operation_Binary>()) {
+        auto size = cond->right->to<IR::Constant>()->type->width_bits();
+        int idx = 0;
+        for (auto a : *typeVec) {
+            if (a == 0) {
+                extraStmts[stmt].push_back(new IR::Equ(cond->srcInfo, cond->left,
+                                       new IR::Constant(IR::Type_Bits::get(size), idx, 10)));
+            }
+            idx++;
+        }
+    }
+}
+
 const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
     prune();
-
     if (stmt->ifTrue) {
         stack_.push_back(stmt->condition);
         visit(stmt->ifTrue);
+        if (auto typeVec = checkTypeAndGetVec(stmt->ifTrue)) {
+            addInArray(typeVec, stmt->condition);
+        }
         predicates[stmt->ifTrue] = stack_;
         stack_.pop_back(); }
 
     if (stmt->ifFalse) {
-        stack_.push_back(new IR::LNot(stmt->condition));
+        if (auto negCond = stmt->condition->to<IR::LNot>()) {
+            stack_.push_back(negCond->expr);
+        } else {
+            stack_.push_back(new IR::LNot(stmt->condition));
+        }
         visit(stmt->ifFalse);
+        if (!stmt->ifFalse->is<IR::IfStatement>()) {
+            // This is for a bare 'else'
+           if (auto typeVec = checkTypeAndGetVec(stmt->ifFalse)) {
+               setExtraStmts(typeVec, stmt->ifFalse, stmt->condition);
+           } else {
+               predicates[stmt->ifFalse] = stack_;
+           }
+        }
         stack_.pop_back(); }
 
     if (stack_.size() == 0) {
@@ -35,7 +112,13 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
                                         p.second.back(), fold);
             vec.push_back(new IR::IfStatement(newcond, p.first, nullptr));
         }
+        for (auto e : extraStmts) {
+            for (auto& a : e.second) {
+                vec.push_back(new IR::IfStatement(a, e.first, nullptr));
+            }
+        }
         predicates.clear();
+        extraStmts.clear();
         return new IR::BlockStatement(stmt->srcInfo, vec); }
     return stmt;
 }

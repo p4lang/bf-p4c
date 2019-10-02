@@ -8,6 +8,7 @@
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_categories.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/device.h"
 
 #ifndef _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
 #define _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
@@ -36,13 +37,29 @@ class DoSimplifyNestedIf : public Transform {
     SkipControlPolicy *policy;
     ordered_map<const IR::Statement*, std::vector<const IR::Expression*>> predicates;
     std::vector<const IR::Expression*> stack_;
+    std::vector<int> *mirrorType, *resubmitType, *digestType;
+    std::map<const IR::Statement*, std::vector<const IR::Expression*>> extraStmts;
 
  public:
     explicit DoSimplifyNestedIf(SkipControlPolicy *policy) : policy(policy) {
+        int size = 0;
+        if (Device::currentDevice() == Device::TOFINO) {
+            size = 8;
+        } else if (Device::currentDevice() == Device::JBAY) {
+            size = 16;
+        }
+        mirrorType = new std::vector<int>(size);
+        resubmitType = new std::vector<int> (size);
+        digestType = new std::vector<int>(size);
         CHECK_NULL(policy); }
 
     const IR::Node* preorder(IR::IfStatement *statement) override;
     const IR::Node* preorder(IR::P4Control *control) override;
+    void setExtraStmts(std::vector<int>* typeVec,
+                       const IR::Statement* stmt,
+                       const IR::Expression* condition);
+    std::vector<int>* checkTypeAndGetVec(const IR::Statement* stmt);
+    void addInArray(std::vector<int>* typeVec, const IR::Expression* condition);
 };
 
 class SimplifyComplexConditionPolicy {

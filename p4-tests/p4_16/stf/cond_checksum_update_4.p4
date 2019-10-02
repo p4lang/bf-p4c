@@ -11,6 +11,7 @@ header sample_h{
     bit<16> c;
     bit<16> csum1;
     bit<16> csum2;
+    bit<16> csum3;
 }
 
 struct headers_t{
@@ -57,6 +58,7 @@ control IgDeparser(packet_out packet, inout headers_t hdr, in metadata_t meta,
                    in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {
     Checksum() deparser_checksum1;
     Checksum() deparser_checksum2;
+    Checksum() deparser_checksum3;
 
     apply {
         if (meta.csum1) {
@@ -68,6 +70,8 @@ control IgDeparser(packet_out packet, inout headers_t hdr, in metadata_t meta,
                                                            hdr.sample.b,
                                                            hdr.sample.c,
                                                            hdr.sample.csum1 });
+        } else {
+            hdr.sample.csum3 = deparser_checksum3.update({hdr.sample.a});
         }
         packet.emit(hdr.sample);
     }
