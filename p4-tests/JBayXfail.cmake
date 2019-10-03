@@ -367,3 +367,8 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
+# Negative tests to test slice list creation
+p4c_add_xfail_reason("tofino2"
+  "you must introduce padding fields around the above slice"
+  extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
+)

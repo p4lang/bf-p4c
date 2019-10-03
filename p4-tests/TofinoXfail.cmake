@@ -423,9 +423,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
 
-  # parde physical adjacency constraint violated by mau phv_no_pack constraint
-  extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
-
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
@@ -1612,7 +1609,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-2221
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*Found extract.*to a non-field object"
+  "error.*No state named.*in.*parser"
   extensions/p4_tests/p4_16/compile_only/p4c-2153.p4
 )
 
@@ -1621,4 +1618,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Overwritting an already written bit"
   ba102_simple_l3_mcast_checksum
+)
+
+# Negative tests to test slice list creation
+p4c_add_xfail_reason("tofino"
+  "you must introduce padding fields around the above slice"
+  extensions/p4_tests/p4_16/compile_only/p4c-2025.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
+  # parde physical adjacency constraint violated by mau phv_no_pack constraint
+  extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
 )

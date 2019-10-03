@@ -445,6 +445,33 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // any) must be padding or unreferenced (unreferenced fields effectively act as a
         // padding field).
         if (lastNoPack && !field->padding && self.uses_i.is_referenced(field)) {
+            bool isNoSplit = std::any_of(accumulator->begin(), accumulator->end(),
+                    [](const PHV::FieldSlice& slice) { return slice.field()->no_split(); });
+            auto roundupSize = 8 * ROUNDUP(accumulator_bits, 8);
+            auto noSplitSize = (isNoSplit)
+                ?  ((accumulator_bits > 16 && accumulator_bits <= 24) ? 32 : roundupSize)
+                : roundupSize;
+            bool deparsedCondition = std::any_of(accumulator->begin(), accumulator->end(),
+                    [](const PHV::FieldSlice& slice) {
+                        return slice.field()->deparsed() || slice.field()->exact_containers();
+                    });
+            if (deparsedCondition && accumulator_bits != roundupSize) {
+                bool singleSlice = (accumulator->size() == 1);
+                std::stringstream ss;
+                if (singleSlice)
+                    ss << "The following slice must be packed by itself in a PHV:" << std::endl;
+                else
+                    ss << "The following slices must be packed together in a PHV, "
+                        "but they cannot be packed with any other slice:" << std::endl;
+                for (auto& slice : *accumulator) ss << "  " << slice << std::endl;
+                ss << "However, " << (singleSlice ? "this slice is " : "these slices are ") <<
+                    "also required to occupy the entire PHV as " <<
+                    (singleSlice ? "it is " : "they are ") << "deparsed." << std::endl;
+                ss << "To resolve this issue, you must introduce padding fields around the "
+                    "above " << (singleSlice ? "slice " : "slices ") << "(" << noSplitSize <<
+                    "b boundary) by annotating the padding field declarations with @padding.";
+                fatal_error("%1%", ss.str());
+            }
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a no_pack field): ");
         } else if (lastWideArith && !field->padding) {
