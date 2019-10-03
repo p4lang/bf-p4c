@@ -86,10 +86,8 @@ node ('compiler-svr1 || master') {
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_' -E 'smoketest|8.7|p4_14|glass' -LE 'METRICS'"
                     sh "echo 'Running switch profiles compilation for rel_8_7'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*switch_8.7_' -E 'smoketest'"
-                    // TODO: Add a MUST PASS tag to extract customer programs automatically from
-                    // ctest
-                    sh "echo 'Running some customer must passes that are excluded in Travis jobs'"
-                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -L 'CUST_MUST_PASS'"
+                    sh "echo 'Running some arista customer must passes that are excluded in Travis jobs'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*arista*' -L 'CUST_MUST_PASS'"
                     sh "echo 'Running switch-14 and switch-16 tests for METRICS'"
                     withCredentials([usernamePassword(
                         credentialsId: "bfndocker",
@@ -120,7 +118,7 @@ node ('compiler-svr1 || master') {
                 }
             }
         },
-        switch_8_7_msdc_and_switch_8_7_dc_basic_tests: {
+        switch_8_7_msdc_and_switch_8_7_dc_basic_tests_cust2: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
@@ -128,6 +126,8 @@ node ('compiler-svr1 || master') {
 
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e NUM_HUGEPAGES=512 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_8.7_dc_basic' -LE 'UNSTABLE'"
+                    sh "echo 'Running remaining customer must passes that are excluded in Travis jobs'"
+                    sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
                 }
             }
         },
