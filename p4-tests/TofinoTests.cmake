@@ -98,10 +98,10 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "-Xp4c=--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2178.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4" "-Xp4c=\"--auto-init-metadata --use-pa-solitary\"")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4" "-Xp4c=--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2189.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4" "-Xp4c=\"--auto-init-metadata --use-pa-solitary\"")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4" "-Xp4c=--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2191.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-Xp4c=\"--auto-init-metadata --use-pa-solitary\" -to 1200")

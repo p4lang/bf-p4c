@@ -123,9 +123,6 @@ BFN_Options::BFN_Options() {
             disabled_pragmas.insert(cstring(arg));
             return true; },
         "Disable specified pragmas");
-    registerOption("--use-pa-solitary", nullptr,
-        [this](const char *) { use_pa_solitary = true; return true; },
-        "Use phv solitary pragma");
     registerOption("--no-phv-privatization", nullptr,
         [this](const char *) { privatization = false; return true; },
         "Do not use TPHV/PHV privatization");

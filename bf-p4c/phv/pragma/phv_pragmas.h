@@ -80,7 +80,7 @@ class Pragmas : public PassManager {
         addPasses({
             &pa_container_sizes_i,
             &pa_mutually_exclusive_i,
-            options.use_pa_solitary ? &pa_solitary_i : nullptr,
+            &pa_solitary_i,
             &pa_atomic_i,
             &pa_no_overlay_i,
             &pa_container_type_i,

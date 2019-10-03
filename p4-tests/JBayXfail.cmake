@@ -103,7 +103,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "This action requires hash, which can only be done through the hit pathway"
   testdata/p4_14_samples/acl1.p4
-  p4_16_internal_p4_16_hwlrn
+  extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -279,12 +279,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Nested checksum updates is currently unsupported"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
-)
-
-# P4C-1665
-p4c_add_xfail_reason("tofino2"
-  "Table placement cannot make any more progress"
-  extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 
 p4c_add_xfail_reason("tofino2"

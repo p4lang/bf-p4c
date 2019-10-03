@@ -17,29 +17,29 @@ set  (isXFail TRUE)
 
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-DDC_BASIC_PROFILE")
+    "switch_dc_basic" ${switchtest} "${testExtraArgs}" "-Xp4c=\"--disable-pragma=pa_solitary\" -DDC_BASIC_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_dc_basic")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-DENT_FIN_POSTCARD_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-DENT_DC_GENERAL_PROFILE -to 1200")
+    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-Xp4c=\"--disable-pragma=pa_solitary\" -DENT_DC_GENERAL_PROFILE -to 1200")
 p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc" ${switchtest} "${testExtraArgs}" "-DMSDC_PROFILE -DP4_WRED_DEBUG")
+    "switch_msdc" ${switchtest} "${testExtraArgs}" "-Xp4c=\"--disable-pragma=pa_solitary\" -DMSDC_PROFILE -DP4_WRED_DEBUG")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE}
-    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-DMSDC_IPV4_PROFILE")
+    "switch_msdc_ipv4" ${switchtest} "${testExtraArgs}" "-Xp4c=\"--disable-pragma=pa_solitary\" -DMSDC_IPV4_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_ipv4")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_msdc_l3" ${switchtest} "${testExtraArgs}" "-DMSDC_L3_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-DMSDC_SPINE_DTEL_INT_PROFILE")
+    "switch_msdc_spine_int" ${switchtest} "${testExtraArgs}" "-Xp4c=\"--disable-pragma=pa_solitary\" -DMSDC_SPINE_DTEL_INT_PROFILE")
 p4c_add_test_label("tofino" "METRICS" "switch_msdc_spine_int")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
@@ -49,7 +49,8 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_l3_heavy_int_leaf" ${switchtest} "${testExtraArgs}" "-DL3_HEAVY_INT_LEAF_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_generic_int_leaf" ${switchtest} "${testExtraArgs}" "-DGENERIC_INT_LEAF_PROFILE")
+    "switch_generic_int_leaf" ${switchtest} "${testExtraArgs}"
+    "-Xp4c=\"--disable-pragma=pa_solitary\" -DGENERIC_INT_LEAF_PROFILE")
 
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_ent_dc_general" PROPERTIES TIMEOUT 1200)
@@ -81,7 +82,8 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_${SWITCH_VERSION}_msdc" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DMSDC_PROFILE -DP4_WRED_DEBUG")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_${SWITCH_VERSION}_msdc_ipv4" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DMSDC_IPV4_PROFILE")
+    "switch_${SWITCH_VERSION}_msdc_ipv4" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}"
+    "-Xp4c=\"--disable-pragma=pa_solitary\" -DMSDC_IPV4_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_${SWITCH_VERSION}_msdc_l3" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DMSDC_L3_PROFILE")
@@ -96,7 +98,8 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_${SWITCH_VERSION}_l3_heavy_int_leaf" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DL3_HEAVY_INT_LEAF_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_${SWITCH_VERSION}_generic_int_leaf" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}" "-DGENERIC_INT_LEAF_PROFILE")
+    "switch_${SWITCH_VERSION}_generic_int_leaf" ${switch_${SWITCH_VERSION}_test} "${testExtraArgs}"
+    "-Xp4c=\"--disable-pragma=pa_solitary\" -DGENERIC_INT_LEAF_PROFILE")
 
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_${SWITCH_VERSION}_ent_dc_general" PROPERTIES TIMEOUT 1200)

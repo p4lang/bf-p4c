@@ -2162,7 +2162,7 @@ FlexiblePacking::FlexiblePacking(
                       new PHV_Field_Operations(p),
                       new PragmaContainerSize(p),
                       new PragmaAtomic(p),
-                      o.use_pa_solitary ? new PragmaSolitary(p) : nullptr,
+                      new PragmaSolitary(p),
                       &tMutex,
                       &aMutex,
                       &packConflicts,
