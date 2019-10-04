@@ -36,28 +36,28 @@ p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y1" ${SWITCH_
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         "all
-        ^switch_tests.L3SVITest
-        ^switch_tests.L2LagTest
-        ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest")
+        ^switch_l3.L3SVITest
+        ^switch_l2.L2LagTest
+        ^switch_l3.L3ECMPTest
+        ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y2" ${SWITCH_P4_16_Y2}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         "all
-        ^switch_tests.L3SVITest
-        ^switch_tests.L2LagTest
-        ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest")
+        ^switch_l3.L3SVITest
+        ^switch_l2.L2LagTest
+        ^switch_l3.L3ECMPTest
+        ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y0" ${SWITCH_P4_16}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y0_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y0"
         "all
-        ^switch_tests.L3SVITest
-        ^switch_tests.L2LagTest
-        ^switch_tests.L3ECMPTest
-        ^switch_tests.L3MulticastTest")
+        ^switch_l3.L3SVITest
+        ^switch_l2.L2LagTest
+        ^switch_l3.L3ECMPTest
+        ^switch_l3.L3MulticastTest")
 
 # All switch_16 tests should depend on the test being compiled, rather than
 # relying on the first one to compile the test.
