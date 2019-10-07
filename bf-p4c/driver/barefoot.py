@@ -65,7 +65,7 @@ if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
 else:
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
 
-bfrt_gen = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-bfrt-schema')
+bfrt_schema = find_file(os.environ['P4C_BIN_DIR'], 'bfrt_schema.py')
 p4c_gen_conf = find_file(os.environ['P4C_BIN_DIR'], 'p4c-gen-conf')
 class BarefootBackend(BackendDriver):
     def __init__(self, target, arch, argParser):
@@ -81,7 +81,7 @@ class BarefootBackend(BackendDriver):
         self.add_command('compiler',
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
-        self.add_command('bf-rt-verifier', bfrt_gen)
+        self.add_command('bf-rt-verifier', bfrt_schema)
         self.add_command('p4c-gen-conf', p4c_gen_conf)
 
         self.runVerifiers = False

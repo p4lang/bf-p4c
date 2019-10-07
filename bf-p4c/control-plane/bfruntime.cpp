@@ -2403,6 +2403,9 @@ BfRtSchemaGenerator::addPortMetadataExtern(Util::JsonArray* tablesJson) const {
 const Util::JsonObject*
 BfRtSchemaGenerator::genSchema() const {
     auto* json = new Util::JsonObject();
+
+    json->emplace("schema_version", cstring("1.0.0"));
+
     auto* tablesJson = new Util::JsonArray();
     json->emplace("tables", tablesJson);
 
