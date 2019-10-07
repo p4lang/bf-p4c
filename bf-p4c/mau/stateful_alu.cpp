@@ -153,11 +153,12 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
     IR::Expression *e = nullptr;
     auto argType = pe->type;
     int idx = 0, field_idx = 0;
+    LocalVar *local = nullptr;
     if (locals.count(pe->path->name.name)) {
-        auto &local = locals.at(pe->path->name.name);
+        local = &locals.at(pe->path->name.name);
         if (islvalue(etype))
-            dest = &local;
-        switch (local.use) {
+            dest = local;
+        switch (local->use) {
         case LocalVar::NONE:
             // if this becomes a real instruction (not an elided copy), this
             // local will become alu_hi, so fall through
@@ -169,7 +170,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         case LocalVar::MEMALL:
             break;
         default:
-            BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local.name, local.use); }
+            BUG("invalide use in CreateSaluInstruction::LocalVar %s %d", local->name, local->use); }
     } else {
         if (!params) return false;
         if (islvalue(etype))
@@ -191,37 +192,23 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
     cstring name = field_idx ? "hi" : "lo";
     switch (param_types->at(idx)) {
-    case param_t::VALUE:        /* inout value; */
+    case param_t::VALUE:        /* inout value or local var */
         if (islvalue(etype)) {
-            // alu_lo cannot be used as a synthetic local var as it is always
-            // written back to the memory. In non-dual mode, alu_hi is not
-            // written back, so it can be used as a local temp for a computation
-            // to be output on the action bus
-            // Therefore in some cases we can have a destination local which
-            // assigns to ALUHI. E.g. sampling_cntr in stful.p4
-            // Creating action sampling_alu_0[1596727] for stateful table .sampling_cntr
-            // void apply(inout bit<32> value, out bit<32> rv) {
-            //   bit<32> alu_hi_0/alu_hi <== Local Value for alu_hi
-            //   bit<32> in_value_12/in_value
-            //   rv = 0;
-            //   in_value_12/in_value = value;
-            //   alu_hi_0/alu_hi = 1; <== Local Value set
-            //   if (value >= 10) {
-            //     value = 1; }
-            //   if (in_value_12/in_value < 10) {
-            //     value = in_value_12/in_value + 1; }
-            //   if (in_value_12/in_value >= 10 || ig_intr_md_for_tm.copy_to_cpu != 0) {
-            //     rv = alu_hi_0/alu_hi; <== Local Value used for return value
-            //     }
-            // }
-            // In this case dest->use is LocalVar::NONE, so we also check for
-            // this value and set alu_write accordingly
-            if (!dest || dest->use == LocalVar::ALUHI || dest->use == LocalVar::NONE)
+            if (!dest)
                 alu_write[field_idx] = true;
             etype = VALUE; }
         if (!opcode) opcode = "alu_a";
-        if (etype == OUTPUT)
-            name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
+        if (etype == OUTPUT) {
+            const char *pfx = "mem_";
+            if (local) {
+                if (local->use == LocalVar::ALUHI) {
+                    pfx = "alu_";
+                } else if (local->use == LocalVar::NONE) {
+                    e = new IR::Constant(0);
+                    break; }
+            } else if (alu_write[field_idx]) {
+                pfx = "alu_"; }
+            name = pfx + name; }
         else if (etype == MINMAX_SRC)
             name = "mem";
         e = new IR::MAU::SaluReg(argType, name, field_idx > 0);
