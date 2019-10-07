@@ -62,7 +62,7 @@ class Table : BFN::Unit {
     inline std::map<cstring, TableSeq>          next;
     inline Vector<TableKey>                     match_key;
     // Symmetric key information here, as the selector key is on the match table
-    LTBitMatrix                                 sel_symmetric_keys = {};
+    LTBitMatrix                                 sel_symmetric_keys = {};        // ignored for ==?
     int                                         random_seed = -1;               // ignored for ==?
     bool                                        dynamic_key_masks = false;      // ignored for ==?
     NullOK EntriesList                          entries_list;                   // ignored for ==?
@@ -76,6 +76,7 @@ class Table : BFN::Unit {
     // cannot split these tables.
     bool                                        has_dark_init = false;
     bool                                        always_run = false;
+    bool                                        suppress_context_json = false;
 
 
     class IndirectAddress {
@@ -254,6 +255,11 @@ class Table : BFN::Unit {
 
     UniqueId unique_id(AttachedMemory at = nullptr, bool is_gw = false) const;
     BackendAttached get_attached(UniqueId id) const;
+    BackendAttached get_attached(AttachedMemory am) const;
+#emit
+    template<class T> const T *get_attached() const;
+#end
+
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
@@ -411,7 +417,9 @@ class Counter : Synth2Port {
     cstring externType() const override { return direct ? "DirectCounter" : "Counter"; }
 }
 
-class Meter : Synth2Port {
+abstract MeterBus2Port : Synth2Port {}  // synth2port addressed via meter bus
+
+class Meter : MeterBus2Port {
     int red_drop_value = -1;
     int red_nodrop_value = -1;
     int green_value = -1;
@@ -444,7 +452,7 @@ class Meter : Synth2Port {
 
 /** Configuration for a stateful table -- a register object (for the memory) plus
  * the associated stateful alu instructions and config */
-class StatefulAlu : Synth2Port {
+class StatefulAlu : MeterBus2Port {
     // The single register or action_selector extern used in this stateful alu
     optional NullOK Declaration_Instance                reg = nullptr;
     optional NullOK Selector                            selector = nullptr;
@@ -667,9 +675,9 @@ class StatefulCounter : Expression {
 class StatefulCall {
     // This will always be null after InstructionSelection is complete.  Everything
     // currently used for DefUse analysis is saved within the rest of the call
-    NullOK Primitive prim;
+    optional NullOK Primitive prim = nullptr;
     AttachedMemory  attached_callee;
-    NullOK Expression index = nullptr;
+    optional NullOK Expression index = nullptr;
 }
 
 /// The base class for MAU::Action and MAU::SaluAction, both represent a wide VLIW action.
@@ -704,6 +712,11 @@ class Action : VLIWInstruction, IAnnotated {
     std::map<UniqueAttachedId, MeterType> meter_types = {};
 
     inline Vector<StatefulCall>    stateful_calls = {};
+    const StatefulCall *stateful_call(cstring name) const {
+        for (auto sc : stateful_calls)
+            if (sc->attached_callee->name == name)
+                return sc;
+        return nullptr; }
 
     cstring externalName() const;
     bool hit_only() const { return default_allowed == false; }
@@ -716,6 +729,7 @@ class Action : VLIWInstruction, IAnnotated {
         ERROR_CHECK(!(hit_only() && miss_only()), "Action %s cannot be both a hit only and a "
                     "miss only action.  Can only be at most one of those categories", name);
     }
+#apply
 }
 
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together
@@ -792,6 +806,8 @@ class HashGenExpression : Expression {
     int hash_output_width = 0;
     HashGenExpression(Util::SourceInfo si, const IR::Type *type, Expression e, HashFunction a)
         : Expression(si, type), expr(e), id("$hash" + std::to_string(nextId++)), algorithm(a) {}
+    HashGenExpression(Expression e, HashFunction a = IR::MAU::HashFunction::identity())
+        : HashGenExpression(e->srcInfo, e->type, e, a) {}
 
     dbprint { out << id << "(" << expr << ")"; }
 
@@ -818,9 +834,8 @@ class HashGenExpression : Expression {
  *  action data lookup or action data itself.  Uses include addressing a table by a PHV field
  *  as well as a calculated hash to be used by PHV
  */
-class HashDist : Expression {
+class HashDist : Operation_Unary {
     // Can be a HashGenExpression or a Slice of one
-    Expression expr;
     safe_vector<int> units = {};
 
     bool allocated() const { return !units.empty(); }
@@ -829,6 +844,7 @@ class HashDist : Expression {
         if (allocated())
             out << units;
     }
+    stringOp = "hash_dist ";
 }
 
 /** Expression computed in the input xbar, generally in the GF matrix
@@ -953,3 +969,12 @@ class RangeMatch : Operation_Unary {
     precedence = DBPrint::Prec_Equ;
     stringOp = " in ";
 }
+
+#emit
+// defined down here to resolve order of declaration issues
+template<class T> inline const T *IR::MAU::Table::get_attached() const {
+    for (auto *at : attached)
+        if (auto rv = at->attached->to<T>())
+            return rv;
+    return nullptr; }
+#end

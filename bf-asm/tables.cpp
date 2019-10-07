@@ -2660,9 +2660,10 @@ void Table::common_tbl_cfg(json::map &tbl) const {
     tbl["uses_range"] = false;
     if (p4_table && p4_table->disable_atomic_modify)
         tbl["disable_atomic_modify"] = true;
-    json::vector &params = tbl["match_key_fields"] = json::vector();
+    json::vector &params = tbl["match_key_fields"];
     if ((!p4_params_list.empty()) &&
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
+        params.clear();
         for (auto &p : p4_params_list) {
             json::map param;
             std::string name = p.name;

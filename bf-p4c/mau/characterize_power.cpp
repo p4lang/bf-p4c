@@ -344,6 +344,7 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *p) {
       }
 
       LOG4("Worst case table path:");
+      std::set<SimpleTableNode *> in_path;
       while (prev_node != nullptr) {
           if (pipe == 0) {
               ingress_worst_case_path_.push(prev_node->unique_id_);
@@ -352,6 +353,8 @@ void CharacterizePower::postorder(const IR::BFN::Pipe *p) {
           }
           table_unique_id_to_on_critical_path_.emplace(prev_node->unique_id_, true);
           LOG4("  " << prev_node->unique_id_);
+          if (in_path.count(prev_node)) break;  // avoid infinite loop
+          in_path.insert(prev_node);
           prev_node = prev.at(prev_node);
       }
 
@@ -568,7 +571,8 @@ void CharacterizePower::postorder(const IR::MAU::Table *t) {
             max_selector_words_[stage] = std::max(max_selector_words_.at(stage), sel_words);
 
         } else if (mem.type == Memories::Use::STATEFUL) {
-            if (t->get_attached(use.first)->use != IR::MAU::StatefulUse::NO_USE) {
+            auto *att = t->get_attached(use.first);
+            if (att && att->use != IR::MAU::StatefulUse::NO_USE) {
                 auto local_stateful_table = CharacterizePower::PowerMemoryAccess();
                 local_stateful_table.ram_read += 1;  // Stateful are only one ram wide
                 local_stateful_table.ram_write += 1;

@@ -16,7 +16,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
     : Logging::PassManager("table_placement_"), siaa(mutex, ignore) {
         addPasses({
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-            new TableLayout(phv, lc),
+            new TableLayout(phv, lc, att_info),  // catches IXBar::realign backtracks
             new AssignActionHandle(phv),
             new MeterALU::Format(phv, lc),
             new TableFindSeqDependencies(phv),
@@ -30,7 +30,8 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             &mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),
-            new TablePlacement(options, &deps, mutex, phv, lc, siaa, summary),
+            new TablePlacement(options, &deps, mutex, phv, lc, siaa, att_info, summary),
+            new DumpPipe("After TablePlacement"),
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),  // not needed?
             new AssignCounterLRTValues(),

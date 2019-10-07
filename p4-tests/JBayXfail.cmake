@@ -366,3 +366,9 @@ p4c_add_xfail_reason("tofino2"
   "you must introduce padding fields around the above slice"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
+
+# stateful table too big to fit in one half of jbay stage -- needs two home rows (top and bottom)
+p4c_add_xfail_reason("tofino2"
+  "error: Could not place table .* could not fit in stage .* with .* entries"
+  extensions/p4_tests/p4_14/stf/stateful4.p4
+)

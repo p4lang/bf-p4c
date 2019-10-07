@@ -75,3 +75,13 @@ int TableResourceAlloc::rng_unit() const {
         "rng unit per table");
     return action_data_xbar.rng_locs.at(0).unit;
 }
+
+std::ostream &operator<<(std::ostream &out, const TableResourceAlloc &alloc) {
+    // FIXME -- there's a huge amount of data in alloc -- what should we log?
+    // this is a prime candidate for structured logging.
+    Memories mem;
+    for (auto &mu : alloc.memuse)
+        mem.update(mu.first.build_name(), mu.second);
+    out << mem;
+    return out;
+}

@@ -1,6 +1,7 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/mau/attached_info.h"
 #include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 
@@ -40,9 +41,11 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
     ia.shifter_enabled = true;
     bool from_hash = false;
     if (ba->addr_location == IR::MAU::AddrLocation::OVERHEAD) {
-        ia.address_bits += std::max(ceil_log2(am->size), 10);
+        ia.address_bits = std::max(ceil_log2(am->size), 10);
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         from_hash = true;
+        // FIXME need to set the address size to something to not ignore it!
+        ia.address_bits = std::max(ceil_log2(am->size), 10);
     }
 
     if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
@@ -112,42 +115,15 @@ bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::ActionData *ad) {
     return false;
 }
 
-/**
- * Returns true if it is legal to split the attached memory from the match table.  A counter
- * entry can be split into multiple entries, as the control plane can just sum the two counter
- * entries.  Selectors and Action Data tables can also be split, as they are not written by
- * the data plane.
- *
- * Meters and stateful ALUs must be together, however, as the entry cannot be split safely.
- * For example, if X is the average of set A and Y is the average of set B, the average
- * of X and Y is not the average of set A + set B.
- */
-bool SplitAttachedInfo::safe_to_split_entry(const IR::MAU::AttachedMemory *at) {
-    if (at->direct)
-        return true;
-    if (!(at->is<IR::MAU::Meter>() || at->is<IR::MAU::StatefulAlu>()))
-        return true;
-    auto salu = at->to<IR::MAU::StatefulAlu>();
-    if (salu && salu->synthetic_for_selector)
-        return true;
-    return false;
-}
-
 bool SplitAttachedInfo::BuildSplitMaps::preorder(const IR::MAU::Table *tbl) {
     const IR::MAU::AttachedMemory *at = nullptr;
     for (auto back_at : tbl->attached) {
-        auto at_temp = back_at->attached;
-        if (SplitAttachedInfo::safe_to_split_entry(at_temp))
+        if (back_at->attached->direct || TablePlacement::can_duplicate(back_at->attached))
             continue;
         BUG_CHECK(at == nullptr, "A single table %s% has multiple meters/stateful ALUs");
-        at = at_temp;
-    }
-
-    if (at == nullptr)
-        return true;
-
-    self.attached_to_table_map[at].insert(tbl);
-    self.table_to_attached_map[tbl] = at;
+        at = back_at->attached;
+        self.attached_to_table_map[at->name].insert(tbl);
+        self.table_to_attached_map[tbl->name] = at; }
     return true;
 }
 
@@ -157,10 +133,10 @@ bool SplitAttachedInfo::ValidateAttachedOfAllTables::preorder(const IR::MAU::Tab
     ValidateAttachedOfSingleTable validate_attached(ia, tbl);
     tbl->attached.apply(validate_attached);
 
-    if (self.table_to_attached_map.count(tbl) == 0)
+    if (self.table_to_attached_map.count(tbl->name) == 0)
         return true;
 
-    auto &addr_info = self.address_info_per_table[tbl];
+    auto &addr_info = self.address_info_per_table[tbl->name];
     addr_info.address_bits = ia[ValidateAttachedOfSingleTable::METER].address_bits;
     return true;
 }
@@ -171,11 +147,11 @@ bool SplitAttachedInfo::EnableAndTypesOnActions::preorder(const IR::MAU::Action 
 
     auto tbl = findContext<IR::MAU::Table>();
 
-    if (self.table_to_attached_map.count(tbl) == 0)
+    if (self.table_to_attached_map.count(tbl->name) == 0)
         return false;
-    auto at = self.table_to_attached_map.at(tbl);
+    auto at = self.table_to_attached_map.at(tbl->name);
     auto uai = at->unique_id();
-    auto &addr_info = self.address_info_per_table[tbl];
+    auto &addr_info = self.address_info_per_table[tbl->name];
 
     auto pfe_p = act->per_flow_enables.find(uai);
     if (pfe_p == act->per_flow_enables.end()) {
@@ -192,29 +168,29 @@ bool SplitAttachedInfo::EnableAndTypesOnActions::preorder(const IR::MAU::Action 
             addr_info.types_on_miss.setbit(meter_type);
         if (!act->miss_only())
             addr_info.types_on_hit.setbit(meter_type);
-        self.types_per_attached[at].setbit(meter_type);
+        self.types_per_attached[at->name].setbit(meter_type);
     }
     return false;
 }
 
 int SplitAttachedInfo::addr_bits_to_phv_on_split(const IR::MAU::Table *tbl) const {
-    if (address_info_per_table.count(tbl) == 0)
+    if (address_info_per_table.count(tbl->name) == 0)
         return false;
-    auto &addr_info = address_info_per_table.at(tbl);
+    auto &addr_info = address_info_per_table.at(tbl->name);
     return addr_info.address_bits;
 }
 
 bool SplitAttachedInfo::enable_to_phv_on_split(const IR::MAU::Table *tbl) const {
-    if (address_info_per_table.count(tbl) == 0)
+    if (address_info_per_table.count(tbl->name) == 0)
         return false;
-    auto &addr_info = address_info_per_table.at(tbl);
+    auto &addr_info = address_info_per_table.at(tbl->name);
     return !(addr_info.always_run_on_hit && addr_info.always_run_on_miss);
 }
 
 int SplitAttachedInfo::type_bits_to_phv_on_split(const IR::MAU::Table *tbl) const {
-    if (address_info_per_table.count(tbl))
+    if (address_info_per_table.count(tbl->name))
         return false;
-    auto &addr_info = address_info_per_table.at(tbl);
+    auto &addr_info = address_info_per_table.at(tbl->name);
     return (addr_info.types_on_hit | addr_info.types_on_miss).popcount() > 1 ? 3 : 0;
 }
 
@@ -228,7 +204,7 @@ int SplitAttachedInfo::type_bits_to_phv_on_split(const IR::MAU::Table *tbl) cons
  * does or does not yet exist.
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const {
+        const IR::MAU::Table *tbl, PhvInfo *phv) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
@@ -237,47 +213,49 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
     if (addr_bits == 0)
         return nullptr;
 
-    cstring base_addr = "$" + at->unique_id().build_name();
-    cstring addr_name = base_addr + "_address";
-    IR::TempVar *tv = new IR::TempVar(IR::Type::Bits::get(addr_bits), false, addr_name);
-    if (phv && phv->field(tv) == nullptr)
-        return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.index) {
+        cstring addr_name = at->name + "$index";
+        tv.index = new IR::TempVar(IR::Type::Bits::get(addr_bits), false, addr_name); }
+    if (phv)
+        phv->addTempVar(tv.index, tbl->gress);
 
-    const IR::Expression *expr_to_set = nullptr;
-    for (auto sc : act->stateful_calls) {
-        if (sc->attached_callee == at) {
-            expr_to_set = sc->index;
-            break;
-        }
-    }
-
-    BUG_CHECK(expr_to_set && (expr_to_set->to<IR::MAU::ActionArg>() ||
-        expr_to_set->to<IR::Constant>()), "Trying to split a stateful ALU %1% "
-        "address across a stage that doesn't have a parameter based address");
-
-    return new IR::MAU::Instruction(act->srcInfo, "set", tv,
-                                    MakeSlice(expr_to_set, 0, addr_bits - 1));
+    if (auto *sc = act->stateful_call(at->name)) {
+        const IR::Expression *index = sc->index;
+        const IR::Expression *dest = tv.index;
+        int index_width = index->type->width_bits();
+        if (index_width > addr_bits)
+            index = MakeSlice(index, 0, addr_bits - 1);
+        else if (index_width < addr_bits)
+            dest = MakeSlice(dest, 0, index_width - 1);
+        return new IR::MAU::Instruction(act->srcInfo, "set", dest, index); }
+    return nullptr;
 }
 
 /**
  * @seealso comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const {
+        const IR::MAU::Table *tbl, PhvInfo *phv) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
     if (!enable_to_phv_on_split(tbl))
         return nullptr;
 
-    cstring base_addr = "$" + at->unique_id().build_name();
-    cstring enable_name = base_addr + "_enable";
-    IR::TempVar *tv = new IR::TempVar(IR::Type::Bits::get(1), 0, enable_name);
-    if (phv && phv->field(tv) == nullptr)
-        return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.enable) {
+        cstring enable_name = at->name + "$ena";
+        tv.enable = new IR::TempVar(IR::Type::Bits::get(1), 0, enable_name); }
+    if (phv)
+        phv->addTempVar(tv.enable, tbl->gress);
 
     bool enabled = act->per_flow_enables.count(at->unique_id()) > 0;
-    return new IR::MAU::Instruction(act->srcInfo, "set", tv,
+    // FIXME -- It's not necessary to set the ena to 0 (metadata init will do that always?), but
+    // doing so causes problems with imem allocation (it incorrectly tries to pack instructions
+    // in the same imem word.)
+    if (!enabled) return nullptr;
+    return new IR::MAU::Instruction(act->srcInfo, "set", tv.enable,
                                     new IR::Constant(IR::Type::Bits::get(1), enabled ? 1 : 0));
 }
 
@@ -285,7 +263,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::
  * @seealso comments above pre_split_addr_instr
  */
 const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const {
+        const IR::MAU::Table *tbl, PhvInfo *phv) {
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return nullptr;
@@ -294,21 +272,26 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MA
     if (type_bits == 0)
         return nullptr;
 
-    cstring base_addr = "$" + at->unique_id().build_name();
-    cstring type_name = base_addr + "_type";
-    IR::TempVar *tv = new IR::TempVar(IR::Type::Bits::get(type_bits), false, type_name);
-    if (phv && phv->field(tv) == nullptr)
-        return nullptr;
+    auto &tv = index_tempvars[at->name];
+    if (!tv.type) {
+        cstring type_name = at->name + "$type";
+        tv.type = new IR::TempVar(IR::Type::Bits::get(type_bits), false, type_name); }
+    if (phv)
+        phv->addTempVar(tv.type, tbl->gress);
 
     bool enabled = act->per_flow_enables.count(at->unique_id()) > 0;
     if (enabled) {
         BUG_CHECK(act->meter_types.count(at->unique_id()) > 0, "An enable stateful op %1% "
             "in action %2% has no meter type?", at->name, act->name);
         int meter_type = static_cast<int>(act->meter_types.at(at->unique_id()));
-        return new IR::MAU::Instruction(act->srcInfo, "set", tv,
+        return new IR::MAU::Instruction(act->srcInfo, "set", tv.type,
                 new IR::Constant(IR::Type::Bits::get(type_bits), meter_type));
     }
     return nullptr;
+}
+
+const IR::Expression *SplitAttachedInfo::split_enable(const IR::MAU::AttachedMemory *at) {
+    return index_tempvars[at->name].enable;
 }
 
 /**
@@ -321,7 +304,8 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MA
  * will be generated if necessary
  */
 const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const {
+        const IR::MAU::Table *tbl, PhvInfo *phv) {
+    // FIXME -- should only do this once per table/action -- memoize?
     IR::MAU::Action *rv = act->clone();
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
@@ -364,15 +348,15 @@ const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU:
 
     // Add instructions if necessary
     auto instr1 = pre_split_addr_instr(act, tbl, phv);
-    if (instr1 == nullptr)
+    if (instr1 != nullptr)
         rv->action.push_back(instr1);
 
     auto instr2 = pre_split_enable_instr(act, tbl, phv);
-    if (instr2 == nullptr)
+    if (instr2 != nullptr)
         rv->action.push_back(instr2);
 
     auto instr3 = pre_split_type_instr(act, tbl, phv);
-    if (instr3 == nullptr)
+    if (instr3 != nullptr)
         rv->action.push_back(instr3);
 
     // Will not be exiting from this point, still have to run one final table
@@ -381,11 +365,16 @@ const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU:
 }
 
 const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl) const {
+        const IR::MAU::Table *tbl) {
+    // FIXME -- should only do this once per table/action -- memoize?
     IR::MAU::Action *rv = act->clone();
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return rv;
+    rv->miss_action_only = false;
+    rv->default_allowed = true;
+    rv->init_default = true;
+    rv->hit_path_imp_only = true;
 
     HasAttachedMemory has_attached(at);
     for (auto it = rv->action.begin(); it != rv->action.end();) {
@@ -400,11 +389,19 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
     for (auto it = rv->stateful_calls.begin(); it != rv->stateful_calls.end();) {
         auto instr = *it;
         instr->apply(has_attached);
-        if (!has_attached.found())
+        if (!has_attached.found()) {
             it = rv->stateful_calls.erase(it);
-        else
+        } else {
+            if (auto *tv = index_tempvars[at->name].index) {
+                // FIXME -- should only create this modified cloned call once?
+                auto *call = (*it)->clone();
+                call->index = new IR::MAU::HashDist(new IR::MAU::HashGenExpression(tv));
+                *it = call;
+            }
             it++;
+        }
     }
+    if (rv->stateful_calls.empty()) return nullptr;
 
     for (auto it = rv->per_flow_enables.begin(); it != rv->per_flow_enables.end();) {
         if (*it != at->unique_id())
@@ -422,4 +419,3 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
     rv->args.clear();
     return rv;
 }
-

@@ -5,7 +5,6 @@
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
-
 class ValidateAttachedOfSingleTable : public MauInspector {
  public:
     enum addr_type_t { STATS, METER, ACTIONDATA, TYPES };
@@ -106,13 +105,18 @@ class HasAttachedMemory : public MauInspector {
  * PHV if this stateful ALU portion is split from the match portion
  */
 class SplitAttachedInfo : public PassManager {
-    static bool safe_to_split_entry(const IR::MAU::AttachedMemory *at);
+    // Can't use IR::Node * as keys in a map, as they change in transforms.  Names
+    // are unique and stable, so use them instead.
+    ordered_map<cstring, ordered_set<const IR::MAU::Table *>> attached_to_table_map;
+    ordered_map<cstring, const IR::MAU::AttachedMemory *> table_to_attached_map;
+    ordered_map<cstring, bitvec> types_per_attached;
 
-    ordered_map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>>
-        attached_to_table_map;
-    ordered_map<const IR::MAU::Table *, const IR::MAU::AttachedMemory *> table_to_attached_map;
-    ordered_map<const IR::MAU::AttachedMemory *, bitvec> types_per_attached;
-
+    struct IndexTemp {
+        const IR::TempVar *index = nullptr;
+        const IR::TempVar *enable = nullptr;
+        const IR::TempVar *type = nullptr;
+    };
+    std::map<cstring, IndexTemp>  index_tempvars;
 
     // Not linked via gateway with information
     struct AddressInfo {
@@ -130,7 +134,7 @@ class SplitAttachedInfo : public PassManager {
         bitvec types_on_miss;
     };
 
-    ordered_map<const IR::MAU::Table *, AddressInfo> address_info_per_table;
+    ordered_map<cstring, AddressInfo> address_info_per_table;
 
     profile_t init_apply(const IR::Node *node) {
         auto rv = PassManager::init_apply(node);
@@ -184,9 +188,9 @@ class SplitAttachedInfo : public PassManager {
     }
 
     const IR::MAU::AttachedMemory *attached_from_table(const IR::MAU::Table *tbl) const {
-        if (table_to_attached_map.count(tbl) == 0)
+        if (table_to_attached_map.count(tbl->name) == 0)
             return nullptr;
-        return table_to_attached_map.at(tbl);
+        return table_to_attached_map.at(tbl->name);
     }
 
     int addr_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
@@ -194,15 +198,17 @@ class SplitAttachedInfo : public PassManager {
     int type_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
 
     const IR::MAU::Instruction *pre_split_addr_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const;
+        const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Instruction *pre_split_enable_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const;
+        const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Instruction *pre_split_type_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const;
+        const IR::MAU::Table *tbl, PhvInfo *phv);
+    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
+
     const IR::MAU::Action *create_pre_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const PhvInfo *phv) const;
+        const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Action *create_post_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl) const;
+        const IR::MAU::Table *tbl);
 };
 
 #endif  /* BF_P4C_MAU_ATTACHED_INFO_H_ */

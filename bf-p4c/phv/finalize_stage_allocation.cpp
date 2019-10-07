@@ -36,7 +36,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
             auto* f = phv.field(ref.second, &bits);
             if (usePhysicalStages) {
                 BUG_CHECK(t->logical_id != -1, "Table %1% is unallocated", t->name);
-                auto minStages = phv.minStage(TableSummary::getTableName(t));
+                auto minStages = phv.minStage(t);
                 for (auto stage : minStages) {
                     stageToTables[stage][t].insert(bits);
                     LOG5("\tUsed in table " << t->name << " (Stage " << stage << ") : " <<
@@ -311,7 +311,7 @@ Visitor::profile_t UpdateFieldAllocation::init_apply(const IR::Node* root) {
 
 bool UpdateFieldAllocation::preorder(const IR::MAU::Table* tbl) {
     int stage = tbl->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
-    PhvInfo::addMinStageEntry(TableSummary::getTableName(tbl), stage);
+    PhvInfo::addMinStageEntry(tbl, stage);
     return true;
 }
 

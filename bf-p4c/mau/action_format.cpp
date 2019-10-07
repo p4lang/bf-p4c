@@ -1027,6 +1027,7 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alia
     ALUOperation *rv = new ALUOperation(*this);
     rv->_right_shift = right_shift;
     rv->_right_shift_set = true;
+    if (!valid()) return rv;
     bool rotational_alias = false;
     LOG6("\tadd_right_shift: params size = " << rv->_params.size());
     for (auto &param : rv->_params) {
@@ -1649,12 +1650,12 @@ BusInputs RamSection::bus_inputs() const {
                 sz /= 8;
                 int slot_pos = start_pos;
                 while (slot_pos != end_pos) {
-                    rv[i].setrange(slot_pos, sz);
+                    rv[i].setrange(slot_pos * sz, sz);
                     slot_pos++;
                     if (slot_pos == rotation)
                         slot_pos = 0;
                 }
-                rv[i].setrange(slot_pos, sz);
+                rv[i].setrange(slot_pos * sz, sz);
             }
         }
     }
@@ -2287,25 +2288,38 @@ void Format::create_split_param(const IR::MAU::Action *act) {
     LOG2("  Creating extra split action data alu for " << act->name);
 
     auto instr = att_info.pre_split_addr_instr(act, tbl, nullptr);
+    if (!instr)
+        return;
     ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
     // Invalid container, to note that this is not yet linked to a PHV container yet
     PHV::Container container;
     ALUOperation *alu = new ALUOperation(container, alu_cons);
     alu->set_action_name(act->name);
     auto expr = instr->operands[1];
-    Parameter *param = nullptr;
+    le_bitrange range = { 0, expr->type->width_bits() - 1 };
+    if (auto *sl = expr->to<IR::Slice>()) {
+        range.lo = sl->getL();
+        range.hi = sl->getH();
+        expr = sl->e0; }
     if (auto *ir_arg = expr->to<IR::MAU::ActionArg>()) {
-        le_bitrange range = { 0, ir_arg->type->width_bits() - 1 };
-        param = new Argument(ir_arg->name.name, range);
-    } else if (expr->to<IR::Constant>()) {
-        return;
+        Parameter *param = new Argument(ir_arg->name.name, range);
+        ALUParameter ap(param, range);
+        alu->add_param(ap);
+        auto &ram_sec_vec = init_ram_sections[act->name];
+        ram_sec_vec.push_back(alu->create_RamSection(true));
+    } else if (expr->is<IR::Constant>()) {
+        // do nothing
+    } else if (auto *hd = expr->to<IR::MAU::HashDist>()) {
+        BuildP4HashFunction builder(phv);
+        hd->apply(builder);
+        P4HashFunction *func = builder.func();
+        Hash *hash = new Hash(*func);
+        ALUParameter ap(hash, range);
+        alu->add_param(ap);
+        locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
     } else {
-        BUG("A split parameter must either be an action data argument or a constant");
+        BUG("A split parameter must be an action data argument, a hash_dist or a constant");
     }
-    ALUParameter ap(param, { 0, expr->type->width_bits() - 1 });
-    alu->add_param(ap);
-    auto &ram_sec_vec = init_ram_sections[act->name];
-    ram_sec_vec.push_back(alu->create_RamSection(true));
 }
 
 /**
@@ -2649,8 +2663,8 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     calc_max_size = std::max(calc_max_size, 1 << ceil_log2(total_bits / 8));
 }
 
-bool Format::analyze_actions(bool with_split) {
-    if (with_split) {
+bool Format::analyze_actions(FormatType_t format_type) {
+    if (format_type != NORMAL) {
         auto at = att_info.attached_from_table(tbl);
         if (at == nullptr)
             return false;
@@ -2659,16 +2673,25 @@ bool Format::analyze_actions(bool with_split) {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto orig_action : Values(tbl->actions)) {
         container_actions_map.clear();
-        ActionAnalysis aa(phv, true, false, tbl);
+        ActionAnalysis aa(phv, true, false, tbl, format_type != NORMAL);
         aa.set_container_actions_map(&container_actions_map);
         const IR::MAU::Action *act_to_analyze = orig_action;
         // If the split parameters exist within the PHV allocation, then add the objects
         // to the IR action in order to correctly understand the split action
-        if (with_split)
+        switch (format_type) {
+        case NORMAL:
+            break;
+        case PRE_SPLIT_ATTACHED:
             act_to_analyze = att_info.create_pre_split_action(orig_action, tbl, &phv);
+            break;
+        case POST_SPLIT_ATTACHED:
+            act_to_analyze = att_info.create_post_split_action(orig_action, tbl);
+            break;
+        default:
+            BUG("Unhandled LayoutChoice %d in analyze_actions", format_type); }
         act_to_analyze->apply(aa);
         create_alu_ops_for_action(container_actions_map, orig_action->name);
-        if (with_split)
+        if (format_type == PRE_SPLIT_ATTACHED)
             create_split_param(orig_action);
     }
 
@@ -2697,10 +2720,14 @@ bool Format::analyze_actions(bool with_split) {
     }
 
     if (locked_in_all_actions_bits > Format::IMMEDIATE_BITS) {
-        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %2%, the number of bits "
-            "required to go through the immediate pathway %3% (e.g. data coming from Hash, RNG, "
-            "Meter Color) is greater than the available bits %4%, and can not be allocated",
-            tbl, tbl->name, locked_in_all_actions_bits, Format::IMMEDIATE_BITS);
+        if (format_type == ActionData::NORMAL)
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %2%, the number of bits "
+                  "required to go through the immediate pathway %3% (e.g. data coming from Hash, "
+                  "RNG, Meter Color) is greater than the available bits %4%, and can not be "
+                  "allocated", tbl, tbl->name, locked_in_all_actions_bits, Format::IMMEDIATE_BITS);
+        // Don't flag an error if this happens with non-NORMAL format, instead just don't create
+        // any formats of that type.  If TablePlacement ends up needing such a format, it will
+        // flag an error then.
         return false;
     }
     return true;
@@ -3423,9 +3450,9 @@ void Format::build_potential_format(bool immediate_forced) {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format(bool immediate_forced, bool with_split) {
+void Format::allocate_format(bool immediate_forced, FormatType_t format_type) {
     LOG1("Determining Formats for table " << tbl->name);
-    bool possible = analyze_actions(with_split);
+    bool possible = analyze_actions(format_type);
     if (!possible)
         return;
     bool initialized = false;

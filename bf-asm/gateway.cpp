@@ -389,7 +389,9 @@ unsigned GatewayTable::input_use() const {
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
- * somewhere, somehow. We do some checking in check_match_key above, but is that enough? */
+ * somewhere, somehow. We do some checking in check_match_key above, but is that enough?
+ * See P4C-2171
+ */
 template<class REGS>
 static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group)
@@ -455,6 +457,9 @@ void GatewayTable::write_regs(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs");
     auto &row = layout[0];
     if (input_xbar) {
+        // FIXME -- if there's no ixbar in the gateway, we should look for a group with
+        // all the match/xor values across all the exact match groups in the stage and use
+        // that.  See P4C-2171
         input_xbar->write_regs(regs);
         if (!setup_vh_xbar(regs, this, row, 0, match, input_xbar->match_group()) ||
             !setup_vh_xbar(regs, this, row, 4, xor_match, input_xbar->match_group()))

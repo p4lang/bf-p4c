@@ -448,6 +448,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool ad_alloc = false;
     bool warning = false;
     bool error = false;
+    bool allow_unalloc = false;
 
     bool action_data_misaligned = false;
     bool verbose = false;
@@ -523,6 +524,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool verify_P4_action_without_phv(cstring action_name);
     bool verify_P4_action_with_phv(cstring action_name);
 
+    bool is_allowed_unalloc(const IR::Expression *e) {
+        if (!allow_unalloc) return false;
+        while (auto *sl = e->to<IR::Slice>()) e = sl->e0;
+        return e->is<IR::TempVar>(); }
+
  public:
     const IR::Expression *isActionParam(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
@@ -551,8 +557,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool warning_found() { return warning; }
     bool error_found() { return error; }
 
-    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t)
-        : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) { visitDagOnce = false; }
+    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t, bool au = false)
+        : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), tbl(t) { visitDagOnce = false; }
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_ */

@@ -218,9 +218,19 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*Can't split table.*with indirect attached|./p4c TIMEOUT"
-  ../glass/testsuite/p4_tests/fox/COMPILER-957/case6123.p4
+  "Compiler Bug.*: Metadata initialization analysis incorrect.  Live ranges .* overlap"
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unimplemented .*: Split attached table with some match and some attached in the same stage, but not all in one stage"
+  ../glass/testsuite/p4_tests/fox/COMPILER-957/case6123.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Conflicting alloc in the action data xbar between .*"
+  ../glass/testsuite/p4_tests/phv/COMPILER-587/l4l.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -242,7 +252,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: constant value.*too large for stateful alu"
   extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
-  )
+)
 
 p4c_add_xfail_reason("tofino"
   "Tofino requires byte-aligned headers"
@@ -1492,7 +1502,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Failed to place tables that Register .* is attached to in the same stage"
   ../glass/testsuite/p4_tests/medialinks/COMPILER-682/case3764.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
 # P4C-2126
@@ -1606,12 +1615,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The compiler failed in slicing the following group of fields|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1834.p4
-)
-
-# P4C-2221
-p4c_add_xfail_reason("tofino"
-  "error.*No state named.*in.*parser"
-  extensions/p4_tests/p4_16/compile_only/p4c-2153.p4
 )
 
 # BA-102 Failures

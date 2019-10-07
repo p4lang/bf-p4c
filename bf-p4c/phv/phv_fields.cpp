@@ -184,7 +184,11 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
 void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
     BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
               "Can't create temp of type %s", tv->type);
-    if (all_fields.count(tv->name) == 0) {
+    if (gress == GHOST) gress = INGRESS;  // treat ghost as ingress
+    if (all_fields.count(tv->name)) {
+        BUG_CHECK(all_fields.at(tv->name).gress == gress, "Inconsistent gress for %s (%s and %s)",
+                  tv, all_fields.at(tv->name).gress, gress);
+    } else {
         add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
         const PHV::Field* fld = field(tv->name);
         if (fld)
@@ -270,7 +274,9 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
                 bits->hi = rv->size - 1; }
             return rv;
         } else {
-            BUG("TempVar %s not in PhvInfo", tv->name); } }
+            // This can happen after a placement failure when we're trying to generate
+            // minimal context.json to aid deubgging.  So we don't want to crash out
+            /*BUG("TempVar %s not in PhvInfo", tv->name);*/ } }
     if (auto *pad = e->to<IR::Padding>()) {
         if (auto *rv = getref(all_fields, pad->name)) {
             if (bits) {
@@ -511,10 +517,21 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
     return boost::none;
 }
 
+std::set<int> PhvInfo::minStage(const IR::MAU::Table *table) {
+    return ::get(table_to_min_stage, TableSummary::getTableName(table));
+}
+
+void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage) {
+    auto tableName = TableSummary::getTableName(table);
+    table_to_min_stage[tableName].insert(stage);
+    if (table->gateway_name && table->gateway_name != tableName)
+        table_to_min_stage[table->gateway_name].insert(stage);
+}
+
 bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
     BUG_CHECK(gateway->gateway_only(), "Trying to merge non gateway table %1% with table %2%",
               gateway->name, t->name);
-    auto t_stages = minStage(TableSummary::getTableName(t));
+    auto t_stages = minStage(t);
     CollectGatewayFields collect_fields(*this);
     gateway->apply(collect_fields);
     static PHV::FieldUse use(PHV::FieldUse::READ);
@@ -596,7 +613,7 @@ bool PHV::Field::checkContext(
     switch (ctxt->type) {
     case AllocContext::Type::TABLE: {
             auto tbl = ctxt->table;
-            auto stages = PhvInfo::minStage(TableSummary::getTableName(tbl));
+            auto stages = PhvInfo::minStage(tbl);
             bool inLiveRange = false;
             for (auto stage : stages) {
                 LOG3("\t\tStage: " << stage);

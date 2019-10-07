@@ -439,6 +439,11 @@ class MemoriesUsePrinter(object):
                 else:
                     rv += " +"
                 rv += str(vec_at(row['mapcol'], j))
+        if self.val['gateway']['unit'] >= 0:
+            rv += " payload " + str(self.val['gateway']['payload_row']) + ":"
+            rv += str(self.val['gateway']['payload_bus']) + ":"
+            rv += str(self.val['gateway']['unit']) + " = "
+            rv += str(self.val['gateway']['payload_value'])
         rv += ')'
         return rv
 

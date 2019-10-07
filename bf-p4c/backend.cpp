@@ -99,6 +99,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     flexiblePacking = new FlexiblePacking(options, phv, uses, deps, bridged_fields,
                                           extracted_together, table_alloc);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
+    auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
+                                              defuse, deps, decaf, table_alloc);
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
@@ -189,7 +191,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
         // will clear the allocation.
         new DumpPipe("Before phv_analysis"),
-        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps, decaf, table_alloc),
+        PHV_Analysis,
         // Validate results of PHV allocation.
         new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
 
@@ -202,6 +204,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
         new TableAllocPass(options, phv, deps, table_summary),
+        new DumpPipe("After TableAlloc"),
         &table_summary,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
@@ -209,11 +212,11 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new LiveRangeReport(phv, table_summary, defuse),
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
+        new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
         phvLoggingInfo,
         new InstructionAdjustment(phv, primNode),
         nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
-        new CheckForUnallocatedTemps(phv, uses, clot),
 
         new AdjustExtract(phv),
         // Lower the parser IR to a target-specific representation. This *loses

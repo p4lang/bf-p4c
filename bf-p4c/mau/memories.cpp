@@ -6,6 +6,10 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 
+// FIXME -- should be in algorithm.h
+template<class C, class Pred> inline bool any_of(C c, Pred pred) {
+    return std::any_of(std::begin(c), std::end(c), pred); }
+
 static const char *use_type_to_str[] = {
     "EXACT", "ATCAM", "TERNARY", "GATEWAY", "TIND", "IDLETIME",
     "COUNTER", "METER", "SELECTOR", "STATEFUL", "ACTIONDATA"
@@ -253,19 +257,20 @@ void Memories::clear_allocation() {
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const LayoutOption *lo,
-                         int entries, int stage_table) {
+                         int entries, int stage_table, attached_entries_t attached_entries) {
     table_alloc *ta;
     if (!t->gateway_only())
         ta = new table_alloc(t, &resources->match_ixbar, &resources->table_format,
-                             &resources->memuse, lo, entries, stage_table);
+                             &resources->memuse, lo, entries, stage_table,
+                             std::move(attached_entries));
     else
         ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, &resources->memuse, lo,
-                             entries, stage_table);
+                             entries, stage_table, std::move(attached_entries));
     LOG2("Adding table " << ta->table->name << " with " << entries << " entries");
     tables.push_back(ta);
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, &resources->memuse,
-                                      lo, -1, stage_table);
+                                      lo, -1, stage_table, {});
         LOG2("Adding gateway table " << ta_gw->table->name << " to table "
              << ta_gw->table->name);
         ta_gw->link_table(ta);
@@ -629,7 +634,9 @@ bool Memories::analyze_tables(mem_info &mi) {
     mi.clear();
     clear_table_vectors();
     for (auto *ta : tables) {
-        if (ta->provided_entries == -1 || ta->provided_entries == 0) {
+        auto table = ta->table;
+        int entries = ta->provided_entries;
+        if (entries == -1 || entries == 0) {
             auto unique_id = ta->build_unique_id(nullptr, true);
             if (ta->table_link != nullptr) {
                 unique_id = ta->table_link->build_unique_id(nullptr, true);
@@ -640,11 +647,16 @@ bool Memories::analyze_tables(mem_info &mi) {
             (*ta->memuse)[unique_id].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
-            continue;
-        }
-        auto table = ta->table;
-        int entries = ta->provided_entries;
-        if (ta->layout_option->layout.no_match_rams()) {
+            if (any_of(Values(ta->attached_entries), [](int entries){ return entries > 0; })) {
+                // at least one attached table so need a no match table
+                no_match_hit_tables.push_back(ta);
+                ta->link_table(ta);  // link to itself to produce payload
+                set_logical_memuse_type(ta, Use::EXACT);
+                mi.no_match_tables++;
+            } else {
+                continue;
+            }
+        } else if (ta->layout_option->layout.no_match_rams()) {
             mi.logical_tables += ta->layout_option->logical_tables();
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
@@ -4012,7 +4024,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &, update_ty
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
     alloc.visit(*this, [name](cstring &use, Memories::Use::update_type_t u_type) {
-        if (use) {
+        if (use && use != name) {
             bool collision = true;
             // A table may have different search buses, but the same result bus.  Say a table
             // required two hash functions (i.e. 5 way table).  The table would require two

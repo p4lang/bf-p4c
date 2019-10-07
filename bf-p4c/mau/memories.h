@@ -41,6 +41,8 @@ struct Memories {
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
+    typedef std::map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
+
     /**
      * For an SRAM based tables, specifically there are 3 buses, and a 4th output potentially
     *  in use:
@@ -281,6 +283,7 @@ struct Memories {
         std::map<UniqueId, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
+        attached_entries_t attached_entries;
         // Entries per match table allocation_unit (logical table) of the table.  This is
         // used to determine the attached table requirements if direct
         safe_vector<int> calc_entries_per_uid;
@@ -294,10 +297,11 @@ struct Memories {
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              const TableFormat::Use *tf,
                              std::map<UniqueId, Memories::Use> *mu,
-                             const LayoutOption *lo, const int e, const int st)
-                : table(t), match_ixbar(mi), table_format(tf), memuse(mu),
-                  layout_option(lo), provided_entries(e), attached_gw_bytes(0), stage_table(st),
-                  table_link(nullptr) {}
+                             const LayoutOption *lo, const int e, const int st,
+                             attached_entries_t attached_entries)
+                : table(t), match_ixbar(mi), table_format(tf), memuse(mu), layout_option(lo),
+                  provided_entries(e), attached_entries(attached_entries), attached_gw_bytes(0),
+                  stage_table(st), table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
 
         UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
@@ -717,7 +721,7 @@ struct Memories {
     void clear();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo, int entries,
-                   int stage_table);
+                   int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };

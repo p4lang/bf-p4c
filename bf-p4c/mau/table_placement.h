@@ -21,11 +21,16 @@ class SharedIndirectAttachedAnalysis;
 class TablePlacement : public MauTransform, public Backtrack {
  public:
     TablePlacement(const BFN_Options &, const DependencyGraph *, const TablesMutuallyExclusive &,
-                   const PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &,
-                   TableSummary &summary);
+                   PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &,
+                   SplitAttachedInfo &, TableSummary &);
     struct GroupPlace;
     struct Placed;
     typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
+
+    struct RedoTablePlacement : public Backtrack::trigger {
+        RedoTablePlacement() : Backtrack::trigger(OK) {}
+    };
+    static bool can_duplicate(const IR::MAU::AttachedMemory *);
 
  protected:
     typedef enum {
@@ -77,13 +82,16 @@ class TablePlacement : public MauTransform, public Backtrack {
     const BFN_Options &options;
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
-    const PhvInfo &phv;
+    PhvInfo &phv;
     const LayoutChoices &lc;
     const SharedIndirectAttachedAnalysis &siaa;
     DynamicDependencyMetrics ddm;
     bool ignoreContainerConflicts = false;
     bool alloc_done = false;
     cstring error_message;
+    SplitAttachedInfo &att_info;
+    struct RewriteForSplitAttached;
+
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override;
     IR::Node *preorder(IR::BFN::Pipe *) override;
@@ -95,6 +103,7 @@ class TablePlacement : public MauTransform, public Backtrack {
         int stage_table = -1, IR::MAU::Table **last = nullptr);
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl, const Placed *placed,
         int stage_table = -1);
+    void setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed);
     const Placed *placement;
 
     /// @returns true if all the metadata initialization induced dependencies for table @t are
@@ -116,7 +125,6 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool try_alloc_imem(Placed *next);
     bool pick_layout_option(Placed *next, bool estimate_set);
     bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries);
-    bool can_duplicate(const IR::MAU::AttachedMemory *);
     bool can_place_with_partly_placed(const IR::MAU::Table *tbl,
         const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed);
     bool initial_stage_and_entries(Placed *rv, int &furthest_stage);

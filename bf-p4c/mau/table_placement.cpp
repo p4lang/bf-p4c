@@ -27,6 +27,7 @@
 #include "lib/set.h"
 #include "bf-p4c/ir/table_tree.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_analysis.h"
 
 // FIXME -- this belongs in p4c/lib/algorithm.h -- remove this when p4c refpoint is updated
 template<class Container, class Pred> inline void erase_if(Container &c, Pred pred) {
@@ -81,10 +82,10 @@ template<class Container, class Pred> inline void erase_if(Container &c, Pred pr
  */
 
 TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
-                               const TablesMutuallyExclusive &m, const PhvInfo &p,
+                               const TablesMutuallyExclusive &m, PhvInfo &p,
                                const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
-                               TableSummary &summary_)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d),
+                               SplitAttachedInfo &sia, TableSummary &summary_)
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), att_info(sia), ddm(ntp, con_paths, *d),
   summary(summary_) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
@@ -98,6 +99,9 @@ bool TablePlacement::backtrack(trigger &trig) {
         ignoreContainerConflicts = t->ignoreContainerConflicts;
         return true; }
     ignoreContainerConflicts = false;
+    if (trig.is<RedoTablePlacement>()) {
+        summary.FinalizePlacement();
+        return true; }
     return false;
 }
 
@@ -596,6 +600,32 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
     return true;
 }
 
+struct TablePlacement::RewriteForSplitAttached : public Transform {
+    TablePlacement &self;
+    const Placed *pl;
+    RewriteForSplitAttached(TablePlacement &self, const Placed *p) : self(self), pl(p) {}
+    const IR::MAU::Table *preorder(IR::MAU::Table *tbl) {
+        self.setup_detached_gateway(tbl, pl);
+        // don't visit most of the children
+        for (auto it = tbl->actions.begin(); it != tbl->actions.end();)  {
+            if ((it->second = self.att_info.create_post_split_action(it->second, tbl)))
+                ++it;
+            else
+                it = tbl->actions.erase(it); }
+        visit(tbl->attached, "attached");
+        prune();
+        return tbl; }
+    const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) {
+        auto *tbl = findContext<IR::MAU::Table>();
+        for (auto act : Values(tbl->actions)) {
+            if (auto *sc = act->stateful_call(ba->attached->name)) {
+                if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
+                    ba->hash_dist = hd;
+                    break; } } }
+        prune();
+        return ba; }
+};
+
 bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
     next->resources.clear_ixbar();
     IXBar current_ixbar;
@@ -604,8 +634,18 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
     }
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
+    auto *table = next->table;
+    if (next->entries == 0 && !table->gateway_only()) {
+        // detached attached table -- need to rewrite it as a hash_action gateway that
+        // tests the enable bit it drives the attached table with the saved index
+        // FIXME -- should we memoize this rather than recreating it each time?
+        BUG_CHECK(!next->attached_entries.empty(),  "detaching atatched from %s, no "
+                  "attached entries?", next->name);
+        BUG_CHECK(!next->gw, "Have a gateway merged with a detached attached table?");
+        table = table->apply(RewriteForSplitAttached(*this, next));
+    }
 
-    if (!current_ixbar.allocTable(next->table, phv, next->resources, next->use.preferred(),
+    if (!current_ixbar.allocTable(table, phv, next->resources, next->use.preferred(),
                                   action_format) ||
         !current_ixbar.allocTable(next->gw, phv, next->resources, next->use.preferred(),
                                   nullptr)) {
@@ -615,6 +655,22 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
         LOG3("    " << error_message);
         return false;
     }
+#if 0
+    if (next->entries == 0 && !next->table->gateway_only()) {
+        // detached attached table -- need a gateway that tests the ena bit
+        BUG_CHECK(!next->attached_entries.empty(),  "detaching atatched from %s, no "
+                  "attached entries?", next->name);
+        IR::MAU::Table  dummy(next->name, next->table->gress);
+        // Need to set the P4Table here so PhvInfo::minStage can find it -- FIXME should be
+        // specifying the stage directly when we have it rather than by table guesstimate.
+        dummy.match_table = next->table->match_table;
+        setup_detached_gateway(&dummy, next);
+        if (!current_ixbar.allocGateway(&dummy, phv, next->resources.gateway_ixbar, false) &&
+            !current_ixbar.allocGateway(&dummy, phv, next->resources.gateway_ixbar, true)) {
+            error_message = "Could not allocate gateway for splitting " + next->table->name;
+            LOG3("    " << error_message);
+            return false; } }
+#endif
 
     IXBar verify_ixbar;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
@@ -651,10 +707,10 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     for (auto *p : whole_stage) {
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         current_mem.add_table(p->table, p->gw, &p->resources, p->use.preferred(),
-                              p->entries, p->stage_split);
+                              p->entries, p->stage_split, p->attached_entries);
         p->resources.memuse.clear(); }
     current_mem.add_table(next->table, next->gw, &next->resources, next->use.preferred(),
-                          next->entries, next->stage_split);
+                          next->entries, next->stage_split, next->attached_entries);
     next->resources.memuse.clear();
 
     if (!current_mem.allocate_all()) {
@@ -851,9 +907,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             }
         }
     } else {
-        rv->entries = 1;  // gateway entries?  FIXME does this really make sense?
-                // Can't be 0 even though there are not any match entries, as that will fail in
-                // the test below for "match fully placed but still needs attached"
+        rv->entries = 0;
     }
     /* Not yet placed tables that share an attached table with this table -- if any of them
      * have a dependency that prevents placement in the current stage, we want to defer */
@@ -862,6 +916,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         if (ba->attached->direct) continue;
         rv->attached_entries[ba->attached] = ba->attached->size;
         if (can_duplicate(ba->attached)) continue;
+        bool stateful_selector = ba->attached->is<IR::MAU::StatefulAlu>() &&
+                                 ba->use == IR::MAU::StatefulUse::NO_USE;
         for (auto *att_to : attached_to.at(ba->attached)) {
             if (att_to == rv->table) continue;
             // If shared with another table that is not placed yet, need to
@@ -869,7 +925,17 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             if (!rv->is_match_placed(att_to)) {
                 tables_with_shared.insert(att_to);
                 rv->attached_entries[ba->attached] = 0;
-                break; } } }
+                if (stateful_selector) {
+                    // A Register that is not directly used, but is instead the backing for a
+                    // selector.  Since a selector cannot be split from its match table, we
+                    // don't want to try to place the table until all the tables that write
+                    // to it are placed.
+                    auto *att_ba = att_to->get_attached(ba->attached);
+                    BUG_CHECK(att_ba, "%s not attached to %s?", ba->attached, att_to);
+                    if (att_ba->use != IR::MAU::StatefulUse::NO_USE)
+                        return false;
+                } else {
+                    break; } } } }
 
     int prev_stage_tables = 0;
     bool repeated_stage = false;
@@ -929,7 +995,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             }
         }
     }
-    if (rv->entries <= 0) {
+    if (rv->entries <= 0 && !t->gateway_only()) {
         rv->entries = 0;
         if (repeated_stage) return false;
         // FIXME -- should use std::any_of, but pre C++-17 is too hard to use and verbose
@@ -977,14 +1043,8 @@ safe_vector<TablePlacement::Placed *>
     safe_vector<TablePlacement::Placed *> rv_vec;
     // Place and save a placement, as a lambda
     auto try_place = [&](Placed* rv) {
-                         rv = try_place_table(rv, current);
-                         if (rv == nullptr) {
-                             LOG2("Unable to place table " << t->name << ". Aborting!");
-                             rv_vec.clear();
-                             return false;
-                         }
-                         rv_vec.push_back(rv);
-                         return true;
+                         if ((rv = try_place_table(rv, current)))
+                             rv_vec.push_back(rv);
                      };
 
     // If we're not a gateway or there are no merge options for the gateway, we create exactly one
@@ -1003,8 +1063,7 @@ safe_vector<TablePlacement::Placed *>
         LOG1("  Merging with match table " << mc.first->name);
         rv->gateway_merge(mc.first, mc.second);
         // Get a placement
-        if (!try_place(rv))
-            break;
+        try_place(rv);
     }
     return rv_vec;
 }
@@ -1039,11 +1098,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     int initial_entries = rv->entries;
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
-    LOG3("  Initial stage is " << rv->stage);
+    LOG3("  Initial stage is " << rv->stage << ", initial entries is " << rv->entries);
     BUG_CHECK(rv->stage < 100, "too many stages");
 
     auto *min_placed = new Placed(*rv);
-    min_placed->entries = 1;
+    if (min_placed->entries > 1)
+        min_placed->entries = 1;
 
     if (!rv->table->created_during_tp) {
         assert(!rv->placed[tblInfo.at(rv->table).uid]);
@@ -1196,6 +1256,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage <<
          (rv->need_more_match ? " (need more match)" : rv->need_more ? " (need more)" : ""));
+    LOG5(IndentCtl::indent << IndentCtl::indent << "    " <<
+         rv->resources <<
+         IndentCtl::unindent << IndentCtl::unindent);
 
     if (!rv->table->created_during_tp) {
         if (!rv->need_more_match) {
@@ -1734,7 +1797,6 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 done = false;
                 for (auto pl : pl_vec) {
                     pl->group = grp;
-                    pl->update_for_partly_placed(partly_placed);
                     trial.push_back(pl);
                 }
             }
@@ -1790,29 +1852,6 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
-    for (auto &el : attached_to) {
-        auto *at = el.first;
-        if (at->direct || can_duplicate(at)) continue;
-        int first_stage = 99999, last_stage = -1;
-        for (auto *t : el.second) {
-            int count_stages = 0;
-            for (auto *p : ValuesForKey(table_placed, t->name)) {
-                if (p->stage < first_stage) first_stage = p->stage;
-                if (p->stage > last_stage) last_stage = p->stage;
-                count_stages++; }
-            if (count_stages > 1)
-                error("Can't split %s with indirect attached %s across stages %d to %d -- "
-                      "try making it smaller, or using @stage to force to later stage",
-                      t, at, first_stage, last_stage); }
-        if (last_stage >= 0 && first_stage != last_stage && el.second.size() > 1) {
-            error("Failed to place tables that %s is attached to in the same stage, try "
-                  "using @stage (%d) on tables", at, last_stage);
-            for (auto *t : el.second) {
-                auto p1 = table_placed.find(t->name);
-                if (p1 == table_placed.end())
-                    error("-- did not place %s", t);
-                else
-                    error("-- placed %s in stage %d", t, p1->second->stage); } } }
     LOG1("Finished table placement decisions " << pipe->name);
     return pipe;
 }
@@ -1946,19 +1985,19 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
     IR::MAU::Table *prev = nullptr;
     int logical_tables = placed->use.preferred()->logical_tables();
 
-
+    BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
     for (int lt = 0; lt < logical_tables; lt++) {
         auto *table_part = tbl->clone();
+        if (lt != 0)
+            table_part->remove_gateway();
         // Clear gateway_name for the split table
         table_part->logical_id = placed->logical_id + lt;
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
-
-        if (stage_table > 0 || lt > 0)
-            table_part->remove_gateway();
+        auto rsrcs = placed->resources.clone()->rename(tbl, stage_table, lt);
         int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
-        table_set_resources(table_part, placed->resources.clone()->rename(tbl, stage_table, lt),
-                            entries);  // table_part->ways[0].entries);
+        table_set_resources(table_part, rsrcs, entries);
+
         if (!rv) {
             rv = table_part;
             assert(!prev);
@@ -1983,6 +2022,7 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
     const Placed *placed, int stage_table) {
     auto dleft_vector = new IR::Vector<IR::MAU::Table>();
     int logical_tables = placed->use.preferred()->logical_tables();
+    BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
 
     for (int lt = 0; lt < logical_tables; lt++) {
         auto *table_part = tbl->clone();
@@ -1999,11 +2039,11 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
             if (salu != nullptr)
                 break;
         }
+        auto rsrcs = placed->resources.clone()->rename(tbl, stage_table, lt);
         int per_row = RegisterPerWord(salu);
         int entries = placed->use.preferred()->dleft_hash_sizes[lt] * Memories::SRAM_DEPTH
                       * per_row;
-        table_set_resources(table_part, placed->resources.clone()->rename(tbl, stage_table, lt),
-                            entries);
+        table_set_resources(table_part, rsrcs, entries);
         if (lt != logical_tables - 1)
             table_part->next.clear();
 
@@ -2012,6 +2052,19 @@ IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
     return dleft_vector;
 }
 
+void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed) {
+    tbl->remove_gateway();
+    BUG_CHECK(placed->entries == 0, "match entries present");
+    for (auto *ba : placed->table->attached) {
+        if (ba->attached->direct || placed->attached_entries.at(ba->attached) == 0)
+            continue;
+        if (auto *ena = att_info.split_enable(ba->attached)) {
+            tbl->gateway_rows.emplace_back(
+                new IR::Equ(ena, new IR::Constant(1)), cstring());
+            tbl->gateway_cond = ena->toString();
+        }
+    }
+}
 
 /** Note from gateway_merge:
  *
@@ -2066,11 +2119,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (it == table_placed.end()) {
         BUG_CHECK(errorCount() > 0, "Trying to place a table %s that was never placed", tbl->name);
         return tbl; }
-    if (tbl->is_placed()) {
-        BUG_CHECK(tbl->stage_split >= 0 || tbl->logical_split >= 0,
-                  "Trying to place a table %s that is already placed", tbl->name);
+    if (tbl->is_placed())
         return tbl;
-    }
     tbl->logical_id = it->second->logical_id;
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
@@ -2152,20 +2202,34 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         return tbl;
     }
     int stage_table = 0;
-    IR::MAU::Table *rv = 0, *prev = 0;
+    IR::Vector<IR::MAU::Table> *rv = new IR::Vector<IR::MAU::Table>;
+    IR::MAU::Table *prev = 0;
     IR::MAU::Table *atcam_last = nullptr;
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
-    for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
-        const Placed *pl = it->second;
+    int deferred_attached = 0;
+    for (auto *att : tbl->attached) {
+        if (att->attached->direct) continue;
+        if (can_duplicate(att->attached)) continue;
+        // splitting a table with an un-duplicatable indirect attached table
+        // allocate TempVar to propagate index from match to attachment stage
+        ++deferred_attached;
+        if (att->type_location == IR::MAU::TypeLocation::OVERHEAD)
+            P4C_UNIMPLEMENTED("%s with multiple RegisterActions placed in separation stage from "
+                              "%s; try using @stage to force them into the same stage",
+                              tbl->match_table->name, att->attached->name); }
+    if (deferred_attached > 1)
+        P4C_UNIMPLEMENTED("Splitting %s with multiple indirect attachements not supported",
+                          tbl->match_table->name);
+    for (const Placed *pl : ValuesForKey(table_placed, tbl->name)) {
         auto *table_part = tbl->clone();
         // When a gateway is merged against a split table, only the first table created from the
-        // split must have the name of the merged gateway
+        // split has the merged gateway
+        if (!rv->empty())
+            table_part->remove_gateway();
+
         if (stage_table != 0) {
-            table_part->gateway_name = cstring();
-            if (pl->entries == 0) {
-                // FIXME -- no entries in this stage, just attached tables?  For now skip these
-                continue; }
+            BUG_CHECK(!rv->empty(), "failed to attach first stage table");
             BUG_CHECK(stage_table == pl->stage_split, "Splitting table %s cannot be "
                       "resolved for stage table %d", table_part->name, stage_table); }
         select_layout_option(table_part, pl->use.preferred());
@@ -2175,36 +2239,73 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         table_part->logical_id = pl->logical_id;
         table_part->stage_split = pl->stage_split;
 
-        if (table_part->layout.atcam) {
-            table_part = break_up_atcam(table_part, pl, pl->stage_split, &atcam_last);
+        if (pl->entries) {
+            if (deferred_attached) {
+                if (pl->use.format_type != ActionData::PRE_SPLIT_ATTACHED)
+                    error("Couldn't find a usable split format for %1% and couldn't place it "
+                          "without splitting", tbl);
+                for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
+                    if ((act->second = att_info.create_pre_split_action(act->second,
+                                                                        table_part, &phv)))
+                        ++act;
+                    else
+                        act = table_part->actions.erase(act); }
+                erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
+                    return pl->attached_entries.count(ba->attached) &&
+                           pl->attached_entries.at(ba->attached) == 0; }); }
+            if (table_part->layout.atcam) {
+                table_part = break_up_atcam(table_part, pl, pl->stage_split, &atcam_last);
+            } else {
+                auto rsrcs = pl->resources.clone()->rename(tbl, pl->stage_split);
+                table_set_resources(table_part, rsrcs, pl->entries);
+            }
         } else {
-            table_set_resources(table_part, pl->resources.clone()->rename(tbl, pl->stage_split),
-                                pl->entries);
-        }
-        if (!rv) {
-            rv = table_part;
-            assert(!prev);
-        } else {
-            table_part->remove_gateway();
+            if (pl->use.format_type != ActionData::POST_SPLIT_ATTACHED)
+                error("Couldn't find a usable split format for %1% and couldn't place it "
+                      "without splitting", tbl);
+            BUG_CHECK(deferred_attached, "Split match from attached with no attached?");
+            for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
+                if ((act->second = att_info.create_post_split_action(act->second, table_part)))
+                    ++act;
+                else
+                    act = table_part->actions.erase(act); }
+            auto rsrcs = pl->resources.clone()->rename(tbl, pl->stage_split);
+            table_set_resources(table_part, rsrcs, pl->entries);
+            table_part->match_key.clear();
+            table_part->next.clear();
+            table_part->suppress_context_json = true;
+            setup_detached_gateway(table_part, pl);
+            if (table_part->actions.size() != 1)
+                P4C_UNIMPLEMENTED("split attached table with multiple actions");
+            erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
+                return !pl->attached_entries.count(ba->attached) ||
+                       pl->attached_entries.at(ba->attached) == 0; });
+            BUG_CHECK(!rv->empty(), "first stage has no match entries?");
+            rv->push_back(table_part); }
 
+        if (rv->empty()) {
+            rv->push_back(table_part);
+            BUG_CHECK(!prev, "didn't add prev stage table?");
+        } else if (pl->entries) {
             // FIXME: Long term solution could be the following for these types of actions:
             //    - Clone all actions and set them all to hit_only
             //    - Create a noop action as miss_only
             //    - Get rid of the $try_next_stage and just go through the standard hit/miss
             // Separate control flow processing for try_next_stage vs miss"
             prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
-            prev->next.erase("$miss");
-        }
+            prev->next.erase("$miss"); }
+
         stage_table++;
         prev = table_part;
         if (atcam_last)
             prev = atcam_last;
     }
-    assert(rv);
+    assert(!rv->empty());
     return rv;
 }
 
 IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
+    visitAgain();  // clone these for any table that has been cloned
     auto tbl = findContext<IR::MAU::Table>();
     if (!tbl || !tbl->resources) {
         BUG_CHECK(errorCount() > 0, "No table resources for %s", ba);
@@ -2223,8 +2324,23 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
         if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD ||
             format.meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
             ba->type_location = format.meter_type_loc;
+        if (tbl->layout.hash_action && !ba->attached->direct) {
+            // FIXME -- this should actually be GATEWAY_PAYLOAD, but that is not yet set up
+            // properly...
+            ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+            // FIXME -- if there's more than one type, this needs to go in a JBay gateway
+            // or match overhead of a small synthetic table.  For now we only support this
+            ba->type_location = IR::MAU::TypeLocation::DEFAULT;
+        }
     }
 
+    for (auto act : Values(tbl->actions)) {
+        if (auto *sc = act->stateful_call(ba->attached->name)) {
+            if (!sc->index) continue;
+            if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
+                ba->hash_dist = hd;
+                ba->addr_location = IR::MAU::AddrLocation::HASH;
+                break; } } }
 
     // If the table has been converted to hash action, then the hash distribution unit has
     // to be tied to the BackendAttached object for the assembly output

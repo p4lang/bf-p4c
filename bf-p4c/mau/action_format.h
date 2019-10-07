@@ -12,7 +12,6 @@
 #include "ir/ir.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/attached_info.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/phv/phv.h"
@@ -22,6 +21,10 @@ namespace ActionData {
 // MASK is currently not used, but maybe will be in order to reduce the size of the JSON
 // If MASK is used, then the equiv_cond will have to change
 enum ModConditionally_t { NONE, VALUE, /* MASK */ };
+
+// Currently only three format types, still debating how to support more long term,
+// i.e. if multiple format types overlap with each other (such as including a gateway)
+enum FormatType_t { NORMAL, PRE_SPLIT_ATTACHED, POST_SPLIT_ATTACHED, FORMAT_TYPES };
 
 /**
  * The purpose of this class is the base abstract class for any parameter that can appear
@@ -502,7 +505,10 @@ class ALUOperation {
     bitvec mask_bits() const { return _mask_bits; }
     bitvec slot_bits() const {
         BUG_CHECK(_right_shift_set, "Unsafe call of slot bits in action format");
-        return _phv_bits.rotate_right_copy(0, _right_shift, _container.size());
+        if (_container)
+            return _phv_bits.rotate_right_copy(0, _right_shift, _container.size());
+        else
+            return _phv_bits >> _right_shift;
     }
 
     bool valid() const { return static_cast<bool>(_container); }
@@ -922,10 +928,10 @@ class Format {
     };
 
  private:
-    const PhvInfo &phv;
+    PhvInfo &phv;
     const IR::MAU::Table *tbl;
     safe_vector<Use> *uses = nullptr;
-    const SplitAttachedInfo &att_info;
+    SplitAttachedInfo &att_info;
     int calc_max_size = 0;
     std::map<cstring, RamSec_vec_t> init_ram_sections;
 
@@ -959,7 +965,7 @@ class Format {
     void create_split_param(const IR::MAU::Action *act);
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name);
-    bool analyze_actions(bool with_split);
+    bool analyze_actions(FormatType_t format_type);
 
     void initial_possible_condenses(PossibleCondenses &condenses, const RamSec_vec_t &ram_sects);
     void incremental_possible_condenses(PossibleCondenses &condense, const RamSec_vec_t &ram_sects);
@@ -1006,8 +1012,8 @@ class Format {
 
  public:
     void set_uses(safe_vector<Use> *u) { uses = u; }
-    void allocate_format(bool immediate_forced, bool with_split = false);
-    Format(const PhvInfo &p, const IR::MAU::Table *t, const SplitAttachedInfo &sai)
+    void allocate_format(bool immediate_forced, FormatType_t format_type);
+    Format(PhvInfo &p, const IR::MAU::Table *t, SplitAttachedInfo &sai)
         : phv(p), tbl(t), att_info(sai) {}
 };
 

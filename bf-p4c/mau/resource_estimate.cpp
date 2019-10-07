@@ -1,5 +1,6 @@
 #include "resource_estimate.h"
 #include "memories.h"
+#include "table_placement.h"
 #include "lib/bitops.h"
 
 constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
@@ -414,7 +415,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
-        if (lo.layout.hash_action) {
+        if (lo.layout.hash_action || lo.way.match_groups == 0) {
             lo.entries = entries;
             lo.srams = 0;
             continue;
@@ -710,7 +711,6 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
                   "hash tables");
         options_to_dleft_entries(tbl, attached_entries); }
     if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
-        entries = 1;
         preferred_index = 0;
     } else if (tbl->layout.atcam) {
         options_to_atcam_entries(tbl, entries);
@@ -741,20 +741,34 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     // Because the table is const, the layout options must be copied into the Object
     logical_ids = 1;
     layout_options.clear();
-    LayoutChoices::FormatType_t format_type = LayoutChoices::NORMAL;
+    format_type = ActionData::NORMAL;
     if (!tbl->created_during_tp) {
         for (auto *ba : tbl->attached) {
-            if (!ba->attached->direct && attached_entries.at(ba->attached) < ba->attached->size) {
-                format_type = LayoutChoices::SPLIT_ATTACHED;
-                break; } }
+            if (ba->attached->direct)
+                continue;
+            else if (TablePlacement::can_duplicate(ba->attached))
+                continue;
+            else if (entries == 0)
+                format_type = ActionData::POST_SPLIT_ATTACHED;
+            else if (attached_entries.at(ba->attached) == 0)
+                format_type = ActionData::PRE_SPLIT_ATTACHED;
+            else if (prev_placed || attached_entries.at(ba->attached) < ba->attached->size)
+                P4C_UNIMPLEMENTED("Split attached table with some match and some attached "
+                                  "in the same stage, but not all in one stage");
+            else
+                continue;
+            break; }
         layout_options = lc->get_layout_options(tbl, format_type);
         if (layout_options.empty()) {
-            // no layouts available?  Fall back to NORMAL for now
-            format_type = LayoutChoices::NORMAL;
+            // no layouts available?  Fall back to NORMAL for now.  TablePlacement will flag
+            // an error if it needs to split this table.
+            format_type = ActionData::NORMAL;
             layout_options = lc->get_layout_options(tbl, format_type); }
-        BUG_CHECK(tbl->gateway_only() || !layout_options.empty(), "No layout options for %s", tbl);
+        BUG_CHECK(tbl->gateway_only() || !layout_options.empty(),
+                  "No %s layout options for %s", format_type, tbl);
         action_formats = lc->get_action_formats(tbl, format_type);
-        meter_format = lc->get_attached_formats(tbl);
+        if (format_type != ActionData::PRE_SPLIT_ATTACHED)
+            meter_format = lc->get_attached_formats(tbl);
     }
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     // A hash action table currently cannot be split across stages if it does an action lookup,
@@ -984,7 +998,7 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
     int adding_entries = 0;
     int depth = 0;
 
-    while (true) {
+    while (lo->way.match_groups > 0) {
         int attempted_depth = depth + 1;
         int sram_count = 0;
         int mapram_count = 0;

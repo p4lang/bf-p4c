@@ -143,14 +143,14 @@ bool TableFormat::analyze_layout_option() {
 
     // If table has @dynamic_table_key_masks pragma, the driver expects all bits
     // to be available in the table pack format, so we disable ghosting
-    if (!tbl->layout.atcam && !tbl->dynamic_key_masks && !tbl->layout.proxy_hash &&
-        layout_option.entries > 0) {
+    if (!layout_option.layout.atcam && !tbl->dynamic_key_masks &&
+        !layout_option.layout.proxy_hash && layout_option.entries > 0) {
         int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
                                              layout_option.way_sizes.end());
         ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
     }
 
-    use->only_one_result_bus = tbl->layout.atcam;
+    use->only_one_result_bus = layout_option.layout.atcam;
 
     // Initialize all information
     overhead_groups_per_RAM.resize(layout_option.way.width, 0);
@@ -163,7 +163,7 @@ bool TableFormat::analyze_layout_option() {
     }
 
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-    if (tbl->layout.proxy_hash) {
+    if (layout_option.layout.proxy_hash) {
         analyze_proxy_hash_option(per_RAM);
     } else {
         auto total_info = match_ixbar.bits_per_search_bus();
@@ -280,7 +280,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
             return false;
     }
 
-    if (tbl->layout.atcam) {
+    if (layout_option.layout.atcam) {
         // ATCAM tables can only have one priority branch
         overhead_groups_per_RAM[0] = layout_option.way.match_groups;
     } else {
@@ -353,7 +353,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
     if (overhead_RAMs * MAX_SHARED_GROUPS < layout_option.way.match_groups)
         return false;
 
-    if (overhead_RAMs > 1 && tbl->layout.atcam)
+    if (overhead_RAMs > 1 && layout_option.layout.atcam)
         return false;
 
     BUG_CHECK(overhead_RAMs <= layout_option.way.match_groups, "Allocation for %s has %d RAMs for "
@@ -492,7 +492,7 @@ bool TableFormat::find_format(Use *u) {
     if (!allocate_match())
         return false;
     LOG3("Match and Version");
-    if (tbl->layout.atcam) {
+    if (layout_option.layout.atcam) {
         redistribute_entry_priority();
     }
     redistribute_next_table();
@@ -786,10 +786,10 @@ bool TableFormat::allocate_all_indirect_ptrs() {
      const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
      const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
 
-     IR::MAU::PfeLocation update_pfe_loc = tbl->layout.no_match_hit_path() ?
+     IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
                                            IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
                                            IR::MAU::PfeLocation::OVERHEAD;
-     IR::MAU::TypeLocation update_type_loc = tbl->layout.no_match_hit_path() ?
+     IR::MAU::TypeLocation update_type_loc = layout_option.layout.no_match_hit_path() ?
                                              IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
                                              IR::MAU::TypeLocation::OVERHEAD;
 
@@ -935,7 +935,7 @@ bool TableFormat::allocate_all_instr_selection() {
     // ternary in which case always a ternary indirect is used to specify
     // actions
     if (instr_select == 0) {
-        if (tbl->layout.no_match_miss_path())
+        if (layout_option.layout.no_match_miss_path())
             instr_select++;
         else
             return true;
@@ -1134,7 +1134,7 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
 }
 
 void TableFormat::classify_match_bits() {
-    if (tbl->layout.atcam) {
+    if (layout_option.layout.atcam) {
         auto partition = match_ixbar.atcam_partition();
         for (auto byte : partition) {
             use->ghost_bits[byte] = byte.bit_use;

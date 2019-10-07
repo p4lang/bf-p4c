@@ -46,9 +46,7 @@ class LayoutOption {
 
 class LayoutChoices {
  public:
-    // Currently only two format types, still debating how to support more long term,
-    // i.e. if multiple format types overlap with each other (such as including a gateway)
-    enum FormatType_t { NORMAL, SPLIT_ATTACHED, FORMAT_TYPES };
+    using FormatType_t = ActionData::FormatType_t;
     using LayoutOptionsPerType = std::map<int, safe_vector<LayoutOption>>;
     using ActionFormatsPerType = std::map<int, safe_vector<ActionData::Format::Use>>;
 
@@ -62,7 +60,7 @@ class LayoutChoices {
             return empty;
         if (total_layout_options.count(t->name) == 0)
             return empty;
-        auto lo_by_type = total_layout_options.at(t->name);
+        auto &lo_by_type = total_layout_options.at(t->name);
         if (lo_by_type.count(type) == 0)
             return empty;
         return lo_by_type.at(type);
@@ -86,7 +84,7 @@ class LayoutChoices {
     }
 };
 
-extern std::ostream &operator<<(std::ostream &, LayoutChoices::FormatType_t);
+extern std::ostream &operator<<(std::ostream &, ActionData::FormatType_t);
 
 /** Checks to see if the action(s) have hash distribution or rng access somewhere */
 class GetActionRequirements : public MauInspector {
@@ -202,7 +200,7 @@ class DoTableLayout : public MauModifier, Backtrack {
     // FIXME: Technically this is 5, but need to update version bit information
     static constexpr int MAX_ENTRIES_PER_ROW = 5;
 
-    const PhvInfo &phv;
+    PhvInfo &phv;
     LayoutChoices &lc;
     SplitAttachedInfo &att_info;
     bool alloc_done = false;
@@ -221,7 +219,7 @@ class DoTableLayout : public MauModifier, Backtrack {
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
     void setup_exact_match(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
-        LayoutChoices::FormatType_t format_type, int action_data_bytes_in_table,
+        ActionData::FormatType_t format_type, int action_data_bytes_in_table,
         int immediate_bits, int index);
     void setup_layout_options(IR::MAU::Table *tbl,
         safe_vector<IR::MAU::Table::Layout> &layouts_per_type);
@@ -231,17 +229,17 @@ class DoTableLayout : public MauModifier, Backtrack {
     void setup_layout_option_no_match(IR::MAU::Table *tbl,
         safe_vector<IR::MAU::Table::Layout> &layouts_per_type);
     void setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-        LayoutChoices::FormatType_t format_type);
+        ActionData::FormatType_t format_type);
     void attach_random_seed(IR::MAU::Table *tbl);
     bool can_be_hash_action(IR::MAU::Table *tbl, std::string &reason);
     void add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
-        bool &hash_action_only);
+        ActionData::FormatType_t format_type, bool &hash_action_only);
     void determine_byte_impacts(const IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
         std::map<MatchByteKey, safe_vector<le_bitrange>> &byte_impacts, bool &partition_found,
         cstring partition_index);
 
  public:
-    explicit DoTableLayout(const PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sai)
+    explicit DoTableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sai)
         : phv(p), lc(l), att_info(sai) {}
     static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
@@ -273,11 +271,11 @@ class ProhibitAtcamWideSelectors : public MauInspector {
 
 class TableLayout : public PassManager {
     LayoutChoices &lc;
-    SplitAttachedInfo att_info;
+    SplitAttachedInfo &att_info;
 
     profile_t init_apply(const IR::Node *root) override;
  public:
-    TableLayout(const PhvInfo &p, LayoutChoices &l);
+    TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia);
 };
 
 /// Run after TablePlacement to assign LR(t) values for counters.

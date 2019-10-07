@@ -12,6 +12,6 @@ Visitor::profile_t MemoizeMinStage::init_apply(const IR::Node* root) {
 bool MemoizeMinStage::preorder(const IR::MAU::Table* tbl) {
     cstring tblName = TableSummary::getTableName(tbl);
     LOG2("\t" << dg.min_stage(tbl) << " : " << tblName << ", backend name: " << tbl->name);
-    PhvInfo::addMinStageEntry(tblName, dg.min_stage(tbl));
+    PhvInfo::addMinStageEntry(tbl, dg.min_stage(tbl));
     return true;
 }

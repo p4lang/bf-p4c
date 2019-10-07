@@ -54,4 +54,6 @@ struct TableResourceAlloc {
     int rng_unit() const;
 };
 
+std::ostream &operator<<(std::ostream &, const TableResourceAlloc &);
+
 #endif /* BF_P4C_MAU_RESOURCE_H_ */

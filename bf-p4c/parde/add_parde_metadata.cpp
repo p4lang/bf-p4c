@@ -20,7 +20,7 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     auto *igParserMeta =
             getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
     auto *alwaysDeparseBit =
-            new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+            new IR::TempVar(IR::Type::Bits::get(1), true, "ingress$always_deparse");
     auto *bridgedMetadataIndicator =
             new IR::TempVar(IR::Type::Bits::get(8), false, BFN::BRIDGED_MD_INDICATOR);
     auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
@@ -58,7 +58,7 @@ void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
       getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
 
     auto* alwaysDeparseBit =
-        new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+        new IR::TempVar(IR::Type::Bits::get(1), true, "egress$always_deparse");
     auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
     auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
 

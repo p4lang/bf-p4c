@@ -1476,13 +1476,14 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     for (auto &rs : action_data_xbar.action_data_locs) {
         if (source.getbit(ActionData::IMMEDIATE) && (rs.source == ActionData::IMMEDIATE))
             max_total++;
-        if (source.getbit(ActionData::ACTION_DATA_TABLE) &&
+        else if (source.getbit(ActionData::ACTION_DATA_TABLE) &&
             (rs.source == ActionData::ACTION_DATA_TABLE))
             max_total++; }
 
     if (source.getbit(ActionData::METER_ALU)) {
         for (auto &rs : meter_xbar.action_data_locs) {
-            if (meter_use.contains_adb_slot(rs.location.type, rs.byte_offset))
+            if (meter_use.contains_adb_slot(rs.location.type, rs.byte_offset) &&
+                tbl->get_attached<IR::MAU::MeterBus2Port>())
                 max_total++;
         }
     }
@@ -1579,13 +1580,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     for (auto &rs : meter_xbar.action_data_locs) {
         if (!emit_meter_action_data) continue;
         if (!meter_use.contains_adb_slot(rs.location.type, rs.byte_offset)) continue;
-        const IR::MAU::AttachedMemory *at = nullptr;
-        for (auto ba : tbl->attached) {
-            at = ba->attached->to<IR::MAU::Meter>();
-            if (at) break;
-            at = ba->attached->to<IR::MAU::StatefulAlu>();
-            if (at) break;
-        }
+        auto *at = tbl->get_attached<IR::MAU::MeterBus2Port>();
         BUG_CHECK(at != nullptr, "Trying to emit meter alu without meter alu user");
         cstring ret_name = find_attached_name(tbl, at);
         int byte_sz = ActionData::slot_type_to_bits(rs.location.type) / 8;
@@ -1603,6 +1598,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
     }
 
     out << "}" << std::endl;
+    BUG_CHECK(total_index == max_total, "max total mismatch");
 }
 
 /* Emits the format portion of tind tables and for exact match tables. */
@@ -1955,8 +1951,9 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         }
         auto &instr_mem = table->resources->instr_mem;
         out << indent << canon_name(act->externalName());
-        auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
-        out << "(" << vliw_instr.mem_code << ", " << vliw_instr.gen_addr() << "):" << std::endl;
+        auto *vliw_instr = getref(instr_mem.all_instrs, act->name.name);
+        BUG_CHECK(vliw_instr, "failed to allocate instruction memory for %s", act);
+        out << "(" << vliw_instr->mem_code << ", " << vliw_instr->gen_addr() << "):" << std::endl;
         action_context_json(act);
         out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
             << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
@@ -1966,7 +1963,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             out << ", is_constant: " << act->is_constant_action;
         out << " }" << std::endl;
         out << indent << "- handle: 0x" << hex(act->handle) << std::endl;
-        next_table(act, vliw_instr.mem_code);
+        next_table(act, vliw_instr->mem_code);
         mod_cond_value(act);
         is_empty = true;
         emit_user_annotation_context_json(out, indent, act, true);
@@ -2008,7 +2005,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                     out << sep << "$stful_counter";
                     sep = ", ";
                 } else {
-                    BUG("%s: Index for %s is not supported", at->srcInfo, at->name);
+                    BUG("%s: Index %s for %s is not supported", at->srcInfo, call->index, at->name);
                 }
             } else {
                 out << sep << "$DIRECT";
@@ -2611,6 +2608,7 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
 
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
+    if (tbl->suppress_context_json) return;
     auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
     out << indent << "p4: { name: " << p4Name;
     if (auto k = tbl->match_table->getConstantProperty("size"))
@@ -3127,6 +3125,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, nullptr,
                    nullptr, tbl, false);
+        bool ok = false;
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
@@ -3140,9 +3139,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                                       false, true);
                     // FIXME: Assembler doesn't yet support payload bus/row for every table
                 }
+                ok = true;
                 break;
             }
         }
+        BUG_CHECK(ok, "No memory allocation for gateway");
         if (!tbl->layout.no_match_rams() || tbl->uses_gateway())
             gw_can_miss = emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else

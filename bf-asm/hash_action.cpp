@@ -210,7 +210,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
     stage_tbl["memory_resource_allocation"] = nullptr;
-    match_attributes["match_type"] = stage_tbl_type;
+    if (!match_attributes.count("match_type"))
+        match_attributes["match_type"] = stage_tbl_type;
     // This is a only a glass required field, as it is only required when no default action
     // is specified, which is impossible for Brig through p4-16
     stage_tbl["default_next_table"] = Stage::end_of_pipe();

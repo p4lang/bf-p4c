@@ -60,7 +60,8 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         memory[t->stage()].update(t->resources->memuse);
         action_data_bus[t->stage()].update(t);
         imems[t->stage()].update(t); }
-    if (t->match_table && t->get_provided_stage() >= 0 && t->stage() != t->get_provided_stage()) {
+    auto stage_pragma = t->get_provided_stage();
+    if (t->match_table && t->stage_split <= 0 && stage_pragma >= 0 && t->stage() != stage_pragma) {
         // FIXME -- move to TablePlacement
         addPlacementWarnError(BaseCompileContext::get().errorReporter().format_message(
                 "The stage specified for %s is %d, but we could not place it until stage %d",
@@ -118,7 +119,7 @@ void TableSummary::throwBacktrackException() {
     // Do not perform more than 5 rounds of table placement; this maximum would entail 3 rounds of
     // PHVs, 3 rounds of table placement with container conflicts, and 2 rounds of table placement
     // without container conflicts.
-    if (numInvoked[pipe_id] >= 5) {
+    if (final_placement || numInvoked[pipe_id] >= 5) {
         for (auto &msg : tablePlacementErrors)
             if (msg.first)
                 error(msg.second);
@@ -224,13 +225,13 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         safe_vector<ActionData::Format::Use> action_formats;
         StageUseEstimate::attached_entries_t attached_entries;
         LayoutChoices lc;
-        if (t->layout.ternary || t->layout.no_match_rams())
+        if (t->layout.ternary || t->layout.no_match_rams() || t->ways.empty())
             lo.emplace_back(t->layout, 0);
         else
             lo.emplace_back(t->layout, t->ways[0], 0);
         action_formats.push_back(t->resources->action_format);
-        lc.total_layout_options[t->name][LayoutChoices::NORMAL] = lo;
-        lc.total_action_formats[t->name][LayoutChoices::NORMAL] = action_formats;
+        lc.total_layout_options[t->name][ActionData::NORMAL] = lo;
+        lc.total_action_formats[t->name][ActionData::NORMAL] = action_formats;
 
         int entries = t->layout.entries;
         StageUseEstimate use(t, entries, attached_entries, &lc, false, true);

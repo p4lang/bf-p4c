@@ -12,10 +12,11 @@ class TableSummary;
 
 class TableAllocPass : public Logging::PassManager {
  private:
-    TablesMutuallyExclusive mutex;
-    IgnoreTableDeps ignore;
-    SharedIndirectAttachedAnalysis siaa;
-    LayoutChoices           lc;
+    IgnoreTableDeps                     ignore;
+    LayoutChoices                       lc;
+    SharedIndirectAttachedAnalysis      siaa;
+    SplitAttachedInfo                   att_info;
+    TablesMutuallyExclusive             mutex;
 
  public:
     TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps, TableSummary &);

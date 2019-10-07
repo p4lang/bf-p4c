@@ -56,6 +56,8 @@ class TableSummary: public MauInspector {
     // error messages to output if we can't backtrack.  Flag is true if the error should
     // be output as an error and false if it should just be a warning
     std::vector<std::pair<bool, cstring>> tablePlacementErrors;
+    /// flag to prevent any further backtracking after a final RedoTablePlacment.
+    bool final_placement = false;
 
     int pipe_id;
     const DependencyGraph& deps;
@@ -106,6 +108,7 @@ class TableSummary: public MauInspector {
     void addPlacementWarnError(cstring msg) { tablePlacementErrors.emplace_back(false, msg); }
     void clearPlacementErrors() { tablePlacementErrors.clear(); }
     int placementErrorCount() { return tablePlacementErrors.size(); }
+    void FinalizePlacement() { final_placement = true; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

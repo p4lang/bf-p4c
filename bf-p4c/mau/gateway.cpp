@@ -612,7 +612,7 @@ bool CollectGatewayFields::compute_offsets() {
         const PHV::FieldSlice &field = it->first;
         info_t &info = it->second;
         if (!info.need_range && !info.const_eq) continue;
-        int size = field.container_bytes();
+        int size = field.is_unallocated() ? (field.size() + 7)/8U : field.container_bytes();
         if (ixbar) {
             bool done = false;
             for (auto &f : ixbar->bit_use) {

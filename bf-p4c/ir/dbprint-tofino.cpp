@@ -105,7 +105,12 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
     for (auto &arg : args) {
         out << sep << *arg->type << ' ' << arg->name;
         sep = ", "; }
-    out << ") {" << indent;
+    out << ")";
+    if (miss_action_only) out << " @miss_only";
+    if (init_default) out << " @default";
+    if (!default_allowed) out << " @table_only";
+    if (is_constant_action) out << " @const";
+    out << " {" << indent;
     for (auto &p : action)
         out << endl << p;
     out << unindent << " }";

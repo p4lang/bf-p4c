@@ -257,8 +257,9 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
            actions == a.actions &&
            next == a.next &&
            match_key == a.match_key &&
-           always_run == a.always_run &&
            has_dark_init == a.has_dark_init &&
+           always_run == a.always_run &&
+           suppress_context_json == a.suppress_context_json &&
            layout == a.layout &&
            ways == a.ways &&
            resources == a.resources;
@@ -378,6 +379,13 @@ UniqueId IR::MAU::Table::unique_id(const IR::MAU::AttachedMemory *at, bool is_gw
 const IR::MAU::BackendAttached *IR::MAU::Table::get_attached(UniqueId id) const {
     for (auto *at : attached)
         if (unique_id(at->attached) == id)
+            return at;
+    return nullptr;
+}
+
+const IR::MAU::BackendAttached *IR::MAU::Table::get_attached(const AttachedMemory *am) const {
+    for (auto *at : attached)
+        if (at->attached == am)
             return at;
     return nullptr;
 }
@@ -647,17 +655,12 @@ cstring IR::MAU::Table::externalName() const {
 }
 
 void IR::MAU::Table::remove_gateway() {
-    std::set<cstring> gateway_rows_next_table;
-    for (auto &gw : gateway_rows) {
-        if (gw.second.isNull()) continue;
-        gateway_rows_next_table.insert(gw.second);
-    }
-
-    gateway_name = cstring();
+    for (auto &gw : gateway_rows)
+        next.erase(gw.second);
     gateway_rows.clear();
-    for (auto gw_next : gateway_rows_next_table) {
-        next.erase(gw_next);
-    }
+    gateway_name = cstring();
+    gateway_cond = cstring();
+    gateway_payload = nullptr;
 }
 
 cstring IR::MAU::Action::externalName() const {

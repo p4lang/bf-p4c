@@ -419,7 +419,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }
     if (size == 0) {
-        match_attributes["match_type"] = "match_with_no_key";
+        if (!match_attributes.count("match_type"))
+            match_attributes["match_type"] = "match_with_no_key";
         stage_tbl["stage_table_type"] = "match_with_no_key";
         stage_tbl["size"] = 1024; }
 }

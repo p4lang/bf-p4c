@@ -18,7 +18,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
                          [&](const PHV::Field::alloc_slice& alloc) {
         slices.push_back(alloc.field_bits());
     });
-    if (slices.size() == 1) return inst;  // nothing to split
+    BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %s", &use);
+    if (slices.size() <= 1) return inst;  // nothing to split
 
     auto split = new IR::Vector<IR::Primitive>();
     cstring opcode = inst->name;

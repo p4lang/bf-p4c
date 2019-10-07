@@ -998,6 +998,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     // methods that just forward to the underlying PHV::Field method
     int container_bytes() const { return field_i->container_bytes(range_i); }
     template<class FN> void foreach_byte(FN fn) const { field_i->foreach_byte(range_i, fn); }
+    bool is_unallocated() const { return field_i->is_unallocated(); }
 };
 
 std::ostream &operator<<(std::ostream &out, const Field &);
@@ -1170,15 +1171,9 @@ class PhvInfo {
 
     static int getDeparserStage() { return PhvInfo::deparser_stage; }
 
-    static std::set<int> minStage(cstring tableName) {
-        static std::set<int> emptySet;
-        if (!PhvInfo::table_to_min_stage.count(tableName)) return emptySet;
-        return PhvInfo::table_to_min_stage.at(tableName);
-    }
+    static std::set<int> minStage(const IR::MAU::Table *tbl);
 
-    static void addMinStageEntry(cstring tableName, int stage) {
-        PhvInfo::table_to_min_stage[tableName].insert(stage);
-    }
+    static void addMinStageEntry(const IR::MAU::Table *tbl, int stage);
 
     // When a gateway and a table is merged together, we need to make sure that the slices used in
     // the gateway are alive at the table with which it is merged. @returns true if the liveness
@@ -1266,7 +1261,6 @@ class PhvInfo {
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
             bool bridged, int offset);
-    void addTempVar(const IR::TempVar* tempVar, gress_t gress);
     void addPadding(const IR::Padding* padding, gress_t gress);
 
     template<typename Iter>
@@ -1299,6 +1293,7 @@ class PhvInfo {
 
  public:  // class PhvInfo
     explicit PhvInfo(SymBitMatrix& m) : field_mutex_i(m) {}
+    void addTempVar(const IR::TempVar* tempVar, gress_t gress);
 
     const PHV::Field *field(int idx) const {
         return size_t(idx) < by_id.size() ? by_id.at(idx) : 0; }

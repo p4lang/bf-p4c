@@ -28,11 +28,11 @@ struct StageUseEstimate {
     int meter_alus = 0;
     int stats_alus = 0;
 
-    safe_vector<LayoutOption> layout_options;
-    // safe_vector<ActionFormat::Use> action_formats;
+    ActionData::FormatType_t             format_type;
+    safe_vector<LayoutOption>            layout_options;
     safe_vector<ActionData::Format::Use> action_formats;
-    MeterALU::Format::Use meter_format;
-    size_t preferred_index;
+    MeterALU::Format::Use                meter_format;
+    size_t                               preferred_index;  // into layout_options
     StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;

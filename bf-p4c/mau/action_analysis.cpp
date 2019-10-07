@@ -373,12 +373,9 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             split_count++;
         });
 
-        bool split = true;
-        if (split_count == 1) split = false;
-        if (split_count == 0) {
-            cstring errorMessage = "PHV not allocated for field " + field->name;
-            ERROR(errorMessage);
-        }
+        BUG_CHECK(split_count > 0 || is_allowed_unalloc(field_action.write.expr),
+                  "PHV not allocated for field %s", field);
+        bool split = (split_count != 1);
 
         field->foreach_alloc(bits, tbl, &use,
                 [&](const PHV::Field::alloc_slice &alloc) {

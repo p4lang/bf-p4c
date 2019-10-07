@@ -3,22 +3,25 @@
 
 #include <sstream>
 #include "ir/ir.h"
+#include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 
-/** Until we support backtracking, all fields (including temporary fields) must
- * be created before PHV allocation.  This pass checks for fields that may have
- * been created afterwards and do not have a PHV allocation.
+/** If any fields (tempvars) were created after PHV allocation, we need to rerun
+ * allocation from scratch (currently) to get those field allocated.  It would be
+ * be better to do incremental allocation.
  */
 class CheckForUnallocatedTemps : public PassManager {
-    /** Produce the set of fields that are not fully allocated to PHV containers.
-     *
-     * @param unallocated Unallocated fields are added to this set.
-     */
-    static ordered_set<PHV::Field *>
-    collect_unallocated_fields(const PhvInfo &phv, const PhvUse &uses, const ClotInfo& clot) {
-        ordered_set<PHV::Field*> unallocated;
+    const PhvInfo &phv;
+    const PhvUse &uses;
+    const ClotInfo &clot;
+    ordered_set<PHV::Field*> unallocated_fields;
 
+    /** Produce the set of fields that are not fully allocated to PHV containers.
+     */
+    void collect_unallocated_fields() {
+        unallocated_fields.clear();
         for (auto& field : phv) {
             if (!uses.is_referenced(&field))
                 continue;
@@ -55,52 +58,22 @@ class CheckForUnallocatedTemps : public PassManager {
             }
 
             bitvec allBitsInField(0, field.size);
-            if (allocatedBits != allBitsInField) unallocated.insert(&field);
+            if (allocatedBits != allBitsInField) unallocated_fields.insert(&field);
         }
-
-        return unallocated;
     }
 
-    struct RejectTemps : public Inspector {
-        const PhvInfo &phv;
-        const PhvUse &uses;
-        const ClotInfo &clot;
-
-        RejectTemps(const PhvInfo& phv, const PhvUse &uses, const ClotInfo& clot) :
-            phv(phv), uses(uses), clot(clot) { }
-
-        const IR::Node *apply_visitor(const IR::Node *n, const char *name = 0) override {
-            if (name)
-                LOG1(name);
-
-            ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses, clot);
-            if (unallocated.size()) {
-                std::stringstream ss;
-                for (auto* f : unallocated)
-                    ss << f << std::endl;
-                BUG("Fields added after PHV allocation:\n%1%", ss.str()); }
-
-            return n;
-        }
-
-        bool preorder(const IR::Member *e) override {
-            if (!phv.field(e))
-                BUG("Field added after PHV allocation: %1%", e->toString());
-            return false;
-        }
-
-        bool preorder(const IR::TempVar *v) override {
-            if (!phv.field(v))
-                BUG("TempVar added after PHV allocation: %1%", v->toString());
-            return false;
-        }
-    };
-
  public:
-    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses, const ClotInfo& clot) {
+    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses, const ClotInfo& clot,
+                             PHV_AnalysisPass *phv_alloc)
+    : phv(phv), uses(uses), clot(clot) {
         addPasses({
             &uses,
-            new RejectTemps(phv, uses, clot) });
+            new VisitFunctor([this]() { collect_unallocated_fields(); }),
+            new PassIf([this]() { return !unallocated_fields.empty(); }, {
+                phv_alloc,
+                new VisitFunctor([]() { throw TablePlacement::RedoTablePlacement(); })
+            })
+        });
     }
 };
 

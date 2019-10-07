@@ -1381,8 +1381,10 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
         }
         index++;
     });
-    if (!ok)
-        ERROR("field " << field->name << " allocated to tagalong but used in MAU pipe");
+    if (!ok) {
+        // should be ok as we'll backtrack and redo layout after final PHV alloc.
+        LOG1("field " << field->name << " is not allocated in the PHV, ixbar alloc will be "
+             "incorrect"); }
 }
 
 /* Simple first step that aligns with the possible options for layout option way sizes.
@@ -2863,14 +2865,17 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         bitvec phv_src_inuse;
         for (auto &field : Values(sources.phv_sources)) {
             for (auto &slice : Values(field)) {
-                int alu_slot_index = phv_src_inuse.ffz();
+                int alu_slot_index = 0;
                 // If the SALU width is >= 32 and this source is less than
                 // 51 (Size of Hash Matrix Output) - 32 (Size of Input) = 19 bits
                 // we do NOT want to put it in slot 0, as it will fit in slot 1 and the other
                 // thing to be placed might not
-                if (salu->source_width() >= 32 && alu_slot_index == 0 &&
+                if (salu->source_width() >= 32 &&
                     slice->type->width_bits() <= METER_ALU_HASH_BITS - salu->source_width())
                     alu_slot_index++;
+                alu_slot_index = phv_src_inuse.ffz(alu_slot_index);
+                if (alu_slot_index > 1)
+                    return false;
                 int start_bit = alu_slot_index * salu->source_width();
                 if (start_bit + slice->type->width_bits() > METER_ALU_HASH_BITS)
                     return false;
