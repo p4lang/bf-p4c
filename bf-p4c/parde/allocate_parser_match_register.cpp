@@ -89,11 +89,13 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
             next->selects.apply(max_save);
             next->statements.apply(max_save);
 
-            return int(t->shift + (max_save.rv + 7) / 8) >
+            if (max_save.rv >= 0) {
+                return int(t->shift + max_save.rv / 8 + 1) >
                    Device::pardeSpec().byteInputBufferSize();
-        } else {
-            return false;
+            }
         }
+
+        return false;
     }
 
     IR::BFN::Transition* postorder(IR::BFN::Transition* t) override {
