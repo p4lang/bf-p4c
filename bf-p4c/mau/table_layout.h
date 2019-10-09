@@ -47,14 +47,16 @@ class LayoutOption {
 class LayoutChoices {
  public:
     using FormatType_t = ActionData::FormatType_t;
-    using LayoutOptionsPerType = std::map<int, safe_vector<LayoutOption>>;
-    using ActionFormatsPerType = std::map<int, safe_vector<ActionData::Format::Use>>;
+    using LayoutOptionsPerType = std::map<ActionData::FormatType_t, safe_vector<LayoutOption>>;
+    using ActionFormatsPerType =
+            std::map<ActionData::FormatType_t, safe_vector<ActionData::Format::Use>>;
 
     std::map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
     std::map<cstring, LayoutOptionsPerType> total_layout_options;
     std::map<cstring, ActionFormatsPerType> total_action_formats;
 
-    safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t, int type) const {
+    safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t,
+                                                 ActionData::FormatType_t type) const {
         safe_vector<LayoutOption> empty;
         if (t == nullptr)
             return empty;
@@ -67,7 +69,7 @@ class LayoutChoices {
     }
 
     safe_vector<ActionData::Format::Use> get_action_formats(const IR::MAU::Table *t,
-        int type) const;
+                                                            ActionData::FormatType_t type) const;
     MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t) const {
         MeterALU::Format::Use empty;
         if (t == nullptr)

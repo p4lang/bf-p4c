@@ -180,7 +180,7 @@ void Format::build_use(OperationsPerAction &ops_per_action, Use *use) {
         auto &alu_positions = use->alu_positions[entry.first];
         for (auto *init_alu_op : entry.second) {
             auto parameter_positions = init_alu_op->parameter_positions();
-            int byte_offset;
+            int byte_offset = -1;
             for (auto param_pos : parameter_positions) {
                 auto ma = param_pos.second->to<ActionData::MeterALU>();
                 BUG_CHECK(ma != nullptr, "All parameters must be from meter ALUs currently");
@@ -188,6 +188,7 @@ void Format::build_use(OperationsPerAction &ops_per_action, Use *use) {
                 byte_offset = bit_offset / 8;
                 break;
             }
+            BUG_CHECK(byte_offset >= 0, "no parameter from meter ALU");
             auto alu_op = init_alu_op->add_right_shift(init_alu_op->hw_right_shift(), nullptr);
             alu_positions.emplace_back(alu_op, ActionData::METER_ALU, byte_offset);
             use->table_bus_inputs[alu_op->index()].setrange(byte_offset, alu_op->size() / 8);

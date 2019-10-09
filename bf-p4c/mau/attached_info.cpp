@@ -226,7 +226,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
         int index_width = index->type->width_bits();
         if (index_width > addr_bits)
             index = MakeSlice(index, 0, addr_bits - 1);
-        else if (index_width < addr_bits)
+        else if (index_width > 0 && index_width < addr_bits)
             dest = MakeSlice(dest, 0, index_width - 1);
         return new IR::MAU::Instruction(act->srcInfo, "set", dest, index); }
     return nullptr;

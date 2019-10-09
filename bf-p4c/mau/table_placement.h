@@ -96,6 +96,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool backtrack(trigger &) override;
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
+    IR::Node *postorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Node *preorder(IR::MAU::BackendAttached *) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;

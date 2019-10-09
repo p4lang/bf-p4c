@@ -85,7 +85,7 @@ TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
                                const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
                                SplitAttachedInfo &sia, TableSummary &summary_)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), att_info(sia), ddm(ntp, con_paths, *d),
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d), att_info(sia),
   summary(summary_) {}
 
 bool TablePlacement::backtrack(trigger &trig) {
@@ -2377,17 +2377,17 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
             }
         }
     }
+    return seq;
+}
 
+IR::Node *TablePlacement::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
-                int a_logical_id = find_placed(a->name)->second->logical_id;
-                int b_logical_id = find_placed(b->name)->second->logical_id;
-                if (a_logical_id != b_logical_id)
-                    return a_logical_id < b_logical_id;
-                return a->logical_split < b->logical_split;
+                return a->logical_id < b->logical_id;
         });
     }
+    seq->deps.clear();  // FIXME -- not needed/valid?  perhaps set to all 1s?
     return seq;
 }
 

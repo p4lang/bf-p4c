@@ -69,6 +69,7 @@ class GTestTablePlacement : public PassManager {
         }
 
         void end_apply() override {
+            // FIXME -- this doesn't actually test anything -- what should it test?
             typename FlowGraph::Graph::edge_iterator edge_it, edges_end;
             for (boost::tie(edge_it, edges_end) = boost::edges(fg.g); edge_it != edges_end;
                  ++edge_it) {
@@ -82,8 +83,8 @@ class GTestTablePlacement : public PassManager {
                     continue;
                 }
 
-                int src_pos = table_to_logical_position.at(src);
-                int dst_pos = table_to_logical_position.at(dst);
+                /* int src_pos = */ table_to_logical_position.at(src);
+                /* int dst_pos = */ table_to_logical_position.at(dst);
             }
         }
 
@@ -352,7 +353,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), 1);  // Should be able to merge
+    ASSERT_EQ(nt->get_num_lbs(), 1U);  // Should be able to merge
 }
 
 /* Checks that no merge occurs when one use ends on the same stage that another begins when the uses
@@ -423,7 +424,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), 2);  // Can't merge!
+    ASSERT_EQ(nt->get_num_lbs(), 2U);  // Can't merge!
 }
 
 /* Checks that a merge occurs when one use ends one stage before another begins when the uses
@@ -494,7 +495,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), 1);
+    ASSERT_EQ(nt->get_num_lbs(), 1U);
 }
 
 /* Checks that tags are successfully merged when we require 9 tags. All of the tags are from stage 0
@@ -736,8 +737,8 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());  // Check reduction success
-    ASSERT_EQ(nt->get_num_dts(), 12);  // Every possible merge requires 12 tables
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));  // Check reduction success
+    ASSERT_EQ(nt->get_num_dts(), 12U);  // Every possible merge requires 12 tables
 }
 
 /* Same as last, but now we have an optimal merge choice. The LBUses between t15 and t16 spans stage
@@ -980,8 +981,8 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());  // Check reduction success
-    ASSERT_EQ(nt->get_num_dts(), 3);  // Merge final two tags with only 3 tables
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));  // Check reduction success
+    ASSERT_EQ(nt->get_num_dts(), 3U);  // Merge final two tags with only 3 tables
 }
 
 /* Same as last, but now we have two partial overlaps. Best to select the one that only requires 1
@@ -1223,8 +1224,8 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());
-    ASSERT_EQ(nt->get_num_dts(), 1);
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
+    ASSERT_EQ(nt->get_num_dts(), 1U);
 }
 
 /* Same as OnGressFullOverlap, but now the 9th tag is on the other gress. Since these are fully
@@ -1472,8 +1473,8 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());
-    ASSERT_EQ(nt->get_num_dts(), 2);  // Add two tags to the 7-10 use to eliminate it
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
+    ASSERT_EQ(nt->get_num_dts(), 2U);  // Add two tags to the 7-10 use to eliminate it
 }
 
 /* Same as last, but we are no longer fully overlapping. This is a difficult corner case, as merging
@@ -1722,8 +1723,8 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());
-    ASSERT_EQ(nt->get_num_dts(), 4);  // Add 4 to either partial overlaps is sufficient
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
+    ASSERT_EQ(nt->get_num_dts(), 4U);  // Add 4 to either partial overlaps is sufficient
 }
 
 /* Assures that when partial overlaps are avaiable they are not always selected. Here, we have a tag
@@ -1998,8 +1999,8 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());
-    ASSERT_EQ(nt->get_num_dts(), 3);  // Need to add 3 tables from stages 3-5 to the tag on egress
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
+    ASSERT_EQ(nt->get_num_dts(), 3U);  // Need to add 3 tables from stages 3-5 to the tag on egress
 }
 
 /* The "big, bad" test. Cross gress merging is required but there are multiple uses that partially
@@ -2273,8 +2274,8 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
     ASSERT_TRUE(test);
     NextTable* nt = new NextTable();
     test->pipe = runMockPasses(test->pipe, nt);
-    ASSERT_EQ(nt->get_num_lbs(), Device::numLongBranchTags());
-    ASSERT_EQ(nt->get_num_dts(), 4);  // Best option is to add 4 tables to deal with the
+    ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
+    ASSERT_EQ(nt->get_num_dts(), 4U);  // Best option is to add 4 tables to deal with the
                                       // double-partial overlap.
 }
 }  // namespace Test

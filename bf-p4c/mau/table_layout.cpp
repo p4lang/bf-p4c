@@ -19,7 +19,7 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
 }
 
 safe_vector<ActionData::Format::Use> LayoutChoices::get_action_formats(const IR::MAU::Table *t,
-        int type) const {
+        ActionData::FormatType_t type) const {
     safe_vector<ActionData::Format::Use> empty;
     if (t == nullptr)
         return empty;
@@ -683,16 +683,17 @@ void DoTableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl,
     // data bus.  Action data bus allocation could properly be optimized a lot more before this
     // choice would have to be made
     for (int i = 0; i < ActionData::FORMAT_TYPES; i++) {
-        auto uses = lc.get_action_formats(tbl, i);
+        ActionData::FormatType_t format_type = static_cast<ActionData::FormatType_t>(i);
+        auto uses = lc.get_action_formats(tbl, format_type);
         if (uses.empty())
             continue;
         auto &use = uses.back();
-        IR::MAU::Table::Layout layout = layouts_per_type[i];
+        IR::MAU::Table::Layout layout = layouts_per_type[format_type];
         layout.immediate_bits = use.immediate_bits();
         layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
         layout.overhead_bits += use.immediate_bits();
         LayoutOption lo(layout, uses.size() - 1);
-        lc.total_layout_options[tbl->name][i].push_back(lo);
+        lc.total_layout_options[tbl->name][format_type].push_back(lo);
     }
 }
 
