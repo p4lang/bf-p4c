@@ -351,7 +351,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Name '.*' is used for multiple Register objects in the P4Info message"
   p4_16_internal_p4_16_t2na_fifo
-  p4_16_internal_p4_16_t2na_pgr
 )
 
 # P4C-2091

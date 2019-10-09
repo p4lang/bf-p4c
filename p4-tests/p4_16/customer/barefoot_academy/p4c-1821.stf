@@ -1,2 +1,5 @@
-expect 1 ffffffffffff001c42ee37d608060001080006040001001c42ee37d60ad33718ffffffffffffffffffff
-packet 0 ffffffffffff001c42ee37d608060001080006040001001c42ee37d60ad33718ffffffffffffffffffff
+
+#        ethernet                      | arp header       | arp_ipv4_h
+#        dst_addr     src_addr     type|hw  proto         |src_hw_addr  src_ip   dst_hw_addr  dst_ip
+packet 0 ffffffffffff 001c42ee37d6 0806 0001 0800 06040001 001c42ee37d6 0ad33718 ffffffffffff ffffffff
+expect 0 001c42ee37d6 000000000000 0806 0001 0800 06040002 000000000000 ffffffff 001c42ee37d6 0ad33718
