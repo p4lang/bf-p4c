@@ -68,28 +68,6 @@ class Pragmas : public PassManager {
     const PragmaDeparserZero& pa_deparser_zero() const    { return pa_deparser_zero_i; }
     PragmaDeparserZero& pa_deparser_zero()                { return pa_deparser_zero_i; }
 
-    explicit Pragmas(PhvInfo& phv, const BFN_Options &options)
-        : pa_container_sizes_i(phv, options.disabled_pragmas),
-          pa_mutually_exclusive_i(phv, options.disabled_pragmas),
-          pa_solitary_i(phv, options.disabled_pragmas),
-          pa_atomic_i(phv, options.disabled_pragmas),
-          pa_no_overlay_i(phv, options.disabled_pragmas),
-          pa_container_type_i(phv, options.disabled_pragmas),
-          pa_no_init_i(phv, options.disabled_pragmas),
-          pa_deparser_zero_i(phv, options.disabled_pragmas) {
-        addPasses({
-            &pa_container_sizes_i,
-            &pa_mutually_exclusive_i,
-            &pa_solitary_i,
-            &pa_atomic_i,
-            &pa_no_overlay_i,
-            &pa_container_type_i,
-            &pa_no_init_i,
-            &pa_deparser_zero_i
-        });
-    }
-
-    // Constructor only used for GTest.
     explicit Pragmas(PhvInfo& phv)
         : pa_container_sizes_i(phv),
           pa_mutually_exclusive_i(phv),

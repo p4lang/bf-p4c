@@ -30,7 +30,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         MauBacktracker& alloc)
     : Logging::PassManager("phv_allocation_"),
       table_alloc(alloc),
-      pragmas(phv, options),
+      pragmas(phv),
       field_to_parser_states(phv),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),

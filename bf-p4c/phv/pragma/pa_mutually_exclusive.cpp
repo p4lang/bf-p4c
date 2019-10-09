@@ -20,8 +20,6 @@ const char *PragmaMutuallyExclusive::help =
     "option to do so.  The gress value can be either ingress or egress.";
 
 bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaMutuallyExclusive::name))
-        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             ::warning("%1%", "@pragma pa_mutually_exclusive's arguments must be strings, skipped");

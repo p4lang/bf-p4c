@@ -688,7 +688,6 @@ class FlexiblePacking : public Logging::PassManager {
 
  public:
     explicit FlexiblePacking(
-            const BFN_Options& o,
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,

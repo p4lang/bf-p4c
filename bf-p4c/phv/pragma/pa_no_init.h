@@ -11,7 +11,6 @@
   */
 class PragmaNoInit : public Inspector {
     const PhvInfo& phv_i;
-    std::set<cstring> disable_pragmas;
 
     /// List of fields for which the pragma pa_no_init has been specified
     /// Used to print logging messages
@@ -29,9 +28,6 @@ class PragmaNoInit : public Inspector {
 
  public:
     explicit PragmaNoInit(const PhvInfo& phv) : phv_i(phv) { }
-
-    explicit PragmaNoInit(const PhvInfo& phv, const std::set<cstring> disable)
-        : phv_i(phv), disable_pragmas(disable) { }
 
     /// BFN::Pragma interface
     static const char *name;

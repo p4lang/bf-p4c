@@ -125,8 +125,6 @@ bool PragmaAlias::addAlias(
 }
 
 void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaAlias::name))
-        return;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             ::warning("%1%", "@pragma pa_alias's arguments must be strings, skipped");

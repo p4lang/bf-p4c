@@ -96,7 +96,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     bridged_fields(phv),
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
-    flexiblePacking = new FlexiblePacking(options, phv, uses, deps, bridged_fields,
+    flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
                                           extracted_together, table_alloc);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
@@ -148,7 +148,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Aliasing replaces all uses of the alias source field with the alias destination field.
         // Therefore, run it first in the backend to ensure that all other passes use a union of the
         // constraints of the alias source and alias destination fields.
-        new Alias(phv, options),
+        new Alias(phv),
         new CollectPhvInfo(phv),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.

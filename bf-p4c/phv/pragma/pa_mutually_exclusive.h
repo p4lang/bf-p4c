@@ -15,8 +15,6 @@
  */
 class PragmaMutuallyExclusive : public Inspector {
     const PhvInfo& phv_i;
-    const std::set<cstring> disable_pragmas;
-
     ordered_map<const PHV::Field*, ordered_set<const PHV::Field*>> pa_mutually_exclusive_i;
 
     profile_t init_apply(const IR::Node* root) override {
@@ -31,9 +29,6 @@ class PragmaMutuallyExclusive : public Inspector {
 
  public:
     explicit PragmaMutuallyExclusive(const PhvInfo& phv) : phv_i(phv) { }
-
-    explicit PragmaMutuallyExclusive(const PhvInfo& phv, const std::set<cstring> disable)
-        : phv_i(phv), disable_pragmas(disable) { }
 
     /// BFN::Pragma interface
     static const char *name;

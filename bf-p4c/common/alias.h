@@ -84,8 +84,7 @@ class Alias : public PassManager {
      PragmaAlias pragmaAlias;
 
  public:
-    explicit Alias(PhvInfo& phv, const BFN_Options &options)
-        : pragmaAlias(phv, options.disabled_pragmas) {
+    explicit Alias(PhvInfo& phv) : pragmaAlias(phv) {
         addPasses({
             &pragmaAlias,
             new AutoAlias(phv, pragmaAlias),

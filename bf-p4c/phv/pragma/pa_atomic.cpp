@@ -51,8 +51,6 @@ bool PragmaAtomic::add_constraint(cstring field_name) {
 }
 
 bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaAtomic::name))
-        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

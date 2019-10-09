@@ -2133,7 +2133,6 @@ std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std:
 }
 
 FlexiblePacking::FlexiblePacking(
-        const BFN_Options& o,
         PhvInfo& p,
         const PhvUse& u,
         DependencyGraph& dg,

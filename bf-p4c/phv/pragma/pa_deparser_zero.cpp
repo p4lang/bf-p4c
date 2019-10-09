@@ -34,9 +34,6 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
                 supported_pragmas->end())
             continue;
 
-        if (disable_pragmas.count(pragma_name))
-            continue;
-
         auto& exprs = annotation->expr;
         // check pragma argument
         if (exprs.size() != 2) {

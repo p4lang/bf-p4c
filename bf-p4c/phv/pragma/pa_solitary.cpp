@@ -19,8 +19,6 @@ const char *PragmaSolitary::help = "@pragma pa_solitary gress instance_name.fiel
     "not a multiple of eight or the field is not byte aligned.";
 
 bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaSolitary::name))
-        return false;
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

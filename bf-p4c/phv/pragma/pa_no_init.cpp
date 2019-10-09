@@ -36,9 +36,6 @@ const char *PragmaNoInit::help = "@pragma pa_no_init gress inst_name.field_name\
     "control flow path is exercised, the field will have an unknown value.";
 
 bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaNoInit::name))
-        return false;
-
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

@@ -18,13 +18,13 @@ set (GTS_ARISTA_PR
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-977/comp_977.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/DRV-543/case2499.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
-)  
+)
 
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "base" "${GTS_ARISTA_PR}")
 
 # Add additional flags to some customer tests
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4"
-  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\" -Xp4c=\"--disable-pragma=pa_container_size\"")
+  "--backward-compatible -to 600 -Xp4c=\"--no-power-check\" --disable-pragmas=pa_container_size")
 
 p4c_add_bf_backend_tests("tofino" "tofino" "v1model" "arista" "${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4"
   "--backward-compatible -to 600 -Xp4c=\"--no-power-check\"")

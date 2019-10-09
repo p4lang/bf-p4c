@@ -29,9 +29,6 @@ bool PragmaNoOverlay::add_constraint(cstring field_name) {
 }
 
 bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
-    if (disable_pragmas.count(PragmaNoOverlay::name))
-        return false;
-
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
             // We only have stringLiteral in IR, no IntLiteral.

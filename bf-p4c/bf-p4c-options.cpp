@@ -111,18 +111,6 @@ BFN_Options::BFN_Options() {
             phv_scale_factor = temp;
             return true; },
          "Scale number of phvs by a factor");
-    registerOption("--disable-pragma", "arg",
-        [this](const char* arg) {
-            if (std::find(CollectGlobalPragma::g_global_pragma_names->begin(),
-                          CollectGlobalPragma::g_global_pragma_names->end(),
-                          arg)
-                    == CollectGlobalPragma::g_global_pragma_names->end()) {
-                ::error("Unsupported pragma specified with disable-pragma: %1%", arg);
-                return false;
-            }
-            disabled_pragmas.insert(cstring(arg));
-            return true; },
-        "Disable specified pragmas");
     registerOption("--no-phv-privatization", nullptr,
         [this](const char *) { privatization = false; return true; },
         "Do not use TPHV/PHV privatization");
