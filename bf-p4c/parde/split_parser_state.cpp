@@ -991,13 +991,14 @@ struct AllocateParserState : public ParserTransform {
             }
         };
 
-        IR::BFN::ParserState* insert_stall_if_needed(IR::BFN::ParserState* state) {
+        IR::BFN::ParserState*
+        insert_stall_if_needed(IR::BFN::ParserState* state, cstring prefix, unsigned idx) {
             auto shift = get_state_shift(state);
 
             if (int(shift) <= Device::pardeSpec().byteInputBufferSize())
                 return nullptr;
 
-            cstring name = state->name + ".$stall";
+            cstring name = prefix + ".$stall_" + cstring::to_cstring(idx);
             auto stall = new IR::BFN::ParserState(state->p4State, name, state->gress);
 
             auto stall_amt = Device::pardeSpec().byteInputBufferSize();
@@ -1027,12 +1028,16 @@ struct AllocateParserState : public ParserTransform {
 
                 // need to insert stall if next state is not reachable from current state
                 // (if the shift is greater than input buffer size)
-                if (auto stall = insert_stall_if_needed(state)) {
-                    LOG2("inserted stall after " << state->name);
-                    return {stall};
-                } else {
-                    return {};
+                unsigned idx = 0;
+                IR::BFN::ParserState* stall = state;
+                std::vector<IR::BFN::ParserState*> splits;
+
+                while (stall = insert_stall_if_needed(stall, prefix, idx++)) {
+                    LOG2("inserted stall after " << stall->name);
+                    splits.push_back(stall);
                 }
+
+                return splits;
             }
 
             VerifySplitStates verify(state);
