@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include <boost/range/adaptors.hpp>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/algorithm.h"
 #include "lib/log.h"
