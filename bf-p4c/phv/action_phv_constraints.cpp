@@ -1926,7 +1926,26 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             else
                 per_unallocated_source[packing_slice] =
                     PHV::Allocation::ConditionalConstraintData(bitPosition); }
-        rv[kv_unallocated.first] = per_unallocated_source; }
+
+        // Make sure that the same set of conditional constraints have not been generated for any
+        // other source.
+        bool conditionalConstraintFound = false;
+        for (auto kv1 : rv) {
+            if (kv1.second.size() != per_unallocated_source.size()) continue;
+            bool individualConditionMatch = true;
+            for (auto& kv2 : per_unallocated_source) {
+                // If slice not found, then this conditional source does not match.
+                individualConditionMatch = kv1.second.count(kv2.first) &&
+                    (kv1.second.at(kv2.first) == kv2.second);
+                if (!individualConditionMatch) break;
+            }
+            conditionalConstraintFound = individualConditionMatch;
+            if (conditionalConstraintFound) break;
+        }
+        if (!conditionalConstraintFound)
+            rv[kv_unallocated.first] = per_unallocated_source;
+    }
+
     return rv;
 }
 
