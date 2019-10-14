@@ -682,6 +682,14 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
     return true;
 }
 
+static int count_sful_actions(const IR::MAU::Table *tbl) {
+    int rv = 0;
+    for (auto act : Values(tbl->actions))
+        if (!act->stateful_calls.empty())
+            ++rv;
+    return rv;
+}
+
 bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_stage) {
     Memories current_mem;
     // This is to guarantee for Tofino to have at least a table per gress within a stage, as
@@ -700,6 +708,11 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
             }
         }
     }
+
+    if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED &&
+        count_sful_actions(next->table) > 1) {
+        error_message = "splitting attached tables invkoed from multiple actions not supported";
+        return false; }
 
     if (shrink_lt)
         current_mem.shrink_allowed_lts();
@@ -1243,7 +1256,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     if (rv->stage > furthest_stage) {
         if (error_message == "")
             error_message = "Unknown error for stage advancement?";
-        ::error("Could not place %s: %s", rv->table, error_message);
+        error("Could not place %s: %s", rv->table, error_message);
         return nullptr;
     }
 
@@ -1812,13 +1825,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 it++; } }
         if (work.empty()) break;
         if (trial.empty()) {
-            ::error("Table placement cannot make any more progress.  Though some tables have "
-                    "not yet been placed, dependency analysis has found that no more tables are "
-                    "placeable.%1%", partly_placed.empty() ? "" :
-                    "  This may be due to shared attachments on partly placed tables; may be "
-                    "able to avoid the problem with @stage on those tables");
+            error("Table placement cannot make any more progress.  Though some tables have "
+                  "not yet been placed, dependency analysis has found that no more tables are "
+                  "placeable.%1%", partly_placed.empty() ? "" :
+                  "  This may be due to shared attachments on partly placed tables; may be "
+                  "able to avoid the problem with @stage on those tables");
             for (auto *tbl : partly_placed)
-                ::error("partly placed: %s", tbl);
+                error("partly placed: %s", tbl);
             break; }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;

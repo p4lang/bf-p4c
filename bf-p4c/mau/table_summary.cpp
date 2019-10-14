@@ -47,6 +47,9 @@ void TableSummary::end_apply() {
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
+    if (t->logical_id < 0) {
+        addPlacementError(t->toString() + " not placed");
+        return true; }
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);
     order[t->logical_id] = t;
@@ -121,10 +124,10 @@ void TableSummary::throwBacktrackException() {
     // without container conflicts.
     if (final_placement || numInvoked[pipe_id] >= 5) {
         for (auto &msg : tablePlacementErrors)
-            if (msg.first)
-                error(msg.second);
+            if (msg.second)
+                error(msg.first);
             else
-                warning(msg.second);
+                warning(msg.first);
         return; }
 
     // First round.

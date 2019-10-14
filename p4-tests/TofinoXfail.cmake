@@ -977,7 +977,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not place table"
   ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
   ../glass/testsuite/p4_tests/noviflow/COMPILER-1175/comp_1175.p4
   )
 

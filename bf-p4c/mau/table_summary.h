@@ -53,9 +53,10 @@ class TableSummary: public MauInspector {
     bool ingressDone;
     bool egressDone;
     /// Flag if we've found a placement problem that will require retrying.  Strings are
-    // error messages to output if we can't backtrack.  Flag is true if the error should
-    // be output as an error and false if it should just be a warning
-    std::vector<std::pair<bool, cstring>> tablePlacementErrors;
+    // error messages to output if we can't backtrack, stored in an ordered_map to suppress
+    // duplicates.  Flag is true if the error should be output as an error and false if it
+    // should just be a warning
+    ordered_map<cstring, bool> tablePlacementErrors;
     /// flag to prevent any further backtracking after a final RedoTablePlacment.
     bool final_placement = false;
 
@@ -104,8 +105,8 @@ class TableSummary: public MauInspector {
     const ordered_map<cstring, ordered_set<int>>& getTableAlloc(void) const { return tableAlloc; }
 
     // only called by TablePlacement
-    void addPlacementError(cstring msg) { tablePlacementErrors.emplace_back(true, msg); }
-    void addPlacementWarnError(cstring msg) { tablePlacementErrors.emplace_back(false, msg); }
+    void addPlacementError(cstring msg) { tablePlacementErrors[msg] = true; }
+    void addPlacementWarnError(cstring msg) { tablePlacementErrors[msg] |= false; }
     void clearPlacementErrors() { tablePlacementErrors.clear(); }
     int placementErrorCount() { return tablePlacementErrors.size(); }
     void FinalizePlacement() { final_placement = true; }
