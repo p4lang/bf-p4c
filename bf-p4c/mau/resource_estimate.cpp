@@ -844,17 +844,13 @@ int StageUseEstimate::stages_required() const {
    different layout options can be while still using up to the number of srams */
 bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
                                         int &entries, attached_entries_t &attached_entries) {
-    // Remove the hash action layout option
-    auto it = layout_options.begin();
-    while (it != layout_options.end()) {
-        if (it->layout.hash_action)
-            it = layout_options.erase(it);
-        else
-            it++;
-    }
-
-    if (layout_options.size() == 0)
+    if (std::all_of(layout_options.begin(), layout_options.end(),
+                    [](LayoutOption &lo) { return lo.layout.hash_action; }))
         return false;
+
+    // Remove the hash action layout option(s)
+    layout_options.erase(std::remove_if(layout_options.begin(), layout_options.end(),
+            [](LayoutOption &lo) { return lo.layout.hash_action; }), layout_options.end());
 
     for (auto &lo : layout_options) {
         lo.clear_mems();

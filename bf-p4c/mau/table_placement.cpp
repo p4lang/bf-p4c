@@ -1168,10 +1168,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             // multiple stages.
             if (rv->table->has_dark_init) {
                 LOG3("    Table with dark initialization cannot be split");
+                error_message = "Can't split this table across stages and it's "
+                                "too big for one stage";
                 advance_to_next_stage = true;
                 break;
             }
             if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries)) {
+                error_message = "Can't split this table across stages and it's "
+                                "too big for one stage";
                 advance_to_next_stage = true;
                 break;
             }
