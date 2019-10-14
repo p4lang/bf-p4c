@@ -240,17 +240,17 @@ bool CollectVarbitExtract::preorder(const IR::AssignmentStatement* astmt) {
         bool seen_varbit = state_to_varbit_header.count(state);
         if (!seen_varbit) return false;
         auto right = astmt->right;
-        if (right->is<IR::BFN::ReinterpretCast>()) {
+        if (right->is<IR::BFN::ReinterpretCast>())
             right = right->to<IR::BFN::ReinterpretCast>()->expr;
-        }
-        auto mc = right->to<IR::MethodCallExpression>();
-        if (auto* method = mc->method->to<IR::Member>()) {
-            if (auto path = method->expr->to<IR::PathExpression>()) {
-                auto type = path->type->to<IR::Type_Extern>();
-                if (!type) return false;
-                if (type->name != "Checksum") return false;
-                if (method->member == "verify") {
-                    state_to_csum_verify[state] = astmt;
+
+        if (auto mc = right->to<IR::MethodCallExpression>()) {
+            if (auto method = mc->method->to<IR::Member>()) {
+                if (auto path = method->expr->to<IR::PathExpression>()) {
+                    auto type = path->type->to<IR::Type_Extern>();
+                    if (!type) return false;
+                    if (type->name != "Checksum") return false;
+                    if (method->member == "verify")
+                        state_to_csum_verify[state] = astmt;
                 }
             }
         }

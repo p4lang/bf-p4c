@@ -1223,11 +1223,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/issue-1559.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Invalid entry in checksum calculation"
-  testdata/p4_16_samples/issue1765-bmv2.p4
-)
-
 # varbit related starts
 p4c_add_xfail_reason("tofino"
   "No varbit length encoding variable in"
@@ -1241,8 +1236,10 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  ".* expected packet on port .* not seen"
+  ".* expected packet.* on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
+  testdata/p4_16_samples/checksum1-bmv2.p4
+  testdata/p4_16_samples/issue1025-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1344,13 +1341,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/array-copy-bmv2.p4
-  testdata/p4_16_samples/checksum1-bmv2.p4
-  testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue1409-bmv2.p4
-  testdata/p4_16_samples/issue1560-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
-  testdata/p4_16_samples/issue355-bmv2.p4
-  testdata/p4_16_samples/issue1765-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"

@@ -115,10 +115,14 @@ struct ParserPragmas : public Inspector {
 static const IR::BFN::PacketRVal*
 rewriteLookahead(P4::TypeMap* typeMap,
                  const IR::MethodCallExpression* call,
-                 const IR::Slice* slice,
-                 int bitShift) {
+                 int bitShift,
+                 const IR::Slice* slice = nullptr,
+                 const IR::Member* member = nullptr) {
     BUG_CHECK(call->typeArguments->size() == 1,
               "Expected 1 type parameter for %1%", call);
+
+    if (slice && member) BUG("Invalid use of function rewriteLookahead");
+
     auto* typeArg = call->typeArguments->at(0);
     auto* typeArgType = typeMap->getTypeType(typeArg, true);
     int width = typeArgType->width_bits();
@@ -135,6 +139,17 @@ rewriteLookahead(P4::TypeMap* typeMap,
 
         auto lookaheadRange = *toClosedRange(lookaheadInterval);
         finalRange = lookaheadRange.shiftedByBits(bitShift);
+    } else if (member) {
+        auto header = typeArgType->to<IR::Type_Header>();
+        unsigned offset = 0;
+
+        for (auto f : header->fields) {
+            if (f->name == member->member)
+                break;
+            offset += f->type->width_bits();
+        }
+
+        finalRange = nw_bitrange(StartLen(bitShift + offset, member->type->width_bits()));
     } else {
         finalRange = nw_bitrange(StartLen(bitShift, width));
     }
@@ -1061,7 +1076,7 @@ struct RewriteParserStatements : public Transform {
             if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
                 if (auto* mem = call->method->to<IR::Member>()) {
                     if (mem->member == "lookahead") {
-                        auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
+                        auto rval = rewriteLookahead(typeMap, call, currentBit, slice);
                         return new IR::BFN::Extract(s->srcInfo, lhs, rval);
                     }
                 }
@@ -1069,8 +1084,17 @@ struct RewriteParserStatements : public Transform {
         } else if (auto* call = rhs->to<IR::MethodCallExpression>()) {
             if (auto* mem = call->method->to<IR::Member>()) {
                 if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, slice, currentBit);
+                    auto rval = rewriteLookahead(typeMap, call, currentBit);
                     return new IR::BFN::Extract(s->srcInfo, lhs, rval);
+                }
+            }
+        } else if (auto* member = rhs->to<IR::Member>()) {
+            if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
+                if (auto* mem = call->method->to<IR::Member>()) {
+                    if (mem->member == "lookahead") {
+                        auto rval = rewriteLookahead(typeMap, call, currentBit, nullptr, member);
+                        return new IR::BFN::Extract(s->srcInfo, lhs, rval);
+                    }
                 }
             }
         }
@@ -1189,7 +1213,7 @@ const IR::Node*
 GetBackendParser::rewriteLookaheadExpr(const IR::MethodCallExpression* call,
                                        const IR::Slice* slice,
                                        int bitShift, nw_bitrange& bitrange) {
-    auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
+    auto rval = rewriteLookahead(typeMap, call, bitShift, slice);
     auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
     bitrange = rval->range;
     return select;
@@ -1225,7 +1249,7 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
         if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
             if (auto* mem = call->method->to<IR::Member>()) {
                 if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, slice, bitShift);
+                    auto rval = rewriteLookahead(typeMap, call, bitShift, slice);
                     auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
                     bitrange = rval->range;
                     return select;
@@ -1235,10 +1259,21 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
     } else if (auto* call = selectExpr->to<IR::MethodCallExpression>()) {
         if (auto* mem = call->method->to<IR::Member>()) {
             if (mem->member == "lookahead") {
-                auto rval = rewriteLookahead(typeMap, call, nullptr, bitShift);
+                auto rval = rewriteLookahead(typeMap, call, bitShift);
                 auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
                 bitrange = rval->range;
                 return select;
+            }
+        }
+    } else if (auto* member = selectExpr->to<IR::Member>()) {
+        if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
+            if (auto* mem = call->method->to<IR::Member>()) {
+                if (mem->member == "lookahead") {
+                    auto rval = rewriteLookahead(typeMap, call, bitShift, nullptr, member);
+                    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
+                    bitrange = rval->range;
+                    return select;
+                }
             }
         }
     }
