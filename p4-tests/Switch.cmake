@@ -112,25 +112,25 @@ set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x0.p4)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -arch tna")
+  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile")
 
 set (SWITCH_P4_16_X1 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x1.p4)
 file (RELATIVE_PATH switch_p4_16_x1 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X1})
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x1_profile" ${switch_p4_16_x1} "${testExtraArgs}" "-DX1_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
+  "smoketest_switch_16_compile_x1_profile" ${switch_p4_16_x1} "${testExtraArgs}" "-DX1_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x1_profile")
 
 set (SWITCH_P4_16_X2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x2.p4)
 file (RELATIVE_PATH switch_p4_16_x2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X2})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x2_profile" ${switch_p4_16_x2} "${testExtraArgs}" "-DX2_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--disable-power-check\" -arch tna")
+  "smoketest_switch_16_compile_x2_profile" ${switch_p4_16_x2} "${testExtraArgs}" "-DX2_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata --disable-power-check\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x2_profile")
 
 set (SWITCH_P4_16_X3 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_x3.p4)
 file (RELATIVE_PATH switch_p4_16_x3 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_X3})
 p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile_x3_profile" ${switch_p4_16_x3} "${testExtraArgs}" "-DX3_PROFILE -I${SWITCH_P4_16_INC} -arch tna")
+  "smoketest_switch_16_compile_x3_profile" ${switch_p4_16_x3} "${testExtraArgs}" "-DX3_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata\" -arch tna")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
 
 # We cannot run some tests in our environment as some interfaces referenced in the port
