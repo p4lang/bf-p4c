@@ -197,6 +197,9 @@ struct IXBar {
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
     bitvec                                      hash_dist_bit_inuse[HASH_TABLES] = { bitvec() };
 
+    // Added on update to be verified
+    bitvec hash_used_per_function[HASH_GROUPS] = { bitvec() };
+
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
 
@@ -648,6 +651,8 @@ struct IXBar {
             return rv;
         }
 
+        bool fit_requirements(bitvec hash_matrix_in_use) const;
+
         hash_matrix_reqs() {}
         hash_matrix_reqs(int ig, int sb, bool hd)
             : index_groups(ig), select_bits(sb), hash_dist(hd) {}
@@ -722,7 +727,7 @@ struct IXBar {
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
     bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                         bool second_try);
-    int getHashGroup(unsigned hash_table_input);
+    int getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_reqs = nullptr);
     void getHashDistGroups(unsigned hash_table_input, int hash_group_opt[HASH_DIST_UNITS]);
     bool allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv,
         const LayoutOption *lo, Use &alloc, Use &proxy_hash_alloc);
@@ -730,10 +735,11 @@ struct IXBar {
         Use &proxy_hash_alloc, hash_matrix_reqs &hm_reqs);
 
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
-                          const LayoutOption *layout_option,
-                          size_t start, size_t last);
+        const LayoutOption *layout_option, size_t start, size_t last,
+        const hash_matrix_reqs &hm_reqs);
     bool allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
-        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc);
+        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
+        unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);
@@ -748,6 +754,8 @@ struct IXBar {
     void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
     // void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl);
+    void add_collisions();
+    void verify_hash_matrix() const;
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
     const Loc *findExactByte(cstring name, int byte) const {
         for (auto &p : Values(exact_fields.equal_range(name)))

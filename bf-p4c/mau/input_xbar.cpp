@@ -333,6 +333,27 @@ std::string IXBar::Use::used_for() const {
     return "";
 }
 
+
+bool IXBar::hash_matrix_reqs::fit_requirements(bitvec hash_matrix_in_use) const {
+    if (!hash_dist) {
+        int free_indexes = 0;
+        for (int i = 0; i < HASH_INDEX_GROUPS; i++) {
+            bitvec idx_use = hash_matrix_in_use.getslice(i * RAM_LINE_SELECT_BITS,
+                                                         RAM_LINE_SELECT_BITS);
+            if (idx_use.empty())
+                free_indexes++;
+        }
+        if (free_indexes < index_groups)
+            return false;
+
+        bitvec select_use = hash_matrix_in_use.getslice(RAM_SELECT_BIT_START, HASH_SINGLE_BITS);
+        if (HASH_SINGLE_BITS - select_use.popcount() < select_bits)
+            return false;
+        return true;
+    }
+    return false;
+}
+
 /** Visualization Information on Hash Distribution Units
  */
 std::string IXBar::Use::hash_dist_used_for() const {
@@ -1743,12 +1764,112 @@ static int way_groups_allocated(const IXBar::Use &alloc) {
     return alloc.way_use.size();
 }
 
-int IXBar::getHashGroup(unsigned hash_table_input) {
+/**
+ * This is to determine which hash group, of any of the 8 hash functions, are available.
+ * A hash function is a set any of the 16 hash tables that will be XORed together.  The hash
+ * functions themselves are 52 bits.
+ *
+ * So let's say we have the following example.
+ *
+ * A table has allocated 16 bytes of exact match in group 2, thus using hash tables 5-6
+ * for the hash calculation.  Let's say it needs 3 ways.
+ *
+ * The hash function then becomes some bits between 0-29 bits.
+ *
+ * Another table, let's say an ATCAM table, only has 10 bits to consider.  In this case
+ * the hash calculation would only require 1 way.  If these 2 bytes go to IXBAR group 7, bytes 0
+ * and 1, then the hash function also would include hash table 14, from bits 30-39.
+ *
+ * Thus, overlaps between different tables are possible as long as hash functions do not collide.
+ * This is opened up by the second check.
+ */
+int IXBar::getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_reqs) {
+    // One can assume that the find legal bytes will have legal space within the hash function
+    // If not the higher functions will find space
     for (int i = 0; i < HASH_GROUPS; i++) {
         if (hash_group_use[i] == hash_table_input) {
             return i;
         }
     }
+
+    // Determining if the usage of hash bits can possibly overlap.  This is only necessary for
+    // non-hash dist, this is handled with getHashDistGroups
+    if (hm_reqs && !hm_reqs->hash_dist) {
+        bitvec ht_usage;
+        // Gather all the hash matrix currently in use, to verify that there is space for the
+        // other bits to possibly share.
+        for (auto idx : Range(0, HASH_INDEX_GROUPS - 1)) {
+            if ((hash_index_inuse[idx] & hash_table_input) != 0)
+                ht_usage.setrange(idx * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS);
+        }
+
+        for (auto single_bit : Range(0, HASH_SINGLE_BITS - 1)) {
+             if ((hash_single_bit_inuse[single_bit] & hash_table_input) != 0)
+                 ht_usage.setbit(single_bit + RAM_SELECT_BIT_START);
+        }
+
+        for (auto ht : bitvec(hash_table_input))
+            ht_usage |= hash_dist_bit_inuse[ht];
+        LOG6("\t\tht_usage 0x" << ht_usage << " 0x" << hex(hash_table_input));
+
+        bitvec hash_table_input_bv(hash_table_input);
+        bitvec hash_matrix_usage_hf[HASH_GROUPS];
+        bitvec hash_matrix_usage_collision[HASH_GROUPS];
+
+        for (int i = 0; i < HASH_GROUPS; i++) {
+            bool is_hash_dist_group = hash_dist_groups[0] == i || hash_dist_groups[1] == i;
+            if (is_hash_dist_group) continue;
+            bitvec max_usage(0, HASH_MATRIX_SIZE);
+            bitvec curr_usage_hf;
+            bitvec curr_usage_collision;
+
+            // Gather up potential requirements from all other hash tables in use
+            unsigned hf_ht = hash_group_use[i];
+            unsigned collision_ht = hash_table_input & ~hash_group_use[i];
+            LOG6("\t\thash group " << i << " 0x" << hex(hash_group_use[i]));
+            LOG6("\t\twith_ht 0x" << hex(hf_ht) << " without_ht 0x" << hex(collision_ht));
+            for (auto idx : Range(0, HASH_INDEX_GROUPS - 1)) {
+                if ((hash_index_inuse[idx] & hf_ht) != 0)
+                    curr_usage_hf.setrange(idx * RAM_LINE_SELECT_BITS,
+                                                       RAM_LINE_SELECT_BITS);
+                if ((hash_index_inuse[idx] & collision_ht) != 0)
+                    curr_usage_collision.setrange(idx * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS);
+            }
+            for (auto single_bit : Range(0, HASH_SINGLE_BITS - 1)) {
+                if ((hash_single_bit_inuse[single_bit] & hf_ht) != 0)
+                    curr_usage_hf.setbit(single_bit + RAM_SELECT_BIT_START);
+                if ((hash_single_bit_inuse[single_bit] & collision_ht) != 0)
+                    curr_usage_collision.setbit(single_bit + RAM_SELECT_BIT_START);
+            }
+            hash_matrix_usage_hf[i] = curr_usage_hf;
+            hash_matrix_usage_collision[i] = curr_usage_collision;
+            LOG6("\t\thash_matrix_usage " << i << " 0x" << hash_matrix_usage_hf[i]
+                 << " 0x" << hash_matrix_usage_collision[i] << " 0x" << hex(hash_group_use[i]));
+        }
+
+        // Only pick a hash function that has the legal amount of space, as well as a hash
+        // function that is already in use.
+        for (int i = 0; i < HASH_GROUPS; i++) {
+            if (hash_group_use[i] == 0) continue;
+            bool is_hash_dist_group = hash_dist_groups[0] == i || hash_dist_groups[1] == i;
+            if (is_hash_dist_group != hm_reqs->hash_dist)
+                continue;
+            if (!(hash_matrix_usage_hf[i] & hash_matrix_usage_collision[i]).empty())
+                continue;
+            if (hm_reqs->fit_requirements(hash_matrix_usage_hf[i] | hash_matrix_usage_collision[i]))
+                return i;
+        }
+
+        // This is not a requirement, but in order to keep hash functions more available,
+        // if an allocation that shares space with another hash function cannot share that
+        // hash function, it's better if the allocation is not on those ixbar bytes.  The
+        // second try will guarantee that the sharing is minimized
+        for (int i = 0; i < HASH_GROUPS; i++) {
+            if (hash_group_use[i] == 0) continue;
+            if ((hash_group_use[i] & hash_table_input) != 0U) return -1;
+        }
+    }
+
     for (int i = 0; i < HASH_GROUPS; i++) {
         if (hash_group_use[i] == 0) {
             return i;
@@ -2002,9 +2123,9 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
         auto max_hm_reqs = hash_matrix_reqs::max(false, false);
 
         if (!(allocMatch(false, tbl, phv, next_alloc, alloced, hm_reqs)
-            && allocAllHashWays(false, tbl, next_alloc, lo, start, last))
+            && allocAllHashWays(false, tbl, next_alloc, lo, start, last, hm_reqs))
             && !(allocMatch(false, tbl, phv, next_alloc, alloced, max_hm_reqs)
-            && allocAllHashWays(false, tbl, next_alloc, lo, start, last))) {
+            && allocAllHashWays(false, tbl, next_alloc, lo, start, last, max_hm_reqs))) {
             next_alloc.clear();
             alloc.clear();
             return false;
@@ -2038,18 +2159,20 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
 /* Allocate all hashes used within a hash group of a table. The number of hashes in the
    hash group are determined by the layout option */
 bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
-                             const LayoutOption *layout_option,
-                             size_t start, size_t last) {
+        const LayoutOption *layout_option, size_t start, size_t last,
+        const hash_matrix_reqs &hm_reqs) {
     if (ternary)
         return true;
-    unsigned hash_table_input = alloc.compute_hash_tables();
-
-    int hash_group = getHashGroup(hash_table_input);
+    unsigned local_hash_table_input = alloc.compute_hash_tables();
+    int hash_group = getHashGroup(local_hash_table_input, &hm_reqs);
     if (hash_group < 0) return false;
+    unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
+    LOG3("\thash_group " << hash_group << " 0x" << hex(local_hash_table_input) <<  " 0x"
+         << hex(hf_hash_table_input));
     int free_groups = 0;
     int group;
     for (group = 0; group < HASH_INDEX_GROUPS; group++) {
-        if (!(hash_index_inuse[group] & hash_table_input)) {
+        if (!(hash_index_inuse[group] & hf_hash_table_input)) {
             free_groups++;
         }
     }
@@ -2065,7 +2188,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
     }
     int way_bits = 0;
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        if (!(hash_single_bit_inuse[bit] & hash_table_input)) {
+        if (!(hash_single_bit_inuse[bit] & hf_hash_table_input)) {
             way_bits++;
         }
     }
@@ -2078,15 +2201,16 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
     std::map<int, bitvec> slice_to_select_bits;
     // Currently should  never return false
     for (size_t index = start; index < last; index++) {
-        if (!allocHashWay(tbl, layout_option, index, slice_to_select_bits, alloc)) {
+        if (!allocHashWay(tbl, layout_option, index, slice_to_select_bits, alloc,
+                          local_hash_table_input, hf_hash_table_input, hash_group)) {
             alloc.clear();
             return false;
         }
     }
     /* No longer does a logical table have one hash_table_input, but a couple if the
        table requires multiple hash groups */
-    alloc.hash_table_inputs[hash_group] = hash_table_input;
-    hash_group_use[hash_group] |= hash_table_input;
+    alloc.hash_table_inputs[hash_group] = local_hash_table_input;
+    hash_group_use[hash_group] |= local_hash_table_input;
 
     // If a random_seed is specified via pragma, do not generate the random seed here.
     if (tbl->random_seed >= 0)
@@ -2130,18 +2254,16 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 /* Individual Hash way allocated, called from allocAllHashWays.  Sets up the select bit
    mask provided by the layout option */
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
-        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc) {
-    unsigned hash_table_input = alloc.compute_hash_tables();
-    int hash_group = getHashGroup(hash_table_input);
-    if (hash_group < 0) return false;
+        size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
+        unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group) {
     int way_bits = ceil_log2(layout_option->way_sizes[index]);
     int group;
     unsigned way_mask = 0;
     bool shared = false;
-    LOG3("Need " << way_bits << " mask bits for way " << alloc.way_use.size() <<
+    LOG3("\tNeed " << way_bits << " mask bits for way " << alloc.way_use.size() <<
          " in table " << tbl->name);
     for (group = 0; group < HASH_INDEX_GROUPS; group++) {
-        if (!(hash_index_inuse[group] & hash_table_input)) {
+        if (!(hash_index_inuse[group] & hf_hash_table_input)) {
             break; } }
     if (group >= HASH_INDEX_GROUPS) {
         if (alloc.way_use.empty()) {
@@ -2156,7 +2278,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
     unsigned free_bits = 0; unsigned used_bits = 0;
 
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        if (!(hash_single_bit_inuse[bit] & hash_table_input)) {
+        if (!(hash_single_bit_inuse[bit] & hf_hash_table_input)) {
             free_bits |= 1U << bit;
         }
     }
@@ -2176,7 +2298,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
         BUG_CHECK(static_cast<int>(bitcount(way_mask)) == way_bits, "Previous allocation "
                   "was not contiguous");
     } else if (static_cast<int>(bitcount(free_bits)) < way_bits) {
-        LOG3("Free bits available is too small");
+        LOG3("\tFree bits available is too small");
         return false;
     } else {
         // Select bits are not required to be contiguous in hardware, but in the driver entry
@@ -2197,16 +2319,24 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
     slice_to_select_bits[group] |= bitvec(way_mask);
 
     alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
-    hash_index_inuse[group] |= hash_table_input;
+    LOG3("\tAllocation of way " << hash_group << " " << group << " 0x" << hex(way_mask));
+    hash_index_inuse[group] |= hf_hash_table_input;
     for (auto bit : bitvec(way_mask)) {
-        hash_single_bit_inuse[bit] |= hash_table_input;
+        hash_single_bit_inuse[bit] |= hf_hash_table_input;
     }
-    for (auto ht : bitvec(hash_table_input)) {
+    for (auto ht : bitvec(local_hash_table_input)) {
         hash_index_use[ht][group] = tbl->name;
         for (auto bit : bitvec(way_mask)) {
             hash_single_bit_use[ht][bit] = tbl->name;
         }
     }
+    for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input)) {
+        hash_index_use[ht][group] = "$collision";
+        for (auto bit : bitvec(way_mask)) {
+            hash_single_bit_use[ht][bit] = "$collision";
+        }
+    }
+
     return true;
 }
 
@@ -2250,23 +2380,24 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     alloc.type = Use::MATCH;
     alloc.used_by = tbl->match_table->externalName();
 
-    unsigned hash_table_input = 0;
+    unsigned local_hash_table_input = 0;
     if (!rv) {
         alloc.clear();
         return rv;
     } else {
-        hash_table_input = alloc.compute_hash_tables();
+        local_hash_table_input = alloc.compute_hash_tables();
     }
 
-    int hash_group = getHashGroup(hash_table_input);
+    int hash_group = getHashGroup(local_hash_table_input, &hm_reqs);
     if (hash_group < 0) {
         alloc.clear();
         return false;
     }
+    unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
 
     int group = -1;
     for (int i = 0; i < HASH_INDEX_GROUPS; i++) {
-        if ((hash_index_inuse[i] & hash_table_input) == 0) {
+        if ((hash_index_inuse[i] & hf_hash_table_input) == 0) {
             group = i;
             break;
         }
@@ -2283,7 +2414,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     for (int i = 0; i < HASH_SINGLE_BITS; i++) {
         if (bits_found >= bits_needed)
             break;
-        if ((hash_single_bit_inuse[i] & hash_table_input) == 0) {
+        if ((hash_single_bit_inuse[i] & hf_hash_table_input) == 0) {
             way_mask |= (1 << i);
             bits_found++;
         }
@@ -2297,14 +2428,20 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     /** The partition fits.  Just update all of the values */
     match_alloc.use.insert(match_alloc.use.end(), alloc.use.begin(), alloc.use.end());
     match_alloc.atcam = true;
-    match_alloc.hash_table_inputs[hash_group] = hash_table_input;
-    hash_group_use[hash_group] |= hash_table_input;
+    match_alloc.hash_table_inputs[hash_group] = local_hash_table_input;
+    hash_group_use[hash_group] |= local_hash_table_input;
     match_alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask});
-    hash_index_inuse[group] |= hash_table_input;
+    hash_index_inuse[group] |= hf_hash_table_input;
     for (auto bit : bitvec(way_mask)) {
-        hash_single_bit_inuse[bit] |= hash_table_input;
+        hash_single_bit_inuse[bit] |= hf_hash_table_input;
     }
-    for (auto ht : bitvec(hash_table_input)) {
+    for (auto ht : bitvec(local_hash_table_input)) {
+        hash_index_use[ht][group] = tbl->name;
+        for (auto bit : bitvec(way_mask)) {
+            hash_single_bit_use[ht][bit] = tbl->name;
+        }
+    }
+    for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input)) {
         hash_index_use[ht][group] = tbl->name;
         for (auto bit : bitvec(way_mask)) {
             hash_single_bit_use[ht][bit] = tbl->name;
@@ -2385,17 +2522,22 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     alloc.used_by = tbl->name;
 
     if (collect.bits > 0) {
-        int hash_table_input = alloc.compute_hash_tables();
-        int hash_group = getHashGroup(hash_table_input);
+        // Per use hash table information vs. potential shared across the hash function
+        // information.  Local_hash_table_input is per use, hash_table_input is for all
+        // hashtables in the group
+        int local_hash_table_input = alloc.compute_hash_tables();
+        int hash_group = getHashGroup(local_hash_table_input, &hm_reqs);
+
         if (hash_group < 0) {
             alloc.clear();
             return false; }
+        int hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
         /* FIXME -- don't need use all hash tables that we're using the ixbar for -- just those
          * tables for bytes we want to put through the hash table to get into the upper gw bits */
         unsigned avail = 0;
         unsigned need = (1U << collect.bits) - 1;
         for (auto j : Range(0, HASH_SINGLE_BITS-1)) {
-            if ((hash_single_bit_inuse[j] & hash_table_input) == 0) {
+            if ((hash_single_bit_inuse[j] & hf_hash_table_input) == 0) {
                 avail |= (1U << j);
             }
         }
@@ -2414,17 +2556,20 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 offset.first += shift;
                 alloc.bit_use.emplace_back(info.first.field()->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
-        for (auto ht : bitvec(hash_table_input))
+        for (auto ht : bitvec(local_hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
+        for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input))
+            for (int i = 0; i < collect.bits; ++i)
+                hash_single_bit_use[ht][shift + i] = "$collision";
         for (int i = 0; i < collect.bits; ++i)
-            hash_single_bit_inuse[shift + i] |= hash_table_input;
-        alloc.hash_table_inputs[hash_group] = hash_table_input;
-        hash_group_use[hash_group] |= hash_table_input;
+            hash_single_bit_inuse[shift + i] |= hf_hash_table_input;
+        alloc.hash_table_inputs[hash_group] = local_hash_table_input;
+        hash_group_use[hash_group] |= local_hash_table_input;
     }
     fill_out_use(xbar_alloced, false);
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        LOG3("Hash bit at bit " << bit << " is " << hex(hash_single_bit_inuse[bit]));
+        LOG3("\tHash bit at bit " << bit << " is " << hex(hash_single_bit_inuse[bit]));
     }
     return true;
 }
@@ -2533,22 +2678,22 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
     hash_matrix_reqs hm_reqs = hash_matrix_reqs::max(false);
     bool rv = find_alloc(alloc.use, false, alloced, hm_reqs);
-    unsigned hash_table_input = 0;
+    unsigned local_hash_table_input = 0;
     if (rv)
-         hash_table_input = alloc.compute_hash_tables();
+         local_hash_table_input = alloc.compute_hash_tables();
     if (!rv) alloc.clear();
-
     if (!rv) return false;
 
     alloc.type = Use::SELECTOR;
     alloc.used_by = as->name + "";
     alloc.symmetric_keys = tbl->sel_symmetric_keys;
 
-    int hash_group = getHashGroup(hash_table_input);
+    int hash_group = getHashGroup(local_hash_table_input);
     if (hash_group < 0) {
         alloc.clear();
         return false;
     }
+    unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
 
     auto &mah = alloc.meter_alu_hash;
 
@@ -2593,16 +2738,18 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
         }
     }
     mah.bit_mask.setrange(0, mode_width_bits);
-    alloc.hash_table_inputs[hash_group] = hash_table_input;
+    alloc.hash_table_inputs[hash_group] = local_hash_table_input;
     int max_bit = max_bit_to_byte(mah.bit_mask);
     int max_group = max_index_group(max_bit);
     int max_single_bit = max_index_single_bit(max_bit);
-    BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation for "
+    BUG_CHECK(hash_use_free(max_group, max_single_bit, hf_hash_table_input), "The calculation for "
               "the hash matrix should be completely free at this point");
-    write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
+    write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
+    write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
+                   "$collision");
     fill_out_use(alloced, false);
     hash_group_print_use[hash_group] = name;
-    hash_group_use[hash_group] |= hash_table_input;
+    hash_group_use[hash_group] |= local_hash_table_input;
     return rv;
 }
 
@@ -2716,12 +2863,13 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
 
     if (!on_search_bus) {
         auto &mah = alloc.meter_alu_hash;
-        unsigned hash_table_input = alloc.compute_hash_tables();
-        int hash_group = getHashGroup(hash_table_input);
+        unsigned local_hash_table_input = alloc.compute_hash_tables();
+        int hash_group = getHashGroup(local_hash_table_input);
         if (hash_group < 0) {
             alloc.clear();
             return false;
         }
+        unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
 
         mah.allocated = true;
         mah.group = hash_group;
@@ -2731,12 +2879,14 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
         int max_single_bit = max_index_single_bit(max_bit);
-        BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
+        BUG_CHECK(hash_use_free(max_group, max_single_bit, hf_hash_table_input), "The calculation "
                   "for the hash matrix should be completely free at this point");
-        write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
-        alloc.hash_table_inputs[mah.group] = hash_table_input;
+        write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
+        write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
+                       "$collision");
+        alloc.hash_table_inputs[mah.group] = local_hash_table_input;
         hash_group_print_use[hash_group] = alloc.used_by;
-        hash_group_use[hash_group] |= hash_table_input;
+        hash_group_use[hash_group] |= local_hash_table_input;
     }
 
     fill_out_use(alloced, false);
@@ -2844,12 +2994,13 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
 bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu,
                                     Use &alloc, const FindSaluSources &sources) {
     auto &mah = alloc.meter_alu_hash;
-    unsigned hash_table_input = alloc.compute_hash_tables();
-    int hash_group = getHashGroup(hash_table_input);
+    unsigned local_hash_table_input = alloc.compute_hash_tables();
+    int hash_group = getHashGroup(local_hash_table_input);
     if (hash_group < 0) {
         alloc.clear();
         return false;
     }
+    unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
 
     mah.allocated = true;
     mah.group = hash_group;
@@ -2902,12 +3053,14 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
     int max_bit = max_bit_to_byte(mah.bit_mask);
     int max_group = max_index_group(max_bit);
     int max_single_bit = max_index_single_bit(max_bit);
-    BUG_CHECK(hash_use_free(max_group, max_single_bit, hash_table_input), "The calculation "
+    BUG_CHECK(hash_use_free(max_group, max_single_bit, hf_hash_table_input), "The calculation "
               "for the hash matrix should be completely free at this point");
-    write_hash_use(max_group, max_single_bit, hash_table_input, alloc.used_by);
-    alloc.hash_table_inputs[mah.group] = hash_table_input;
+    write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
+    write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
+                   "$collision");
+    alloc.hash_table_inputs[mah.group] = local_hash_table_input;
     hash_group_print_use[hash_group] = alloc.used_by;
-    hash_group_use[hash_group] |= hash_table_input;
+    hash_group_use[hash_group] |= local_hash_table_input;
     return true;
 }
 
@@ -3197,7 +3350,6 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
 
     rv.use.field_list_order.insert(rv.use.field_list_order.end(), alloc_req.func->inputs.begin(),
                                    alloc_req.func->inputs.end());
-    LOG1("  Build Hash Dist IR use " << alloc_req.func->symmetrically_hashed_inputs);
     rv.use.symmetric_keys = alloc_req.func->symmetrically_hashed_inputs;
     // Create pre-allocated bytes of the subset
     create_alloc(map_alloc, rv.use);
@@ -3842,9 +3994,9 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             auto max_hm_reqs = hash_matrix_reqs::max(false, ternary);
 
             if (!(allocMatch(ternary, tbl, phv, next_alloc, alloced, hm_reqs)
-                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))
+                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last, hm_reqs))
                 && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, max_hm_reqs)
-                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))) {
+                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last, max_hm_reqs))) {
                 next_alloc.clear();
                 alloc.match_ixbar.clear();
                 return false;
@@ -3960,18 +4112,17 @@ void IXBar::update(cstring name, const Use &alloc) {
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
             hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_inputs[bits.group];
         }
-        if (hash_group_use[bits.group] == 0) {
-            hash_group_use[bits.group] = alloc.hash_table_inputs[bits.group];
-            hash_group_print_use[bits.group] = name;
-        } else if (hash_group_use[bits.group] != alloc.hash_table_inputs[bits.group]) {
-            BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]);
-        }
+
+        hash_group_use[bits.group] |= alloc.hash_table_inputs[bits.group];
+        hash_group_print_use[bits.group] = name;
+        hash_used_per_function[bits.group].setrange(bits.bit + RAM_SELECT_BIT_START, bits.width);
     }
     for (auto &way : alloc.way_use) {
-        if (hash_group_use[way.group] == 0) {
-            hash_group_use[way.group] = alloc.hash_table_inputs[way.group];
-            hash_group_print_use[way.group] = name;
-        }
+        hash_group_use[way.group] |= alloc.hash_table_inputs[way.group];
+        hash_group_print_use[way.group] = name;
+        hash_used_per_function[way.group].setrange(way.slice * RAM_LINE_SELECT_BITS,
+                                                   RAM_LINE_SELECT_BITS);
+        hash_used_per_function[way.group] |= bitvec(way.mask) << RAM_SELECT_BIT_START;
         hash_index_inuse[way.slice] |= alloc.hash_table_inputs[way.group];
         for (int hash : bitvec(alloc.hash_table_inputs[way.group])) {
             if (!hash_index_use[hash][way.slice])
@@ -3988,10 +4139,10 @@ void IXBar::update(cstring name, const Use &alloc) {
         int max_group = max_index_group(max_bit);
         int max_index_bit = max_index_single_bit(max_bit);
         unsigned hash_table_input = alloc.hash_table_inputs[mah.group];
-        if (hash_group_use[mah.group] == 0) {
-            hash_group_use[mah.group] = alloc.hash_table_inputs[mah.group];
-            hash_group_print_use[mah.group] = name;
-        }
+        hash_group_use[mah.group] |= alloc.hash_table_inputs[mah.group];
+        hash_group_print_use[mah.group] = name;
+        hash_used_per_function[mah.group] |= mah.bit_mask;
+
         if (!hash_use_free(max_group, max_index_bit, hash_table_input)) {
             BUG("Conflicting hash matrix usage for %s", name);
         }
@@ -4011,6 +4162,7 @@ void IXBar::update(cstring name, const Use &alloc) {
             }
             hash_dist_bit_inuse[i] |= hdh.galois_matrix_bits;
         }
+        hash_used_per_function[hdh.group] |= hdh.galois_matrix_bits;
         hash_group_print_use[hdh.group] = name;
         hash_group_use[hdh.group] |= alloc.hash_table_inputs[hdh.group];
     }
@@ -4040,6 +4192,7 @@ void IXBar::update(cstring name, const Use &alloc) {
         }
         hash_group_print_use[ph.group] = name;
         hash_group_use[ph.group] |= alloc.hash_table_inputs[ph.group];
+        hash_used_per_function[ph.group] |= ph.hash_bits;
     }
 }
 
@@ -4109,6 +4262,88 @@ void IXBar::update(const IR::MAU::Table *tbl) {
     }
     if (tbl->is_placed())
         update(tbl, tbl->resources);
+}
+
+
+/**
+ * Because hash functions can share portions of hash tables, this looks for all possible
+ * places that cannot be allocated and reserves them.  This is best displayed by an example:
+ *
+ * Let's say you have two tables A and B with 8 byte keys.  Table A allocates its bytes to
+ * byte 0-7 of ixbar group 2, and Table B allocates its bytes to bytes 8-15 of ixbar group 2.
+ * Now both A and B both require two ways, so we will say that table A uses bits 0-19 and table
+ * B uses bits 20-39.  If these tables were to share the same hash function, then the hash matrix
+ * between bytes 0-7 of ixbar group 2 and bits 20-39 would not be off limits, as this would
+ * collide with the hash function for table B. The same is true for bits 0-19 of bytes 8-15 of
+ * ixbar group 2.  This is to guarantee that this space is reserved.
+ */
+void IXBar::add_collisions() {
+    for (int hg = 0; hg < HASH_GROUPS; hg++) {
+        for (int idx = 0; idx < HASH_INDEX_GROUPS; idx++) {
+            if ((hash_group_use[hg] & hash_index_inuse[idx]) != 0) {
+                for (auto ht : bitvec(hash_group_use[hg])) {
+                    if (hash_index_use[ht][idx].isNull())
+                        hash_index_use[ht][idx] = "$collision";
+                }
+                hash_index_inuse[idx] |= hash_group_use[hg];
+            }
+        }
+
+        for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+            if ((hash_group_use[hg] & hash_single_bit_inuse[bit]) != 0) {
+                for (auto ht : bitvec(hash_group_use[hg])) {
+                    if (hash_single_bit_use[ht][bit].isNull())
+                        hash_single_bit_use[ht][bit] = "$collision";
+                }
+                hash_single_bit_inuse[bit] |= hash_group_use[hg];
+            }
+        }
+    }
+}
+
+/**
+ * The purpose of this function is to guarantee no hash collisions on the relevant bits
+ * for each hash function.  This is currently only done on non hash dist, though could
+ * be extended.  This can only be done after update, as it requires the hash_used_per_function
+ * to be set, which is currently only guaranteed on update.
+ */
+void IXBar::verify_hash_matrix() const {
+    for (int hg = 0; hg < HASH_GROUPS; hg++) {
+        std::vector<cstring> index_groups(HASH_INDEX_GROUPS, cstring());
+        for (int idx = 0; idx < HASH_INDEX_GROUPS; idx++) {
+            bitvec idx_in_use = hash_used_per_function[hg].getslice(idx * RAM_LINE_SELECT_BITS,
+                                                                    RAM_LINE_SELECT_BITS);
+            if (idx_in_use.empty()) continue;
+            BUG_CHECK(idx < HASH_INDEX_GROUPS, "Illegal idx %1%", idx);
+            unsigned relevant_hash_tables = hash_group_use[hg] & hash_index_inuse[idx];
+            for (auto ht : bitvec(relevant_hash_tables)) {
+                BUG_CHECK(ht < HASH_TABLES, "Illegal hash table %1%", ht);
+                if (index_groups[idx].isNull())
+                    index_groups[idx] = hash_index_use[ht][idx];
+                else
+                    BUG_CHECK(index_groups[idx] == hash_index_use[ht][idx], "Hash table "
+                        "collision at ht %1% index %2% between %3% and %4%", ht, idx,
+                        index_groups[idx], hash_index_use[ht][idx]);
+            }
+        }
+
+
+        std::vector<cstring> single_bits(HASH_SINGLE_BITS, cstring());
+        for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+            if (!hash_used_per_function[hg].getbit(bit + RAM_SELECT_BIT_START)) continue;
+            unsigned relevant_hash_tables = hash_group_use[hg] & hash_single_bit_inuse[bit];
+            BUG_CHECK(bit < HASH_SINGLE_BITS, "Illegal bit %1%", bit);
+            for (auto ht : bitvec(relevant_hash_tables)) {
+                BUG_CHECK(ht < HASH_TABLES, "Illegal hash table %1%", ht);
+                if (single_bits[bit].isNull())
+                    single_bits[bit] = hash_single_bit_use[ht][bit];
+                else
+                    BUG_CHECK(single_bits[bit] == hash_single_bit_use[ht][bit], "Hash table "
+                        "collision at ht %1% bit %2% between %3% and %4%", ht, bit,
+                        single_bits[bit], hash_single_bit_use[ht][bit]);
+            }
+        }
+    }
 }
 
 static void replace_name(cstring n, std::map<cstring, char> &names) {

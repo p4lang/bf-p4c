@@ -210,6 +210,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
 )
 
 p4c_add_xfail_reason("tofino"

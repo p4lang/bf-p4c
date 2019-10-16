@@ -632,6 +632,7 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->table, &p->resources);
     }
+    current_ixbar.add_collisions();
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
     auto *table = next->table;
@@ -676,6 +677,7 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
         verify_ixbar.update(p->table, &p->resources);
     verify_ixbar.update(next->table, &next->resources);
+    verify_ixbar.verify_hash_matrix();
     LOG7(IndentCtl::indent << IndentCtl::indent);
     LOG7(verify_ixbar << IndentCtl::unindent << IndentCtl::unindent);
 
