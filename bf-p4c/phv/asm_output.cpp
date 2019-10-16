@@ -168,7 +168,7 @@ void emit_phv_field(
 void PhvAsmOutput::emit_phv_field_info(
         std::ostream& out,
         const PHV::Field* f,
-        const ordered_set<const PHV::Field*>& fieldsInContainer) const {
+        const PHV::Container& c) const {
     out << "      " << canon_name(f->externalName()) << ":" << std::endl;
 
     // Print live range info.
@@ -184,13 +184,15 @@ void PhvAsmOutput::emit_phv_field_info(
 
     if (liveRanges.count(f)) {
         auto& range = liveRanges.at(f);
-        out << "          " << "live_start: " << PrintStage(range.first) << std::endl;
-        out << "          " << "live_end: " << PrintStage(range.last) << std::endl; }
+        auto live_start = c.is(PHV::Kind::tagalong) ? "parser"   : PrintStage(range.first);
+        auto live_end   = c.is(PHV::Kind::tagalong) ? "deparser" : PrintStage(range.last);
+        out << "          " << "live_start: " << live_start << std::endl;
+        out << "          " << "live_end: "   << live_end   << std::endl; }
 
     // Print mutual exclusion information.
     out << "          " << "mutually_exclusive_with: [ ";
     std::string sep = "";
-    for (const auto* f2 : fieldsInContainer) {
+    for (const auto* f2 : phv.fields_in_container(c)) {
         if (phv.isFieldMutex(f, f2)) {
             out << sep << canon_name(f2->externalName());
             if (sep == "") sep = ", "; } }
@@ -220,7 +222,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
             const auto& fieldsInContainer = phv.fields_in_container(c);
             for (const auto* f : fieldsInContainer) {
                 if (f->gress == gress && !f->is_unallocated()) {
-                    emit_phv_field_info(out, f, fieldsInContainer); } } } }
+                    emit_phv_field_info(out, f, c); } } } }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {

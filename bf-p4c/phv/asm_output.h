@@ -29,7 +29,7 @@ class PhvAsmOutput {
     void emit_phv_field_info(
             std::ostream& out,
             const PHV::Field* f,
-            const ordered_set<const PHV::Field*>& fieldsInContainer) const;
+            const PHV::Container& c) const;
 
     void emit_gress(std::ostream& out, gress_t gress) const;
     friend std::ostream &operator<<(std::ostream &, const PhvAsmOutput &);
