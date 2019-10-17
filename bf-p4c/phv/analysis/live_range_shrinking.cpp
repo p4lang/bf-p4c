@@ -679,6 +679,7 @@ FindInitializationNode::findInitializationNodes(
         if (noInit.count(f)) {
             LOG3("\t\tField " << f->name << " marked no_init. No initialization required.");
             initPoints[f] = emptySet;
+            lastField = f;
             seenFields.insert(f);
             continue;
         }
@@ -738,6 +739,7 @@ FindInitializationNode::findInitializationNodes(
             LOG3("\t\tAll actions of all strict dominators write to the field " << f->name);
             initPoints[f] = emptySet;
             seenFields.insert(f);
+            lastField = f;
             continue;
         } else {
             LOG3("\t\tOnly some strict dominators write to the field " << f->name);
@@ -848,11 +850,10 @@ FindInitializationNode::findInitializationNodes(
             LOG3("\t\t  Initialization action: " << act->name);
         initPoints[f] = *initializationCandidates;
         seenFields.insert(f);
+        lastField = f;
 
-        if (lastField == nullptr) continue;
         LOG3("\t\t  Need to insert dependencies from uses of " << lastField->name <<
              " to initialization of " << f->name);
-        lastField = f;
     }
     return initPoints;
 }
