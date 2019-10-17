@@ -815,7 +815,7 @@ deparser <thread>:
     drop_ctl: <phv-location> [ ':' <pov-bit> ]
     # jbay only, ingress or egress
     afc: '{' <phv->location> ':' <pov-bit> '}'
-    mirr_egress_port: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_epipe_port: '{' <phv->location> ':' <pov-bit> '}'
     mirr_c2c_ctrl: '{' <phv->location> ':' <pov-bit> '}'
     mirr_coal_smpl_len: '{' <phv->location> ':' <pov-bit> '}'
     mirr_dond_ctrl: '{' <phv->location> ':' <pov-bit> '}'

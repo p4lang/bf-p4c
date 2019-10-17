@@ -134,7 +134,7 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     if (Device::currentDevice() == Device::JBAY) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
         addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
-        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_egress_port");
+        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");
         addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
         addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
         addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
@@ -164,7 +164,7 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
     if (Device::currentDevice() == Device::JBAY) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
         addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
-        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_egress_port");
+        addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");
         addDeparserParamRename(d, dpMeta, "mirror_qid", "mirr_qid");
         addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
         addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
