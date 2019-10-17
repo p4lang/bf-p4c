@@ -453,7 +453,6 @@ p4c_add_xfail_reason("tofino"
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
 
   # broke by flexible packing PR
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
@@ -840,7 +839,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
   extensions/p4_tests/p4_16/compile_only/serializer2.p4
   extensions/p4_tests/p4_16/compile_only/serializer3.p4
-  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4  # P4C-1372
 )
 
 p4c_add_xfail_reason("tofino"
@@ -890,6 +888,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
   ../glass/testsuite/p4_tests/rdp/COMPILER-533/case2736.p4
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shrubs_0.p4
   )
 
 # P4C-1375
@@ -1623,4 +1622,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
   extensions/p4_tests/p4_14/compile_only/19-SimpleTrill.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  " .* appears multiple times in checksum .*"
+  extensions/p4_tests/p4_16/stf/p4c-1426.p4
 )

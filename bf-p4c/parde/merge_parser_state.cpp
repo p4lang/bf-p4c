@@ -32,6 +32,21 @@ struct CollectStateUses : public ParserInspector {
     std::map<const State*, int> n_transition_to;
 };
 
+/// Shift all input packet extracts to the right by the given
+    /// amount. Works for SaveToRegister and Extract.
+    /// The coordinate system:
+    /// [0............31]
+    /// left..........right
+struct RightShiftPacketRVal : public Modifier {
+    int byteDelta = 0;
+    explicit RightShiftPacketRVal(int byteDelta) : byteDelta(byteDelta) { }
+    bool preorder(IR::BFN::PacketRVal* rval) override {
+        rval->range  = rval->range.shiftedByBytes(byteDelta);
+        BUG_CHECK(rval->range.lo >= 0, "Shifting extract to negative position.");
+        return true;
+    }
+};
+
 class ComputeMergeableState : public ParserInspector {
     using State = IR::BFN::ParserState;
 
@@ -110,25 +125,20 @@ class ComputeMergeableState : public ParserInspector {
 
         // Merge all except the tail state.
         bool is_first = true;
-        for (auto itr = states.rbegin(); itr < states.rend() - 1; ++itr) {
+        for (auto itr = states.rbegin(); itr != states.rend(); ++itr) {
             auto& st = *itr;
             BUG_CHECK(st->transitions.size() == 1,
                       "branching state can not be merged, unless the last");
             auto* transition = *st->transitions.begin();
 
-            // FIXME(zma) shift using visitor
 
             for (const auto* stmt : st->statements) {
-                if (auto* extract = stmt->to<IR::BFN::Extract>()) {
-                    extractions.push_back(rightShiftSource(extract, shifted));
-                } else if (auto* add_checksum = stmt->to<IR::BFN::ChecksumAdd>()) {
-                    extractions.push_back(rightShiftSource(add_checksum, shifted));
-                } else {
-                    extractions.push_back(stmt);
-                }
+                auto s = stmt->apply(RightShiftPacketRVal(shifted));
+                extractions.push_back(s->to<IR::BFN::ParserPrimitive>());
             }
             for (const auto* save : transition->saves) {
-                saves.push_back(rightShiftSource(save, shifted)); }
+                saves.push_back((save->apply(RightShiftPacketRVal
+                            (shifted)))->to<IR::BFN::SaveToRegister>()); }
 
             cstring state_name = stripThreadPrefix(st->name);
 
@@ -137,28 +147,12 @@ class ComputeMergeableState : public ParserInspector {
                 name += state_name;
                 is_first = false;
             }
-
-            shifted += transition->shift;
-        }
-
-        // FIXME(zma) shift using visitor
-        // FIXME(zma) this tail exception is rather distasteful
-
-        // Include extractions of the tail state.
-        for (const auto* stmt : tail->statements) {
-            if (auto* extract = stmt->to<IR::BFN::Extract>()) {
-                extractions.push_back(rightShiftSource(extract, shifted));
-            } else if (auto* add_checksum = stmt->to<IR::BFN::ChecksumAdd>()) {
-                extractions.push_back(rightShiftSource(add_checksum, shifted));
-            } else {
-                extractions.push_back(stmt); }
-        }
-
-        cstring tail_name = stripThreadPrefix(tail->name);
-
-        if (!is_compiler_generated(name) || !is_compiler_generated(tail_name)) {
-            if (!is_first) name += ".";
-            name += tail_name;
+            if (itr != states.rend() - 1) {
+                for (const auto* save : transition->saves) {
+                    saves.push_back((save->apply(RightShiftPacketRVal
+                                (shifted)))->to<IR::BFN::SaveToRegister>()); }
+                shifted += transition->shift;
+            }
         }
 
         auto* merged_state = new IR::BFN::ParserState(nullptr, name, tail->gress);
@@ -180,7 +174,8 @@ class ComputeMergeableState : public ParserInspector {
             const IR::Vector<IR::BFN::SaveToRegister>& prev_saves) {
         IR::Vector<IR::BFN::SaveToRegister> saves = prev_saves;
         for (const auto* save : prev_transition->saves) {
-            saves.push_back(rightShiftSource(save, shifted)); }
+            saves.push_back((save->apply(RightShiftPacketRVal
+                            (shifted)))->to<IR::BFN::SaveToRegister>()); }
         auto* rst = new IR::BFN::Transition(
                 prev_transition->value,
                 prev_transition->shift + shifted,
@@ -195,29 +190,6 @@ class ComputeMergeableState : public ParserInspector {
             LOG4("Add " << state->name << " to merge chain");
         }
         return state_chains.at(state);
-    }
-
-    // FIXME(zma) shift using visitor
-
-    /// Shift all input packet extracts to the right by the given
-    /// amount. Works for SaveToRegister and Extract.
-    /// The coordinate system:
-    /// [0............31]
-    /// left..........right
-    template<class T>
-    T*
-    rightShiftSource(T* primitive, int byteDelta) {
-        const IR::BFN::PacketRVal* source =
-            primitive->source->template to<typename IR::BFN::PacketRVal>();
-
-        // Do not need to shift it's not packetRval
-        if (!source) return primitive;
-
-        const auto shiftedRange = source->range.shiftedByBytes(byteDelta);
-        BUG_CHECK(shiftedRange.lo >= 0, "Shifting extract to negative position.");
-        auto* clone = primitive->clone();
-        clone->source = new IR::BFN::PacketRVal(shiftedRange);
-        return clone;
     }
 
     bool is_merge_point(const State* state) {

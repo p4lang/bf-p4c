@@ -382,11 +382,8 @@ template<class ENTRIES> static
 void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const char* name = "entry") {
     BUG_CHECK(swap == 0 || swap == 1);
     BUG_CHECK(mask == 0 || mask & 3);
-    // XXX(zma) this should be an error; downgrading this as a warning for the time being
-    // because it will cause all tests with UDP checksum to fail (UDP checksum include the
-    // the length field twice). BRIG-864
     if (entry.modified())
-        warning(-1, "%s appears multiple times in checksum %d", name, id);
+        error(1,"%s appears multiple times in checksum %d", name, id);
     entry.swap = swap;
     // CSR: The order of operation: data is swapped or not and then zeroed or not
     if (swap)

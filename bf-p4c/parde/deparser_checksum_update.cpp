@@ -34,6 +34,11 @@ struct FieldListInfo {
     // List of fields that participate in the update calculation
     IR::Vector<IR::BFN::ChecksumEntry>* fields;
 
+    // Checksum engines cannot compute a field that appears more than once in calculations
+    // Hence, a metadata with the same value would be inserted in the duplicate field's
+    // place.
+    std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
+
     // Maps each field's index in the list above to its bit offset in the field list
     std::map<int, int> fieldsToOffset;
 
@@ -154,6 +159,14 @@ bool checkIncorrectCsumFields(const IR::HeaderOrMetadata* last,
     }
 }
 
+bool findIfDup(IR::Vector<IR::BFN::ChecksumEntry>* fields, const IR::BFN::FieldLVal* fieldlval) {
+    for (auto f : *fields) {
+        if (fieldlval->equiv(*f->field)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 FieldListInfo*
 analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
@@ -166,6 +179,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     auto method =  methodCall->method->to<IR::Member>();
     auto path = method->expr->to<IR::PathExpression>()->path->name;
     bool zerosAsOnes = false;
+    std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
     const IR::ListExpression* sourceList =
         (*methodCall->arguments)[0]->expression->to<IR::ListExpression>();
     if ((*methodCall->arguments).size() == 2) {
@@ -209,8 +223,19 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
                 } else {
                     ::error("Unhandled checksum expression %1%", member);
                 }
-                fields->push_back(new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(member),
+               auto fieldVal = new IR::BFN::FieldLVal(member);
+               if (findIfDup(fields, fieldVal)) {
+                    auto fieldSize = member->type->width_bits();
+                    const IR::TempVar* dupf = new IR::TempVar(IR::Type::Bits::get(fieldSize), true,
+                                             + "$duplicate_" + member->toString() +
+                                             "_" + std::to_string(duplicatedFields.size()));
+                    duplicatedFields[member] = dupf;
+                    fields->push_back(new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(dupf),
+                                                                 povBit));
+                } else {
+                    fields->push_back(new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(member),
                                                              povBit));
+                }
                 fieldsToOffset[fields->size() - 1] = offset;
             }
 
@@ -238,6 +263,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     LOG2("Validated computed checksum for field: " << destField);
     auto listInfo = new FieldListInfo(fields, fieldsToOffset);
     listInfo->zerosAsOnes = zerosAsOnes;
+    listInfo->duplicatedFields = duplicatedFields;
     csum->fieldListInfos.insert(listInfo);
     return (listInfo);
 }
@@ -466,7 +492,7 @@ struct SubstituteUpdateChecksums : public Transform {
             // If update condition is specified, we create two emits: one for
             // the updated checksum, and one for the original checksum from header.
             // The POV bits for these emits are inserted by the compiler (see
-            // pass "InsertChecksumConditions" below).
+            // pass "InsertTablesForChecksums" below).
             for (auto listInfo : csumInfo->fieldListInfos) {
                 auto* emitUpdatedChecksum = new IR::BFN::EmitChecksum(
                        new IR::BFN::FieldLVal(listInfo->deparseUpdated),
@@ -559,88 +585,114 @@ struct SubstituteChecksumLVal : public Transform {
 /// is predicated by the header validity bit, but this should be a
 /// general table "fusing" optimization in the backend.
 
-struct InsertChecksumConditions : public Transform {
-    explicit InsertChecksumConditions(const ChecksumUpdateInfoMap& checksums, gress_t gress)
+void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
+                                  ChecksumUpdateInfo* csumInfo,
+                                  gress_t gress) {
+    if (csumInfo->isUnconditional)
+        return;
+    cstring tableName = csumInfo->dest + "_encode_update_condition_";
+    cstring actionName = "_set_checksum_update_";
+    // Get matchkeys
+    std::vector<const IR::Expression*> keys;
+    keys.push_back(csumInfo->povBit->field);
+    for (auto fieldListInfo : csumInfo->fieldListInfos) {
+        for (auto updateCond : fieldListInfo->updateConditions) {
+            if (std::find(keys.begin(), keys.end(), updateCond->field) == keys.end()) {
+                keys.push_back(updateCond->field);
+            }
+        }
+    }
+
+    // Get Match Outputs
+    csumInfo->deparseOriginal = new IR::TempVar(IR::Type::Bits::get(1), true,
+                             csumInfo->dest + ".$deparse_original_csum");
+    ordered_set<const IR::TempVar*> outputs;
+    outputs.insert(csumInfo->deparseOriginal);
+    ordered_map<unsigned, unsigned> match_to_action_param;
+
+    int id = 0;
+    for (auto fieldListInfo : csumInfo->fieldListInfos) {
+        unsigned action_param = 0;
+        fieldListInfo->deparseUpdated = new IR::TempVar(IR::Type::Bits::get(1), true,
+                   csumInfo->dest + ".$deparse_updated_csum_" + std::to_string(id++));
+        outputs.insert(fieldListInfo->deparseUpdated);
+        action_param |= 1 << (outputs.size() - 1);
+        unsigned match = 1 << (keys.size() - 1);   // match for valid bit
+        int dontCareBits = INT_MAX;
+        for (auto updateCond : fieldListInfo->updateConditions) {
+            int keyDiff = keys.size() - std::distance(keys.begin(),
+            (std::find(keys.begin(), keys.end(), updateCond->field))) - 1;
+            if (keyDiff < dontCareBits) dontCareBits = keyDiff;
+            if (!updateCond->conditionNegated) {
+                match |= (1 << (keyDiff));
+            }
+        }
+        // Some tables might have more matchkeys than the ones required to calculate
+        // checksum from the particular field list. "dontCareBits" is the number of
+        // the excess keys we do not care about.
+        // Map all possible combination of dont care bits to the same action parameter
+        for (int i = 0; i < (1 << dontCareBits); i++) {
+            match_to_action_param[match | i] = action_param;
+        }
+    }
+    for (unsigned match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
+        if (!match_to_action_param.count(match))
+            match_to_action_param[match] = 1;
+    }
+    auto ma = new MatchAction(keys, outputs, match_to_action_param);
+    auto encoder = create_pov_encoder(gress, tableName, actionName, *ma);
+    tableSeq->tables.push_back(encoder);
+
+    LOG3("Created table " << tableName << " in " << gress << " for match action:");
+    LOG5(ma->print());
+    return;
+}
+
+// If a field is included in multiple times in checksum update, a mau table will be created
+// with an action to copy the repeated field into a  metadata. This metadata will be used instead of
+// the duplicate field. This is done because a checksum engine can add a PHV only once.
+// If a field is added more than twice, that many
+// actions will be created to copy the field in different metadatas
+
+void add_entry_duplication_tables(IR::MAU::TableSeq* tableSeq,
+                                 ChecksumUpdateInfo* csumInfo,
+                                 gress_t gress) {
+    cstring tableName = csumInfo->dest + "_duplication_" + toString(gress);
+    auto table = new IR::MAU::Table(tableName , gress);
+    table->is_compiler_generated = true;
+    auto p4Name = tableName + "_" + cstring::to_cstring(gress);
+    table->match_table = new IR::P4Table(p4Name.c_str(), new IR::TableProperties());
+    auto action = new IR::MAU::Action("__checksum_field_duplication__");
+    for (auto& fieldInfo : csumInfo->fieldListInfos) {
+        if (fieldInfo->duplicatedFields.empty()) {
+            continue;
+        } else {
+            for (auto& dupf : fieldInfo->duplicatedFields) {
+                action->default_allowed = action->init_default = true;
+                auto setdup = new IR::MAU::Instruction("set", {dupf.second, dupf.first});
+                action->action.push_back(setdup);
+            }
+            table->actions[action->name] = action;
+            tableSeq->tables.push_back(table);
+            LOG3("Created table " << tableName << " to handle checksum entry duplication");
+        }
+    }
+    return;
+}
+
+struct InsertTablesForChecksums : public Transform {
+    explicit InsertTablesForChecksums(const ChecksumUpdateInfoMap& checksums, gress_t gress)
         : checksums(checksums), gress(gress) { }
 
  private:
     IR::MAU::TableSeq*
     preorder(IR::MAU::TableSeq* tableSeq) override {
-        bool hasUpdateCondition = false;
-
-        for (auto& csum : checksums) {
-            auto csumInfo = csum.second;
-            if (!csumInfo->isUnconditional) {
-                hasUpdateCondition = true;
-                break;
-            }
+        if (!checksums.empty()) {
+            prune();
         }
-
-        if (!hasUpdateCondition)
-            return tableSeq;
-
-        prune();
-
         for (auto& csum : checksums) {
-            auto csumInfo = csum.second;
-            if (csumInfo->isUnconditional)
-                continue;
-            cstring tableName = csumInfo->dest + "_encode_update_condition_";
-            cstring actionName = "_set_checksum_update_";
-
-            // Get matchkeys
-            std::vector<const IR::Expression*> keys;
-            keys.push_back(csumInfo->povBit->field);
-            for (auto fieldListInfo : csumInfo->fieldListInfos) {
-                for (auto updateCond : fieldListInfo->updateConditions) {
-                    if (std::find(keys.begin(), keys.end(), updateCond->field) == keys.end()) {
-                        keys.push_back(updateCond->field);
-                    }
-                }
-            }
-
-            // Get Match Outputs
-            csumInfo->deparseOriginal = new IR::TempVar(IR::Type::Bits::get(1), true,
-                                     csumInfo->dest + ".$deparse_original_csum");
-            ordered_set<const IR::TempVar*> outputs;
-            outputs.insert(csumInfo->deparseOriginal);
-            ordered_map<unsigned, unsigned> match_to_action_param;
-            int id = 0;
-            for (auto fieldListInfo : csumInfo->fieldListInfos) {
-                unsigned action_param = 0;
-                fieldListInfo->deparseUpdated = new IR::TempVar(IR::Type::Bits::get(1), true,
-                           csumInfo->dest + ".$deparse_updated_csum_" + std::to_string(id++));
-                outputs.insert(fieldListInfo->deparseUpdated);
-                action_param |= 1 << (outputs.size() - 1);
-                unsigned match = 1 << (keys.size() - 1);   // match for valid bit
-                int dontCareBits = INT_MAX;
-                for (auto updateCond : fieldListInfo->updateConditions) {
-                    int keyDiff = keys.size() - std::distance(keys.begin(),
-                    (std::find(keys.begin(), keys.end(), updateCond->field))) - 1;
-                    if (keyDiff < dontCareBits) dontCareBits = keyDiff;
-                    if (!updateCond->conditionNegated) {
-                        match |= (1 << (keyDiff));
-                    }
-                }
-                // Some tables might have more matchkeys than the ones required to calculate
-                // checksum from the particular field list. "dontCareBits" is the number of
-                // the excess keys we do not care about.
-                // Map all possible combination of dont care bits to the same action parameter
-                for (int i = 0; i < (1 << dontCareBits); i++) {
-                    match_to_action_param[match | i] = action_param;
-                }
-            }
-            for (int match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
-                if (!match_to_action_param.count(match))
-                    match_to_action_param[match] = 1;
-            }
-            auto ma = new MatchAction(keys, outputs, match_to_action_param);
-            auto encoder = create_pov_encoder(gress, tableName, actionName, *ma);
-
-            tableSeq->tables.push_back(encoder);
-
-            LOG3("Created table " << tableName << " in " << gress << " for match action:");
-            LOG5(ma->print());
+            add_checksum_condition_table(tableSeq, csum.second, gress);
+            add_entry_duplication_tables(tableSeq, csum.second, gress);
         }
         return tableSeq;
     }
@@ -807,9 +859,8 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
     pipe->thread[gress].deparser->apply(getChecksumPovBits);
     SubstituteUpdateChecksums substituteChecksums(checksums);
     SubstituteChecksumLVal substituteChecksumLVal(checksums);
-    InsertChecksumConditions insertChecksumConditions(checksums, gress);
-
-    pipe->thread[gress].mau = pipe->thread[gress].mau->apply(insertChecksumConditions);
+    InsertTablesForChecksums inserttablesforchecksums(checksums, gress);
+    pipe->thread[gress].mau = pipe->thread[gress].mau->apply(inserttablesforchecksums);
     pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(substituteChecksums);
     for (auto& parser : pipe->thread[gress].parsers) {
         parser = parser->apply(substituteChecksumLVal);

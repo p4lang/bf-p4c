@@ -31,7 +31,7 @@ class Parser {
         gress_t         gress;
         Phv::Ref        dest;
         int             tag = -1;
-        unsigned        add = 0, mask = 0, swap = 0;
+        unsigned        add = 0, mask = 0, swap = 0, mul_2 = 0;
         unsigned        dst_bit_hdr_end_pos = 0;
         bool            start = false, end = false, shift = false;
         unsigned        type = 0; // 0 = verify, 1 = residual, 2 = clot
@@ -42,8 +42,9 @@ class Parser {
         template<class REGS> void write_config(REGS &, Parser *);
         template<class REGS>
         void write_output_config(REGS &, Parser *, void *, unsigned &) const;
-    private:
-        template <typename ROW> void write_row_config(ROW &row_regs);
+      private:
+        template <typename ROW> void write_row_config(ROW &row);
+        template <typename ROW> void write_jbay_row_config(ROW &row);
     };
     struct CounterInit {
         gress_t         gress;

@@ -319,6 +319,9 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "swap: " << csum->swap << std::endl;
         out << indent << "start: " << csum->start  << std::endl;
         out << indent << "end: " << csum->end  << std::endl;
+        if (csum->multiply_2 > 0) {
+            out << indent << "mul_2: " << csum->multiply_2 << std::endl;
+        }
 
         if (csum->end) {
             if (csum->type == IR::BFN::ChecksumMode::VERIFY && csum->csum_err)

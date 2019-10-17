@@ -151,6 +151,8 @@ parser SwitchIngressParser(
         pkt.extract(hdr.udpv4);
         udp_checksum.subtract({hdr.udpv4.src_port,
                                hdr.udpv4.dst_port,
+                               hdr.udpv4.length,
+                               hdr.udpv4.length,
                                hdr.udpv4.checksum});
         ig_md.ig_brid_md.udp_checksum_b_md = udp_checksum.get();
         transition accept;
@@ -159,6 +161,8 @@ parser SwitchIngressParser(
         pkt.extract(hdr.udpv6);
         udp_checksum.subtract({hdr.udpv6.src_port,
                                hdr.udpv6.dst_port,
+                               hdr.udpv6.length,
+                               hdr.udpv6.length,
                                hdr.udpv6.checksum});
         ig_md.ig_brid_md.udp_checksum_b_md = udp_checksum.get();
         transition accept;
@@ -288,6 +292,8 @@ control SwitchEgressDeparser(packet_out pkt, inout Parsed_packet hdr,
                                                     hdr.ipv4.total_len,
                                                     hdr.udpv4.src_port,
                                                     hdr.udpv4.dst_port,
+                                                    hdr.udpv4.length,
+                                                    hdr.udpv4.length,
                                                     eg_md.eg_brid_md.udp_checksum_b_md});
         }
         if (hdr.ipv6.isValid()){
@@ -298,6 +304,8 @@ control SwitchEgressDeparser(packet_out pkt, inout Parsed_packet hdr,
                                                     hdr.ipv6.next_hdr,
                                                     hdr.udpv6.src_port,
                                                     hdr.udpv6.dst_port,
+                                                    hdr.udpv6.length,
+                                                    hdr.udpv6.length,
                                                     eg_md.eg_brid_md.udp_checksum_b_md});
  
         }

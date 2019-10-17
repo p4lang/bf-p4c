@@ -132,7 +132,7 @@ class LoweredParserChecksum : LoweredParserPrimitive {
     bool end;
     unsigned end_pos;
     BFN::ChecksumMode type;
-
+    optional unsigned multiply_2;
     optional NullOK BFN::ContainerBitRef csum_err;
     optional Clot clot_dest;
     optional NullOK BFN::ContainerRef phv_dest;

@@ -472,6 +472,11 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
             }
         } else if (kv.key == "swap") {
             if (CHECKTYPE(kv.value, tINT)) swap = kv.value.i;
+        } else if (kv.key == "mul_2") {
+            if (options.target == TOFINO) {
+                error(kv.value.lineno, "multiply by 2 feature is available for Tofino2 and higher");
+            }
+            if (CHECKTYPE(kv.value, tINT)) mul_2 = kv.value.i;
         } else if (kv.key == "shift") {
             shift = get_bool(kv.value);
         } else {

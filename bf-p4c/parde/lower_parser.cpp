@@ -681,17 +681,15 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         return loweredChecksums;
     }
-    unsigned int getChecksumSwap(const IR::BFN::PacketRVal* range) {
+    unsigned int rangeToInt(const IR::BFN::PacketRVal* range) {
         auto lo = range->range.loByte();
         auto hi = range->range.hiByte();
-        unsigned swap = 0;
+        unsigned num = 0;
 
         for (int byte = lo; byte <= hi; ++byte)
-            swap |= (1 << byte/2);
+            num |= (1 << byte/2);
 
-        // swap register is 17 bit long
-        BUG_CHECK(swap <= ((1 << 17) - 1), "checksum swap byte is out of input buffer");
-        return swap;
+        return num;
     }
 
     /// Create lowered HW checksum primitives that can be consumed by the assembler.
@@ -709,25 +707,38 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         const IR::BFN::FieldLVal* dest = nullptr;
         unsigned swap = 0;
+        unsigned mul2 = 0;
+        // Will be used to compare bitranges for multiply by 2 in jbay
+        std::set<nw_bitrange> mask_for_compare;
         std::set<nw_byterange> masked_ranges;
         for (auto c : checksums) {
             if (auto add = c->to<IR::BFN::ChecksumAdd>()) {
                 if (auto v = add->source->to<IR::BFN::PacketRVal>()) {
                     masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
                     if (add->swap)
-                        swap |= getChecksumSwap(v);
+                        swap |= rangeToInt(v);
                 }
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
                 if (auto v = sub->source->to<IR::BFN::PacketRVal>()) {
-                    masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
+                    if (mask_for_compare.find(v->range) != mask_for_compare.end()) {
+                        if (Device::currentDevice() == Device::JBAY) {
+                            mul2 |= rangeToInt(v);
+                        }
+                    } else {
+                        masked_ranges.insert(v->range.toUnit<RangeUnit::Byte>());
+                        mask_for_compare.insert(v->range);
+                    }
                     if (sub->swap)
-                        swap |= getChecksumSwap(v);
+                        swap |= rangeToInt(v);
                 }
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
             } else if (auto get = c->to<IR::BFN::ChecksumGet>()) {
                 dest = get->dest;
             }
+            // swap or mul_2 register is 17 bit long
+            BUG_CHECK(swap <= ((1 << 17) - 1), "checksum swap byte is out of input buffer");
+            BUG_CHECK(mul2 <= ((1 << 17) - 1), "checksum mul_2 byte is out of input buffer");
         }
 
         auto last = checksums.back();
@@ -740,7 +751,9 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         auto csum = new IR::BFN::LoweredParserChecksum(
             id, masked_ranges, swap, start, end, end_pos, type);
-
+        if (mul2) {
+            csum->multiply_2 = mul2;
+        }
         std::vector<alloc_slice> slices;
 
         // FIXME(zma) this code could use some cleanup, what a mess ...

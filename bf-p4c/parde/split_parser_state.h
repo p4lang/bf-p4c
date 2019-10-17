@@ -3,6 +3,7 @@
 
 #include "parde_visitor.h"
 #include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/ir/bitrange.h"
 
 /*
  * After PHV allocation, we have the concrete view of what size of

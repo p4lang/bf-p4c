@@ -593,6 +593,29 @@ struct AllocateParserState : public ParserTransform {
                     return (va.rv && vb.rv) ? va.rv->range < vb.rv->range : false;
                 });
             }
+            template <typename T>
+            bool find_spill_needed_for_dup(std::map<nw_bitrange, int>& masked_ranges_map,
+                                           const T* csum_entry) {
+                GetPacketRVal gpr;
+                csum_entry->apply(gpr);
+                if (!gpr.rv) return false;
+                auto r = gpr.rv->range;
+                if (masked_ranges_map.count(r)) {
+                    if (Device::currentDevice() == Device::TOFINO) {
+                        masked_ranges_map[r]++;
+                        return true;
+                    } else if (Device::currentDevice() == Device::JBAY) {
+                        if (masked_ranges_map[r] % 2 == 0 || r.size() % 16) {
+                            masked_ranges_map[r]++;
+                            return true;
+                        }
+                    } else {
+                        BUG("unhandled device");
+                    }
+                }
+                masked_ranges_map[r]++;
+                return false;
+            }
 
             void allocate() override {
                 std::map<cstring,
@@ -607,12 +630,18 @@ struct AllocateParserState : public ParserTransform {
 
                 for (auto& kv : decl_to_checksums) {
                     bool oob = false;
-
+                    std::map<nw_bitrange, int> masked_ranges_map;
                     for (auto c : kv.second) {
                         if (oob) {
                             spilled.push_back(c);
                         } else if (within_buffer(c)) {
-                            current.push_back(c);
+                           if (find_spill_needed_for_dup(masked_ranges_map, c)) {
+                                spilled.push_back(c);
+                                LOG3("Spill " << c << " (checksum entry duplication)");
+                                oob = true;
+                            } else {
+                                current.push_back(c);
+                            }
                         } else if (out_of_buffer(c)) {
                             spilled.push_back(c);
                             LOG3("spill " << c << " (out of buffer)");
