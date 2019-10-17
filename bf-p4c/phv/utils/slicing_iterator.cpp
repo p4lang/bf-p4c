@@ -1513,7 +1513,10 @@ PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
         const ordered_set<FieldSlice>& points,
         const int minSize,
         const FieldSlice& candidate) const {
+    const PHV::FieldSlice* bestPoint = nullptr;
+    int numFields = -1;
     for (auto& point : points) {
+        ordered_set<const PHV::Field*> fields;
         LOG6("\t\t\tChecking slicing point (slice before point): " << point);
         bool pointFound = false;
         bool candidateFound = false;
@@ -1530,10 +1533,17 @@ PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
                      << " bits in this slice list now.");
                 pointFound = true;
             }
+            fields.insert(slice.field());
             sliceListSize += slice.size();
             if (candidateFound && sliceListSize == minSize) {
                 LOG6("\t\t\t  Returning point " << point);
-                return point;
+                if (numFields == -1 || numFields > fields.size()) {
+                    bestPoint = &point;
+                    numFields = fields.size();
+                }
+                LOG6("\t\t\t  Processed valid slicing point " << point << ". So, go to next slicing"
+                     " point.");
+                break;
             }
             if (sliceListSize > minSize) {
                 LOG6("\t\t\t  We are greater than the minSize " << minSize << " now. So, go to next"
@@ -1541,8 +1551,11 @@ PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
                 break;
             }
         }
-        LOG5("\t\t\tSlicing at " << point << " causes a slice boundary to fall between slices.");
+        if (bestPoint != nullptr)
+            LOG5("\t\t\tSlicing at " << point << " causes a slice boundary to fall between "
+                 "slices.");
     }
+    if (bestPoint != nullptr) return *bestPoint;
     auto customSlice = getBestSlicingPoint(list, minSize, candidate);
     LOG5("\t\t\tCustom slice found: " << (customSlice != boost::none));
     if (customSlice == boost::none) return *(points.begin());
