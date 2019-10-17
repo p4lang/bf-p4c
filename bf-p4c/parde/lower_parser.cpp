@@ -1407,6 +1407,20 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     IR::BFN::LoweredDeparser* egLoweredDeparser;
 
  private:
+    IR::Vector<IR::BFN::FieldLVal>
+    removeDeparserZeroFields(IR::Vector<IR::BFN::FieldLVal> checksumFields) {
+        // Fields which are deparser zero candidate are guaranteed to be zero
+        // Removing such fields will not alter checksum.
+        IR::Vector<IR::BFN::FieldLVal> newChecksumFields;
+        for (auto cfield : checksumFields) {
+            auto* phv_field = phv.field(cfield->field);
+            if (!phv_field->is_deparser_zero_candidate()) {
+                newChecksumFields.push_back(cfield);
+            }
+        }
+        return newChecksumFields;
+    }
+
     IR::BFN::ChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum) {
         // Allocate a checksum unit and generate the configuration for it.
         auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
@@ -1420,6 +1434,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             for (auto f : emitChecksum->sources) {
                 checksumFields.push_back(f->field);
             }
+            checksumFields = removeDeparserZeroFields(checksumFields);
             std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, checksumFields);
             for (auto* source : phvSources) {
                 auto* input = new IR::BFN::ChecksumPhvInput(source);
@@ -1453,6 +1468,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             for (auto& group : groups) {
                 phvSources.clear();
                 clotSources.clear();
+                *group.first = removeDeparserZeroFields(*group.first);
                 std::tie(phvSources, clotSources) = lowerFields(phv, clotInfo, *group.first);
                 auto povBit = lowerSingleBit(phv, group.second,
                                                   PHV::AllocContext::DEPARSER);

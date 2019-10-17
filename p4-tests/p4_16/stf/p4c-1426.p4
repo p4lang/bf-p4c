@@ -23,10 +23,9 @@ header ingress_skip_t {
 
 parser IgParser(packet_in packet, out headers_t hdr, out metadata_t meta,
                   out ingress_intrinsic_metadata_t ig_intr_md) {
-    ingress_skip_t skip;
     state start {
         packet.extract(ig_intr_md);
-        packet.extract(skip);
+        packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.sample);
         
         transition accept;
@@ -38,12 +37,8 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
   action act(bit<9> port) {ig_intr_tm_md.ucast_egress_port = port;}
-    table test {
-        actions = { act; }
-        key = { hdr.sample.a: exact; }
-        default_action = act(1);
-    }
-    apply {test.apply();}
+    
+   apply {act(1);}
 }
 
 control IgDeparser(packet_out packet, inout headers_t hdr,in metadata_t meta, in ingress_intrinsic_metadata_for_deparser_t standard_metadata) {

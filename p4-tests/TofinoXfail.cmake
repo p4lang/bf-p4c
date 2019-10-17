@@ -25,8 +25,8 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
-    extensions/p4_tests/p4_16/stf/p4c-1426.p4
     testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
+    extensions/p4_tests/p4_16/stf/p4c-1426.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
