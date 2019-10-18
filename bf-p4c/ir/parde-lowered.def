@@ -252,8 +252,8 @@ class LoweredParserMatch {
     /// Next state to transition to (null means terminal state)
     NullOK LoweredParserState next;
 
-    /// If true, extract at stridded offset on state re-entry
-    bool stride = false;
+    /// Increment destination offset on state re-entry
+    optional boost::optional<unsigned> offsetInc;
 
 #emit
     cstring loop;

@@ -935,8 +935,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (offset_inc)
                 error(kv.key.lineno, "Multiple offset_inc settings in match");
             if (!CHECKTYPE(kv.value, tINT)) continue;
-            if ((offset_inc = kv.value.i) != 1)
-                error(kv.value.lineno, "currently only offset_inc of 1 is supported");
+            offset_inc = kv.value.i;
         } else if (kv.key == "buf_req") {
             if (buf_req >= 0)
                 error(kv.key.lineno, "Multiple buf_req settings in match");
@@ -1341,6 +1340,8 @@ Parser::State::OutputUse Parser::State::Match::output_use() const {
 }
 void Parser::State::Match::merge_outputs(OutputUse use) {
     if (options.target != TOFINO) return;
+    // In a loop, do not merge the extracts since the offset inc count is tied to the container.
+    if (offset_inc) return;
     // FIXME -- this is tofino specific
     use += output_use();
     if (use.b32 >= 4 && use.b16 >= 4) return;

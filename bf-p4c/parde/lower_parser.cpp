@@ -786,6 +786,42 @@ struct ComputeLoweredParserIR : public ParserInspector {
         return csum;
     }
 
+    struct CountStridedHeaderRefs : public Inspector {
+        std::map<cstring, std::vector<unsigned>> header_stack_to_indices;
+
+        bool preorder(const IR::HeaderStackItemRef* hs) {
+            auto stack = hs->base()->toString();
+            auto index = hs->index()->to<IR::Constant>()->asUnsigned();
+            header_stack_to_indices[stack].push_back(index);
+            return false;
+        }
+    };
+
+    unsigned getOffsetIncAmt(const IR::BFN::ParserState* state) {
+        CountStridedHeaderRefs count;
+        state->apply(count);
+
+        // TODO move this check to midend
+        if (count.header_stack_to_indices.size() > 1) {
+            std::stringstream ss;
+            for (auto& kv : count.header_stack_to_indices)
+                ss << kv.first << " ";
+
+            ::error("More than one header stack in parser state %1%: %2%", state->name, ss.str());
+        }
+
+        auto& indices = count.header_stack_to_indices.begin()->second;
+
+        for (unsigned i = 0; i < indices.size(); i++) {
+            if (indices[i] != i) {
+                ::error("Illegal header stack references in parser state %1%. "
+                        "Header stack indices must be contiguous.", state->name);
+            }
+        }
+
+        return indices.size();
+    }
+
     void postorder(const IR::BFN::ParserState* state) override {
         LOG4("[ComputeLoweredParserIR] lowering state " << state->name);
 
@@ -889,7 +925,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                     priority,
                     loweredStates[transition->next]);
 
-            loweredMatch->stride = state->stride;
+            if (state->stride)
+                loweredMatch->offsetInc = getOffsetIncAmt(state);
 
             if (transition->loop)
                 loweredMatch->loop = transition->loop;
