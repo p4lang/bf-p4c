@@ -492,9 +492,37 @@ bool IR::MAU::Table::getAnnotation(cstring name, std::vector<ID> &val) const {
     return rv;
 }
 
-int IR::MAU::Table::get_placement_priority() const {
-    int rv = 0;
-    getAnnotation("placement_priority", rv);
+int IR::MAU::Table::get_placement_priority_int() const {
+    int val = 0;
+    if (!match_table) return val;
+    bool val_set = false;
+    for (auto &annot : match_table->getAnnotations()->annotations) {
+        if (annot->name != "placement_priority") continue;
+        for (auto *expr : annot->expr) {
+            if (auto constant = expr->to<IR::Constant>()) {
+                if (val_set)
+                    ::error(ErrorType::ERR_INVALID, "Only one integer value is allowed for a "
+                        "placement_priority on table %2% for its global score", annot,
+                        externalName());
+                val = constant->asInt();
+                val_set = true;
+            }
+        }
+    }
+    return val;
+}
+
+std::set<cstring> IR::MAU::Table::get_placement_priority_string() const {
+    std::set<cstring> rv;
+    if (!match_table) return rv;
+    for (auto &annot : match_table->getAnnotations()->annotations) {
+        if (annot->name != "placement_priority") continue;
+        for (auto *expr : annot->expr) {
+            if (auto sl = expr->to<IR::StringLiteral>()) {
+                rv.insert(sl->value);
+            }
+        }
+    }
     return rv;
 }
 

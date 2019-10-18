@@ -80,7 +80,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaPadding, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaPacketEntry, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaPhase0, PARSE_TRIPLE, Expression, extPragma);
-        BFN_PARSE(PragmaPlacementPriority, PARSE, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaPlacementPriority, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE(PragmaPreColor, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaProxyHashAlgorithm, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaProxyHashWidth, PARSE, Expression, extPragma);

@@ -1473,7 +1473,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     LOG5("      Stage A is " << a->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
          " with calculated stage " << a->stage <<
          ", provided stage " << a->table->get_provided_stage(&a->stage) <<
-         ", priority " << a->table->get_placement_priority());
+         ", priority " << a->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.first);
     LOG5("        local dep score " << deps->stage_info.at(a_table_to_use).dep_stages_control_anti);
     LOG5("        dom frontier " << deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier);
@@ -1483,7 +1483,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     LOG5("      Stage B is " << b->name << ((a->gw) ? (" $" + a->gw->name) : "") <<
          " with calculated stage " << b->stage <<
          ", provided stage " << b->table->get_provided_stage(&b->stage) <<
-         ", priority " << b->table->get_placement_priority());
+         ", priority " << b->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.second);
     LOG5("        local dep score " << deps->stage_info.at(b_table_to_use).dep_stages_control_anti);
     LOG5("        dom frontier " << deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier);
@@ -1511,8 +1511,19 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     }
 
     choice = PRIORITY;
-    int a_priority = a->table->get_placement_priority();
-    int b_priority = b->table->get_placement_priority();
+    auto a_priority_str = a->table->get_placement_priority_string();
+    auto b_priority_str = b->table->get_placement_priority_string();
+    if (a_priority_str.count(b->table->externalName()))
+        return true;
+    if (b->gw && a_priority_str.count(b->gw->externalName()))
+        return true;
+    if (b_priority_str.count(a->table->externalName()))
+        return false;
+    if (a->gw && b_priority_str.count(a->gw->externalName()))
+        return false;
+
+    int a_priority = a->table->get_placement_priority_int();
+    int b_priority = b->table->get_placement_priority_int();
     if (a_priority > b_priority) return true;
     if (a_priority < b_priority) return false;
 

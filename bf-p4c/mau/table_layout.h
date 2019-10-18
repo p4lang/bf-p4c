@@ -271,6 +271,24 @@ class ProhibitAtcamWideSelectors : public MauInspector {
      ProhibitAtcamWideSelectors() { visitDagOnce = false; }
 };
 
+
+class CheckPlacementPriorities : public MauInspector {
+    ordered_map<cstring, std::set<cstring>> placement_priorities;
+    bool run_once = false;
+
+    profile_t init_apply(const IR::Node *root) override {
+        auto rv = MauInspector::init_apply(root);
+        placement_priorities.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *tbl) override;
+    void end_apply() override;
+
+ public:
+    CheckPlacementPriorities() {}
+};
+
 class TableLayout : public PassManager {
     LayoutChoices &lc;
     SplitAttachedInfo &att_info;

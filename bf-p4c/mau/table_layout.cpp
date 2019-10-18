@@ -1332,6 +1332,35 @@ bool MeterColorMapramAddress::SetMapramAddress::preorder(IR::MAU::Meter *mtr) {
     return false;
 }
 
+bool CheckPlacementPriorities::preorder(const IR::MAU::Table *tbl) {
+    tbl->get_placement_priority_int();
+    placement_priorities[tbl->externalName()] = tbl->get_placement_priority_string();
+    return true;
+}
+
+/**
+ * TODO: P4C-2256: the placement_priorities could use a check for a cycle
+ */
+void CheckPlacementPriorities::end_apply() {
+    if (run_once)
+        return;
+
+    for (auto &entry : placement_priorities) {
+        for (auto pri : entry.second) {
+            auto other_entry = placement_priorities.find(pri);
+            if (other_entry == placement_priorities.end()) {
+                ::warning("The placement_priority %1% on table %2% cannot find the associated "
+                    "table", entry.first, pri);
+                continue;
+            } else if (other_entry->second.count(entry.first)) {
+                ::error("Tables %1% and %2% have both been prioritized over each other, which "
+                    "is nonsensical.", entry.first, pri);
+            }
+        }
+    }
+    run_once = true;
+}
+
 TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
 : lc(l), att_info(sia) {
     addPasses({
@@ -1341,6 +1370,7 @@ TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
         new RandomExternUsedOncePerAction,
         new DoTableLayout(p, lc, att_info),
         new ValidateActionProfileFormat(lc),
-        new ProhibitAtcamWideSelectors
+        new ProhibitAtcamWideSelectors,
+        new CheckPlacementPriorities
     });
 }
