@@ -34,6 +34,10 @@ class ParseAnnotations : public P4::ParseAnnotations {
                 PARSE_SKIP("assert"),
                 PARSE_SKIP("assume"),
 
+                // Ignore p4runtime annotations
+                PARSE_SKIP("brief"),
+                PARSE_SKIP("description"),
+
                 // Ignore unused annotations appearing in headers for v1model.
                 PARSE_SKIP("metadata"),
                 PARSE_SKIP("alias"),

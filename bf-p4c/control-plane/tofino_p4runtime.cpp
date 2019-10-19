@@ -1597,6 +1597,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         pre->set_name(name);
         pre->set_alias(symbols.getAlias(name));
         Helpers::addAnnotations(pre, annotations);
+        Helpers::addDocumentation(pre, annotations);
         externInstance->mutable_info()->PackFrom(message);
     }
 
