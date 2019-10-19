@@ -393,6 +393,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     boost::optional<bool> prev_is_tphv = boost::none;
     const PHV::Field* lastDigest = nullptr;
     bool lastNoPack = false;
+    bool lastPadding = false;
     bool lastWideArith = false;
     bool lastDeparserZero = false;
     bool break_at_next_byte_boundary = false;
@@ -407,6 +408,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         lastDigest = nullptr;
         lastWideArith = false;
         lastDeparserZero = false;
+        lastPadding = false;
         break_at_next_byte_boundary = false;
         lastUnreferenced = false;
     };
@@ -503,8 +505,9 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // BRIG-301.
         break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
 
-        if (accumulator_bits && (field->no_pack())) {
-            // Break off the existing slice list if this field has a no_pack
+        if (accumulator_bits && (field->no_pack()) && !lastPadding) {
+            // Break off the existing slice list if this field has a no_pack and
+            // the previous fields are not padding fields.
             // Break at bottom as well
             StartNewSliceList();
             LOG5("Starting new slice list (for no_pack field):");
@@ -604,6 +607,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
             (lastNoPack && field->padding);
         lastWideArith = field->used_in_wide_arith();
+        lastPadding = field->padding;
         lastDeparserZero = field->is_deparser_zero_candidate();
         lastUnreferenced = !self.uses_i.is_referenced(field);
         lastDigest = (field->is_digest() || (lastDigest && !self.uses_i.is_referenced(field)) ||
