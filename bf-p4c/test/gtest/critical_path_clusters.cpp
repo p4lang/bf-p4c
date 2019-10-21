@@ -111,7 +111,8 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PackConflicts& conflicts,
                                    MapTablesToActions& tableActionsMap,
                                    ActionPhvConstraints& actions,
-                                   CalcParserCriticalPath& parser_critical_path) {
+                                   CalcParserCriticalPath& parser_critical_path,
+                                   PragmaContainerSize& pragma) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
@@ -130,6 +131,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
         &tableActionsMap,
         &actions,
         new PHV_Field_Operations(phv),
+        &pragma,
         &clustering,
     };
     return pipe->apply(quick_backend);
@@ -199,14 +201,15 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     ActionPhvConstraints actions(phv, uses, conflicts, tableActionsMap, deps);
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
-    Clustering clustering(phv, uses, conflicts, actions);
+    PragmaContainerSize pragma(phv);
+    Clustering clustering(phv, uses, conflicts, pragma);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
                                        clustering,
                                        table_alloc,
                                        deps, conflicts, tableActionsMap, actions,
-                                       parser_critical_path);
+                                       parser_critical_path, pragma);
 
     auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
     post_pm_pipe = post_pm_pipe->apply(*cluster_cp);

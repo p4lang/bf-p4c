@@ -42,7 +42,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
               tableActionsMap, alloc),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
               domTree, alloc),
-      clustering(phv, uses, pack_conflicts, action_constraints),
+      clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes()),
       strided_headers(phv) {
     if (options.trivial_phvalloc) {
         addPasses({

@@ -13,6 +13,7 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
+#include "bf-p4c/phv/pragma/pa_container_size.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/mau/gateway.h"
 
@@ -42,9 +43,7 @@ class Clustering : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
     const PackConflicts& conflicts_i;
-#if 0  // Used in MakeSuperClusters which is now disabled
-    const ActionPhvConstraints& actions_i;
-#endif  // 0
+    const PragmaContainerSize& pragma_i;
 
     /// Holds all aligned clusters.  Every slice is in exactly one cluster.
     std::list<PHV::AlignedCluster *> aligned_clusters_i;
@@ -286,8 +285,8 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const ActionPhvConstraints&)
-        : phv_i(p), uses_i(u), conflicts_i(c), /* actions_i(a), */ slice_i(*this) {
+    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const PragmaContainerSize& pa)
+        : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i

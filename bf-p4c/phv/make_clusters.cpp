@@ -380,6 +380,8 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         return;
     headers_i.insert(struct_info.first_field_id);
 
+    auto& sizesMap = self.pragma_i.field_to_sizes();
+
     // Build slice lists.  All slices of the same field go in the same slice
     // list.  Additionally, non-byte aligned fields are grouped together in the
     // smallest byte-aligned chunk.  Use reverse order, because types list
@@ -413,16 +415,34 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         lastUnreferenced = false;
     };
 
-    LOG5("Starting new slice list:");
+    std::vector<PHV::Field*> fields_in_header;
     for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
         PHV::Field* field = phv_i.field(fid);
-
         BUG_CHECK(field != nullptr, "No PHV info for field in header reference %1%",
                   cstring::to_cstring(hr));
         BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
                   "Found field in header but not PHV: %1%",
                   cstring::to_cstring(field));
+        fields_in_header.push_back(field);
+    }
 
+    // bitsAfter represents the number of bits after this field, that could be a part of the same
+    // slice list. In case of no-pack fields, bitsAfter will be zero.
+    int bitsAfter = 0;
+    std::map<PHV::Field*, int> bitsAfterField;
+    for (int i = fields_in_header.size() - 1; i >= 0; i--) {
+        PHV::Field* field = fields_in_header[i];
+        if (field->no_pack())
+            bitsAfter = 0;
+        else
+            bitsAfter += field->size;
+        bitsAfterField[field] = bitsAfter;
+        LOG1("\tBits after " << field->name << " : " << bitsAfter);
+    }
+
+    LOG5("Starting new slice list:");
+    for (unsigned i = 0; i < fields_in_header.size(); i++) {
+        PHV::Field* field = fields_in_header[i];
         // XXX(cole): HACK to deal with intrinsic metadata padding.  Some
         // intrinsic metadata is not deparsed and also marked as no-pack.  To
         // avoid prepending its padding to the next slice list, we don't
@@ -629,8 +649,28 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         bool is_multiple = accumulator_bits % int(PHV::Size::b8) == 0 && accumulator_bits >= 32;
         if (is_multiple || (accumulator_bits % int(PHV::Size::b8) == 0
                 && !self.uses_i.is_referenced(field))) {
-            StartNewSliceList();
-            LOG5("Starting new slice list:"); } }
+            bool startNewSliceList = true;
+            unsigned nextSliceSizes = 0;
+            for (unsigned j = i + 1; j < fields_in_header.size(); j++) {
+                PHV::Field* nextField = fields_in_header[j];
+                nextSliceSizes += nextField->size;
+                LOG5("\t\tSubsequent slice: " << nextField->name);
+                if (!sizesMap.count(nextField)) continue;
+                int totalSizeReqd = 0;
+                for (auto sz : sizesMap.at(nextField))
+                    totalSizeReqd += static_cast<int>(sz);
+                LOG5("\t\t  totalSizeReqd: " << totalSizeReqd << ", bits after: " <<
+                        bitsAfterField.at(nextField));
+                if (totalSizeReqd > bitsAfterField.at(nextField) &&
+                    totalSizeReqd != nextField->size) {
+                    startNewSliceList = false;
+                    break;
+                }
+                if (nextSliceSizes >= 32) break;
+            }
+            if (startNewSliceList) {
+                StartNewSliceList();
+                LOG5("Starting new slice list:"); } } }
 
     if (accumulator->size())
         slice_lists_i.insert(accumulator);

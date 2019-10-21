@@ -860,8 +860,6 @@ p4c_add_xfail_reason("tofino"
   "Cannot find a slicing to satisfy @pa_container_size"
   extensions/p4_tests/p4_14/customer/arista/p4c-1814.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
-  ../glass/testsuite/p4_tests/phv/test_config_227_set_meta_packing.p4
-  ../glass/testsuite/p4_tests/phv/test_config_262_req_packing.p4
   ../glass/testsuite/p4_tests/phv/test_config_275_match_key_range.p4
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
   )
@@ -1600,12 +1598,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Depth of way doesn't match number of rams in table|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
-)
-
-# P4C-2188
-p4c_add_xfail_reason("tofino"
-  "The compiler failed in slicing the following group of fields|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/noviflow/p4c-1834.p4
 )
 
 # BA-102 Failures
