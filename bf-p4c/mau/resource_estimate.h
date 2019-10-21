@@ -65,7 +65,6 @@ struct StageUseEstimate {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
     }
-
     void options_to_ways(const IR::MAU::Table *tbl, int entries);
     void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
                          bool table_placement);
@@ -111,7 +110,7 @@ struct StageUseEstimate {
                               int srams_left);
     void unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
     void calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
-    void calculate_partition_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int ram_depth);
+    void calculate_partition_sizes(LayoutOption *lo, int ram_depth);
     bool ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void srams_left_best_option(int srams_left);
     void tcams_left_best_option();

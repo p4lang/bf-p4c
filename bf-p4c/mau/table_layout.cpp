@@ -378,9 +378,6 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
             layout.match_width_bits += bv.popcount() * mbk.match_multiplier;
             byte_sizes.push_back(bv.popcount());
         }
-        LOG4("\tIXBar Bytes : " << layout.ixbar_bytes << " Match Bytes : " << layout.match_bytes
-             << " IXBar Width Bits : " << layout.ixbar_width_bits << " Match Width Bits : "
-             << layout.match_width_bits);
     }
 
     if (layout.atcam) {

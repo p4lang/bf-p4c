@@ -672,18 +672,8 @@ void SRamMatchTable::setup_ways() {
         for (auto &w : ways) {
             ++way;
             int index = -1;
-            if (table_type() != ATCAM) {
-                if ((w.rams.size() != (1U << bitcount(w.mask)) * fmt_width))
-                    error(w.lineno, "Depth of way doesn't match number of rams in table %s",
-                          name());
-            } else {
-                // Allowed to not fully match, as the partition index can be set from the
-                // control plane 
-                if (!((w.rams.size() < (1U << bitcount(w.mask)) * fmt_width) &&
-                     (w.rams.size() % fmt_width) == 0))
-                    error(w.lineno, "RAMs in ATCAM is not a legal multiple of the format width %s",
-                          name());
-            }
+            if (w.rams.size() != (1U << bitcount(w.mask)) * fmt_width)
+                error(w.lineno, "Depth of way doesn't match number of rams in table %s", name());
             for (auto &ram : w.rams) {
                 ++index;
                 if (way_map.count(ram)) {

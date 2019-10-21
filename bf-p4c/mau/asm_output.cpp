@@ -643,31 +643,31 @@ void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
         mask_bits |= way.mask;
     }
 
+    auto bv = bitvec(mask_bits);
+    BUG_CHECK(bv.is_contiguous() || bv.empty(), "Unsupported non-contiguous select mask for "
+                                                "ATCAM table");
+
     for (auto ghost_slice : ghost) {
         int start_bit = 0;  int end_bit = 0;
         if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS)
             continue;
 
-        int bits_seen = TableFormat::RAM_GHOST_BITS;
-        for (auto br : bitranges(mask_bits)) {
-            le_bitrange ixbar_bits = { bits_seen, bits_seen + (br.second - br.first) };
-            le_bitrange ghost_bits = { ghost_slice.get_lo(), ghost_slice.get_hi() };
-            bits_seen += ixbar_bits.size();
-            auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
-                            (ixbar_bits.intersectWith(ghost_bits));
-            if (boost_sl == boost::none)
-                continue;
-            le_bitrange sl_overlap = *boost_sl;
-            le_bitrange hash_bits = { br.first + sl_overlap.lo - ixbar_bits.lo,
-                                      br.second - (ixbar_bits.hi - sl_overlap.hi) };
-            hash_bits = hash_bits.shiftedByBits(IXBar::RAM_SELECT_BIT_START);
-            Slice adapted_ghost = ghost_slice;
-            if (ghost_slice.get_lo() < sl_overlap.lo)
-                adapted_ghost.shrink_lo(sl_overlap.lo - ghost_slice.get_lo());
-            if (ghost_slice.get_hi() > sl_overlap.hi)
-                adapted_ghost.shrink_hi(ghost_slice.get_hi() - sl_overlap.hi);
-            emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
+        int max_point = TableFormat::RAM_GHOST_BITS + bv.popcount() - ghost_slice.get_hi();
+        end_bit = bv.max().index() - max_point + 1;
+        start_bit = bv.min().index();
+        Slice adapted_ghost = ghost_slice;
+        if (ghost_slice.get_lo() >= TableFormat::RAM_GHOST_BITS) {
+            start_bit += ghost_slice.get_lo() - TableFormat::RAM_GHOST_BITS;
+        } else {
+            int diff = TableFormat::RAM_GHOST_BITS - ghost_slice.get_lo();
+            adapted_ghost.shrink_lo(diff);
         }
+
+        le_bitrange hash_bits = { start_bit, end_bit };
+        bitvec select_bits(use->way_use[0].mask);
+        hash_bits = hash_bits.shiftedByBits(IXBar::RAM_SELECT_BIT_START
+                                            + select_bits.min().index());
+        emit_ixbar_match_func(out, indent, empty, &adapted_ghost, hash_bits);
     }
 }
 

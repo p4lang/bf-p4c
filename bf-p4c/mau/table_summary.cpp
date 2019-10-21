@@ -219,7 +219,7 @@ void TableSummary::printTablePlacement() {
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     TablePrinter tp(out, {"Stage", "Logical ID", "Gress", "Name", "Ixbar Bytes", "Match Bits",
-                          "Gateway", "Action Data Bytes"},
+                          "Gateway", "SRAM", "TCAM", "MapRAM", "Action Data Bytes"},
                     TablePrinter::Align::CENTER);
 
     int prev_stage = 0;
@@ -237,7 +237,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         lc.total_action_formats[t->name][ActionData::NORMAL] = action_formats;
 
         int entries = t->layout.entries;
-        // StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
+        StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
 
         int curr_stage = t->logical_id/16;
         if (curr_stage != prev_stage)
@@ -251,6 +251,9 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
             std::to_string(t->layout.ixbar_bytes),
             std::to_string(t->layout.match_width_bits),
             std::string(1, (t->uses_gateway() ? 'Y' : 'N')),
+            std::to_string(use.srams),
+            std::to_string(use.tcams),
+            std::to_string(use.maprams),
             std::to_string(t->layout.action_data_bytes),
           });
 
