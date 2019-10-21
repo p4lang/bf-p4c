@@ -1061,7 +1061,7 @@ struct AllocateParserState : public ParserTransform {
                 IR::BFN::ParserState* stall = state;
                 std::vector<IR::BFN::ParserState*> splits;
 
-                while (stall = insert_stall_if_needed(stall, prefix, idx++)) {
+                while ((stall = insert_stall_if_needed(stall, prefix, idx++))) {
                     LOG2("inserted stall after " << stall->name);
                     splits.push_back(stall);
                 }

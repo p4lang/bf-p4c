@@ -31,9 +31,10 @@ control ingress(inout headers hdr, inout metadata meta,
     table t1 {
         actions = { act1; dep; }
         key = { hdr.data.f1: exact; }
-            size = 311296;
+            size = 1024;
     }
     @stage(1, 4096)
+    @stage(4, 16000)
     table t2 {
         actions = { act2; dep; }
         key = { hdr.data.f1: exact; }
@@ -46,18 +47,9 @@ control ingress(inout headers hdr, inout metadata meta,
     }
 
     apply {
-        hdr.data.f2[31:24] = 0;
-        if (hdr.data.b1 == 0) {
-            if (hdr.data.f2[31:31] == 0)
-                t1.apply();
-        } else {
-            if (hdr.data.b2 == 0) {
-                if (hdr.data.f2[31:31] == 0)
-                    t2.apply();
-            } else {
-                if (hdr.data.f2[31:31] == 0)
-                    t3.apply(); }
-        }
+        t1.apply();
+        t2.apply();
+        t3.apply();
     }
 }
 

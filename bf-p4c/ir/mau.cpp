@@ -566,8 +566,7 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
     };
 
     int geq_stage = init_stage != nullptr ? *init_stage : -1;
-    const IR::Annotation *min_stage_annot = nullptr;
-    const IR::Annotation *max_stage_annot = nullptr;
+    const IR::Annotation *stage_annot = nullptr;
     auto stage_annotations = match_table->annotations->where([](const IR::Annotation *annot)
                                                              { return annot->name == "stage"; });
     if (!stage_annotations)
@@ -579,23 +578,15 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
 
         int curr_stage = annot->expr.at(0)->to<IR::Constant>()->asInt();
         if (curr_stage >= geq_stage) {
-            if (min_stage_annot == nullptr) {
-                min_stage_annot = annot;
+            if (stage_annot == nullptr) {
+                stage_annot = annot;
             } else {
-                int min_stage = min_stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
-                min_stage_annot = curr_stage < min_stage ? annot : min_stage_annot;
+                int min_stage = stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
+                stage_annot = curr_stage < min_stage ? annot : stage_annot;
             }
-        }
-
-        if (max_stage_annot == nullptr) {
-            max_stage_annot = annot;
-        } else {
-            int max_stage = max_stage_annot->expr.at(0)->to<IR::Constant>()->asInt();
-            max_stage_annot = curr_stage < max_stage ? max_stage_annot : annot;
         }
     }
 
-    const IR::Annotation *stage_annot = min_stage_annot ? min_stage_annot : max_stage_annot;
     if (!stage_annot)
         return -1;
 

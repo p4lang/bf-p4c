@@ -262,6 +262,7 @@ struct TablePlacement::Placed {
     const GroupPlace            *group = 0;  // work group chosen from
     cstring                     name;
     int                         entries = 0;
+    int                         requested_stage_entries = -1;  // pragma stage requested entries
     attached_entries_t          attached_entries;
     bitvec                      placed;  // fully placed tables after this placement
     bitvec                      match_placed;  // tables where the match table is fully placed,
@@ -383,7 +384,8 @@ struct TablePlacement::Placed {
 
     Placed(const Placed &p)
         : self(p.self), id(uid_counter++), prev(p.prev), group(p.group), name(p.name),
-          entries(p.entries), attached_entries(p.attached_entries), placed(p.placed),
+          entries(p.entries), requested_stage_entries(p.requested_stage_entries),
+          attached_entries(p.attached_entries), placed(p.placed),
           match_placed(p.match_placed), need_more(p.need_more), need_more_match(p.need_more_match),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
@@ -1021,10 +1023,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 break; } }
         if (!have_attached) return false; }
 
-    int stage_entries = -1;
-    auto stage_pragma = t->get_provided_stage(&rv->stage, &stage_entries);
-    if (stage_entries > 0)
-        rv->entries = std::min(stage_entries, rv->entries);
+    auto stage_pragma = t->get_provided_stage(&rv->stage, &rv->requested_stage_entries);
+    if (rv->requested_stage_entries > 0)
+        LOG5("Using " << rv->requested_stage_entries << " for stage " << rv->stage
+             << " out of total " << rv->entries);
 
     if (stage_pragma >= 0) {
         rv->stage = std::max(stage_pragma, rv->stage);
@@ -1110,7 +1112,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         rv->placed |= rv->prev->placed;
         BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
 
-    int initial_entries = rv->entries;
+    int initial_entries = rv->requested_stage_entries > 0 ? rv->requested_stage_entries :
+        rv->entries;
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
     LOG3("  Initial stage is " << rv->stage << ", initial entries is " << rv->entries);
@@ -1119,6 +1122,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     auto *min_placed = new Placed(*rv);
     if (min_placed->entries > 1)
         min_placed->entries = 1;
+    if (min_placed->requested_stage_entries > 0)
+        min_placed->entries = rv->requested_stage_entries;
 
     if (!rv->table->created_during_tp) {
         assert(!rv->placed[tblInfo.at(rv->table).uid]);
@@ -1235,6 +1240,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             for (auto *p : whole_stage) delete p;  // help garbage collector
             whole_stage.clear();
             rv->prev = min_placed->prev = done;
+        } else if (rv->requested_stage_entries > 0 && rv->requested_stage_entries <= rv->entries) {
+            // If the table had a stage pragma, we placed the slice of the table requested by
+            // stage pragma and we need to make sure that the rest of entries are going to be
+            // placed in subsequent stages.
+            rv->requested_stage_entries = -1;
+            rv->need_more = rv->need_more_match = true;
         }
     } while (!allocated && rv->stage <= furthest_stage);
 
@@ -2413,7 +2424,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
 IR::Node *TablePlacement::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
-            [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
+            [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
                 return a->logical_id < b->logical_id;
         });
     }
@@ -2435,4 +2446,3 @@ TablePlacement::find_placed(cstring name) const {
 
 void dump(const ordered_set<const TablePlacement::GroupPlace *> &work) {
     std::cout << work << std::endl; }
-
