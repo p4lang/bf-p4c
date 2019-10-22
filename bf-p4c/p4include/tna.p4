@@ -29,41 +29,47 @@ parser IngressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M ig_md,
-    out ingress_intrinsic_metadata_t ig_intr_md);
+    @optional out ingress_intrinsic_metadata_t ig_intr_md,
+    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr);
 
 parser EgressParserT<H, M>(
     packet_in pkt,
     out H hdr,
     out M eg_md,
-    out egress_intrinsic_metadata_t eg_intr_md);
+    @optional out egress_intrinsic_metadata_t eg_intr_md,
+    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
 
 control IngressT<H, M>(
     inout H hdr,
     inout M ig_md,
-    in ingress_intrinsic_metadata_t ig_intr_md,
-    in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
+    @optional in ingress_intrinsic_metadata_t ig_intr_md,
+    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+    @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm);
 
 control EgressT<H, M>(
     inout H hdr,
     inout M eg_md,
-    in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-    inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+    @optional in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 control IngressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
+    @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+    @optional in ingress_intrinsic_metadata_t ig_intr_md);
 
 control EgressDeparserT<H, M>(
     packet_out pkt,
     inout H hdr,
     in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
+    @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
 
 package Pipeline<IH, IM, EH, EM>(
     IngressParserT<IH, IM> ingress_parser,

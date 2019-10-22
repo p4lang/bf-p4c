@@ -210,114 +210,97 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) 
     return node;
 }
 
+void add_param(ordered_map<cstring, cstring>& tnaParams,
+        const IR::ParameterList* params, cstring hdr, int index) {
+    if (params->parameters.size() > index) {
+        auto* param = params->parameters.at(index);
+        tnaParams.emplace(hdr, param->name);
+    }
+}
+
 IR::BFN::TnaControl* RestoreParams::preorder(IR::BFN::TnaControl* control) {
     auto* params = control->type->getApplyParameters();
     ordered_map<cstring, cstring> tnaParams;
-
+    prune();
     if (control->thread == INGRESS) {
-        prune();
-
-        auto* headers = params->parameters.at(0);
-        tnaParams.emplace("hdr", headers->name);
-
-        auto* meta = params->parameters.at(1);
-        tnaParams.emplace("ig_md", meta->name);
-
-        auto* ig_intr_md = params->parameters.at(2);
-        tnaParams.emplace("ig_intr_md", ig_intr_md->name);
-
-        auto* ig_intr_md_from_prsr = params->parameters.at(3);
-        tnaParams.emplace("ig_intr_md_from_prsr", ig_intr_md_from_prsr->name);
-
-        auto* ig_intr_md_for_dprsr = params->parameters.at(4);
-        tnaParams.emplace("ig_intr_md_for_dprsr", ig_intr_md_for_dprsr->name);
-
-        auto* ig_intr_md_for_tm = params->parameters.at(5);
-        tnaParams.emplace("ig_intr_md_for_tm", ig_intr_md_for_tm->name);
-
+        add_param(tnaParams, params, "hdr", 0);
+        add_param(tnaParams, params, "ig_md", 1);
+        add_param(tnaParams, params, "ig_intr_md", 2);
+        add_param(tnaParams, params, "ig_intr_md_from_prsr", 3);
+        add_param(tnaParams, params, "ig_intr_md_for_dprsr", 4);
+        add_param(tnaParams, params, "ig_intr_md_for_tm", 5);
         // Check for optional ghost_intrinsic_metadata_t for t2na arch
-        if (options.arch == "t2na" && params->parameters.size() > 6) {
-            auto* gh_intr_md = params->parameters.at(6);
-            tnaParams.emplace("gh_intr_md", gh_intr_md->name);
+        if (options.arch == "t2na") {
+            add_param(tnaParams, params, "gh_intr_md", 6);
         }
     } else if (control->thread == EGRESS) {
-        prune();
-
-        auto* headers = params->parameters.at(0);
-        tnaParams.emplace("hdr", headers->name);
-
-        auto* meta = params->parameters.at(1);
-        tnaParams.emplace("eg_md", meta->name);
-
-        auto* eg_intr_md = params->parameters.at(2);
-        tnaParams.emplace("eg_intr_md", eg_intr_md->name);
-
-        auto* eg_intr_md_from_prsr = params->parameters.at(3);
-        tnaParams.emplace("eg_intr_md_from_prsr", eg_intr_md_from_prsr->name);
-
-        auto* eg_intr_md_for_dprsr = params->parameters.at(4);
-        tnaParams.emplace("eg_intr_md_for_dprsr", eg_intr_md_for_dprsr->name);
-
-        auto* eg_intr_md_for_oport = params->parameters.at(5);
-        tnaParams.emplace("eg_intr_md_for_oport", eg_intr_md_for_oport->name);
+        add_param(tnaParams, params, "hdr", 0);
+        add_param(tnaParams, params, "eg_md", 1);
+        add_param(tnaParams, params, "eg_intr_md", 2);
+        add_param(tnaParams, params, "eg_intr_md_from_prsr", 3);
+        add_param(tnaParams, params, "eg_intr_md_for_dprsr", 4);
+        add_param(tnaParams, params, "eg_intr_md_for_oport", 5);
     }
 
     return new IR::BFN::TnaControl(control->srcInfo, control->name,
-                                            control->type,
-                                            control->constructorParams, control->controlLocals,
-                                            control->body, tnaParams, control->thread,
-                                            control->pipeName);
+                                   control->type,
+                                   control->constructorParams, control->controlLocals,
+                                   control->body, tnaParams, control->thread,
+                                   control->pipeName);
 }
 
 IR::BFN::TnaParser* RestoreParams::preorder(IR::BFN::TnaParser* parser) {
     auto* params = parser->type->getApplyParameters();
-    auto* paramList = new IR::ParameterList;
     ordered_map<cstring, cstring> tnaParams;
 
+    prune();
     if (parser->thread == INGRESS) {
-        prune();
-
-        auto* packet = params->parameters.at(0);
-        tnaParams.emplace("pkt", packet->name);
-        paramList->push_back(packet);
-
-        auto* headers = params->parameters.at(1);
-        tnaParams.emplace("hdr", headers->name);
-        paramList->push_back(headers);
-
-        auto* meta = params->parameters.at(2);
-        tnaParams.emplace("ig_md", meta->name);
-        paramList->push_back(meta);
-
-        auto* ig_intr_md = params->parameters.at(3);
-        tnaParams.emplace("ig_intr_md", ig_intr_md->name);
-        paramList->push_back(ig_intr_md);
+        add_param(tnaParams, params, "pkt", 0);
+        add_param(tnaParams, params, "hdr", 1);
+        add_param(tnaParams, params, "ig_md", 2);
+        add_param(tnaParams, params, "ig_intr_md", 3);
+        add_param(tnaParams, params, "ig_intr_md_for_tm", 4);
+        add_param(tnaParams, params, "ig_intr_md_from_prsr", 5);
     } else if (parser->thread == EGRESS) {
-        prune();
-
-        auto* packet = params->parameters.at(0);
-        tnaParams.emplace("pkt", packet->name);
-        paramList->push_back(packet);
-
-        auto* headers = params->parameters.at(1);
-        tnaParams.emplace("hdr", headers->name);
-        paramList->push_back(headers);
-
-        auto* meta = params->parameters.at(2);
-        tnaParams.emplace("eg_md", meta->name);
-        paramList->push_back(meta);
-
-        auto* eg_intr_md = params->parameters.at(3);
-        tnaParams.emplace("eg_intr_md", eg_intr_md->name);
-        paramList->push_back(eg_intr_md);
+        add_param(tnaParams, params, "pkt", 0);
+        add_param(tnaParams, params, "hdr", 1);
+        add_param(tnaParams, params, "eg_md", 2);
+        add_param(tnaParams, params, "eg_intr_md", 3);
+        add_param(tnaParams, params, "eg_intr_md_from_prsr", 4);
     }
 
-    auto parser_type = new IR::Type_Parser(parser->type->name, paramList);
     return new IR::BFN::TnaParser(parser->srcInfo, parser->name,
-                                           parser_type,
-                                           parser->constructorParams, parser->parserLocals,
-                                           parser->states, tnaParams, parser->thread,
-                                           parser->phase0, parser->pipeName, parser->portmap);
+                                  parser->type,
+                                  parser->constructorParams, parser->parserLocals,
+                                  parser->states, tnaParams, parser->thread,
+                                  parser->phase0, parser->pipeName, parser->portmap);
+}
+
+IR::BFN::TnaDeparser* RestoreParams::preorder(IR::BFN::TnaDeparser* control) {
+    auto* params = control->type->getApplyParameters();
+    ordered_map<cstring, cstring> tnaParams;
+
+    prune();
+    if (control->thread == INGRESS) {
+        add_param(tnaParams, params, "pkt", 0);
+        add_param(tnaParams, params, "hdr", 1);
+        add_param(tnaParams, params, "metadata", 2);
+        add_param(tnaParams, params, "ig_intr_md_for_dprsr", 3);
+        add_param(tnaParams, params, "ig_intr_md", 4);
+    } else if (control->thread == EGRESS) {
+        add_param(tnaParams, params, "pkt", 0);
+        add_param(tnaParams, params, "hdr", 1);
+        add_param(tnaParams, params, "metadata", 2);
+        add_param(tnaParams, params, "eg_intr_md_for_dprsr", 3);
+        add_param(tnaParams, params, "eg_intr_md", 4);
+        add_param(tnaParams, params, "eg_intr_md_from_prsr", 5);
+    }
+
+    return new IR::BFN::TnaDeparser(control->srcInfo, control->name,
+                                    control->type,
+                                    control->constructorParams, control->controlLocals,
+                                    control->body, tnaParams, control->thread,
+                                    control->pipeName);
 }
 
 }  // namespace BFN

@@ -188,6 +188,7 @@ struct RestoreParams: public Transform {
     explicit RestoreParams(BFN_Options &options) : options(options) { }
     IR::BFN::TnaControl* preorder(IR::BFN::TnaControl* control);
     IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* parser);
+    IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* deparser);
 
     BFN_Options &options;
 };
