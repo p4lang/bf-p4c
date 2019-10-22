@@ -27,9 +27,9 @@ control ingress(inout headers hdr, inout metadata meta,
     action nop() { }
 
     @chain_total_size(3072)
-    @name("fifo") Register<pair, bit<32>>(1024) fifo_1_of_3; // First stage
-    @name("fifo") Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage
-    @name("fifo") Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage
+    /*@name("fifo")*/ Register<pair, bit<32>>(1024) fifo_1_of_3; // First stage
+    /*@name("fifo")*/ Register<pair, bit<32>>(1024) fifo_2_of_3; // Second stage
+    /*@name("fifo")*/ Register<pair, bit<32>>(1024) fifo_3_of_3; // Third stage
 
     @chain_address
     RegisterAction<pair, bit<32>, b32>(fifo_1_of_3) read_1 = {
