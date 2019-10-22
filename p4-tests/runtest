@@ -249,15 +249,16 @@ while [ $# -gt 1 ]; do
     -target)
         target=$2
         if [[ $target = "tofino" ]]; then
-            device="tofino"
             toolsdevice="tofino"
         elif [[ $target =~ "tofino2" ]]; then
-            device="tofino2"
             toolsdevice="jbay"
+        elif [[ $target =~ "tofino3" ]]; then
+            toolsdevice="cb"
         else
             echo "Unknown target $target"
             exit 1
         fi
+        device=$target
         testdir=$target
         shift
         ;;

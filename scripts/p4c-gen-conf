@@ -82,7 +82,7 @@ def get_parser():
                         choices=['BF-RT', 'PD', 'P4Runtime'], default='BF-RT',
                         type=str, action='store', required=True)
     parser.add_argument('--device', help='Target device',
-                        choices=['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u'],
+#                        choices=['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u'],
                         default='tofino', type=str, action='store', required=True)
     parser.add_argument('--name', help='Name of P4 program',
                         type=str, action='store', required=True)

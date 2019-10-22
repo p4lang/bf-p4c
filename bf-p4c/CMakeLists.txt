@@ -28,6 +28,27 @@ if (ENABLE_BAREFOOT_INTERNAL)
   add_definitions("-DBAREFOOT_INTERNAL=1")
 endif()
 
+# We need to abstract away the targets enumerated in the schema files,
+# so that we do not tip our hand on future targets.
+# The design is to create a file compiler-interfaces/schemas/targets.py
+# that defines the list of targets (and p4 architectures supported). If
+# the file is present, use it. Otherwise, use a predefined version of the
+# list with only the targets that are exposed
+# Note that we need to do this early, before we process any of the rules
+# using schemas (context, manifest, phv, etc.) and packaging the compiler
+# interfaces tools.
+set (INTERFACES_DIR ${BFN_P4C_SOURCE_DIR}/compiler_interfaces)
+set(COMPILER_SCHEMA_TARGETS "${INTERFACES_DIR}/schemas/targets.py")
+if (ENABLE_CLOUDBREAK)
+  set(DEFAULT_SCHEMA_TARGETS "['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u', 'tofino3']")
+  set(DEFAULT_SCHEMA_P4ARCH "['tna', 't2na', 't3na', 'psa', 'PISA', 'v1model']")
+else()
+  set(DEFAULT_SCHEMA_TARGETS "['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u']")
+  set(DEFAULT_SCHEMA_P4ARCH "['tna', 't2na', 'psa', 'PISA', 'v1model']")
+endif()
+file(WRITE ${COMPILER_SCHEMA_TARGETS} "TARGETS=${DEFAULT_SCHEMA_TARGETS}\n")
+file(APPEND ${COMPILER_SCHEMA_TARGETS} "P4ARCHITECTURES=${DEFAULT_SCHEMA_P4ARCH}\n")
+
 get_schema_version(manifest_schema MANIFEST_SCHEMA_VERSION)
 MESSAGE(STATUS "Found manifest schema version ${MANIFEST_SCHEMA_VERSION}")
 set_source_files_properties(logging/manifest.cpp PROPERTIES
@@ -810,7 +831,6 @@ if (ENABLE_CLOUDBREAK)
 endif (ENABLE_CLOUDBREAK)
 
 # install the tools that generate logging
-set (INTERFACES_DIR ${BFN_P4C_SOURCE_DIR}/compiler_interfaces)
 set (LOGGING_FILES
   ${INTERFACES_DIR}/p4c-build-logs
   ${INTERFACES_DIR}/tools/create_mau_json.py
@@ -833,6 +853,9 @@ set (SCHEMA_FILES
   ${INTERFACES_DIR}/schemas/schema_keys.py
   ${INTERFACES_DIR}/schemas/__init__.py
   )
+if (EXISTS ${COMPILER_SCHEMA_TARGETS})
+  list(APPEND SCHEMA_FILES ${COMPILER_SCHEMA_TARGETS})
+endif()
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   POST_BUILD
