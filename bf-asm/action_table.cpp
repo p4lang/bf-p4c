@@ -683,6 +683,10 @@ void ActionTable::write_regs(REGS &regs) {
 //    { 512,    {"x01", "11111"} },
 //    { 1024,   {"011", "11111"} };
 
+// Track the actions added to json per action table. gen_tbl_cfg can be called
+// multiple times for the same action for each stage table in case of an action
+// table split across multiple stages, but must be added to json only once. 
+static std::map<std::string, std::set<std::string>> actions_in_json;
 void ActionTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- this is wrong if actions have different format sizes
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
@@ -691,7 +695,18 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     for (auto &act : pack_actions) {
         auto *fmt = ::get(action_formats, act.first);
         add_pack_format(stage_tbl, fmt ? fmt : format, true, true, act.second);
-        act.second->gen_simple_tbl_cfg(tbl["actions"]);
+        std::string tbl_name = p4_name();
+        std::string act_name = act.second->name;
+        if (actions_in_json.count(tbl_name) == 0) {
+            actions_in_json[tbl_name].insert(act_name);
+            act.second->gen_simple_tbl_cfg(tbl["actions"]);
+        } else {
+            auto acts_added = actions_in_json[tbl_name];
+            if (acts_added.count(act_name) == 0) {
+                actions_in_json[tbl_name].emplace(act_name);
+                act.second->gen_simple_tbl_cfg(tbl["actions"]);
+            }
+        }
     }
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout);

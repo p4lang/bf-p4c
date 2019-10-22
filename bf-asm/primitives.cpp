@@ -43,6 +43,7 @@ class Primitives : public Section {
                     ctxt_action->to<json::map>().merge(_prim_action->to<json::map>());
                     merged = true;
                     auto aname = ctxt_action->to<json::map>()["name"]->to<json::string>();
+                    LOG3("Merged primitive action : " << aname);
                     break;
                 }
             }
@@ -114,6 +115,7 @@ class Primitives : public Section {
                                             (prim_table_pc.to<json::map>().count("actions") > 0)) {
                                                 json::vector &prim_table_actions = prim_table_pc.to<json::map>()["actions"];
                                                 json::vector &ctxt_table_actions = ctxt_table_pc.to<json::map>()["actions"];
+                                                LOG3("Merging primitive actions on table: " << prim_table_name);
                                                 is_merged = merge_actions(prim_table_actions, ctxt_table_actions);
                                                 break; } } } } }
                 if (!is_merged) {

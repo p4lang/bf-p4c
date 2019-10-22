@@ -261,6 +261,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/field_use.cpp
   mau/db-gateway.cpp
   mau/gateway.cpp
+  mau/gen_prim_json.cpp
   mau/handle_assign.cpp
   mau/input_xbar.cpp
   mau/instruction_adjustment.cpp
@@ -306,6 +307,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/default_next.h
   mau/field_use.h
   mau/gateway.h
+  mau/gen_prim_json.h
   mau/handle_assign.h
   mau/input_xbar.h
   mau/instruction_adjustment.h
