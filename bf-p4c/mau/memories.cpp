@@ -845,8 +845,9 @@ safe_vector<int> Memories::way_size_calculator(int ways, int RAMs_needed) {
     return vec;
 }
 
-/* Find the rows of SRAMs that can hold the table, verified as well by the busses set in SRAM
-*/
+/**
+ * Find the rows of SRAMs that can hold the table, verified as well by the busses set in SRAM
+ */
 safe_vector<std::pair<int, int>>
 Memories::available_SRAMs_per_row(unsigned mask, SRAM_group *group, int width_sect) {
     safe_vector<std::pair<int, int>> available_rams;
@@ -861,10 +862,29 @@ Memories::available_SRAMs_per_row(unsigned mask, SRAM_group *group, int width_se
     }
 
     std::sort(available_rams.begin(), available_rams.end(),
-             [=](const std::pair<int, int> a, const std::pair<int, int> b) {
-         int t;
-         if ((t = a.second - b.second) != 0) return t > 0;
-         return a > b;
+             [&](const std::pair<int, int> a, const std::pair<int, int> b) {
+        int t;
+        if (a.second != 0 && b.second == 0) return true;
+        if (a.second == 0 && b.second != 0) return false;
+
+        // Must fully place a partition
+        if (group->type == SRAM_group::ATCAM) {
+            if (group->left_to_place() <= a.second && group->left_to_place() > b.second)
+                return true;
+            if (group->left_to_place() > a.second && group->left_to_place() <= b.second)
+                return false;
+        }
+
+        // Prefer sharing a search bus/result bus if there is one to share
+        auto bus = sram_search_bus[a.first];
+        bool a_matching_bus = bus[0] == group_search_bus || bus[1] == group_search_bus;
+        bus = sram_search_bus[b.first];
+        bool b_matching_bus = bus[0] == group_search_bus || bus[1] == group_search_bus;
+        if (a_matching_bus != b_matching_bus)
+            return a_matching_bus;
+
+        if ((t = a.second - b.second) != 0) return t > 0;
+        return a > b;
     });
     return available_rams;
 }
@@ -1537,11 +1557,15 @@ Memories::SRAM_group *Memories::best_partition_candidate(int row, unsigned colum
         int &loc) {
     loc = -1;
     auto search_bus = sram_search_bus[row];
+    auto result_bus = sram_result_bus[row];
     int available_rams = bitcount(column_mask & ~sram_inuse[row]);
     for (auto part : atcam_partitions) {
         loc++;
-        auto group_search_bus = part->build_search_bus(0);
+        auto group_search_bus = part->build_search_bus(part->width - 1);
+        auto group_result_bus = part->build_result_bus(part->width - 1);
         if (group_search_bus != search_bus[0] && group_search_bus != search_bus[1])
+            continue;
+        if (group_result_bus != result_bus[0] && group_result_bus != result_bus[1])
             continue;
         if (part->left_to_place() > available_rams)
             continue;
