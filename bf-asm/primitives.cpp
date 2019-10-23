@@ -3,6 +3,7 @@
 #include <string>
 
 #include "json.h"
+#include "log.h"
 #include "sections.h"
 
 class Primitives : public Section {

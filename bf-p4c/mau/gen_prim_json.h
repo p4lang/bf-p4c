@@ -1,6 +1,11 @@
 #ifndef BF_P4C_MAU_GEN_PRIM_JSON_H_
 #define BF_P4C_MAU_GEN_PRIM_JSON_H_
 
+#include "lib/json.h"
+#include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/mau/ixbar_expr.h"
+#include "bf-p4c/mau/mau_visitor.h"
+
 namespace PHV {
 class Field;
 }  // namespace PHV
