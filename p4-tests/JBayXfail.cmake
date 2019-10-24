@@ -365,3 +365,18 @@ p4c_add_xfail_reason("tofino2"
   "error: .*: Could not place table .* could not fit in stage .* with .* entries"
   extensions/p4_tests/p4_14/stf/stateful4.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "All fields within the same byte-size chunk of the header must have the same 2 byte-alignment in the checksum list. Checksum engine is unable to read .* for .* checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test1.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "All fields within same byte of header must participate in the checksum list. Checksum engine is unable to read .* for .*checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test2.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Each field's bit alignment in the packet should be equal to that in the checksum list. Checksum engine is unable to read .* for .* checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
+)

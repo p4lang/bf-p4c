@@ -1,0 +1,4 @@
+#        a b c d e f csum 
+expect 1 2 3 4 7 6 9 73b3
+packet 0 2 3 4 7 6 9 8888
+

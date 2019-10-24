@@ -1552,15 +1552,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         } else {
             (*lastChecksumUnit)++;
         }
-        if (Device::currentDevice() == Device::TOFINO) {
-            if (*lastChecksumUnit > 1) {
-                return (*lastChecksumUnit + lastSharedUnit);
-            } else {
-                 return *lastChecksumUnit;
-            }
-        } else if (Device::currentDevice() == Device::JBAY) {
-            return *lastChecksumUnit;
+        if (*lastChecksumUnit > 1 && Device::currentDevice() == Device::TOFINO) {
+            return (*lastChecksumUnit + lastSharedUnit);
         }
+        return *lastChecksumUnit;
     }
 
     bool preorder(const IR::BFN::Deparser* deparser) override {

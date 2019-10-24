@@ -26,7 +26,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
-    extensions/p4_tests/p4_16/stf/p4c-1426.p4
     )
 
   # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
@@ -446,9 +445,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
-
-  # p4smith generated file used to debug key with zero mask. Fails PHV for an unknown reason.
-  extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
 
   # p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
@@ -1617,6 +1613,22 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  " .* appears multiple times in checksum .*"
-  extensions/p4_tests/p4_16/stf/p4c-1426.p4
+  "Checksum destination field .* is not byte-aligned in the header. Checksum engine is unable to update a field if it is not byte-aligned"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/checksum_align.p4
+  extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "All fields within the same byte-size chunk of the header must have the same 2 byte-alignment in the checksum list. Checksum engine is unable to read .* for .* checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "All fields within same byte of header must participate in the checksum list. Checksum engine is unable to read .* for .* checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Each field's bit alignment in the packet should be equal to that in the checksum list. Checksum engine is unable to read .* for .* checksum update"
+  extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
 )
