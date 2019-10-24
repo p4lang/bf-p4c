@@ -702,7 +702,7 @@ bool Memories::analyze_tables(mem_info &mi) {
                TCAMs_needed += 2;
            }
 
-           if (bytes > 5)
+           if (bytes > 6)
                TCAMs_needed += 2;
            else
                TCAMs_needed += 1;

@@ -436,7 +436,16 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
 void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
         int depth = (entries + 511u)/512u;
-        int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
+        int bytes = tbl->layout.match_bytes;
+        int width = 0;
+        while (bytes > 11) {
+            bytes -= 11;
+            width += 2;
+        }
+        if (bytes > 6)
+            width += 2;
+        else
+            width++;
         lo.tcams = depth * width;
         lo.srams = 0;
         lo.entries = depth * 512;
