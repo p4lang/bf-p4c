@@ -74,6 +74,7 @@ void CheckExternInvocationCommon::init_common_pipe_constraints() {
     set_pipe_constraints("invalidate", valid_in_mau);
     set_pipe_constraints("max", valid_in_mau);
     set_pipe_constraints("min", valid_in_mau);
+    set_pipe_constraints("SelectorAction", valid_in_mau);
 
     bitvec valid_in_deparsers;
     valid_in_deparsers.setbit(genIndex(INGRESS, DEPARSER));
@@ -126,6 +127,7 @@ void CheckT2NAExternInvocation::init_pipe_constraints() {
     set_pipe_constraints("DirectRegisterAction3", valid_in_mau | valid_in_ghost);
     set_pipe_constraints("DirectRegisterAction4", valid_in_mau | valid_in_ghost);
     set_pipe_constraints("DirectWred", valid_in_ghost);
+    set_pipe_constraints("SelectorAction", valid_in_ghost);
     set_pipe_constraints("Hash", valid_in_ghost);
     set_pipe_constraints("Lpf", valid_in_ghost);
     set_pipe_constraints("MathUnit", valid_in_ghost);

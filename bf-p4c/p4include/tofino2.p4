@@ -1113,6 +1113,13 @@ extern ActionSelector {
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
 }
 
+extern SelectorAction {
+    SelectorAction(ActionSelector sel);
+    bit<1> execute(@optional in bit<32> index);
+    @synchronous(execute)
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+}
+
 extern Mirror {
     Mirror();
 

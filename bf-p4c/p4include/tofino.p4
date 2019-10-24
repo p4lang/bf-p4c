@@ -150,11 +150,11 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<1> enable_mcast_cutthru;        // Enable cut-through forwarding for
                                         // multicast.
 
-    MulticastGroupId_t  mcast_grp_a;    // 1st multicast group (i.e., tree) id;
+    MulticastGroupId_t mcast_grp_a;     // 1st multicast group (i.e., tree) id;
                                         // a tree can have two levels. must be
                                         // presented to TM for multicast.
 
-    MulticastGroupId_t  mcast_grp_b;    // 2nd multicast group (i.e., tree) id;
+    MulticastGroupId_t mcast_grp_b;     // 2nd multicast group (i.e., tree) id;
                                         // a tree can have two levels.
 
     bit<13> level1_mcast_hash;          // Source of entropy for multicast
@@ -736,6 +736,13 @@ extern ActionSelector {
 
     @deprecated("ActionSelector must be specified with an associated ActionProfile")
     ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
+}
+
+extern SelectorAction {
+    SelectorAction(ActionSelector sel);
+    bit<1> execute(@optional in bit<32> index);
+    @synchronous(execute)
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
 }
 
 // Tofino supports mirroring both at the ingress and egress. Ingress deparser

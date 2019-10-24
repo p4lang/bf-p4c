@@ -253,43 +253,6 @@ class LoadTargetArchitecture : public Inspector {
         return new IR::Type_Header("pktgen_generic_header_t", *fields);
     }
 
-    /** This extern is only needed to support v1model program and
-        should not be exposed to tna.
-
-        extern SelectorAction {
-          SelectorAction(ActionSelector sel);
-          abstract void apply(inout bit<1> value, @optional out bit<1> rv);
-          bit<1> execute(@optional in bit<32> index); }
-     */
-    const IR::Node* create_selector_action() {
-        auto methods = new IR::Vector<IR::Method>({
-            new IR::Method(
-                "SelectorAction",
-                new IR::Type_Method(
-                new IR::ParameterList({
-                    new IR::Parameter("sel", IR::Direction::None,
-                        new IR::Type_Name("ActionSelector"))})), false),
-            new IR::Method(
-                "apply",
-                new IR::Type_Method(
-                new IR::Type_Void(),
-                new IR::ParameterList({
-                    new IR::Parameter("value", IR::Direction::InOut, IR::Type_Bits::get(1)),
-                    new IR::Parameter("rv",
-                        new IR::Annotations({new IR::Annotation(IR::ID("optional"), {})}),
-                        IR::Direction::Out, IR::Type_Bits::get(1))})), true),
-            new IR::Method(
-                "execute",
-                new IR::Type_Method(
-                IR::Type_Bits::get(1),
-                new IR::ParameterList({
-                    new IR::Parameter("index",
-                        new IR::Annotations({new IR::Annotation(IR::ID("optional"), {})}),
-                        IR::Direction::In, IR::Type_Bits::get(32))})), false),
-        });
-        return new IR::Type_Extern("SelectorAction", *methods);
-    }
-
     /* extern math_unit<T, U> {
         math_unit(bool invert, int<2> shift, int<6> scale, U data);
         T execute(in T x);
@@ -381,7 +344,6 @@ class LoadTargetArchitecture : public Inspector {
 
         // XXX(hanw): add extra type declaration that are not ready to publish
         structure->targetTypes.push_back(create_pktgen_generic_header_t());
-        structure->targetTypes.push_back(create_selector_action());
         structure->targetTypes.push_back(create_math_unit());
 
         analyzeTofinoModel();
@@ -1671,7 +1633,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtRecirculateRawFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        ERROR_CHECK(control != nullptr, "random() must be used in a control block");
+        ERROR_CHECK(control != nullptr, "recirculate() must be used in a control block");
         ERROR_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                     "Recirculate must be called in Ingress");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
