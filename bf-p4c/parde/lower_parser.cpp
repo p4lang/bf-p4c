@@ -1447,7 +1447,7 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
     ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo)
-      : phv(phv), clotInfo(clotInfo), nextChecksumUnit(0) {
+      : phv(phv), clotInfo(clotInfo), lastChecksumUnit(boost::none), lastSharedUnit(0) {
         igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
         egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
     }
@@ -1471,9 +1471,15 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         return newChecksumFields;
     }
 
-    IR::BFN::ChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum) {
+    IR::BFN::ChecksumUnitConfig* lowerChecksum(const IR::BFN::EmitChecksum* emitChecksum,
+                                               unsigned checksumUnit) {
         // Allocate a checksum unit and generate the configuration for it.
-        auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
+        if (checksumUnit >= Device::pardeSpec().numDeparserChecksumUnits()) {
+            ::fatal_error("Number of deparser checksum updates exceeds the number of checksum"
+            " engines available. Checksum engine not allocated for destination %1%",
+            emitChecksum->dest);
+        }
+        auto* unitConfig = new IR::BFN::ChecksumUnitConfig(checksumUnit);
         auto containerToSwap = getChecksumPhvSwap(phv, emitChecksum);
         unitConfig->zeros_as_ones = emitChecksum->zeros_as_ones;
         IR::Vector<IR::BFN::ContainerRef> phvSources;
@@ -1540,6 +1546,23 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         return unitConfig;
     }
 
+    unsigned int getChecksumUnit() {
+        if (lastChecksumUnit == boost::none) {
+            lastChecksumUnit = 0;
+        } else {
+            (*lastChecksumUnit)++;
+        }
+        if (Device::currentDevice() == Device::TOFINO) {
+            if (*lastChecksumUnit > 1) {
+                return (*lastChecksumUnit + lastSharedUnit);
+            } else {
+                 return *lastChecksumUnit;
+            }
+        } else if (Device::currentDevice() == Device::JBAY) {
+            return *lastChecksumUnit;
+        }
+    }
+
     bool preorder(const IR::BFN::Deparser* deparser) override {
         auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser
                                                            : egLoweredDeparser;
@@ -1548,8 +1571,12 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // its own checksum units. On JBay they're shared, and their ids are
         // global, so on that device we don't reset the next checksum unit for
         // each deparser.
-        if (Device::currentDevice() == Device::TOFINO)
-            nextChecksumUnit = 0;
+        if (Device::currentDevice() == Device::TOFINO) {
+            if (lastChecksumUnit != boost::none && *lastChecksumUnit > 1) {
+                lastSharedUnit = *lastChecksumUnit - 1;
+            }
+            lastChecksumUnit = boost::none;
+       }
 
         struct LastSimpleEmitInfo {
             /// The `PHV::Field::id` of the POV bit for the last simple emit.
@@ -1619,12 +1646,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                     // this emit checksum is part of a clot
                     auto emitChecksum = clotInfo.clot_to_emit_checksum().at(cl);
                     auto f = phv.field(emitChecksum->dest->field);
-                    cl->csum_field_to_csum_id[f] = nextChecksumUnit;
-
-                    auto unitConfig = lowerChecksum(emitChecksum);
+                    auto checksumUnit = getChecksumUnit();
+                    cl->csum_field_to_csum_id[f] = checksumUnit;
+                    auto unitConfig = lowerChecksum(emitChecksum, checksumUnit);
                     loweredDeparser->checksums.push_back(unitConfig);
-
-                    nextChecksumUnit++;
                 }
 
                 continue;
@@ -1634,21 +1659,19 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
             if (auto* emitChecksum = group.back()->to<IR::BFN::EmitChecksum>()) {
                 BUG_CHECK(group.size() == 1,
                           "Checksum primitives should be in a singleton group");
-
-                auto unitConfig = lowerChecksum(emitChecksum);
+                auto checksumUnit = getChecksumUnit();
+                auto unitConfig = lowerChecksum(emitChecksum, checksumUnit);
                 loweredDeparser->checksums.push_back(unitConfig);
 
                 // Generate the lowered checksum emit.
                 auto* loweredPovBit = lowerSingleBit(phv,
                                                      emitChecksum->povBit,
                                                      PHV::AllocContext::DEPARSER);
-
                 auto* loweredEmit =
-                  new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
+                  new IR::BFN::LoweredEmitChecksum(loweredPovBit, checksumUnit);
 
                 loweredDeparser->emits.push_back(loweredEmit);
 
-                nextChecksumUnit++;
 
                 continue;
             }
@@ -1784,7 +1807,8 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
 
     const PhvInfo& phv;
     const ClotInfo& clotInfo;
-    unsigned nextChecksumUnit;
+    boost::optional<unsigned>lastChecksumUnit;
+    unsigned lastSharedUnit;
 };
 
 /// Replace the high-level deparser IR version of each deparser with the lowered

@@ -85,6 +85,9 @@ class PardeSpec {
 
     // Number of deparser consant bytes available
     virtual unsigned numDeparserConstantBytes() const = 0;
+
+    // Number deparser checksum units each gress can support
+    virtual unsigned numDeparserChecksumUnits() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -123,6 +126,7 @@ class TofinoPardeSpec : public PardeSpec {
     unsigned bitMaxClotPos() const override { BUG("No CLOTs in Tofino"); }
 
     unsigned numDeparserConstantBytes() const override { return 0; }
+    unsigned numDeparserChecksumUnits() const override { return 6; }
 };
 
 #if HAVE_JBAY
@@ -160,6 +164,7 @@ class JBayPardeSpec : public PardeSpec {
     unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
 
     unsigned numDeparserConstantBytes() const override { return 8; }
+    unsigned numDeparserChecksumUnits() const override { return 8; }
 };
 #endif /* HAVE_JBAY */
 
@@ -198,6 +203,7 @@ class CloudbreakPardeSpec : public PardeSpec {
     unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
 
     unsigned numDeparserConstantBytes() const override { return 8; }
+    unsigned numDeparserChecksumUnits() const override { return 8; }
 };
 #endif /* HAVE_CLOUDBREAK */
 
