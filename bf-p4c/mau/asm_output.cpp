@@ -102,6 +102,7 @@ class MauAsmOutput::TableMatch {
     };
     safe_vector<ProxyHashSlice> proxy_hash_fields;
     bool proxy_hash = false;
+    bool identity_hash = false;
 
     const IR::MAU::Table     *table = nullptr;
     void init_proxy_hash(const IR::MAU::Table *tbl);
@@ -581,7 +582,8 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &mat
             safe_vector<Slice> reg_ghost;
             safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
             ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
-            match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
+            if (!fmt->identity_hash)
+                match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
         } else {
             match_data.emplace_back(reg);
         }
@@ -2323,6 +2325,8 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         init_proxy_hash(tbl);
         return;
     }
+
+    identity_hash = tbl->resources->table_format.identity_hash;
 
     // Determine which fields are part of a table match.  If a field partially ghosted,
     // then this information is contained within the bitvec and the int of the match_info

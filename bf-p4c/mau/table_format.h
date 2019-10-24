@@ -110,6 +110,7 @@ struct TableFormat {
         safe_vector<bool> result_bus_needed;
         bitvec avail_sb_bytes;
         int proxy_hash_group = -1;
+        bool identity_hash = false;
 
         /// The byte and individual bits to be ghosted. Ghost bits should be the
         /// same for all match entries.

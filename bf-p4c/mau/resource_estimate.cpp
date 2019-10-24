@@ -358,7 +358,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         return;
 
     // This indicates that we are using identity function.
-    if (lo->layout.ixbar_width_bits <= ceil_log2(Memories::SRAM_DEPTH) && !lo->layout.proxy_hash) {
+    if (lo->layout.ixbar_width_bits < ceil_log2(Memories::SRAM_DEPTH) && !lo->layout.proxy_hash) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
             lo->identity = true;
@@ -366,19 +366,45 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         }
     }
 
+    if (calculated_depth <= 3) {
+        calculated_depth = calculated_depth == 1 ? 3 : 4;
+    }
+
+    // In order for the default entry to be safely added, the driver currently uses the largest
+    // hash address always.  With a standard exact match, this is not a problem due to ease of
+    // movement, but with an identity it is unclear if the last hash address.  The fix is to
+    // allow a dynamic hash movement
+    bool default_entry_required = false;
+    if (lo->layout.action_data_bytes_in_table > 0)
+        default_entry_required = true;
+    for (auto back_at : tbl->attached) {
+        if (back_at->attached->direct)
+            default_entry_required = true;
+    }
+
+    int extra_identity_bits = lo->layout.ixbar_width_bits - ceil_log2(Memories::SRAM_DEPTH);
+    // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
+    if (extra_identity_bits <= 8 && !default_entry_required) {
+        int entries_needed = (1 << extra_identity_bits);
+        int RAMs_needed = (entries_needed + lo->way.match_groups - 1) / lo->way.match_groups;
+        RAMs_needed = 1 << ceil_log2(RAMs_needed);
+        // Minimum way number is generally 4
+
+        if (RAMs_needed <= calculated_depth) {
+            lo->way_sizes = { RAMs_needed };
+            lo->identity = true;
+            calculated_depth = RAMs_needed;
+            return;
+        }
+    }
+
     if (calculated_depth < 8) {
         switch (calculated_depth) {
             case 1:
-                lo->way_sizes = {1, 1, 1};
-                calculated_depth = 3;
-                break;
             case 2:
-                lo->way_sizes = {1, 1, 1, 1};
-                calculated_depth = 4;
-                break;
+                BUG("Illegal calculated depth for resources %1%", calculated_depth);
             case 3:
-                lo->way_sizes = {1, 1, 1, 1};
-                calculated_depth = 4;
+                lo->way_sizes = {1, 1, 1};
                 break;
             case 4:
                 lo->way_sizes = {1, 1, 1, 1};

@@ -166,6 +166,7 @@ bool TableFormat::analyze_layout_option() {
     if (layout_option.layout.proxy_hash) {
         analyze_proxy_hash_option(per_RAM);
     } else {
+        use->identity_hash = layout_option.identity;
         auto total_info = match_ixbar.bits_per_search_bus();
 
         for (auto gi : total_info[0].all_group_info)
