@@ -12,6 +12,7 @@
 #include "frontends/p4/typeMap.h"
 #include "bf-p4c/arch/psa_program_structure.h"
 #include "bf-p4c/arch/collect_bridged_fields.h"
+#include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_checker.h"
 
@@ -135,26 +136,12 @@ struct BridgeIngressToEgress : public Transform {
         auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
 
         // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
-        {
-            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID(BRIDGED_MD));
-            auto* fieldMember =
-              new IR::Member(member, IR::ID(BRIDGED_MD_INDICATOR));
-            auto* value = new IR::Constant(IR::Type::Bits::get(8), 0);
-            auto* assignment = new IR::AssignmentStatement(fieldMember, value);
-            state->components.push_back(assignment);
-        }
+        state->components.push_back(
+                createSetMetadata(cgMetadataParam, BRIDGED_MD, BRIDGED_MD_INDICATOR, 8, 0));
 
         // Add "md.^bridged_metadata.setValid();"
-        {
-            auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
-            auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                          IR::ID(BRIDGED_MD));
-            auto* method = new IR::Member(member, IR::ID("setValid"));
-            auto* args = new IR::Vector<IR::Argument>;
-            auto* callExpr = new IR::MethodCallExpression(method, args);
-            state->components.push_back(new IR::MethodCallStatement(callExpr));
-        }
+        state->components.push_back(
+                createSetValid(cgMetadataParam, BRIDGED_MD));
 
         return state;
     }
@@ -169,26 +156,15 @@ struct BridgeIngressToEgress : public Transform {
 
         if (fieldsToBridge.empty()) {
             // Nothing to bridge, simply advance one byte
-            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                          IR::ID("advance"));
-            auto *args = new IR::Vector<IR::Argument>(
-                { new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), 8)) });
-            auto *callExpr = new IR::MethodCallExpression(method, args);
-
-            state->components.push_back(new IR::MethodCallStatement(callExpr));
+            state->components.push_back(createAdvanceCall(packetInParam, 8));
             return state;
         }
 
         // Add "pkt.extract(md.^bridged_metadata);"
-        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-
         auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
-                                      IR::ID(BRIDGED_MD));
-        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto* callExpr = new IR::MethodCallExpression(method, args);
-        state->components.push_back(new IR::MethodCallStatement(callExpr));
+                IR::ID(BRIDGED_MD));
+        state->components.push_back(createExtractCall(packetInParam, member));
 
         // Copy all of the bridged fields to their final locations.
         for (auto& bridgedField : fieldsToBridge) {

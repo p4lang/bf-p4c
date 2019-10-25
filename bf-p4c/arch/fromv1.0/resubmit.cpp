@@ -5,10 +5,11 @@
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
-#include "bf-p4c/midend/parser_utils.h"
+#include "bf-p4c/arch/intrinsic_metadata.h"
 
 namespace BFN {
 namespace {
+
 /**
  * Analyze the Resubmit `emit` method within the deparser block,
  * and try to extract the source field list.
@@ -134,7 +135,7 @@ class AddResubmitParser : public Transform {
     explicit AddResubmitParser(const ResubmitExtracts* extracts)
         : extracts(extracts) { }
 
-    IR::Node* preorder(IR::ParserState* state) override {
+    const IR::Node* preorder(IR::ParserState* state) override {
         auto parser = findOrigCtxt<IR::BFN::TnaParser>();
         BUG_CHECK(parser != nullptr, "ParserState %1% is not in TnaParser ", state->name);
         prune();
@@ -146,13 +147,14 @@ class AddResubmitParser : public Transform {
         return state;
     }
 
-    IR::Node* createEmptyResubmitState(const IR::BFN::TnaParser* parser) {
+    const IR::Node* createEmptyResubmitState(const IR::BFN::TnaParser* parser) {
         // Add a state that skips over any padding between the phase 0 data and the
         // beginning of the packet.
         const auto bitSkip = Device::pardeSpec().bitResubmitSize();
+        auto packetInParam = parser->tnaParams.at("pkt");
         auto *skipToPacketState =
-            ParserUtils::createGeneratedParserState("resubmit", {
-                ParserUtils::createAdvanceCall(parser, bitSkip)
+            createGeneratedParserState("resubmit", {
+                createAdvanceCall(packetInParam, bitSkip)
             }, new IR::PathExpression(IR::ID("__skip_to_packet")));
         return skipToPacketState;
     }
@@ -167,16 +169,16 @@ class AddResubmitParser : public Transform {
             auto newState = createResubmitState(parser, e.first,
                         e.second.first, e.second.second);
             states->push_back(newState);
-            auto selectCase = ParserUtils::createSelectCase(8, e.first, 0x07, newState);
+            auto selectCase = createSelectCase(8, e.first, 0x07, newState);
             selectCases->push_back(selectCase);
         }
 
         IR::Vector<IR::Expression> selectOn = {
-            ParserUtils::createLookaheadExpr(parser, 8)
+            createLookaheadExpr(parser->tnaParams.at("pkt"), 8)
         };
 
         auto* resubmitState =
-            ParserUtils::createGeneratedParserState(
+            createGeneratedParserState(
                 "resubmit", { },
                 new IR::SelectExpression(new IR::ListExpression(selectOn), *selectCases));
         states->push_back(resubmitState);
@@ -194,7 +196,7 @@ class AddResubmitParser : public Transform {
         auto tmp = "__resubmit_tmp_" + std::to_string(idx);
         auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
         statements->push_back(decl);
-        statements->push_back(ParserUtils::createExtractCall(parser, tmp));
+        statements->push_back(createExtractCall(parser->tnaParams.at("pkt"), tmp));
 
         /**
          * copy extract tmp header to metadata;
@@ -207,7 +209,7 @@ class AddResubmitParser : public Transform {
                 field_idx++;
                 continue; }
             auto field = "__field_" + std::to_string(field_idx++);
-            statements->push_back(ParserUtils::createSetMetadata(s->apply(cloner), tmp, field));
+            statements->push_back(createSetMetadata(s->apply(cloner), tmp, field));
         }
 
         cstring name = "resubmit_" + std::to_string(idx);

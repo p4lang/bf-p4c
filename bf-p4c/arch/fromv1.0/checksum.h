@@ -3,7 +3,7 @@
 
 #include "v1_program_structure.h"
 #include "bf-p4c/midend/parser_graph.h"
-#include "bf-p4c/midend/parser_utils.h"
+#include "bf-p4c/arch/intrinsic_metadata.h"
 
 typedef std::map<const IR::Declaration*, std::set<cstring>> DeclToStates;
 
@@ -565,7 +565,7 @@ class InsertChecksumError : public PassManager {
             for (auto& kv : self->endStates[parser->name]) {
                 if (kv.second.count("accept")) {
                     if (!dummy) {
-                        dummy = ParserUtils::createGeneratedParserState(
+                        dummy = createGeneratedParserState(
                             "before_accept", {}, "accept");
                         parser->states.push_back(dummy);
                     }
@@ -609,7 +609,7 @@ class InsertChecksumError : public PassManager {
             return path;
         }
 
-        IR::ParserState* dummy = nullptr;
+        const IR::ParserState* dummy = nullptr;
         InsertChecksumError* self;
 
         explicit InsertBeforeAccept(InsertChecksumError* self) : self(self) { }

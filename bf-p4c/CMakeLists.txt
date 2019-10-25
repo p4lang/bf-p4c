@@ -149,7 +149,6 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h
-  midend/parser_utils.h
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_args.h
   midend/simplify_nested_if.h
@@ -538,6 +537,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/arch.cpp
+  arch/intrinsic_metadata.cpp
   arch/bridge_metadata.cpp
   arch/check_extern_invocation.cpp
   arch/collect_bridged_fields.cpp
