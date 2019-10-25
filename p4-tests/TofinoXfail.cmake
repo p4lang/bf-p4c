@@ -141,10 +141,10 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-956, parser wide match
 p4c_add_xfail_reason("tofino"
-  "error: Parser match .* too large, Tofino only supports 32 bits"
-  testdata/p4_14_samples/source_routing.p4
+  "error.*Ran out of parser match registers for"
   testdata/p4_16_samples/issue995-bmv2.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
+  testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -483,6 +483,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
+
+
+  testdata/p4_14_samples/source_routing.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1103,13 +1106,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "expected a field list"
   ../glass/testsuite/p4_tests/parde/test_start_coalesced_state.p4
-  )
-
-# BRIG-956, parser wide match
-p4c_add_xfail_reason("tofino"
-  "error: Parser match .* too large, Tofino only supports 32 bits"
-  ../glass/testsuite/p4_tests/parde/COMPILER-1091/comp_1091.p4
-  testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
   )
 
 # P4C-1393
