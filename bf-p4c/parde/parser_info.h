@@ -8,6 +8,7 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
@@ -92,6 +93,15 @@ class ParserGraphImpl : public DirectedGraph {
         return _loopbacks;
     }
 
+    bool is_loopback_state(cstring state) const {
+        for (auto& kv : _loopbacks) {
+            if (state == stripThreadPrefix(kv.first.second))
+                return true;
+        }
+
+        return false;
+    }
+
     const State* get_state(cstring name) const {
         for (auto s : states()) {
             if (name == s->name)
@@ -148,12 +158,34 @@ class ParserGraphImpl : public DirectedGraph {
 
     /// Determines whether @arg src and @arg dst are mutually exclusive states on all paths through
     /// the parser graph.
-    bool is_mutex(const State* src, const State* dst) const {
-        return src != dst &&
-               !is_ancestor(src, dst) &&
-               !is_ancestor(dst, src) &&
-               !is_loop_reachable(src, dst) &&
-               !is_loop_reachable(dst, src);
+    bool is_mutex(const State* a, const State* b) const {
+        return a != b &&
+               !is_ancestor(a, b) &&
+               !is_ancestor(b, a) &&
+               !is_loop_reachable(a, b) &&
+               !is_loop_reachable(b, a);
+    }
+
+    bool is_mutex(const Transition* a, const Transition* b) const {
+        if (a == b)
+            return false;
+
+        auto a_dst = get_dst(a);
+        auto a_src = get_src(a);
+
+        auto b_dst = get_dst(b);
+        auto b_src = get_src(b);
+
+        if (a_dst == b_src) return false;
+        if (b_dst == a_src) return false;
+
+        if (is_ancestor(a_dst, b_src)) return false;
+        if (is_ancestor(b_dst, a_src)) return false;
+
+        if (is_loop_reachable(a_dst, b_src)) return false;
+        if (is_loop_reachable(b_dst, a_src)) return false;
+
+        return true;
     }
 
     std::set<const State*>
@@ -177,10 +209,24 @@ class ParserGraphImpl : public DirectedGraph {
         return longest_path_impl(src, path_map);
     }
 
-    const IR::BFN::ParserState* get_src(const IR::BFN::Transition* t) const {
+    const State* get_src(const Transition* t) const {
         for (auto& kv : _transitions) {
             if (kv.second.count(t))
                 return kv.first.first;
+        }
+
+        for (auto& kv : _to_pipe) {
+            if (kv.second.count(t))
+                return kv.first;
+        }
+
+        return nullptr;
+    }
+
+    const State* get_dst(const Transition* t) const {
+        for (auto& kv : _transitions) {
+            if (kv.second.count(t))
+                return kv.first.second;
         }
         return nullptr;
     }

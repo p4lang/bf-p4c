@@ -5,6 +5,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/bf-p4c-options.h"
 
@@ -146,7 +147,7 @@ class DotDumper {
 
             for (auto t : kv.second) {
                 out << to_label("State", kv.first.first) << " -> "
-                    << to_label("State", next) << " [ ";
+                    << to_label("State", next) << " [ color=\"red\" ";
 
                 dump(t);
 
@@ -235,9 +236,9 @@ class DotDumper {
         for (auto s : graph.states()) {
             for (auto m : s->transitions) {
                 if (m->loop) {
-                    auto next = graph.get_state(m->loop);
+                    auto next = graph.get_state(stripThreadPrefix(m->loop));
                     out << to_label("Match", m) << " -> "
-                        << to_label("State", next) << std::endl;
+                        << to_label("State", next) << " [color=\"red\"] " << std::endl;
                 }
             }
         }

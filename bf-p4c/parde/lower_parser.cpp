@@ -898,10 +898,18 @@ struct ComputeLoweredParserIR : public ParserInspector {
             IR::Vector<IR::BFN::LoweredSave> saves;
 
             for (const auto* save : transition->saves) {
-                saves.push_back(
-                    new IR::BFN::LoweredSave(
-                            save->dest,
-                            save->source->range.toUnit<RangeUnit::Byte>()));
+                auto range = save->source->range.toUnit<RangeUnit::Byte>();
+
+                IR::BFN::LoweredInputBufferRVal* source = nullptr;
+
+                if (save->source->is<IR::BFN::MetadataRVal>())
+                    source = new IR::BFN::LoweredMetadataRVal(range);
+                else if (save->source->is<IR::BFN::PacketRVal>())
+                    source = new IR::BFN::LoweredPacketRVal(range);
+                else
+                    BUG("unexpected save source: %1%", save);
+
+                saves.push_back(new IR::BFN::LoweredSave(save->dest, source));
             }
 
             IR::BFN::LoweredMatchValue* match_value = nullptr;
@@ -1051,9 +1059,13 @@ class ResolveParserConstants : public ParserTransform {
         phv(phv), clotInfo(clotInfo) { }
 };
 
-// If after parser lowering, a state is empty and has unconditional transition
+// If before parser lowering, a state is empty and has unconditional transition
 // leaving the state, we can safely eliminate this state.
 struct ElimEmptyState : public ParserTransform {
+    const CollectParserInfo& parser_info;
+
+    explicit ElimEmptyState(const CollectParserInfo& pi) : parser_info(pi) { }
+
     bool is_empty(const IR::BFN::ParserState* state) {
         if (!state->selects.empty())
             return false;
@@ -1067,6 +1079,12 @@ struct ElimEmptyState : public ParserTransform {
         }
 
         if (state->name.endsWith("$ctr_stall"))  // compiler generated stall
+            return false;
+
+        auto parser = findOrigCtxt<IR::BFN::Parser>();
+        // do not merge loopback state for now, need to maitain loopback pointer TODO
+        // p4-tests/p4_16/compile_only/p4c-2153.p4
+        if (parser_info.graph(parser).is_loopback_state(state->name))
             return false;
 
         return true;
@@ -1104,6 +1122,136 @@ struct ElimEmptyState : public ParserTransform {
     }
 };
 
+// After parser lowering, we have converted the parser IR from P4 semantic (action->match)
+// to HW semantic (match->action), there may still be opportunities where we can merge states
+// where we couldn't before lowering (without breaking the P4 semantic).
+struct MergeLoweredParserStates : public ParserTransform {
+    const CollectLoweredParserInfo& parser_info;
+
+    explicit MergeLoweredParserStates(const CollectLoweredParserInfo& pi) : parser_info(pi) { }
+
+    const IR::BFN::LoweredParserMatch*
+    get_unconditional_match(const IR::BFN::LoweredParserState* state) {
+        if (state->select->regs.empty() && state->select->counters.empty())
+            return state->transitions[0];
+
+        return nullptr;
+    }
+
+    struct RightShiftPacketRVal : public Modifier {
+        int byteDelta = 0;
+        bool oob = false;
+        explicit RightShiftPacketRVal(int byteDelta) : byteDelta(byteDelta) { }
+        bool preorder(IR::BFN::LoweredPacketRVal* rval) override {
+            rval->range = rval->range.shiftedByBytes(byteDelta);
+            BUG_CHECK(rval->range.lo >= 0, "Shifting extract to negative position.");
+            if (rval->range.hi >= Device::pardeSpec().byteInputBufferSize())
+                oob = true;
+            return true;
+        }
+    };
+
+    bool can_merge(const IR::BFN::LoweredParserMatch* a, const IR::BFN::LoweredParserMatch* b) {
+        if (a->hdrLenIncFinalAmt && b->hdrLenIncFinalAmt)
+            return false;
+
+        if (a->priority && b->priority)
+            return false;
+
+        if (a->offsetInc && b->offsetInc)
+            return false;
+
+        if (!a->extracts.empty() || !a->saves.empty() ||
+            !a->checksums.empty() || !a->counters.empty()) {
+            return false;
+        }
+
+        if (int(a->shift + b->shift) > Device::pardeSpec().byteInputBufferSize())
+            return false;
+
+        RightShiftPacketRVal shifter(a->shift);
+
+        for (auto e : b->extracts)
+            e->apply(shifter);
+
+        for (auto e : b->saves)
+            e->apply(shifter);
+
+        for (auto e : b->checksums)
+            e->apply(shifter);
+
+        for (auto e : b->counters)
+            e->apply(shifter);
+
+        if (shifter.oob)
+            return false;
+
+        return true;
+    }
+
+    void do_merge(IR::BFN::LoweredParserMatch* match,
+                   const IR::BFN::LoweredParserMatch* next) {
+        RightShiftPacketRVal shifter(match->shift);
+
+        for (auto e : next->extracts) {
+            auto s = e->apply(shifter);
+            match->extracts.push_back(s->to<IR::BFN::LoweredParserPrimitive>());
+        }
+
+        for (auto e : next->saves) {
+            auto s = e->apply(shifter);
+            match->saves.push_back(s->to<IR::BFN::LoweredSave>());
+        }
+
+        for (auto e : next->checksums) {
+            auto s = e->apply(shifter);
+            match->checksums.push_back(s->to<IR::BFN::LoweredParserChecksum>());
+        }
+
+        for (auto e : next->counters) {
+            auto s = e->apply(shifter);
+            match->counters.push_back(s->to<IR::BFN::ParserCounterPrimitive>());
+        }
+
+        match->loop = next->loop;
+        match->next = next->next;
+        match->shift += next->shift;
+
+        if (!match->priority)
+            match->priority = next->priority;
+
+        if (!match->offsetInc)
+            match->offsetInc = next->offsetInc;
+    }
+
+    // do not merge loopback state for now, need to maitain loopback pointer TODO
+    // p4-tests/p4_16/compile_only/p4c-1601-neg.p4
+    bool is_loopback_state(cstring state) {
+        auto parser = findOrigCtxt<IR::BFN::LoweredParser>();
+        if (parser_info.graph(parser).is_loopback_state(state))
+            return true;
+
+        return false;
+    }
+
+    IR::Node* preorder(IR::BFN::LoweredParserMatch* match) override {
+        auto state = findContext<IR::BFN::LoweredParserState>();
+
+        if (match->next && !match->next->name.find("$") && !is_loopback_state(match->next->name)) {
+            if (auto next = get_unconditional_match(match->next)) {
+                if (can_merge(match, next)) {
+                    LOG3("merge " << match->next->name << " with "
+                            << state->name << " (" << match->value << ")");
+
+                    do_merge(match, next);
+                }
+            }
+        }
+
+        return match;
+    }
+};
+
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
@@ -1111,18 +1259,27 @@ struct LowerParserIR : public PassManager {
         auto* allocateParserChecksums = new AllocateParserChecksums(phv, clotInfo);
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clotInfo,
                                             *allocateParserChecksums);
+
+        auto* parser_info = new CollectParserInfo;
+        auto* lower_parser_info = new CollectLoweredParserInfo;
+
         addPasses({
             LOGGING(4) ? new DumpParser("before_parser_lowering") : nullptr,
             new ResolveParserConstants(phv, clotInfo),
             new ParserCopyProp(phv),
             new SplitParserState(phv, clotInfo),
             new AllocateParserMatchRegisters(phv),
-            new ElimEmptyState,
+            LOGGING(4) ? new DumpParser("before_elim_empty_states") : nullptr,
+            parser_info,
+            new ElimEmptyState(*parser_info),
             allocateParserChecksums,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
             computeLoweredParserIR,
             new ReplaceParserIR(*computeLoweredParserIR),
-            LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr
+            LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
+            lower_parser_info,
+            new MergeLoweredParserStates(*lower_parser_info),
+            LOGGING(4) ? new DumpParser("final_llir_parser") : nullptr
         });
     }
 };
@@ -1852,21 +2009,25 @@ class ComputeMultiWriteContainers : public ParserModifier {
 
  private:
     bool preorder(IR::BFN::LoweredExtractPhv* extract) override {
-        auto state = findOrigCtxt<IR::BFN::LoweredParserState>();
+        auto match = findOrigCtxt<IR::BFN::LoweredParserMatch>();
 
         if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
-            clear_on_write[extract->dest->container].push_back(state);
+            clear_on_write[extract->dest->container].insert(match);
         else
-            bitwise_or[extract->dest->container].push_back(state);
+            bitwise_or[extract->dest->container].insert(match);
+
+        revisit_visited();
 
         return false;
     }
 
     bool preorder(IR::BFN::LoweredParserChecksum* csum) override {
-        auto state = findOrigCtxt<IR::BFN::LoweredParserState>();
+        auto match = findOrigCtxt<IR::BFN::LoweredParserMatch>();
 
         if (csum->csum_err)
-            bitwise_or[csum->csum_err->container->container].push_back(state);
+            bitwise_or[csum->csum_err->container->container].insert(match);
+
+        revisit_visited();
 
         return false;
     }
@@ -1877,17 +2038,12 @@ class ComputeMultiWriteContainers : public ParserModifier {
     }
 
     bool has_non_mutex_writes(const IR::BFN::LoweredParser* parser,
-            const std::vector<const IR::BFN::LoweredParserState*>& states) {
-        for (unsigned i = 0; i < states.size(); i++) {
-            for (unsigned j = 0; j < states.size(); j++) {
-                if (i == j)
-                    continue;
+            const std::set<const IR::BFN::LoweredParserMatch*>& matches) {
+        for (auto i : matches) {
+            for (auto j : matches) {
+                if (i == j) continue;
 
-                if (states[i] == states[j])
-                    return true;
-
-                bool mutex = parser_info.graph(parser).is_mutex(states[i], states[j]);
-
+                bool mutex = parser_info.graph(parser).is_mutex(i, j);
                 if (!mutex)
                     return true;
             }
@@ -1896,17 +2052,9 @@ class ComputeMultiWriteContainers : public ParserModifier {
         return false;
     }
 
-    std::vector<const IR::BFN::LoweredParserState*>
-    merge_states(const std::vector<const IR::BFN::LoweredParserState*>& a,
-                 const std::vector<const IR::BFN::LoweredParserState*>& b) {
-        std::vector<const IR::BFN::LoweredParserState*> merged = a;
-        merged.insert(merged.begin(), b.begin(), b.end());
-        return merged;
-    }
-
     std::set<PHV::Container>
     detect_multi_writes(const IR::BFN::LoweredParser* parser,
-            const std::map<PHV::Container, std::vector<const IR::BFN::LoweredParserState*>>& writes,
+            const std::map<PHV::Container, std::set<const IR::BFN::LoweredParserMatch*>>& writes,
             const char* which) {
         std::set<PHV::Container> results;
 
@@ -1920,10 +2068,22 @@ class ComputeMultiWriteContainers : public ParserModifier {
                 if (w.first.is(PHV::Size::b8)) {
                     PHV::Container other(w.first.type(), w.first.index() ^ 1);
                     if (writes.count(other)) {
-                        auto merged = merge_states(w.second, writes.at(other));
-                        if (has_non_mutex_writes(parser, merged)) {
+                        bool has_even_odd_pair = false;
+
+                        for (auto x : writes.at(other)) {
+                            for (auto y : w.second) {
+                                if (x == y || !parser_info.graph(parser).is_mutex(x, y)) {
+                                    has_even_odd_pair = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (has_even_odd_pair) {
                             results.insert(w.first);
-                            LOG4("mark " << w.first << " as " << which);
+                            results.insert(other);
+                            LOG4("mark " << w.first << " and " << other << " as "
+                                         << which << " (even-and-odd pair)");
                         }
                     }
                 }
@@ -1966,7 +2126,7 @@ class ComputeMultiWriteContainers : public ParserModifier {
     }
 
     std::map<PHV::Container,
-             std::vector<const IR::BFN::LoweredParserState*>> bitwise_or, clear_on_write;
+             std::set<const IR::BFN::LoweredParserMatch*>> bitwise_or, clear_on_write;
 };
 
 // If a container that participates in ternary match is invalid, model(HW)

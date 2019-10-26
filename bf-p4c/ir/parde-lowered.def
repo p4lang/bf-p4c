@@ -143,8 +143,6 @@ class LoweredSave : LoweredParserPrimitive {
     /// Convenience constructors for accepting a raw source
     LoweredSave(const MatchRegister& reg, const LoweredInputBufferRVal* source)
       : source(source), dest(reg) { }
-    LoweredSave(const MatchRegister& reg, nw_byterange source)
-      : source(new LoweredMetadataRVal(source)), dest(reg) { }
 
     dbprint { out << "save " << source << " to " << dest.name; }
 
