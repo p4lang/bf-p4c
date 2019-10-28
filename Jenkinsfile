@@ -1,4 +1,4 @@
-node ('compiler || compiler-svr4') {
+node ('compiler-nodes') {
     sh "echo 'Building docker image for PR'"
     // Clean workspace before doing anything
     sh "sudo chmod -R 777 ."
@@ -66,7 +66,7 @@ node ('compiler || compiler-svr4') {
     }
 }
 
-node ('compiler-svr1 || master') {
+node ('compiler-nodes') {
     // Clean workspace before doing anything
     sh "sudo chmod -R 777 ."
     deleteDir()
