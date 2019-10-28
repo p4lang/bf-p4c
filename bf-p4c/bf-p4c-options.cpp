@@ -127,6 +127,9 @@ BFN_Options::BFN_Options() {
     registerOption("--decaf", nullptr,
         [this](const char *) { decaf = true; return true; },
         "Apply decaf optimization");
+    registerOption("--table-placement-in-order", nullptr,
+        [this](const char *) { table_placement_in_order = true; return true; },
+        "Do not reorder tables in a basic block");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");

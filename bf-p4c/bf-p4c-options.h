@@ -35,6 +35,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_direct_exit = false;
     bool disable_long_branch = false;
     bool disable_dark_allocation = false;
+    bool table_placement_in_order = false;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in

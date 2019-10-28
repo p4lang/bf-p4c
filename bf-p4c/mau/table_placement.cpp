@@ -378,6 +378,17 @@ struct TablePlacement::Placed {
         if (auto *mf = use.preferred_meter_format())
             resources.meter_format = *mf; }
 
+    void setup_logical_id() {
+        if (prev && prev->stage == stage) {
+            if (prev->table->gateway_only())
+                logical_id = prev->logical_id + 1;
+            else
+                logical_id = prev->logical_id + prev->use.preferred()->logical_tables();
+        } else {
+            logical_id = stage * StageUse::MAX_LOGICAL_IDS;
+        }
+    }
+
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
         out << pl->name;
         return out; }
@@ -1273,14 +1284,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         return nullptr;
     }
 
-    if (rv->prev && rv->prev->stage == rv->stage) {
-        if (rv->prev->table->gateway_only())
-            rv->logical_id = rv->prev->logical_id + 1;
-        else
-            rv->logical_id = rv->prev->logical_id + rv->prev->use.preferred()->logical_tables();
-    } else {
-        rv->logical_id = rv->stage * StageUse::MAX_LOGICAL_IDS;
-    }
+    rv->setup_logical_id();
 
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
@@ -1758,12 +1762,19 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             for (auto t : grp->seq->tables) {
                 LOG3("  Group table: " << t->name);
             }
+            bool first_not_yet_placed = true;
             for (auto t : grp->seq->tables) {
                 ++idx;
                 if (placed && placed->is_placed(t)) {
                     seq_placed[idx] = true;
                     LOG3("    - skipping " << t->name << " as its already done");
                     continue; }
+
+                if (options.table_placement_in_order) {
+                    if (first_not_yet_placed)
+                        first_not_yet_placed = false;
+                    else
+                        break; }
 
                 bool should_skip = false;  // flag to continue; outer loop;
                 for (auto& grp_tbl : grp->seq->tables) {
