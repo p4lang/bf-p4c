@@ -107,8 +107,6 @@ bool TablePlacement::backtrack(trigger &trig) {
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
-    placed_tables_for_dep_analysis.clear();
-    placed_table_names.clear();
     summary.clearPlacementErrors();
     root->apply(ntp);
     root->apply(con_paths);
@@ -128,6 +126,7 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
 
 struct TablePlacement::TableInfo {
     int uid = -1;
+    const IR::MAU::Table        *table;
     const IR::MAU::TableSeq     *parent;
     bitvec                      tables;  // this table and all tables control dependent on it
 };
@@ -144,8 +143,12 @@ class TablePlacement::SetupInfo : public Inspector {
         BUG_CHECK(!self.tblInfo.count(tbl), "Table in both ingress and egress?");
         auto &info = self.tblInfo[tbl];
         info.uid = self.tblInfo.size() - 1;
+        info.table = tbl;
         info.parent = getParent<IR::MAU::TableSeq>();
         BUG_CHECK(info.parent, "parent of Table is not TableSeq");
+        BUG_CHECK(!self.tblByName.count(tbl->name), "Duplicate tables named %s: %s and %s",
+                  tbl->name, tbl, self.tblByName.at(tbl->name)->table);
+        self.tblByName[tbl->name] = &info;
         return true; }
     void revisit(const IR::MAU::Table *) override {
         BUG("Table appears twice"); }
@@ -300,6 +303,8 @@ struct TablePlacement::Placed {
     // test if this table is placed
     bool is_placed(const IR::MAU::Table *tbl) const {
         return placed[self.tblInfo.at(tbl).uid]; }
+    bool is_placed(cstring tbl) const {
+        return placed[self.tblByName.at(tbl)->uid]; }
     bool is_match_placed(const IR::MAU::Table *tbl) const {
         return match_placed[self.tblInfo.at(tbl).uid]; }
     // test if this table or seq and all its control dependent tables are placed
@@ -1300,8 +1305,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             if (!rv->need_more)
                 rv->placed[tblInfo.at(rv->table).uid] = true;
         }
-        if (rv->gw)
+        if (rv->gw) {
+            rv->match_placed[tblInfo.at(rv->gw).uid] = true;
             rv->placed[tblInfo.at(rv->gw).uid] = true;
+        }
     }
     return rv;
 }
@@ -1373,19 +1380,10 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
 
-    placed_table_names.insert(pl->name);
-    LOG2("  inserting " << pl->name << " into placed_table_names");
-    if (pl->gw) {
-        placed_table_names.insert(pl->gw->name);
-        LOG2("  inserting " << pl->gw->name << " into placed_table_names");
-    }
-
     if (!pl->need_more) {
-        placed_tables_for_dep_analysis.insert(pl->table);
         pl->group->finish_if_placed(work, pl); }
     GroupPlace *gw_match_grp = nullptr;
     if (pl->gw)  {
-        placed_tables_for_dep_analysis.insert(pl->gw);
         bool found_match = false;
         for (auto n : Values(pl->gw->next)) {
             if (!n || n->tables.size() == 0) continue;
@@ -1416,7 +1414,6 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                     gw_match_grp = g; } } }
         BUG_CHECK(found_match, "Failed to find match table"); }
     if (!pl->need_more_match) {
-        placed_tables_for_dep_analysis.insert(pl->table);
         for (auto n : Values(pl->table->next)) {
             if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n)) {
                 bool ready = true;
@@ -1441,12 +1438,13 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     return pl;
 }
 
-bool TablePlacement::are_metadata_deps_satisfied(const IR::MAU::Table* t) const {
+bool TablePlacement::are_metadata_deps_satisfied(const Placed *placed,
+                                                 const IR::MAU::Table* t) const {
     // If there are no reverse metadata deps for this table, return true.
     LOG4("Checking table " << t->name << " for metadata dependencies");
     const ordered_set<cstring> set_of_tables = phv.getReverseMetadataDeps(t);
     for (auto tbl : set_of_tables) {
-        if (!placed_table_names.count(tbl)) {
+        if (!placed || !placed->is_placed(tbl)) {
             LOG4("    Table " << tbl << " needs to be placed before table " << t->name);
             return false;
         }
@@ -1465,7 +1463,14 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
         b_table_to_use = b->table;
     }
 
-    ddm.update_placed_tables(&placed_tables_for_dep_analysis);
+    // FIXME -- which state should we use for this -- a->prev or b->prev?  Currently they'll
+    // be the same (as far as placed tables are concerned) as we only try_place a single table
+    // before committing, but in the future...
+    BUG_CHECK(a->prev == b->prev || a->prev->match_placed == b->prev->match_placed,
+              "Inconsistent previously placed state in is_better");
+    const Placed *done = a->prev;
+    ddm.update_placed_tables([done](const IR::MAU::Table *tbl)->bool {
+        return done ? done->is_match_placed(tbl) : false; });
     const auto down_score = ddm.get_downward_prop_score(a_table_to_use, b_table_to_use);
 
     ordered_set<const IR::MAU::Table *> already_placed_a;
@@ -1697,6 +1702,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread) );
     tblInfo.clear();
+    tblByName.clear();
     seqInfo.clear();
     attached_to.clear();
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
@@ -1787,7 +1793,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                         break; } }
                 if (should_skip) continue;
 
-                if (!are_metadata_deps_satisfied(t)) {
+                if (!are_metadata_deps_satisfied(placed, t)) {
                     LOG3("  - skipping " << t->name << " because metadata deps not satisfied");
                     // In theory, could continue, but the analysis at this point would be
                     // incorrect
@@ -1955,6 +1961,7 @@ void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t ch
 
 IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     tblInfo.clear();
+    tblByName.clear();
     seqInfo.clear();
     table_placed.clear();
     LOG3("table placement completed " << pipe->name);

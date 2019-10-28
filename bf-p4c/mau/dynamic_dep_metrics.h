@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
 #define EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
 
+#include <functional>
 #include "bf-p4c/mau/table_dependency_graph.h"
 
 
@@ -8,7 +9,8 @@ class DynamicDependencyMetrics {
     const CalculateNextTableProp &ntp;
     const ControlPathwaysToTable &con_paths;
     const DependencyGraph &dg;
-    ordered_set<const IR::MAU::Table *> *placed_tables;
+    // FIXME -- not thread safe!
+    std::function<bool(const IR::MAU::Table *)> placed_tables;
 
  public:
     DynamicDependencyMetrics(const CalculateNextTableProp &n, const ControlPathwaysToTable &cp,
@@ -19,7 +21,7 @@ class DynamicDependencyMetrics {
 
     void score_on_seq(const IR::MAU::TableSeq *seq, const IR::MAU::Table *tbl,
         int &max_dep_impact, char type) const;
-    void update_placed_tables(ordered_set<const IR::MAU::Table*> *pt) { placed_tables = pt; }
+    void update_placed_tables(std::function<bool(const IR::MAU::Table*)> pt) { placed_tables = pt; }
 
     int total_deps_of_dom_frontier(const IR::MAU::Table *a) const;
     int placeable_cds_count(const IR::MAU::Table *tbl,

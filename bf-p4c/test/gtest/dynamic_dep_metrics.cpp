@@ -246,7 +246,8 @@ TEST_F(DynamicDepTest, DownwardProp1) {
     EXPECT_EQ(scores.second, 2);
 
     placed_tables.emplace(t1);
-    ddm.update_placed_tables(&placed_tables);
+    ddm.update_placed_tables([&placed_tables](const IR::MAU::Table *tbl)->bool {
+        return placed_tables.count(tbl); });
 
     scores = ddm.get_downward_prop_score(t2, e1);
     EXPECT_EQ(scores.first, 2);

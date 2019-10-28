@@ -53,16 +53,6 @@ class TablePlacement : public MauTransform, public Backtrack {
     } choice_t;
 
  private:
-    // Note that this is for the DynamicDepMetrics, and refers to their match portion being
-    // fully placed.  In order to truly successfully split tables, some information is necessary to
-    // capture the potential dependencies removed or added by moving the stateful operation to a
-    // later stage
-    ordered_set<const IR::MAU::Table *> placed_tables_for_dep_analysis;
-
-    // Names of all tables that have been placed so far in the TablePlacement pass. Note that this
-    // is a global set of tables.
-    ordered_set<cstring> placed_table_names;
-
     // Find potential tables to merge into a gateway
     using GatewayMergeChoices = ordered_map<const IR::MAU::Table *, cstring>;
     GatewayMergeChoices gateway_merge_choices(const IR::MAU::Table *table);
@@ -73,6 +63,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     ControlPathwaysToTable con_paths;
     friend std::ostream &operator<<(std::ostream &out, choice_t choice);
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
+    std::map<cstring, struct TableInfo *> tblByName;
     struct TableSeqInfo;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     std::map<const IR::MAU::AttachedMemory *, std::set<const IR::MAU::Table *>> attached_to;
@@ -110,7 +101,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     /// @returns true if all the metadata initialization induced dependencies for table @t are
     /// satisfied, i.e. all the tables that must be placed before table t (due to ordering imposed
     /// by the live range shrinking pass) have been placed. @returns false otherwise.
-    bool are_metadata_deps_satisfied(const IR::MAU::Table* t) const;
+    bool are_metadata_deps_satisfied(const Placed *placed, const IR::MAU::Table* t) const;
 
     bool is_better(const Placed *a, const Placed *b, choice_t& choice);
     safe_vector<Placed *> try_place_table(const IR::MAU::Table *t, const Placed *done,

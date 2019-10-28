@@ -9,7 +9,7 @@ void DynamicDependencyMetrics::score_on_seq(const IR::MAU::TableSeq *seq,
     }
 
     for (auto seq_tbl : seq->tables) {
-        if (placed_tables->count(seq_tbl)) continue;
+        if (placed_tables(seq_tbl)) continue;
         int curr_impact = dg.dependence_tail_size_control_anti(seq_tbl);
         curr_impact += dg.stage_info.at(tbl).dep_stages_dom_frontier;
         LOG2("    " << type << " impact : " << seq_tbl->externalName() << " " << curr_impact);
