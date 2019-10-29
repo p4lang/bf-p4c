@@ -2165,7 +2165,10 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         return true;
     unsigned local_hash_table_input = alloc.compute_hash_tables();
     int hash_group = getHashGroup(local_hash_table_input, &hm_reqs);
-    if (hash_group < 0) return false;
+    if (hash_group < 0) {
+        alloc.clear();
+        return false;
+    }
     unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
     LOG3("\thash_group " << hash_group << " 0x" << hex(local_hash_table_input) <<  " 0x"
          << hex(hf_hash_table_input));
