@@ -556,6 +556,8 @@ void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring 
 bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estimate_set) {
     bool table_format = true;
 
+    int initial_entries = next->entries;
+
     if (!estimate_set)
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
                                      next->stage_split > 0);
@@ -569,7 +571,7 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estim
         }
 
         if (!table_format) {
-            bool adjust_possible = next->use.adjust_choices(next->table, next->entries,
+            bool adjust_possible = next->use.adjust_choices(next->table, initial_entries,
                                                             next->attached_entries);
             if (!adjust_possible)
                 return false;
