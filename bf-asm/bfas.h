@@ -33,6 +33,7 @@ extern struct option_t {
     bool                match_compiler;
     bool                singlewrite;
     bool                multi_parsers;
+    bool                tof2lab44_workaround;
     std::string         stage_dependency_pattern;
     target_t            target;
     config_version_t    version;

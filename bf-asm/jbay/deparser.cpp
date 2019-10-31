@@ -221,11 +221,13 @@ JBAY_SIMPLE_DIGEST(INGRESS, pktgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
 
 // Compiler workaround for TOF2LAB-44, skip certain chunk indices
 void tof2lab44_workaround(unsigned& chunk_index) {
-    static std::set<unsigned> skipped_chunks = {
-        24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
-    };
-
-    while (skipped_chunks.count(chunk_index)) chunk_index++;
+    if (options.tof2lab44_workaround) {
+        static std::set<unsigned> skipped_chunks = {
+            24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
+        };
+    
+        while (skipped_chunks.count(chunk_index)) chunk_index++;
+    }
 }
 
 template<class REGS, class POV_FMT, class POV, class DICT>

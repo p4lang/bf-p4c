@@ -38,6 +38,7 @@ option_t options = {
     .singlewrite = false,
 #endif
     .multi_parsers = true, // TODO:Remove option after testing
+    .tof2lab44_workaround = true,
     .stage_dependency_pattern = "",
     .target = NO_TARGET,
     .version = CONFIG_OLD,
@@ -182,6 +183,8 @@ int main(int ac, char **av) {
             options.singlewrite = true;
         } else if (!strcmp(av[i], "--multi-parsers")) {
             options.multi_parsers = true;
+        } else if (!strcmp(av[i], "--disable-tof2lab44-workaround")) {
+            options.tof2lab44_workaround = false;
         } else if (!strcmp(av[i], "--stage_dependency_pattern")) {
           ++i;
           if (!av[i]) {
