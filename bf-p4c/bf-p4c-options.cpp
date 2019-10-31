@@ -11,9 +11,12 @@
 #include "ir/visitor.h"
 #include "lib/cstring.h"
 #include "version.h"
+#include "frontends/p4/evaluator/evaluator.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/pragma/pragma.h"
+#include "bf-p4c/arch/arch.h"
 #include "bf-p4c/logging/manifest.h"
 #include "frontends/parsers/parserDriver.h"
 
@@ -330,7 +333,7 @@ cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {
     return dir;
 }
 
-void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelBlock *toplevel) {
+void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelBlock* toplevel) {
     auto main = toplevel->getMain();
     auto pipe_id = 0;
     for (auto pkg : main->constantValue) {

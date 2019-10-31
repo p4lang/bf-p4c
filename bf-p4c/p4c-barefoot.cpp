@@ -11,6 +11,7 @@
 #include "backends/graphs/controls.h"
 #include "bf-p4c-options.h"
 #include "bf-p4c/common/parse_annotations.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
@@ -39,6 +40,7 @@
 #include "lib/nullstream.h"
 #include "logging/manifest.h"
 #include "midend.h"
+#include "post_midend.h"
 #include "version.h"
 
 #if !defined(BAREFOOT_INTERNAL) || defined(NDEBUG)
@@ -288,7 +290,26 @@ int main(int ac, char **av) {
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
 
-    if (!midend.toplevel)
+#if 0
+    // apply bridge packing to IR::P4Program
+    // return IR::P4Program with @flexible header packed
+    BFN::PostMidEnd bridgePacking(options, true);
+    bridgePacking.addDebugHook(hook, true);
+
+    program = program->apply(bridgePacking);
+    LOG3(program);
+    if (!program)
+        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+#endif
+
+    BFN::PostMidEnd postmid(options, false);
+    postmid.addDebugHook(hook, true);
+
+    program = program->apply(postmid);
+    if (!program)
+        return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
+
+    if (!postmid.getToplevelBlock())
         return PROGRAM_ERROR;
 
 #if !BAREFOOT_INTERNAL
@@ -299,21 +320,11 @@ int main(int ac, char **av) {
     // create the archive manifest
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
 
-    /// setup the context to know which pipes are available in the program: for logging and
-    /// other output declarations.
-    BFNContext::get().discoverPipes(program, midend.toplevel);
-
-    // convert midend IR to backend IR
-    BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
-    conv.convertTnaProgram(program, options);
-    if (::errorCount() > 0)
-        return PROGRAM_ERROR;
-
     // setup the pipes and the architecture config early, so that the manifest is
     // correct even if there are errors in the backend.
-    for (auto& pipe : conv.pipe)
+    for (auto& pipe : postmid.pipe)
         manifest.setPipe(pipe->id, pipe->name.name);
-    manifest.addArchitecture(conv.getThreads());
+    manifest.addArchitecture(postmid.getThreads());
 
     if (options.dumpJsonFile) {
         // We just want to produce an IR for mutine (p4v & friends), so running
@@ -321,24 +332,26 @@ int main(int ac, char **av) {
         auto &fileStr = options.dumpJsonFile != "-" ?
             *openFile(options.dumpJsonFile, false) : std::cout;
         LOG3("Output to " << options.dumpJsonFile);
-        for (auto& pipe : conv.pipe)
-            JSONGenerator(fileStr, true) << pipe << std::endl;
+        for (auto& pipe : postmid.pipe)
+             JSONGenerator(fileStr, true) << pipe << std::endl;
         return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
     }
 
-    for (auto& pipe : conv.pipe) {
+    // collect global pragma
+
+    for (auto& pipe : postmid.pipe) {
         manifest.setPipe(pipe->id, pipe->name.name);
         // generate graphs
         // In principle this should not fail, so we call it before the backend
         if (options.create_graphs) {
             auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe->id);
             // set the pipe for the visitors to compute the output dir
-            manifest.setRefAndTypeMap(&midend.refMap, &midend.typeMap);
-            auto toplevel = midend.toplevel;
+            manifest.setRefAndTypeMap(&postmid.refMap, &postmid.typeMap);
+            auto toplevel = postmid.getToplevelBlock();
             if (toplevel != nullptr) {
                 LOG2("Generating control graphs");
                 // FIXME(cc): this should move to the manifest graph generation to work per-pipe
-                graphs::ControlGraphs cgen(&midend.refMap, &midend.typeMap, graphsDir);
+                graphs::ControlGraphs cgen(&postmid.refMap, &postmid.typeMap, graphsDir);
                 toplevel->getMain()->apply(cgen);
                 toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
             }

@@ -5,7 +5,6 @@
 #include "ir/dbprint.h"
 #include "common/name_gateways.h"
 #include "frontends/p4-14/inline_control_flow.h"
-#include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"
 #include "bf-p4c/arch/bridge_metadata.h"
@@ -1636,6 +1635,8 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
             }
         }
     }
+
+    BUG_CHECK(toplevel, "unable to get pipeline name");
     // If no declaration found (anonymous instantiation) we get the pipe name
     // from arch definition
     auto main = toplevel->getMain();
@@ -1645,23 +1646,28 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
     return idxParam->name;
 }
 
-void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Options& options) {
+// custom visitor to the main package block to generate the
+// toplevel pipeline structure.
+bool BackendConverter::preorder(const IR::P4Program* program) {
+    ApplyEvaluator eval;
+    program->apply(eval);
+
+    toplevel = eval.getToplevelBlock();
+    BUG_CHECK(toplevel, "toplevel cannot be nullptr");
+
     auto main = toplevel->getMain();
-    DeclarationConversions converted;
-    StatefulSelectors stateful_selectors;
+    auto arch = new ParseTna();
     main->apply(*arch);
 
-    auto bindings = new ParamBinding(typeMap,
-            options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    /// setup the context to know which pipes are available in the program: for logging and
+    /// other output declarations.
+    BFNContext::get().discoverPipes(program, toplevel);
+
     /// SimplifyReferences passes are fixup passes that modifies the visited IR tree.
     /// Unfortunately, the modifications by simplifyReferences will transform IR tree towards
     /// the backend IR, which means we can no longer run typeCheck pass after applying
     /// simplifyReferences to the frontend IR.
     auto simplifyReferences = new SimplifyReferences(bindings, refMap, typeMap);
-
-    // ParamBinding pass must be applied to IR::P4Program* node,
-    // see comments in param_binding.h for the reason.
-    program->apply(*bindings);
 
     // collect and set global_pragmas
     CollectGlobalPragma collect_pragma;
@@ -1671,13 +1677,14 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
+        DeclarationConversions converted;
         auto name = getPipelineName(program, npipe);
         auto rv = new IR::BFN::Pipe(name, npipe);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
             if (!arch->threads.count(std::make_pair(npipe, gress))) {
                 ::error("Unable to find thread %1%", npipe);
-                return; }
+                return false; }
             auto thread = arch->threads.at(std::make_pair(npipe, gress));
             thread = thread->apply(*simplifyReferences);
             if (auto mau = thread->mau->to<IR::BFN::TnaControl>()) {
@@ -1706,17 +1713,14 @@ void BackendConverter::convertTnaProgram(const IR::P4Program* program, BFN_Optio
         }
 
         rv->global_pragmas = collect_pragma.global_pragmas();
-
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
-                                              stateful_selectors, bindings);
-        processBackendPipe.addDebugHook(options.getDebugHook());
+                stateful_selectors, bindings);
 
         pipe.push_back(rv->apply(processBackendPipe));
         npipe++;
-
-        // clear DeclarationConversions map after the conversion of each pipeline.
-        converted.clear();
     }
+
+    return false;
 }
 
 }  // namespace BFN

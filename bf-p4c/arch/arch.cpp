@@ -152,6 +152,7 @@ void ParseTna::parseMultipleParserInstances(const IR::PackageBlock* block,
 
 bool ParseTna::preorder(const IR::PackageBlock* block) {
     mainBlock = block;
+
     auto pos = 0;
     for (auto param : block->constantValue) {
         if (!param.second) continue;

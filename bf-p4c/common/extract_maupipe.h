@@ -129,23 +129,23 @@ class ProcessBackendPipe : public PassManager {
                        ParamBinding *bindings);
 };
 
-class BackendConverter {
+class BackendConverter : public Inspector {
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-    IR::ToplevelBlock* toplevel;
+    ParamBinding *bindings;
     ParseTna *arch;
+    const IR::ToplevelBlock* toplevel;
+    StatefulSelectors stateful_selectors;
+    std::vector<const IR::BFN::Pipe*>& pipe;
 
  public:
-    BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ToplevelBlock* toplevel)
-        : refMap(refMap), typeMap(typeMap), toplevel(toplevel) {
-        arch = new ParseTna();
-        CHECK_NULL(refMap); CHECK_NULL(typeMap); CHECK_NULL(toplevel); }
+    BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+            ParamBinding* bindings, std::vector<const IR::BFN::Pipe*>& pipe)
+    : refMap(refMap), typeMap(typeMap), bindings(bindings), pipe(pipe) { arch = new ParseTna(); }
 
-    void convertTnaProgram(const IR::P4Program *program, BFN_Options &options);
     cstring getPipelineName(const IR::P4Program* program, int index);
     const ProgramThreads &getThreads() const { return arch->threads; }
-
-    std::vector<const IR::BFN::Pipe*> pipe;
+    bool preorder(const IR::P4Program* program) override;
 };
 
 }  // namespace BFN

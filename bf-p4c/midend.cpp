@@ -417,11 +417,6 @@ MidEnd::MidEnd(BFN_Options& options) {
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
         new MidEndLast,
-        new RenameArchParams(&refMap, &typeMap),
-        new FillFromBlockMap(&refMap, &typeMap),
-        evaluator,
-        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
-        new MidEndLast,
     });
 }
 

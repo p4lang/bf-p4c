@@ -11,6 +11,7 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/midend.h"
+#include "bf-p4c/post_midend.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
 namespace Test {
@@ -58,13 +59,13 @@ TofinoPipeTestCase::create(const std::string& source) {
                   << " errors while executing midend" << std::endl;
         return boost::none;
     }
-    BFN::BackendConverter conv(&midend.refMap, &midend.typeMap, midend.toplevel);
-    conv.convertTnaProgram(midendProgram, options);
-    if (conv.pipe.size() == 0) {
+    BFN::PostMidEnd postmid(options, false);
+    midendProgram->apply(postmid);
+    if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;
         return boost::none;
     }
-    auto* pipe = conv.pipe[0];
+    auto* pipe = postmid.pipe[0];
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;

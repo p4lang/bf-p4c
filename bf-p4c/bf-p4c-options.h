@@ -99,7 +99,7 @@ class BFNContext final : public P4CContext {
     cstring getOutputDirectory(const cstring &suffix = cstring(), int pipe_id = -1);
 
     /// identify the pipelines in the program and setup the _pipes map
-    void discoverPipes(const IR::P4Program *, const IR::ToplevelBlock *);
+    void discoverPipes(const IR::P4Program *, const IR::ToplevelBlock*);
 
     /// Return the pipeline name or empty if the program has not been parsed
     cstring &getPipeName(int pipe_id) {

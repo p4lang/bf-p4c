@@ -8,6 +8,9 @@
 #include "ir/namemap.h"
 #include "lib/path.h"
 #include "frontends/common/options.h"
+#include "frontends/p4/typeMap.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/cloner.h"
@@ -17,6 +20,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/arch/program_structure.h"
+#include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
@@ -215,6 +219,40 @@ class LoweringType : public Transform {
         }
         return node;
     }
+};
+
+class ApplyEvaluator : public PassManager {
+ public:
+    P4::ReferenceMap        *refMap;
+    P4::TypeMap             *typeMap;
+    const IR::ToplevelBlock *toplevel;
+
+    ApplyEvaluator() {
+        refMap = new P4::ReferenceMap;
+        typeMap = new P4::TypeMap;
+        refMap->setIsV1(true);
+        auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+        addPasses({
+            new BFN::TypeChecking(refMap, typeMap, true),
+            evaluator,
+            new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        });
+    }
+
+    ApplyEvaluator(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
+        refMap(refMap), typeMap(typeMap) {
+        CHECK_NULL(refMap);
+        CHECK_NULL(typeMap);
+        refMap->setIsV1(true);
+        auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+        addPasses({
+            new BFN::TypeChecking(refMap, typeMap, true),
+            evaluator,
+            new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        });
+    }
+
+    const IR::ToplevelBlock* getToplevelBlock() { return toplevel; }
 };
 
 }  // namespace BFN
