@@ -297,7 +297,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             UNRESOLVED_REPEATED_ACTION_DATA = (1 << 19),
                             ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT = (1 << 20),
                             CONSTANT_TO_HASH = (1 << 21),
-                            ILLEGAL_MOCHA_OR_DARK_WRITE = (1 << 22)
+                            ILLEGAL_MOCHA_OR_DARK_WRITE = (1 << 22),
+                            BIT_COLLISION_SET = (1 << 23)
                          };
         unsigned error_code = NO_PROBLEM;
         cstring name;

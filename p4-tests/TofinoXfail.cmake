@@ -1594,7 +1594,7 @@ p4c_add_xfail_reason("tofino"
 # BA-102 Failures
 # P4C-2216
 p4c_add_xfail_reason("tofino"
-  "Overwritting an already written bit"
+  "every write bit does not have a corresponding .* read bits"
   ba102_simple_l3_mcast_checksum
 )
 

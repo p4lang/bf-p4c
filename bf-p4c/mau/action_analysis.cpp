@@ -22,7 +22,8 @@ std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
       MAU_GROUP_MISMATCH,
       PHV_AND_ACTION_DATA,
       MULTIPLE_SHIFTS,
-      ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT };
+      ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT,
+      BIT_COLLISION_SET };
 
 /** Calculates a total container constant, given which constants wrote to which fields in the
  *  operation
@@ -2195,7 +2196,10 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
     bool source_to_bit_correct = verify_source_to_bit(operands(), container);
     if (!source_to_bit_correct) {
-        error_code |= BIT_COLLISION;
+        if (is_from_set())
+            error_code |= BIT_COLLISION_SET;
+        else
+            error_code |= BIT_COLLISION;
         error_message += "every write bit does not have a corresponding "
                          + cstring::to_cstring(operands()) + " or 0 read bits.";
         return false;
