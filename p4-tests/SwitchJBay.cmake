@@ -8,7 +8,7 @@ set (SWITCH_P4_16_PTF ${SWITCH_P4_16_ROOT}/ptf/api)
 set (SWITCH_P4_16 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y0.p4)
 file (RELATIVE_PATH switch_p4_16 ${P4C_SOURCE_DIR} ${SWITCH_P4_16})
 p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE
-  "smoketest_switch_16_compile" ${switch_p4_16} "$testExtraArgs}" "-I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata\" -arch t2na")
+  "smoketest_switch_16_compile" ${switch_p4_16} "${testExtraArgs}" "-I${SWITCH_P4_16_INC} -tofino2 -Xp4c=\"--auto-init-metadata\" -arch t2na")
 
 # Need to confirm the p4 path once a new profile is created for L0 on tofino2
 set (SWITCH_P4_16_Y3 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino2/switch_tofino2_y3.p4)

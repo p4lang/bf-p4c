@@ -659,12 +659,6 @@ class BarefootBackend(BackendDriver):
         elif language == "p4-16" and arch == 'default':
             self._arch = "tna"
             self.backend = target + '-' + 'tna'
-        elif language == "p4-14" and arch != "v1model":
-            print >> sys.stderr, \
-                    "Ignored --arch={}, v1model is the only supported architecture " \
-                    "for p4-14".format(self._arch)
-            self._arch = "v1model"
-            self.backend = target + '-' + 'v1model'
 
     def run(self):
         """

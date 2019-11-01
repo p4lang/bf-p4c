@@ -224,6 +224,21 @@ void FlattenHeader::flattenStructInitializer(
         pathSegments.push_back(e->name);
         if (const auto* c = e->expression->to<IR::StructInitializerExpression>()) {
             flattenStructInitializer(c, components);
+        } else if (auto* member = e->expression->to<IR::Member>()) {
+            if (auto type = member->type->to<IR::Type_Struct>()) {
+                for (auto f : type->fields) {
+                    pathSegments.push_back(f->name);
+                    auto newName = makePath("_");
+                    auto newField = new IR::Member(member, f->name);
+                    auto namedExpression = new IR::NamedExpression(IR::ID(newName), newField);
+                    pathSegments.pop_back();
+                    components->push_back(namedExpression);
+                }
+            } else {
+                auto newName = makePath("_");
+                auto namedExpression = new IR::NamedExpression(IR::ID(newName), e->expression);
+                components->push_back(namedExpression);
+            }
         } else {
             auto newName = makePath("_");
             auto namedExpression = new IR::NamedExpression(IR::ID(newName), e->expression);

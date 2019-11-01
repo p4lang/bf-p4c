@@ -2,19 +2,27 @@
 
 namespace BFN {
 
-cstring LinearPath::to_cstring() {
+cstring LinearPath::to_cstring(cstring delimiter,
+        bool skip_path_expression) {
     cstring ret = "";
-    unsigned count = 0;
     for (auto c : components) {
-        if (auto pathexpr = c->to<IR::PathExpression>())
+        if (auto pathexpr = c->to<IR::PathExpression>()) {
+            if (skip_path_expression)
+                continue;
             ret += pathexpr->path->name;
-        else if (auto member = c->to<IR::Member>())
+        } else if (auto member = c->to<IR::Member>()) {
             ret += member->member;
-        if (count < components.size() - 1)
-            ret += ".";
-        count++;
+        } else if (auto href = c->to<IR::ConcreteHeaderRef>()) {
+            ret += href->ref->name;
+        }
+        if (c != components.back())
+            ret += delimiter;
     }
     return ret;
+}
+
+cstring LinearPath::to_cstring() {
+    return to_cstring(".", false);
 }
 
 Visitor::profile_t PathLinearizer::init_apply(const IR::Node* root) {
@@ -38,6 +46,17 @@ void PathLinearizer::postorder(const IR::PathExpression* path) {
 
 void PathLinearizer::postorder(const IR::Member* member) {
     if (linearPath) linearPath->components.push_back(member);
+}
+
+// When applied to P4-14 ConcreteHeaderRef, convert it to P4-16 PathExpression.
+void PathLinearizer::postorder(const IR::ConcreteHeaderRef* href) {
+    auto expr = new IR::PathExpression(href->srcInfo, href->type, new IR::Path(href->ref->name));
+    if (linearPath) linearPath->components.push_back(expr);
+}
+
+bool PathLinearizer::preorder(const IR::HeaderOrMetadata* href) {
+    // Do not visit IR::Header underneath the HeaderRef.
+    return false;
 }
 
 void PathLinearizer::postorder(const IR::ArrayIndex *array) {
@@ -64,7 +83,8 @@ void PathLinearizer::end_apply() {
         linearPath = boost::none;
         return;
     }
-    if (!linearPath->components[0]->is<IR::PathExpression>()) {
+    if (!linearPath->components[0]->is<IR::PathExpression>() &&
+        !linearPath->components[0]->is<IR::ConcreteHeaderRef>()) {
         LOG2("Marking path-like expression invalid due to first component: "
              << linearPath->components[0]);
         linearPath = boost::none;

@@ -57,7 +57,7 @@ set (testExtraArgs "${testExtraArgs} -tofino2")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_873" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873/p4c_873.p4"
-    "${testExtraArgs} -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873")
+    "${testExtraArgs} -bfrt -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_873")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585/p4c_1585.p4"
@@ -67,24 +67,24 @@ set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-on
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT"
+    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+    "${testExtraArgs} -arch v1model" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4")
@@ -119,7 +119,7 @@ set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/atomic_mo
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/smoke_large_tbls/*.p4"
                "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/stful/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
-bfn_add_p4factory_tests("tofino2" "smoketest_programs" BFN_TESTS_LIST)
+bfn_add_p4factory_tests("tofino2" "tofino2" "v1model" "smoketest_programs" BFN_TESTS_LIST)
 
 bfn_set_ptf_test_spec("tofino2" "extensions/p4_tests/p4-programs/programs/meters/meters.p4"
         "^test.TestMeterOmnet

@@ -34,6 +34,7 @@ namespace BFN {
 struct LinearPath {
     std::vector<const IR::Expression*> components;
     cstring to_cstring();
+    cstring to_cstring(cstring, bool);
 };
 
 /**
@@ -59,11 +60,19 @@ struct PathLinearizer : public Inspector {
     profile_t init_apply(const IR::Node* root) override;
     void postorder(const IR::Path*) override;
     void postorder(const IR::PathExpression* path) override;
+    void postorder(const IR::ConcreteHeaderRef* href) override;
     void postorder(const IR::Member* member) override;
     void postorder(const IR::ArrayIndex* array) override;
+    bool preorder(const IR::HeaderOrMetadata* href) override;
     bool preorder(const IR::Constant*) override;
     void postorder(const IR::Node* node) override;
     void end_apply() override;
+ public:
+    static cstring convert(const IR::Expression* expr) {
+        PathLinearizer linearizer;
+        expr->apply(linearizer);
+        return linearizer.linearPath->to_cstring();
+    }
 };
 
 }  // namespace BFN
