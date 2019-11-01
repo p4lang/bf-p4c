@@ -273,13 +273,30 @@ bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {
         // that writes a non-zero value to `hdrRef.$valid`...
         auto* m = prim->operands[0]->to<IR::Member>();
         auto* c = prim->operands[1]->to<IR::Constant>();
-        if (m && m->member == "$valid" && c && c->asInt() != 0) {
+        if (m && m->member == "$valid") {
             if (auto* hr = m->expr->to<IR::HeaderRef>()) {
                 // then add all fields of the header (not including $valid) to
                 // the set of fields that are part of added headers
-                LOG4("Found added header: " << hr);
-                PhvInfo::StructInfo info = phv.struct_info(hr);
-                for (int id : info.field_ids()) {
-                    rv[id] = true; } } } }
+                if (c && c->asInt() != 0) {
+                    LOG4("Found added header: " << hr);
+                    markFields(hr);
+                    return false;
+                }
+                // process copy header primitives
+                auto* srcM = prim->operands[1]->to<IR::Member>();
+                if (!srcM) return false;
+                auto* srcField = phv.field(srcM);
+                if (!srcField) return false;
+                LOG4("Found copy header destination: " << hr);
+                markFields(hr);
+            }
+        }
+    }
     return false;
+}
+
+void FindAddedHeaderFields::markFields(const IR::HeaderRef* hr) {
+    PhvInfo::StructInfo info = phv.struct_info(hr);
+    for (int id : info.field_ids())
+        rv[id] = true;
 }

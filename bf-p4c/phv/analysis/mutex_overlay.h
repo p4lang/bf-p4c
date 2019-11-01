@@ -236,6 +236,7 @@ class FindAddedHeaderFields : public MauInspector {
         return Inspector::init_apply(root);
     }
     bool preorder(const IR::Primitive* prim) override;
+    void markFields(const IR::HeaderRef* hr);
 
  public:
     explicit FindAddedHeaderFields(PhvInfo& phv) : phv(phv) { }
