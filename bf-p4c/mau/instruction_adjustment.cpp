@@ -796,7 +796,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         build_actiondata_source(cont_action, &src1, src1_writebits, brm_info, container);
     } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0) {
         // Constant merged into a single constant over the entire container
-        int constant_value = cont_action.ci.valid_instruction_constant(container.size());
+        unsigned constant_value = cont_action.ci.valid_instruction_constant(container.size());
         int width_bits;
         if ((cont_action.error_code & ActionAnalysis::ContainerAction::REFORMAT_CONSTANT) == 0)
             width_bits = cont_action.ci.alignment.bitrange_size();
