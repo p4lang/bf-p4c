@@ -14,7 +14,7 @@ class TranslateParserChecksums : public PassManager {
  public:
     std::map<const IR::Expression*, IR::Member*> bridgedResidualChecksums;
     std::map<const IR::Expression*, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
-
+    std::map<const IR::Expression*, std::map<gress_t, const IR::ParserState*>> destToGressToState;
     DeclToStates ingressVerifyDeclToStates;
     P4ParserGraphs parserGraphs;
 
@@ -358,6 +358,7 @@ class InsertParserChecksums : public Inspector {
                                     IR::Type::Bits::get(16)));
 
             translate->bridgedResidualChecksums[destfield] = residualChecksum;
+            translate->destToGressToState[destfield][deparserUpdateLocations[0]] = state;
         }
 
         for (auto location : parserUpdateLocations) {

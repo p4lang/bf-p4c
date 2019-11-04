@@ -1104,6 +1104,48 @@ class ConstructSymbolTable : public Inspector {
         structure->_map.emplace(node, stmt);
     }
 
+    void addResidualFields(cstring cloneHeaderName,
+                           std::vector<DigestFieldInfo>* digestFieldsFromSource,
+                           cstring cloneType) {
+        if (parserChecksums->bridgedResidualChecksums.empty()) return;
+        auto header = structure->type_declarations.at(cloneHeaderName)->to<IR::Type_Header>();
+        auto fields = new IR::IndexedVector<IR::StructField>();
+        for (auto f : header->fields) {
+            fields->push_back(f);
+        }
+        int idx = fields->size();
+        for (auto& gressToStateMap : parserChecksums->destToGressToState) {
+            if (gressToStateMap.second.count(EGRESS)) {
+            // First check if the residual checksum is in the clone path
+            // If yes, then add residual in the field list
+                auto checsksumState = gressToStateMap.second.at(EGRESS);
+                auto parser = parserChecksums->parserGraphs.get_parser(checsksumState);
+                cstring cloneEntry;
+                if (cloneType == "E2E") {
+                    cloneEntry = "start_e2e_mirrored";
+                } else {
+                    cloneEntry = "start_i2e_mirrored";
+                }
+                auto cloneEntryPoint = parserChecksums->parserGraphs.get_state(parser, cloneEntry);
+                if (cloneEntryPoint) {
+                    if (!parserChecksums->parserGraphs.is_descendant(
+                                               checsksumState->name, cloneEntry)) {
+                        continue;
+                    }
+                }
+                cstring fieldName = "__field_" + std::to_string(idx);
+                fields->push_back(new IR::StructField(IR::ID(fieldName), IR::Type::Bits::get(16)));
+                auto tpl = std::make_tuple(fieldName, IR::Type::Bits::get(16),
+                            parserChecksums->bridgedResidualChecksums.at(gressToStateMap.first));
+                digestFieldsFromSource->push_back(tpl);
+                idx++;
+            }
+        }
+        auto newHeader = new IR::Type_Header(cloneHeaderName, *fields);
+        structure->type_declarations[cloneHeaderName] = newHeader;
+        return;
+    }
+
     void cvtCloneFunction(const IR::MethodCallStatement *node, bool hasData) {
         LOG1("cvtCloneFunction: (id= " << node->id << " ) " << node);
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
@@ -1119,12 +1161,10 @@ class ConstructSymbolTable : public Inspector {
                                                  : "eg_intr_md_for_dprsr");
         auto *compilerMetadataPath =
                 new IR::PathExpression(COMPILER_META);
-
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the
         // correct parser for this field list.
         unsigned cloneId = getIndex(node, cloneIndexHashes[gress]);
-
         // COMPILER-914: In Tofino, Disable clone id - 0 which is reserved in
         // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
         // clone id's 0 - 7 are valid for e2e
@@ -1230,6 +1270,8 @@ class ConstructSymbolTable : public Inspector {
         }
 
         cstring generatedCloneHeaderTypeName = genUniqueName("__clone");
+        cstring cloneHeaderName;
+        cstring cloneType = mce->arguments->at(0)->expression->to<IR::Member>()->member;
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
         if (mce->typeArguments->size() > 0 && mce->typeArguments->at(0)->is<IR::Type_Tuple>()) {
             if (hasData) {
@@ -1245,6 +1287,7 @@ class ConstructSymbolTable : public Inspector {
                                 generatedCloneHeaderTypeName, components, true);
                         structure->type_declarations.emplace(header_type->name, header_type);
                         LOG3("create header " << header_type->name);
+                        cloneHeaderName = header_type->name;
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
                         for (auto elem : list->components) {
@@ -1276,8 +1319,10 @@ class ConstructSymbolTable : public Inspector {
             auto fields = new IR::IndexedVector<IR::StructField>();
             fields->push_back(new IR::StructField(IR::ID("__field_0"), IR::Type::Bits::get(8)));
             auto type = new IR::Type_Header(hdName, *fields);
+            cloneHeaderName = hdName;
             structure->type_declarations.emplace(hdName, type);
         }
+        addResidualFields(cloneHeaderName, digestFieldsFromSource, cloneType);
 
         const IR::StructInitializerExpression* fieldList =
             convertFieldList(generatedCloneHeaderTypeName,

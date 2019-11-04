@@ -867,10 +867,6 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     if (field_i->padding) return false;  // __pad_ fields are not considered as tphv.
     // TODO(zma) derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
-    if (f_name.find(BFN::COMPILER_META) != std::string::npos &&
-        f_name.find("residual_checksum_") != std::string::npos) {
-        return true;
-    }
     // XXX(zma) somehow phv allocation can't derive this one
     if (f_name.find("$constant") != std::string::npos)
         return true;
