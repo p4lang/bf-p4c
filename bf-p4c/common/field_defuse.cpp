@@ -29,6 +29,24 @@ class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
     explicit ClearBeforeEgress(FieldDefUse &self) : self(self) {}
 };
 
+class FieldDefUse::CollectAliasDestinations : public Inspector {
+    FieldDefUse& self;
+    bool preorder(const IR::BFN::AliasMember *e) override {
+        const auto* f = self.phv.field(e);
+        if (!f) return false;
+        self.alias_destinations.insert(f);
+        return false;
+    }
+    bool preorder(const IR::BFN::AliasSlice* sl) override {
+        const auto* f = self.phv.field(sl);
+        if (!f) return false;
+        self.alias_destinations.insert(f);
+        return false;
+    }
+ public:
+    explicit CollectAliasDestinations(FieldDefUse &s) : self(s) {}
+};
+
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
@@ -39,6 +57,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     located_defs.clear();
     output_deps.clear();
     parser_zero_inits.clear();
+    alias_destinations.clear();
     uninitialized_fields.clear();
     non_dark_refs.clear();
     return rv;
@@ -136,6 +155,11 @@ void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
         write(phv.field(hr->toString() + ".$valid"), unit, e, needsIXBar);
 }
 
+bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
+    p->apply(CollectAliasDestinations(*this));
+    return true;
+}
+
 bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
@@ -157,10 +181,11 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
         // In the ingress, bridged_metadata is considered as a header field.
         // For ingress ,all metadata are initializes in the beginning.
         // for egress, only none bridged metadata are initializes at the beginning.
-        if (p->gress == INGRESS && (!f.metadata && !f.bridged)) {
-            continue; }
-        if (p->gress == EGRESS  && (!f.metadata || f.bridged)) {
-            continue; }
+        if (!alias_destinations.count(&f)) {
+            if (p->gress == INGRESS && (!f.metadata && !f.bridged)) continue;
+            if (p->gress == EGRESS  && (!f.metadata || f.bridged)) continue;
+        }
+        LOG1("Ignoring implicit initialization for " << f.name);
         auto* parser_begin = p->start;
         const PHV::Field* f_p = phv.field(f.id);
         IR::Expression* dummy_expr = new ImplicitParserInit(f_p);

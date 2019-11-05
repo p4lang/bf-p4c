@@ -57,6 +57,9 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     // All fields that rely on parser zero initialization.
     ordered_set<const PHV::Field*>    &uninitialized_fields;
 
+    // All fields used as alias destinations.
+    ordered_set<const PHV::Field*>    alias_destinations;
+
     /// Intermediate data structure for computing def/use sets.
     struct info {
         const PHV::Field    *field = 0;
@@ -65,7 +68,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     /// Intermediate data structure for computing def/use sets.
     std::unordered_map<int, info> defuse;
     class ClearBeforeEgress;
-    // class Init;
+    class CollectAliasDestinations;
 
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
@@ -78,6 +81,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     info &field(const PHV::Field *);
     info &field(int id) { return field(phv.field(id)); }
     void access_field(const PHV::Field *);
+    bool preorder(const IR::BFN::Pipe *p) override;
     bool preorder(const IR::BFN::Parser *p) override;
     bool preorder(const IR::BFN::LoweredParser *p) override;
     bool preorder(const IR::MAU::Action *p) override;

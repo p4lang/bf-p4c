@@ -193,6 +193,16 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
         LOG5("\t\t\t  Disabling this metadata init because of previous round.");
         return true;
     }
+    if (!tableAlloc.hasTablePlacement()) return false;
+    auto use_prev_round_stages = tableAlloc.stage(use);
+    auto last_stage_use = std::max_element(use_prev_round_stages.begin(),
+            use_prev_round_stages.end());
+    new_init_stage = *last_stage_use + 1;
+    if (new_init_stage + init_dep_tail > Device::numStages()) {
+        LOG5("\t\t\t  Disallowing this metadata init because it would cause use to exceed "
+             "number of stages based on previous round");
+        return true;
+    }
     return false;
 }
 
@@ -232,6 +242,8 @@ bool FindInitializationNode::mayViolatePackConflict(
         for (auto& def : defuse.getAllDefs(slice.field()->id)) {
             const auto* t = def.first->to<IR::MAU::Table>();
             if (!t) continue;
+            LOG5("\t  Defuse of slice " << slice << " : " << t->name << ", initTable: " <<
+                    initTable->name);
             if (t == initTable) continue;
             if (tableAlloc.inSameStage(initTable, t).size() != 0 && !tableMutex(initTable, t)) {
                 LOG4("\t\tInitialization table " << initTable->name << " and def table " << t->name
@@ -675,15 +687,6 @@ FindInitializationNode::findInitializationNodes(
             LOG3("\t\t  No.");
         }
 
-        // Fields marked by pa_no_init do not require initialization.
-        if (noInit.count(f)) {
-            LOG3("\t\tField " << f->name << " marked no_init. No initialization required.");
-            initPoints[f] = emptySet;
-            lastField = f;
-            seenFields.insert(f);
-            continue;
-        }
-
         if (LOGGING(1)) {
             LOG3("\t\t  Considering the following dominators");
             for (const auto* u : f_dominators)
@@ -735,12 +738,47 @@ FindInitializationNode::findInitializationNodes(
         };
         bool allStrictDominatorsWrite = std::all_of(f_dominators.begin(), f_dominators.end(),
             IsUnitWrite);
-        if (allStrictDominatorsWrite) {
-            LOG3("\t\tAll actions of all strict dominators write to the field " << f->name);
-            initPoints[f] = emptySet;
-            seenFields.insert(f);
-            lastField = f;
-            continue;
+
+        if (allStrictDominatorsWrite || noInit.count(f)) {
+            if (allStrictDominatorsWrite)
+                LOG3("\t\tAll actions of all strict dominators write to the field " << f->name);
+            else
+                LOG3("\t\tField " << f->name << " marked pa_no_init. No initialization equired.");
+            // Check if this overlay would either increase critical path length or introduce pack
+            // conflicts.
+            ordered_set<const IR::MAU::Table*> prevTables;
+            for (const auto* u : g_units[lastField])
+                if (u->is<IR::MAU::Table>())
+                    prevTables.insert(u->to<IR::MAU::Table>());
+            bool allowOverlay = true;
+            for (const auto* u : f_dominators) {
+                const auto* t = u->to<IR::MAU::Table>();
+                BUG_CHECK(t, "Table object not found for strict dominator unit %1%", u);
+                for (const auto* prev : prevTables) {
+                    if (increasesDependenceCriticalPath(prev, t)) {
+                        LOG3("\t\tThis overlay would result in increased critical path length "
+                             "because of tables " << prev->name << " and " << t->name);
+                        allowOverlay = false;
+                    }
+                }
+                if (allowOverlay && mayViolatePackConflict(t, f, container_state, alloc)) {
+                    LOG3("\t\tThis overlay would result in a container conflict. Therefore, "
+                         "skipping overlay even though no initialization is required.");
+                    allowOverlay = false;
+                }
+            }
+            if (allowOverlay) {
+                initPoints[f] = emptySet;
+                seenFields.insert(f);
+                lastField = f;
+                continue;
+            } else if (noInit.count(f)) {
+                // If initialization not required but overlay will increase dependency length, then
+                // disallow this overlay.
+                return boost::none;
+            }
+            // In case all strict dominators write but the overlay will increase dependency length,
+            // we may still try to initialize at the group dominator for the field.
         } else {
             LOG3("\t\tOnly some strict dominators write to the field " << f->name);
         }

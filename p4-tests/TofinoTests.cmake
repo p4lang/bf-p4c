@@ -97,17 +97,17 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_
 # p4_16/customer/arista/p4c-2032.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "-Xp4c=--auto-init-metadata")
 
-# p4_16/customer/arista/p4c-2178.p4
+# p4_16/customer/arista/p4c-2143.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4" "-Xp4c=--disable-power-check")
-# p4_16/customer/arista/p4c-2178.p4
 
+# p4_16/customer/arista/p4c-2178.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4" "-Xp4c=--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2189.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4" "-Xp4c=--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2191.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-Xp4c=\"--auto-init-metadata --use-pa-solitary\" -to 1200")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-Xp4c=\"--auto-init-metadata\" -to 1200")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4" PROPERTIES TIMEOUT 1200)
 
 # p4_16/customer/arista/p4c-2226.p4
@@ -129,6 +129,7 @@ p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4")
+#p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4")
 # p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
@@ -777,6 +778,7 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2012.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4
