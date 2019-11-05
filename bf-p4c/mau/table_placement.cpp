@@ -1213,9 +1213,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
         if (!try_alloc_all(min_placed, whole_stage, "Min use") ||
             !try_alloc_all(rv, whole_stage, "Table use", true)) {
-            if (!rv->stage_advance_log) {
-                BUG_CHECK(min_placed->stage_advance_log, "stage advance not logged");
-                rv->stage_advance_log = min_placed->stage_advance_log; }
+            if (!rv->stage_advance_log)
+                if (!(rv->stage_advance_log = min_placed->stage_advance_log))
+                    rv->stage_advance_log = "repacking previously placed failed";
             advance_to_next_stage = true; }
 
         if (rv->prev && rv->stage == rv->prev->stage) {
