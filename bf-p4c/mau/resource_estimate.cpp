@@ -235,6 +235,19 @@ static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
     return -1;
 }
 
+// for logging messages -- which resource ran out
+cstring StageUseEstimate::ran_out() const {
+    if (logical_ids > StageUse::MAX_LOGICAL_IDS) return "logical_ids";
+    if (srams > StageUse::MAX_SRAMS) return "srams";
+    if (tcams > StageUse::MAX_TCAMS) return "tcams";
+    if (maprams > StageUse::MAX_MAPRAMS) return "maprams";
+    if (exact_ixbar_bytes > StageUse::MAX_IXBAR_BYTES) return "exact ixbar";
+    if (ternary_ixbar_groups > StageUse::MAX_TERNARY_GROUPS) return "ternary ixbar";
+    if (meter_alus > MAX_METER_ALUS) return "meter_alus";
+    if (stats_alus > MAX_STATS_ALUS) return "stats_alus";
+    return cstring();
+}
+
 /**
  * There are now two support pragmas, ways and simul_lookups.  For an SRAM based table that uses
  * cuckoo hashing, multiple RAMs are looked up simultaneously, each accessed by a different

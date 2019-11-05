@@ -4097,6 +4097,16 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                 &mem.stash_use, &mem.sram_use, &mem.mapram_use, &mem.overflow_bus,
                 &mem.gateway_use, &mem.payload_use };
     std::map<cstring, char>     tables;
+    for (auto arr : arrays)
+        for (int r = 0; r < arr->rows(); r++)
+            for (int c = 0; c < arr->cols(); c++)
+                if (arr->at(r, c))
+                    tables[arr->at(r, c)] = '?';
+    char ch = 'A' - 1;
+    for (auto &t : tables) {
+        t.second = ++ch;
+        if (ch == 'Z') ch = 'a'-1;
+        else if (ch == 'z') ch = '0'-1; }
     out << "tc  sb  rb  tib ab  st  srams       mapram  ov  gw pay 2p" << Log::endl;
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {
@@ -4104,19 +4114,13 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                 if (r >= arr->rows()) {
                     out << ' ';
                 } else {
-                    auto tbl = (*arr)[r][c];
-                    if (tbl) {
-                        if (!tables.count(tbl))
-                            tables.emplace(tbl, 'A' + tables.size());
+                    if (auto tbl = arr->at(r, c)) {
                         out << tables.at(tbl);
                     } else {
                         out << '.'; } } }
             out << "  "; }
         if (r < Memories::SRAM_ROWS) {
-            auto tbl = mem.twoport_bus[r];
-            if (tbl) {
-                if (!tables.count(tbl))
-                    tables.emplace(tbl, 'A' + tables.size());
+            if (auto tbl = mem.twoport_bus[r]) {
                 out << tables.at(tbl);
             } else {
                 out << '.'; } }

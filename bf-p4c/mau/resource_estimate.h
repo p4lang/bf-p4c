@@ -41,6 +41,8 @@ struct StageUseEstimate {
         maprams += a.maprams;
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
+        meter_alus += a.meter_alus;
+        stats_alus += a.stats_alus;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, const LayoutChoices *lc,
                      bool prev_placed, bool table_placement = false);
@@ -55,16 +57,19 @@ struct StageUseEstimate {
         rv.maprams = StageUse::MAX_MAPRAMS;
         rv.exact_ixbar_bytes = StageUse::MAX_IXBAR_BYTES;
         rv.ternary_ixbar_groups = StageUse::MAX_TERNARY_GROUPS;
-        rv.stats_alus = MAX_METER_ALUS;
-        rv.meter_alus = MAX_STATS_ALUS;
+        rv.meter_alus = MAX_METER_ALUS;
+        rv.stats_alus = MAX_STATS_ALUS;
         return rv; }
     bool operator<=(const StageUseEstimate &a) {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
-               maprams <= a.maprams; }
+               maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
+               ternary_ixbar_groups <= a.ternary_ixbar_groups && meter_alus < a.meter_alus &&
+               stats_alus <= a.stats_alus; }
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
-    }
+        meter_alus = 0; stats_alus = 0; }
+    cstring ran_out() const;
 
     void options_to_ways(const IR::MAU::Table *tbl, int entries);
     void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,

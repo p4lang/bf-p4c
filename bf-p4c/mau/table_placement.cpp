@@ -272,6 +272,7 @@ struct TablePlacement::Placed {
                                                // but indirect attached tables may not be
     int                         complete_shared = 0;  // tables that share attached tables and
                                         // are completely placed by placing this
+    cstring                     stage_advance_log;  // why placement had to go to next stage
 
     /// True if the table needs to be split across multiple stages, because it
     /// can't fit within a single stage (eg. not enough entries in the stage).
@@ -402,7 +403,9 @@ struct TablePlacement::Placed {
         : self(p.self), id(uid_counter++), prev(p.prev), group(p.group), name(p.name),
           entries(p.entries), requested_stage_entries(p.requested_stage_entries),
           attached_entries(p.attached_entries), placed(p.placed),
-          match_placed(p.match_placed), need_more(p.need_more), need_more_match(p.need_more_match),
+          match_placed(p.match_placed), complete_shared(p.complete_shared),
+          stage_advance_log(p.stage_advance_log),
+          need_more(p.need_more), need_more_match(p.need_more_match),
           gw_result_tag(p.gw_result_tag), table(p.table), gw(p.gw), stage(p.stage),
           logical_id(p.logical_id), initial_stage_split(p.initial_stage_split),
           stage_split(p.stage_split), use(p.use), resources(p.resources)
@@ -421,6 +424,22 @@ struct TablePlacement::Placed {
 };
 
 int TablePlacement::Placed::uid_counter = 0;
+
+namespace {
+class StageSummary {
+    IXBar       ixbar;
+    Memories    mem;
+ public:
+    StageSummary(int stage, const TablePlacement::Placed *pl) {
+        while (pl && pl->stage > stage) pl = pl->prev;
+        while (pl && pl->stage == stage) {
+            ixbar.update(pl->table, &pl->resources);
+            mem.update(pl->resources.memuse);
+            pl = pl->prev; } }
+    friend std::ostream &operator<<(std::ostream &out, const StageSummary &sum) {
+        return out << sum.ixbar << Log::endl << sum.mem; }
+};
+}  // end anonymous namespace
 
 void TablePlacement::GroupPlace::finish_if_placed(
     ordered_set<const GroupPlace*> &work, const Placed *pl
@@ -564,8 +583,9 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estim
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next);
-        if (!ixbar_fit)
-            return false;
+        if (!ixbar_fit) {
+            next->stage_advance_log = "ran out of ixbar";
+            return false; }
         if (!next->table->gateway_only()) {
             table_format = try_alloc_format(next, next->gw);
         }
@@ -573,8 +593,9 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estim
         if (!table_format) {
             bool adjust_possible = next->use.adjust_choices(next->table, initial_entries,
                                                             next->attached_entries);
-            if (!adjust_possible)
-                return false;
+            if (!adjust_possible) {
+                next->stage_advance_log = "adjust_choices failed";
+                return false; }
         }
     } while (!table_format);
     return true;
@@ -597,6 +618,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
     } else if (!t->layout.ternary) {
         if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries,
                                                     next->attached_entries)) {
+            next->stage_advance_log = "ran out of srams";
             return false;
         }
     } else {
@@ -605,6 +627,10 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
 
     if (next->entries < min_entries) {
         LOG5("Couldn't place minimum entries within table " << t->name);
+        if (t->layout.ternary)
+            next->stage_advance_log = "ran out of tcams";
+        else
+            next->stage_advance_log = "ran out of srams";
         return false;
     }
     if (!t->layout.ternary)
@@ -676,22 +702,6 @@ bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
         LOG3("    " << error_message);
         return false;
     }
-#if 0
-    if (next->entries == 0 && !next->table->gateway_only()) {
-        // detached attached table -- need a gateway that tests the ena bit
-        BUG_CHECK(!next->attached_entries.empty(),  "detaching atatched from %s, no "
-                  "attached entries?", next->name);
-        IR::MAU::Table  dummy(next->name, next->table->gress);
-        // Need to set the P4Table here so PhvInfo::minStage can find it -- FIXME should be
-        // specifying the stage directly when we have it rather than by table guesstimate.
-        dummy.match_table = next->table->match_table;
-        setup_detached_gateway(&dummy, next);
-        if (!current_ixbar.allocGateway(&dummy, phv, next->resources.gateway_ixbar, false) &&
-            !current_ixbar.allocGateway(&dummy, phv, next->resources.gateway_ixbar, true)) {
-            error_message = "Could not allocate gateway for splitting " + next->table->name;
-            LOG3("    " << error_message);
-            return false; } }
-#endif
 
     IXBar verify_ixbar;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev)
@@ -753,6 +763,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                         std::to_string(next->stage) + " with " + std::to_string(next->entries)
                         + " entries";
         LOG3("    " << error_message);
+        next->stage_advance_log = "ran out of memories";
         next->resources.memuse.clear();
         for (auto *p : whole_stage)
             p->resources.memuse.clear();
@@ -808,6 +819,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
                         "action data bus";
         LOG3("    " << error_message);
         next->resources.action_data_xbar.clear();
+        next->stage_advance_log = "ran out of action data bus space";
         return false;
     }
 
@@ -820,6 +832,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
                         " output in within the action data bus";
         LOG3(error_message);
         next->resources.meter_xbar.clear();
+        next->stage_advance_log = "ran out of action data bus space for meter output";
         return false;
     }
 
@@ -848,6 +861,7 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
                         "instruction memory";
         LOG3("    " << error_message);
         next->resources.instr_mem.clear();
+        next->stage_advance_log = "ran out of imem";
         return false;
     }
 
@@ -890,8 +904,11 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
     if (no_memory) return true;
-    if (!(get_current_stage_use(next) <= StageUseEstimate::max()) ||
-        !try_alloc_mem(next, whole_stage)) {
+    if (auto what = get_current_stage_use(next).ran_out()) {
+        LOG3("    " << what << " of memory allocation ran out of " << what);
+        next->stage_advance_log = "ran out of " + what;
+        return false;
+    } else if (!try_alloc_mem(next, whole_stage)) {
         LOG3("    " << what << " of memory allocation did not fit");
         return false; }
     return true;
@@ -986,6 +1003,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             prev_stage_tables++;
             if (p->stage == rv->stage) {
                 LOG2("  Cannot place multiple sections of an individual table in the same stage");
+                rv->stage_advance_log = "cannot split into same stage";
                 repeated_stage = true;
                 rv->stage++;
                 continue;
@@ -997,15 +1015,18 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 && !mutex.action(p->table, rv->table)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and table advances stage");
+                rv->stage_advance_log = "dependency on table " + p->table->name;
             } else if (rv->gw && deps->happens_phys_before(p->table, rv->gw)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
+                rv->stage_advance_log = "gateway dependency on table " + p->table->name;
             } else if (deps->container_conflict(p->table, rv->table)) {
                 if (!ignoreContainerConflicts) {
                     rv->stage++;
                     LOG2("  - action dependency between " << p->table->name << " and table " <<
                          rv->table->name << " due to PHV allocation advances stage to " <<
                          rv->stage);
+                    rv->stage_advance_log = "container conflict with table " + p->table->name;
                 }
             } else {
                 for (auto ctbl : tables_with_shared) {
@@ -1016,6 +1037,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                         rv->stage++;
                         LOG2("  - dependency between " << p->table->name << " and " <<
                              ctbl->name << " advances stage");
+                        rv->stage_advance_log = "shared table " + ctbl->name +
+                            " depends on table " + p->table->name;
                         break;
                     } else if (deps->container_conflict(p->table, ctbl)) {
                         if (!ignoreContainerConflicts) {
@@ -1023,6 +1046,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                             LOG2("  - action dependency between " << p->table->name << " and "
                                  "table " << ctbl->name << " due to PHV allocation advances "
                                  "stage to " << rv->stage);
+                            rv->stage_advance_log = "shared table " + ctbl->name +
+                                " container conflict with table " + p->table->name;
                             break;
                         }
                     }
@@ -1187,8 +1212,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         }
 
         if (!try_alloc_all(min_placed, whole_stage, "Min use") ||
-            !try_alloc_all(rv, whole_stage, "Table use", true))
-            advance_to_next_stage = true;
+            !try_alloc_all(rv, whole_stage, "Table use", true)) {
+            if (!rv->stage_advance_log) {
+                BUG_CHECK(min_placed->stage_advance_log, "stage advance not logged");
+                rv->stage_advance_log = min_placed->stage_advance_log; }
+            advance_to_next_stage = true; }
 
         if (rv->prev && rv->stage == rv->prev->stage) {
             avail.srams -= stage_current.srams;
@@ -1699,6 +1727,8 @@ bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
 
 
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
+    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
+        (ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
     LOG1("table placement starting " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
@@ -1788,7 +1818,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 for (auto& grp_tbl : grp->seq->tables) {
                     if (deps->happens_before_control(t, grp_tbl) &&
                         (!placed || !(placed->is_placed(grp_tbl)))) {
-                        LOG1("  - skipping " << t->name << " due to in-sequence control" <<
+                        LOG3("  - skipping " << t->name << " due to in-sequence control" <<
                             " dependence on " << grp_tbl->name);
                         done = false;
                         should_skip = true;
@@ -1883,13 +1913,21 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         choice_t choice = DEFAULT;
         for (auto t : trial) {
             if (t->prev) {
-                LOG1("  Check point now " << t->prev << " " << (t->prev->prev == nullptr));
+                LOG3("  Check point now " << t->prev << " " << (t->prev->prev == nullptr));
             }
             if (!best || is_better(t, best, choice)) {
                 log_choice(t, best, choice);
                 best = t;
             } else if (best) {
                 log_choice(nullptr, best, choice); } }
+        if (placed && best->stage != placed->stage) {
+            LOG_FEATURE("stage_advance", 2,
+                        "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
+                        StageSummary(placed->stage, best) << IndentCtl::unindent);
+            for (auto t : trial) {
+                if (t->stage == best->stage)
+                    LOG_FEATURE("stage_advance", 2, "can't place " << t->name << " in stage " <<
+                                (t->stage-1) << " : " << t->stage_advance_log); } }
         placed = place_table(work, best);
 
         if (placed->need_more)

@@ -4090,6 +4090,7 @@ void IXBar::update(cstring name, const Use &alloc) {
     cstring xbar_type = alloc.ternary ? "TCAM" : "SRAM";
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
+        field_users[byte.name].insert(name);
         if (byte.loc.byte == 5 && alloc.ternary) {
             /* the sixth byte in a ternary group is actually half a byte group it shares with
              * the adjacent ternary group */
@@ -4349,8 +4350,8 @@ void IXBar::verify_hash_matrix() const {
     }
 }
 
-static void replace_name(cstring n, std::map<cstring, char> &names) {
-    if (!names.count(n)) {
+static void add_names(cstring n, std::map<cstring, char> &names) {
+    if (n && !names.count(n)) {
         if (names.size() >= 52)
             names.emplace(n, '?');
         else if (names.size() >= 26)
@@ -4358,19 +4359,39 @@ static void replace_name(cstring n, std::map<cstring, char> &names) {
         else
             names.emplace(n, 'A' + names.size()); }
 }
+static void add_names(const std::pair<cstring, int> &n, std::map<cstring, char> &names) {
+    add_names(n.first, names); }
+template<class T>
+static void add_names(const T &n, std::map<cstring, char> &names) {
+    for (auto &a : n) add_names(a, names); }
+// FIXME -- should not be needed, but Alloc2D is missing begin/end
+template<class T, int R, int C>
+static void add_names(const Alloc2D<T, R, C> &n, std::map<cstring, char> &names) {
+    for (int r = 0; r < R; r++) add_names(n[r], names); }
+// FIXME -- should not be needed, but Alloc1D is missing const begin/end
+template<class T, int S>
+static void add_names(const Alloc1D<T, S> &n, std::map<cstring, char> &names) {
+    for (int i = 0; i < S; i++) add_names(n[i], names); }
+
+static void sort_names(std::map<cstring, char> &names) {
+    char a = 'A' - 1;
+    for (auto &n : names) {
+        n.second = ++a;
+        if (a == 'Z') a = 'a' - 1;
+        if (a == 'z') a = '0' - 1;
+        if (a == '9' || a == '?') a = '?' - 1; }
+}
 
 static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
                       std::map<cstring, char> &fields) {
     if (f.first) {
-        replace_name(f.first, fields);
-        out << fields[f.first] << hex(f.second/8);
+        out << fields.at(f.first) << hex(f.second/8);
     } else {
         out << ".."; }
 }
 static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
     if (n) {
-        replace_name(n, names);
-        out << names[n];
+        out << names.at(n);
     } else {
         out << '.'; }
 }
@@ -4383,6 +4404,10 @@ static void write_group(std::ostream &out, const T &grp, std::map<cstring, char>
 /* IXBarPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
     std::map<cstring, char>     fields;
+    add_names(ixbar.exact_use, fields);
+    add_names(ixbar.ternary_use, fields);
+    add_names(ixbar.byte_group_use, fields);
+    sort_names(fields);
     out << "Input Xbar:" << Log::endl;
     for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
         write_group(out, ixbar.exact_use[r], fields);
@@ -4394,9 +4419,20 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
             out << " ";
             write_group(out, ixbar.ternary_use[2*r+1], fields); }
         out << Log::endl; }
-    for (auto &f : fields)
-        out << "   " << f.second << " " << f.first << Log::endl;
+    for (auto &f : fields) {
+        out << "   " << f.second << " " << f.first;
+        const char *sep = " (";
+        if (ixbar.field_users.count(f.first)) {
+            for (auto t : ixbar.field_users.at(f.first)) {
+                out << sep << t;
+                sep = ", "; } }
+        if (*sep == ',') out << ')';
+        out << Log::endl; }
     std::map<cstring, char>     tables;
+    add_names(ixbar.hash_index_use, tables);
+    add_names(ixbar.hash_single_bit_use, tables);
+    add_names(ixbar.hash_group_print_use, tables);
+    sort_names(tables);
     out << "Hash:" << Log::endl;
     for (int h = 0; h < IXBar::HASH_TABLES; ++h) {
         write_group(out, ixbar.hash_index_use[h], tables);

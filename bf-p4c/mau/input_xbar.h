@@ -183,6 +183,9 @@ struct IXBar {
     std::multimap<cstring, Loc> &fields(bool ternary) {
         return ternary ? ternary_fields : exact_fields; }
 
+    // map from field names to tables that use those fields (mostly for debugging)
+    std::map<cstring, std::set<cstring>>        field_users;
+
     /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
      * strings here are table names
      * NOTE: Changes here require changes to .gdbinit pretty printer */
