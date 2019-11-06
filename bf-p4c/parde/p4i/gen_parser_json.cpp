@@ -155,6 +155,9 @@ void GenerateParserP4iJson::generateClotInfo(const IR::BFN::LoweredParserMatch* 
 
     for (auto* stmt : match->extracts) {
         if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>()) {
+            // Don't generate JSON for the extracted CLOT if the CLOT is spilled.
+            if (!extract->is_start) continue;
+
             clot_usage[gress].clots.push_back(generateExtractClot(extract, state));
         }
     }

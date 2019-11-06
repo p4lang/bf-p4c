@@ -174,6 +174,8 @@ class ClotInfo {
                 state_name = "ingress::" + state_name;
             else if (state->thread() == EGRESS)
                 state_name = "egress::" + state_name;
+        }
+        if (!parser_state_to_clots.count(state_name)) {
             // It is likely the state name is that of a split state,
             // e.g. Original state = ingress::stateA
             //      Split state = ingress::stateA.$common.0
