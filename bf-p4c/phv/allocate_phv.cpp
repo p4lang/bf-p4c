@@ -1287,13 +1287,22 @@ CoreAllocation::tryAllocSliceList(
                     int offset = 0;
                     bool absolute = false;
                     int size = 0;
+                    boost::optional<PHV::Container> requiredContainer;
+                    std::map<PHV::FieldSlice, int> bitPositions;
                     for (auto& slice : **slice_list) {
                         size += slice.range().size();
                         if (kv_source.second.find(slice) == kv_source.second.end()) {
+                            bitPositions[slice] = offset;
                             offset += slice.range().size();
                             continue; }
 
                         int required_pos = kv_source.second.at(slice).bitPosition;
+                        if (requiredContainer && *requiredContainer !=
+                                kv_source.second.at(slice).container)
+                            BUG("Error setting up conditional constraints: Multiple containers "
+                                "%1% and %2% found", *requiredContainer,
+                                kv_source.second.at(slice).container);
+                        requiredContainer = kv_source.second.at(slice).container;
                         if (!absolute && required_pos < offset) {
                             // This is the first slice with an action alignment constraint.  Check
                             // that the constraint is >= the bits seen so far. If this check fails,
@@ -1319,10 +1328,21 @@ CoreAllocation::tryAllocSliceList(
                         } else {
                             offset += slice.range().size(); } }
 
-                    // If we've reached here, then all the slices that have conditional constraints
-                    // are in slice_list at the right required alignment. Therefore, we can mark
-                    // this source for erasure from the conditional constraints map.
-                    conditionalConstraintsToErase.insert(kv_source.first);
+                    if (requiredContainer) {
+                        for (auto& slice : **slice_list) {
+                            if (kv_source.second.find(slice) != kv_source.second.end()) continue;
+                            BUG_CHECK(bitPositions.count(slice),
+                                    "Cannot calculate offset for slice %1%", slice);
+                            (*action_constraints)[kv_source.first][slice] =
+                                PHV::Allocation::ConditionalConstraintData(bitPositions.at(slice),
+                                        *requiredContainer);
+                        }
+                    } else {
+                        // If we've reached here, then all the slices that have conditional
+                        // constraints are in slice_list at the right required alignment. Therefore,
+                        // we can mark this source for erasure from the conditional constraints map.
+                        conditionalConstraintsToErase.insert(kv_source.first);
+                    }
                 }
             }
         } else {

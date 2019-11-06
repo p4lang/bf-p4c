@@ -121,6 +121,7 @@ class Clustering : public PassManager {
     class MakeSlices : public Inspector {
         Clustering& self;
         PhvInfo& phv_i;
+        const PragmaContainerSize& pa_sizes_i;
 
         /// Sets of sets of slices, where each set of slices must share a
         /// fine-grained slicing.  (We use a vector because duplicates don't
@@ -148,7 +149,8 @@ class Clustering : public PassManager {
         void end_apply() override;
 
      public:
-        explicit MakeSlices(Clustering &self) : self(self), phv_i(self.phv_i) { }
+        explicit MakeSlices(Clustering &self, const PragmaContainerSize& pa)
+            : self(self), phv_i(self.phv_i), pa_sizes_i(pa) { }
 
         /// Utility method for updating fields_to_slices_i.
         /// Splits slices for @field at @range.lo and @range.hi + 1.
@@ -219,6 +221,7 @@ class Clustering : public PassManager {
         Clustering& self;
         PhvInfo& phv_i;
         const PackConflicts& conflicts_i;
+        const PragmaContainerSize& pa_sizes_i;
 
         /// Track headers already visited, by tracking the IDs of the first
         /// fields.
@@ -266,8 +269,8 @@ class Clustering : public PassManager {
                 ordered_set<PHV::SuperCluster::SliceList*>& slice_lists);
 
      public:
-        explicit MakeSuperClusters(Clustering &self)
-        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i) { }
+        explicit MakeSuperClusters(Clustering &self, const PragmaContainerSize& pa)
+        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), pa_sizes_i(pa) { }
     };
 
     /** For the deparser zero optimization, we need to make sure that every deparser zero
@@ -286,14 +289,14 @@ class Clustering : public PassManager {
 
  public:
     Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const PragmaContainerSize& pa)
-        : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this) {
+        : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this, pa) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
             new FindComplexValidityBits(*this),         // populates complex_validity_bits_i
             &slice_i,
             new MakeAlignedClusters(*this),             // populates aligned_clusters_i
             new MakeRotationalClusters(*this),          // populates rotational_clusters_i
-            new MakeSuperClusters(*this),               // populates super_clusters_i
+            new MakeSuperClusters(*this, pa),           // populates super_clusters_i
             new ValidateDeparserZeroClusters(*this)     // validate clustering is correct for
                                                         // deparser zero optimization
         });

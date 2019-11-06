@@ -24,10 +24,13 @@ class PragmaContainerSize : public Inspector {
 
     std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
     std::map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
+    // Set of all slices that become no-pack because of pa_container_size pragmas.
+    std::map<const PHV::Field*, std::set<PHV::FieldSlice>> no_pack_slices_i;
 
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         pa_container_sizes_i.clear();
+        no_pack_slices_i.clear();
         field_slice_req_i.clear();
         return rv;
     }
@@ -118,6 +121,16 @@ class PragmaContainerSize : public Inspector {
      * and @pa_container_size("ingress", "abc", 16) is actually Okay.
      */
     void adjust_requirements(const std::list<PHV::SuperCluster*>& sliced);
+
+    bool has_no_pack_slice(const PHV::Field* field) const {
+        return no_pack_slices_i.count(field);
+    }
+
+    const std::set<PHV::FieldSlice> get_no_pack_slices(const PHV::Field* field) const {
+        static std::set<PHV::FieldSlice> emptySet;
+        if (!has_no_pack_slice(field)) return emptySet;
+        return no_pack_slices_i.at(field);
+    }
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaContainerSize& pa_cs);

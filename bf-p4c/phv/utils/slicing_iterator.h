@@ -97,6 +97,9 @@ class SlicingIterator {
     /// true if the associated supercluster has slice lists.
     bool has_slice_lists_i;
 
+    bool change_i = false;
+    uint8_t iterations_i = 0;
+
     bitvec compressed_schemas_i;
     bitvec boundaries_i;
     bitvec required_slices_i;
@@ -110,6 +113,7 @@ class SlicingIterator {
     ordered_map<PHV::FieldSlice, ordered_set<PHV::FieldSlice>> sliceToRotSlices;
     ordered_map<PHV::FieldSlice, std::vector<PHV::FieldSlice>> sliceToSliceLists;
     ordered_set<PHV::FieldSlice> noSplitSlices;
+    ordered_map<PHV::FieldSlice, int> initialOffset;
 
     /// Number of different slicings tried by the slicing iterator.
     uint64_t num_slicings;
@@ -124,6 +128,10 @@ class SlicingIterator {
     cstring get_slice_coordinates(
             const int slice_list_size,
             const std::pair<int, int>& slice_location) const;
+
+    void print_slicing_state(
+            const ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
+            const ordered_map<FieldSlice, int>& exactSliceListSize) const;
 
     /// Changes compressed_schemas_i to account for pa_container_size pragmas.
     void enforce_container_size_pragmas(
@@ -194,7 +202,6 @@ class SlicingIterator {
             ordered_set<FieldSlice>& alreadyProcessedSlices,
             ordered_map<FieldSlice, int>& exactSliceListSize,
             ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
-            const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
             const std::vector<FieldSlice>& list,
             const FieldSlice& point);
 

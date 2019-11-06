@@ -134,6 +134,37 @@ void PragmaContainerSize::end_apply() {
         auto& field = kv.first;
         auto& sizes = kv.second;
         update_field_slice_req(field, sizes); }
+
+    for (const auto& kv : pa_container_sizes_i) {
+        // Ignore fields that will share bytes with other fields.
+        if (kv.first->offset % 8 != 0) continue;
+        if (kv.second.size() == 1) {
+            int size = static_cast<int>(*(kv.second.begin()));
+            if (kv.first->size % size != 0) continue;
+            for (int i = 0; i < kv.first->size; i += size)
+                no_pack_slices_i[kv.first].insert(
+                        PHV::FieldSlice(kv.first, le_bitrange(StartLen(i, size))));
+        } else {
+            int i = 0;
+            std::vector<PHV::FieldSlice> thisFieldSlices;
+            for (auto sz : kv.second) {
+                int size = static_cast<int>(sz);
+                thisFieldSlices.push_back(
+                        PHV::FieldSlice(kv.first, le_bitrange(StartLen(i, size))));
+                i += size;
+            }
+            if (i != kv.first->size) continue;
+            no_pack_slices_i[kv.first].insert(thisFieldSlices.begin(), thisFieldSlices.end());
+        }
+    }
+
+    if (LOGGING(2)) {
+        LOG2("\t  Printing no-pack slices due to pa_container_size pragmas:");
+        for (const auto& kv : no_pack_slices_i) {
+            LOG2("\t\tField: " << kv.first->name);
+            for (const auto& slice : kv.second) LOG2("\t\t  " << slice);
+        }
+    }
 }
 
 void PragmaContainerSize::check_and_add_no_split(

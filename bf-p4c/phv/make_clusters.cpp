@@ -98,8 +98,18 @@ Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     equivalences_i.clear();
     // Wrap each field in a slice.
-    for (auto& f : phv_i)
-        self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
+    for (auto& f : phv_i) {
+        if (pa_sizes_i.has_no_pack_slice(&f)) {
+            auto no_pack_slices = pa_sizes_i.get_no_pack_slices(&f);
+            for (auto& slice : no_pack_slices) {
+                self.fields_to_slices_i[&f].push_back(slice);
+                LOG5("Clustering::MakeSlices: breaking " << f.name << " into " <<
+                     slice.range() << " due to pa_container_size");
+            }
+        } else {
+            self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
+        }
+    }
     return rv;
 }
 
@@ -617,12 +627,42 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             lastUnreferenced = true;
             continue; }
 
+
+        auto no_pack_slices = pa_sizes_i.get_no_pack_slices(field);
         int field_slice_list_size = 0;
-        for (auto& slice : self.fields_to_slices_i.at(field)) {
-            LOG5("    ...adding " << slice);
-            accumulator->push_back(slice);
-            field_slice_list_size += slice.size();
-            self.slices_used_in_slice_lists_i.insert(slice); }
+        if (no_pack_slices.size() == 0) {
+            for (auto& slice : self.fields_to_slices_i.at(field)) {
+                LOG5("    ...adding " << slice);
+                accumulator->push_back(slice);
+                field_slice_list_size += slice.size();
+                self.slices_used_in_slice_lists_i.insert(slice);
+            }
+        } else {
+            StartNewSliceList();
+            LOG5("Starting new slice list (encountered a no-pack slice due to pa_container_size):");
+            std::vector<le_bitrange> boundaries;
+            for (auto& slice : no_pack_slices) boundaries.push_back(slice.range());
+            int indexIntoBoundaries = 0;
+            for (auto& slice : self.fields_to_slices_i.at(field)) {
+                LOG5("Considering slice " << slice);
+                // Index into the next container.
+                if (!slice.range().overlaps(boundaries[indexIntoBoundaries])) {
+                    indexIntoBoundaries++;
+                    LOG5("Starting new slice list (encountered a no-pack slice due to "
+                         "pa_container_size):");
+                    StartNewSliceList();
+                }
+                LOG5("    ...adding " << slice);
+                accumulator->push_back(slice);
+                self.slices_used_in_slice_lists_i.insert(slice);
+                field_slice_list_size += slice.size();
+                lastNoPack = true;
+            }
+            BUG_CHECK(field_slice_list_size == field->size,
+                    "Fine grained slicing of field %1% (size %2%) produced slices adding up to "
+                    "%3%b", cstring::to_cstring(field), field->size, field_slice_list_size);
+            continue;
+        }
         accumulator_bits += field->size;
         lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
             (lastNoPack && field->padding);
