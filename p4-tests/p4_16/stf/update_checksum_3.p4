@@ -7,8 +7,8 @@
 header sample_h {
     bit<4> a;
     bit<4> b;
-    bit<4> c;
-    bit<4> d;
+    bit<7> c;
+    bit<17> d;
     bit<4> e;
     bit<4> f;
     bit<16> csum;

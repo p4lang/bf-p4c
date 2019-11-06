@@ -226,7 +226,7 @@ FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerTofields,
                 }
                 fieldsTillByte = true;
                 // Setting the alignment for next field
-                offset16 = (fm.second.at(field->name) % 16) + field->type->width_bits();
+                offset16 = (fm.second.at(field->name) + field->type->width_bits()) % 16;
                 if (bitCount % 8 != fm.second.at(field->name) % 8) {
                     ::fatal_error("Each field's bit alignment in the packet should be"
                     " equal to that in the checksum list. Checksum"
