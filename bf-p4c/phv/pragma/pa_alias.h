@@ -52,6 +52,14 @@ class PragmaAlias : public Inspector {
     static const char *description;
     static const char *help;
 
+    /// Checks if alias is possible between @f1 and @f2. If not, returns boost::none.
+    /// If yes, it returns a pair of fields, the first being the alias destination and the
+    /// second is the alias source (field being replaced).
+    boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> mayAddAlias(
+            const PHV::Field* f1,
+            const PHV::Field* f2,
+            bool suppressWarning = false);
+
     bool addAlias(const PHV::Field* f1, const PHV::Field* f2, bool suppressWarning = false);
 };
 

@@ -113,7 +113,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaPayloadChecksum, PARSE_EMPTY, intPragma);
 
         // pa_ pragmas
-        BFN_PARSE(PragmaAlias, PARSE_TRIPLE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaAlias, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE(PragmaAtomic, PARSE_PAIR, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE(PragmaContainerType, PARSE_TRIPLE, StringLiteral, extPragma);
