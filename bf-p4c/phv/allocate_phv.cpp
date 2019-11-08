@@ -1,4 +1,5 @@
 #include <boost/format.hpp>
+#include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <numeric>
 #include "bf-p4c/bf-p4c-options.h"

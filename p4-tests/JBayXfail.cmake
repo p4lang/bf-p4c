@@ -376,3 +376,15 @@ p4c_add_xfail_reason("tofino2"
   "Each field's bit alignment in the packet should be equal to that in the checksum list. Checksum engine is unable to read .* for .* checksum update"
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
 )
+
+# P4 program error
+p4c_add_xfail_reason("tofino2"
+  "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
+  p4c_1585_a
+)
+
+# P4C-2291
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received"
+  p4c_1585_b
+)
