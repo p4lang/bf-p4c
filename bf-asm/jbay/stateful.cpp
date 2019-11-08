@@ -24,7 +24,7 @@ enum {
     FUNCTION_LOG = 1 << FUNCTION_SHIFT,
     FUNCTION_FIFO = 2 << FUNCTION_SHIFT,
     FUNCTION_STACK = 3 << FUNCTION_SHIFT,
-    FUNCTION_BLOOM_CLR = 4 << FUNCTION_SHIFT,
+    FUNCTION_FAST_CLEAR = 4 << FUNCTION_SHIFT,
     FUNCTION_MASK = 0xf << FUNCTION_SHIFT,
 };
 
@@ -74,11 +74,11 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
                 stateful_counter_mode |= decode_push_pop(el.value) << PUSHPOP_BITS;
             else
                 error(el.key.lineno, "Syntax error, expecting push or pop"); }
-    } else if (kv.key == "bloom") {
+    } else if (kv.key == "clear") {
         if (stateful_counter_mode) {
             error(kv.key.lineno, "Conflicting log counter functions in %s", name());
             return true; }
-        stateful_counter_mode = FUNCTION_BLOOM_CLR;
+        stateful_counter_mode = FUNCTION_FAST_CLEAR;
         stateful_counter_mode |= decode_push_pop(kv.value);
     } else if (kv.key == "watermark") {
         if (kv.value == "pop") watermark_pop_not_push = 1;
@@ -126,7 +126,7 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
     return true;
 }
 
-int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
+static int parse_jbay_counter_mode(const value_t &v) {
     int rv = 0;
     if (v == "counter") rv = FUNCTION_LOG;
     else if (v == "fifo") rv = FUNCTION_FIFO;
@@ -153,10 +153,12 @@ int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
             return -1; }
     return rv | flag;
 }
+int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
+    return parse_jbay_counter_mode(v); }
 
 void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
     int fnmode = mode & FUNCTION_MASK;
-    BUG_CHECK(fnmode > 0 && (fnmode >> FUNCTION_SHIFT) <= FUNCTION_BLOOM_CLR);
+    BUG_CHECK(fnmode > 0 && (fnmode >> FUNCTION_SHIFT) <= FUNCTION_FAST_CLEAR);
     if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != fnmode)
         error(lineno, "Incompatible uses (%s and %s) of stateful alu counters",
               function_names[stateful_counter_mode >> FUNCTION_SHIFT],
@@ -167,9 +169,21 @@ void StatefulTable::set_counter_mode(Target::JBay target, int mode) {
     if (mode & POP_MASK) stateful_counter_mode |= POP_ANY;
 }
 
-// This is called write_logging_regs, but it handles all target (jbay) specific
-// registers, as write_regs is not specialized and this is.  Should rename?
-template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) {
+// DANGER -- nasty hack to set the raw bits of an SALU state alu instruction
+// really need to make the csr2cpp codegen handle this automatically
+template<class T> void set_raw_instr_bits(checked_array<4, T> &reg, bitvec v) {
+    for (int i = 0; i < 4; ++i) {
+        reg[i].salu_const_src = v.getrange(i*32, 4);
+        reg[i].salu_regfile_const = v.getrange(i*32 + 4, 1);
+        reg[i].salu_bsrc_input = v.getrange(i*32 + 5, 3);
+        reg[i].salu_asrc_input = v.getrange(i*32 + 8, 3);
+        reg[i].salu_op = v.getrange(i*32 + 11, 4);
+        reg[i].salu_arith = v.getrange(i*32 + 15, 1);
+        reg[i].salu_pred = v.getrange(i*32 + 16, 16);
+    }
+}
+
+template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
     auto &adrdist = regs.rams.match.adrdist;
     auto &merge = regs.rams.match.merge;
     auto &vpn_range = adrdist.mau_meter_alu_vpn_range[meter_group()];
@@ -211,11 +225,12 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
     case 1: adrdist.meter_adr_shift.meter_adr_shift1 = meter_adr_shift; break;
     case 2: adrdist.meter_adr_shift.meter_adr_shift2 = meter_adr_shift; break;
     case 3: adrdist.meter_adr_shift.meter_adr_shift3 = meter_adr_shift; break; }
-    if (stateful_counter_mode) {
-        auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
-        oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
-        oxbar_map.stateful_log_counter_oxbar_enable = 1;
-        auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
+    auto &oxbar_map = adrdist.mau_stateful_log_counter_oxbar_map[meter_group()];
+    oxbar_map.stateful_log_counter_oxbar_ctl = meter_group();
+    oxbar_map.stateful_log_counter_oxbar_enable = 1;
+    auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
+    auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
+    if (stateful_counter_mode && (stateful_counter_mode % FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
         ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
         ctl2.slog_instruction_width = format->log2size - 3;
         if ((stateful_counter_mode & PUSH_ANY) == 0)
@@ -228,13 +243,21 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
             ctl2.slog_watermark_ctl = watermark_pop_not_push;
             ctl2.slog_watermark_enable = 1;
             merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
-        auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
         if (underflow_action.set())
             // 4-bit stateful addr MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
             ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
         if (overflow_action.set())
             ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
-    }
+    } else {
+        // we set up for fast clear from the control plane if the counter mode is unused
+        ctl2.slog_counter_function = FUNCTION_FAST_CLEAR >> FUNCTION_SHIFT;
+        ctl2.slog_instruction_width = 4;  // 128 bits
+        ctl2.slog_vpn_base = minvpn;
+        ctl2.slog_vpn_limit = maxvpn;
+        if (clear_value) {
+            set_raw_instr_bits(salu.salu_instr_state_alu[3], clear_value);
+            salu.stateful_ctl.salu_clear_value_ctl = 1; }
+        ctl3.slog_overflow_instruction = 0x6; }
     regs.rams.map_alu.meter_alu_group_phv_hash_shift[meter_group()] = phv_hash_shift;
     unsigned idx = 0;
     for (auto &slice : regs.rams.map_alu.meter_alu_group_phv_hash_mask[meter_group()])
@@ -251,6 +274,11 @@ template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) 
         salu.stateful_ctl.salu_stage_id = stage_alu_id;
         salu.stateful_ctl.salu_stage_id_enable = 1; }
 }
+
+// This is called write_logging_regs, but it handles all tofino2+ target specific
+// registers, as write_regs is not specialized and this is.  Should rename?
+template<> void StatefulTable::write_logging_regs(Target::JBay::mau_regs &regs) {
+    write_tofino2_common_regs(regs); }
 
 /// Compute the proper value for the register
 ///    map_alu.meter_alu_group_data_delay_ctl[].meter_alu_right_group_delay

@@ -62,6 +62,7 @@
     M(bool, SUPPORT_ALWAYS_RUN) \
     M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
     M(bool, SUPPORT_OVERFLOW_BUS) \
+    M(bool, SUPPORT_SALU_FAST_CLEAR) \
     M(int, MINIMUM_INSTR_CONSTANT) \
     M(int, NUM_PARSERS)
 
@@ -159,6 +160,7 @@ class Target::Tofino : public Target {
         SUPPORT_ALWAYS_RUN = 0,
         SUPPORT_CONCURRENT_STAGE_DEP = 1,
         SUPPORT_OVERFLOW_BUS = 1,
+        SUPPORT_SALU_FAST_CLEAR = 0,
         MINIMUM_INSTR_CONSTANT = -8,
         NUM_PARSERS = 18,
     };
@@ -263,6 +265,7 @@ class Target::JBay : public Target {
         SUPPORT_ALWAYS_RUN = 1,
         SUPPORT_CONCURRENT_STAGE_DEP = 0,
         SUPPORT_OVERFLOW_BUS = 0,
+        SUPPORT_SALU_FAST_CLEAR = 1,
         MINIMUM_INSTR_CONSTANT = -4,
         NUM_PARSERS = 36,
     };
@@ -401,6 +404,7 @@ class Target::Cloudbreak : public Target {
         SUPPORT_ALWAYS_RUN = 1,
         SUPPORT_CONCURRENT_STAGE_DEP = 0,
         SUPPORT_OVERFLOW_BUS = 0,
+        SUPPORT_SALU_FAST_CLEAR = 1,
         MINIMUM_INSTR_CONSTANT = -4,
         NUM_PARSERS = 36,
     };

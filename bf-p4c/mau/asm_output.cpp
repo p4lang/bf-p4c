@@ -646,7 +646,7 @@ void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
     }
 
     for (auto ghost_slice : ghost) {
-        int start_bit = 0;  int end_bit = 0;
+        // int start_bit = 0;  int end_bit = 0;
         if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS)
             continue;
 
@@ -1985,9 +1985,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             auto *at = call->attached_callee;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             sep = "";
-            // Currently dumps meter type as number, because the color aware stuff does not
-            // have a name
-            if (act->meter_types.count(at->unique_id()) > 0) {
+            if (auto *salu = at->to<IR::MAU::StatefulAlu>()) {
+                out << canon_name(salu->calledAction(table, act)->name);
+                sep = ", ";
+            } else if (act->meter_types.count(at->unique_id()) > 0) {
+                // Currently dumps meter type as number, because the color aware stuff does not
+                // have a name
                 IR::MAU::MeterType type = act->meter_types.at(at->unique_id());
                 out << static_cast<int>(type);
                 sep = ", "; }
@@ -2018,7 +2021,9 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         }
         return false; }
     bool preorder(const IR::MAU::SaluAction *act) override {
-        out << indent << canon_name(act->name) << ":" << std::endl;
+        out << indent << canon_name(act->name);
+        if (act->inst_code >= 0) out << " " << act->inst_code;
+        out << ":" << std::endl;
         is_empty = true;
         return true; }
     void postorder(const IR::MAU::Action *) override {

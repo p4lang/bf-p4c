@@ -13,8 +13,10 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "lo", "hi" },
         /* .MaxSize = */ 32,
         /* .MaxDualSize = */ 64,
+        /* .MaxInstructions = */ 4,
         /* .OutputWords = */ 1,
         /* .DivModUnit = */ false,
+        /* .FastClear = */ false,
     };
     return spec;
 }
@@ -26,8 +28,10 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
+        /* .MaxInstructions = */ 4,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
+        /* .FastClear = */ true,
     };
     return spec;
 }
@@ -40,8 +44,10 @@ const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
         /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
+        /* .MaxInstructions = */ 4,
         /* .OutputWords = */ 4,
         /* .DivModUnit = */ true,
+        /* .FastClear = */ true,
     };
     return spec;
 }
@@ -1250,6 +1256,7 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
+    auto &device = Device::statefulAluSpec();
     const IR::Type *regtype = nullptr;
     if (salu->selector) {
         // selector action
@@ -1274,8 +1281,8 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         } else if (bits->size < 8) {
             // too small
             bits = nullptr;
-        } else if (bits->size > Device::statefulAluSpec().MaxSize) {
-            if (bits->size == Device::statefulAluSpec().MaxDualSize && !salu->dual) {
+        } else if (bits->size > device.MaxSize) {
+            if (bits->size == device.MaxDualSize && !salu->dual) {
                 // we can support 1x1x  double the max width by using dual mode.
                 salu->dual = true;
             } else {
@@ -1287,10 +1294,10 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     if (!bits) {
         std::stringstream detail;
         detail << "    Supported Register element types:\n       ";
-        for (int sz = 8; sz < Device::statefulAluSpec().MaxDualSize; sz += sz)
+        for (int sz = 8; sz < device.MaxDualSize; sz += sz)
             detail << " bit<" << sz << "> int<" << sz << ">";
         detail << "\n        structs containing one or two fields of one of the above types";
-        detail << "\n        bit<1> bit<" << Device::statefulAluSpec().MaxDualSize << ">\n";
+        detail << "\n        bit<1> bit<" << device.MaxDualSize << ">\n";
         error("Unsupported Register element type %s for %s\n%s", regtype, salu->reg,
               detail.str());
         return false; }
@@ -1341,6 +1348,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             first = salu_action;
         }
     }
+
     lmatch_usage.clear();
     lmatch_usage.salu = salu;
     salu->apply(lmatch_usage);

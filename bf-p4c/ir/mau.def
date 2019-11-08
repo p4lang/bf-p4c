@@ -513,6 +513,7 @@ class StatefulAlu : MeterBus2Port {
     const Type *getType() const override { return Type_Register::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::STATEFUL_ALU; }
     bool alu_output() const;   // has output to VLIW alus via action data bus
+    SaluAction calledAction(Table tbl, Action act) const;
 
     int source_width() const {
         if (dual)
@@ -738,6 +739,7 @@ class Action : VLIWInstruction, IAnnotated {
 /// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
 class SaluAction : VLIWInstruction {
     IR::ID                      name;
+    int                         inst_code = -1;
     inline Vector<Primitive>    action = {};
     safe_vector<ActionArg>      args = {};
     optional Annotations        annotations = Annotations::empty;

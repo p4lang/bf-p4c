@@ -264,15 +264,12 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
                 return nullptr; }
             auto t = IR::Type::Bits::get(32);
             return new IR::MAU::StatefulCounter(prim->srcInfo, t, salu); }
-        auto ta_pair = tbl->name + "-" + act->name.originalName;
-        BUG_CHECK(salu->action_map.count(ta_pair), "%s: Stateful Alu %s does not "
-                  "have an action in it's action map", prim->srcInfo, salu->name);
-        auto salu_action_name = salu->action_map.at(ta_pair);
-        auto pos = salu->instruction.find(salu_action_name);
-        BUG_CHECK(pos != salu->instruction.end(), "No action %s in salu %s?",
-                  salu_action_name, salu);
-        int salu_index = std::distance(salu->instruction.begin(), pos);
-        auto salu_inst = pos->second;
+        auto *salu_inst = salu->calledAction(tbl, act);
+        auto salu_index = salu_inst->inst_code;
+        if (salu_index < 0) {
+            // FIXME -- should be allocating/setting this
+            auto pos = salu->instruction.find(salu_inst->name);
+            salu_index = std::distance(salu->instruction.begin(), pos); }
         switch (salu_index) {
             case 0:
                 meter_type = IR::MAU::MeterType::STFUL_INST0; break;

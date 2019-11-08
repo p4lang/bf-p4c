@@ -1679,14 +1679,22 @@ void Table::Actions::pass2(Table *tbl) {
 
 void Table::Actions::stateful_pass2(Table *tbl) {
     BUG_CHECK(tbl->table_type() == STATEFUL);
+    auto *stbl = tbl->to<StatefulTable>();
     for (auto &act : *this) {
         if (act.code >= 4)
             error(act.lineno, "Only 4 actions in a stateful table");
         else if (act.code >= 0) {
+            if (code_use[act.code]) {
+                error(act.lineno, "duplicate use of code %d in SALU", act.code);
+                warning(by_code[act.code]->lineno, "previous use here"); }
             by_code[act.code] = &act;
             code_use[act.code] = true; }
+        if (act.code == 3 && stbl->clear_value)
+            error(act.lineno, "Cn't use SALU action 3 with a non-zero clear value");
         for (auto *inst : act.instr)
             inst->pass2(tbl, &act); }
+    if (stbl->clear_value)
+        code_use[3] = true;
     for (auto &act : *this) {
         if (act.code < 0) {
             if ((act.code = code_use.ffz(0)) >= 4) {

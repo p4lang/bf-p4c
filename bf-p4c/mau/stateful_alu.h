@@ -11,8 +11,10 @@ struct Device::StatefulAluSpec {
     std::vector<cstring>        CmpUnits;
     int                         MaxSize;
     int                         MaxDualSize;
+    int                         MaxInstructions;
     int                         OutputWords;
     bool                        DivModUnit;
+    bool                        FastClear;
 
     cstring cmpUnit(unsigned idx) const;
 };

@@ -100,6 +100,14 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 if ((pred_comb_shift = kv.value.i) < 0 || pred_comb_shift >= 32)
                     error(kv.value.lineno, "Invalid pred_comb_shift value %d: %s", pred_comb_shift,
                           pred_comb_shift < 0 ? "negative" : "too large");
+        } else if (kv.key == "clear_value" && Target::SUPPORT_SALU_FAST_CLEAR()) {
+            if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
+                if (kv.value.type == tINT)
+                    clear_value.setraw(kv.value.i);
+                else
+                    clear_value.setraw(kv.value.bigi.data, kv.value.bigi.size);
+                if (clear_value.max().index() >= 128)
+                    error(kv.value.lineno, "Value too large for 128 bits"); }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }

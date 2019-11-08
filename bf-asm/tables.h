@@ -1658,6 +1658,9 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
         void write_merge_regs, (mau_regs &regs, MatchTable *match, int type,
                                 int bus, const std::vector<Call::Arg> &args), override {
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
+#if HAVE_JBAY
+    template<class REGS> void write_tofino2_common_regs(REGS &regs);
+#endif
     std::vector<int64_t>   const_vals;
     std::vector<int>       const_vals_lineno;
     struct MathTable {
@@ -1691,6 +1694,7 @@ public:
     int                 phv_hash_shift = 0;
     bitvec              phv_hash_mask = bitvec(0, 128);
     Instruction         *output_lmatch = nullptr;  // output instruction using lmatch
+    bitvec              clear_value;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
