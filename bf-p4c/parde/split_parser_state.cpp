@@ -296,6 +296,9 @@ struct AllocateParserState : public ParserTransform {
                 unsigned c = merge_const_source(extracts);
                 if (c) {
                     rv = constant_extractor_use(c, container.size());
+
+                    LOG4("constant: " << c);
+                    LOG4("extractors needed: " << (*rv).first << " : " << (*rv).second);
                 }
 
                 return rv;
@@ -347,7 +350,7 @@ struct AllocateParserState : public ParserTransform {
                         BUG_CHECK(alloc_slices.size() == 1,
                             "extract allocator expects dest to be individual slice");
 
-                        merged |= c->constant->asUnsigned();
+                        merged |= c->constant->asUnsigned() << alloc_slices[0].container_bit;
                     }
                 }
 
@@ -468,44 +471,43 @@ struct AllocateParserState : public ParserTransform {
         };
 
         class TofinoExtractAllocator : public ExtractAllocator {
-            size_t get_constant_extractor_size(uint32_t value, uint32_t n_set_range) {
-                size_t n_needed = 0;
-                while (value) {
-                    if (value & 1) {
-                        n_needed++;
-                        value >>= n_set_range;
-                    } else {
-                        value >>= 1; } }
-                return n_needed;
-            }
+            bool can_extract(unsigned val, unsigned extractor_size) {
+                if (val == 0) return true;
 
-            size_t get_constant_extractor_size(uint32_t value, PHV::Size sz) {
-                if (sz == PHV::Size::b8) {
-                    return get_constant_extractor_size(value, 8);
-                } else if (sz == PHV::Size::b16) {
-                    return get_constant_extractor_size(value, 4);
-                } else if (sz == PHV::Size::b32) {
-                    return get_constant_extractor_size(value, 3);
-                } else {
-                    BUG("unexpected container size: %1%", sz);
-                    return 0;
+                switch (extractor_size) {
+                    case 32:
+                        for (int i = 0; i < 32; i++) {
+                            if ((val & 1) && (0x7 & val) == val)
+                                return true;
+                            val = ((val >> 1) | (val << 31)) & 0xffffffffU;
+                        }
+                        return false;
+                    case 16:
+                        if ((val >> 16) && !can_extract(val >> 16, extractor_size))
+                            return false;
+                        val &= 0xffff;
+                        for (int i = 0; i < 16; i++) {
+                            if ((val & 1) && (0xf & val) == val)
+                                return true;
+                            val = ((val >> 1) | (val << 15)) & 0xffffU;
+                         }
+                        return false;
+                    case 8:
+                        return true;
                 }
+
+                return false;
             }
 
             std::pair<size_t, unsigned>
-            constant_extractor_use(uint32_t value, size_t container_size) override {
-                for (const auto sz : { PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
-                    // can not use larger extractor on smaller container;
-                    if (container_size < size_t(sz)) {
-                        continue; }
-
-                    size_t n = get_constant_extractor_size(value, sz);
-                    if (container_size == size_t(sz) && n > 1) {
+            constant_extractor_use(unsigned value, size_t container_size) override {
+                for (const auto extractor_size : { PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
+                    // can not use larger extractor on smaller container
+                    if (container_size < size_t(extractor_size))
                         continue;
-                    } else {
-                        if (n > container_size / unsigned(sz)) {
-                            continue; }
-                        return {size_t(sz), container_size / unsigned(sz)}; }
+
+                    if (can_extract(value, unsigned(extractor_size)))
+                        return {size_t(extractor_size), container_size / unsigned(extractor_size)};
                 }
                 BUG("Impossible constant value write in parser: %1%", value);
             }
@@ -637,7 +639,7 @@ struct AllocateParserState : public ParserTransform {
                         } else if (within_buffer(c)) {
                            if (find_spill_needed_for_dup(masked_ranges_map, c)) {
                                 spilled.push_back(c);
-                                LOG3("Spill " << c << " (checksum entry duplication)");
+                                LOG3("spill " << c << " (checksum entry duplication)");
                                 oob = true;
                             } else {
                                 current.push_back(c);

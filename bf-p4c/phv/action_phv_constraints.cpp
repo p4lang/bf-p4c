@@ -1492,7 +1492,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
     // Check for parser constant extract for non 8b containers.
     if (Device::currentDevice() == Device::TOFINO)
-        if (!parser_constant_extract_satisfied(c, container_state))
+       if (!parser_constant_extract_satisfied(c, container_state))
             return boost::none;
 
     // Check if any of the destinations require a speciality read, and therefore, we cannot have a

@@ -284,14 +284,14 @@ void Parser::define_state(gress_t gress, pair_t &kv) {
                error(kv.key.lineno, "Explicit state out of range");
            stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
    if (!CHECKTYPE(kv.value, tMAP)) return;
-   auto n = states.emplace(name, State(kv.key.lineno, name, gress,
+   auto n = states.emplace(name, new State(kv.key.lineno, name, gress,
                                   stateno, kv.value.map));
    if (n.second)
-       all.push_back(&n.first->second);
+       all.push_back(n.first->second);
    else {
        error(kv.key.lineno, "State %s already defined in %sgress", name,
              gress ? "e" : "in");
-       warning(n.first->second.lineno, "previously defined here"); }
+       warning(n.first->second->lineno, "previously defined here"); }
 }
 
 void Parser::process() {
@@ -300,8 +300,8 @@ void Parser::process() {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (states.empty()) continue;
         if (start_state[0].lineno < 0) {
-            State *start = ::getref(states, "start");
-            if (!start) start = ::getref(states, "START");
+            State *start = states.at("start");
+            if (!start) start = states.at("START");
             if (!start) {
                 error(lineno, "No %sgress parser start state", gress ? "e" : "in");
                 continue;
@@ -315,10 +315,10 @@ void Parser::process() {
             if (!start_state[i]->can_be_start()) {
                 std::string name = std::string("<start") + char('0'+i) + '>';
                 LOG1("Creating new " << gress << " " << name << " state");
-                auto n = states.emplace(name, State(lineno, name.c_str(), gress,
+                auto n = states.emplace(name, new State(lineno, name.c_str(), gress,
                         match_t{ 0, 0 }, VECTOR(pair_t) { 0, 0, 0 }));
                 BUG_CHECK(n.second);
-                State *state = &n.first->second;
+                State *state = n.first->second;
                 state->def = new State::Match(lineno, gress, *start_state[i]);
                 for (int j = 3; j >= i; j--)
                     if (start_state[j] == start_state[i]) {
@@ -703,7 +703,7 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
         if (name.size()) {
             auto it = pa->states.find(name);
             if (it != pa->states.end())
-                ptr.push_back(&it->second);
+                ptr.push_back(it->second);
             else if (name != "END" && name != "end")
                 error(lineno, "No state named %s in %sgress parser",
                       name.c_str(), gress ? "e" : "in");
@@ -889,8 +889,8 @@ void Parser::State::MatchKey::setup(value_t &spec) {
     }
 }
 
-Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
-    lineno(l), match(m)
+Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pair_t) &data) :
+    lineno(l), state(s), match(m)
 {
     for (auto &kv : data) {
         if (kv.key == "counter") {
@@ -969,14 +969,14 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
         } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
             clots.push_back(new Clot(gress, kv.key.vec[1], kv.value));
         } else if (kv.key.type == tINT) {
-            save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
+            save.push_back(new Save(gress, this, kv.key.i, kv.key.i, kv.value));
         } else if (kv.key.type == tRANGE) {
-            save.emplace_back(gress, kv.key.lo, kv.key.hi, kv.value);
+            save.push_back(new Save(gress, this, kv.key.lo, kv.key.hi, kv.value));
         } else if (kv.value.type == tINT) {
-            set.emplace_back(gress, kv.key, kv.value.i);
+            set.push_back(new Set(gress, this, kv.key, kv.value.i));
         } else if (kv.value.type == tCMD && kv.value[0] == "rotate") {
             if (CHECKTYPE(kv.value[1], tINT))
-                set.emplace_back(gress, kv.key, kv.value[1].i, ROTATE);
+                set.push_back(new Set(gress, this, kv.key, kv.value[1].i, ROTATE));
         } else {
             error(kv.key.lineno, "Syntax error");
         }
@@ -1007,8 +1007,9 @@ static value_t &extract_save_phv(value_t &data) {
     return data;
 }
 
-Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int flgs) :
-    lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs)
+Parser::State::Match::Save::Save(gress_t gress, Match* m,
+                                 int l, int h, value_t &data, int flgs) :
+    match(m), lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs)
 {
     if (hi < lo || hi-lo > 3 || hi-lo == 2)
         error(data.lineno, "Invalid parser extraction size");
@@ -1024,8 +1025,9 @@ Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int
             flags |= ROTATE; }
 }
 
-Parser::State::Match::Set::Set(gress_t gress, value_t &data, int v, int flgs) :
-    where(gress, 0, extract_save_phv(data)), what(v), flags(flgs)
+Parser::State::Match::Set::Set(gress_t gress, Match* m,
+                               value_t &data, int v, int flgs) :
+    match(m), where(gress, 0, extract_save_phv(data)), what(v), flags(flgs)
 {
     if (data.type == tCMD) {
         if (data[0] == "offset")
@@ -1144,25 +1146,25 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
     for (auto &kv : data) {
         if (kv.key.type == tINT && kv.value.type == tMAP) {
             match_t m = { ~(unsigned)kv.key.i, (unsigned)kv.key.i };
-            match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+            match.push_back(new Match(kv.key.lineno, gress, this, m, kv.value.map));
         } else if (kv.key.type == tBIGINT && kv.value.type == tMAP) {
             match_t m = { ~(unsigned)kv.key.bigi.data[0], (unsigned)kv.key.bigi.data[0] };
-            match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+            match.push_back(new Match(kv.key.lineno, gress, this, m, kv.value.map));
         } else if (kv.key == "value_set" && kv.value.type == tMAP) {
             match_t m = { 0, 0 };
-            match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+            match.push_back(new Match(kv.key.lineno, gress, this, m, kv.value.map));
             if (kv.key.type == tCMD) {
                 if (CHECKTYPE(kv.key[1], tSTR))
-                    match.back().value_set_name = kv.key[1].s;
+                    match.back()->value_set_name = kv.key[1].s;
                 if (kv.key.vec.size > 2 && CHECKTYPE(kv.key[2], tINT))
-                    match.back().value_set_size = kv.key[2].i;
+                    match.back()->value_set_size = kv.key[2].i;
                 else
-                    match.back().value_set_size = 1;
+                    match.back()->value_set_size = 1;
             } else
-                match.back().value_set_size = 1;
+                match.back()->value_set_size = 1;
         } else if (kv.key.type == tMATCH) {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
-            match.emplace_back(kv.key.lineno, gress, kv.key.m, kv.value.map);
+            match.push_back(new Match(kv.key.lineno, gress, this, kv.key.m, kv.value.map));
         } else if (kv.key == "match") {
             if (key.lineno) {
                 error(kv.value.lineno, "Multiple match entries in state %s", n);
@@ -1176,7 +1178,7 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
                 error(def->lineno, "previous specified here");
             } else {
                 match_t m = { 0, 0 };
-                def = new Match(kv.key.lineno, gress, m, kv.value.map); }
+                def = new Match(kv.key.lineno, gress, this, m, kv.value.map); }
         } else if (!have_default) {
             VECTOR_add(default_data, kv);
         } else
@@ -1185,7 +1187,7 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
     if (default_data.size) {
         BUG_CHECK(!def);
         match_t m = { 0, 0 };
-        def = new Match(default_data[0].key.lineno, gress, m, default_data); }
+        def = new Match(default_data[0].key.lineno, gress, this, m, default_data); }
     VECTOR_fini(default_data);
 }
 
@@ -1201,7 +1203,7 @@ bool Parser::State::can_be_start() {
 void Parser::State::unmark_reachable(Parser *pa, bitvec &unreach) {
     if (!unreach[all_idx]) return;
     unreach[all_idx] = 0;
-    for (auto &m : match) m.unmark_reachable(pa, this, unreach);
+    for (auto m : match) m->unmark_reachable(pa, this, unreach);
     if (def) def->unmark_reachable(pa, this, unreach);
 }
 
@@ -1213,39 +1215,39 @@ void Parser::State::Match::unmark_reachable(Parser *pa, Parser::State *state, bi
 
 void Parser::State::Match::pass1(Parser *pa, State *state) {
     next.check(state->gress, pa, state);
-    for (auto &s : save) {
-        if (!s.where.check()) continue;
-        if (s.where->reg.parser_id() < 0)
-            error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
-        if (options.target == TOFINO && s.lo >= 32 && s.lo < 54)
-            error(s.where.lineno, "byte 32-53 of input buffer cannot be used for output");
-        if (options.target == JBAY && s.lo >= 32 && s.lo < 48)
-            error(s.where.lineno, "byte 32-47 of input buffer cannot be used for output");
-        pa->phv_use[state->gress][s.where->reg.uid] = 1;
-        int size = s.where->reg.size;
-        if (s.second) {
-            if (!s.second.check()) continue;
-            if (s.second->reg.parser_id() < 0)
-                error(s.second.lineno, "%s is not accessable in the parser", s.second->reg.name);
-            else if (s.second->lo >= 32 && s.second->lo < 54)
-                error(s.where.lineno, "byte 32-53 of input buffer cannot be used for output");
-            else if (s.second->reg.parser_id() != s.where->reg.parser_id() + 1 ||
-                (s.where->reg.parser_id() & 1))
-                error(s.second.lineno, "Can only write into even/odd register pair");
-            else if (s.second->lo || s.second->hi != size-1)
-                error(s.second.lineno, "Can only write data into whole phv registers in parser");
+    for (auto s : save) {
+        if (!s->where.check()) continue;
+        if (s->where->reg.parser_id() < 0)
+            error(s->where.lineno, "%s is not accessable in the parser", s->where->reg.name);
+        if (options.target == TOFINO && s->lo >= 32 && s->lo < 54)
+            error(s->where.lineno, "byte 32-53 of input buffer cannot be used for output");
+        if (options.target == JBAY && s->lo >= 32 && s->lo < 48)
+            error(s->where.lineno, "byte 32-47 of input buffer cannot be used for output");
+        pa->phv_use[state->gress][s->where->reg.uid] = 1;
+        int size = s->where->reg.size;
+        if (s->second) {
+            if (!s->second.check()) continue;
+            if (s->second->reg.parser_id() < 0)
+                error(s->second.lineno, "%s is not accessable in the parser", s->second->reg.name);
+            else if (s->second->lo >= 32 && s->second->lo < 54)
+                error(s->where.lineno, "byte 32-53 of input buffer cannot be used for output");
+            else if (s->second->reg.parser_id() != s->where->reg.parser_id() + 1 ||
+                (s->where->reg.parser_id() & 1))
+                error(s->second.lineno, "Can only write into even/odd register pair");
+            else if (s->second->lo || s->second->hi != size-1)
+                error(s->second.lineno, "Can only write data into whole phv registers in parser");
             else
                 size *= 2; }
-        if (s.where->lo || s.where->hi != s.where->reg.size-1)
-            error(s.where.lineno, "Can only write data into whole phv registers in parser");
-        else if ((s.hi-s.lo+1)*8 != size)
-            error(s.where.lineno, "Data to write doesn't match phv register size");
+        if (s->where->lo || s->where->hi != s->where->reg.size-1)
+            error(s->where.lineno, "Can only write data into whole phv registers in parser");
+        else if ((s->hi-s->lo+1)*8 != size)
+            error(s->where.lineno, "Data to write doesn't match phv register size");
     }
-    for (auto &s : set) {
-        if (!s.where.check()) continue;
-        if (s.where->reg.parser_id() < 0)
-            error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
-        pa->phv_use[state->gress][s.where->reg.uid] = 1;
+    for (auto s : set) {
+        if (!s->where.check()) continue;
+        if (s->where->reg.parser_id() < 0)
+            error(s->where.lineno, "%s is not accessable in the parser", s->where->reg.name);
+        pa->phv_use[state->gress][s->where->reg.uid] = 1;
     }
     if (value_set_size == 0) {
         uint64_t match_mask = (UINT64_C(1) << state->key.width) - 1;
@@ -1257,11 +1259,11 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
             match.word1 |= not_covered; }
         if ((match.word1 & ~match.word0 & ~match_mask) != 0)
             error(lineno, "Matching on bits not in the match of state %s", state->name.c_str());
-        for (auto &m : state->match) {
-            if (&m == this) break;
-            if (m.match == match) {
+        for (auto m : state->match) {
+            if (m == this) break;
+            if (m->match == match) {
                 warning(lineno, "Can't match parser state due to previous match");
-                warning(m.lineno, "here");
+                warning(m->lineno, "here");
                 break; } } }
     for (auto &c : csum)
         c.pass1(pa);
@@ -1282,7 +1284,7 @@ bool Parser::State::Match::Set::merge(gress_t gress, const Set &a) {
 }
 
 void Parser::State::pass1(Parser *pa) {
-    for (auto &m : match) m.pass1(pa, this);
+    for (auto m : match) m->pass1(pa, this);
     if (def) def->pass1(pa, this);
     for (auto code : MatchIter(stateno)) {
         if (pa->state_use[code]) {
@@ -1292,12 +1294,14 @@ void Parser::State::pass1(Parser *pa) {
                 if (state != this && state->gress == gress && state->stateno.matches(code))
                     error(state->lineno, "also used by state %s", state->name.c_str()); } }
         pa->state_use[code] = 1; }
-    for (auto &m : match)
-        for (auto succ : m.next)
-            succ->pred.insert(this);
+
+    for (auto m : match)
+        for (auto succ : m->next)
+            succ->pred.insert(m);
+
     if (def)
         for (auto succ : def->next)
-            succ->pred.insert(this);
+            succ->pred.insert(def);
 }
 
 /********* pass 2 *********/
@@ -1334,8 +1338,8 @@ Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
 }
 Parser::State::OutputUse Parser::State::Match::output_use() const {
     OutputUse rv;
-    for (auto &s : save) rv += s.output_use();
-    for (auto &s : set) rv += s.output_use();
+    for (auto s : save) rv += s->output_use();
+    for (auto s : set) rv += s->output_use();
     return rv;
 }
 void Parser::State::Match::merge_outputs(OutputUse use) {
@@ -1345,38 +1349,38 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     // FIXME -- this is tofino specific
     use += output_use();
     if (use.b32 >= 4 && use.b16 >= 4) return;
-    std::sort(save.begin(), save.end(), [](const Save &a, const Save &b)->bool {
-        return a.lo < b.lo; });
+    std::sort(save.begin(), save.end(), [](const Save* a, const Save* b)->bool {
+        return a->lo < b->lo; });
     /* combine adjacent aligned 16-bit extracts into 32 bit */
     for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
-        if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
-            save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.parser_id() & 1) == 0 &&
-            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
-            LOG3("merge 2x16->32 (" << save[i].where << ", " << save[i+1].where << ")");
-            save[i].hi += 2;
+        if (save[i]->hi == save[i]->lo + 1 && save[i+1]->lo == save[i]->hi + 1 &&
+            save[i+1]->hi == save[i+1]->lo + 1 && !save[i]->flags && !save[i+1]->flags &&
+            (save[i]->where->reg.parser_id() & 1) == 0 &&
+            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
+            LOG3("merge 2x16->32 (" << save[i]->where << ", " << save[i+1]->where << ")");
+            save[i]->hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;
             use.b16 -= 2; } }
     /* combine adjacent aligned 8-bit extracts into 16 bit */
     for (unsigned i = 0; i+1 < save.size() && use.b16 < 4; ++i) {
-        if (save[i].hi == save[i].lo && save[i+1].lo == save[i].hi + 1 &&
-            save[i+1].hi == save[i+1].lo && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.parser_id() & 1) == 0 &&
-            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
-            LOG3("merge 2x8->16 (" << save[i].where << ", " << save[i+1].where << ")");
-            save[i].hi += 1;
+        if (save[i]->hi == save[i]->lo && save[i+1]->lo == save[i]->hi + 1 &&
+            save[i+1]->hi == save[i+1]->lo && !save[i]->flags && !save[i+1]->flags &&
+            (save[i]->where->reg.parser_id() & 1) == 0 &&
+            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
+            LOG3("merge 2x8->16 (" << save[i]->where << ", " << save[i+1]->where << ")");
+            save[i]->hi += 1;
             save.erase(save.begin()+i+1);
             use.b16++;
             use.b8 -= 2; } }
     /* combine 4 adjacent aligned 8-bit extracts into 32 bit */
     for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
-        if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
-            save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.parser_id() & 1) == 0 &&
-            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
-            LOG3("merge 4x8->32 (" << save[i].where << ", " << save[i+1].where << ")");
-            save[i].hi += 2;
+        if (save[i]->hi == save[i]->lo + 1 && save[i+1]->lo == save[i]->hi + 1 &&
+            save[i+1]->hi == save[i+1]->lo + 1 && !save[i]->flags && !save[i+1]->flags &&
+            (save[i]->where->reg.parser_id() & 1) == 0 &&
+            save[i]->where->reg.parser_id() + 1 == save[i+1]->where->reg.parser_id()) {
+            LOG3("merge 4x8->32 (" << save[i]->where << ", " << save[i+1]->where << ")");
+            save[i]->hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;
             use.b16 -= 2; } }
@@ -1416,22 +1420,22 @@ void Parser::State::pass2(Parser *pa) {
             def->next->key.preserve_saved(def_saved); }
     OutputUse defuse;
     if (def) defuse = def->output_use();
-    for (auto &m : match) {
-        m.pass2(pa, this);
+    for (auto m : match) {
+        m->pass2(pa, this);
         unsigned saved = def_saved;
-        if (m.future.lineno) {
+        if (m->future.lineno) {
             for (int i = 0; i < 4; i++)
-                if (m.future.data[i].bit >= 0)
+                if (m->future.data[i].bit >= 0)
                     saved |= 1 << i;
                 else if (def && def->future.lineno && def->future.data[i].bit >= 0)
-                    m.future.data[i] = def->future.data[i]; }
+                    m->future.data[i] = def->future.data[i]; }
         if (saved) {
-            if (m.next)
-                m.next->key.preserve_saved(saved);
+            if (m->next)
+                m->next->key.preserve_saved(saved);
             else if (def && def->next)
                 def->next->key.preserve_saved(saved); }
         if (!options.match_compiler)
-            m.merge_outputs(defuse); }
+            m->merge_outputs(defuse); }
 }
 
 /********* output *********/
@@ -1462,6 +1466,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
             return; }
         ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
         write_row_config(regs, pa, state, row, def,ctxt_json);
+        pa->match_to_row[this] = row;
     } while (++count < value_set_size);
 }
 
@@ -1488,6 +1493,22 @@ void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
         container_cjson["field_mapping"] = field_mapping_cjson.clone();
         vec.push_back(container_cjson.clone());
     }
+}
+
+template <class REGS>
+void Parser::State::Match::write_saves(REGS &regs, Match* def, void *output_map, int& max_off, unsigned& used) {
+    if (offset_inc) for (auto s : save) s->flags |= OFFSET;
+    for (auto s : save)
+        max_off = std::max(max_off, s->write_output_config(regs, output_map, used));
+    if (def) for (auto &s : def->save)
+        max_off = std::max(max_off, s->write_output_config(regs, output_map, used));
+}
+
+template <class REGS>
+void Parser::State::Match::write_sets(REGS &regs, Match* def, void *output_map, unsigned& used) {
+    if (offset_inc) for (auto s : set) s->flags |= ROTATE;
+    for (auto s : set) s->write_output_config(regs, output_map, used);
+    if (def) for (auto s : def->set) s->write_output_config(regs, output_map, used);
 }
 
 template <class REGS>
@@ -1535,14 +1556,15 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
     for (auto &c : csum) c.write_output_config(regs, pa, output_map, used);
-    if (offset_inc) for (auto &s : set) s.flags |= ROTATE;
-    for (auto &s : set) s.write_output_config(regs, output_map, used);
-    if (def) for (auto &s : def->set) s.write_output_config(regs, output_map, used);
-    if (offset_inc) for (auto &s : save) s.flags |= OFFSET;
-    for (auto &s : save)
-        max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
-    if (def) for (auto &s : def->save)
-        max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
+
+    if (options.target == TOFINO) {
+        write_saves(regs, def, output_map, max_off, used);
+        write_sets(regs, def, output_map, used);
+    } else {
+        write_sets(regs, def, output_map, used);
+        write_saves(regs, def, output_map, max_off, used);
+    }
+
     int clot_unit = 0;
     for (auto *c : clots) c->write_config(action_row, clot_unit++);
     if (def) for (auto *c : def->clots) c->write_config(action_row, clot_unit++);
@@ -1563,7 +1585,7 @@ void Parser::State::MatchKey::write_config(REGS &, json::vector &) {
 template <class REGS>
 void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json) {
     LOG2(gress << " state " << name << " (" << stateno << ')');
-    for (auto i = match.begin(); i != match.end(); i++) {
+    for (auto i : match) {
         bool uses_pvs = false;
         json::map state_cjson;
         state_cjson["parser_name"] = name;

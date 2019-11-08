@@ -189,7 +189,7 @@ class CoreAllocation {
 
     // Builds two maps used by tryAllocSliceList.
     // slice_alignment maps field slice to start bit location in a container.
-    // cluster_alignment maps aligned cluster ot start bit location in a container.
+    // cluster_alignment maps aligned cluster to start bit location in a container.
     bool buildAlignmentMaps(
       const PHV::ContainerGroup& container_group,
       const PHV::SuperCluster& super_cluster,

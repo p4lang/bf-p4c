@@ -134,22 +134,22 @@ enum {
 
 static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
 phv_32b_slots[] = {
-    { phv_32b_0, 1U << phv_32b_0, 0, 32 },
-    { phv_32b_1, 1U << phv_32b_1, 0, 32 },
-    { phv_32b_2, 1U << phv_32b_2, 0, 32 },
     { phv_32b_3, 1U << phv_32b_3, 0, 32 },
-    { phv_16b_0, 3U << phv_16b_0, 16, 16 },
+    { phv_32b_2, 1U << phv_32b_2, 0, 32 },
+    { phv_32b_1, 1U << phv_32b_1, 0, 32 },
+    { phv_32b_0, 1U << phv_32b_0, 0, 32 },
     { phv_16b_2, 3U << phv_16b_2, 16, 16 },
+    { phv_16b_0, 3U << phv_16b_0, 16, 16 },
     { phv_8b_0, 0xfU << phv_8b_0, 24, 8 },
     { 0, 0, 0, 0 }
 },
 phv_16b_slots[] = {
-    { phv_16b_0, 1U << phv_16b_0, 0, 16 },
-    { phv_16b_1, 1U << phv_16b_1, 0, 16 },
-    { phv_16b_2, 1U << phv_16b_2, 0, 16 },
     { phv_16b_3, 1U << phv_16b_3, 0, 16 },
-    { phv_8b_0, 3U << phv_8b_0, 8, 8 },
+    { phv_16b_2, 1U << phv_16b_2, 0, 16 },
+    { phv_16b_1, 1U << phv_16b_1, 0, 16 },
+    { phv_16b_0, 1U << phv_16b_0, 0, 16 },
     { phv_8b_2, 3U << phv_8b_2, 8, 8 },
+    { phv_8b_0, 3U << phv_8b_0, 8, 8 },
     { 0, 0, 0, 0 }
 },
 phv_8b_slots[] = {
@@ -183,7 +183,7 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 
     phv_use_slots *usable_slots = get_phv_use_slots(dest->reg.size);
 
-    auto &slot = usable_slots[3];
+    auto &slot = usable_slots[0];
     int id = dest->reg.parser_id();
     *map[slot.idx].dst = id;
     used |= slot.usemask;
@@ -204,14 +204,29 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
         if (used & slot.usemask) continue;
         if ((flags & ROTATE) && !map[slot.idx].offset_rot)
             continue;
+
+        if ((where->reg.size == 32 && slot.idx >= phv_16b_0) ||
+            (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
+            match->has_narrow_to_wide_extract = true;
+        }
+
+        // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
+        // see model/src/shared/parser.cpp:621
+        bool swizzle = where->reg.size == 32 &&
+                       (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
+
         int byte = lo;
         for (int i = slot.idx; slot.usemask & (1U << i); i++, byte += slot.size/8U) {
-            *map[i].dst = where->reg.parser_id();
-            *map[i].src = byte;
-            if (flags & OFFSET) *map[i].offset_add = 1;
-            if (flags & ROTATE) *map[i].offset_rot = 1; }
+            int x = i;
+            if (swizzle) x ^= 1;
+
+            *map[x].dst = where->reg.parser_id();
+            *map[x].src = byte;
+            if (flags & OFFSET) *map[x].offset_add = 1;
+            if (flags & ROTATE) *map[x].offset_rot = 1; }
         used |= slot.usemask;
-        return hi; }
+        return hi;
+    }
     error(where.lineno, "Ran out of phv output extractor slots");
     return -1;
 }
@@ -254,18 +269,44 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
         if (!map[slot.idx].src_type) continue;
         if ((flags & ROTATE) && (!map[slot.idx].offset_rot || slot.shift))
             continue;
-        if (encode_constant_for_slot(slot.idx, what << where->lo) < 0)
-            continue;
-        unsigned shift = slot.shift;
+        unsigned shift = 0;
+        bool can_encode = true;
         for (int i = slot.idx; slot.usemask & (1U << i); i++) {
-            *map[i].dst = where->reg.parser_id();
-            *map[i].src_type = 1;
-            *map[i].src = encode_constant_for_slot(i, (what << where->lo) >> shift);
-            if (flags & OFFSET) *map[i].offset_add = 1;
-            if (flags & ROTATE) *map[i].offset_rot = 1;
-            shift -= slot.size; }
+            if (encode_constant_for_slot(i, (what << where->lo) >> shift) < 0) {
+                can_encode = false;
+                break;
+            }
+            shift += slot.size;
+        }
+        if (!can_encode)
+            continue;
+
+        if ((where->reg.size == 32 && slot.idx >= phv_16b_0) ||
+            (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
+            match->has_narrow_to_wide_extract = true;
+        }
+
+        // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
+        // see model/src/shared/parser.cpp:621
+        bool swizzle = where->reg.size == 32 &&
+                       (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
+
+        shift = 0;
+        for (int i = slot.idx; slot.usemask & (1U << i); i++) {
+            int x = i;
+            if (swizzle) x ^= 1;
+
+            *map[x].dst = where->reg.parser_id();
+            *map[x].src_type = 1;
+            auto v = encode_constant_for_slot(x, (what << where->lo) >> shift);
+            *map[x].src = v;
+            if (flags & OFFSET) *map[x].offset_add = 1;
+            if (flags & ROTATE) *map[x].offset_rot = 1;
+            shift += slot.size;
+        }
         used |= slot.usemask;
-        return; }
+        return;
+    }
     error(where.lineno, "Ran out of phv output extractor slots");
 }
 
@@ -353,6 +394,120 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
 }
 
+std::set<Parser::State::Match*>
+get_all_preds(Parser::State::Match* match) {
+    std::set<Parser::State::Match*> rv;
+
+    for (auto p : match->state->pred) {
+        rv.insert(p);
+        auto pred = get_all_preds(p);
+        rv.insert(pred.begin(), pred.end());
+    }
+
+    return rv;
+}
+
+void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
+                               Parser::State::Match* match) {
+    int row = parser->match_to_row.at(match);
+    auto map = (tofino_phv_output_map *)parser->setup_phv_output_map(regs, parser->gress, row);
+
+    unsigned used = 0;
+    int used_idx = -1, unused_idx = -1;
+
+    // find an used extractor and use its dest to issue a dummy write
+
+    for (auto i : { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 }) {
+        if (map[i].dst->value != 511) {
+            used++;
+            if (used_idx == -1) used_idx = i;
+        } else {
+            unused_idx = i;
+        }
+    }
+
+    if (used == 1)
+        unused_idx = used_idx ^ 1;
+    else if (used == 3)
+        used_idx = unused_idx ^ 1;
+
+    if (used % 2) {
+        *map[unused_idx].dst = *map[used_idx].dst;
+        *map[unused_idx].src = *map[used_idx].src;
+        if (map[used_idx].src_type)
+            *map[unused_idx].src_type = *map[used_idx].src_type;
+
+        // mark the dummy write dest as multi-write
+
+        if (*map[used_idx].dst < 224) {
+            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
+            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
+        } else if (*map[used_idx].dst >= 256) {
+            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
+            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
+        }
+    }
+}
+
+void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
+                              Parser::State::Match* match) {
+    int row = parser->match_to_row.at(match);
+    auto map = (tofino_phv_output_map *)parser->setup_phv_output_map(regs, parser->gress, row);
+
+    unsigned used = 0;
+    int used_idx = -1;
+
+    // find an used extractor and use its dest to issue a dummy write
+
+    for (auto i : { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 }) {
+        if (map[i].dst->value != 511) {
+            used++;
+            if (used_idx == -1) used_idx = i;
+        }
+    }
+
+    if (used % 4) {
+        for (auto i : { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 }) {
+            if (map[i].dst->value == 511) {
+                *map[i].dst = *map[used_idx].dst;
+                *map[i].src = 0;
+                *map[i].src_type = 1;
+            }
+        }
+
+        // mark the dummy write dest as multi-write
+
+        if (*map[used_idx].dst < 224) {
+            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
+            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
+        } else if (*map[used_idx].dst >= 256) {
+            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
+            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
+        }
+    }
+}
+
+void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_regs &regs) {
+    std::set<Parser::State::Match*> narrow_to_wide_matches;
+
+    for (auto& kv : parser->match_to_row) {
+        if (kv.first->has_narrow_to_wide_extract)
+            narrow_to_wide_matches.insert(kv.first);
+    }
+
+    std::set<Parser::State::Match*> all_preds;
+
+    for (auto m : narrow_to_wide_matches) {
+        auto preds = get_all_preds(m);
+        all_preds.insert(preds.begin(), preds.end());
+    }
+
+    for (auto p : all_preds) {
+        pad_to_16b_extracts_to_2n(parser, regs, p);
+        pad_to_8b_extracts_to_4n(parser, regs, p);
+    }
+}
+
 template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
     /// remove after 8.7 release
     if (single_parser) {
@@ -364,6 +519,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         for (auto st : all)
             st->write_config(regs, this, ctxt_json["states"]);
     }
+
     if (error_count > 0) return;
 
     int i = 0;
@@ -437,6 +593,13 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     //     regs.egress.disable_if_reset_value();
     //     regs.merge.disable_if_reset_value(); 
     // }
+
+    // Handles the constraint when using narrow extractors to generate wide values
+    // (either extracted from the packet or using the constants), then you need to
+    // follow the rule the _every_ preceding cycle must do:
+    //   0 or 4 8b extractions
+    //   0 or 2 or 4 16b extractions
+    handle_narrow_to_wide_constraint(this, regs);
 
     if (error_count == 0 && options.gen_json) {
         /// XXX(hanw) remove after 8.7 release

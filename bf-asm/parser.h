@@ -110,6 +110,7 @@ class Parser {
         };
         struct Match {
             int         lineno;
+            State*      state = nullptr;
             match_t     match;
             std::string value_set_name;
             int         value_set_size = 0;
@@ -125,24 +126,29 @@ class Parser {
             Ref         next;
             MatchKey    future;
 
+            int row = -1;
+            bool has_narrow_to_wide_extract = false;
+
             enum flags_t { OFFSET=1, ROTATE=2 };
 
             struct Save {
+                Match*      match;
                 int         lo, hi;
                 Phv::Ref    where, second;
                 int         flags;
-                Save(gress_t, int l, int h, value_t &data, int flgs=0);
+                Save(gress_t, Match* m, int l, int h, value_t &data, int flgs=0);
                 template<class REGS>
                 int write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
             };
-            std::vector<Save>               save;
+            std::vector<Save*>               save;
 
             struct Set {
+                Match*          match = nullptr;
                 Phv::Ref        where;
                 unsigned        what;
                 int             flags;
-                Set(gress_t gress, value_t &data, int v, int flgs=0);
+                Set(gress_t gress, Match* m, value_t &data, int v, int flgs=0);
                 template<class REGS>
                 void write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
@@ -150,7 +156,7 @@ class Parser {
                 bool operator==(const Set &a) const { return where == a.where && what == a.what
                     && flags == a.flags; }
             };
-            std::vector<Set>            set;
+            std::vector<Set*>            set;
 
             struct Clot {
                 int             lineno, tag;
@@ -186,7 +192,7 @@ class Parser {
                 template<class PO_ROW> void write_config(PO_ROW &) const;
             } hdr_len_inc_stop;
 
-            Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
+            Match(int lineno, gress_t, State *s, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
@@ -200,15 +206,18 @@ class Parser {
                                                        Match *, json::map &);
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);
             template<class REGS> void write_config(REGS &, json::vector &);
+
+            template <class REGS> void write_saves(REGS &regs, Match* def, void *output_map, int& max_off, unsigned& used);
+            template <class REGS> void write_sets(REGS &regs, Match* def, void *output_map, unsigned& used);
         };
 
         std::string             name;
         gress_t                 gress;
         match_t                 stateno;
         MatchKey                key;
-        std::vector<Match>      match;
+        std::vector<Match*>     match;
         Match                   *def;
-        std::set<State *>       pred;
+        std::set<Match*>        pred;
         int                     lineno;
         int                     all_idx;
 
@@ -229,8 +238,9 @@ class Parser {
     void output_legacy(json::map &);
     gress_t                             gress;
     std::string                         name;
-    std::map<std::string, State>        states;
-    std::vector<State *>                all;
+    std::map<std::string, State*>       states;
+    std::vector<State*>                 all;
+    std::map<State::Match*, int>        match_to_row;
     bitvec                              port_use;
     int                                 parser_no;  // used to print cfg.json
     bitvec                              state_use;
@@ -302,8 +312,9 @@ class Parser {
         return 0;
     }
 
-private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
+
+private:
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
     void define_state(gress_t gress, pair_t &kv);
     void output_default_ports(json::vector& vec, bitvec port_use);
