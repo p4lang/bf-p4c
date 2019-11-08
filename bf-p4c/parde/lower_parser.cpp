@@ -1410,7 +1410,7 @@ struct RewriteEmitClot : public DeparserModifier {
             // ClotInfo.
             if (auto emitCsum = emit->to<IR::BFN::EmitChecksum>()) {
                 if (auto fieldClot = clotInfo.whole_field_clot(field)) {
-                    clotInfo.clot_to_emit_checksum()[fieldClot] = emitCsum;
+                    clotInfo.clot_to_emit_checksum()[fieldClot].push_back(emitCsum);
                 } else {
                     BUG_CHECK(sliceClots->empty(),
                               "Checksum field %s was partially allocated to CLOTs, but this is not"
@@ -1796,12 +1796,14 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 auto cl = emitClot->clot;
                 if (clotInfo.clot_to_emit_checksum().count(cl)) {
                     // this emit checksum is part of a clot
-                    auto emitChecksum = clotInfo.clot_to_emit_checksum().at(cl);
-                    auto f = phv.field(emitChecksum->dest->field);
-                    auto checksumUnit = getChecksumUnit();
-                    cl->csum_field_to_csum_id[f] = checksumUnit;
-                    auto unitConfig = lowerChecksum(emitChecksum, checksumUnit);
-                    loweredDeparser->checksums.push_back(unitConfig);
+                    auto emitChecksumVec = clotInfo.clot_to_emit_checksum().at(cl);
+                    for (auto emitChecksum : emitChecksumVec) {
+                        auto f = phv.field(emitChecksum->dest->field);
+                        auto checksumUnit = getChecksumUnit();
+                        cl->csum_field_to_csum_id[f] = checksumUnit;
+                        auto unitConfig = lowerChecksum(emitChecksum, checksumUnit);
+                        loweredDeparser->checksums.push_back(unitConfig);
+                    }
                 }
 
                 continue;

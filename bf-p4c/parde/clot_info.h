@@ -109,7 +109,7 @@ class ClotInfo {
     std::map<const IR::BFN::ParserState*,
              std::map<const PHV::Field*, nw_bitrange>> field_range_;
 
-    std::map<const Clot*, const IR::BFN::EmitChecksum*> clot_to_emit_checksum_;
+    std::map<const Clot*, std::vector<const IR::BFN::EmitChecksum*>> clot_to_emit_checksum_;
 
     /// Maps fields to their equivalence class of aliases.
     std::map<const PHV::Field*, std::set<const PHV::Field*>*> field_aliases_;
@@ -220,11 +220,12 @@ class ClotInfo {
         return csum_fields;
     }
 
-    std::map<const Clot*, const IR::BFN::EmitChecksum*>& clot_to_emit_checksum() {
+    std::map<const Clot*, std::vector<const IR::BFN::EmitChecksum*>>& clot_to_emit_checksum() {
         return clot_to_emit_checksum_;
     }
 
-    const std::map<const Clot*, const IR::BFN::EmitChecksum*>& clot_to_emit_checksum() const {
+    const std::map<const Clot*,
+             std::vector<const IR::BFN::EmitChecksum*>>& clot_to_emit_checksum() const {
         return clot_to_emit_checksum_;
     }
 
