@@ -106,6 +106,7 @@ bool FindInitializationNode::summarizeUseDefs(
                 if (noInit.count(f)) {
                     LOG3("\t\t\tNot adding dominator for field " << f->name << " marked "
                          "pa_no_init.");
+                    f_dominators.insert(use.first);
                     continue;
                 }
             }
