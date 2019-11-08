@@ -1489,8 +1489,8 @@ class IXBar::FieldManagement : public Inspector {
         return true; }
 
     bool preorder(const IR::MAU::ActionArg *aa) override {
-        error("Can't use action argument %s in a hash in the same action; "
-              "try splitting the action", aa);
+        error(ErrorType::ERR_INVALID, "Can't use action argument %1% in a hash in the same action;"
+              " try splitting the action", aa);
         return false; }
 
     bool preorder(const IR::Expression *e) override {
@@ -1574,8 +1574,9 @@ class IXBar::FieldManagement : public Inspector {
                     it = field_list_order.erase(it);
                     it--;
                 } else {
-                    ::error("Overlapping field %s in table %s not supported with the hashing "
-                            "algorithm", field->name, tbl->name);
+                    ::error(ErrorType::ERR_INVALID,
+                            "Overlapping field %2% in table %3% not supported with the hashing "
+                            "algorithm", tbl, field->name, tbl->externalName());
                 }
             }
             field_list_check[field->name] |= used_bits;
@@ -1933,8 +1934,8 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
     if (auto s = annot->getSingle("proxy_hash_algorithm")) {
         auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
         if (pragma_val == nullptr) {
-            ::error("%s: proxy_hash_algorithm pragma on table %s must be a string", tbl->srcInfo,
-                    tbl->name);
+            ::error(ErrorType::ERR_INVALID,
+                    "proxy_hash_algorithm pragma on table %2% must be a string", tbl, tbl->name);
         } else if (alloc.proxy_hash_key_use.algorithm.setup(pragma_val)) {
             hash_function_found = true;
         }
@@ -1947,8 +1948,9 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
     }
 
     if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::HashFunction::IDENTITY)
-        ::error("%s: A proxy hash table with an identity algorithm is not supported, as specified "
-                "on table %s.  Just use a normal exact match table", tbl->srcInfo, tbl->name);
+        ::error(ErrorType::ERR_UNSUPPORTED,
+                "A proxy hash table with an identity algorithm is not supported, as specified "
+                "on table %2%.  Using a normal exact match table.", tbl, tbl->name);
 
     int start_bit = alloc.proxy_hash_key_use.hash_bits.ffs();
     std::map<int, le_bitrange> bit_starts;
@@ -2708,9 +2710,10 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     if (mah.algorithm.size_from_algorithm()) {
         if (mode_width_bits > mah.algorithm.size) {
             // FIXME: Debatably be moved to an error, but have to wait on a p4-tests update
-            ::warning("%s: The algorithm for selector %s has a size of %d bits, when the mode "
-                      "selected requires %d bits", as->srcInfo, as->name, mah.algorithm.size,
-                    mode_width_bits);
+            ::warning(ErrorType::WARN_OVERFLOW,
+                      "%1%: The algorithm for selector %2% has a size of %3% bits, when the mode "
+                      "selected requires %4% bits. Padding with zeros.",
+                      as, as->name, mah.algorithm.size, mode_width_bits);
             // alloc.clear();
             // return false;
         }
@@ -2733,9 +2736,10 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 
         if (bits_seen < mode_width_bits) {
             // FIXME: See above at previous FIXME
-            ::warning("%s: The identity hash for selector %s has a size of %d bits, when the mode "
-                      "selected required %d bits", as->srcInfo, as->name, bits_seen,
-                       mode_width_bits);
+            ::warning(ErrorType::WARN_OVERFLOW,
+                      "%1%: The identity hash for selector %2% has a size of %3% bits, "
+                      "when the mode selected required %4% bits. Padding with zeros.",
+                      as, as->name, bits_seen, mode_width_bits);
             // alloc.clear();
             // return false;
         }
@@ -3699,7 +3703,7 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
         if (entry->is<IR::Constant>()) {
             hash_input.type = ixbar_input_type::tCONST;
             if (!entry->to<IR::Constant>()->fitsUint64())
-                ::error("The size of constant %1% is too large, "
+                ::error(ErrorType::ERR_OVERLIMIT, "The size of constant %1% is too large, "
                         "the maximum supported size is 64 bit", entry);
             hash_input.u.constant = entry->to<IR::Constant>()->asUint64();
         } else {

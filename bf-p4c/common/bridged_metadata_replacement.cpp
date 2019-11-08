@@ -15,7 +15,7 @@ void CollectBridgedFields::postorder(const IR::MAU::Instruction* inst) {
         BUG_CHECK(inst->operands.size() == 2, "The number of set operands is not 2.");
         const auto* left = phv.field(inst->operands[0]);
         const auto* right = phv.field(inst->operands[1]);
-        if (!left->bridged) return;
+        if (!left || !left->bridged || !right) return;
 
         LOG5("Found bridged field:" << left << " --> " << right);
         BUG_CHECK(bridged_to_orig.count(left->name) == 0, "Duplicated initialzation of bridged.");
