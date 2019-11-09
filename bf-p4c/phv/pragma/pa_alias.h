@@ -34,6 +34,8 @@ class PragmaAlias : public Inspector {
     /// All PHV::Field objects that have expressions associated with them.
     /// This is used to replace IR::Expression objects for aliased fields later.
     bitvec fieldsWithExpressions;
+    /// All fields involved in aliasing operations (either as source or destination).
+    bitvec fieldsWithAliasing;
 
     profile_t init_apply(const IR::Node* root) override;
 

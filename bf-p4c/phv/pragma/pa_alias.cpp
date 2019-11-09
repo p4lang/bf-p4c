@@ -35,6 +35,7 @@ const char *PragmaAlias::help =
 Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
     aliasMap.clear();
     fieldsWithExpressions.clear();
+    fieldsWithAliasing.clear();
     return Inspector::init_apply(root);
 }
 
@@ -49,18 +50,20 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
         const PHV::Field* field1,
         const PHV::Field* field2,
         bool suppressWarning) {
-    if (aliasMap.count(field1->name)) {
+    if (fieldsWithAliasing[field1->id]) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias for fields %1% and %2% ignored because "
-                "field %1% already aliases with %3%",
-                field1->name, field2->name, aliasMap[field1->name].field);
+                "field %1% already aliases with a different field %3%",
+                field1->name, field2->name,
+                (aliasMap.count(field1->name) ? aliasMap[field1->name].field : ""));
         return boost::none; }
 
-    if (aliasMap.count(field2->name)) {
+    if (fieldsWithAliasing[field2->id]) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias for fields %1% and %2% ignored because "
-                "field %1% already aliases with %3%",
-                field2->name, field1->name, aliasMap[field2->name].field);
+                "field %2% already aliases with a different field %3%",
+                field1->name, field2->name,
+                (aliasMap.count(field2->name) ? aliasMap[field2->name].field : ""));
         return boost::none; }
 
     if (field1->isPacketField() && field2->isPacketField()) {
@@ -144,6 +147,8 @@ bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2, bool supp
     auto mayAlias = mayAddAlias(f1, f2, suppressWarning);
     if (!mayAlias) return false;
     aliasMap[mayAlias->second->name] = { mayAlias->first->name, boost::none };
+    fieldsWithAliasing[mayAlias->second->id] = true;
+    fieldsWithAliasing[mayAlias->first->id] = true;
     LOG1("\t  " << mayAlias->second->name << " --> " << mayAlias->first->name);
     return true;
 }
@@ -228,6 +233,8 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         for (const auto* field : fields) {
             if (field == aliasDest) continue;
             aliasMap[field->name] = { aliasDest->name, boost::none };
+            fieldsWithAliasing[field->id] = true;
+            fieldsWithAliasing[aliasDest->id] = true;
             LOG1("\t  " << field->name << " --> " << aliasDest->name);
         }
     }
