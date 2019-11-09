@@ -28,6 +28,7 @@
 #include "midend/predication.h"
 #include "midend/remove_action_params.h"
 #include "midend/removeLeftSlices.h"
+#include "midend/removeMiss.h"
 #include "midend/removeSelectBooleans.h"
 #include "midend/removeExits.h"
 #include "midend/simplifyBitwise.h"
@@ -349,6 +350,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             new BFN::IsSlice());
 
     addPasses({
+        new P4::RemoveMiss(&refMap, &typeMap),
         new P4::EliminateNewtype(&refMap, &typeMap, typeChecking),
         new P4::EliminateSerEnums(&refMap, &typeMap, typeChecking),
         new BFN::TypeChecking(&refMap, &typeMap, true),

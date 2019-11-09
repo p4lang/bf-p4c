@@ -29,15 +29,6 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_analysis.h"
 
-// FIXME -- this belongs in p4c/lib/algorithm.h -- remove this when p4c refpoint is updated
-template<class Container, class Pred> inline void erase_if(Container &c, Pred pred) {
-    for (auto it = c.begin(); it != c.end();) {
-        if (pred(*it))
-            it = c.erase(it);
-        else
-            ++it; }
-}
-
 /********************************************************************************************
  ** Table placement is done with a fairly simple greedy allocator in a single Transform pass
  ** organized so as to allow backtracking within the greedy allocation, though we do not
