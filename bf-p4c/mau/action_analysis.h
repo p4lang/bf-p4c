@@ -147,6 +147,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bitvec write_bits() const { return direct_write_bits | implicit_write_bits; }
         bitvec read_bits() const { return direct_read_bits | implicit_read_bits; }
 
+        ///> The amount to bits to rotate right the write_bits in order to get the read_bits.
+        ///> The deposit-field write shift is the opposite, i.e. the amount to rotate right the
+        ///> read bits in order to get the write bits
         int right_shift = 0;
         bool is_src1 = false;
 

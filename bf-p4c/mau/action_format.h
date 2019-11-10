@@ -413,6 +413,7 @@ class MeterALU : public Parameter {
 struct ALUParameter {
     const Parameter *param;
     le_bitrange phv_bits;
+    // @seealso ALUOperation::read_bits
     int right_shift;
 
     safe_vector<le_bitrange> slot_bits_brs(PHV::Container cont) const;
@@ -463,7 +464,10 @@ class ALUOperation {
     safe_vector<ALUParameter> _params;
     // The bits that are to be written in the PHV Container
     bitvec _phv_bits;
-    // The amount to barrel-shift right the phv_bits in order to know the associated slot_bits
+    // The amount to barrel-shift right the phv_bits in order to know the associated slot_bits. One
+    // can think of the phv_bits as the write_bits and the slot_bits as the read_bits.  In a
+    // deposit-field instruction, the right rotate is actually the reverse, i.e. the right rotation
+    // of the read bits in order to align them to the write bits
     int _right_shift;
     bool _right_shift_set = false;
     PHV::Container _container;

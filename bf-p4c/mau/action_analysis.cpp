@@ -1211,10 +1211,12 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
         if (right_shift == 0) {
             return false;
         } else {
+            ///> lo is the bit of the read bits that needs to be aligned with bit 0
+            ///> hi is the bit that needs to be aligned with container.size() - 1.
             if (lo)
-                *lo = right_shift;
+                *lo = (container.size() - right_shift);
             if (hi)
-                *hi = right_shift - 1;
+                *hi = (container.size() - right_shift) - 1;
             return true;
         }
     } else {
