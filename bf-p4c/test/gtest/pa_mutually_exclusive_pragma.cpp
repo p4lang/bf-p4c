@@ -69,6 +69,58 @@ createPaMutuallyExclusivePragmaTestCase() {
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
+  boost::optional<TofinoPipeTestCase>
+createPaMutuallyExclusiveHeaderPragmaTestCase() {
+    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+        @pa_mutually_exclusive("ingress", "headers.h1", "h2")
+        header H1
+        {
+            bit<8> f1;
+            bit<32> f2;
+        }
+        header H2
+        {
+            bit<8> f1;
+            bit<32> f2;
+        }
+        struct Headers { H1 h1; H2 h2; }
+        struct Metadata {
+            bit<8> f1;
+            H2 f3;
+        }
+
+        parser parse(packet_in packet, out Headers headers, inout Metadata meta,
+                     inout standard_metadata_t sm) {
+            state start {
+            packet.extract(headers.h1);
+            packet.extract(headers.h2);
+            transition accept;
+            }
+        }
+
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+
+        control mau(inout Headers headers, inout Metadata meta,
+                        inout standard_metadata_t sm) { apply { } }
+
+        control computeChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+
+        control deparse(packet_out packet, in Headers headers) {
+            apply { }
+        }
+
+        V1Switch(parse(), verifyChecksum(), mau(), mau(),
+                 computeChecksum(), deparse()) main;
+    )");
+
+    auto& options = BackendOptions();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
+    return TofinoPipeTestCase::createWithThreadLocalInstances(source);
+}
+
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvInfo& phv) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
@@ -96,6 +148,19 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
 
     EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h1.f1")->id,
                                            phv.field("ingress::h2.f1")->id), true);
+
+    auto test2 = createPaMutuallyExclusiveHeaderPragmaTestCase();
+    ASSERT_TRUE(test2);
+
+    SymBitMatrix mutually_exclusive_field_ids2;
+    PhvInfo phv2(mutually_exclusive_field_ids2);
+
+    runMockPasses(test2->pipe, phv2);
+    EXPECT_EQ(mutually_exclusive_field_ids2(phv2.field("ingress::h1.f2")->id,
+                                            phv2.field("ingress::h2.f2")->id), true);
+
+    EXPECT_EQ(mutually_exclusive_field_ids2(phv2.field("ingress::h1.f1")->id,
+                                           phv2.field("ingress::h2.f1")->id), true);
 }
 
 }  // namespace Test

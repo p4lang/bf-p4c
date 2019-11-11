@@ -1191,7 +1191,7 @@ class PhvInfo {
 
     /// Tracks the subset of `all_structs` that are only headers, not header stacks.
     // TODO: what about header unions?
-    std::vector<std::pair<cstring, StructInfo>>       simple_headers;
+    ordered_map<cstring, StructInfo>               simple_headers;
 
     /// Mapping from containers to the fields using those containers.
     std::map<PHV::Container, ordered_set<const PHV::Field *>> container_to_fields;
@@ -1309,6 +1309,10 @@ class PhvInfo {
     PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     bool has_struct_info(cstring name) const;
+    void get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const;
+    cstring full_hdr_name(const cstring& name) const;
+    const PhvInfo::StructInfo* simple_hdr(const cstring& name_) const;
+
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }

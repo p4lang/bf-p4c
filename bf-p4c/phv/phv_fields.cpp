@@ -153,6 +153,7 @@ void PhvInfo::add_struct(
     if (!meta) {
         int end = by_id.size();
         all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
+        LOG3("Adding struct  " << name << " to all_structs");
     }
 }
 
@@ -178,6 +179,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
     if (meta) {
         int end = by_id.size();
         all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
+        LOG3("Adding header  " << name << " to all_structs");
     }
 }
 
@@ -210,6 +212,79 @@ bool PhvInfo::has_struct_info(cstring name_) const {
         name = name.after(p+2); }
     return all_structs.find(name) != all_structs.end();
 }
+
+/// Look up the fully qualified name of a header
+///   PHV header names are fully qualified, but we sometimes look up a partial
+///   name when it's unique.  Eg. using "ingress::bar" to find
+///   "ingress::foo.bar" when there are no other "bar" suffixes.
+/// ----
+cstring PhvInfo::full_hdr_name(const cstring& name_) const {
+    StringRef name = name_;
+    if (simple_headers.find(name) != simple_headers.end())
+        return name;
+
+    if (auto *p = name.findstr("::")) {
+        name = name.after(p+2); }
+    if (simple_headers.find(name) != simple_headers.end())
+        return name;
+
+    name = name_;
+    StringRef prefixRef;
+    StringRef suffixRef = name;
+    if (auto* p = name.findstr("::")) {
+        prefixRef = name.before(p);
+        suffixRef = name.after(p + 2); }
+    cstring prefix = prefixRef.toString();
+    cstring suffix = suffixRef.toString();
+
+    LOG4("Looking for PHV header " << name_);
+    LOG4("    ...with prefix " << prefix);
+    LOG4("    ...with suffix " << suffix);
+    std::set<cstring> matches;
+    for (auto& hdr : simple_headers) {
+        if ((hdr.first).endsWith(suffix))
+            LOG4("    ...found suffix: " << hdr.first);
+        if ((hdr.first).startsWith(prefix) && (hdr.first).endsWith(suffix))
+            matches.insert(hdr.first);
+    }
+    if (matches.size() > 1) {
+        std::stringstream msg;
+        for (auto& mp : matches)
+            msg << " " << mp;
+        LOG4("Name '" << name_ << "' could refer to:" << msg.str());
+    } else if (matches.size() == 1) {
+        return *(matches.begin());
+    }
+
+    return cstring("");
+}
+
+
+/// Get all the fields of header named @name_ and store them in set @flds
+/// ---
+void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const {
+    const PhvInfo::StructInfo arr_info = struct_info(full_hdr_name(name_));
+
+    int fld_id = arr_info.first_field_id;
+    int last_fld = fld_id + arr_info.size;
+
+    while ((fld_id < by_id.size()) && (fld_id < last_fld)) {
+        flds.insert(by_id.at(fld_id));
+        ++fld_id;
+    }
+
+    BUG_CHECK(fld_id == last_fld, "Something wrong going with fields of header %s", name_);
+}
+
+const PhvInfo::StructInfo *PhvInfo::simple_hdr(const cstring& name_) const {
+    cstring full_name = full_hdr_name(name_);
+    if (full_name.size())
+        return &(simple_headers.at(full_name));
+
+    return nullptr;
+}
+
+
 
 void PhvInfo::addPadding(const IR::Padding *pad, gress_t gress) {
     BUG_CHECK(pad->type->is<IR::Type::Bits>(),
@@ -1105,18 +1180,15 @@ class CollectPhvFields : public Inspector {
         int end = phv.by_id.size();
 
         // Ensure that the header hasn't been seen before
-        auto it = std::find_if(phv.simple_headers.begin(),
-                      phv.simple_headers.end(),
-                      [&h](const std::pair<cstring, PhvInfo::StructInfo>& hdr)
-                      { return hdr.first == h->name.name; });
+        auto it = phv.simple_headers.find(h->name.name);
         BUG_CHECK(it == phv.simple_headers.end(),
             "Header %1% already seen!", h->name.name);
 
         // Add the header to the simple_headers vector, as they
         // are seen in the program order
-        phv.simple_headers.emplace_back(
-            h->name.name,
-            PhvInfo::StructInfo(false, getGress(), start, end - start));
+        phv.simple_headers.emplace(h->name.name, PhvInfo::StructInfo(false, getGress(),
+                                                                     start, end - start));
+        LOG3("Adding header  " << h->name.name << " to simple_headers");
 
         return false;
     }
@@ -1138,6 +1210,7 @@ class CollectPhvFields : public Inspector {
             h->name.name,
             PhvInfo::StructInfo(false, getGress(), start, end - start));
         return false;
+        LOG3("Adding headerStack  " << h->name.name << " to all_structs");
     }
 
     bool preorder(const IR::Metadata* h) override {
