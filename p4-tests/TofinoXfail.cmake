@@ -455,7 +455,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
 
   ba101_20-simple_l2
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
 
   # P4C-1778
   ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
@@ -1410,12 +1409,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/brig-305.p4
 )
 
+# Expected failures due to program error
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
