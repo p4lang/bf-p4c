@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/utils/liverange_opti_utils.h"
+#include "bf-p4c/lib/error_type.h"
 
 Visitor::profile_t FindInitializationNode::init_apply(const IR::Node* root) {
     LOG3("Printing dependency graph");
@@ -24,6 +25,13 @@ bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
         LOG3("\tCannot initialize at action " << act->name << " because it requires "
              "the hash distribution unit.");
         doNotInitActions.insert(act);
+    }
+
+    auto *tbl = findContext<IR::MAU::Table>();
+    if (tbl && tbl->match_table->getAnnotations()->getSingle("no_field_initialization")) {
+      doNotInitActions.insert(act);
+      LOG3("Pragma @no_field_initialization found for action: "<< act->externalName() <<
+           " in table " << tbl->externalName());
     }
     return true;
 }

@@ -808,6 +808,15 @@ const char *PragmaWays::help = "@pragma ways 4\n"
     "the requirements of the match table, a large ways value may prevent "
     "the table from being placed.";
 
+const char *PragmaNoFieldInits::name = "no_field_initialization";
+const char *PragmaNoFieldInits::description =
+    "Forbids the insertion of initialization instructions in the actions of the match table";
+const char *PragmaNoFieldInits::help = "@pragma no_field_initialization \n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "Specifies that the associated match table should not allow insertion of "
+    "field initialization instructions into its actions.";
+
 const char *PragmaRed::name = "red";
 const char *PragmaRed::description = "To be documented";  // FIXME
 const char *PragmaRed::help = "To be documented";

@@ -70,6 +70,7 @@ DEFINE_PRAGMA_CLASS(PragmaTernary);
 DEFINE_PRAGMA_CLASS(PragmaUseHashAction);
 DEFINE_PRAGMA_CLASS(PragmaUserAnnotation);
 DEFINE_PRAGMA_CLASS(PragmaWays);
+DEFINE_PRAGMA_CLASS(PragmaNoFieldInits);
 // meter
 DEFINE_PRAGMA_CLASS(PragmaRed);
 DEFINE_PRAGMA_CLASS(PragmaYellow);
