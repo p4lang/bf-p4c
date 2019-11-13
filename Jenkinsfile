@@ -1,3 +1,13 @@
+/**
+ * Libraries contain reusabile snippets that can be reused across multiple projects.
+ */
+@Library('bf-jenkins-utils@master')_
+
+node {
+    // kill any previous runs of the same PR that may be in progress
+    stopPreviousRuns(this)
+}
+
 node ('compiler-nodes') {
     sh "echo 'Building docker image for PR'"
     // Clean workspace before doing anything
