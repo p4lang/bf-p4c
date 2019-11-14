@@ -19,10 +19,28 @@ struct ByteInfo {
     explicit ByteInfo(const IXBar::Use::Byte b, bitvec bu)
         : byte(b), bit_use(bu) {}
 
-    void dbprint(std::ostream &out) const {
-        out << "Byte " << byte << " bit_use " << bit_use << " byte_location"
-            << byte_location;
-    }
+    void dbprint(std::ostream &out) const;
+
+    // Where the hole is in the byte, i.e. at the LSB or the MSB or in the middle
+    enum HoleType_t { LSB, MIDDLE, MSB, INVALID };
+    bool is_better_for_overhead(const ByteInfo &bi, int overhead_bits) const;
+    int hole_size(HoleType_t hole_type, int *hole_start_pos = nullptr) const;
+    bool better_hole_type(int hole, int comp_hole, int overhead_bits) const;
+    void set_interleave_info(int overhead_bits);
+
+    struct InterleaveInfo {
+        bool interleaved = false;
+        HoleType_t hole_type = INVALID;
+        // How many bytes the combination of the match byte and overhead take
+        int byte_cycle = 0;
+        // The first bit position of the overhead in this byte cycle
+        int overhead_start = 0;
+        // The first bit position of the match byte in this byte cycle (always % 8 == 0)
+        int match_byte_start = 0;
+        void dbprint(std::ostream &out) const;
+    };
+
+    InterleaveInfo il_info;
 };
 
 
@@ -48,7 +66,8 @@ struct TableFormat {
     static constexpr int SELECTOR_LENGTH_MAX_BIT = 16;
 
     enum type_t { MATCH, NEXT, ACTION, IMMEDIATE, VERS, COUNTER, COUNTER_PFE, METER, METER_PFE,
-                  METER_TYPE, INDIRECT_ACTION, SEL_LEN_MOD, SEL_LEN_SHIFT, ENTRY_TYPES };
+                  METER_TYPE, INDIRECT_ACTION, SEL_LEN_MOD, SEL_LEN_SHIFT, ENTRY_TYPES,
+                  INTERLEAVED_MATCH };
 
 
     struct Use {
@@ -70,6 +89,13 @@ struct TableFormat {
                 mask[MATCH].clear();
                 mask[VERS].clear();
                 match_byte_mask.clear();
+            }
+
+            void clear() {
+                clear_match();
+                allocated_bytes.clear();
+                for (int i = 0; i < ENTRY_TYPES; i++)
+                    mask[i].clear();
             }
 
             bitvec match_bit_mask() const {
@@ -171,6 +197,7 @@ struct TableFormat {
     // Vector for a hash group, as large tables could potentially use multiple hash groups
     safe_vector<IXBar::Use::Byte> single_match;
     // Match Bytes
+
     safe_vector<ByteInfo> match_bytes;
     safe_vector<ByteInfo> ghost_bytes;
     std::set<int> fully_ghosted_search_buses;
@@ -179,7 +206,9 @@ struct TableFormat {
     bitvec total_use;  // Total bitvec for all entries in table format
     bitvec pre_match_total_use;
     bitvec match_byte_use;   // Bytes used by all match byte masks
-    // safe_vector<bitvec> byte_use;  // Vector of individual byte by byte masks
+
+    bitvec interleaved_bit_use;
+    bitvec interleaved_match_byte_use;
 
     enum packing_algorithm_t { SAVE_GW_SPACE, PACK_TIGHT, PACKING_ALGORITHMS };
 
@@ -198,6 +227,7 @@ struct TableFormat {
     safe_vector<int> shared_groups_per_RAM;
     bitvec version_allocated;
 
+
     // Match group index in use coordinate to whenever they are found in the match_groups_per_RAM
     // i.e. if the match_groups_per_RAM looks like [2, 2], then use->match_groups[0] and
     // use->match_groups[1] are in the first RAM, etc.  Same thing applies for overhead groups
@@ -212,13 +242,23 @@ struct TableFormat {
     bool skinny = false;
     bool requires_versioning() const { return layout_option.layout.requires_versioning; }
 
-    // bitvec ghost_start;
+    void clear_match_state();
+    void clear_pre_allocation_state();
+
+    bitvec bitvec_necessary(type_t type) const;
+    int bits_necessary(type_t type) const;
+    int overhead_bits_necessary() const;
+    bool allocate_overhead_field(type_t type, int lsb_mem_word_offset, int bit_width, int entry,
+        int RAM_word);
+    bool allocate_overhead_entry(int entry, int RAM_word, int lsb_mem_word_offset);
     bool allocate_overhead();
+    void setup_pfes_and_types();
     bool allocate_all_indirect_ptrs();
     bool allocate_all_immediate();
     bool allocate_all_instr_selection();
     bool allocate_match();
     bool allocate_match_with_algorithm();
+    bool allocate_sram_match();
     bool is_match_entry_wide() const;
 
     bool allocate_all_ternary_match();
@@ -231,7 +271,7 @@ struct TableFormat {
     bool analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> &sizes);
     void analyze_proxy_hash_option(int per_RAM);
 
-    int hit_actions();
+    int hit_actions() const;
     bool allocate_next_table();
     bool allocate_selector_length();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
@@ -241,6 +281,8 @@ struct TableFormat {
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempted);
     bool allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
         bitvec &byte_attempt, bitvec &bit_attempt);
+    bool allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
+        int entry, bitvec &byte_attempt, bitvec &bit_attempt);
     bool allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
         bitvec &version_loc, bitvec &byte_attempt, bitvec &bit_attempt);
     void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
@@ -248,7 +290,7 @@ struct TableFormat {
     void classify_match_bits();
     void choose_ghost_bits(safe_vector<IXBar::Use::Byte> &potential_ghost);
     int determine_group(int width_sect, int groups_allocated);
-    void allocate_share(int width_sect, safe_vector<ByteInfo> &unalloced_group,
+    void allocate_share(int width_sect, int group, safe_vector<ByteInfo> &unalloced_group,
         safe_vector<ByteInfo> &alloced, bitvec &version_loc, bitvec &byte_attempt,
         bitvec &bit_attempt, bool overhead_section);
     bool attempt_allocate_shares();
@@ -256,6 +298,7 @@ struct TableFormat {
     void allocate_full_fits(int width_sect);
     void redistribute_entry_priority();
     void redistribute_next_table();
+    bool interleave_match_and_overhead();
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IXBar::Use &phi,

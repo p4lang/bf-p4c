@@ -1,6 +1,16 @@
-#include "table_format.h"
 #include "memories.h"
 
+void ByteInfo::InterleaveInfo::dbprint(std::ostream &out) const {
+    if (!interleaved) return;
+    out << "overhead_start " << overhead_start << " match_byte_start " << match_byte_start
+        << " byte cycle " << byte_cycle;
+}
+
+void ByteInfo::dbprint(std::ostream &out) const {
+    out << "Byte " << byte << " bit_use 0x" << bit_use << " byte_location " << byte_location;
+    if (!il_info.interleaved) return;
+    out << " il_info : { " << il_info << " }";
+}
 /**
  * For ATCAM specifically, only one result bus is alloweed per match.  This is due to the
  * priority ranking.  Each RAM can at most hold 5 entries, and those entries, numbered 0-4
@@ -454,6 +464,7 @@ bool TableFormat::find_format(Use *u) {
     LOG1("Find format for table " << tbl->name);
     LOG2("  Layout option action { adt_bytes: " << layout_option.layout.action_data_bytes_in_table
          << ", immediate_bits: " << layout_option.layout.immediate_bits << " }");
+    setup_pfes_and_types();
     if (layout_option.layout.ternary) {
         LOG3("Ternary table?");
         overhead_groups_per_RAM.push_back(1);
@@ -486,11 +497,7 @@ bool TableFormat::find_format(Use *u) {
 
     if (!analyze_layout_option())
         return false;
-    if (!allocate_overhead()) {
-        return false;
-    }
-
-    if (!allocate_match())
+    if (!allocate_sram_match())
         return false;
     LOG3("Match and Version");
     if (layout_option.layout.atcam) {
@@ -498,7 +505,7 @@ bool TableFormat::find_format(Use *u) {
     }
     redistribute_next_table();
     verify();
-    LOG3("Table format is successful");
+    LOG2("SRAM Table format is successful");
     return true;
 }
 
@@ -534,9 +541,206 @@ bool TableFormat::allocate_overhead() {
     return true;
 }
 
-int TableFormat::hit_actions() {
+
+bool TableFormat::allocate_sram_match() {
+    if (allocate_overhead())
+        if (allocate_match())
+            return true;
+    clear_pre_allocation_state();
+    return interleave_match_and_overhead();
+}
+
+/**
+ * For each type, return the bits necessary for each overhead requirement.  One can then gather
+ * all of the requirements for a single entries overhead.
+ *
+ * Returns a bitvec, as at some point, overhead could have holes in it.  Right now, all overhead
+ * requirements are contiguous, but things like immediate could in theory could be not contiguous
+ */
+bitvec TableFormat::bitvec_necessary(type_t type) const {
+    bitvec rv;
+    if (type == NEXT) {
+        if (!tbl->action_chain() || hit_actions() <= NEXT_MAP_TABLE_ENTRIES)
+            return rv;
+        int next_tables = tbl->action_next_paths();
+        if (!tbl->has_default_path())
+            next_tables++;
+        if (next_tables <= NEXT_MAP_TABLE_ENTRIES)
+            rv.setrange(0, ceil_log2(next_tables));
+        else
+            rv.setrange(0, FULL_NEXT_TABLE_BITS);
+    } else if (type == ACTION) {
+        int instr_select = 0;
+        if (hit_actions() == 0) {
+            instr_select = 0;
+        } else if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES) {
+            instr_select = ceil_log2(hit_actions());
+        } else {
+            instr_select = FULL_IMEM_ADDRESS_BITS;
+        }
+
+        // For no match miss path specifically a format is required, as a ternary indirect is how
+        // this pathway is setup.  Therefore, we guarantee at least one overhead bit, though the
+        // ternary indirect RAMs don't actually exist
+        if (instr_select == 0 && layout_option.layout.no_match_miss_path())
+            instr_select++;
+        /* If actions cannot be fit inside a lookup table, the action instruction can be
+           anywhere in the IMEM and will need entire imem bits. The assembler decides
+           based on color scheme allocations. Assembler will flag an error if it fails
+           to fit the action code in the given bits. */
+        rv.setrange(0, instr_select);
+    } else if (type == IMMEDIATE) {
+        rv |= immediate_mask;
+    } else if (type == COUNTER || type == COUNTER_PFE) {
+        const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
+        for (auto ba : tbl->attached) {
+             if (!ba->attached->is<IR::MAU::Counter>()) continue;
+             stats_addr_user = ba->attached;
+             break;
+        }
+
+        if (!layout_option.layout.stats_addr.shifter_enabled)
+            return rv;
+        if (stats_addr_user == nullptr)
+            return rv;
+        bool move_to_overhead = gw_linked && !stats_addr_user->direct;
+
+        if (type == COUNTER) {
+            rv.setrange(0, layout_option.layout.stats_addr.address_bits);
+        } else if (type == COUNTER_PFE) {
+            if (layout_option.layout.stats_addr.per_flow_enable || move_to_overhead)
+                rv.setrange(0, 1);
+        } else {
+            BUG("Unreachable");
+        }
+    } else if (type == METER || type == METER_PFE || type == METER_TYPE) {
+        const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
+        for (auto *ba : tbl->attached) {
+             if (ba->attached->is<IR::MAU::StatefulAlu>() &&
+                 ba->use != IR::MAU::StatefulUse::NO_USE) {
+                 meter_addr_user = ba->attached;
+            } else if (ba->attached->is<IR::MAU::Selector>() ||
+                       ba->attached->is<IR::MAU::Meter>()) {
+                 meter_addr_user = ba->attached;
+            }
+        }
+        if (!layout_option.layout.meter_addr.shifter_enabled)
+            return rv;
+        if (meter_addr_user == nullptr)
+            return rv;
+        bool move_to_overhead = gw_linked &&
+                                !(meter_addr_user->direct ||
+                                  meter_addr_user->is<IR::MAU::Selector>());
+        if (type == METER) {
+            rv.setrange(0, layout_option.layout.meter_addr.address_bits);
+        } else if (type == METER_PFE) {
+            if (layout_option.layout.meter_addr.per_flow_enable || move_to_overhead)
+                rv.setbit(1);
+        } else if (type == METER_TYPE) {
+            if (layout_option.layout.meter_addr.meter_type_bits > 0 || move_to_overhead)
+                rv.setrange(0, 3);
+        } else {
+            BUG("Unreachable");
+        }
+    } else if (type == INDIRECT_ACTION) {
+        // FIXME: unsure if the defaulting of the Huffman bits happens for indirect
+        // action data addresses, as potentially it shouldn't be if the compiler
+        // was to have different sized action data.  Right now the full bits are
+        // reserved even if the size of the action profile does not warrant it
+#if 0
+         const IR::MAU::ActionData *ad = nullptr;
+         for (auto back_at : tbl->attached) {
+             ad = back_at->to<IR::MAU::ActionData>();
+             if (ad != nullptr)
+                 break;
+         }
+         BUG_CHECK(ad, "No action data table found with an associated action"
+                   "address");
+         // Extra Huffman encoding required in the address, see section 6.2.8.4.3
+         if (ad->size > Memories::SRAM_DEPTH)
+             total += ActionDataHuffmanVPNBits(&layout_option.layout);
+#endif
+        if (!layout_option.layout.action_addr.shifter_enabled)
+            return rv;
+        int ad_adr_bits = layout_option.layout.action_addr.address_bits;
+        ad_adr_bits += ActionDataHuffmanVPNBits(&layout_option.layout);
+        rv.setrange(0, ad_adr_bits);
+    } else if (type == SEL_LEN_MOD || type == SEL_LEN_SHIFT) {
+        const IR::MAU::Selector *sel = nullptr;
+        for (auto ba : tbl->attached) {
+            sel = ba->attached->to<IR::MAU::Selector>();
+            if (sel != nullptr)
+                break;
+        }
+        if (sel == nullptr)
+            return rv;
+        if (type == SEL_LEN_MOD)
+            rv.setrange(0, SelectorModBits(sel));
+        else if (type == SEL_LEN_SHIFT)
+            rv.setrange(0, SelectorLengthShiftBits(sel));
+        else
+            BUG("Unreachable");
+    }
+    return rv;
+}
+
+int TableFormat::bits_necessary(type_t type) const {
+    return bitvec_necessary(type).popcount();
+}
+
+/**
+ * Gather the number of bits for a non-overhead field, which is necessary to calculate the bits
+ * for possibly interleaving
+ */
+int TableFormat::overhead_bits_necessary() const {
+    int rv = 0;
+    for (int i = NEXT; i < ENTRY_TYPES; i++) {
+        if (i == VERS) continue;
+        rv += bits_necessary(static_cast<type_t>(i));
+    }
+    return rv;
+}
+
+/**
+ * Because a gateway requires the 0 position in the action instruction 8 entry matrix, one must
+ * add an extra action to a table if linked with a gateway.
+ */
+int TableFormat::hit_actions() const {
     int extra_action_needed = gw_linked ? 1 : 0;
     return tbl->hit_actions() + extra_action_needed;
+}
+
+/**
+ * Pretty standard, coordinated to the context JSON parameters:
+ *     - type - The type of the field
+ *     - lsb_mem_word_offset - the first bit position in the RAM word
+ *     - bit_width - how many bits the field requires 
+ *     - entry - the match group to be in 
+ *     - RAM_word - the RAM in a wide match
+ */
+bool TableFormat::allocate_overhead_field(type_t type, int lsb_mem_word_offset, int bit_width,
+        int entry, int RAM_word) {
+    if (lsb_mem_word_offset + bit_width > OVERHEAD_BITS)
+        return false;
+    bitvec pack_req(RAM_word * SINGLE_RAM_BITS + lsb_mem_word_offset, bit_width);
+    BUG_CHECK((total_use & pack_req).empty(), "Illegally packing data");
+    use->match_groups[entry].mask[type] |= pack_req;
+    total_use |= pack_req;
+    return true;
+}
+
+bool TableFormat::allocate_overhead_entry(int entry, int RAM_word, int lsb_mem_word_offset) {
+    int curr_lsb_mem_word_offset = lsb_mem_word_offset;
+    for (int i = NEXT; i < ENTRY_TYPES; i++) {
+        if (i == VERS) continue;
+        type_t type = static_cast<type_t>(i);
+        int bit_width = bits_necessary(type);
+        if (bit_width == 0) continue;
+        if (!allocate_overhead_field(type, curr_lsb_mem_word_offset, bit_width, entry, RAM_word))
+            return false;
+        curr_lsb_mem_word_offset += bit_width;
+    }
+    return true;
 }
 
 /* Bits for selecting the next table from an action chain table must be in the lower part
@@ -574,21 +778,9 @@ int TableFormat::hit_actions() {
  *  when this optimization cannot be used is this function called.
  */
 bool TableFormat::allocate_next_table() {
-    if (!tbl->action_chain() || hit_actions() <= NEXT_MAP_TABLE_ENTRIES) {
+    int next_table_bits = bits_necessary(NEXT);
+    if (next_table_bits == 0)
         return true;
-    }
-
-    int next_tables = tbl->action_next_paths();
-    // If no default path is provided, then the default next table has to be included
-    if (!tbl->has_default_path())
-        next_tables++;
-
-    int next_table_bits;
-    if (next_tables <= NEXT_MAP_TABLE_ENTRIES) {
-        next_table_bits = ceil_log2(next_tables);
-    } else {
-        next_table_bits = FULL_NEXT_TABLE_BITS;
-    }
 
     int group = 0;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
@@ -731,16 +923,9 @@ bool TableFormat::allocate_next_table() {
  * row, this constraint goes away).
  */
 bool TableFormat::allocate_selector_length() {
-    const IR::MAU::Selector *sel = nullptr;
-    for (auto ba : tbl->attached) {
-        sel = ba->attached->to<IR::MAU::Selector>();
-        if (sel != nullptr)
-            break;
-    }
-    if (sel == nullptr)
-        return true;
-    int sel_len_mod_bits = SelectorModBits(sel);
-    int sel_len_shift_bits = SelectorLengthShiftBits(sel);
+    int sel_len_mod_bits = bits_necessary(SEL_LEN_MOD);
+    int sel_len_shift_bits = bits_necessary(SEL_LEN_SHIFT);
+
     if (sel_len_mod_bits == 0 && sel_len_shift_bits == 0)
         return true;
     if (sel_len_shift_bits > 0)
@@ -781,105 +966,68 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
     return true;
 }
 
+void TableFormat::setup_pfes_and_types() {
+    if (layout_option.layout.no_match_miss_path())
+        return;
+    IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
+                                          IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
+                                          IR::MAU::PfeLocation::OVERHEAD;
+    IR::MAU::TypeLocation update_type_loc = layout_option.layout.no_match_hit_path() ?
+                                            IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
+                                            IR::MAU::TypeLocation::OVERHEAD;
+    if (bits_necessary(COUNTER_PFE) > 0)
+        use->stats_pfe_loc = update_pfe_loc;
+    if (bits_necessary(METER_PFE) > 0)
+        use->meter_pfe_loc = update_pfe_loc;
+    if (bits_necessary(METER_TYPE) > 0)
+        use->meter_type_loc = update_type_loc;
+}
 /* Algorithm to find the space for any indirect pointers.  Allocated back to back, as they are
    easiest to pack.  No gaps are possible at all within the indirect pointers */
 bool TableFormat::allocate_all_indirect_ptrs() {
-     const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
-     const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
+    int group = 0;
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
+            int stats_addr_bits_required = bits_necessary(COUNTER);
+            if (stats_addr_bits_required != 0) {
+                if (!allocate_indirect_ptr(stats_addr_bits_required, COUNTER, group, i))
+                       return false;
+            }
 
-     IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
-                                           IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
-                                           IR::MAU::PfeLocation::OVERHEAD;
-     IR::MAU::TypeLocation update_type_loc = layout_option.layout.no_match_hit_path() ?
-                                             IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
-                                             IR::MAU::TypeLocation::OVERHEAD;
+            int stats_pfe_bits_required = bits_necessary(COUNTER_PFE);
+            if (stats_pfe_bits_required > 0) {
+                if (!allocate_indirect_ptr(stats_pfe_bits_required, COUNTER_PFE, group, i))
+                    return false;
+            }
 
-     for (auto *ba : tbl->attached) {
-         if (ba->attached->is<IR::MAU::StatefulAlu>() && ba->use != IR::MAU::StatefulUse::NO_USE) {
-             meter_addr_user = ba->attached;
-         } else if (ba->attached->is<IR::MAU::Selector>() || ba->attached->is<IR::MAU::Meter>()) {
-             meter_addr_user = ba->attached;
-         } else if (ba->attached->is<IR::MAU::Counter>()) {
-             stats_addr_user = ba->attached;
-         }
-     }
+            int meter_addr_bits_required = bits_necessary(METER);
+            if (meter_addr_bits_required > 0) {
+                if (!allocate_indirect_ptr(meter_addr_bits_required, METER, group, i))
+                    return false;
+            }
 
-     int group = 0;
-     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
-         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
-             int total;
 
-             if (layout_option.layout.stats_addr.shifter_enabled > 0) {
-                 if ((total = layout_option.layout.stats_addr.address_bits) != 0) {
-                     if (!allocate_indirect_ptr(total, COUNTER, group, i))
-                         return false;
-                 }
-                 bool move_to_overhead = gw_linked && !stats_addr_user->direct;
+            int meter_pfe_bits_required = bits_necessary(METER_PFE);
+            if (meter_pfe_bits_required > 0) {
+                if (!allocate_indirect_ptr(meter_pfe_bits_required, METER_PFE, group, i))
+                    return false;
+            }
 
-                 if (layout_option.layout.stats_addr.per_flow_enable || move_to_overhead) {
-                     if (!allocate_indirect_ptr(1, COUNTER_PFE, group, i))
-                         return false;
-                     use->stats_pfe_loc = update_pfe_loc;
-                 }
-             }
+            int meter_type_bits_required = bits_necessary(METER_TYPE);
+            if (meter_type_bits_required > 0) {
+                if (!allocate_indirect_ptr(meter_type_bits_required, METER_TYPE, group, i))
+                    return false;
+            }
 
-             if (layout_option.layout.meter_addr.shifter_enabled > 0) {
-                 if ((total = layout_option.layout.meter_addr.address_bits) != 0) {
-                     if (!allocate_indirect_ptr(total, METER, group, i))
-                         return false;
-                 }
-
-                 // FIXME: In general, this is currently used for both the per flow enable portion
-                 // and the meter type portion.  The meter type could be reduced if there is only
-                 // one meter type for the meter address user (1 stateful instruction or 1 type
-                 // of color aware metering, or if the meter type of this logical table is possible
-                 // to OR into the others, i.e. STFUL_INSTRUCTION_0
-                 bool move_to_overhead = gw_linked &&
-                                         !(meter_addr_user->direct ||
-                                           meter_addr_user->is<IR::MAU::Selector>());
-
-                 if (layout_option.layout.meter_addr.per_flow_enable || move_to_overhead) {
-                     if (!allocate_indirect_ptr(1, METER_PFE, group, i))
-                         return false;
-                     use->meter_pfe_loc = update_pfe_loc;
-                 }
-
-                 if (layout_option.layout.meter_addr.meter_type_bits > 0 || move_to_overhead) {
-                     total = 3;
-                     if (!allocate_indirect_ptr(total, METER_TYPE, group, i))
-                         return false;
-                     use->meter_type_loc = update_type_loc;
-                 }
-             }
-
-             if (layout_option.layout.action_addr.shifter_enabled) {
-                 // FIXME: unsure if the defaulting of the Huffman bits happens for indirect
-                 // action data addresses, as potentially it shouldn't be if the compiler
-                 // was to have different sized action data.  Right now the full bits are
-                 // reserved even if the size of the action profile does not warrant it
-#if 0
-                  const IR::MAU::ActionData *ad = nullptr;
-                  for (auto back_at : tbl->attached) {
-                      ad = back_at->to<IR::MAU::ActionData>();
-                      if (ad != nullptr)
-                          break;
-                  }
-                  BUG_CHECK(ad, "No action data table found with an associated action"
-                            "address");
-                  // Extra Huffman encoding required in the address, see section 6.2.8.4.3
-                  if (ad->size > Memories::SRAM_DEPTH)
-                      total += ActionDataHuffmanVPNBits(&layout_option.layout);
-#endif
-                 total = layout_option.layout.action_addr.address_bits;
-                 total += ActionDataHuffmanVPNBits(&layout_option.layout);
-                 if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
+            int ad_addr_bits_required = bits_necessary(INDIRECT_ACTION);
+            if (ad_addr_bits_required > 0) {
+                 if (!allocate_indirect_ptr(ad_addr_bits_required, INDIRECT_ACTION, group, i))
                      return false;
-             }
-             group++;
-         }
-     }
-
-     return true;
+            }
+            group++;
+        }
+    }
+    return true;
 }
 
 /* Algorithm to find space for the immediate data.  Immediate information may have gaps, i.e. a 9
@@ -921,36 +1069,8 @@ bool TableFormat::allocate_all_immediate() {
  *  be crucial that these action instruction comes first, if next table is not already allocated
  */
 bool TableFormat::allocate_all_instr_selection() {
-    // Because a gateway requires the 0 position in the action instruction 8 entry matrix, one must
-    // add an extra action to a table if linked with a gateway.
-
-    int instr_select = 0;
-    if (hit_actions() == 0)
-        instr_select = 0;
-    else if (hit_actions() > 0 && hit_actions() <= IMEM_MAP_TABLE_ENTRIES)
-        instr_select = ceil_log2(hit_actions());
-    else
-        instr_select = FULL_IMEM_ADDRESS_BITS;
-
-    // If no action instruction bit is required return unless the table is
-    // ternary in which case always a ternary indirect is used to specify
-    // actions
-    if (instr_select == 0) {
-        if (layout_option.layout.no_match_miss_path())
-            instr_select++;
-        else
-            return true;
-    }
-
-    /* If actions cannot be fit inside a lookup table, the action instruction can be
-       anywhere in the IMEM and will need entire imem bits. The assembler decides
-       based on color scheme allocations. Assembler will flag an error if it fails
-       to fit the action code in the given bits. */
-    if (instr_select == 0)
-        return true;
-
-    bitvec instr_mask;
-    instr_mask.setrange(0, instr_select);
+    bitvec instr_mask = bitvec_necessary(ACTION);
+    if (instr_mask.empty()) return true;
     int group = 0;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         size_t end = i * SINGLE_RAM_BITS;
@@ -986,16 +1106,23 @@ bool TableFormat::is_match_entry_wide() const {
 bool TableFormat::initialize_byte(int byte_offset, int width_sect, ByteInfo &info,
         safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempt) {
      int initial_offset = byte_offset + width_sect * SINGLE_RAM_BYTES;
+
      if (match_byte_use.getbit(initial_offset) || byte_attempt.getbit(initial_offset))
          return false;
+     // Only interleaved bytes can go to the interleaved positions
+     if (!info.il_info.interleaved && interleaved_match_byte_use.getbit(initial_offset))
+         return false;
+
      auto use_slice = total_use.getslice(initial_offset * 8, 8);
      use_slice |= bit_attempt.getslice(initial_offset * 8, 8);
+     if (!info.il_info.interleaved)
+         use_slice |= interleaved_bit_use.getslice(initial_offset * 8, 8);
+
      if (!(use_slice & info.bit_use).empty())
          return false;
 
-
      byte_attempt.setbit(initial_offset);
-     bit_attempt.setrange(initial_offset * 8, 8);
+     bit_attempt |= info.bit_use << (initial_offset * 8);
      alloced.push_back(info);
      alloced.back().byte_location = initial_offset;
      return true;
@@ -1020,6 +1147,26 @@ bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &all
            return true;
     }
     return false;
+}
+
+/**
+ * Find the correct position for the interleaved byte of a particular entry, and allocate that
+ * byte to that position. 
+ */
+bool TableFormat::allocate_interleaved_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
+        int width_sect, int entry, bitvec &byte_attempt, bitvec &bit_attempt) {
+    BUG_CHECK(info.il_info.interleaved, "Illegally calling allocate_interleaved_byte");
+
+    int first_oh_bit = use->match_groups[entry].overhead_mask().min().index();
+    int first_match_bit = first_oh_bit + info.il_info.match_byte_start
+                                       - info.il_info.overhead_start;
+    BUG_CHECK(first_match_bit % 8 == 0, "Interleaving incorrectly done");
+    BUG_CHECK(first_match_bit / SINGLE_RAM_BITS == width_sect, "Interleaving cannot find the "
+        "correct match bit location");
+    int byte_offset = (first_match_bit / 8) % SINGLE_RAM_BYTES;
+    BUG_CHECK(initialize_byte(byte_offset, width_sect, info, alloced, byte_attempt, bit_attempt),
+        "Always should be able to initialize a split byte");
+    return true;
 }
 
 /** Pull out all bytes that coordinate to a particular search bus
@@ -1068,6 +1215,8 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
             continue;
         auto use_slice = total_use.getslice(info.byte_location * 8, 8);
         use_slice |= bit_attempt.getslice(info.byte_location * 8, 8);
+        use_slice |= interleaved_bit_use.getslice(info.byte_location * 8, 8);
+
         if (((info.bit_use | use_slice) & lo_vers).empty()) {
             version_loc = lo_vers << (8 * info.byte_location);
             bit_attempt |= version_loc;
@@ -1085,9 +1234,14 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
         if (pa != PACK_TIGHT)
             break;
         int byte = width_sect * SINGLE_RAM_BYTES + i;
-        if (byte_attempt.getbit(i) || match_byte_use.getbit(i)) continue;
+        if (byte_attempt.getbit(byte) || match_byte_use.getbit(byte) ||
+            interleaved_match_byte_use.getbit(byte))
+            continue;
+
         auto use_slice = total_use.getslice(byte * 8, 8);
         use_slice |= bit_attempt.getslice(byte * 8, 8);
+        use_slice |= interleaved_bit_use.getslice(byte * 8, 8);
+
         if ((use_slice & lo_vers).empty() && !(use_slice & hi_vers).empty()) {
             version_loc = lo_vers << (8 * byte);
             bit_attempt |= version_loc;
@@ -1108,6 +1262,8 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
         initial_bit_offset += i * VERSION_BITS;
         auto use_slice = total_use.getslice(initial_bit_offset, VERSION_BITS);
         use_slice |= bit_attempt.getslice(initial_bit_offset, VERSION_BITS);
+        use_slice |= interleaved_bit_use.getslice(initial_bit_offset, VERSION_BITS);
+
         if ((use_slice).empty()) {
             version_loc = lo_vers << initial_bit_offset;
             bit_attempt |= version_loc;
@@ -1119,10 +1275,13 @@ bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &
     for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
         bitvec version_bits(0, VERSION_BITS);
         int initial_byte = (width_sect * SINGLE_RAM_BYTES) + i;
-        if (match_byte_use.getbit(initial_byte) || byte_attempt.getbit(initial_byte))
+        if (match_byte_use.getbit(initial_byte) || byte_attempt.getbit(initial_byte)
+            || interleaved_match_byte_use.getbit(i))
             continue;
         auto use_slice = total_use.getslice(initial_byte * 8, 8);
         use_slice |= bit_attempt.getslice(initial_byte * 8, 8);
+        use_slice |= interleaved_bit_use.getslice(initial_byte * 8, 8);
+
         if (!(use_slice & version_bits).empty())
             continue;
         version_loc = version_bits << (initial_byte * 8);
@@ -1167,7 +1326,7 @@ void TableFormat::classify_match_bits() {
 
 
     for (auto info : ghost_bytes) {
-        LOG4("Ghost " << info.byte);
+        LOG6("\t\tGhost " << info.byte);
         use->ghost_bits[info.byte] = info.bit_use;
     }
 }
@@ -1320,6 +1479,8 @@ void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
  *  necessarily version, as version can be placed in any of the wide match sections.
  */
 void TableFormat::allocate_full_fits(int width_sect) {
+    LOG4("\t  Allocating Full Fits on RAM word " << width_sect << " search bus "
+         << search_bus_per_width[width_sect]);
     safe_vector<ByteInfo> allocation_needed;
     safe_vector<ByteInfo> alloced;
     find_bytes_to_allocate(width_sect, allocation_needed);
@@ -1334,14 +1495,23 @@ void TableFormat::allocate_full_fits(int width_sect) {
         int group = determine_group(width_sect, groups_allocated);
         if (group == -1)
             break;
+        LOG4("\t    Attempting Entry " << group);
         for (auto info : allocation_needed) {
-            if (!allocate_match_byte(info, alloced, width_sect, byte_attempt, bit_attempt)) {
-                break;
+            if (info.il_info.interleaved) {
+                if (!allocate_interleaved_byte(info, alloced, width_sect, group, byte_attempt,
+                                               bit_attempt))
+                    break;
+            } else {
+                if (!allocate_match_byte(info, alloced, width_sect, byte_attempt, bit_attempt))
+                    break;
             }
         }
 
         if (allocation_needed.size() != alloced.size())
             break;
+
+        LOG6("\t\tBytes used for match 0x"
+             << byte_attempt.getslice(width_sect * SINGLE_RAM_BYTES, SINGLE_RAM_BYTES));
 
         bitvec version_loc;
         if (requires_versioning()) {
@@ -1356,6 +1526,16 @@ void TableFormat::allocate_full_fits(int width_sect) {
             }
         }
 
+        if (!version_allocated[group] && !version_loc.empty()) {
+            int version_byte = version_loc.min().index() / 8;
+            LOG6("\t\tVersion Loc : { Byte : " << (version_byte % SINGLE_RAM_BYTES)
+                  << " Bits in Byte : " << version_loc.getslice(version_byte * 8, 8) << "}");
+        } else {
+            LOG6("\t\tVersion not allocated on RAM word " << width_sect);
+        }
+
+        LOG4("\t    Entry " << group << " fully fits on RAM word");
+
         groups_allocated++;
         full_match_groups_per_RAM[width_sect]++;
         fill_out_use(group, alloced, version_loc);
@@ -1367,7 +1547,7 @@ void TableFormat::allocate_full_fits(int width_sect) {
  *  happens when the overhead section is found), then try to fit the information in all
  *  previous RAMs as well.
  */
-void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloced_group,
+void TableFormat::allocate_share(int width_sect, int group, safe_vector<ByteInfo> &unalloced_group,
         safe_vector<ByteInfo> &alloced, bitvec &version_loc, bitvec &byte_attempt,
         bitvec &bit_attempt, bool overhead_section) {
     std::set<int> width_sections;
@@ -1381,10 +1561,26 @@ void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloce
         min_sect = 0;
     }
 
+    if (overhead_section) {
+        auto it = unalloced_group.begin();
+        while (it != unalloced_group.end()) {
+            if (!it->il_info.interleaved) {
+                it++;
+                continue;
+            }
+            allocate_interleaved_byte(*it, alloced, width_sect, group, byte_attempt, bit_attempt);
+            width_sections.emplace(width_sect);
+            it = unalloced_group.erase(it);
+        }
+    }
+
+
     for (int current_sect = min_sect; current_sect <= width_sect; current_sect++) {
         if (shared_groups_per_RAM[width_sect] == MAX_SHARED_GROUPS)
             continue;
+        LOG5("\t    Allocating shared entry " << group << " on RAM word " << width_sect);
         auto it = unalloced_group.begin();
+        bitvec prev_attempt = byte_attempt;
         while (it != unalloced_group.end()) {
             if (allocate_match_byte(*it, alloced, current_sect, byte_attempt, bit_attempt)) {
                 width_sections.emplace(current_sect);
@@ -1393,6 +1589,10 @@ void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloce
                 it++;
             }
         }
+
+        bitvec local_attempt = byte_attempt - prev_attempt;
+        LOG6("\t\tBytes used for match 0x"
+             << local_attempt.getslice(current_sect * SINGLE_RAM_BYTES, SINGLE_RAM_BYTES));
     }
 
     for (int current_sect = min_sect; current_sect <= width_sect; current_sect++) {
@@ -1403,6 +1603,9 @@ void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloce
         if (!version_loc.empty()) break;
         if (allocate_version(current_sect, alloced, version_loc, byte_attempt, bit_attempt)) {
             width_sections.emplace(current_sect);
+            int version_byte = version_loc.min().index() / 8;
+            LOG6("\t\tVersion Loc : { Byte : " << (version_byte % SINGLE_RAM_BYTES)
+                  << " Bits in Byte : " << version_loc.getslice(version_byte * 8, 8) << "}");
             break;
         }
     }
@@ -1463,6 +1666,7 @@ bool TableFormat::allocate_shares() {
 
     overhead_groups_seen = 0;
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
+        LOG4("\t  Attempting cross RAM entries on RAM word " << width_sect);
         // Groups that aren't allocated that will need sharing
         int groups_to_start = overhead_groups_per_RAM[width_sect]
                               - full_match_groups_per_RAM[width_sect];
@@ -1478,7 +1682,8 @@ bool TableFormat::allocate_shares() {
         for (auto group : groups_begun) {
             if (shared_groups_per_RAM[width_sect] > MAX_SHARED_GROUPS)
                 break;
-            allocate_share(width_sect, unalloced_groups[group], allocated[group],
+            LOG4("\t  Attempting already split entry " << group);
+            allocate_share(width_sect, group, unalloced_groups[group], allocated[group],
                            version_locs[group], byte_attempt, bit_attempt, false);
         }
 
@@ -1486,8 +1691,9 @@ bool TableFormat::allocate_shares() {
         for (int i = 0; i < groups_to_start; i++) {
             if (shared_groups_per_RAM[width_sect] > MAX_SHARED_GROUPS)
                 break;
-            int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
-            allocate_share(width_sect, unalloced_groups[group], allocated[group],
+            int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect] + i;
+            LOG4("\t  Attempting newly split entry " << group);
+            allocate_share(width_sect, group, unalloced_groups[group], allocated[group],
                            version_locs[group], byte_attempt, bit_attempt, true);
         }
 
@@ -1547,6 +1753,7 @@ bool TableFormat::allocate_shares() {
  *  algorithm determines that with the extra sharing the matches still will not fit.
  */
 bool TableFormat::attempt_allocate_shares() {
+    LOG4("\t  Attempt Allocating Shares");
     // Try with all full fits
     if (allocate_shares())
         return true;
@@ -1570,6 +1777,29 @@ bool TableFormat::attempt_allocate_shares() {
             return true;
     }
     return false;
+}
+
+void TableFormat::clear_match_state() {
+    for (int entry = 0; entry < layout_option.way.match_groups; entry++) {
+        use->match_groups[entry].clear_match();
+    }
+    match_bytes.clear();
+    ghost_bytes.clear();
+    std::fill(full_match_groups_per_RAM.begin(), full_match_groups_per_RAM.end(), 0);
+    std::fill(shared_groups_per_RAM.begin(), shared_groups_per_RAM.end(), 0);
+    use->ghost_bits.clear();
+    match_byte_use.clear();
+    version_allocated.clear();
+    interleaved_bit_use.clear();
+    interleaved_match_byte_use.clear();
+}
+
+void TableFormat::clear_pre_allocation_state() {
+    clear_match_state();
+    total_use.clear();
+    for (int entry = 0; entry < layout_option.way.match_groups; entry++) {
+        use->match_groups[entry].clear();
+    }
 }
 
 /** Gateway tables and exact match tables share search buses to perform lookups.  Thus
@@ -1596,7 +1826,9 @@ bool TableFormat::allocate_match() {
         use->ghost_bits.clear();
         match_byte_use.clear();
 
+        classify_match_bits();
         pa = static_cast<packing_algorithm_t>(i);
+        LOG4("\tAllocate match with algorithm " << pa);
         success = allocate_match_with_algorithm();
 
         if (success)
@@ -1631,7 +1863,6 @@ bool TableFormat::allocate_match() {
  *    3. Allocate shares: share match groups RAMs
  */
 bool TableFormat::allocate_match_with_algorithm() {
-    classify_match_bits();
     for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
         allocate_full_fits(width_sect);
     }
@@ -1991,6 +2222,240 @@ void TableFormat::redistribute_next_table() {
             next_mask_entry++;
         }
     }
+}
+
+int ByteInfo::hole_size(HoleType_t hole_type, int *hole_start_pos) const {
+    if (bit_use.empty())
+        return 0;
+    if (hole_type == LSB) {
+        if (hole_start_pos)
+            *hole_start_pos = 0;
+        return bit_use.min().index();
+    } else if (hole_type == MSB) {
+        if (hole_start_pos)
+            *hole_start_pos = bit_use.max().index() + 1;
+        return 7 - bit_use.max().index();
+    } else if (hole_type == MIDDLE) {
+        int max_hole = 0;
+        int lsb_hole_end = bit_use.ffs();
+        int hole_start = bit_use.ffz(lsb_hole_end);
+        int hole_end = bit_use.ffs(hole_start);
+        while (hole_end >= 0) {
+            if (max_hole < hole_end - hole_start) {
+                if (hole_start_pos)
+                    *hole_start_pos = hole_start;
+                max_hole = std::max(hole_end - hole_start, max_hole);
+            }
+            hole_start = bit_use.ffz(hole_end);
+            hole_end = bit_use.ffs(hole_start);
+        }
+        return max_hole;
+    }
+    return -1;
+}
+
+/**
+ * Return the better hole for minimizing byte requirements for packing
+ *     Least number of bytes in the il_info.byte_cycle
+ *     Least number 
+ */
+bool ByteInfo::better_hole_type(int hole, int comp_hole, int overhead_bits) const {
+    // Return the actual hole
+    if (hole != 0 && comp_hole == 0)
+        return true;
+    if (hole == 0 && comp_hole != 0)
+        return false;
+
+    // The bits used by the match byte and the overhead
+    int a_bits_used = overhead_bits + (8 - hole);
+    int b_bits_used = overhead_bits + (8 - comp_hole);
+
+    // The lower number of bytes used for the bytes
+    int a_bytes_used = (a_bits_used + 7) / 8;
+    int b_bytes_used = (b_bits_used + 7) / 8;
+
+    if (a_bytes_used != b_bytes_used)
+        return a_bytes_used < b_bytes_used;
+
+    // Return the byte that uses the overlap best
+    return a_bits_used > b_bits_used;
+}
+
+/**
+ * Determine which byte is better for overhead, based on either of their LSB or MSB holes
+ */
+bool ByteInfo::is_better_for_overhead(const ByteInfo &bi, int overhead_bits) const {
+    int a_middle_hole_size = hole_size(MIDDLE);
+    int b_middle_hole_size = bi.hole_size(MIDDLE);
+
+
+    if (a_middle_hole_size >= overhead_bits && b_middle_hole_size < overhead_bits) {
+        return true;
+    } else if (a_middle_hole_size < overhead_bits && b_middle_hole_size >= overhead_bits) {
+        return false;
+    } else if (a_middle_hole_size >= overhead_bits && b_middle_hole_size >= overhead_bits) {
+        return a_middle_hole_size < b_middle_hole_size;
+    }
+
+    // definitely the best a**hole I know
+    HoleType_t best_a_hole =
+        better_hole_type(hole_size(LSB), hole_size(MSB), overhead_bits) ? LSB : MSB;
+
+    HoleType_t best_b_hole =
+        better_hole_type(bi.hole_size(LSB), bi.hole_size(MSB), overhead_bits) ? LSB : MSB;
+
+    return better_hole_type(hole_size(best_a_hole), bi.hole_size(best_b_hole), overhead_bits);
+}
+
+/**
+ * Set the information for allocating the interleaved byte.
+ *    @seealso comments on ByteInfo for the definitions of these values
+ */
+void ByteInfo::set_interleave_info(int overhead_bits) {
+    il_info.interleaved = true;
+    int middle_hole_start;
+    int middle_hole_size = hole_size(MIDDLE, &middle_hole_start);
+    // Overhead would start at the beginning of the largest hole
+    if (middle_hole_size >= overhead_bits) {
+        il_info.overhead_start = middle_hole_start;
+        il_info.match_byte_start = 0;
+        il_info.byte_cycle = 1;
+        return;
+    }
+
+
+    int lsb_hole_start;
+    int msb_hole_start;
+    HoleType_t best_hole
+        = better_hole_type(hole_size(LSB, &lsb_hole_start), hole_size(MSB, &msb_hole_start),
+                           overhead_bits)
+          ? LSB : MSB;
+
+    // Hole for overhead is at the LSB of the byte
+    if (best_hole == LSB) {
+        // Overhead can go all the way to the first match bit
+        int lsb_first_match_bit_of_byte = 8 - hole_size(LSB);
+        il_info.byte_cycle = (lsb_first_match_bit_of_byte + overhead_bits + 7) / 8;
+        il_info.match_byte_start = (il_info.byte_cycle - 1) * 8;
+        il_info.overhead_start = il_info.match_byte_start + hole_size(LSB) - overhead_bits;
+    } else {
+        // Overhead starts at the first bit of the hole
+        il_info.match_byte_start = 0;
+        il_info.overhead_start = msb_hole_start;
+        il_info.byte_cycle = (msb_hole_start + overhead_bits + 7) / 8;
+    }
+    LOG1("\t\t   Boobs " << il_info.match_byte_start << " " << il_info.overhead_start << " " <<
+          il_info.byte_cycle << " " << best_hole << " " << msb_hole_start);
+}
+
+/**
+ * The premise of this function is to potentially interleave overhead data with match data.
+ * The original approach of the interleaving was to pack all overhead data closest to the least
+ * significant bit, and then pack the match data above this data.  However, though this strategy
+ * works fairly well, by expanding the search space, the actual allocation can be improved.
+ * This generally can be taken advantage of especially when no bits are ghosted.
+ *
+ * Let's take the following example:
+ *     - 2 entries, 1 RAM wide
+ *     - Each entry has 4 bits of overhead
+ *     - Each entry has 8 match bytes, 2 of which are matching on a single nibble, let's say the lower
+ *     - Each entry requires a nibble for version/validity
+ * Could be thought of as an ATCAM entry with 28 bits of a ternary match key and some number of actions
+ *
+ * If we were to pack the overhead all at the lsb, this would be definition take up an entire byte,
+ * and thus because 16 match bytes are needed, this would never fit.  However, because the overhead
+ * and a match byte can be combined into a single byte requirement, this now becomes possible if match
+ * data and overhead are interleaved.
+ *
+ * Right now, overhead is still allocated as one step.  One could take this even further, and
+ * break up overhead into its constituent pieces, but a single block of overhead is easiest to
+ * consider.
+ *
+ * Also the current basic assumption is that the interleaved byte both doesn't have a hole at both
+ * the msb and the lsb, but that in theory could still save bits if this corner case is found 
+ */
+bool TableFormat::interleave_match_and_overhead() {
+    if (tbl->action_chain() || bits_necessary(SEL_LEN_MOD) > 0
+        || bits_necessary(SEL_LEN_SHIFT) > 0)
+        return false;
+
+    int overhead_bits = overhead_bits_necessary();
+    if (overhead_bits == 0) return false;
+    LOG1("    overhead bits " << overhead_bits);
+    clear_pre_allocation_state();
+    classify_match_bits();
+
+    // Only makes sense to interleave bytes that share RAMs with overhead
+    int search_bus_with_overhead = -1;
+    int width_sect = -1;
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        if (overhead_groups_per_RAM[i] == 0) continue;
+        if (search_bus_with_overhead == -1) {
+            search_bus_with_overhead = search_bus_per_width[i];
+            width_sect = i;
+        } else if (search_bus_with_overhead != search_bus_per_width[i]) {
+            return false;
+        }
+    }
+
+    if (search_bus_with_overhead < 0)
+        return false;
+
+    // Determine the best byte to interleave with overhead
+    ssize_t best_entry_index = -1;
+    for (size_t i = 0; i < match_bytes.size(); i++) {
+        if (match_bytes[i].byte.search_bus != search_bus_with_overhead)
+            continue;
+        if (best_entry_index < 0) {
+            best_entry_index = i;
+            continue;
+        }
+
+
+        if (match_bytes[i].is_better_for_overhead(match_bytes[best_entry_index], overhead_bits)) {
+            best_entry_index = i;
+        }
+    }
+
+    if (best_entry_index < 0)
+        return false;
+
+    // If the byte has no holes, then this byte is generally not useful
+    ByteInfo *il_byte = &match_bytes[best_entry_index];
+    if (il_byte->bit_use.popcount() == 8)
+        return false;
+    else if (il_byte->bit_use.min().index() == 0 && il_byte->bit_use.max().index() == 7 &&
+             il_byte->hole_size(ByteInfo::MIDDLE) < overhead_bits)
+        return false;
+
+    il_byte->set_interleave_info(overhead_bits);
+    LOG5("\t  Interleaved byte candidate " << il_byte);
+
+    // Reserve space for the match bytes and allocate the overhead to the groups.  All match bytes
+    // are actually reserved during allocate_match_with_algorithm due to internal structures
+    // necessary to maintain in that function
+    int entry = 0;
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        int start_byte = 0;
+        for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
+            if (!allocate_overhead_entry(entry, i,
+                                         start_byte * 8 + il_byte->il_info.overhead_start))
+                return false;
+            int match_bit_start = start_byte * 8 + il_byte->il_info.match_byte_start;
+            match_bit_start += (i * SINGLE_RAM_BITS);
+            BUG_CHECK(match_bit_start % 8 == 0, "Interleaved match byte is not correct");
+            interleaved_bit_use |= (il_byte->bit_use << match_bit_start);
+            interleaved_match_byte_use.setbit(match_bit_start / 8);
+            BUG_CHECK((total_use & interleaved_bit_use).empty(), "Interleaving allocation is "
+                      "incorrect");
+            start_byte += il_byte->il_info.byte_cycle;
+            entry++;
+        }
+    }
+
+
+    pa = PACK_TIGHT;
+    return allocate_match_with_algorithm();
 }
 
 /* This is a verification pass that guarantees that we don't have overlap.  More constraints can

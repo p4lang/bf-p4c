@@ -267,6 +267,7 @@ struct Memories {
             dleft_match.clear();
         }
 
+        int rams_required() const;
         bool separate_search_and_result_bus() const;
         // depth in memory units + mask to use for memory selection per way
         enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY, UPDATE_RESULT_BUS };

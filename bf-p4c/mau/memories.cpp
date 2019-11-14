@@ -22,6 +22,14 @@ static const char *sram_group_type_to_str[] = {
 
 constexpr int Memories::SRAM_DEPTH;
 
+int Memories::Use::rams_required() const {
+    int rv = 0;
+    for (auto r : row) {
+        rv += r.col.size();
+    }
+    return rv;
+}
+
 /**
  * A function to determine whether or not the asm_output for a table needs to have a separate
  * search bus and result bus printed, rather than having just a single bus, as the result bus

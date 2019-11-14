@@ -33,11 +33,11 @@ TableResourceAlloc *TableResourceAlloc::rename(const IR::MAU::Table *tbl, int st
 bool TableResourceAlloc::has_tind() const {
     bool rv = false;
     for (auto &kv : memuse) {
-        if (kv.second.type != Memories::Use::TIND)
-            continue;
+        if (kv.second.type != Memories::Use::TIND) continue;
         rv = true;
         break;
     }
+
     if (rv)
         BUG_CHECK(table_format.has_overhead(), "A ternary indirect table is currently "
             "required with no overhead");
