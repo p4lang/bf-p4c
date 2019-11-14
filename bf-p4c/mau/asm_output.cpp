@@ -1861,8 +1861,8 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                 self.next_table_non_action_map(table, next_table_map);
                 for (auto entry : next_table_map) {
                 }
-                cstring act_next_for = self.next_for(table, act->name.originalName);
-                auto it = std::find(next_table_map.begin(), next_table_map.end(), act_next_for);
+                NextTableSet act_set = self.next_for(table, act->name.originalName);
+                auto it = std::find(next_table_map.begin(), next_table_map.end(), act_set);
                 BUG_CHECK(it != next_table_map.end(), "Next table cannot be associated");
                 out << (it - next_table_map.begin());
             } else {
