@@ -304,8 +304,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "The input .* cannot be found on the hash input"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
+  "The input .* cannot be found on the hash input|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
 )
 

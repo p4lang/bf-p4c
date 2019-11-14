@@ -417,7 +417,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The input .* cannot be found on the hash input|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
 )
 

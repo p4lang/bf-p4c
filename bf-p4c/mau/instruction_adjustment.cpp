@@ -894,16 +894,16 @@ const IR::MAU::IXBarExpression *AdjustStatefulInstructions::preorder(IR::MAU::IX
  *  field and beginning position on the input xbar
  */
 bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> &salu_inputs,
-        int field_size, int starting_bit) {
+        le_bitrange field_bits, int starting_bit) {
     bitvec all_bits;
     for (auto entry : salu_inputs) {
         int ixbar_bit_start = entry.first - starting_bit;
-        if (ixbar_bit_start != entry.second.lo)
+        if (ixbar_bit_start + field_bits.lo != entry.second.lo)
             return false;
         all_bits.setrange(entry.second.lo, entry.second.size());
     }
 
-    if (all_bits.popcount() != field_size || !all_bits.is_contiguous())
+    if (all_bits.popcount() != field_bits.size() || !all_bits.is_contiguous())
         return false;
     return true;
 }
@@ -947,6 +947,8 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
     }
 
     if (!salu_bytes.is_contiguous()) {
+        // FIXME -- we've lost the source info on 'field' so can't generate a decent error
+        // message here -- should pass in `expr` from the caller to this function.
         ::error("The input %s to stateful alu %s is not allocated contiguously by byte on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
        return false;
@@ -969,7 +971,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
         return false;
     }
 
-    if (!check_bit_positions(salu_inputs, bits.size(), salu_bytes.min().index() * 8)) {
+    if (!check_bit_positions(salu_inputs, bits, salu_bytes.min().index() * 8)) {
         ::error("The input %s to stateful alu %s is not allocated contiguously by bit on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
         return false;

@@ -557,6 +557,7 @@ static bool checkSlice(const IR::Slice *sl, unsigned width) {
 
 bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
     bool keep_slice = false;
+    bool save_negate = negate;
     if (etype == NONE) {
         if (!checkSlice(sl, salu->alu_width()))
             error("%scan only output entire %d-bit ALU output from %s", sl->srcInfo,
@@ -567,13 +568,18 @@ bool CreateSaluInstruction::preorder(const IR::Slice *sl) {
             error("%s%s index output can only write to bottom %d bits of output", sl->srcInfo,
                   minmax_instr->name, 4 - minmax_width);
     } else {
+        negate = false;
         keep_slice = true; }
     visit(sl->e0, "e0");
     if (keep_slice) {
         if (operands.back() == sl->e0)
             operands.back() = sl;
         else
-            operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2); }
+            operands.back() = new IR::Slice(sl->srcInfo, operands.back(), sl->e1, sl->e2);
+        if (save_negate)
+            operands.back() = new IR::Neg(operands.back());
+    }
+    negate = save_negate;
     return false;
 }
 
