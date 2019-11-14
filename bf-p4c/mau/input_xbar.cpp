@@ -1078,7 +1078,7 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
         int required_allocation_bytes, std::map<int, int> &constraints_to_reqs) const {
     auto &a = *this;
     if (!a.attempted && b.attempted) return true;
-    if (b.attempted && !a.attempted) return false;
+    if (a.attempted && !b.attempted) return false;
     bool a_candidate = a.total_avail() > required_allocation_bytes;
     bool b_candidate = b.total_avail() > required_allocation_bytes;
 
