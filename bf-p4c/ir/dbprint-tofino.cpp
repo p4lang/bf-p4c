@@ -184,7 +184,13 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
 
     out << unindent;
 
-    out << endl << "goto " << (next ? next->name : "(end)");
+    out << endl << "goto ";
+    if (next)
+        out << next->name;
+    else if (loop)
+        out << loop;
+    else
+        out << "(end)";
 }
 
 void IR::BFN::ParserState::dbprint(std::ostream &out) const {

@@ -497,7 +497,7 @@ extern Checksum {
     void subtract<T>(in T data);
 
     /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
-    /// @return : Boolean flag indicating wether the checksum is valid or not.
+    /// @return : Boolean flag indicating whether the checksum is valid or not.
     bool verify();
 
     /// Get the calculated checksum value.
@@ -513,9 +513,14 @@ extern Checksum {
 // ----------------------------------------------------------------------------
 // PARSER COUNTER
 // ----------------------------------------------------------------------------
-// Tofino parser counter can be used to extract header stacks or headers with
-// variable length. Tofino has a single 8-bit signed counter that can be
+// Tofino2 parser counter can be used to extract header stacks or headers with
+// variable length. Tofino2 has a single 8-bit signed counter that can be
 // initialized with an immediate value or a header field.
+//
+// On Tofino2, the parser counter also comes with a shallow stack (with depth of 4).
+// The counter stack is useful when parsing nested TLV headers (e.g. GENEVE-like options
+// where the total option length is variable and each individual option length is
+// also variable).
 
 extern ParserCounter {
     /// Constructor
@@ -534,6 +539,22 @@ extern ParserCounter {
                 in bit<8> rotate,
                 in bit<8> mask,
                 in bit<8> add);
+
+    /// Push the immediate value or a header field onto the stack.
+    /// @param update_with_top : update the pushed value when the top-of-stack value is updated.
+    void push<T>(in T value, @optional bool update_with_top);
+
+    /// Push the header field onto the stack.
+    /// @param update_with_top : update the pushed value when the top-of-stack value is updated.
+    void push<T>(in T field,
+                 in bit<8> max,
+                 in bit<8> rotate,
+                 in bit<8> mask,
+                 in bit<8> add,
+                 @optional bool update_with_top);
+
+    /// Pop the top-of-stack value from the stack.
+    void pop();
 
     /// @return true if counter value is zero.
     bool is_zero();

@@ -411,7 +411,7 @@ extern Checksum {
     void subtract<T>(in T data);
 
     /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
-    /// @return : Boolean flag indicating wether the checksum is valid or not.
+    /// @return : Boolean flag indicating whether the checksum is valid or not.
     bool verify();
 
     /// Get the calculated checksum value.

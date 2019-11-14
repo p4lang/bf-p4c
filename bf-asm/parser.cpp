@@ -605,7 +605,7 @@ Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.l
                     else error(lineno, "Unexpected counter load source");
                 } 
             }
-        } else {
+        } else if (kv.key != "push" && kv.key != "update_with_top") {
             error(lineno, "Syntax error in parser counter init expression");
         }
     }
@@ -895,9 +895,35 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
     for (auto &kv : data) {
         if (kv.key == "counter") {
             if (kv.value.type == tMAP) {
-                ctr_ld_src = 1;
                 ctr_load = 1;
-                ctr_instr = new CounterInit(gress, kv);
+
+                bool from_ctr_init_ram = false;
+
+                for (auto &kv : MapIterChecked(kv.value.map, true)) {
+                    if (kv.key == "src") {
+                        from_ctr_init_ram = true;
+                    } else if (kv.key == "push" && CHECKTYPE(kv.value, tINT)) {
+                        if (options.target == TOFINO)
+                            error(kv.key.lineno, "Tofino does not have counter stack");
+                        ctr_stack_push = kv.value.i;
+                    } else if (kv.key == "update_with_top" && CHECKTYPE(kv.value, tINT)) {
+                        if (options.target == TOFINO)
+                            error(kv.key.lineno, "Tofino does not have counter stack");
+                        ctr_stack_upd_w_top = kv.value.i;
+                    }
+                }
+
+                if (from_ctr_init_ram) {
+                    ctr_ld_src = 1;
+                    ctr_instr = new CounterInit(gress, kv);
+                } else {  // load from immediate
+                    for (auto &kv : MapIterChecked(kv.value.map, true)) {
+                        if (kv.key == "imm" && CHECKTYPE(kv.value, tINT))
+                            ctr_imm_amt = kv.value.i;
+                        else if (kv.key != "push" && kv.key != "update_with_top")
+                            error(kv.value.lineno, "Unknown parser counter init command");
+                    }
+                }
             } else if (kv.value.type == tCMD) {
                 if (kv.value[0] == "inc" || kv.value[0] == "increment") {
                     if (CHECKTYPE(kv.value[1], tINT))
@@ -905,11 +931,16 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 } else if (kv.value[0] == "dec" || kv.value[0] == "decrement") {
                     if (CHECKTYPE(kv.value[1], tINT))
                         ctr_imm_amt = ~kv.value[1].i + 1;
-                } else if (kv.value[0] == "load") {
-                    if (CHECKTYPE(kv.value[1], tINT)) {
-                        ctr_load = 1;
-                        ctr_imm_amt = kv.value[1].i;
-                    }
+                } else {
+                    error(kv.value.lineno, "Unknown parser counter command");
+                }
+            } else if (kv.value.type == tSTR) {
+                if (kv.value == "pop") {
+                    if (options.target == TOFINO)
+                        error(kv.key.lineno, "Tofino does not have counter stack");
+                    ctr_stack_pop = true;
+                } else {
+                    error(kv.value.lineno, "Unknown parser counter command");
                 }
             } else {
                 error(kv.value.lineno, "Syntax error for parser counter");
@@ -1518,7 +1549,7 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    if (ctr_instr || ctr_load || ctr_imm_amt)
+    if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop)
         write_counter_config(ea_row);
     else if (def)
         def->write_counter_config(ea_row);
@@ -1574,6 +1605,30 @@ void Parser::State::Match::write_row_config(REGS &regs, Parser *pa, State *state
         buf_req = max_off + 1;
         BUG_CHECK(buf_req <= 32); }
     ea_row.buf_req = buf_req;
+}
+
+std::set<Parser::State::Match*>
+Parser::State::Match::get_all_preds() {
+    std::set<Parser::State::Match*> visited;
+    return get_all_preds_impl(visited);
+}
+
+std::set<Parser::State::Match*>
+Parser::State::Match::get_all_preds_impl(std::set<Parser::State::Match*>& visited) {
+    if (visited.count(this))
+        return {};
+
+    visited.insert(this);
+
+    std::set<Parser::State::Match*> rv;
+
+    for (auto p : this->state->pred) {
+        rv.insert(p);
+        auto pred = p->get_all_preds_impl(visited);
+        rv.insert(pred.begin(), pred.end());
+    }
+
+    return rv;
 }
 
 template <class REGS>

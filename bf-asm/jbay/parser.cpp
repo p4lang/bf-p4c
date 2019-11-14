@@ -352,16 +352,33 @@ template<> void Parser::State::Match::write_counter_config(
             case 1: ea_row.ctr_op = 3; break;
             default: error(lineno, "Unsupported parser counter load instruction (JBay)");
         } 
-    } else {  // add
+    } else if (ctr_stack_pop) {
+        ea_row.ctr_op = 1;
+    } else { // add
         ea_row.ctr_op = 0;
     }
 
     ea_row.ctr_amt_idx = ctr_instr ? ctr_instr->addr : ctr_imm_amt;
+    ea_row.ctr_stack_push = ctr_stack_push;
+    ea_row.ctr_stack_upd_w_top = ctr_stack_upd_w_top;
+}
 
-    // TODO -- counter stack config
-    // ea_row.ctr_op = 1; (load ctr from stack top and add imm)
-    // ea_row.ctr_stack_push = ?
-    // ea_row.ctr_stack_upd_w_top = ?
+// Workaround for JBAY-2717: parser counter adds RAM index or immediate value
+// to the pushed value when doing push + update_w_top. To cancel this offset,
+// we subtract the amount on pop.
+void jbay2717_workaround(Parser* parser, Target::JBay::parser_regs &regs) {
+    for (auto& kv : parser->match_to_row) {
+        if (kv.first->ctr_stack_pop) {
+            for (auto p : kv.first->get_all_preds()) {
+                if (p->ctr_stack_push && p->ctr_stack_upd_w_top) {
+                    auto& ea_row = regs.memory[parser->gress].ml_ea_row[kv.second];
+                    auto adjust = p->ctr_instr ? p->ctr_instr->addr : p->ctr_imm_amt;
+                    ea_row.ctr_amt_idx = ea_row.ctr_amt_idx.value - adjust;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
@@ -374,6 +391,8 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
             st->write_config(regs, this, ctxt_json["states"]);
     }
     if (error_count > 0) return;
+
+    jbay2717_workaround(this, regs);
 
     int i = 0;
     for (auto ctr : counter_init) {

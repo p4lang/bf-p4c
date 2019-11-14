@@ -74,8 +74,7 @@ GenerateParserP4iJson::generateSaves(const IR::BFN::LoweredParserMatch* match) {
     return rst;
 }
 
-int GenerateParserP4iJson::getStateId(const IR::BFN::LoweredParserState* state) {
-    // XXX(yumin): the `end` state is a leaf state.
+int GenerateParserP4iJson::getStateId(cstring state) {
     if (!state_ids.count(state)) {
         int id = state_ids.size();
         state_ids[state] = id;
@@ -94,7 +93,7 @@ int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match, g
 
 P4iParserStateTransition
 GenerateParserP4iJson::generateStateTransitionByMatch(
-        const IR::BFN::LoweredParserState* next_state,
+        cstring next_state,
         const IR::BFN::LoweredParserState* prev_state,
         const IR::BFN::LoweredParserMatch* match) {
     // Create a parser state transition out from this match.
@@ -104,12 +103,11 @@ GenerateParserP4iJson::generateStateTransitionByMatch(
     state_transition.extracts           = generateExtracts(match);
     state_transition.saves              = generateSaves(match);
     state_transition.matches            = generateMatches(prev_state, match);
-    // TODO(yumin): update this when counter is supported.
-    state_transition.has_counter        = false;
+    state_transition.has_counter        = !match->counters.empty();
     state_transition.next_state_id      = getStateId(next_state);
-    state_transition.next_state_name    = next_state ? next_state->name : "END";
+    state_transition.next_state_name    = next_state;
     if (prev_state) {
-        state_transition.previous_state_id = getStateId(prev_state);
+        state_transition.previous_state_id = getStateId(prev_state->name);
         state_transition.previous_state_name = prev_state->name;
     }
 
@@ -183,7 +181,14 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     // auto prev_state = findContext<IR::BFN::LoweredParserState>();
     for (const auto* match : state->transitions) {
         LOG1("State Match: " << match);
-        p->states.push_back(generateStateTransitionByMatch(match->next, state, match));
+        cstring next_state;
+        if (match->next)
+            next_state = match->next->name;
+        else if (match->loop)
+            next_state = match->loop;
+        else
+            next_state = "END";
+        p->states.push_back(generateStateTransitionByMatch(next_state, state, match));
     }
 
     if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {

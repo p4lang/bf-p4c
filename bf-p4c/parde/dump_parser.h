@@ -194,6 +194,12 @@ class DotDumper {
             if (match->checksums.size())
                 out << "\\l";
 
+            for (auto cntr : match->counters)
+                out << "    " << cntr << "\\l";
+
+            if (match->counters.size())
+                out << "\\l";
+
             out << "shift: " << match->shift;
         }
 

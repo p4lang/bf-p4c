@@ -394,19 +394,6 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
 }
 
-std::set<Parser::State::Match*>
-get_all_preds(Parser::State::Match* match) {
-    std::set<Parser::State::Match*> rv;
-
-    for (auto p : match->state->pred) {
-        rv.insert(p);
-        auto pred = get_all_preds(p);
-        rv.insert(pred.begin(), pred.end());
-    }
-
-    return rv;
-}
-
 void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
                                Parser::State::Match* match) {
     int row = parser->match_to_row.at(match);
@@ -498,7 +485,7 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
     std::set<Parser::State::Match*> all_preds;
 
     for (auto m : narrow_to_wide_matches) {
-        auto preds = get_all_preds(m);
+        auto preds = m->get_all_preds();
         all_preds.insert(preds.begin(), preds.end());
     }
 

@@ -642,6 +642,38 @@ struct ResolveHeaderStackIndex : public Transform {
     }
 };
 
+const IR::BFN::PacketRVal*
+resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
+    if (auto* slice = expr->to<IR::Slice>()) {
+        if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
+            if (auto* mem = call->method->to<IR::Member>()) {
+                if (mem->member == "lookahead") {
+                    auto rval = rewriteLookahead(typeMap, call, currentBit, slice);
+                    return rval;
+                }
+            }
+        }
+    } else if (auto* call = expr->to<IR::MethodCallExpression>()) {
+        if (auto* mem = call->method->to<IR::Member>()) {
+            if (mem->member == "lookahead") {
+                auto rval = rewriteLookahead(typeMap, call, currentBit);
+                return rval;
+            }
+        }
+    } else if (auto* member = expr->to<IR::Member>()) {
+        if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
+            if (auto* mem = call->method->to<IR::Member>()) {
+                if (mem->member == "lookahead") {
+                    auto rval = rewriteLookahead(typeMap, call, currentBit, nullptr, member);
+                    return rval;
+                }
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 /// Rewrites frontend parser IR statements to the backend ones.
 struct RewriteParserStatements : public Transform {
     RewriteParserStatements(P4::TypeMap* typeMap, cstring stateName, gress_t gress)
@@ -866,8 +898,103 @@ struct RewriteParserStatements : public Transform {
             return rewriteChecksumAddOrSubtract(call);
         } else if (method->member == "verify") {
             return rewriteChecksumVerify(call);
+        } else {
+            BUG("Unhandled parser checksum call: %1%", statement);
         }
 
+        return nullptr;
+    }
+
+    IR::BFN::ParserPrimitive*
+    rewriteParserCounterSet(IR::MethodCallStatement* statement, bool push_stack = false) {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+
+        if ((*call->arguments).size() == 1 || (push_stack && (*call->arguments).size() == 2)) {
+            if (auto* imm = (*call->arguments)[0]->expression->to<IR::Constant>()) {
+                // load immediate
+                auto* load = new IR::BFN::ParserCounterLoadImm(declName);
+                load->imm = imm->asInt();
+                load->push = push_stack;
+                if ((*call->arguments).size() == 2) {
+                    load->update_with_top = (*call->arguments)[1]->expression
+                                              ->to<IR::BoolLiteral>()->value;
+                }
+                return load;
+            } else if (auto* rval = resolveLookahead(typeMap,
+                                 (*call->arguments)[0]->expression, currentBit)) {
+                // load field (from match register)
+                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                           new IR::BFN::SavedRVal(rval));
+                load->push = push_stack;
+                if ((*call->arguments).size() == 2) {
+                    load->update_with_top = (*call->arguments)[1]->expression
+                                              ->to<IR::BoolLiteral>()->value;
+                }
+                return load;
+            } else if (auto* member = (*call->arguments)[0]->expression->to<IR::Member>()) {
+                // load field (from match register)
+                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                           new IR::BFN::SavedRVal(member));
+                load->push = push_stack;
+                if ((*call->arguments).size() == 2) {
+                    load->update_with_top = (*call->arguments)[1]->expression
+                                              ->to<IR::BoolLiteral>()->value;
+                }
+                return load;
+            } else if (auto* concat = (*call->arguments)[0]->expression->to<IR::Concat>()) {
+                auto* ext = concat->left->to<IR::Constant>();
+                if (ext && ext->asInt() == 0) {
+                    if (auto* field = concat->right->to<IR::Member>()) {
+                        // load field (from match register)
+                        auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                            new IR::BFN::SavedRVal(field));
+                        load->push = push_stack;
+                        if ((*call->arguments).size() == 2) {
+                            load->update_with_top = (*call->arguments)[1]->expression
+                                                      ->to<IR::BoolLiteral>()->value;
+                        }
+                        return load;
+                    }
+                }
+            }
+        } else if ((*call->arguments).size() == 5 ||
+                   (push_stack && (*call->arguments).size() == 6)) {
+            // load field (from match register)
+            const IR::Expression* field =
+                resolveLookahead(typeMap, (*call->arguments)[0]->expression, currentBit);
+
+            if (!field)
+                field = (*call->arguments)[0]->expression->to<IR::Member>();
+
+            auto* max = (*call->arguments)[1]->expression->to<IR::Constant>();
+            auto* rotate = (*call->arguments)[2]->expression->to<IR::Constant>();
+            auto* mask = (*call->arguments)[3]->expression->to<IR::Constant>();
+            auto* add = (*call->arguments)[4]->expression->to<IR::Constant>();
+
+            if (field && max && rotate && mask && add) {
+                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
+                                                               new IR::BFN::SavedRVal(field));
+
+                load->max = max->asInt();
+                load->rotate = rotate->asInt();
+                load->mask = mask->asInt();
+                load->add = add->asInt();
+                load->push = push_stack;
+
+                if ((*call->arguments).size() == 6) {
+                    load->update_with_top = (*call->arguments)[5]->expression
+                                              ->to<IR::BoolLiteral>()->value;
+                }
+
+                return load;
+            }
+        }
+
+        ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
         return nullptr;
     }
 
@@ -881,53 +1008,14 @@ struct RewriteParserStatements : public Transform {
 
         auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
 
-        if (method->member == "set") {
-            if ((*call->arguments).size() == 1) {
-                if (auto* imm = (*call->arguments)[0]->expression->to<IR::Constant>()) {
-                    // load immediate
-                    auto* init = new IR::BFN::ParserCounterLoadImm(declName);
-                    init->imm = imm->asInt();
+        if (Device::currentDevice() == Device::TOFINO &&
+            (method->member == "push" || method->member == "pop")) {
+            ::fatal_error("Tofino's parser does not have counter stack: %1%", statement);
+        }
 
-                    rv->push_back(init);
-                } else if (auto* field = (*call->arguments)[0]->expression->to<IR::Member>()) {
-                    // load field (from match register)
-                    auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                                   new IR::BFN::SavedRVal(field));
-                    rv->push_back(load);
-                } else if (auto* concat = (*call->arguments)[0]->expression->to<IR::Concat>()) {
-                    auto* ext = concat->left->to<IR::Constant>();
-                    if (ext && ext->asInt() == 0) {
-                        if (auto* field = concat->right->to<IR::Member>()) {
-                            // load field (from match register)
-                            auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                                new IR::BFN::SavedRVal(field));
-                            rv->push_back(load);
-                        }
-                    }
-                } else {
-                    ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
-                }
-            } else if ((*call->arguments).size() == 5) {  // load field (from match register)
-                auto* field = (*call->arguments)[0]->expression->to<IR::Member>();
-                auto* max = (*call->arguments)[1]->expression->to<IR::Constant>();
-                auto* rotate = (*call->arguments)[2]->expression->to<IR::Constant>();
-                auto* mask = (*call->arguments)[3]->expression->to<IR::Constant>();
-                auto* add = (*call->arguments)[4]->expression->to<IR::Constant>();
-
-                if (field && max && rotate && mask && add) {
-                    auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                                   new IR::BFN::SavedRVal(field));
-
-                    load->max = max->asInt();
-                    load->rotate = rotate->asInt();
-                    load->mask = mask->asInt();
-                    load->add = add->asInt();
-
-                    rv->push_back(load);
-                } else {
-                    ::fatal_error("Unsupported syntax of parser counter: %1%", statement);
-                }
-            }
+        if (method->member == "set" || method->member == "push") {
+            auto set = rewriteParserCounterSet(statement, method->member == "push");
+            rv->push_back(set);
         } else if (method->member == "increment") {
             auto* value = (*call->arguments)[0]->expression->to<IR::Constant>();
             auto* inc = new IR::BFN::ParserCounterIncrement(declName);
@@ -938,6 +1026,11 @@ struct RewriteParserStatements : public Transform {
             auto* dec = new IR::BFN::ParserCounterDecrement(declName);
             dec->value = value->asInt();
             rv->push_back(dec);
+        } else if (method->member == "pop") {
+            auto* pop = new IR::BFN::ParserCounterPop(declName);
+            rv->push_back(pop);
+        } else {
+            BUG("Unhandled parser counter call: %1%", statement);
         }
 
         return rv;
@@ -1077,31 +1170,9 @@ struct RewriteParserStatements : public Transform {
             }
         }
 
-        if (auto* slice = rhs->to<IR::Slice>()) {
-            if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
-                if (auto* mem = call->method->to<IR::Member>()) {
-                    if (mem->member == "lookahead") {
-                        auto rval = rewriteLookahead(typeMap, call, currentBit, slice);
-                        return new IR::BFN::Extract(s->srcInfo, lhs, rval);
-                    }
-                }
-            }
-        } else if (auto* call = rhs->to<IR::MethodCallExpression>()) {
-            if (auto* mem = call->method->to<IR::Member>()) {
-                if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, currentBit);
-                    return new IR::BFN::Extract(s->srcInfo, lhs, rval);
-                }
-            }
-        } else if (auto* member = rhs->to<IR::Member>()) {
-            if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
-                if (auto* mem = call->method->to<IR::Member>()) {
-                    if (mem->member == "lookahead") {
-                        auto rval = rewriteLookahead(typeMap, call, currentBit, nullptr, member);
-                        return new IR::BFN::Extract(s->srcInfo, lhs, rval);
-                    }
-                }
-            }
+        if (auto rval = resolveLookahead(typeMap, rhs, currentBit)) {
+            auto extract = new IR::BFN::Extract(s->srcInfo, lhs, rval);
+            return extract;
         }
 
         if (auto mem = lhs->to<IR::Member>()) {
@@ -1248,39 +1319,10 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
         }
     }
 
-    // We can transform a lookahead expression immediately to a concrete select
-    // on bits in the input buffer.
-    if (auto* slice = selectExpr->to<IR::Slice>()) {
-        if (auto* call = slice->e0->to<IR::MethodCallExpression>()) {
-            if (auto* mem = call->method->to<IR::Member>()) {
-                if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, bitShift, slice);
-                    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
-                    bitrange = rval->range;
-                    return select;
-                }
-            }
-        }
-    } else if (auto* call = selectExpr->to<IR::MethodCallExpression>()) {
-        if (auto* mem = call->method->to<IR::Member>()) {
-            if (mem->member == "lookahead") {
-                auto rval = rewriteLookahead(typeMap, call, bitShift);
-                auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
-                bitrange = rval->range;
-                return select;
-            }
-        }
-    } else if (auto* member = selectExpr->to<IR::Member>()) {
-        if (auto* call = member->expr->to<IR::MethodCallExpression>()) {
-            if (auto* mem = call->method->to<IR::Member>()) {
-                if (mem->member == "lookahead") {
-                    auto rval = rewriteLookahead(typeMap, call, bitShift, nullptr, member);
-                    auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), call);
-                    bitrange = rval->range;
-                    return select;
-                }
-            }
-        }
+    if (auto rval = resolveLookahead(typeMap, selectExpr, bitShift)) {
+        auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), selectExpr);
+        bitrange = rval->range;
+        return select;
     }
 
     BUG_CHECK(!selectExpr->is<IR::Constant>(), "%1% constant selection expression %2% "

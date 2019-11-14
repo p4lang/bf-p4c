@@ -1,0 +1,20 @@
+expect 2 babe
+packet 0 04 8804babe
+
+expect 2 babe 
+packet 0 0c ff08010203040506 8804babe
+
+expect 2 babe
+packet 0 0c 8804babe ff08010203040506
+
+expect 2 babe 
+packet 0 0a 8804babe ff0601020304
+
+expect 2 babe
+packet 0 12 ff08010203040506 8804babe ff0601020304
+
+expect 2 babe
+packet 0 12 ff08010203040506 ff0601020304 8804babe
+
+expect 2 babe
+packet 0 14 ff08010203040506 ff0601020304 ff02 8804babe

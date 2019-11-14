@@ -338,7 +338,19 @@ struct ParserAsmSerializer : public ParserInspector {
 
     void outputCounter(const IR::BFN::ParserCounterPrimitive* cntr) {
         if (auto* init = cntr->to<IR::BFN::ParserCounterLoadImm>()) {
-            out << indent << "counter: load " << init->imm << std::endl;
+            out << indent << "counter:" << std::endl;
+
+            indent++;
+
+            out << indent << "imm: " << init->imm << std::endl;
+
+            if (init->push)
+                out << indent << "push: 1" << std::endl;
+
+            if (init->update_with_top)
+                out << indent << "update_with_top: 1"  << std::endl;
+
+            indent--;
         } else if (auto* load = cntr->to<IR::BFN::ParserCounterLoadPkt>()) {
             out << indent << "counter:" << std::endl;
 
@@ -370,11 +382,19 @@ struct ParserAsmSerializer : public ParserInspector {
             if (load->add)
                 out << indent << "add: " << *(load->add) << std::endl;
 
+            if (load->push)
+                out << indent << "push: 1" << std::endl;
+
+            if (load->update_with_top)
+                out << indent << "update_with_top: 1"  << std::endl;
+
             indent--;
         } else if (auto* inc = cntr->to<IR::BFN::ParserCounterIncrement>()) {
             out << indent << "counter: inc " << inc->value << std::endl;
         } else if (auto* inc = cntr->to<IR::BFN::ParserCounterDecrement>()) {
             out << indent << "counter: dec " << inc->value << std::endl;
+        } else if (cntr->is<IR::BFN::ParserCounterPop>()) {
+            out << indent << "counter: pop" << std::endl;
         }
     }
 

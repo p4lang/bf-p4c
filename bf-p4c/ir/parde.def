@@ -191,6 +191,9 @@ abstract ParserCounterPrimitive : ParserPrimitive {
 class ParserCounterLoadImm : ParserCounterPrimitive {
     dbprint { out << "parser counter load imm " << imm; }
     int imm = 0;
+
+    bool push = false;
+    bool update_with_top = false;
 }
 
 class ParserCounterLoadPkt : ParserCounterPrimitive {
@@ -206,6 +209,9 @@ class ParserCounterLoadPkt : ParserCounterPrimitive {
     boost::optional<int> rotate;
     boost::optional<int> mask;
     boost::optional<int> add;
+
+    bool push = false;
+    bool update_with_top = false;
 }
 
 class ParserCounterIncrement : ParserCounterPrimitive {
@@ -216,6 +222,10 @@ class ParserCounterIncrement : ParserCounterPrimitive {
 class ParserCounterDecrement : ParserCounterPrimitive {
     dbprint { out << "parser counter dec " << value; }
     int value = 0;
+}
+
+class ParserCounterPop : ParserCounterPrimitive {
+    dbprint { out << "parser counter pop"; }
 }
 
 abstract ParserCounterRVal : ParserRVal {

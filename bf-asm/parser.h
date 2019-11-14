@@ -119,6 +119,8 @@ class Parser {
             bool        offset_rst = false;
 
             int ctr_imm_amt = 0, ctr_ld_src = 0, ctr_load = 0;
+            bool ctr_stack_push = false, ctr_stack_upd_w_top = false, ctr_stack_pop = false;
+
             CounterInit* ctr_instr = nullptr;
 
             PriorityUpdate      priority;
@@ -209,6 +211,9 @@ class Parser {
 
             template <class REGS> void write_saves(REGS &regs, Match* def, void *output_map, int& max_off, unsigned& used);
             template <class REGS> void write_sets(REGS &regs, Match* def, void *output_map, unsigned& used);
+
+            std::set<Match*> get_all_preds();
+            std::set<Match*> get_all_preds_impl(std::set<Match*>& visited);
         };
 
         std::string             name;

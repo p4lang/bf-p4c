@@ -18,10 +18,10 @@ class GenerateParserP4iJson : public ParserInspector {
     std::vector<P4iParserClotUsage> clot_usage;
     bool collected;
 
-    std::map<const IR::BFN::LoweredParserState*, int> state_ids;
+    std::map<cstring, int> state_ids;
     std::map<const IR::BFN::LoweredParserMatch*, int> tcam_ids[2];
 
-    int getStateId(const IR::BFN::LoweredParserState* state);
+    int getStateId(cstring state);
     int getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress);
 
     std::vector<P4iParserMatchOn> generateMatches(
@@ -33,7 +33,7 @@ class GenerateParserP4iJson : public ParserInspector {
     std::vector<P4iParserExtract> generateExtracts(const IR::BFN::LoweredParserMatch* match);
 
     P4iParserStateTransition
-    generateStateTransitionByMatch(const IR::BFN::LoweredParserState* next_state,
+    generateStateTransitionByMatch(cstring next_state,
                          const IR::BFN::LoweredParserState* prev_state,
                          const IR::BFN::LoweredParserMatch* match);
 

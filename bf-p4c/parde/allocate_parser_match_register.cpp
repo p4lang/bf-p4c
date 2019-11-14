@@ -1030,7 +1030,11 @@ struct AdjustMatchValue : public ParserModifier {
         auto* adjusted = new IR::BFN::ParserPvsMatchValue(old_value->name, old_value->size);
 
         for (const auto* select : state->selects) {
-            cstring field_name = stripThreadPrefix(select->p4Source->toString());
+            const IR::Expression* source = select->p4Source;
+            if (auto sl = select->p4Source->to<IR::Slice>())
+                source = sl->e0;
+
+            cstring field_name = stripThreadPrefix(source->toString());
             int field_start = 0;
 
             if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
