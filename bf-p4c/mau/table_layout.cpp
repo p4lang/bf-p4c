@@ -797,6 +797,10 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::
                     "or a 0 to disable the hash action path for for table %2%.",
                     s, tbl->externalName(), pragma_val);
         hash_action_only = (pragma_val == 1);
+        LOG3("\tHash Action pragma value determined on " << tbl->externalName() << " as "
+              << pragma_val);
+        if (pragma_val == 0)
+            return;
     }
 
     if (hash_action_only) {
