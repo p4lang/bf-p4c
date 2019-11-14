@@ -269,8 +269,19 @@ struct InferWriteMode : public ParserModifier {
     }
 
     profile_t init_apply(const IR::Node* root) override {
-        for (auto& kv : field_to_states.field_to_extracts)
-            infer_write_mode(kv.first, kv.second);
+        for (auto& kv : field_to_states.field_to_extracts) {
+            bool loop_state = false;
+
+            for (auto s : field_to_states.field_to_parser_states.at(kv.first)) {
+                if (s->stride) {
+                    loop_state = true;
+                    break;
+                }
+            }
+
+            if (!loop_state)
+                infer_write_mode(kv.first, kv.second);
+        }
 
         return ParserModifier::init_apply(root);
     }

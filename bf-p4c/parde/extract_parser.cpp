@@ -571,6 +571,11 @@ struct ResolveHeaderStackIndex : public Transform {
 
         if (headerToCurrentIndex.count(header)) {
             currentIndex = headerToCurrentIndex.at(header);
+        } else if (state->stride) {
+            // The strided header will be allocated in a loop
+            // and whose index increment will be managed by the
+            // destination adjustment counter at runtime.
+            headerToCurrentIndex[header] = currentIndex = 0;
         } else {
             currentIndex = ancestors.getCurrentIndex(header);
             headerToCurrentIndex[header] = currentIndex;

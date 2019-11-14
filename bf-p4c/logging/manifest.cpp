@@ -119,7 +119,7 @@ void Manifest::serialize() {
     writer.EndArray();   // end "programs"
     writer.EndObject();  // end BFNCompilerArchive
 
-    BUG_CHECK(_manifestStream, "manifest,jsom has been serialized already!");
+    BUG_CHECK(_manifestStream, "manifest.json has been serialized already!");
 
     _manifestStream << sb.GetString();
     _manifestStream.flush();

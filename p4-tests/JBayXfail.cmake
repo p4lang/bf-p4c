@@ -36,6 +36,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_16/stf/parser_loop_1.p4
     extensions/p4_tests/p4_16/stf/parser_loop_2.p4
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+    extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
 
   p4c_add_xfail_reason("tofino2"

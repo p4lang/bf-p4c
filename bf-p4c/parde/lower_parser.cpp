@@ -787,19 +787,19 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     struct CountStridedHeaderRefs : public Inspector {
-        std::map<cstring, std::vector<unsigned>> header_stack_to_indices;
+        std::map<cstring, std::set<unsigned>> header_stack_to_indices;
 
         bool preorder(const IR::HeaderStackItemRef* hs) {
             auto stack = hs->base()->toString();
             auto index = hs->index()->to<IR::Constant>()->asUnsigned();
-            header_stack_to_indices[stack].push_back(index);
+            header_stack_to_indices[stack].insert(index);
             return false;
         }
     };
 
     unsigned getOffsetIncAmt(const IR::BFN::ParserState* state) {
         CountStridedHeaderRefs count;
-        state->apply(count);
+        state->statements.apply(count);
 
         // TODO move this check to midend
         if (count.header_stack_to_indices.size() > 1) {
@@ -812,12 +812,17 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         auto& indices = count.header_stack_to_indices.begin()->second;
 
-        for (unsigned i = 0; i < indices.size(); i++) {
-            if (indices[i] != i) {
-                ::error("Illegal header stack references in parser state %1%. "
-                        "Header stack indices must be contiguous.", state->name);
+        unsigned i = 0;
+
+        for (auto idx : indices) {
+            if (idx != i) {
+                BUG("Illegal header stack references in parser state %1%. "
+                     "Header stack indices must be contiguous.", state->name);
             }
+            i++;
         }
+
+        LOG4(state->name << " has offset_inc = " << indices.size());
 
         return indices.size();
     }

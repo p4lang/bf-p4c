@@ -1,0 +1,24 @@
+expect 2 04 01010101 ff
+packet 0 04 01010101 ff
+
+expect 2 03 010202 ff
+packet 0 03 010202 ff
+
+expect 2 03 020201 ff
+packet 0 03 020201 ff
+
+expect 2 04 01030303 ff
+packet 0 04 01030303 ff
+
+expect 2 04 03030301 ff
+packet 0 04 03030301 ff
+
+expect 2 06 010202030303 ff
+packet 2 06 010202030303 ff
+
+expect 2 06 010303030202 ff
+packet 2 06 010303030202 ff
+
+expect 2 07 01020201030303 ff
+packet 2 07 01020201030303 ff
+
