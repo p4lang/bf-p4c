@@ -818,6 +818,7 @@ class ConstructSymbolTable : public Inspector {
     // - the resubmit index is the value stored for hash key of element within
     // the map
     std::map<unsigned long, unsigned> resubmitIndexHashes;
+    std::set<unsigned> resubmitIndexSet;
     // digestIndex is similar to resubmitIndex and generate_digest() can only be called in ingress
     std::map<unsigned long, unsigned> digestIndexHashes;
 
@@ -1523,6 +1524,12 @@ class ConstructSymbolTable : public Inspector {
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->_map.emplace(node, stmt);
 
+        if (resubmitIndexSet.count(resubmitId)) {
+            LOG3("Already generated resubmit.emit for id " << resubmitId);
+            return;
+        } else {
+            resubmitIndexSet.insert(resubmitId);
+        }
         /*
          * Add header definition to top level;
          * header $resubmit_header_t {
