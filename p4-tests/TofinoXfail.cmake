@@ -417,7 +417,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "The input .* cannot be found on the hash input|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-724/comp_724.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1412,6 +1411,7 @@ p4c_add_xfail_reason("tofino"
 # Expected failures due to program error
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call|./p4c TIMEOUT"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
@@ -1426,11 +1426,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1672-1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "is not allocated contiguously by bit on the input xbar and cannot be resolved"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-a.p4
 )
 
 # P4C-1862

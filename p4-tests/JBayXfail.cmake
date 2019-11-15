@@ -290,6 +290,12 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/stful/stful.p4
 )
 
+# P4C-2325
+p4c_add_xfail_reason("tofino2"
+  "inconsistent table layout"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+)
+
 # Expected failures due to program error
 p4c_add_xfail_reason("tofino2"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call"
@@ -305,18 +311,8 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "The input .* cannot be found on the hash input|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Slicing the following supercluster is taking too long"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  ".* is not allocated contiguously by bit on the input xbar and cannot be resolved"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-a.p4
 )
 
 p4c_add_xfail_reason("tofino2"
