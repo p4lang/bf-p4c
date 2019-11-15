@@ -1,5 +1,6 @@
 #include <stack>
 #include "ir/ir.h"
+#include "ir/pattern.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/strengthReduction.h"
 #include "frontends/p4/simplify.h"
@@ -59,7 +60,8 @@ class DoSimplifyNestedIf : public Transform {
                        const IR::Statement* stmt,
                        const IR::Expression* condition);
     std::vector<int>* checkTypeAndGetVec(const IR::Statement* stmt);
-    void addInArray(std::vector<int>* typeVec, const IR::Expression* condition);
+    void addInArray(std::vector<int>* typeVec, const IR::Expression* condition,
+                                               const IR::IfStatement* ifstmt);
 };
 
 class SimplifyComplexConditionPolicy {

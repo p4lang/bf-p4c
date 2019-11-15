@@ -45,13 +45,20 @@ std::vector<int>* DoSimplifyNestedIf::checkTypeAndGetVec(const IR::Statement* st
 }
 
 void DoSimplifyNestedIf::addInArray(std::vector<int>* typeVec,
-                                 const IR::Expression* condition) {
+                                    const IR::Expression* condition,
+                                    const IR::IfStatement* ifstmt) {
     if (auto neq = condition->to<IR::LNot>()) {
         condition = neq->expr;
     }
+    Pattern::Match<IR::Expression> expr;
+    Pattern::Match<IR::Constant> constant;
     if (auto cond = condition->to<IR::Operation_Binary>()) {
-        auto constant = cond->right->to<IR::Constant>();
-        typeVec->at(constant->asInt()) = 1;
+        if ((expr == constant).match(cond)) {
+            typeVec->at(constant->asInt()) = 1;
+        } else {
+            ::error("If statement is too complex to handle.%1% \n Supported if condition :"
+            " if (digest/mirror/resubmit_type == constant)", ifstmt->srcInfo);
+        }
     }
     return;
 }
@@ -81,7 +88,7 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
         stack_.push_back(stmt->condition);
         visit(stmt->ifTrue);
         if (auto typeVec = checkTypeAndGetVec(stmt->ifTrue)) {
-            addInArray(typeVec, stmt->condition);
+            addInArray(typeVec, stmt->condition, stmt);
         }
         predicates[stmt->ifTrue] = stack_;
         stack_.pop_back(); }
