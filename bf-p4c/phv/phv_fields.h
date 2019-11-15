@@ -1092,42 +1092,52 @@ class PhvInfo {
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together_i; }
     const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together_i; }
     bool are_bridged_extracted_together(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
         return bridged_extracted_together_i(f1->id, f2->id);
     }
 
     void addDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
         deparser_no_pack_i(f1->id, f2->id) = true;
     }
 
     void addFieldMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
         field_mutex_i(f1->id, f2->id) = true;
     }
 
     void removeFieldMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
         field_mutex_i(f1->id, f2->id) = false;
     }
 
     void addMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
         metadata_mutex_i(f1->id, f2->id) = true;
     }
 
     void addDarkMutex(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
         dark_mutex_i(f1->id, f2->id) = true;
     }
 
     bool isFieldMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
         return field_mutex_i(f1->id, f2->id);
     }
 
     bool isMetadataMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
         return metadata_mutex_i(f1->id, f2->id);
     }
 
     bool isDarkMutex(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
         return dark_mutex_i(f1->id, f2->id);
     }
 
     bool isDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
         return deparser_no_pack_i(f1->id, f2->id);
     }
 

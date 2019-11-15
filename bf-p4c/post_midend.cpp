@@ -12,7 +12,7 @@ namespace BFN {
 // SimplifyReference transforms IR::P4Program towards the
 // backend IR representation, as a result, the transformed
 // P4Program no longer type-check.
-PostMidEnd::PostMidEnd(BFN_Options& options, bool with_bridge_packing) {
+PostMidEnd::PostMidEnd(BFN_Options& options, bool /* with_bridge_packing */) {
     refMap.setIsV1(true);
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);

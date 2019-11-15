@@ -1520,7 +1520,7 @@ PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
             sliceListSize += slice.size();
             if (candidateFound && sliceListSize == minSize) {
                 LOG6("\t\t\t  Returning point " << point);
-                if (numFields == -1 || numFields > fields.size()) {
+                if (numFields == -1 || numFields > int(fields.size())) {
                     bestPoint = &point;
                     numFields = fields.size();
                 }

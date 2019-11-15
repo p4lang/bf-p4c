@@ -236,7 +236,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         lc.total_layout_options[t->name][ActionData::NORMAL] = lo;
         lc.total_action_formats[t->name][ActionData::NORMAL] = action_formats;
 
-        int entries = t->layout.entries;
+        // int entries = t->layout.entries;
         // StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
 
         int curr_stage = t->logical_id/16;

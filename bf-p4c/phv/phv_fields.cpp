@@ -6,9 +6,10 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/lib/error_type.h"
+#include "bf-p4c/parde/parde_visitor.h"
 #include "lib/stringref.h"
 
 FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
@@ -265,8 +266,8 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
 void PhvInfo::get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const {
     const PhvInfo::StructInfo arr_info = struct_info(full_hdr_name(name_));
 
-    int fld_id = arr_info.first_field_id;
-    int last_fld = fld_id + arr_info.size;
+    size_t fld_id = arr_info.first_field_id;
+    size_t last_fld = fld_id + arr_info.size;
 
     while ((fld_id < by_id.size()) && (fld_id < last_fld)) {
         flds.insert(by_id.at(fld_id));
@@ -1317,7 +1318,8 @@ struct ComputeFieldAlignments : public Inspector {
 
         auto* fieldInfo = phv.field(lval->field);
         if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
-            ::warning("No allocation for field %1%", extract->dest);
+            ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
+                      extract->dest);
             return false;
         }
 
@@ -1383,7 +1385,8 @@ struct ComputeFieldAlignments : public Inspector {
 
             auto* fieldInfo = phv.field(emit->source->field);
             if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
-                ::warning("No allocation for field %1%", emit->source);
+                ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
+                          emit->source);
                 currentBit = 0;
                 continue;
             }
@@ -1579,12 +1582,18 @@ class CollectPardeConstraints : public Inspector {
             auto fi = phv.field(efi->source->field);
             auto pi = phv.field(efi->povBit->field);
 
+            if (!fi) continue;  // FIXME(hanw): padding field. Need a better way to identify it.
+
+            BUG_CHECK(fi && pi, "Deparser Emit with a non-PHV or non-POV source: %1%", efi);
+
             for (auto jt = deparser->emits.begin(); jt != deparser->emits.end(); jt++) {
                 auto efj = (*jt)->to<IR::BFN::EmitField>();
                 if (!efj) continue;
 
                 auto fj = phv.field(efj->source->field);
                 auto pj = phv.field(efj->povBit->field);
+
+                if (!fj) continue;  // FIXME(hanw): padding field. Need a better way to identify it.
 
                 if (pi != pj) {
                     phv.addDeparserNoPack(fi, fj);
@@ -1614,6 +1623,7 @@ class CollectPardeConstraints : public Inspector {
 
     void postorder(const IR::BFN::EmitField* emit) override {
         auto* src_field = phv.field(emit->source->field);
+        if (!src_field) return;  // FIXME(hanw): padding field. Need a better way to identify it.
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
         // XXX(cole): These two constraints will be subsumed by deparser schema.

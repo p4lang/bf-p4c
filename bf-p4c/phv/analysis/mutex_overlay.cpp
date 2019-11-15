@@ -243,6 +243,7 @@ void ExcludeDeparserOverlays::end_apply() {
         LOG3("\t  Marking fields emitted based on POV field: " << kv.first->name);
         for (const auto* f1 : kv.second) {
             for (const auto* f2 : kv.second) {
+                if (!f1 || !f2) continue;  // FIXME(hanw): padding fields
                 if (f1 == f2) continue;
                 phv.removeFieldMutex(f1, f2);
                 LOG3("\t\t" << f1->name << ", " << f2->name);

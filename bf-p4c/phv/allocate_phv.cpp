@@ -2096,7 +2096,7 @@ mergeContiguousSlices(const PHV::SuperCluster::SliceList* list) {
             slice = PHV::FieldSlice(slice.field(), FromTo(slice.range().lo, it->range().hi));
         else
             rv->push_back(slice); }
-    if (rv->back() != slice)
+    if (rv->size() == 0 || rv->back() != slice)
         rv->push_back(slice);
     return rv;
 }
