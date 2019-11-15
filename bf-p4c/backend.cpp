@@ -153,7 +153,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CollectPhvInfo(phv),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
+        new DumpPipe("Before packing"),
         flexiblePacking,
+        new DumpPipe("After packing"),
         new ResolveSizeOfOperator(),
         new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.

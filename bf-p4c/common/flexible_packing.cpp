@@ -1742,7 +1742,8 @@ ReplaceFlexFieldUses::getNewExtracts(cstring h, unsigned& packetOffset) const {
 IR::BFN::Extract* ReplaceFlexFieldUses::getNewSavedVal(const IR::BFN::Extract* e) const {
     const IR::BFN::SavedRVal* source = e->source->to<IR::BFN::SavedRVal>();
     BUG_CHECK(source, "Cannot get saved source for SavedRVal object %1%", e);
-    const auto* f = phv.field(source->source);
+    le_bitrange bits;
+    const auto* f = phv.field(source->source, &bits);
     auto* newE = new IR::BFN::Extract(e->dest, e->source);
     if (!f) return newE;
     if (!fieldsToReplace.count(f->name)) return newE;
@@ -1750,7 +1751,9 @@ IR::BFN::Extract* ReplaceFlexFieldUses::getNewSavedVal(const IR::BFN::Extract* e
     LOG4("\t\tFound field to replace: " << e);
     auto& exprMap = info.getBridgedToExpressionsMap();
     if (exprMap.count(f->name)) {
-        IR::Member* mem = exprMap.at(f->name);
+        IR::Expression* mem = exprMap.at(f->name);
+        if (bits.size() < f->size)
+            mem = new IR::Slice(mem, bits.hi, bits.lo);
         IR::BFN::SavedRVal* source = new IR::BFN::SavedRVal(mem);
         IR::BFN::Extract* newExtract = new IR::BFN::Extract(e->dest, source);
         LOG4("\t\t  New saved val extract: " << newExtract);
