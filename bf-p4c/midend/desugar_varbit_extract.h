@@ -103,6 +103,8 @@ class CollectVarbitExtract : public Inspector {
     std::map<const IR::ParserState*,
              std::set<const IR::Expression*>> state_to_verify_exprs;
 
+    std::map<const IR::StructField*, cstring> varbit_field_to_header_instance;
+
     std::map<const IR::StructField*,
              std::set<const IR::MethodCallExpression*>> varbit_field_to_csum_call;
 
@@ -138,7 +140,7 @@ class CollectVarbitExtract : public Inspector {
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
         const IR::Expression* varsize_expr,
-        const IR::Type_Header* hdr_type);
+        const IR::Member* hdr_inst);
 
     bool preorder(const IR::MethodCallExpression*) override;
     bool preorder(const IR::AssignmentStatement*) override;
@@ -163,12 +165,16 @@ class RewriteVarbitUses : public Modifier {
  private:
     profile_t init_apply(const IR::Node* root) override;
 
-    IR::ParserState*
+    const IR::ParserState*
     create_branch_state(const IR::BFN::TnaParser* parser,
                         const IR::Expression* select,
-                        const IR::StructField* varbit_field, unsigned length);
+                        const IR::StructField* varbit_field, unsigned length, cstring name);
 
     void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field);
+
+    const IR::ParserState*
+    create_end_state(const IR::BFN::TnaParser* parser,
+                     const IR::ParserState* state, cstring name);
 
     bool preorder(IR::BFN::TnaParser*) override;
     bool preorder(IR::ParserState*) override;
@@ -179,6 +185,34 @@ class RewriteVarbitUses : public Modifier {
 
  public:
     explicit RewriteVarbitUses(const CollectVarbitExtract& cve) : cve(cve) {}
+};
+
+struct RemoveZeroVarbitExtract : public Modifier {
+    bool preorder(IR::ParserState* state) override {
+        IR::IndexedVector<IR::StatOrDecl> rv;
+
+        for (auto stmt : state->components) {
+            if (auto mc = stmt->to<IR::MethodCallStatement>()) {
+                auto call = mc->methodCall;
+                if (auto method = call->method->to<IR::Member>()) {
+                    if (method->member == "extract") {
+                        if (call->arguments->size() == 2) {
+                            auto varsize_expr = (*call->arguments)[1]->expression;
+                            if (auto c = varsize_expr->to<IR::Constant>()) {
+                                if (c->asInt() == 0)
+                                    continue;
+                            }
+                        }
+                    }
+                }
+            }
+
+            rv.push_back(stmt);
+        }
+
+        state->components = rv;
+        return false;
+    }
 };
 
 class RewriteVarbitTypes : public Modifier {
@@ -208,6 +242,7 @@ class RewriteParserVerify : public Transform {
 class DesugarVarbitExtract : public PassManager {
  public:
     explicit DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+        auto remove_zero_varbit = new RemoveZeroVarbitExtract;
         auto collect_varbit_extract = new CollectVarbitExtract(refMap, typeMap);
         auto rewrite_varbit_uses = new RewriteVarbitUses(*collect_varbit_extract);
         auto rewrite_parser_verify = new RewriteParserVerify(*collect_varbit_extract);
@@ -216,6 +251,7 @@ class DesugarVarbitExtract : public PassManager {
 
         addPasses({
             new CheckMauUse,
+            remove_zero_varbit,
             collect_varbit_extract,
             rewrite_varbit_uses,
             rewrite_parser_verify,

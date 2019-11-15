@@ -143,6 +143,7 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
     }
 
     unsigned branches_needed = 0;
+    bool too_many_branches = false;
 
     for (unsigned long i = 0; i < (1UL << var_bitwidth); i++) {
         if (is_legal_runtime_value(state, encode_var, i)) {
@@ -162,18 +163,20 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
         branches_needed++;
 
-        if (branches_needed > 100)
+        if (branches_needed > 1024) {
+            too_many_branches = true;
             break;
+        }
     }
 
-    if (branches_needed > 100) {
+    if (too_many_branches) {
         ::fatal_error("Varbit extract requires too many parser branches to implement. "
                   "Consider rewriting the variable length expression to reduce "
                   "the number of possible runtime values: %1%", call);
         return false;
     }
 
-    LOG2(varsize_expr << " needs " << branches_needed << "to implement");
+    LOG2(varsize_expr << " needs " << branches_needed << " branches to implement");
     LOG2(varsize_expr << " evaluate to compile time constants:");
 
     for (auto& kv : compile_time_constants)
@@ -189,11 +192,13 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
         const IR::Expression* varsize_expr,
-        const IR::Type_Header* hdr_type) {
+        const IR::Member* hdr_inst) {
     if (state_to_varbit_header.count(state)) {
         P4C_UNIMPLEMENTED("%1%: multiple varbit fields in a parser state"
                               " is currently unsupported", call);
     }
+
+    auto hdr_type = hdr_inst->type->to<IR::Type_Header>();
 
     const IR::StructField* varbit_field = hdr_type->fields.back();
 
@@ -216,6 +221,7 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     state_to_varbit_field[state] = varbit_field;
     state_to_encode_var[state] = encode_var;
 
+    varbit_field_to_header_instance[varbit_field] = hdr_inst->member;
     varbit_field_to_compile_time_constants[varbit_field] = compile_time_constants;
     varbit_field_to_reject_values[varbit_field] = reject_values;
 
@@ -264,8 +270,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
 
         if (auto method = call->method->to<IR::Member>()) {
             if (method->member == "extract") {
-                auto dest = (*call->arguments)[0]->expression;
-                auto hdr_type = dest->type->to<IR::Type_Header>();
+                auto hdr_inst = (*call->arguments)[0]->expression->to<IR::Member>();
 
                 if (call->arguments->size() == 2) {
                     auto varsize_expr = (*call->arguments)[1]->expression;
@@ -278,7 +283,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                               " is currently unsupported", call);
                     }
 
-                    enumerate_varbit_field_values(call, state, varsize_expr, hdr_type);
+                    enumerate_varbit_field_values(call, state, varsize_expr, hdr_inst);
 
                     auto parser = findContext<IR::BFN::TnaParser>();
                     state_to_parser[state] = parser;
@@ -362,7 +367,7 @@ create_add_statement(const IR::Member* method,
                      const IR::PathExpression* path,
                      const IR::Type_Header* header) {
     auto listVec = IR::Vector<IR::Expression>();
-    cstring headerName = create_instance_name(header->name);
+    auto headerName = create_instance_name(header->name);
     for (auto f : header->fields) {
         listVec.push_back(new IR::Member(f->type, new IR::Member(path, headerName), f->name));
     }
@@ -372,9 +377,20 @@ create_add_statement(const IR::Member* method,
     return new IR::MethodCallStatement(addCall);
 }
 
-IR::ParserState*
+const IR::ParserState*
 RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
-        const IR::Expression* select, const IR::StructField* varbit_field, unsigned length) {
+        const IR::Expression* select, const IR::StructField* varbit_field, unsigned length,
+        cstring name) {
+    for (auto& kv : state_to_branches) {
+        auto p = cve.state_to_parser.at(kv.first);
+        if (p == parser) {
+            for (auto s : kv.second) {
+                if (name == s.second->name)
+                    return s.second;
+            }
+        }
+    }
+
     IR::IndexedVector<IR::StatOrDecl> statements;
 
     auto header = varbit_field_to_header_types[varbit_field][length];
@@ -383,7 +399,8 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     auto path = (*call->arguments)[0]->expression->to<IR::Member>()
                                      ->expr->to<IR::PathExpression>();
 
-    auto extract = create_extract_statement(parser, path, create_instance_name(header->name));
+    auto varbit_hdr_inst = create_instance_name(header->name);
+    auto extract = create_extract_statement(parser, path, varbit_hdr_inst);
     statements.push_back(extract);
 
     if (cve.varbit_field_to_csum_call.count(varbit_field)) {
@@ -392,7 +409,6 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
             statements.push_back(create_add_statement(method, path, header));
         }
     }
-    cstring name = "parse_" + varbit_field->name + "_" + cstring::to_cstring(length) + "b";
     auto branch_state = new IR::ParserState(name, statements, select);
 
     LOG3("create state " << name);
@@ -400,17 +416,39 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     return branch_state;
 }
 
+const IR::ParserState*
+RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
+                                    const IR::ParserState* state, cstring name) {
+    for (auto& kv : state_to_branches) {
+        auto p = cve.state_to_parser.at(kv.first);
+        if (p == parser) {
+            for (auto s : kv.second) {
+                if (name == s.second->name)
+                    return s.second;
+            }
+        }
+    }
+
+    IR::IndexedVector<IR::StatOrDecl> statements;
+    if (cve.state_to_csum_verify.count(state))
+        statements.push_back(cve.state_to_csum_verify.at(state));
+
+    return new IR::ParserState(name, statements, state->selectExpression);
+}
+
 void RewriteVarbitUses::create_branches(const IR::ParserState* state,
-                                         const IR::StructField* varbit_field) {
+                                        const IR::StructField* varbit_field) {
     ordered_map<unsigned, const IR::ParserState*> match_to_branch_state;
 
     auto parser = cve.state_to_parser.at(state);
     auto orig_header = cve.state_to_varbit_header.at(state);
+    auto orig_hdr_inst = cve.varbit_field_to_header_instance.at(varbit_field);
     auto encode_var = cve.state_to_encode_var.at(state);
 
     auto& value_map = cve.varbit_field_to_compile_time_constants.at(varbit_field);
 
-    cstring no_option_state_name = "parse_" + varbit_field->name + "_0b";
+    cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
+    const IR::ParserState* no_option_state = nullptr;
 
     for (auto& kv : value_map) {
         auto match = kv.first;
@@ -427,17 +465,22 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
             else  // unconditional transition (varsize expr is constant)
                 select = state->selectExpression;
 
-            auto branch_state = create_branch_state(parser, select, varbit_field, length);
+            cstring name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_" +
+                    cstring::to_cstring(length) + "b";
+
+            auto branch_state = create_branch_state(parser, select, varbit_field, length, name);
+
             match_to_branch_state[match] = branch_state;
         } else {
-            IR::IndexedVector<IR::StatOrDecl> statements;
-            if (cve.state_to_csum_verify.count(state)) {
-                statements.push_back(cve.state_to_csum_verify.at(state));
-            }
-            auto no_option_state = new IR::ParserState(no_option_state_name, statements,
-                                                       state->selectExpression);
+            no_option_state = create_end_state(parser, state, no_option_state_name);
+
             match_to_branch_state[match] = no_option_state;
         }
+    }
+
+    if (!no_option_state) {
+        no_option_state = create_end_state(parser, state, no_option_state_name);
+        match_to_branch_state[0] = no_option_state;
     }
 
     state_to_branches[state] = match_to_branch_state;
@@ -458,12 +501,17 @@ bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
     if (!has_varbit)
         return true;
 
+    std::set<const IR::ParserState*> states;
+
     for (auto& kv : state_to_branches) {
         if (cve.state_to_parser.at(kv.first) == orig) {
             for (auto& ms : kv.second)
-                parser->states.push_back(ms.second);
+                states.insert(ms.second);
         }
     }
+
+    for (auto s : states)
+        parser->states.push_back(s);
 
     return true;
 }
