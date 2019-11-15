@@ -919,10 +919,9 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 BUG_CHECK(bit == match->size); }
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bit(0)/128U != word) continue;
-                // don't need to enable vh_xbar just for version/valid, but do need to enable
-                // at least one word of vh_xbar always, so use this one if there's no match
-                if (!format->field("match", i))
-                    using_match = true;
+                ///> P4C-1552: if no match, but a version/valid is, the vh_xbar needs to be
+                ///> enabled.  This was preventing anything from running
+                using_match = true;
                 for (unsigned j = 0; j < version->size; ++j) {
                     unsigned bit = version->bit(j);
                     unsigned byte = (bit%128)/8;
