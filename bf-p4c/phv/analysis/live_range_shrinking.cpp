@@ -192,8 +192,8 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
     int init_dep_tail = dg.dependence_tail_size_control_anti(init);
     LOG7("\t\t\t  use_stage: " << use_stage << ", init_stage: " << init_stage << ", init_dep_tail: "
             << init_dep_tail);
-    if (use_stage < init_stage) return false;
-    int new_init_stage = use_stage + 1;
+    // if (use_stage < init_stage) return false;
+    int new_init_stage = std::max(use_stage + 1, init_stage);
     LOG7("\t\t\t  new_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
     if (new_init_stage + init_dep_tail > maxStages) return true;
     // If in a previous round of table placement, use table was allocated earlier than the init
@@ -202,12 +202,20 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
         LOG5("\t\t\t  Disabling this metadata init because of previous round.");
         return true;
     }
-    if (!tableAlloc.hasTablePlacement()) return false;
+    if (!tableAlloc.hasTablePlacement()) {
+        LOG5("\t\t\t  No need to check actual allocation because no previous round.");
+        return false;
+    }
     auto use_prev_round_stages = tableAlloc.stage(use);
+    auto init_prev_round_stages = tableAlloc.stage(init);
     auto last_stage_use = std::max_element(use_prev_round_stages.begin(),
             use_prev_round_stages.end());
-    new_init_stage = *last_stage_use + 1;
-    if (new_init_stage + init_dep_tail > Device::numStages()) {
+    auto last_stage_init = std::max_element(init_prev_round_stages.begin(),
+            init_prev_round_stages.end());
+    new_init_stage = std::max(*last_stage_use + 1, *last_stage_init);
+    LOG7("\t\t\t  last_stage_use: " << *last_stage_use << ", new_init_stage: " << new_init_stage <<
+         ", init_dep_tail: " << init_dep_tail);
+    if (new_init_stage + init_dep_tail >= Device::numStages() - 1) {
         LOG5("\t\t\t  Disallowing this metadata init because it would cause use to exceed "
              "number of stages based on previous round");
         return true;
@@ -305,12 +313,19 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc,
         bool ignoreMutex) const {
+    // If a table has a stage pragma associated with it, initializing at that table may cause us to
+    // add dependencies that prevent that pragma from being satisfied. Therefore, prevent
+    // initialization at tables that have the stage pragma associated with them.
+    if (t->get_provided_stage() >= 0) {
+        LOG3("\t\t\tIgnoring table " << t->name << " because it has a stage pragma specified.");
+        return boost::none;
+    }
     // If the uses of the previous field do not reach this initialization point, then the live
     // ranges might overlap.
     ordered_set<const IR::BFN::Unit*> prevUseUnits;
-    for (const auto* t : prevUses) {
-        const IR::BFN::Unit* u = t->to<IR::BFN::Unit>();
-        if (!u) BUG("How is table %1% not a unit?", t->name);
+    for (const auto* tbl : prevUses) {
+        const IR::BFN::Unit* u = tbl->to<IR::BFN::Unit>();
+        if (!u) BUG("How is table %1% not a unit?", tbl->name);
         prevUseUnits.insert(u);
     }
     if (!canFUsesReachInitTable(t, prevUseUnits)) {

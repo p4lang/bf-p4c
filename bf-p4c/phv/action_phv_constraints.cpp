@@ -1490,10 +1490,12 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     if (stateful_destinations_constraints_violated(container_state))
         return boost::none;
 
+#if 0
     // Check for parser constant extract for non 8b containers.
     if (Device::currentDevice() == Device::TOFINO)
        if (!parser_constant_extract_satisfied(c, container_state))
             return boost::none;
+#endif
 
     // Check if any of the destinations require a speciality read, and therefore, we cannot have a
     // bitmasked-set instruction for this packing.

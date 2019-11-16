@@ -274,6 +274,7 @@ struct Pridgen {
 @pa_container_size("ingress", "Naubinway.Alamosa.Exton", 32)
 @pa_container_size("egress", "Lamona.Knoke.Ipava", 32)
 @pa_container_size("ingress", "Lamona.Broussard.Monahans", 32)
+@pa_container_size("ingress", "Naubinway.WindGap.Loris", 16)
 struct Beaverdam {
     Exell     ElVerano;
     Iberia    Brinkman;

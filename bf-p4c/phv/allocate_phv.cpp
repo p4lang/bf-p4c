@@ -739,7 +739,9 @@ bool CoreAllocation::satisfies_constraints(
     if (slices.size() > 0 && slice.field()->no_pack()) {
         for (auto& sl : slices) {
             LOG5("\t\t\tChecking no-pack for live slice: " << sl);
-            if (slice.isLiveRangeDisjoint(sl)) {
+            if (slice.isLiveRangeDisjoint(sl) ||
+                (slice.container_slice().overlaps(sl.container_slice()) &&
+                 phv_i.isMetadataMutex(sl.field(), slice.field()))) {
                 LOG5("\t\t\t  Ignoring because of disjoint live range");
                 continue;
             }
@@ -751,7 +753,10 @@ bool CoreAllocation::satisfies_constraints(
     // Check no pack for any other fields already in the container.
     for (auto& sl : slices) {
         if (sl.field()->no_pack()) {
-            if (slice.isLiveRangeDisjoint(sl)) continue;
+            if (slice.isLiveRangeDisjoint(sl) ||
+                (slice.container_slice().overlaps(sl.container_slice()) &&
+                 phv_i.isMetadataMutex(slice.field(), sl.field())))
+                continue;
             LOG5("        constraint: field " << sl.field()->name << " has no_pack constraint and "
                  "is already placed in this container");
             return false; } }
@@ -772,7 +777,8 @@ bool CoreAllocation::satisfies_constraints(
 
     bool isThisSliceExtracted = !slice.field()->pov && uses_i.is_extracted(slice.field());
     bool isThisSliceUninitialized = (slice.field()->pov
-            || (defuse_i.hasUninitializedRead(slice.field()->id) && !initFields.count(slice)));
+            || (defuse_i.hasUninitializedRead(slice.field()->id) && !initFields.count(slice) &&
+                !pragmas_i.pa_no_init().getFields().count(slice.field())));
 
     bool hasExtractedTogether = std::all_of(
             liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {

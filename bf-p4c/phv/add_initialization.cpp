@@ -56,7 +56,7 @@ Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) 
             // For each alloc slice in the field, check if metadata initialization is required.
             if (!slice.has_meta_init) continue;
             LOG4("\t  Need to initialize " << f.name << " : " << slice);
-            fieldsForInit.insert(slice.field);
+            fieldsForInit.insert(PHV::FieldSlice(slice.field, slice.field_bits()));
             for (const auto* act : slice.init_points) {
                 actionInits[act].push_back(slice);
                 LOG4("\t\tInitialize at action " << act->name);
@@ -291,7 +291,7 @@ void ComputeDependencies::noteDependencies(
 
 Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
     initTableNames.clear();
-    const auto& fields = fieldsForInit.getComputeFieldsRequiringInit();
+    const auto& slices = fieldsForInit.getSlicesRequiringInitialization();
     const auto& livemap = liverange.getMetadataLiveMap();
     // Set of fields involved in metadata initialization whose usedef live ranges must be
     // considered.
@@ -304,11 +304,13 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
     // The key here is a field that must be initialized as part of live range shrinking; the values
     // are the set of fields that overlap with the key field, and so there must be dependencies
     // inserted from the reads of the value fields to the initializations inserted.
-    for (const auto* f : fields) {
+    for (const auto& sliceToInit : slices) {
+        const PHV::Field* f = sliceToInit.field();
         // For each field, check the other slices overlapping with that field.
         // FIXME(cc): check that this should always be the full pipeline. Or this should change
         // when we compute live ranges per stage
         f->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+            if (!slice.field_bits().overlaps(sliceToInit.range())) return;
             auto slices = phv.get_slices_in_container(slice.container);
             for (auto& sl : slices) {
                 if (slice == sl) continue;

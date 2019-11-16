@@ -58,7 +58,7 @@ class ComputeFieldsRequiringInit : public Inspector {
     ordered_map<const IR::MAU::Action*, std::vector<MapFieldToExpr::AllocSlice>> actionInits;
 
     // Map of all fields that must be initialized (across all actions).
-    ordered_set<const PHV::Field*> fieldsForInit;
+    ordered_set<PHV::FieldSlice> fieldsForInit;
 
     profile_t init_apply(const IR::Node* root) override;
 
@@ -66,7 +66,7 @@ class ComputeFieldsRequiringInit : public Inspector {
     explicit ComputeFieldsRequiringInit(const PhvInfo& p) : phv(p) { }
 
     // @returns the set of all fields that must be initialized across all actions.
-    const ordered_set<const PHV::Field*>& getComputeFieldsRequiringInit() const {
+    const ordered_set<PHV::FieldSlice>& getSlicesRequiringInitialization() const {
         return fieldsForInit;
     }
 

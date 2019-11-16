@@ -23,6 +23,7 @@ class PragmaNoOverlay : public Inspector {
     bool add_constraint(cstring field_name);
 
     bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const IR::MAU::Instruction* inst) override;
 
  public:
     explicit PragmaNoOverlay(PhvInfo& phv) : phv_i(phv) { }

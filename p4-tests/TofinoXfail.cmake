@@ -237,7 +237,6 @@ p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
   switch_8.7_generic_int_leaf
-  switch_8.7_msdc_leaf_int
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
 )
 
@@ -246,6 +245,7 @@ p4c_add_xfail_reason("tofino"
   switch_8.7_l3_heavy_int_leaf
   switch_generic_int_leaf
   switch_l3_heavy_int_leaf
+  switch_8.7_msdc_leaf_int
   switch_msdc_leaf_int
 )
 

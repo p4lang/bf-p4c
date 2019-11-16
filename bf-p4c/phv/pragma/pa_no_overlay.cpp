@@ -28,6 +28,24 @@ bool PragmaNoOverlay::add_constraint(cstring field_name) {
     return true;
 }
 
+bool PragmaNoOverlay::preorder(const IR::MAU::Instruction* inst) {
+    // XXX(Deep): Until we handle concat operations in the backend properly (by adding metadata
+    // fields with concat operations to a slice list, also containing padding fields that must be
+    // initialized to 0), we have to disable overlay for any field used in concat operations (concat
+    // operations that survive in the backend).
+    if (inst->operands.empty()) return true;
+    for (auto* operand : inst->operands) {
+        if (!operand->is<IR::Concat>()) continue;
+        const PHV::Field* f = phv_i.field(operand);
+        if (f) {
+            add_constraint(f->name);
+            LOG1("\tAdding pa_no_overlay on " << f->name << " because of a concat "
+                 "operation.");
+        }
+    }
+    return true;
+}
+
 bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
     auto check_pragma_string = [] (const IR::StringLiteral* ir) {
         if (!ir) {
