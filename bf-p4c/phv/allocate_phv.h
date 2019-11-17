@@ -498,7 +498,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
      *  2. Slicing by 7, 6, 5...1-bit chunks.
      *
      */
-    std::vector<bitvec>
+    ordered_set<bitvec>
     calc_slicing_schemas(const PHV::SuperCluster* sc,
                          const std::set<PHV::Allocation::AvailableSpot>& spots);
 

@@ -2416,10 +2416,10 @@ BruteForceAllocationStrategy::remove_unreferenced_clusters(
     return cluster_groups_filtered;
 }
 
-std::vector<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
+ordered_set<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
         const PHV::SuperCluster* sc,
         const std::set<PHV::ConcreteAllocation::AvailableSpot>& spots) {
-    std::vector<bitvec> rst;
+    ordered_set<bitvec> rst;
     const std::vector<int> chunk_sizes = {7, 6, 5, 4, 3, 2, 1};
 
     auto gress = sc->gress();
@@ -2437,16 +2437,20 @@ std::vector<bitvec> BruteForceAllocationStrategy::calc_slicing_schemas(
         covered_size += spot.n_bits;
         if (covered_size >= size) break;
         suggested_slice_schema.setbit(covered_size); }
-    if (covered_size >= size) {
-        rst.push_back(suggested_slice_schema); }
+    if (covered_size >= size  && !(suggested_slice_schema.empty())) {
+        LOG5("Adding schema: covered_size = " << covered_size << ", size = " << size <<
+             ", schema = " << suggested_slice_schema);
+        rst.insert(suggested_slice_schema); }
 
     // slice them to n-bit chunks.
     for (int sz : chunk_sizes) {
         bitvec slice_schema;
         for (int i = sz; i < sc->max_width(); i += sz) {
             slice_schema.setbit(i); }
-        rst.push_back(slice_schema); }
-
+        if (!(slice_schema.empty())) {
+            LOG5("Adding schema:  sz = " << sz << ", schema = " << slice_schema);
+            rst.insert(slice_schema); }
+    }
     return rst;
 }
 
@@ -2534,9 +2538,10 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
             continue; }
 
         auto available_spots = rst.available_spots();
-        std::vector<bitvec> slice_schemas = calc_slicing_schemas(sc, available_spots);
+        ordered_set<bitvec> slice_schemas = calc_slicing_schemas(sc, available_spots);
         // Try different slicing, from large to small
         for (const auto& slice_schema : slice_schemas) {
+            LOG5("Splitting supercluster" << sc << "using schema " << slice_schema);
             auto slice_rst = PHV::SlicingIterator::split_super_cluster(sc, slice_schema);
             if (!slice_rst) continue;
 
