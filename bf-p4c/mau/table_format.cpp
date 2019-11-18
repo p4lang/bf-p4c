@@ -967,8 +967,6 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
 }
 
 void TableFormat::setup_pfes_and_types() {
-    if (layout_option.layout.no_match_miss_path())
-        return;
     IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
                                           IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
                                           IR::MAU::PfeLocation::OVERHEAD;
