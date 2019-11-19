@@ -300,10 +300,15 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     bool isFlexibleHeader(const IR::BFN::DigestFieldList* d);
 
     /** Action analysis for the set of @nonByteAlignedFields in header @h. It populates the
-      * doNotPack matrix based on results of this analysis. @returns a matrix of fields that must be
-      * packed together.
+      * doNotPack matrix based on results of this analysis.
+      *
+      * @param alignmentConstraints will be populated with the alignment of must-pack fields.
+      *
+      * @returns a matrix of fields that must be packed together.
       */
-    SymBitMatrix bridgedActionAnalysis(std::vector<const PHV::Field*>& fieldsToBePacked);
+    SymBitMatrix bridgedActionAnalysis(
+        std::vector<const PHV::Field*>& fieldsToBePacked,
+        ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints);
 
     void updateNoPackForDigestFields(const std::vector<const PHV::Field*>& nonByteAlignedFields,
             const SymBitMatrix& mustPack);
@@ -369,10 +374,14 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
             const ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>>& acts,
             bool written = true) const;
 
-    /** @returns a matrix in which matrix(f1->id, f2->id) = true, if fields @f1 and @f2 in @fields
-      * must be packed together within the same byte.
-      */
-    SymBitMatrix mustPack(const ordered_set<const PHV::Field*>& fields) const;
+    /**
+     * @param alignmentConstraints will be populated with the alignment of must-pack fields.
+     *
+     * @returns a matrix in which matrix(f1->id, f2->id) = true, if fields @f1 and @f2 in @fields
+     * must be packed together within the same byte.
+     */
+    SymBitMatrix mustPack(const ordered_set<const PHV::Field*>& fields,
+        ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints) const;
 
     /** If the fields @f1 and @f2 must be packed together and @actions is the set of actions where
       * these fields are written, @returns a map of the field and its corresponding required

@@ -269,7 +269,11 @@ boost::optional<ordered_map<const PHV::Field*, int>> RepackFlexHeaders::mustBePa
     return reqAlignment;
 }
 
-SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& fields) const {
+/// @param alignmentConstraints if provided, will be populated with the alignment of must-pack
+/// fields.
+SymBitMatrix RepackFlexHeaders::mustPack(
+        const ordered_set<const PHV::Field*>& fields,
+        ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints) const {
     ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> reads;
     ordered_map<const PHV::Field*, const PHV::Field*> otherGressMapping;
     SymBitMatrix mustPackMatrix;
@@ -350,17 +354,23 @@ SymBitMatrix RepackFlexHeaders::mustPack(const ordered_set<const PHV::Field*>& f
             mustPackMatrix(ingressField1->id, ingressField2->id) = mustPackValue;
         }
     }
+
+    for (auto& kv : alignment) {
+        auto& field = kv.first;
+        alignmentConstraints.emplace(field, StartLen(kv.second, field->size));
+    }
+
     return mustPackMatrix;
 }
 
 void RepackFlexHeaders::updateNoPackForDigestFields(
         const std::vector<const PHV::Field*>& nonByteAlignedFields,
-        const SymBitMatrix& mustPack) {
+        const SymBitMatrix& mustPackMatrix) {
     for (const auto* field1 : nonByteAlignedFields) {
         if (!digestFlexFields.count(field1)) continue;
         for (const auto* field2 : nonByteAlignedFields) {
             if (field1 == field2) continue;
-            if (mustPack(field1->id, field2->id)) {
+            if (mustPackMatrix(field1->id, field2->id)) {
                 LOG4("\t\tEncountered must pack for " << field1->name << " and " << field2->name <<
                      " when the former is a digest field");
                 continue;
@@ -371,15 +381,19 @@ void RepackFlexHeaders::updateNoPackForDigestFields(
     }
 }
 
+/// @param alignmentConstraints will be populated with the alignment of must-pack
+/// fields.
 SymBitMatrix
-RepackFlexHeaders::bridgedActionAnalysis(std::vector<const PHV::Field*>& nonByteAlignedFields) {
+RepackFlexHeaders::bridgedActionAnalysis(
+        std::vector<const PHV::Field*>& nonByteAlignedFields,
+        ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints) {
     ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> fieldToActionWrites;
     ordered_set<const PHV::Field*> fieldsToBePacked;
     for (auto f : nonByteAlignedFields) {
         fieldsToBePacked.insert(f);
         fieldToActionWrites[f] = actionConstraints.actions_writing_fields(f); }
 
-    SymBitMatrix mustPackMatrix = mustPack(fieldsToBePacked);
+    SymBitMatrix mustPackMatrix = mustPack(fieldsToBePacked, alignmentConstraints);
 
     // Conservatively, mark fields that are written in the same action as do not pack. Also,
     for (const auto* field1 : nonByteAlignedFields) {
@@ -443,7 +457,7 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
         const ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
         const ordered_map<const PHV::Field*, std::set<int>>&
         conflictingAlignmentConstraints,
-        const SymBitMatrix& mustPack) const {
+        const SymBitMatrix& mustPackMatrix) const {
     static ordered_map<const PHV::Field*, int> emptyMap;
     ordered_map<const PHV::Field*, int> rv;
     ordered_set<const PHV::Field*> potentiallyPackableFields;
@@ -453,7 +467,7 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
     ordered_set<const PHV::Field*> mustPackFields;
     for (auto field2 : candidates) {
         if (field1 == field2) continue;
-        if (mustPack(field1->id, field2->id)) {
+        if (mustPackMatrix(field1->id, field2->id)) {
             LOG4("\t\tDetected must pack field " << field2->name);
             mustPackFields.insert(field2);
         }
@@ -567,6 +581,11 @@ ordered_map<const PHV::Field*, int> RepackFlexHeaders::packWithField(
             LOG4("\t\t\tUnoccupied bits: " << unOccupied);
             if (unOccupied.size() == 0 || f->size > static_cast<int>(unOccupied.size()))
                 return rv;
+
+            BUG_CHECK(alignmentConstraints.count(f),
+                      "Field %1% unexpectedly has no alignment constraint during flexible packing",
+                      f->name);
+
             int lo = alignmentConstraints.at(f).lo;
             LOG4("\t\t\tMust be aligned at bit: " << lo);
             for (int i = lo; i < lo + f->size; i++) {
@@ -931,9 +950,9 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
         }
     }
 
-    auto sliceListAlignment = bridgedActionAnalysis(nonByteAlignedFields);
     // Determine nonbyte-aligned bridged fields with alignment constraints.
     ordered_map<const PHV::Field*, le_bitrange> alignmentConstraints;
+    auto sliceListAlignment = bridgedActionAnalysis(nonByteAlignedFields, alignmentConstraints);
     ordered_map<const PHV::Field*, std::set<int>> conflictingAlignmentConstraints;
     ordered_set<const PHV::Field*> mustAlignFields;
     determineAlignmentConstraints(nonByteAlignedFields, alignmentConstraints,
