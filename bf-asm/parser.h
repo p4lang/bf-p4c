@@ -204,6 +204,8 @@ class Parser {
             template<class REGS> int write_future_config(REGS &, Parser *, State *, int) const;
             template<class REGS> void write_lookup_config(REGS &, State *, int) const;
             template<class EA_REGS> void write_counter_config(EA_REGS &) const;
+            template<class REGS> void write_common_row_config(REGS &, Parser *, State *, int,
+                                                              Match *, json::map &);
             template<class REGS> void write_row_config(REGS &, Parser *, State *, int,
                                                        Match *, json::map &);
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);

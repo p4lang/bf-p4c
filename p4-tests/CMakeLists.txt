@@ -40,6 +40,9 @@ if (ENABLE_TESTING)
     # add jbay tests and xfails with reasons
     include(JBayTests.cmake)
   endif()
+  if (ENABLE_CLOUDBREAK)
+    include(CloudbreakTests.cmake)
+  endif()
 
   # We have additional test inputs that are used to test the other
   # (standard) back-ends These test input programs depend on Tofino in

@@ -9,24 +9,30 @@ template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs 
     else error(lineno, "invalid unit for parser checksum");
 }
 
+struct cloudbreak_row_output_state {
+    gress_t     gress;
+    int         row;
+    Target::Cloudbreak::parser_regs::_memory::_po_action_row    *regs;
+    struct slot {
+        int phv_dst;
+        int phv_offset_add_dst;
+        int phv_src;
+    };
+    std::vector<slot>   extracts[4];  // indexed by mask;
+};
+
 template <>
 void Parser::Checksum::write_output_config(Target::Cloudbreak::parser_regs &regs, Parser *pa,
     void *_row, unsigned &used) const {
     if (type != 0 || !dest) return;
 
-    Target::Cloudbreak::parser_regs::_memory::_po_action_row *row =
-        (Target::Cloudbreak::parser_regs::_memory::_po_action_row *)_row;
+    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
 
     // checksum verification outputs "steal" extractors, see parser uArch (6.3.6)
-
-    for (int i = 0; i < 20; ++i) {
-        if (used & (1 << i)) continue;
-        used |= 1 << i;
-        row->phv_dst[i] = dest->reg.parser_id();
-        // FIXME -- regs have changed
-        // row->extract_type[i] = 3;
-        return; }
-    error(lineno, "Ran out of phv output extractor slots");
+    if ((++used & 0xfff) > 20)
+        error(lineno, "Ran out of phv output extractor slots");
+    else
+        row->extracts[3].push_back({ dest->reg.parser_id(), 0, 0 });
 }
 
 template <> void Parser::CounterInit::write_config(Target::Cloudbreak::parser_regs &regs,
@@ -122,25 +128,18 @@ template <> int Parser::State::Match::write_future_config(Target::Cloudbreak::pa
     return max_off;
 }
 
-static void write_output_slot(int lineno, Target::Cloudbreak::parser_regs::_memory::_po_action_row *row,
+static void write_output_slot(int lineno, cloudbreak_row_output_state *row,
                               unsigned &used, int src, int dest, int bytemask, bool offset) {
     BUG_CHECK(bytemask > 0 && bytemask < 4);
-    for (int i = 0; i < 20; ++i) {
-        if (used & (1 << i)) continue;
-        row->phv_dst[i] = dest;
-        row->phv_src[i] = src;
-        if (offset) row->phv_offset_add_dst[i] = 1;
-        // FIXME -- regs have changed
-        // row->extract_type[i] = bytemask;
-        used |= 1 << i;
-        return; }
-    error(lineno, "Ran out of phv output slots");
+    if ((++used & 0xfff) > 20)
+        error(lineno, "Ran out of phv output slots");
+    else
+        row->extracts[bytemask].push_back({ dest, offset, src });
 }
 
 template <> int Parser::State::Match::Save::write_output_config(Target::Cloudbreak::parser_regs &regs,
             void *_row, unsigned &used) const {
-    Target::Cloudbreak::parser_regs::_memory::_po_action_row *row =
-        (Target::Cloudbreak::parser_regs::_memory::_po_action_row *)_row;
+    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     int lo = this->lo;
@@ -161,9 +160,8 @@ template <> int Parser::State::Match::Save::write_output_config(Target::Cloudbre
     return hi;
 }
 
-#define SAVE_ONLY_USED_SLOTS    0xffc00
 static void write_output_const_slot(
-        int lineno, Target::Cloudbreak::parser_regs::_memory::_po_action_row *row, unsigned &used,
+        int lineno, cloudbreak_row_output_state *row, unsigned &used,
         unsigned src, int dest, int bytemask, int flags) {
     // use bits 24..27 of 'used' to track the two constant slots
     BUG_CHECK(bytemask > 0 && bytemask < 4);
@@ -176,19 +174,18 @@ static void write_output_const_slot(
     if (cslot >= 2) {
         error(lineno, "Ran out of constant output slots");
         return; }
-    row->val_const[cslot] |= src;
-    if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
+    row->regs->val_const[cslot] |= src;
+    if (flags & 2 /*ROTATE*/)
+        row->regs->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
-    unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
-    write_output_slot(lineno, row, tmpused, 62 - 2*cslot + (bytemask == 1), dest, bytemask, flags);
-    used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
+    write_output_slot(lineno, row, used, 62 - 2*cslot + (bytemask == 1), dest, bytemask, flags);
 }
 
 template <> void Parser::State::Match::Set::write_output_config(Target::Cloudbreak::parser_regs &regs,
             void *_row, unsigned &used) const
 {
-    Target::Cloudbreak::parser_regs::_memory::_po_action_row *row =
-        (Target::Cloudbreak::parser_regs::_memory::_po_action_row *)_row;
+    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     unsigned what = this->what << where->lo;
@@ -207,23 +204,53 @@ template <> void Parser::State::Match::Set::write_output_config(Target::Cloudbre
         write_output_const_slot(where.lineno, row, used, (what >> 16) & 0xffff, dest+1,
                                 (mask>>2) & 3, flags);
         if ((mask & 3) && (flags & ROTATE))
-            row->val_const_32b_bond = 1; }
+            row->regs->val_const_32b_bond = 1; }
 }
 
+/* Tofino3 has a simple uniform array of 20 extractors, but they are not individually
+ * configurable as to what type of extraction they do.  Instead, we can only configure
+ * how many extractors do each type of extraction; the first extractors will do an
+ * 16-bit write, the next group do 8-bit-hi, and following do 8-bit-lo, with any left
+ * over extractor doing nothing.  So instead of actually configuring the registers in
+ * the write_output_config routines, we just save the config into the output_map,
+ * sorting by type, and then in `mark_usused_output_map` we copy them into the
+ * actual register config.  In this mode the `used` mask still tracks the 4 constant
+ * bytes (as in jbay) in bits [23:20], but the lower bits are just used to track how
+ * many extractors have been used, not which specific extractors.
+ */
 template <> void *Parser::setup_phv_output_map(Target::Cloudbreak::parser_regs &regs,
             gress_t gress, int row) {
-    return &regs.memory[gress].po_action_row[row];
+    static cloudbreak_row_output_state      output_state;
+    output_state.gress = gress;
+    output_state.row = row;
+    output_state.regs = &regs.memory[gress].po_action_row[row];
+    for (auto &set : output_state.extracts) set.clear();
+    return &output_state;
 }
-template <> void Parser::mark_unused_output_map(Target::Cloudbreak::parser_regs &,
-            void *, unsigned) {
-    // unneeded on jbay
+
+template <> void Parser::mark_unused_output_map(Target::Cloudbreak::parser_regs &regs,
+            void *_row, unsigned) {
+    cloudbreak_row_output_state *row = (cloudbreak_row_output_state *)_row;
+
+    ubits<5> *counts[4] = { 0,
+            &row->regs->phv_ext_cnt_8_lo,
+            &row->regs->phv_ext_cnt_8_hi,
+            &row->regs->phv_ext_cnt_16 };
+    BUG_CHECK(row->extracts[0].empty());
+    int idx = 0;
+    for (int i = 3; i > 0; --i) {
+        for (auto &sl : row->extracts[i]) {
+            row->regs->phv_dst[idx] = sl.phv_dst;
+            row->regs->phv_offset_add_dst[idx] = sl.phv_offset_add_dst;
+            row->regs->phv_src[idx] = sl.phv_src;
+            ++idx; }
+        *counts[i] = row->extracts[i].size(); }
 }
 
 template<> void Parser::State::Match::HdrLenIncStop::write_config(
         Cloudbreak::memories_parser_::_po_action_row &po_row) const {
+    // FIXME -- how to implement the amount on cloudbreak?  It doesn't really support it.
     po_row.hdr_len_inc_stop = 1;
-    // FIXME -- regs have changed
-    // po_row.hdr_len_inc_final_amt = final_amt;
 }
 
 template<> void Parser::State::Match::Clot::write_config(
@@ -261,6 +288,16 @@ template<> void Parser::State::Match::write_counter_config(
     // ea_row.ctr_op = 1; (load ctr from stack top and add imm)
     // ea_row.ctr_stack_push = ?
     // ea_row.ctr_stack_upd_w_top = ?
+}
+
+template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parser_regs  &regs,
+        Parser *pa, State *state, int row, Match *def, json::map &ctxt_json) {
+    write_common_row_config(regs, pa, state, row, def, ctxt_json);
+    auto &action_row = regs.memory[state->gress].po_action_row[row];
+    // FIXME -- CB Parser uArch doc recommends only doing this in the last state for a
+    // specific header, though its not clear why
+    if (shift || (def && def->shift))
+        action_row.hdr_len_inc = 1;
 }
 
 template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json::map &ctxt_json, bool single_parser) {

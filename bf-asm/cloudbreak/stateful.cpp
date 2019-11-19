@@ -6,7 +6,7 @@ int StatefulTable::parse_counter_mode(Target::Cloudbreak target, const value_t &
 
 void StatefulTable::set_counter_mode(Target::Cloudbreak target, int mode) {
     int fnmode = mode & FUNCTION_MASK;
-    BUG_CHECK(fnmode > 0 && (fnmode >> FUNCTION_SHIFT) <= FUNCTION_BLOOM_CLR);
+    BUG_CHECK(fnmode > 0 && (fnmode >> FUNCTION_SHIFT) <= FUNCTION_FAST_CLEAR);
     if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != fnmode)
         error(lineno, "Incompatible uses (%s and %s) of stateful alu counters",
               function_names[stateful_counter_mode >> FUNCTION_SHIFT],

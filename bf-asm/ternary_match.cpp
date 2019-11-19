@@ -344,8 +344,52 @@ template<class REGS> void TernaryMatchTable::tcam_table_map(REGS &regs, int row,
 template<> void TernaryMatchTable::tcam_table_map(Target::Cloudbreak::mau_regs &regs,
                                                   int row, int col) {
     // FIXME -- figure out how to program tcam_map_oxbar_ctl
+    auto &ctl = regs.tcams.col[col].tcam_map_oxbar_ctl[row];
+    if (tcam_id >= 0) {
+        if (!((chain_rows[col] >> row) & 1)) {
+            switch (tcam_id) {
+            case 0:
+                ctl.tcam_map_oxbar_ctl_0_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_0_select = ??;
+                break;
+            case 1:
+                ctl.tcam_map_oxbar_ctl_1_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_1_select = ??;
+                break;
+            case 2:
+                ctl.tcam_map_oxbar_ctl_2_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_2_select = ??;
+                break;
+            case 3:
+                ctl.tcam_map_oxbar_ctl_3_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_3_select = ??;
+                break;
+            case 4:
+                ctl.tcam_map_oxbar_ctl_4_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_4_select = ??;
+                break;
+            case 5:
+                ctl.tcam_map_oxbar_ctl_5_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_5_select = ??;
+                break;
+            case 6:
+                ctl.tcam_map_oxbar_ctl_6_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_6_select = ??;
+                break;
+            case 7:
+                ctl.tcam_map_oxbar_ctl_7_enable = 1;
+                // ctl.tcam_map_oxbar_ctl_7_select = ??;
+                break; } }
+        // FIXME -- this register only needs to be set once per table, but its only on cloudbreak.
+        // setting it here means we set it multiple times (leading to WARNINGs), but is ok
+        setup_muxctl(regs.tcams.mpr_tcam_table_oxbar_ctl[tcam_id], logical_id); }
 }
 #endif
+
+static void set_tcam_mode_logical_table(ubits<4> &reg, int tcam_id, int logical_id) {
+    reg = logical_id; }
+static void set_tcam_mode_logical_table(ubits<8> &reg, int tcam_id, int logical_id) {
+    reg |= 1U << tcam_id; }
 
 template<class REGS>
 void TernaryMatchTable::write_regs(REGS &regs) {
@@ -370,7 +414,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             tcam_mode.tcam_match_output_enable =
                 ((~chain_rows[col] | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
-            tcam_mode.tcam_logical_table = logical_id;
+            set_tcam_mode_logical_table(tcam_mode.tcam_logical_table, tcam_id, logical_id);
             tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam & 0x3ff;
             tcam_mode.tcam_vbit_dirtcam_mode = match[word].dirtcam >> 10;
             /* TODO -- always disable tcam_validbit_xbar? */

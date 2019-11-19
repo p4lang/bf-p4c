@@ -310,6 +310,14 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
     error(where.lineno, "Ran out of phv output extractor slots");
 }
 
+/** Tofino1-specific output map management
+ * Tofino1 has separate 8- 16- and 32-bit extractors with various limitations on extracting
+ * constants and capability of ganging extractors to extract larger PHVs or extrating adjacent
+ * pairs of smaller PHVs.  They're also addressed via named registers rather than an array,
+ * so we build an array of pointers into the reg object to simplify things.  The `used`
+ * value ends up begin a simple 12-bit bitmap with 1 bit for each extractor.
+ */
+
 #define OUTPUT_MAP_INIT(MAP, ROW, SIZE, INDEX) \
     MAP[phv_##SIZE##b_##INDEX].size = SIZE;                                             \
     MAP[phv_##SIZE##b_##INDEX].dst = &ROW.phv_##SIZE##b_dst_##INDEX;                    \

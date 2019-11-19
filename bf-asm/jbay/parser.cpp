@@ -312,6 +312,13 @@ template <> void Parser::State::Match::Set::write_output_config(Target::JBay::pa
             row->val_const_32b_bond = 1; }
 }
 
+/* Tofino2 has a simple uniform array of 20 extractors, so doesn't really need an output
+ * map to track them.  Constants 'sets' are handled by having 4 bytes of data that is set
+ * per row and extrated from the input buffer like a 'save', except only the first 10
+ * extractors can access them.  So `output_map` ends up being just a pointer to the
+ * register object for the row, and `used` is a 24-bit bitmap, tracking the 20 extractors
+ * and the 4 constant bytes.
+ */
 template <> void *Parser::setup_phv_output_map(Target::JBay::parser_regs &regs,
             gress_t gress, int row) {
     return &regs.memory[gress].po_action_row[row];

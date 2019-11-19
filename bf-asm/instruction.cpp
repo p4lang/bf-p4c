@@ -1344,4 +1344,9 @@ static CondMoveMux::Decode  jb_opCondMove ("cmov",    JBAY, 0x6, true,  5, "cond
         // TODO add new jbay instructions, alu_gtequ, alu_geqs ...
 #endif // HAVE_JBAY
 
+#if HAVE_CLOUDBREAK
+static AluOP3Src::Decode    cb_opBMSET    ("bitmasked-set", CLOUDBREAK, 0x0e);
+static CondMoveMux::Decode  cb_opCondMove ("cmov", CLOUDBREAK, 0x6, true,  5, "conditional-move");
+#endif // HAVE_CLOUDBREAK
+
 }  // end namespace VLIW
