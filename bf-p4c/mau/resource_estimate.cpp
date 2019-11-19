@@ -241,8 +241,21 @@ cstring StageUseEstimate::ran_out() const {
     if (srams > StageUse::MAX_SRAMS) return "srams";
     if (tcams > StageUse::MAX_TCAMS) return "tcams";
     if (maprams > StageUse::MAX_MAPRAMS) return "maprams";
-    if (exact_ixbar_bytes > StageUse::MAX_IXBAR_BYTES) return "exact ixbar";
-    if (ternary_ixbar_groups > StageUse::MAX_TERNARY_GROUPS) return "ternary ixbar";
+    // For exact and ternary ixbar allocation, tables can share ixbar bytes.
+    // However stage use estimate simply adds the ixbar bytes on the tables and
+    // does not account for any sharing (see StageUseEstimate operator+=).
+    // Therefore, we can have a valid allocation where stage estimate for ixbar
+    // byte usage exceeds max allowed bytes but is still valid because of shared
+    // bytes.
+    // We remove the check here to ensure we dont fail for these scenarios. The
+    // TablePlacement::try_alloc_all (where this code is called from) will fail
+    // while picking layout options in case the xbar byte usage does exceed
+    // (with/without sharing), hence the failing case is considered and no
+    // invalid allocation occurs.
+    // TBD: The estimate can be made more robust to account for shared
+    // bytes and calculate the correct ixbar bytes and re-enable this check.
+    // if (exact_ixbar_bytes > StageUse::MAX_IXBAR_BYTES) return "exact ixbar";
+    // if (ternary_ixbar_groups > StageUse::MAX_TERNARY_GROUPS) return "ternary ixbar";
     if (meter_alus > MAX_METER_ALUS) return "meter_alus";
     if (stats_alus > MAX_STATS_ALUS) return "stats_alus";
     return cstring();

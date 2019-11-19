@@ -107,4 +107,5 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1812.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
+  extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4
 )

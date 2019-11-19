@@ -129,6 +129,7 @@ set (TOFINO_PSA_TEST_SUITES
 p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # Add labels for tests to be run as MUST PASS in Jenkins
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1214.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-1813.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4")
@@ -785,6 +786,7 @@ set (NON_PR
   ${P4TESTDATA}/p4_14_samples/07-FullTPHV2.p4
   # CUST_MUSS_PASS (run on Jenkins)
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/rdp/case9757.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/customer/ruijie/p4c-2250.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1214.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2012.p4
