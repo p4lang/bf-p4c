@@ -207,6 +207,8 @@ void DarkLiveRange::end_apply() {
         if (!uses.is_referenced(&f)) continue;
         // Ignore POV fields.
         if (f.pov) continue;
+        // If a field is marked by pa_no_overlay, do not consider it for dark overlay.
+        if (noOverlay.count(&f)) continue;
         fieldsConsidered.insert(&f);
     }
     for (const auto* f : fieldsConsidered) setFieldLiveMap(f);
