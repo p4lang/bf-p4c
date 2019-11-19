@@ -3024,7 +3024,8 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
         auto at = back_at->attached;
         for (auto annot : at->annotations->annotations) {
             if (annot->name != "bind_indirect_res_to_match") continue;
-            BUG_CHECK(at->is<IR::MAU::ActionData>() && at->direct == false,
+            BUG_CHECK((at->is<IR::MAU::ActionData>() && at->direct == false)
+                      || at->is<IR::MAU::Selector>(),
                       "bind_indirect_res_to_match only allowed on action profiles");
             auto res_name = annot->expr[0]->to<IR::StringLiteral>()->value;
             // Ignore multiple pragmas for same resource name
