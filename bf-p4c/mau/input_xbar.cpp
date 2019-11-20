@@ -4181,7 +4181,7 @@ void IXBar::update(cstring name, const Use &alloc) {
             if (((1U << ht) & alloc.hash_table_inputs[ph.group]) == 0) continue;
             unsigned indexes = index_groups_used(ph.hash_bits);
             for (auto idx : bitvec(indexes)) {
-                hash_index_inuse[idx] = alloc.hash_table_inputs[ph.group];
+                hash_index_inuse[idx] |= alloc.hash_table_inputs[ph.group];
                 if (!hash_index_use[ht][idx])
                     hash_index_use[ht][idx] = name;
                 else if (hash_index_use[ht][idx] != name)
@@ -4190,7 +4190,7 @@ void IXBar::update(cstring name, const Use &alloc) {
             }
             unsigned select_bits = select_bits_used(ph.hash_bits);
             for (auto bit : bitvec(select_bits)) {
-                hash_single_bit_inuse[bit] = alloc.hash_table_inputs[ph.group];
+                hash_single_bit_inuse[bit] |= alloc.hash_table_inputs[ph.group];
                 if (!hash_single_bit_use[ht][bit])
                     hash_single_bit_use[ht][bit] = name;
                 else if (hash_single_bit_use[ht][bit] != name)
