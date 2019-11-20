@@ -25,6 +25,7 @@ class TablePlacement : public MauTransform, public Backtrack {
                    SplitAttachedInfo &, TableSummary &);
     struct GroupPlace;
     struct Placed;
+    class Backfill;
     typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
 
     struct RedoTablePlacement : public Backtrack::trigger {
@@ -108,6 +109,7 @@ class TablePlacement : public MauTransform, public Backtrack {
                                           const StageUseEstimate &current,
                                           GatewayMergeChoices &gmc);
     Placed *try_place_table(Placed *rv, const StageUseEstimate &current);
+    Placed *try_backfill_table(const Placed *done, const IR::MAU::Table *tbl, cstring before);
     bool try_alloc_all(Placed *next, std::vector<Placed *> whole_stage, const char *what,
                        bool no_memory = false);
     bool try_alloc_ixbar(Placed *next);

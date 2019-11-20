@@ -133,6 +133,9 @@ BFN_Options::BFN_Options() {
     registerOption("--table-placement-in-order", nullptr,
         [this](const char *) { table_placement_in_order = true; return true; },
         "Do not reorder tables in a basic block");
+    registerOption("--disable_backfill", nullptr,
+        [this](const char *) { disable_table_placement_backfill = true; return true; },
+        "Do not backfill tables in table placement");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");

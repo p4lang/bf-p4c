@@ -432,6 +432,39 @@ class StageSummary {
 };
 }  // end anonymous namespace
 
+class TablePlacement::Backfill {
+    /** Used to track tables that could be backfilled into a stage if we run out of other
+     *  things to put in that stage.  Whenever we choose to place table such that another
+     * table is no longer (immediately) placeable due to next table limits (so only applies
+     * to tofino1), we remember that (non-placed) table and if we later run out of things to
+     * put into the current stage, we attempt to 'backfill' that remembered table -- place
+     * it in the current stage *before* the table that made it non-placeable.
+     *
+     * Currently backfilling is limited to single tables that have no control dependent tables.
+     * We could try backfilling multiple tables but that is less likely to be possible or
+     * useful; it is more likely that a general backtracking scheme would be a better approach.
+     */
+    TablePlacement              &self;
+    int                         stage;
+    struct table_t {
+        const IR::MAU::Table    *table;
+        cstring                 before;
+    };
+    std::vector<table_t>        avail;
+
+ public:
+    explicit Backfill(TablePlacement &s) : self(s) {}
+    explicit operator bool() const { return !avail.empty(); }
+    std::vector<table_t>::iterator begin() { return avail.begin(); }
+    std::vector<table_t>::iterator end() { return avail.end(); }
+    void set_stage(int st) {
+        if (stage != st) avail.clear();
+        stage = st; }
+    void add(const Placed *tbl, const Placed *before) {
+        set_stage(before->stage);
+        avail.push_back({ tbl->table, before->name }); }
+};
+
 void TablePlacement::GroupPlace::finish_if_placed(
     ordered_set<const GroupPlace*> &work, const Placed *pl
 ) const {
@@ -870,28 +903,46 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
     // stage 0 when trying to place a starter pistol (even though that alocation ends up
     // unchanged), placement of memory for the starter pistol may then fail.  So we hack
     // not doing the reallication (just) for starter pistols to avoid the problem.
+    bool done_next = false;
     if (!next->table->created_during_tp) {
         for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (p->prev == next) {
+                if (!pick_layout_option(next, false)) {
+                    LOG3("    " << what << " ixbar allocation did not fit");
+                    return false; }
+                done_next = true; }
             if (!pick_layout_option(p, false)) {
                 LOG3("    redo of " << p->name << " ixbar allocation did not fit");
                 return false; } } }
-    if (!pick_layout_option(next, false)) {
+    if (!done_next && !pick_layout_option(next, false)) {
         LOG3("    " << what << " ixbar allocation did not fit");
         return false; }
+    done_next = false;
     if (!next->table->created_during_tp) {
         for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (p->prev == next) {
+                if (!try_alloc_adb(next)) {
+                    LOG3("    " << what << " of action data bus did not fit");
+                    return false; }
+                done_next = true; }
             if (!try_alloc_adb(p)) {
                 LOG3("    redo of " << p->name << " action data bus did not fit");
                 return false; } } }
-    if (!try_alloc_adb(next)) {
+    if (!done_next && !try_alloc_adb(next)) {
         LOG3("    " << what << " of action data bus did not fit");
         return false; }
+    done_next = false;
     if (!next->table->created_during_tp) {
         for (auto *p : boost::adaptors::reverse(whole_stage)) {
+            if (p->prev == next) {
+                if (!try_alloc_imem(next)) {
+                    LOG3("    " << what << " of instruction memory did not fit");
+                    return false; }
+                done_next = true; }
             if (!try_alloc_imem(p)) {
                 LOG3("    redo of " << p->name << " instruction memory did not fit");
                 return false; } } }
-    if (!try_alloc_imem(next)) {
+    if (!done_next && !try_alloc_imem(next)) {
         LOG3("    " << what << " of instruction memory did not fit");
         return false; }
     if (no_memory) return true;
@@ -1335,6 +1386,60 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 }
 
 /**
+ * Try to backfill a table in the current stage just before another table, bumping up the
+ * logical ids of the later tables, but keeping all in the same stage.
+ */
+TablePlacement::Placed *TablePlacement::try_backfill_table(
+        const Placed *done, const IR::MAU::Table *tbl, cstring before) {
+    LOG2("try to backfill " << tbl->name << " before " << before);
+    std::vector<Placed *> whole_stage;
+    Placed *place_before = nullptr;
+    for (const Placed **p = &done; *p && (*p)->stage == done->stage; ) {
+        auto clone = new Placed(**p);
+        whole_stage.push_back(clone);
+        if (clone->name == before) {
+            BUG_CHECK(!place_before, "%s placed multiple times in stage %d", before, done->stage);
+            place_before = clone; }
+        *p = clone;
+        p = &clone->prev; }
+    if (!place_before) {
+        BUG("Couldn't find %s in stage %d", before, done->stage);
+        return nullptr; }
+    Placed *pl = new Placed(*this, tbl, place_before->prev);
+    int furthest_stage = done->stage;
+    if (!initial_stage_and_entries(pl, furthest_stage))
+        return nullptr;
+    if (pl->stage != place_before->stage)
+        return nullptr;
+    place_before->prev = pl;
+    if (!try_alloc_all(pl, whole_stage, "Backfill"))
+        return nullptr;
+    for (auto &ae : pl->attached_entries)
+        if (!ae.second)
+            return nullptr;
+    int lts = pl->use.preferred()->logical_tables();
+    if (lts + (done->logical_id % StageUse::MAX_LOGICAL_IDS) >= StageUse::MAX_LOGICAL_IDS)
+        return nullptr;
+    for (auto *p : whole_stage) {
+        p->logical_id += lts;
+        p->placed[tblInfo.at(tbl).uid] = 1;
+        p->match_placed[tblInfo.at(tbl).uid] = 1;
+        if (p == place_before)
+            break; }
+    pl->update_formats();
+    for (auto *p : whole_stage)
+        p->update_formats();
+    pl->setup_logical_id();
+    pl->placed[tblInfo.at(tbl).uid] = 1;
+    pl->match_placed[tblInfo.at(tbl).uid] = 1;
+    LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
+         (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " << pl->stage << "(" <<
+         hex(pl->logical_id) << ")" << " (backfilled)");
+    BUG_CHECK(pl->table->next.empty(), "Can't backfill table with control dependencies");
+    return whole_stage.front();
+}
+
+/**
  * In Tofino specifically, if a table is in ingress or egress, then a table for that pipeline
  * must be placed within stage 0.  The parser requires a pathway into the first stage.
  *
@@ -1752,9 +1857,11 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             error("direct %s attached to multiple match tables", att.first); }
 
     ordered_set<const IR::MAU::Table *> partly_placed;
+    Backfill backfill(*this);
     while (!work.empty()) {
         erase_if(partly_placed, [placed](const IR::MAU::Table *t) -> bool {
                                         return placed->is_placed(t); });
+        if (placed) backfill.set_stage(placed->stage);
         StageUseEstimate current = get_current_stage_use(placed);
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed) <<
@@ -1911,6 +2018,29 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 best = t;
             } else if (best) {
                 log_choice(nullptr, best, choice); } }
+
+        if (placed && best->stage > placed->stage && !options.disable_table_placement_backfill) {
+            const Placed *backfilled = nullptr;
+            /* look for a table that could be backfilled */
+            for (auto &bf : backfill) {
+                if (placed->is_placed(bf.table)) continue;
+                if ((backfilled = try_backfill_table(placed, bf.table, bf.before))) {
+                    BUG_CHECK(backfilled->is_placed(bf.table), "backfill !is_placed abort");
+                    /* Found one -- currently we don't priorities if mulitple tables could
+                     * be backfilled; just backfill the first found */
+                    break; } }
+            if (backfilled) {
+                placed = backfilled;
+                /* backfilling a table -- abort the current placement and go back and do it
+                 * again in case something changed.  It seems that nothing ever should change
+                 * so we'll end up finding the same table to place nextyt into the next stage
+                 * anyways, but to ocntinue here we'd have to fix up the Placed to refer to
+                 * the backfilled placed, and *best is (currently) const.  We also don't look
+                 * for newly backfillable tables as that would pretty much require backtracking
+                 * and redoing everything in the stage after tha backfilled table (would require
+                 * checkpointing and restoring the work list) */
+                continue; } }
+
         if (placed && best->stage != placed->stage) {
             LOG_FEATURE("stage_advance", 2,
                         "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
@@ -1920,6 +2050,16 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     LOG_FEATURE("stage_advance", 2, "can't place " << t->name << " in stage " <<
                                 (t->stage-1) << " : " << t->stage_advance_log); } }
         placed = place_table(work, best);
+
+        if (!options.disable_table_placement_backfill) {
+            for (auto p : trial) {
+                /* Look for tables that are were placeable in this stage and are now not placeable
+                 * and remember them for future backfilling.  Currently restricted to tables with
+                 * no control dependent tables and no gateway merged */
+                if (p != placed && p->stage == placed->stage && !work.count(p->group) &&
+                    !p->need_more && !p->gw && p->table->next.empty()) {
+                    LOG2("potential backfill " << p->name << " before " << placed->name);
+                    backfill.add(p, placed); } } }
 
         if (placed->need_more)
             partly_placed.insert(placed->table);
