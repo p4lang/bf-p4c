@@ -18,12 +18,30 @@ node ('compiler-nodes') {
         def git_sha = ""
         def metrics_cid = ""
         def p4c_cid = ""
+        def switch_16_branch = ""
     }
     try {
+        stage ('Setup') {
+            ansiColor('xterm') {
+                timestamps {
+                    sh "echo 'Checking out p4factory build'"
+                    sh "git clone git@github.com:barefootnetworks/p4factory.git"
+                    dir('p4factory') {
+                        sh "echo 'p4factory current commit:'"
+                        sh "git log -1 --stat"
+                        switch_16_branch = sh (
+                            script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
+                            returnStdout: true
+                        ).trim()
+                        sh "echo 'bf-switch last working p4factory commit: ' $switch_16_branch"
+                    }
+                }
+            }
+        }
         stage ('Checkout') {
             ansiColor('xterm') {
                 timestamps {
-                    sh "echo 'Checking out build'"
+                    sh "echo 'Checking out bf-p4c-compilers build'"
                     checkout scm
                     image_tag = sh (
                         script: 'git rev-parse HEAD',
@@ -34,7 +52,7 @@ node ('compiler-nodes') {
                         script: 'git rev-parse --short HEAD',
                         returnStdout: true
                     ).trim()
-                    sh "echo 'git sha: ' $git_sha"
+                    sh "echo 'bf-p4c-compilers git sha: ' $git_sha"
                 }
             }
         }
@@ -56,7 +74,6 @@ node ('compiler-nodes') {
                             sh "git submodule update --init --recursive"
                             // Update switch.p4-16 to the latest known working refpoint
                             switch_16_repo = 'p4-tests/p4_16/switch_16'
-                            switch_16_branch = 'master'
                             sh "git -C $switch_16_repo fetch origin $switch_16_branch && git -C $switch_16_repo checkout $switch_16_branch"
                             sh "echo 'Using switch_16: ' && git -C p4-tests/p4_16/switch_16 log HEAD^..HEAD"
                             sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
