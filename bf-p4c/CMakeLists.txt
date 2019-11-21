@@ -170,7 +170,6 @@ set (BF_P4C_BACKEND_CONV_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_SRCS}")
 
 set (BF_P4C_BACKEND_CONV_HDRS
-  arch/fromv1.0/checksum.h
   arch/fromv1.0/field_list.h
   arch/fromv1.0/lpf.h
   arch/fromv1.0/meter.h
@@ -552,7 +551,9 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/tna.cpp
   arch/v1model.cpp
   arch/fromv1.0/add_metadata_parser_states.cpp
+  arch/fromv1.0/checksum.cpp
   arch/fromv1.0/mirror.cpp
+  arch/fromv1.0/parser_counter.cpp
   arch/fromv1.0/phase0.cpp
   arch/fromv1.0/resubmit.cpp
   arch/fromv1.0/v1_converters.cpp
@@ -582,7 +583,9 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/tna.h
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h
+  arch/fromv1.0/checksum.h
   arch/fromv1.0/mirror.h
+  arch/fromv1.0/parser_counter.h
   arch/fromv1.0/phase0.h
   arch/fromv1.0/resubmit.h
   arch/fromv1.0/v1_converters.h

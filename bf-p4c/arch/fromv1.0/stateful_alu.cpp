@@ -71,6 +71,11 @@ class CreateSaluApplyFunction : public Inspector {
             if (self.convert_to_saturating)
                 return new IR::SubSat(e->srcInfo, e->type, e->left, e->right);
             return e; }
+        const IR::Expression *postorder(IR::Neg *e) override {
+            if (e->type->is<IR::Type_InfInt>())
+                return new IR::Neg(e->srcInfo, e->expr->type, e->expr);
+            return e;
+        }
         const IR::Expression *postorder(IR::AttribLocal *attr) override {
             int idx = 0;
             IR::Path *var = nullptr;

@@ -11,6 +11,7 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
 #include "bf-p4c/arch/fromv1.0/checksum.h"
+#include "bf-p4c/arch/fromv1.0/parser_counter.h"
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/device.h"

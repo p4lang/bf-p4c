@@ -244,20 +244,6 @@ class ParserPriorityConverter : public StatementConverter {
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
 };
 
-class ParserCounterConverter : public StatementConverter {
-    void cannotFit(const IR::AssignmentStatement* stmt, const char* what);
-
- public:
-    explicit ParserCounterConverter(ProgramStructure *structure)
-    : StatementConverter(structure) { CHECK_NULL(structure); }
-    const IR::Node* postorder(IR::AssignmentStatement *node) override;
-};
-
-class ParserCounterSelectionConverter : public PassManager {
- public:
-    ParserCounterSelectionConverter();
-};
-
 }  // namespace V1
 
 }  // namespace BFN

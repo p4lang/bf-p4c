@@ -23,7 +23,7 @@ class TranslateParserChecksums : public PassManager {
                              P4::TypeMap *typeMap);
 };
 
-bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
+static bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstring which) {
     auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
     if (!methodCall) {
         ::warning("Expected a non-empty method call expression: %1%", statement);
@@ -462,21 +462,6 @@ class InsertParserChecksums : public Inspector {
         }
     }
 };
-
-TranslateParserChecksums::TranslateParserChecksums(ProgramStructure *structure,
-                                                   P4::ReferenceMap *refMap,
-                                                   P4::TypeMap *typeMap)
-        : parserGraphs(refMap, typeMap, cstring()) {
-    auto collectParserChecksums = new BFN::V1::CollectParserChecksums(refMap, typeMap);
-    auto insertParserChecksums = new BFN::V1::InsertParserChecksums(this,
-                                                  collectParserChecksums,
-                                                  &parserGraphs,
-                                                  structure);
-    addPasses({&parserGraphs,
-               collectParserChecksums,
-               insertParserChecksums
-              });
-}
 
 class InsertChecksumError : public PassManager {
  public:
