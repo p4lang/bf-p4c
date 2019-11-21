@@ -1084,10 +1084,14 @@ class PhvInfo {
     const SymBitMatrix& metadata_mutex() const { return metadata_mutex_i; }
     const SymBitMatrix& dark_mutex() const { return dark_mutex_i; }
     const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack_i; }
+    const SymBitMatrix& field_no_pack_mutex() const { return field_no_pack_i; }
+    const SymBitMatrix& digest_no_pack_mutex() const { return digest_no_pack_i; }
     SymBitMatrix& field_mutex() { return field_mutex_i; }
     SymBitMatrix& metadata_mutex() { return metadata_mutex_i; }
     SymBitMatrix& dark_mutex() { return dark_mutex_i; }
     SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack_i; }
+    SymBitMatrix& field_no_pack_mutex() { return field_no_pack_i; }
+    SymBitMatrix& digest_no_pack_mutex() { return digest_no_pack_i; }
 
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together_i; }
     const SymBitMatrix& getBridgedExtractedTogether() const { return bridged_extracted_together_i; }
@@ -1099,6 +1103,26 @@ class PhvInfo {
     void addDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) {
         BUG_CHECK(f1 && f2, "No PHV field");
         deparser_no_pack_i(f1->id, f2->id) = true;
+    }
+
+    void addFieldNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        field_no_pack_i(f1->id, f2->id) = true;
+    }
+
+    void removeFieldNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        field_no_pack_i(f1->id, f2->id) = false;
+    }
+
+    void addDigestNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        digest_no_pack_i(f1->id, f2->id) = true;
+    }
+
+    void removeDigestNoPack(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        digest_no_pack_i(f1->id, f2->id) = false;
     }
 
     void addFieldMutex(const PHV::Field* f1, const PHV::Field* f2) {
@@ -1139,6 +1163,20 @@ class PhvInfo {
     bool isDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
         BUG_CHECK(f1 && f2, "No PHV field");
         return deparser_no_pack_i(f1->id, f2->id);
+    }
+
+    bool isFieldNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        return field_no_pack_i(f1->id, f2->id);
+    }
+
+    bool isDigestNoPack(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        return digest_no_pack_i(f1->id, f2->id);
+    }
+
+    unsigned sizeFieldNoPack() {
+        return field_no_pack_i.size();
     }
 
     /// Clear the state maintained corresponding to constant extractors.
@@ -1233,6 +1271,15 @@ class PhvInfo {
     /// Stores all pairs of fields that cannot be packed in the same container
     /// Derived from POV bits of adjacent fields in deparser
     SymBitMatrix                             deparser_no_pack_i;
+
+    /// field_no_pack_i[i, j] is set to true if field f1 with id i cannot be packed
+    /// with another field f2 with id j
+    SymBitMatrix                             field_no_pack_i;
+
+    /// Stores all pairs of fields that cannot be packed in the same container
+    /// digest_field, digest_field -> false
+    /// digest_field, non-digest_field -> true
+    SymBitMatrix                             digest_no_pack_i;
 
     /// bridged_extracted_together(f1->id, f2->id) is true if f1 and f2 are both bridged fields and
     /// they are extracted as part of the same byte.

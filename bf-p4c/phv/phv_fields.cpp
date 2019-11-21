@@ -83,6 +83,8 @@ void PhvInfo::clear() {
     reverseMetadataDeps.clear();
     metadataDeps.clear();
     deparser_no_pack_i.clear();
+    field_no_pack_i.clear();
+    digest_no_pack_i.clear();
     field_mutex_i.clear();
     constantExtractedInSameState.clear();
     sameStateConstantExtraction.clear();

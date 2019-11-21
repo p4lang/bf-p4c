@@ -15,7 +15,7 @@
  */
 class PackConflicts : public PassManager {
  private:
-    const PhvInfo                   &phv;
+    PhvInfo                         &phv;
     // const DependencyGraph           &dg;
     IgnoreTableDeps                 ignore;
     const TablesMutuallyExclusive   &mutex;
@@ -24,10 +24,6 @@ class PackConflicts : public PassManager {
 
     /// Count for total number of no pack constraints induced by table placement
     size_t                  totalNumSet;
-
-    /// fieldNoPack[i, j] is set to true if field f1 with id i cannot be packed with another field
-    /// f2 with id j
-    SymBitMatrix            fieldNoPack;
 
     /// Stores a set of all actions invoked from the key table
     ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Action*>> tableActions;
@@ -63,7 +59,7 @@ class PackConflicts : public PassManager {
     void updateNumPackConstraints();
 
  public:
-    PackConflicts(const PhvInfo &p, const DependencyGraph &, const TablesMutuallyExclusive &m,
+    PackConflicts(PhvInfo &p, const DependencyGraph &, const TablesMutuallyExclusive &m,
             const MauBacktracker &b, const ActionMutuallyExclusive &a) :
         phv(p), /* dg(d), */ mutex(m), bt(b), amutex(a) {
         addPasses({

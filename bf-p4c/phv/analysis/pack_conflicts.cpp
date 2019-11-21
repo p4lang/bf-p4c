@@ -5,18 +5,18 @@ Visitor::profile_t PackConflicts::init_apply(const IR::Node *root) {
     profile_t rv = PassManager::init_apply(root);
     totalNumSet = 0;
     // Initialize the fieldNoPack matrix to allow all fields to be packed together
-    for (auto& f1 : phv) {
-        for (auto& f2 : phv) {
+    for (auto f1 : phv) {
+        for (auto f2 : phv) {
             // If the fields are no pack according to deparser constraints, then set that here.
             if (phv.isDeparserNoPack(&f1, &f2)) {
-                fieldNoPack(f1.id, f2.id) = true;
+                phv.addFieldNoPack(&f1, &f2);
                 continue;
             }
             // For all other fields, default is false.
-            fieldNoPack(f1.id, f2.id) = false;
+            phv.removeFieldNoPack(&f1, &f2);
         }
         // Same field must always be packable with itself.
-        fieldNoPack(f1.id, f1.id) = false;
+        phv.removeFieldNoPack(&f1, &f1);
     }
     tableActions.clear();
     actionWrites.clear();
@@ -49,7 +49,6 @@ bool PackConflicts::GatherWrites::preorder(const IR::BFN::Digest* digest) {
     if (digest->name != "learning" && digest->name != "mirror" && digest->name != "resubmit")
         return true;
     LOG3("    Determining constraints for " << digest->name << " digest.");
-    SymBitMatrix digestPackOkay;
     ordered_set<const PHV::Field*> allDigestFields;
     // For fields that are not part of the same digest field lists, set the no-pack constraint.
     for (auto fieldList : digest->fieldLists) {
@@ -57,24 +56,23 @@ bool PackConflicts::GatherWrites::preorder(const IR::BFN::Digest* digest) {
             const auto* f1 = self.phv.field(flval1->field);
             // Apply the constraint only to metadata fields.
             if (!f1->metadata && !f1->bridged) continue;
-            allDigestFields.insert(f1);
-            for (auto flval2 : fieldList->sources) {
-                if (flval1 == flval2) continue;
-                const auto* f2 = self.phv.field(flval2->field);
-                // Apply the constraint only to metadata fields.
-                if (!f2->metadata && !f2->bridged) continue;
+            allDigestFields.insert(f1); }
+        for (const auto* f1 : allDigestFields) {
+            for (const auto* f2 : allDigestFields) {
+                if (f1 == f2) continue;
                 // Fields within the same digest field list. So, packing them together is okay.
-                digestPackOkay(f1->id, f2->id) = true; } } }
+                self.phv.removeDigestNoPack(f1, f2); } } }
 
     // Set no pack for fields not marked digest pack okay.
     for (const auto* digestField : allDigestFields) {
         for (const auto& f : self.phv) {
             if (digestField == &f) continue;
-            if (digestPackOkay(digestField->id, f.id)) continue;
             if (f.padding || f.isCompilerGeneratedPaddingField()) continue;
-            LOG3("\t  Setting no-pack for digest field " << digestField->name << " and "
-                 "non-digest field " << f.name);
-            self.fieldNoPack(digestField->id, f.id) = true; } }
+            if (!allDigestFields.count(&f)) {
+                LOG3("\t  Setting no-pack for digest field " << digestField->name << " and "
+                    "non-digest field " << f.name);
+                self.phv.addFieldNoPack(digestField, &f);
+                self.phv.addDigestNoPack(digestField, &f); } } }
 
     return true;
 }
@@ -152,9 +150,9 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
                      "tables " << t1->name << " and " << t2->name);
             } else {
                 ++numSet;
-                fieldNoPack(f1->id, f2->id) = true;
-                fieldNoPack(f2->id, f1->id) = true;
-                LOG6("\t" << fieldNoPack(f1->id, f2->id) << " Setting no pack for " << f1->name <<
+                phv.addFieldNoPack(f1, f2);
+                phv.addFieldNoPack(f2, f1);
+                LOG6("\t" << phv.isFieldNoPack(f1, f2) << " Setting no pack for " << f1->name <<
                      " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")"); } } }
 
     LOG4("\tNumber of no pack conditions added for " << t1->name << " and " << t2->name << " : " <<
@@ -163,28 +161,28 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
 }
 
 unsigned PackConflicts::size() const {
-    return fieldNoPack.size();
+    return phv.sizeFieldNoPack();
 }
 
 void PackConflicts::addPackConflict(const PHV::Field* f1, const PHV::Field* f2) {
-    fieldNoPack(f1->id, f2->id) = true;
+    phv.addFieldNoPack(f1, f2);
 }
 
 bool PackConflicts::hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const {
-    LOG6(this << " " << fieldNoPack(f1->id, f2->id) << " Checking for " << f1->name << " (" <<
+    LOG6(this << " " << phv.isFieldNoPack(f1, f2) << " Checking for " << f1->name << " (" <<
             f1->id << ") and " << f2->name << " (" << f2->id << ")");
-    return fieldNoPack(f1->id, f2->id);
+    return phv.isFieldNoPack(f1, f2);
 }
 
 void PackConflicts::printNoPackConflicts() const {
-    LOG5("List of no pack constraints " << this << " " << &fieldNoPack);
+    LOG5("List of no pack constraints ");
     for (auto& f1 : phv) {
         for (auto& f2 : phv) {
             if (f1.id >= f2.id) continue;
-            if (fieldNoPack(f1.id, f2.id))
+            if (phv.isFieldNoPack(&f1, &f2))
                 LOG5("\t" << f1.name << " (" << f1.id << "), " << f2.name << " (" << f2.id << ")");
         } }
-    LOG5("End List of no pack constraints " << this << " " << &fieldNoPack);
+    LOG5("End List of no pack constraints ");
 }
 
 void PackConflicts::updateNumPackConstraints() {
@@ -192,7 +190,7 @@ void PackConflicts::updateNumPackConstraints() {
         size_t numPack = 0;
         for (auto& f2 : phv) {
             if (f1.id == f2.id) continue;
-            if (fieldNoPack(f1.id, f2.id))
+            if (phv.isFieldNoPack(&f1, &f2))
                 numPack++; }
         f1.set_num_pack_conflicts(numPack); }
 }
