@@ -16,7 +16,7 @@
   * size). If the learning quanta exceeds this threshold, then it imposes the following constraints
   * on PHV fields used in that learning quanta:
   * - If the field is byte aligned, the exact containers property for the field is set to true and
-  *   the field is set to no_pack (to prevent other fields in the same header from being tacked on
+  *   the field is set to solitary (to prevent other fields in the same header from being tacked on
   *   and forcing allocation into a larger container size).
   * - If the field is less than 32b, the field is made no_split.
   * - Depending on the size of field (for fields less than 32b in size), pa_container_size pragmas

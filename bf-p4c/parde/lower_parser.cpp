@@ -515,8 +515,8 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             last->debug.info.push_back(debugInfoFor(fieldRef, slice));
             containers.push_back(last);
 
-            if (slice.field->is_checksummed() && slice.field->no_pack()) {
-                // Since the field has a no-pack constraint, its is safe to
+            if (slice.field->is_checksummed() && slice.field->is_solitary()) {
+                // Since the field has a solitary constraint, its is safe to
                 // extend the range till the end of container
                 last->range = containerRange.unionWith(nw_bitrange(
                                StartLen(0, slice.container.size())));

@@ -301,7 +301,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             "checksum: %1%", source->field);
                     continue;
                 }
-                if (sourceField->metadata && sourceField->no_pack()) {
+                if (sourceField->metadata && sourceField->is_solitary()) {
                     // A metadata can have a no-pack constraint and hence will include
                     // empty space. Excluding such metadatas from the warning below.
                     continue;

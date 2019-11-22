@@ -66,9 +66,9 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
                       " and it is not container-sized ", field_name);
             continue; }
 
-        // set no_pack
-        field->set_no_pack(true);
-        LOG1("@pragma pa_solitary set " << field->name << " to be no_pack");
+        // set solitary
+        field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::PRAGMA_SOLITARY);
+        LOG1("@pragma pa_solitary set " << field->name << " to be solitary");
     }
     return true;
 }

@@ -35,7 +35,7 @@ void PHV::AllocationReport::collectStatus() {
             container_to_bits_used[c] = used;
             total_unallocated_bits += partial_containers_stat[c];
             if (slices.size() > 1
-                || (slices.size() == 1 && !slices.begin()->field()->no_pack())) {
+                || (slices.size() == 1 && !slices.begin()->field()->is_solitary())) {
                 if (gress && *gress == INGRESS) {
                     valid_ingress_unallocated_bits += partial_containers_stat[c];
                 } else if (gress && *gress == EGRESS) {

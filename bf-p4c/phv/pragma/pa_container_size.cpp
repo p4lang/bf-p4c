@@ -185,10 +185,12 @@ void PragmaContainerSize::check_and_add_no_split(
                 privatized_field->set_no_split(true);
         }
         if (static_cast<int>(container_size) == field->size) {
-            field->set_no_pack(true);
+            field->set_solitary(
+                    Constraints::SolitaryConstraint::SolitaryReason::PRAGMA_CONTAINER_SIZE);
             LOG3("Setting field " << field->name << " to no-pack.");
             if (privatized_field)
-                privatized_field->set_no_pack(true);
+                privatized_field->set_solitary(
+                        Constraints::SolitaryConstraint::SolitaryReason::PRAGMA_CONTAINER_SIZE);
         }
     }
 }

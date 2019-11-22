@@ -1229,7 +1229,7 @@ RepackFlexHeaders::verifyPackingAcrossBytes(const std::vector<const PHV::Field*>
                 ordered_set<const PHV::Field*> noPackFields;
                 ordered_set<const PHV::Field*> noSplitFields;
                 for (const auto* related : clusterFields.at(f)) {
-                    if (related->no_pack()) {
+                    if (related->is_solitary()) {
                         noPackFields.insert(related);
                         LOG5("\t\t\t" << related->name << " is no-pack.");
                     }

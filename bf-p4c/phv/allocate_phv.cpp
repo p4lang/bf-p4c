@@ -85,7 +85,7 @@ FieldPackingOpportunity* AllocScore::g_packing_opportunities = nullptr;
 
 /** Metrics are prioritized by
  * 1. is_tphv.
- * 2. n_wasted_bits, to avoid no_pack slice allocated to large containers.
+ * 2. n_wasted_bits, to avoid solitary slice allocated to large containers.
  * 3. n_packing_bits
  * 4. n_overlay_bits
  * 5. use new container.
@@ -236,7 +236,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
  * + n_overlay_bits: container bits already used in parent alloc get overlaid.
  * + n_packing_bits: use bits that ContainerAllocStatus is PARTIAL in parent.
  * + n_inc_containers: the number of container used that was EMPTY.
- * + n_wasted_bits: if field is no_pack, container.size() - slice.width().
+ * + n_wasted_bits: if field is solitary, container.size() - slice.width().
  */
 AllocScore::AllocScore(
         const PHV::Transaction& alloc,
@@ -280,7 +280,7 @@ AllocScore::AllocScore(
 
         // calc n_wasted_bits and n_clot_bits
         for (const auto& slice : slices) {
-            if (slice.field()->no_pack())
+            if (slice.field()->is_solitary())
                 score[kind].n_wasted_bits += (container.size() - slice.width());
             if (clot.fully_allocated(slice.field()))
                 score[kind].n_clot_bits += slice.width(); }
@@ -579,7 +579,7 @@ bool CoreAllocation::satisfies_constraints(
                  "b container");
             return false; } }
 
-    // Check if any fields have the no_pack constraint, which is mutually
+    // Check if any fields have the solitary constraint, which is mutually
     // unsatisfiable with slice lists, which induce packing.  Ignore adjacent slices of the same
     // field.
     std::vector<PHV::AllocSlice> used;
@@ -590,17 +590,17 @@ bool CoreAllocation::satisfies_constraints(
         bool overlayablePadding = slice.field()->overlayable;
         if (isDeparsedOrMau && !overlayablePadding)
             used.push_back(slice);
-        if (!slice.field()->no_pack()) pack_fields.insert(slice.field());
+        if (!slice.field()->is_solitary()) pack_fields.insert(slice.field());
     }
     auto NotAdjacent = [](const PHV::AllocSlice& left, const PHV::AllocSlice& right) {
             return left.field() != right.field() ||
                    left.field_slice().hi + 1 != right.field_slice().lo ||
                    left.container_slice().hi + 1 != right.container_slice().lo;
         };
-    auto NoPack = [](const PHV::AllocSlice& s) { return s.field()->no_pack(); };
+    auto NoPack = [](const PHV::AllocSlice& s) { return s.field()->is_solitary(); };
     bool not_adjacent = std::adjacent_find(used.begin(), used.end(), NotAdjacent) != used.end();
-    bool no_pack = std::find_if(used.begin(), used.end(), NoPack) != used.end();
-    if (not_adjacent && no_pack) {
+    bool solitary = std::find_if(used.begin(), used.end(), NoPack) != used.end();
+    if (not_adjacent && solitary) {
         if (!std::all_of(pack_fields.begin(), pack_fields.end(), [](const PHV::Field* f) {
                     return f->padding;
                 })) {
@@ -736,7 +736,7 @@ bool CoreAllocation::satisfies_constraints(
         liveFieldSlices.push_back(PHV::FieldSlice(sl.field(), sl.field_slice()));
     for (auto& initSlice : initFields)
         initFieldSlices.insert(PHV::FieldSlice(initSlice.field(), initSlice.field_slice()));
-    if (slices.size() > 0 && slice.field()->no_pack()) {
+    if (slices.size() > 0 && slice.field()->is_solitary()) {
         for (auto& sl : slices) {
             LOG5("\t\t\tChecking no-pack for live slice: " << sl);
             if (slice.isLiveRangeDisjoint(sl) ||
@@ -745,19 +745,19 @@ bool CoreAllocation::satisfies_constraints(
                 LOG5("\t\t\t  Ignoring because of disjoint live range");
                 continue;
             }
-            LOG5("        constraint: slice has no_pack constraint but container has slices ");
+            LOG5("        constraint: slice has solitary constraint but container has slices ");
             return false;
         }
     }
 
     // Check no pack for any other fields already in the container.
     for (auto& sl : slices) {
-        if (sl.field()->no_pack()) {
+        if (sl.field()->is_solitary()) {
             if (slice.isLiveRangeDisjoint(sl) ||
                 (slice.container_slice().overlaps(sl.container_slice()) &&
                  phv_i.isMetadataMutex(slice.field(), sl.field())))
                 continue;
-            LOG5("        constraint: field " << sl.field()->name << " has no_pack constraint and "
+            LOG5("        constraint: field " << sl.field()->name << " has solitary constraint and "
                  "is already placed in this container");
             return false; } }
 
@@ -2123,7 +2123,7 @@ static std::string printSlice(const PHV::FieldSlice& slice) {
 static std::string printSliceConstraints(const PHV::FieldSlice& slice) {
     auto f = slice.field();
     return printSlice(slice) + ": "
-            + (f->no_pack() ? "no_pack " : "")
+            + (f->is_solitary() ? "solitary " : "")
             + (f->no_split() ? "no_split " : "")
             + (f->used_in_wide_arith() ? "wide_arith " : "")
             + (f->exact_containers() ? "exact_containers" : "");
@@ -2218,7 +2218,7 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
                 // adjacent slices, that's a problem.
                 std::string sm = printSlice(smaller);
                 std::string lg = printSlice(larger);
-                if (smaller.field()->no_pack() && smaller.field()->size != larger.size()) {
+                if (smaller.field()->is_solitary() && smaller.field()->size != larger.size()) {
                     std::stringstream ss;
                     ss << "Constraint conflict: ";
                     ss << "Field slices " << sm << " and " << lg << " must be in the same PHV "
@@ -2317,7 +2317,7 @@ void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat
     // Pretty-print the kinds of constraints.
     /*
     msg << R"(Constraints:
-    no_pack:    The field cannot be allocated in the same PHV container(s) as any
+    solitary:   The field cannot be allocated in the same PHV container(s) as any
                 other fields.  Fields that are shifted or are the destination of
                 arithmetic operations have this constraint.
 
@@ -2846,7 +2846,7 @@ void
 BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluster_groups) {
     // Critical Path result are not used.
     // auto critical_clusters = critical_path_clusters_i.calc_critical_clusters(cluster_groups);
-    std::set<const PHV::SuperCluster*> has_no_pack;
+    std::set<const PHV::SuperCluster*> has_solitary;
     std::set<const PHV::SuperCluster*> has_no_split;
     std::map<const PHV::SuperCluster*, int> n_valid_starts;
     std::map<const PHV::SuperCluster*, int> n_required_length;
@@ -2904,7 +2904,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         });
     }
 
-    // calc no_pack and no_split.
+    // calc has_solitary and no_split.
     for (const auto* super_cluster : cluster_groups) {
         n_valid_starts[super_cluster] = (std::numeric_limits<int>::max)();
         for (const auto* rot : super_cluster->clusters()) {
@@ -2917,15 +2917,15 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
                 n_valid_starts[super_cluster] = std::min(n_valid_starts[super_cluster], 5);
 
                 for (const auto& slice : ali->slices()) {
-                    if (slice.field()->no_pack()) {
-                        has_no_pack.insert(super_cluster); }
+                    if (slice.field()->is_solitary()) {
+                        has_solitary.insert(super_cluster); }
                     if (slice.field()->no_split() || slice.field()->has_no_split_at_pos()) {
                         has_no_split.insert(super_cluster); } }
             } } }
 
     // calc pounder-able clusters.
     for (const auto* super_cluster : cluster_groups) {
-        if (has_no_split.count(super_cluster) || has_no_pack.count(super_cluster)) continue;
+        if (has_no_split.count(super_cluster) || has_solitary.count(super_cluster)) continue;
         if (super_cluster->exact_containers()) continue;
         if (n_valid_starts[super_cluster] <= 4) continue;
         if (super_cluster->slice_lists().size() > 1) continue;
@@ -2985,8 +2985,8 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         if (Device::currentDevice() == Device::JBAY)
             if (has_pov.count(l) != has_pov.count(r))
                 return has_pov.count(l) > has_pov.count(r);
-        if (has_no_pack.count(l) != has_no_pack.count(r)) {
-            return has_no_pack.count(l) > has_no_pack.count(r); }
+        if (has_solitary.count(l) != has_solitary.count(r)) {
+            return has_solitary.count(l) > has_solitary.count(r); }
         if (has_no_split.count(l) != has_no_split.count(r)) {
             return has_no_split.count(l) > has_no_split.count(r); }
         if (non_sliceable.count(l) != non_sliceable.count(r)) {
@@ -3033,7 +3033,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         for (const auto& v : cluster_groups) {
             ++i;
             logs << i << "th "<< " [";
-            logs << "is_no_pack: "            << has_no_pack.count(v) << ", ";
+            logs << "is_solitary: "           << has_solitary.count(v) << ", ";
             logs << "is_no_split: "           << has_no_split.count(v) << ", ";
             logs << "is_non_sliceable: "      << non_sliceable.count(v) << ", ";
             logs << "is_exact_container: "    << v->exact_containers() << ", ";

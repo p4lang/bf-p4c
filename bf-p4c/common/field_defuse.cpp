@@ -174,7 +174,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             continue; }
 
         // Some DeparserParameters are not initialized by parser, i.e. fields that are
-        // f.deparsed_to_tm() && f.no_pack(). However, they should be treated as
+        // f.deparsed_to_tm() && f.is_solitary(). However, they should be treated as
         // implicitly initialized to an invalid value, instead of not initialized,
         // for the correctness of overlay analysis.
 

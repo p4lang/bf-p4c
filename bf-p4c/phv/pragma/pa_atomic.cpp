@@ -42,7 +42,6 @@ bool PragmaAtomic::add_constraint(cstring field_name) {
                   "the largest container", field_name);
         return false; }
 
-    // set no_pack
     fields.insert(field);
     field->set_no_split(true);
     LOG1("@pragma pa_atomic set " << field->name << " to be no_split");

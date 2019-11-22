@@ -122,8 +122,8 @@ PHV::SlicingIterator::SlicingIterator(
                 LOG5("\t  " << get_slice_coordinates(kv.second, sliceLocations[kv.first]) <<
                      "\t:\t" << kv.first); }
 
-        // TODO: Consider `no_pack` constraints in required_slices.  If a slice
-        // in a slice list has `no_pack`, then the slice list needs to be
+        // TODO: Consider `solitary` constraints in required_slices.  If a slice
+        // in a slice list has `solitary`, then the slice list needs to be
         // sliced exactly around it.
 
         // TODO: Add a dual `prohibited_slices`, which are slices that cannot

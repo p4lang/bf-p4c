@@ -160,7 +160,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (is_bitwise_op)
             continue;
 
-        // Apply no_pack constraint on carry-based operation. If sliced, apply
+        // Apply solitary constraint on carry-based operation. If sliced, apply
         // on the slice only.  If f can't be split but is larger than 32 bits,
         // report an error.
         if (field_bits.size() > 64)
@@ -237,22 +237,22 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (dst == field) {
             LOG3("Marking " << field->name << " as 'no pack' because it is written in "
                  "non-MOVE instruction " << inst->name << ".");
-            field->set_no_pack(true); }
+            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); }
 
         // For non-move operations, if the source field is smaller in size than the
-        // destination field, we need to set the no_pack property for the source field
+        // destination field, we need to set the solitary property for the source field
         // so that the missing bits (in the source compared to the destination) do not
         // contain any value that can affect the result of the operation
         if (dst && dst != field && field_bits.size() < dest_bits.size()) {
             LOG3("Marking " << field->name << " as 'no pack' because it is a source of a "
                  "non-MOVE operation to a larger field " << dst->name);
-            field->set_no_pack(true); }
+            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); }
 
         // For shift operations, the sources must be assigned no-pack.
         if (SHIFT_OPS.count(inst->name)) {
             LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
                  "shift operation " << inst);
-            field->set_no_pack(true); } }
+            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); } }
 
     if (!alignStatefulSource) return;
 

@@ -23,7 +23,6 @@ bool PragmaNoOverlay::add_constraint(cstring field_name) {
                   "%1% does not match any phv fields, skipped", field_name);
         return false; }
 
-    // set no_pack
     fields.insert(field);
     return true;
 }

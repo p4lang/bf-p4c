@@ -94,7 +94,7 @@ struct AllocScore {
         int n_packing_bits = 0;  // how many wasted bits in partial container get used.
         int n_packing_priority = 0;  // smaller, better.
         int n_inc_containers = 0;
-        int n_wasted_bits = 0;  // if no_pack but taking a container larger than it.
+        int n_wasted_bits = 0;  // if solitary but taking a container larger than it.
 
         // The number of CLOT-eligible bits that have been allocated to PHV
         // (JBay only).

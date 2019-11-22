@@ -442,7 +442,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
     std::map<PHV::Field*, int> bitsAfterField;
     for (int i = fields_in_header.size() - 1; i >= 0; i--) {
         PHV::Field* field = fields_in_header[i];
-        if (field->no_pack())
+        if (field->is_solitary())
             bitsAfter = 0;
         else
             bitsAfter += field->size;
@@ -474,7 +474,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             continue;
         }
 
-        // If the slice list contains a no_pack field, then all the other slices in the list (if
+        // If the slice list contains a solitary field, then all the other slices in the list (if
         // any) must be padding or unreferenced (unreferenced fields effectively act as a
         // padding field).
         if (lastNoPack && !field->padding && self.uses_i.is_referenced(field)) {
@@ -506,7 +506,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
                 fatal_error("%1%", ss.str());
             }
             StartNewSliceList();
-            LOG5("Starting new slice list (to isolate a no_pack field): ");
+            LOG5("Starting new slice list (to isolate a solitary field): ");
         } else if (lastWideArith && !field->padding) {
             StartNewSliceList();
             LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
@@ -535,12 +535,12 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // BRIG-301.
         break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
 
-        if (accumulator_bits && (field->no_pack()) && !lastPadding) {
-            // Break off the existing slice list if this field has a no_pack and
+        if (accumulator_bits && (field->is_solitary()) && !lastPadding) {
+            // Break off the existing slice list if this field has a solitary and
             // the previous fields are not padding fields.
             // Break at bottom as well
             StartNewSliceList();
-            LOG5("Starting new slice list (for no_pack field):");
+            LOG5("Starting new slice list (for solitary field):");
         } else if (accumulator_bits && (field->used_in_wide_arith())) {
             // Break off the existing slice list if this field is used in wide arithmetic
             // Break at bottom as well
@@ -664,7 +664,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             continue;
         }
         accumulator_bits += field->size;
-        lastNoPack = field->no_pack() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
+        lastNoPack = field->is_solitary() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
             (lastNoPack && field->padding);
         lastWideArith = field->used_in_wide_arith();
         lastPadding = field->padding;
@@ -683,7 +683,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
                   "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",
                   cstring::to_cstring(field), field->size, field_slice_list_size);
 
-        // Break off the slice list holding this field if it has a no_pack
+        // Break off the slice list holding this field if it has a solitary
         // constraint, or if the list has reached a byte multiple of at least
         // 32b.
         bool is_multiple = accumulator_bits % int(PHV::Size::b8) == 0 && accumulator_bits >= 32;
@@ -891,7 +891,7 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
         if (any_pack_conflicts) {
             LOG5("    Ignoring POV bit " << f->name << " because of a pack conflict");
             continue; }
-        if (f->no_pack()) {
+        if (f->is_solitary()) {
             ::error("POV Bit %1% is marked as no-pack", f->name);
             continue; }
 
@@ -936,7 +936,7 @@ void Clustering::MakeSuperClusters::end_apply() {
         // slice.
         bool has_constraints = kv.first->alignment
                                || (kv.first->no_split() && kv.second.size() > 1)
-                               || (kv.first->no_pack() && kv.second.size() > 1)
+                               || (kv.first->is_solitary() && kv.second.size() > 1)
                                || kv.first->is_checksummed() || kv.first->is_marshaled()
                                // We must create slice lists for all metadata fields that are
                                // involved in wide arithmetic to ensure that the slices of those

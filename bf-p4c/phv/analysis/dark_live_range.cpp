@@ -1152,7 +1152,7 @@ cstring DarkLiveRange::DarkLiveRangeMap::printDarkLiveRanges() const {
 }
 
 bool DarkOverlay::suitableForDarkOverlay(const PHV::AllocSlice& slice) const {
-    if (slice.field()->no_pack() && (slice.container().size() - slice.width() > 7))
+    if (slice.field()->is_solitary() && (slice.container().size() - slice.width() > 7))
         return false;
     return true;
 }

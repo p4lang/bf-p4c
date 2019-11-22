@@ -106,9 +106,9 @@ TEST_F(PaSolitaryPragmaTest, Basic) {
     auto* h1_f2 = phv.field("ingress::h1.f2");
     auto* h2_f1 = phv.field("ingress::h2.f1");
 
-    EXPECT_EQ(h1_f1->no_pack(), true);
-    EXPECT_EQ(h1_f2->no_pack(), false);  // skip if not container-sized header field
-    EXPECT_EQ(h2_f1->no_pack(), true);   // not skip if not deparsed
+    EXPECT_EQ(h1_f1->is_solitary(), true);
+    EXPECT_EQ(h1_f2->is_solitary(), false);  // skip if not container-sized header field
+    EXPECT_EQ(h2_f1->is_solitary(), true);   // not skip if not deparsed
 }
 
 }  // namespace Test

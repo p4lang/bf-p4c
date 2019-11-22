@@ -941,7 +941,7 @@ bool ActionPhvConstraints::pack_slices_together(
             // Insert the slices to be packed together into the UnionFind structure
             LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
                     rangeRead.hi << "] into copacking_constraints for action " << action->name);
-            if (fieldRead->no_pack() &&
+            if (fieldRead->is_solitary() &&
                (no_pack_source_field == nullptr || fieldRead == no_pack_source_field)) {
                 // If the source is no-pack and there is no other no-pack field encountered, then
                 // add this to the no-pack slice list. Also do the same if this slice belongs to the
@@ -951,7 +951,7 @@ bool ActionPhvConstraints::pack_slices_together(
                 pack_together_no_pack.insert(PHV::FieldSlice(fieldRead, rangeRead));
             } else {
                 // Note if we have a second no-pack source.
-                if (fieldRead->no_pack()) {
+                if (fieldRead->is_solitary()) {
                     pack_together_fields.insert(fieldRead);
                     pack_together_has_no_pack = true;
                 }

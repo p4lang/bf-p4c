@@ -144,11 +144,11 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
         // Impose constraints for digest fields without the exact_containers requirement.
         for (PHV::Field* f : nonExactDigestFields) {
             // For fields whose sizes are multiples of bytes, we set exact_containers to true and
-            // also set them to no_pack. This ensures that the containers with these fields do not
+            // also set them to solitary. This ensures that the containers with these fields do not
             // have any additional bits not occupied by slices of these fields.
             if (f->size % 8 == 0) {
                 f->set_exact_containers(true);
-                f->set_no_pack(true);
+                f->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::DIGEST);
                 LOG2("\tSetting " << f->name << " to exact containers.");
                 continue;
             }

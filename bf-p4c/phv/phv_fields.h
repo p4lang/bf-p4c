@@ -13,6 +13,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/constraints/constraints.h"
 #include "ir/ir.h"
 #include "lib/algorithm.h"
 #include "lib/map.h"
@@ -291,15 +292,15 @@ class Field : public LiftLess<Field> {
     //
     /// True if this Field is part of a flexible struct.
     bool            flexible_i = false;
-    bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
-                                                       /// set by PHV_Field_Operations
     bool            parsed_i = false;                  /// true if parsed field
     bool            deparsed_i = false;                /// true if field has the deparsed PHV
                                                        /// constraint. NB: fields with this
                                                        /// constraint are not necessarily emitted.
                                                        /// See @ref emitted_i.
-    bool            no_pack_i = false;                 /// prevents field from being placed in a
-                                                       /// container with any other field
+    // Solitary Constraint: This field cannot be packed with any other field (although it may share
+    // a container with another field through overlay).
+    Constraints::SolitaryConstraint solitary_i;
+
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
@@ -406,16 +407,16 @@ class Field : public LiftLess<Field> {
     //
     // constraints
     //
-    bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
-    void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
     bool parsed() const                                    { return parsed_i; }
     void set_parsed(bool b)                                { parsed_i = b; }
     /// NB: Fields satisfying the deparsed constraint are not necessarily emitted. To determine
     /// whether a field is emitted by the deparser onto the wire, see @ref emitted.
     bool deparsed() const                                  { return deparsed_i; }
     void set_deparsed(bool b)                              { deparsed_i = b; }
-    bool no_pack() const                                   { return no_pack_i; }
-    void set_no_pack(bool b)                               { no_pack_i = b; }
+
+    bool is_solitary() const                               { return solitary_i.hasConstraint(); }
+    void set_solitary(uint32_t reason)                     { solitary_i.addConstraint(reason); }
+
     bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
     bool exact_containers() const                          { return exact_containers_i; }

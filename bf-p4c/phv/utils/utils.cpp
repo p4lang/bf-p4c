@@ -601,8 +601,8 @@ PHV::Allocation::available_spots() const {
         if (allocatedBits == bitvec(0, c.size())) {
             continue;
         } else {
-            // Occupied by no_pack field
-            if (slices.size() == 1 && slices.begin()->field()->no_pack()) {
+            // Occupied by solitary field
+            if (slices.size() == 1 && slices.begin()->field()->is_solitary()) {
                 continue; }
             int used = std::accumulate(allocatedBits.begin(),
                                        allocatedBits.end(), 0,
@@ -945,7 +945,7 @@ void PHV::AlignedCluster::initialize_constraints() {
 
         // XXX(cole): This should probably live in the field object.
         if (slice.field()->deparsed())              num_constraints_i++;
-        if (slice.field()->no_pack())               num_constraints_i++;
+        if (slice.field()->is_solitary())           num_constraints_i++;
         if (slice.field()->deparsed_bottom_bits())  num_constraints_i++;
         if (slice.field()->exact_containers())      num_constraints_i++; }
 }
