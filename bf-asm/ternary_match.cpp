@@ -773,24 +773,83 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
                               tcam_bits[word], field.second.what->lo % 4); }
             break; }
         case InputXbar::Group::BYTE:
+            // The byte group represents what goes in top nibble in the tcam
+            // word. Based on the byte config, the corresponding match word is
+            // selected and the field (slice) is placed in the nibble.
+            // E.g. (P4C-2257)
+            //   byte group 5: { 0: HillTop.Lamona.Whitefish(0..1) , 2: HillTop.RossFork.Adona(0..5) }
+            //   match:
+            //        - { group: 10, byte_group: 5, byte_config: 0, dirtcam: 0x555 }
+            //        - { group: 11, byte_group: 5, byte_config: 1, dirtcam: 0x555 }
+            // Placement
+            //  --------------------------
+            //  Group 10 - Midbyte Nibble Lo
+            //  --------------------------
+            //  Word 1    : 41  42  43  44
+            //  Whitefish :  0   1   X   X
+            //  Adona     :  X   X   0   1
+            //  --------------------------
+            //  Group 11 - Midbyte Nibble Hi
+            //  --------------------------
+            //  Word 0    : 41  42  43  44
+            //  Whitefish :  X   X   X   X
+            //  Adona     :  2   3   4   5
+            //  --------------------------
             for (size_t word = 0; word < match.size(); word++) {
                 if (match[word].byte_group != field.first.index) continue;
-                std::string source = "spec";
-                std::string field_name = field.second.what.name();
-                int byte_lo = field.second.lo;
-                int field_lo = field.second.what.lobit();
-                int width = field.second.what.size();
+                auto source     = "spec";
+                auto field_name = field.second.what.name();
+                int byte_lo     = field.second.lo;
+                int field_lo    = field.second.what.lobit();
+                int width       = field.second.what.size();
+                int nibble_lo   = byte_lo;
                 if (match[word].byte_config == MIDBYTE_NIBBLE_HI) {
                     if (byte_lo >= 4) {
-                        byte_lo -= 4;
+                        // NIBBLE HI  | NIBBLE LO
+                        // 7  6  5  4 | 3  2  1  0
+                        // x  x  x    |
+                        // byte_lo = 5 (start of byte)
+                        nibble_lo = byte_lo - 4;  // Get nibble_lo from nibble boundary
+                        // nibble_lo = 1
                     } else {
-                        field_lo += 4 - byte_lo;
-                        width -= 4 - byte_lo;
-                        byte_lo = 0; } }
-                if (width > 4) width = 4;
-                gen_entry_cfg(match_field_list, field_name, 41 + byte_lo, match_index - word,
+                        // NIBBLE HI  | NIBBLE LO
+                        // 7  6  5  4 | 3  2  1  0
+                        //       x  x | x  x
+                        // say field f1(3..7)
+                        // field_lo = 3
+                        // byte_lo = 2 (start of byte)
+                        // width   = 4
+                        width -= 4 - byte_lo;  // Adjust width to what must
+                                               // fit in the nibble
+                        if (width <= 0) continue;  // No field in nibble, skip
+                        // width = 2
+                        nibble_lo = 0;  // Field starts at nibble boundary
+                        field_lo += 4 - byte_lo;  // Adjust field lo bit to start of nibble
+                        // field_lo = 5
+                    }
+                } else if (match[word].byte_config == MIDBYTE_NIBBLE_LO) {
+                    if (byte_lo >=4) {
+                        // NIBBLE HI  | NIBBLE LO
+                        // 7  6  5  4 | 3  2  1  0
+                        // x  x  x    |
+                        // byte_lo = 5 (start of byte)
+                        continue;  // No field in nibble, skip
+                    } else {
+                        // NIBBLE HI  | NIBBLE LO
+                        // 7  6  5  4 | 3  2  1  0
+                        //    x  x  x | x  x
+                        // byte_lo = 2 (start of byte)
+                        // width   = 5
+                        nibble_lo = byte_lo;
+                        int nibble_left = 4 - nibble_lo;
+                        width = (width > nibble_left) ? nibble_left : width;
+                        // width = 2
+                    }
+                }
+                gen_entry_cfg(match_field_list, field_name, 41 + nibble_lo, match_index - word,
                     match_index - word, source, field_lo, width, match[word].byte_group,
-                    tcam_bits[match_index - word]); }
+                    tcam_bits[match_index - word]);
+            }
             break; } }
     // For keyless table, just add parity & payload bits
     if (p4_params_list.empty()) {
