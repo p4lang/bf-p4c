@@ -139,7 +139,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_x3_profile")
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x2" ${SWITCH_P4_16_X2}
-    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 3600" ${SWITCH_P4_16_PTF})
+    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 4500" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
          "all
          ^switch_l3.L3SVITest

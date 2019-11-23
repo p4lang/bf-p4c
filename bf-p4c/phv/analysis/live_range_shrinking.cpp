@@ -196,12 +196,6 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
     int new_init_stage = std::max(use_stage + 1, init_stage);
     LOG7("\t\t\t  new_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
     if (new_init_stage + init_dep_tail > maxStages) return true;
-    // If in a previous round of table placement, use table was allocated earlier than the init
-    // table t, then do not initialize here.
-    if (!tableAlloc.happensBefore(use, init)) {
-        LOG5("\t\t\t  Disabling this metadata init because of previous round.");
-        return true;
-    }
     if (!tableAlloc.hasTablePlacement()) {
         LOG5("\t\t\t  No need to check actual allocation because no previous round.");
         return false;
@@ -313,13 +307,6 @@ boost::optional<const PHV::Allocation::ActionSet> FindInitializationNode::getIni
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const PHV::Transaction& alloc,
         bool ignoreMutex) const {
-    // If a table has a stage pragma associated with it, initializing at that table may cause us to
-    // add dependencies that prevent that pragma from being satisfied. Therefore, prevent
-    // initialization at tables that have the stage pragma associated with them.
-    if (t->get_provided_stage() >= 0) {
-        LOG3("\t\t\tIgnoring table " << t->name << " because it has a stage pragma specified.");
-        return boost::none;
-    }
     // If the uses of the previous field do not reach this initialization point, then the live
     // ranges might overlap.
     ordered_set<const IR::BFN::Unit*> prevUseUnits;
