@@ -160,7 +160,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "the following .* not written in .* will be overwritten illegally"
-  switch_8.7_msdc_l3
+  switch_8.8_msdc_l3
   switch_msdc_l3
   )
 
@@ -236,16 +236,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   ../glass/testsuite/p4_tests/mau/COMPILER-1068/comp_1068.p4
-  switch_8.7_generic_int_leaf
+  switch_8.8_generic_int_leaf
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error occured while the compiler was allocating parser match registers for|Ran out of parser match registers for"
-  switch_8.7_l3_heavy_int_leaf
+  switch_8.8_l3_heavy_int_leaf
   switch_generic_int_leaf
   switch_l3_heavy_int_leaf
-  switch_8.7_msdc_leaf_int
+  switch_8.8_msdc_leaf_int
   switch_msdc_leaf_int
 )
 

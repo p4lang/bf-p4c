@@ -54,8 +54,8 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
 # 500s timeout is too little for compiling ent_dc_general profile, bumping it up
 set_tests_properties("tofino/switch_ent_dc_general" PROPERTIES TIMEOUT 1200)
 
-# Switch On Release 8.7 (refpoint must be periodically updated)
-set  (SWITCH_VERSION 8.7)
+# Switch On Release 8.8 (refpoint must be periodically updated)
+set  (SWITCH_VERSION 8.8)
 set  (SWITCH_${SWITCH_VERSION}_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/p4src/switch.p4)
 set  (SWITCH_${SWITCH_VERSION}_PTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/base/api-tests)
 set  (SWITCH_${SWITCH_VERSION}_PTF_DIR_MIRROR ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch-${SWITCH_VERSION}/ptf-tests/base/feature-tests)
@@ -533,7 +533,7 @@ set_tests_properties("tofino/smoketest_switch_dtel_int_spine_dtel_sai" PROPERTIE
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_sai" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dtel_int_spine_sai_hostif" PROPERTIES TIMEOUT 3600)
 
-# Switch Rel 8.7 MSDC_PROFILE tests
+# Switch Rel 8.8 MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -arch v1model -DMSDC_PROFILE -DP4_WRED_DEBUG -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_msdc"
@@ -642,7 +642,7 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_msdc_MalformedPa
 
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_msdc_set_8")
 
-# Switch Rel 8.7 ENT_DC_GENERAL_PROFILE tests
+# Switch Rel 8.8 ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -arch v1model -DENT_DC_GENERAL_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general"
@@ -747,7 +747,7 @@ set_tests_properties("tofino/smoketest_switch_${SWITCH_VERSION}_ent_dc_general_s
 
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_${SWITCH_VERSION}_ent_dc_general_set_9")
 
-# Switch Rel 8.7 DC_BASIC_PROFILE_BRIG tests
+# Switch Rel 8.8 DC_BASIC_PROFILE_BRIG tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic" ${SWITCH_${SWITCH_VERSION}_P4}
     "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_${SWITCH_VERSION}_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_${SWITCH_VERSION}_dc_basic"
