@@ -418,8 +418,8 @@ RepackFlexHeaders::bridgedActionAnalysis(
                 // because of backtracking to bridged metadata packing.
                 doNotPack(field1->id, field2->id) = true;
                 printNoPackConstraint("Backtracking NO-PACK", field1, field2);
-            } else if (field1->is_marshaled() || field2->is_marshaled()) {
-                // Do not pack fields together if one or both of them is mirrored/resubmitted.
+            } else if (field1->is_digest() || field2->is_marshaled()) {
+                // Do not pack fields together if one or both of them is used in a digest.
                 doNotPack(field1->id, field2->id) = true;
                 printNoPackConstraint("Marshaled", field1, field2);
             } else if (isSpecialityDest1 || isSpecialityDest2) {

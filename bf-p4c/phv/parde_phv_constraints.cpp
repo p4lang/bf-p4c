@@ -148,7 +148,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
             // have any additional bits not occupied by slices of these fields.
             if (f->size % 8 == 0) {
                 f->set_exact_containers(true);
-                f->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::DIGEST);
+                f->set_solitary(PHV::SolitaryReason::DIGEST);
                 LOG2("\tSetting " << f->name << " to exact containers.");
                 continue;
             }

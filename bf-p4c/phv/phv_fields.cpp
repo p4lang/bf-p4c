@@ -1232,7 +1232,7 @@ class CollectPhvFields : public Inspector {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_exact_containers(true);
-            f->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ARCH);
+            f->set_solitary(PHV::SolitaryReason::ARCH);
             f->set_no_split(true);
         }
         // A field that ends with PHV::Field::TPHV_PRIVATIZE_SUFFIX is the TPHV copy of a header
@@ -1269,11 +1269,11 @@ class CollectPhvFields : public Inspector {
             if (f_name.find(BFN::COMPILER_META) != std::string::npos
              && f_name.find("residual_checksum_") != std::string::npos) {
                 f.set_exact_containers(true);
-                f.set_solitary(Constraints::SolitaryConstraint::SolitaryReason::CHECKSUM);
+                f.set_solitary(PHV::SolitaryReason::CHECKSUM);
                 f.set_no_split(true);
             }
             if (f_name == "ingress::ig_intr_md_for_dprsr.digest_type")
-                f.set_solitary(Constraints::SolitaryConstraint::SolitaryReason::DIGEST);
+                f.set_solitary(PHV::SolitaryReason::DIGEST);
         }
     }
 
@@ -1482,7 +1482,7 @@ class AddIntrinsicConstraints : public Inspector {
                     std::string f_name(f.name.c_str());
                     if (f_name.find(kv.first) != std::string::npos
                         && f_name.find(kv.second) != std::string::npos) {
-                        f.set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ARCH);
+                        f.set_solitary(PHV::SolitaryReason::ARCH);
                         f.set_invalidate_from_arch(true);
                         LOG3("\tMarking field " << f.name << " as invalidate from arch");
                     }
@@ -1613,7 +1613,7 @@ class CollectPardeConstraints : public Inspector {
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_is_checksummed(true);
             if (f->metadata && f->size % 8) {
-                f->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::CHECKSUM);
+                f->set_solitary(PHV::SolitaryReason::CHECKSUM);
                 LOG3("Marking checksummed field " << f << " as no_pack");
                 // TODO: Allocate multiple metadatas in a container instead of
                 // allocation only one in a container. Allocation must consider the
@@ -1709,13 +1709,20 @@ class CollectPardeConstraints : public Inspector {
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
         f->set_no_split(true);
-        f->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::DIGEST);
-        f->set_is_digest(true);
+        f->set_solitary(PHV::SolitaryReason::DIGEST);
 
         for (auto fieldList : digest->fieldLists) {
             for (auto flval : fieldList->sources) {
-                if (auto f = phv.field(flval->field))
-                    f->set_is_digest(true);
+                if (auto f = phv.field(flval->field)) {
+                    if (digest->name == "learning")
+                        f->set_digest(PHV::DigestType::LEARNING);
+                    else if (digest->name == "mirror")
+                        f->set_digest(PHV::DigestType::MIRROR);
+                    else if (digest->name == "resubmit")
+                        f->set_digest(PHV::DigestType::RESUBMIT);
+                    else if (digest->name == "pktgen")
+                        f->set_digest(PHV::DigestType::PKTGEN);
+                }
             }
         }
 

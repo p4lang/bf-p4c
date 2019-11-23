@@ -237,7 +237,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (dst == field) {
             LOG3("Marking " << field->name << " as 'no pack' because it is written in "
                  "non-MOVE instruction " << inst->name << ".");
-            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); }
+            field->set_solitary(PHV::SolitaryReason::ALU); }
 
         // For non-move operations, if the source field is smaller in size than the
         // destination field, we need to set the solitary property for the source field
@@ -246,13 +246,13 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         if (dst && dst != field && field_bits.size() < dest_bits.size()) {
             LOG3("Marking " << field->name << " as 'no pack' because it is a source of a "
                  "non-MOVE operation to a larger field " << dst->name);
-            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); }
+            field->set_solitary(PHV::SolitaryReason::ALU); }
 
         // For shift operations, the sources must be assigned no-pack.
         if (SHIFT_OPS.count(inst->name)) {
             LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
                  "shift operation " << inst);
-            field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::ALU); } }
+            field->set_solitary(PHV::SolitaryReason::ALU); } }
 
     if (!alignStatefulSource) return;
 

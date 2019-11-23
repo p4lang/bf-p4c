@@ -1,14 +1,14 @@
 #ifndef BF_P4C_PHV_CONSTRAINTS_CONSTRAINTS_H_
 #define BF_P4C_PHV_CONSTRAINTS_CONSTRAINTS_H_
 
-// This is the file in which we will document all PHV constraints.
-// XXX(Deep): Integrate all constraints into this class format.
+/// This is the file in which we will document all PHV constraints.
+/// XXX(Deep): Integrate all constraints into this class format.
 
 namespace Constraints {
 
-// Class that captures whether a constraint is present on a field or not.
-// It also registers the reason for the constraint being added to the field.
-// reason = 0 necessarily implies the absence of the constraint.
+/// Class that captures whether a constraint is present on a field or not.
+/// It also registers the reason for the constraint being added to the field.
+/// reason = 0 necessarily implies the absence of the constraint.
 class BooleanConstraint {
  protected:
     unsigned reason = 0;
@@ -18,9 +18,9 @@ class BooleanConstraint {
     virtual void addConstraint(uint32_t reason) = 0;
 };
 
-// This class represents the solitary constraint, which implies that the field cannot be packed with
-// any other field in the same container. Note that solitary constraint does not preclude fields
-// sharing the same container through overlay.
+/// This class represents the solitary constraint, which implies that the field cannot be packed
+/// with any other field in the same container. Note that solitary constraint does not preclude
+/// fields sharing the same container through overlay.
 class SolitaryConstraint : BooleanConstraint {
  public:
      // Define reasons for constraints here as enum classes.
@@ -43,6 +43,28 @@ class SolitaryConstraint : BooleanConstraint {
     bool isDigest() const { return reason & DIGEST; }
     bool isPragmaSolitary() const { return reason & PRAGMA_SOLITARY; }
     bool isPragmaContainerSize() const { return reason & PRAGMA_CONTAINER_SIZE; }
+};
+
+/// This class represents the digest constraint, which implies that the field is used in a digest.
+/// Additionally, it also stores the type of digest in which the field is used.
+class DigestConstraint : BooleanConstraint {
+ public:
+    // Define type of digest in which the field is used.
+    enum DigestType {
+        NONE = 0,               // Field is not used in a digest
+        MIRROR = 1,             // used in mirror digest
+        LEARNING = (1 << 1),    // used in learning digest
+        RESUBMIT = (1 << 2),    // used in resubmit
+        PKTGEN = (1 << 3)       // used in pktgen
+    };
+
+    bool hasConstraint() const { return (reason != 0); }
+    void addConstraint(uint32_t r) { reason |= r; }
+
+    bool isMirror() const { return reason & MIRROR; }
+    bool isLearning() const { return reason & LEARNING; }
+    bool isResubmit() const { return reason & RESUBMIT; }
+    bool isPktGen() const { return reason & PKTGEN; }
 };
 }  // namespace Constraints
 

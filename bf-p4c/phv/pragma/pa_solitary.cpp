@@ -67,7 +67,7 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
             continue; }
 
         // set solitary
-        field->set_solitary(Constraints::SolitaryConstraint::SolitaryReason::PRAGMA_SOLITARY);
+        field->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
         LOG1("@pragma pa_solitary set " << field->name << " to be solitary");
     }
     return true;

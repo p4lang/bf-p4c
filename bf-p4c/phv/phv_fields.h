@@ -40,6 +40,9 @@ std::ostream& operator<<(std::ostream&, const FieldAlignment&);
 
 namespace PHV {
 
+using SolitaryReason = Constraints::SolitaryConstraint::SolitaryReason;
+using DigestType = Constraints::DigestConstraint::DigestType;
+
 class FieldSlice;
 
 enum class FieldKind : unsigned short {
@@ -301,6 +304,10 @@ class Field : public LiftLess<Field> {
     // a container with another field through overlay).
     Constraints::SolitaryConstraint solitary_i;
 
+    // Digest Constraint: This field is used in a digest. This constraint also contains the type of
+    // digest this field is used in.
+    Constraints::DigestConstraint digest_i;
+
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
@@ -313,7 +320,6 @@ class Field : public LiftLess<Field> {
     bool            privatized_i = false;              /// true for the TPHV version of a
                                                        /// privatized field
     bool            is_checksummed_i = false;          /// true for fields used in checksum.
-    bool            is_digest_i = false;               /// true for fields used in digest.
     bool            mocha_i = false;                   /// true if field is a candidate for mocha
                                                        /// PHV.
     bool            dark_i = false;                    /// true if field is a candidate for dark
@@ -356,16 +362,16 @@ class Field : public LiftLess<Field> {
     /// does not split c[0:31]. E.g. c[32:47] is allowed, but c[15:31] is not.
     std::vector<le_bitrange> no_split_ranges_i;
 
-    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
-     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
-     *  header is being created) to the ingress parser (when the mirrored header is being processed).
-     *
-     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
-     *  are not emitted on the wire.
-     *
-     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
-     *  mechanism can be used for learning, recirculation, and bridged metadata.
-     **/
+    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.   
+     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored    
+     *  header is being created) to the ingress parser (when the mirrored header is being processed).   
+     *  
+     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they    
+     *  are not emitted on the wire.    
+     *  
+     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same  
+     *  mechanism can be used for learning, recirculation, and bridged metadata.    
+     **/    
     bool            is_marshaled_i = false;
 
     /// MAU operations performed on this field.
@@ -416,6 +422,8 @@ class Field : public LiftLess<Field> {
 
     bool is_solitary() const                               { return solitary_i.hasConstraint(); }
     void set_solitary(uint32_t reason)                     { solitary_i.addConstraint(reason); }
+    bool is_digest() const                                 { return digest_i.hasConstraint(); }
+    void set_digest(uint32_t source)                       { digest_i.addConstraint(source); }
 
     bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
@@ -473,8 +481,6 @@ class Field : public LiftLess<Field> {
     void set_privatized(bool b)                            { privatized_i = b; }
     bool is_checksummed() const                            { return is_checksummed_i; }
     void set_is_checksummed(bool b)                        { is_checksummed_i = b; }
-    bool is_digest() const                                 { return is_digest_i; }
-    void set_is_digest(bool b)                             { is_digest_i = b; }
     bool is_intrinsic() const                              { return intrinsic_i; }
     void set_intrinsic(bool b)                             { intrinsic_i = b; }
     bool is_invalidate_from_arch() const                   { return invalidate_from_arch_i; }
