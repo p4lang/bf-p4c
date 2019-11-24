@@ -195,7 +195,9 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
                 argType = f->type;
                 break; }
             ++field_idx; }
-        BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
+        if (field_idx > 1) {
+            /* three or more fields in the register type will flag an error later */
+            field_idx = 0; } }
     cstring name = field_idx ? "hi" : "lo";
     switch (param_types->at(idx)) {
     case param_t::VALUE:        /* inout value or local var */

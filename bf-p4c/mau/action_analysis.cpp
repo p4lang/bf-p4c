@@ -346,7 +346,7 @@ bool ActionAnalysis::preorder(const IR::Expression *expr) {
     if (phv.field(expr)) {
         initialize_phv_field(expr);
     } else {
-        BUG("IR structure not yet handled by the ActionAnalysis pass");
+        BUG("IR structure not yet handled by the ActionAnalysis pass: %s", expr);
     }
     return false;
 }
