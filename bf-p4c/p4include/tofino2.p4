@@ -716,6 +716,9 @@ extern Register<T, I> {
 
     /// Write value to register at specified index.
     void write(in I index, in T value);
+
+    /// Write a value to every index in the register
+    void clear(in T value, @optional in T busy);
 }
 
 /// DirectRegister
@@ -733,6 +736,9 @@ extern DirectRegister<T> {
 
     /// Write value to a direct register.
     void write(in T value);
+
+    /// Write a value to every element of the register
+    void clear(in T value, @optional in T busy);
 }
 
 extern RegisterParam<T> {

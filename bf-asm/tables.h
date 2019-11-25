@@ -1695,6 +1695,7 @@ public:
     bitvec              phv_hash_mask = bitvec(0, 128);
     Instruction         *output_lmatch = nullptr;  // output instruction using lmatch
     bitvec              clear_value;
+    uint32_t            busy_value = 0;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;

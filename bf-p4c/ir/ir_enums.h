@@ -7,10 +7,16 @@
 namespace IR {
 namespace MAU {
 enum class DataAggregation { NONE, PACKETS, BYTES, BOTH, AGGR_TYPES };
-enum class MeterType { UNUSED, STFUL_INST0, COLOR_BLIND, STFUL_INST1, SELECTOR, STFUL_INST2,
-                       COLOR_AWARE, STFUL_INST3, METER_TYPES };
+enum class MeterType { UNUSED = 0,
+    // we use explicit constants here to map to the meter types defined by hardware
+    // these are (currently) consistent across tofino1/2/3, but perhaps should be
+    // moved to the Device model
+    COLOR_BLIND = 2, SELECTOR = 4, COLOR_AWARE = 6,
+    STFUL_INST0 = 1, STFUL_INST1 = 3, STFUL_INST2 = 5, STFUL_INST3 = 7,
+    STFUL_CLEAR = 6,
+    METER_TYPES = 8 };
 enum class StatefulUse { NO_USE, DIRECT, INDIRECT, LOG, STACK_PUSH, STACK_POP, FIFO_PUSH,
-                         FIFO_POP, STFUL_TYPES };
+                         FIFO_POP, FAST_CLEAR, STFUL_TYPES };
 enum class AddrLocation { DIRECT, OVERHEAD, HASH, STFUL_COUNTER, GATEWAY_PAYLOAD, NOT_SET };
 enum class PfeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
 enum class TypeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };

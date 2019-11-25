@@ -972,25 +972,34 @@ Visitor::profile_t AttachTables::init_apply(const IR::Node *root) {
 bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
         const IR::Declaration_Instance **reg_ptr, const IR::Type_Specialized **regtype_ptr,
         const IR::Type_Extern **seltype_ptr) {
-    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0)->expression : nullptr;
-    if (!reg_arg) {
-        if (auto regprop = ext->properties["reg"]) {
-            if (auto rpv = regprop->value->to<IR::ExpressionValue>())
-                reg_arg = rpv->expression;
-            else
-                BUG("reg property %s is not an ExpressionValue", regprop);
-        } else {
-            error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
-            return false; } }
-    auto pe = reg_arg->to<IR::PathExpression>();
-    auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
-    auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
+    auto *loc = &ext->srcInfo;
+    const IR::Declaration_Instance *reg = nullptr;
+    if (auto exttype = ext->type->to<IR::Type_Specialized>()) {
+        auto tname = exttype->baseType->toString();
+        if (tname == "Register" || tname == "DirectRegister")
+            reg = ext; }
+    if (!reg) {
+        auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0)->expression : nullptr;
+        if (!reg_arg) {
+            // FIXME -- P4_14 compat code, no longer needed?
+            if (auto regprop = ext->properties["reg"]) {
+                if (auto rpv = regprop->value->to<IR::ExpressionValue>())
+                    reg_arg = rpv->expression;
+                else
+                    BUG("reg property %s is not an ExpressionValue", regprop);
+            } else {
+                error("%sno reg property in stateful_alu %s", ext->srcInfo, ext->name);
+                return false; } }
+        loc = &reg_arg->srcInfo;
+        auto pe = reg_arg->to<IR::PathExpression>();
+        auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
+        reg = d ? d->to<IR::Declaration_Instance>() : nullptr; }
     auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
     auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
     if ((!regtype || regtype->baseType->toString() != "DirectRegister") &&
         (!regtype || regtype->baseType->toString() != "Register") &&
         (!seltype || seltype->name != "ActionSelector")) {
-        error("%s: is not a Register or ActionSelector", reg_arg->srcInfo);
+        error("%snot a Register or ActionSelector", *loc);
         return false;
     }
     *reg_ptr = reg;
@@ -1084,6 +1093,10 @@ void AttachTables::InitializeStatefulAlus
             salu->chain_total_size = getConstant(cts);
         salu_inits[reg] = salu; }
 
+    if (reg == ext) {
+        // direct register call (to .clear())
+        return; }
+
     // copy annotations from register action
     IR::Annotations *new_annot = nullptr;
     for (auto annot : ext->annotations->annotations) {
@@ -1138,10 +1151,12 @@ void AttachTables::InitializeStatefulAlus
 
 bool AttachTables::isSaluActionType(const IR::Type *type) {
     static std::set<cstring> saluActionTypes = {
+        "DirectRegister",
         "DirectRegisterAction", "DirectRegisterAction2", "DirectRegisterAction3",
         "DirectRegisterAction4",
         "LearnAction", "LearnAction2", "LearnAction3", "LearnAction4",
         "MinMaxAction", "MinMaxAction2", "MinMaxAction3", "MinMaxAction4",
+        "Register",
         "RegisterAction", "RegisterAction2", "RegisterAction3", "RegisterAction4",
         "SelectorAction" };
     cstring tname = type->toString();

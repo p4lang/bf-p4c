@@ -481,6 +481,9 @@ class StatefulAlu : MeterBus2Port {
     bool        synthetic_for_selector = false;  // created for the driver to set selector
     int         pred_shift = -1;
     int         pred_comb_shift = -1;
+    // params for fast clear.
+    bitvec      clear_value = {};
+    uint32_t    busy_value = 0;
 
     class MathUnit {
         bool            valid = false;

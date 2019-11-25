@@ -196,6 +196,13 @@ class StatefulAttachmentSetup : public PassManager {
     ordered_map<const IR::MAU::Action *, ordered_map<const IR::MAU::AttachedMemory *, use_t>>
         action_use;
     typedef std::pair<const IR::MAU::Synth2Port *, const IR::MAU::Table *> IndexCheck;
+    struct clear_info_t {
+        const IR::MAU::AttachedMemory   *attached = 0;
+        bitvec                          clear_value;
+        uint32_t                        busy_value = 0;
+    };
+    ordered_map<const IR::MAU::AttachedMemory *, clear_info_t>  salu_clears;
+    ordered_map<const IR::MAU::Table *, clear_info_t *>         table_clears;
 
     ordered_set<IndexCheck> addressed_by_hash;
     ordered_set<IndexCheck> addressed_by_index;
@@ -228,9 +235,11 @@ class StatefulAttachmentSetup : public PassManager {
         StatefulAttachmentSetup &self;
         const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *) override;
         const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override;
+        const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override;
         const IR::MAU::Instruction *preorder(IR::MAU::Instruction *sp) override;
      public:
-        explicit Update(StatefulAttachmentSetup &self) : self(self) {}
+        explicit Update(StatefulAttachmentSetup &self) : self(self) {
+            dontForwardChildrenBeforePreorder = true; }
     };
 
     const IR::MAU::HashDist *find_hash_dist(const IR::Expression *expr, const IR::Primitive *prim);

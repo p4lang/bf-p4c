@@ -30,6 +30,8 @@ static const char *meter_type_to_str[] = {
 };
 
 std::ostream &operator<<(std::ostream &out, const IR::MAU::MeterType &m) {
+    // FIXME -- COLOR_AWARE and STFUL_CLEAR are overloaded into the same code; which it
+    // is depends on the context.
     out << meter_type_to_str[static_cast<int>(m)];
     return out;
 }
@@ -45,6 +47,9 @@ bool operator>>(cstring s, IR::MAU::MeterType &m) {
             return true;
         }
     }
+    if (s == "STFUL_CLEAR") {
+        m = IR::MAU::MeterType::STFUL_CLEAR;
+        return true; }
     return false;
 }
 

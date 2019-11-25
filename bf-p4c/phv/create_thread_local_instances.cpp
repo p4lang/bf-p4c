@@ -24,7 +24,9 @@ class FindSharedStateful : public MauInspector {
         all_salus[salu].threads.insert(thread);
         if (auto *tbl = findContext<IR::MAU::Table>()) {
             if (auto *act = findContext<IR::MAU::Action>()) {
-                all_salus.at(salu).action_thread[salu->calledAction(tbl, act)->name] = thread;
+                if (auto *sact = salu->calledAction(tbl, act)) {
+                    all_salus.at(salu).action_thread[sact->name] = thread;
+                }
             }
         }
         return false; }

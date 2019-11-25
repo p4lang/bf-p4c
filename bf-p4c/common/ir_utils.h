@@ -10,4 +10,10 @@ getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName);
 
 bool isSigned(const IR::Type *);
 
+// probably belongs in ir/ir.h or ir/node.h...
+template <class T> inline T *clone_update(const T* &ptr) {
+    T *rv = ptr->clone();
+    ptr = rv;
+    return rv; }
+
 #endif /* EXTENSIONS_BF_P4C_COMMON_IR_UTILS_H_ */

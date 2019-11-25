@@ -694,8 +694,7 @@ const IR::MAU::SaluAction *IR::MAU::StatefulAlu::calledAction(
         const IR::MAU::Table* tbl,
         const IR::MAU::Action* act) const {
     auto ta_pair = tbl->name + "-" + act->name.originalName;
-    BUG_CHECK(action_map.count(ta_pair), "%s does not have %s for %s in its action map",
-              this, act, tbl);
+    if (!action_map.count(ta_pair)) return nullptr;
     auto *rv = instruction.get<SaluAction>(action_map.at(ta_pair));
     BUG_CHECK(rv, "No action %s in %s", action_map.at(ta_pair), this);
     return rv;

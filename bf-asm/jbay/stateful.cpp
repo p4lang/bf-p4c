@@ -28,7 +28,7 @@ enum {
     FUNCTION_MASK = 0xf << FUNCTION_SHIFT,
 };
 
-static const char *function_names[] = { "none", "log", "fifo", "stack", "bloom" };
+static const char *function_names[] = { "none", "log", "fifo", "stack", "clear" };
 
 static int decode_push_pop(const value_t &v) {
     static const std::map<std::string, int> modes = {
@@ -131,6 +131,7 @@ static int parse_jbay_counter_mode(const value_t &v) {
     if (v == "counter") rv = FUNCTION_LOG;
     else if (v == "fifo") rv = FUNCTION_FIFO;
     else if (v == "stack") rv = FUNCTION_STACK;
+    else if (v == "clear") rv = FUNCTION_FAST_CLEAR;
     else return -1;
     if (v.type == tSTR) return rv | PUSH_ALL;
     if (v.type != tCMD) return -1;
@@ -230,7 +231,7 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
     oxbar_map.stateful_log_counter_oxbar_enable = 1;
     auto &ctl2 = merge.mau_stateful_log_counter_ctl2[meter_group()];
     auto &ctl3 = merge.mau_stateful_log_counter_ctl3[meter_group()];
-    if (stateful_counter_mode && (stateful_counter_mode % FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
+    if (stateful_counter_mode && (stateful_counter_mode & FUNCTION_MASK) != FUNCTION_FAST_CLEAR) {
         ctl2.slog_counter_function = stateful_counter_mode >> FUNCTION_SHIFT;
         ctl2.slog_instruction_width = format->log2size - 3;
         if ((stateful_counter_mode & PUSH_ANY) == 0)
@@ -254,6 +255,8 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
         ctl2.slog_instruction_width = 4;  // 128 bits
         ctl2.slog_vpn_base = minvpn;
         ctl2.slog_vpn_limit = maxvpn;
+        if (busy_value)
+            salu.stateful_clear_action_output = busy_value;
         if (clear_value) {
             set_raw_instr_bits(salu.salu_instr_state_alu[3], clear_value);
             salu.stateful_ctl.salu_clear_value_ctl = 1; }

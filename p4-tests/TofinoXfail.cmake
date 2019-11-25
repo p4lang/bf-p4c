@@ -606,6 +606,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/slice-def-use1.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Unsupported Register element type"
+  testdata/p4_16_samples/psa-register1.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
+)
+
 # p4smith and p4testgen regression XFAILs
 
 # real error. fails because gateway condition too complex and cannot fit in a TCAM.

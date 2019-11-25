@@ -78,8 +78,9 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                         math_table.data[v.key.i] = v.value.i;
                 } else error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key)); }
 #ifdef HAVE_JBAY
-        } else if (options.target == JBAY && setup_jbay(kv)) {
+        } else if (options.target >= JBAY && setup_jbay(kv)) {
             /* jbay specific extensions done in setup_jbay */
+            // FIXME -- these should probably be based on individual Target::FEATURE() queries
 #endif
         } else if (kv.key == "log_vpn") {
             logvpn_lineno = kv.value.lineno;
@@ -100,6 +101,9 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 if ((pred_comb_shift = kv.value.i) < 0 || pred_comb_shift >= 32)
                     error(kv.value.lineno, "Invalid pred_comb_shift value %d: %s", pred_comb_shift,
                           pred_comb_shift < 0 ? "negative" : "too large");
+        } else if (kv.key == "busy_value" && Target::SUPPORT_SALU_FAST_CLEAR()) {
+            if (CHECKTYPE(kv.value, tINT))
+                busy_value = kv.value.i;
         } else if (kv.key == "clear_value" && Target::SUPPORT_SALU_FAST_CLEAR()) {
             if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
                 if (kv.value.type == tINT)

@@ -7,6 +7,7 @@
 #include "action_analysis.h"
 #include "ixbar_expr.h"
 #include "bf-p4c/common/elim_unused.h"
+#include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -316,6 +317,11 @@ const IR::Node *Synth2PortSetup::postorder(IR::Primitive *prim) {
         rv = nullptr;
         if (!prim->type->is<IR::Type::Void>())
             rv = makeInstr(new IR::TempVar(prim->type), 0);
+    } else if (prim->name == "Register.clear" || prim->name == "DirectRegister.clear") {
+        glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        meter_type = IR::MAU::MeterType::STFUL_CLEAR;
+        stateful.push_back(prim);  // needed to setup clear/busy values
+        rv = nullptr;
     } else if (prim->name == "Counter.count") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         stateful.push_back(prim);  // needed to setup the index
@@ -897,11 +903,13 @@ static const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (auto a = strstr(prim->name, "Action")) {
         if (a[6] == '.' || (std::isdigit(a[6]) && a[7] == '.'))
             return IR::Type_Register::get(); }
+    if (prim->name == "Register.clear" || prim->name == "DirectRegister.clear")
+        return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
 
 static ssize_t index_operand(const IR::Primitive *prim) {
-    if (prim->name.startsWith("Direct"))
+    if (prim->name.startsWith("Direct") || prim->name.endsWith(".clear"))
         return -1;
     else if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
         prim->name.endsWith("Action.execute"))
@@ -1022,6 +1030,46 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
         BUG_CHECK(obj, "invalid object");
         use = objType.startsWith("Direct") ? IR::MAU::StatefulUse::DIRECT
                                            : IR::MAU::StatefulUse::INDIRECT;
+    } else if (method == "clear") {
+        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
+        BUG_CHECK(obj, "invalid object");
+        use = IR::MAU::StatefulUse::FAST_CLEAR;
+        bitvec clear_value;
+        uint32_t busy_value = 0;
+        if (prim->operands.size() > 0) {
+            auto *v = prim->operands.at(1)->to<IR::Constant>();
+            if (!v) {
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "clear value %1% must be a constant",
+                      prim->operands.at(1));
+            } else {
+                uintptr_t raw[4];
+                size_t size = 4;
+                mpz_export(raw, &size, -1, sizeof(uintptr_t), 0, 0, v->value.get_mpz_t());
+                clear_value.setraw(raw, size); } }
+        if (prim->operands.size() > 1) {
+            auto *v = prim->operands.at(2)->to<IR::Constant>();
+            if (!v) {
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "busy value %1% must be a constant",
+                      prim->operands.at(2));
+            } else {
+                busy_value = v->asUnsigned(); } }
+        auto &info = self.table_clears[findContext<IR::MAU::Table>()];
+        if (info) {
+            if (obj != info->attached)
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Clearing %1% and %2% in one table",
+                      info->attached, obj);
+            if (info->clear_value != clear_value || info->busy_value != busy_value)
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Inconsistent clear arguments in %1%",
+                      prim);
+        } else {
+            info = &self.salu_clears[obj];
+            if (info->attached) {
+                if (info->clear_value != clear_value || info->busy_value != busy_value)
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Inconsistent clear arguments "
+                          "for %1%", info->attached); }
+            info->attached = obj; }
+        info->clear_value = clear_value;
+        info->busy_value = busy_value;
     }
     if (obj) {
         auto *act = findContext<IR::MAU::Action>();
@@ -1250,8 +1298,21 @@ const IR::MAU::BackendAttached *
         }
     }
     ba->use = use;
-    prune();
     return ba;
+}
+
+const IR::MAU::StatefulAlu *StatefulAttachmentSetup::Update::preorder(IR::MAU::StatefulAlu *salu) {
+    auto *orig = getOriginal<IR::MAU::StatefulAlu>();
+    if (self.salu_clears.count(orig)) {
+        auto &info = self.salu_clears.at(orig);
+        salu->clear_value = info.clear_value;
+        // truncate the value to width bits, then replicate back to 128 bits
+        salu->clear_value.clrrange(salu->width, ~0);
+        for (size_t w = salu->width; w < 128; w = w*2)
+            salu->clear_value |= salu->clear_value << w;
+        salu->busy_value = info.busy_value; }
+    prune();
+    return salu;
 }
 
 const IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(IR::MAU::Instruction *inst) {

@@ -1985,12 +1985,13 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             auto *at = call->attached_callee;
             out << indent << "- " << self.find_attached_name(table, at) << '(';
             sep = "";
-            if (auto *salu = at->to<IR::MAU::StatefulAlu>()) {
-                out << canon_name(salu->calledAction(table, act)->name);
+            auto *salu = at->to<IR::MAU::StatefulAlu>();
+            if (auto *salu_act = salu ? salu->calledAction(table, act) : nullptr) {
+                out << canon_name(salu_act->name);
                 sep = ", ";
             } else if (act->meter_types.count(at->unique_id()) > 0) {
                 // Currently dumps meter type as number, because the color aware stuff does not
-                // have a name
+                // have a name in asm, nor does STFUL_CLEAR
                 IR::MAU::MeterType type = act->meter_types.at(at->unique_id());
                 out << static_cast<int>(type);
                 sep = ", "; }
@@ -3278,6 +3279,7 @@ std::string MauAsmOutput::stateful_counter_addr(IR::MAU::StatefulUse use) const 
         case IR::MAU::StatefulUse::FIFO_POP: return "fifo pop";
         case IR::MAU::StatefulUse::STACK_PUSH: return "stack push";
         case IR::MAU::StatefulUse::STACK_POP: return "stack pop";
+        case IR::MAU::StatefulUse::FAST_CLEAR: return "clear";
         default: return "";
     }
 }
@@ -3810,6 +3812,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         out << "{ lo: " << salu->init_reg_lo;
         out << " , hi: " << salu->init_reg_hi << " }" << std::endl;
     }
+    if (salu->clear_value)
+        out << indent << "clear_value : 0x" << salu->clear_value << std::endl;
+    if (salu->busy_value)
+        out << indent << "busy_value : 0x" << hex(salu->busy_value) << std::endl;
 
     if (salu->math.valid) {
         out << indent++ << "math_table:" << std::endl;
