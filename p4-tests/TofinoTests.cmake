@@ -815,6 +815,7 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2058.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2076.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2077.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2257.p4
   # Other XFails in Glass repo to run in nightly
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-562/case3005.p4
   ${BFN_P4C_SOURCE_DIR}/glass/testsuite/p4_tests/arista/COMPILER-576/case3042.p4

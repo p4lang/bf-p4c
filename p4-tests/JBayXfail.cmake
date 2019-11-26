@@ -4,13 +4,6 @@ set (JBAY_XFAIL_TESTS
   # or open a new one.
   )
 
-# Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
-# implementation
-p4c_add_xfail_reason("tofino2"
-  "Error when creating clone session in target"
-  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
-  )
-
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
@@ -380,4 +373,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Expected packet was not received"
   p4c_1585_b
+)
+
+# DRV-3247
+p4c_add_xfail_reason("tofino2"
+  "BfruntimeReadWriteRpcException"
+  p4_16_programs_tna_ternary_match
 )

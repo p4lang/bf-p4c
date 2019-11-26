@@ -165,7 +165,7 @@ set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES 
 set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 3600)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 4500)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 3600)
 
 # Switch master MSDC_PROFILE tests
