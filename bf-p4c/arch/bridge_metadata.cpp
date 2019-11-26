@@ -339,7 +339,7 @@ struct PsaBridgeIngressToEgress : public Transform {
                 cstring padFieldName = "__pad_";
                 padFieldName += cstring::to_cstring(padFieldId++);
                 auto* fieldAnnotations = new IR::Annotations({
-                    new IR::Annotation(IR::ID("hidden"), { }) });
+                    new IR::Annotation(IR::ID("padding"), { }) });
                 fields.push_back(new IR::StructField(padFieldName,
                     fieldAnnotations, IR::Type::Bits::get(alignment)));
             }

@@ -1397,7 +1397,7 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     IR::IndexedVector<IR::StructField> fields;
     // Add the non flexible fields from the header.
     for (auto f : h->type->fields) {
-        if (!f->getAnnotation("flexible") && !f->getAnnotation("hidden")) {
+        if (!f->getAnnotation("flexible") && !f->getAnnotation("padding")) {
             fields.push_back(f);
             LOG2("Pushing original field " << f);
             continue;
@@ -1526,7 +1526,7 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
     IR::IndexedVector<IR::StructField> fields;
     // Add the non flexible fields from the header.
     for (auto f : d->type->fields) {
-        if (!f->getAnnotation("flexible") && !f->getAnnotation("hidden")) {
+        if (!f->getAnnotation("flexible") && !f->getAnnotation("padding")) {
             fields.push_back(f);
             LOG3("\tPushing original field " << f);
             continue;

@@ -95,7 +95,7 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
                     LOG4("tofino2 needs " << tofino2_pad << " bytes of padding");
 
                     auto* annots = new IR::Annotations(
-                        {new IR::Annotation(IR::ID("hidden"), { })});
+                        {new IR::Annotation(IR::ID("padding"), { })});
 
                     const IR::StructField* tofino2_pad_field = new IR::StructField("__tofino2_pad_",
                         annots, IR::Type::Bits::get(tofino2_pad * 8));

@@ -320,7 +320,7 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
  */
 class SaveFlexibleAnnotation : public P4::AnnotationSelectionPolicy {
     bool keep(const IR::Annotation* annot) override {
-        if (annot->name == "flexible" || annot->name == "hidden")
+        if (annot->name == "flexible" || annot->name == "padding")
             return true;
         return false;
     }

@@ -125,13 +125,13 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
         if (packed != nullptr) {
             structFields.push_back(field);
             continue; }
-        // If field has @hidden annotation, it is treated as a padding field.
+        // If field has @padding annotation, it is treated as a padding field.
         // remove all other annotations on the field, especially the @flexible
         // annotation which could be introduced by header flattening.
-        auto hidden = field->getAnnotation("hidden");
+        auto hidden = field->getAnnotation("padding");
         if (hidden != nullptr) {
             auto *fieldAnnotations = new IR::Annotations({
-                new IR::Annotation(IR::ID("hidden"), {})});
+                new IR::Annotation(IR::ID("padding"), {})});
             structFields.push_back(new IR::StructField(field->name, fieldAnnotations, field->type));
             programmer_inserted_padding += canonicalType->width_bits();
             continue; }
@@ -143,7 +143,7 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
             cstring padFieldName = "__pad_";
             padFieldName += cstring::to_cstring(padFieldId++);
             auto *fieldAnnotations = new IR::Annotations({
-                new IR::Annotation(IR::ID("hidden"), {})});
+                    new IR::Annotation(IR::ID("padding"), {})});
             structFields.push_back(new IR::StructField(padFieldName, fieldAnnotations,
                                                        IR::Type::Bits::get(alignment)));
             programmer_inserted_padding = 0;
@@ -202,7 +202,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) 
         // Add padding field for every bridged metadata field to ensure that the resulting
         // header is byte aligned.
         LOG3(" canno type " << canonicalType);
-        auto hidden = field->getAnnotation("hidden");
+        auto hidden = field->getAnnotation("padding");
         if (hidden != nullptr) {
             programmer_inserted_padding += canonicalType->width_bits();
         } else {

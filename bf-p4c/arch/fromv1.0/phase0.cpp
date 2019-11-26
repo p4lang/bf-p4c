@@ -460,10 +460,17 @@ struct FindPhase0Table : public Inspector {
             // remove it at that point.
             const int fieldSize = param->type->width_bits();
             const int alignment = getAlignment(fieldSize);
-            packing.padToAlignment(8, alignment);
+            bool is_pad_field   = param->getAnnotation("padding");
+            const int phase     = is_pad_field ? 0 : alignment;
+            packing.padToAlignment(8, phase);
+            LOG4("Padding phase = " << phase << ",  totalWidth = " << packing.totalWidth);
             packing.appendField(new IR::PathExpression(param->name),
-                                param->name, fieldSize);
-            packing.padToAlignment(8);
+                                 param->name, fieldSize);
+            if (!is_pad_field)
+                packing.padToAlignment(8);
+            LOG4("Append field " << param->name << " of size " <<
+                 fieldSize << " and apply padding (if non-padding field): totalWidth = " <<
+                 packing.totalWidth);
         }
 
         // Pad out the layout to fill the available phase 0 space.
@@ -482,7 +489,7 @@ struct FindPhase0Table : public Inspector {
                 padFieldName += cstring::to_cstring(padFieldId++);
                 auto* padFieldType = IR::Type::Bits::get(packedField.width);
                 fields.push_back(new IR::StructField(padFieldName, new IR::Annotations({
-                        new IR::Annotation(IR::ID("hidden"), { })
+                        new IR::Annotation(IR::ID("padding"), { })
                     }), padFieldType));
                 continue;
             }
@@ -700,10 +707,17 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
         // it at that point.
         const int fieldSize = param->type->width_bits();
         const int alignment = getAlignment(fieldSize);
-        packing->padToAlignment(8, alignment);
+        bool is_pad_field   = param->getAnnotation("padding");
+        const int phase     = is_pad_field ? 0 : alignment;
+        packing->padToAlignment(8, phase);
+        LOG4("Padding phase = " << phase << ",  totalWidth = " << packing->totalWidth);
         packing->appendField(new IR::PathExpression(param->name),
                              param->name, fieldSize);
-        packing->padToAlignment(8);
+        if (!is_pad_field)
+            packing->padToAlignment(8);
+        LOG4("Append field " << param->name << " of size " <<
+             fieldSize << " and apply padding (if non-padding field): totalWidth = " <<
+             packing->totalWidth);
     }
 
     // Pad out the layout to fill the available phase 0 space.
@@ -723,7 +737,7 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
             padFieldName += cstring::to_cstring(padFieldId++);
             auto* padFieldType = IR::Type::Bits::get(packedField.width);
             packFields->push_back(new IR::StructField(padFieldName, new IR::Annotations({
-                new IR::Annotation(IR::ID("hidden"), { })
+                new IR::Annotation(IR::ID("padding"), { })
             }), padFieldType));
             continue;
         }
@@ -757,6 +771,7 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     if (phase0_calls && phase0_calls->count(origParser)) {
         auto pmdFields = (*phase0_calls)[origParser];
         hdrName = pmdFields->name.toString();
+        LOG4("Pack Data into phase0: hdrName = " << hdrName << ", Size = " << phase0Size);
         packedFields = canPackDataIntoPhase0(&pmdFields->fields, phase0Size);
     } else {
         // If no extern is specified inject phase0 in parser
