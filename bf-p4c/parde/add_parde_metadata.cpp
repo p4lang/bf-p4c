@@ -38,13 +38,11 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
                 new IR::BFN::MetadataRVal(StartLen(432, 48))));
         prim->push_back(new IR::BFN::Extract(globalVersion,
                 new IR::BFN::MetadataRVal(StartLen(480, 32))));
-    } else if (Device::currentDevice() == Device::JBAY) {
+    } else {
         prim->push_back(new IR::BFN::Extract(globalTimestamp,
                 new IR::BFN::MetadataRVal(StartLen(400, 48))));
         prim->push_back(new IR::BFN::Extract(globalVersion,
                 new IR::BFN::MetadataRVal(StartLen(448, 32))));
-        // XXX(zma) paser uArch says extractor 9-16 has another
-        // version field at byte [60:63], not sure how to use this
     }
 
     parser->start =
@@ -65,10 +63,18 @@ void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
     auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
     if (isV1)
         prim->push_back(new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)));
-    prim->push_back(new IR::BFN::Extract(globalTimestamp,
-            new IR::BFN::MetadataRVal(StartLen(432, 48))));
-    prim->push_back(new IR::BFN::Extract(globalVersion,
-            new IR::BFN::MetadataRVal(StartLen(480, 32))));
+
+    if (Device::currentDevice() == Device::TOFINO) {
+        prim->push_back(new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(StartLen(432, 48))));
+        prim->push_back(new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(StartLen(480, 32))));
+    } else {
+        prim->push_back(new IR::BFN::Extract(globalTimestamp,
+                new IR::BFN::MetadataRVal(StartLen(400, 48))));
+        prim->push_back(new IR::BFN::Extract(globalVersion,
+                new IR::BFN::MetadataRVal(StartLen(448, 32))));
+    }
 
     parser->start =
       new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
