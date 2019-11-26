@@ -124,9 +124,12 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     int row = -1, prev = -1, prev_pov = -1;
     bool prev_is_checksum = false;
     unsigned pos = 0;
+    unsigned total_bytes = 0;
     for (auto &ent : dict) {
         unsigned size = ent.what->size();
+        total_bytes += size;
         int pov_bit = pov[ent.pov->reg.deparser_id()] + ent.pov->lo;
+
         if (options.match_compiler) {
             if (ent.what->is<Deparser::FDEntry::Checksum>()) {
                 /* checksum unit -- make sure it gets its own dictionary line */
@@ -166,7 +169,39 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
-        fde_data[row].num_bytes = pos & 3; }
+        fde_data[row].num_bytes = pos & 3;
+    }
+
+    // Compute average occupancy.  For deparser FDE compression to work,
+    // need to make sure have certain average occupancy.
+    // This error check may still be too high level.  I think it needs a finer granularity,
+    // but I'm not sure how to model the allowed variability of packet headers.
+
+    // Tofino deparser has a maximum output header size of 480 bytes.  This is done in 2 phases.
+    // Each phase can do 240 bytes, corresponding to 18 QFDEs (4 * 18 * 4 bytes = 288 bytes)
+    // This means that average occupancy must be better than 240 / 288 bytes, or roughly 83%.
+    // This is the value we will check.
+    // We gate the check on total bytes occupied being greater than 64 bytes in an attempt to consider the
+    // QFDE constraint that it can only drive four stage 2 buses for compression.
+
+    unsigned max_bytes_for_rows_occupied = 4 * (row + 1);
+    float occupancy = 0.0;
+
+    if (max_bytes_for_rows_occupied > 0)
+        occupancy = (float)total_bytes / (float)max_bytes_for_rows_occupied;
+
+    if (total_bytes > 64 && occupancy < (240.0 / 288.0)) {
+         std::stringstream error_msg;
+         error_msg.precision(2);
+         error_msg << "Deparser field dictionary occupancy is too sparse.";
+         error_msg << "\nHardware requires an occupancy of " << 100.0 * 240.0 / 288.0 << " to deparse the output header,";
+         error_msg << "\nbut the PHV layout for the header structures was such that the occupancy was only " << 100.0 * occupancy << ".";
+         error_msg << "\nThis situation is usually caused by a program that has one or more of the following requirements:";
+         error_msg << "\n  1. many 'short' headers that are not guaranteed to coexist (e.g. less than 4 bytes)";
+         error_msg << "\n  2. many packet headers that are not multiples of 4 bytes";
+         error_msg << "\n  3. many conditionally updated checksums";
+         error(0, "%s", error_msg.str().c_str());
+    }
 }
 
 template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT>

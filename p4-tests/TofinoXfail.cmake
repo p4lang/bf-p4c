@@ -1404,6 +1404,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "error: Deparser field dictionary occupancy is too sparse"
+  extensions/p4_tests/p4-programs/internal_p4_14/ambiguities/ambiguities.p4
+
+  # P4C-2349
+  ../glass/testsuite/p4_tests/parde/COMPILER-960/checksum_update_prediction.p4
+  COMPILER-1186
+)
+
 # P4C-1723
 p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
