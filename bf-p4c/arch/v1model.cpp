@@ -184,18 +184,14 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(EGRESS,
                                MetadataField{"eg_intr_md_for_mb", "mirror_deflect_on_drop", 1},
                                MetadataField{"eg_intr_md_for_dprsr", "mirror_deflect_on_drop", 1});
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+
+        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
+        // structure->addMetadata(INGRESS,
+        //                     MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+        //                     MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
+        // structure->addMetadata(EGRESS,
+        //                     MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
+        //                     MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
         structure->addMetadata(INGRESS,
                                MetadataField{"ig_intr_md_for_mb", "mirror_multicast_ctrl", 1},
                                MetadataField{"ig_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});

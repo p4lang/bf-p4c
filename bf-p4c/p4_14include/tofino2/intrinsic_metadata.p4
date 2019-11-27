@@ -261,7 +261,9 @@ header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
         _pad4 : 2;
         mirror_ingress_cos : 3;         // Mirror ingress cos for PG mapping.
         mirror_deflect_on_drop : 1;     // Mirror enable deflection on drop if true.
-        mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
+
+        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
+        // mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
         mirror_multicast_ctrl : 1;      // Mirror enable multicast if true.
         _pad5 : 7;
         mirror_egress_port : 9;         // Mirror packet egress port.
@@ -432,7 +434,9 @@ header_type egress_intrinsic_metadata_for_mirror_buffer_t {
         _pad4 : 2;
         mirror_ingress_cos : 3;         // Mirror ingress cos for PG mapping.
         mirror_deflect_on_drop : 1;     // Mirror enable deflection on drop if true.
-        mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
+
+        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
+        // mirror_copy_to_cpu_ctrl : 1;    // Mirror enable copy-to-cpu if true.
         mirror_multicast_ctrl : 1;      // Mirror enable multicast if true.
         _pad5 : 7;
         mirror_egress_port : 9;         // Mirror packet egress port.

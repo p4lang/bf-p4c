@@ -145,7 +145,8 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
         addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
         addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
         addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
-        addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
+        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
+        // addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
         addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
         addDeparserParam(d, dpMeta, "mtu_trunc_len");
         addDeparserParam(d, dpMeta, "mtu_trunc_err_f");
@@ -175,7 +176,8 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
         addDeparserParamRename(d, dpMeta, "mirror_deflect_on_drop", "mirr_dond_ctrl");
         addDeparserParamRename(d, dpMeta, "mirror_ingress_cos", "mirr_icos");
         addDeparserParamRename(d, dpMeta, "mirror_multicast_ctrl", "mirr_mc_ctrl");
-        addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
+        // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
+        // addDeparserParamRename(d, dpMeta, "mirror_copy_to_cpu_ctrl", "mirr_c2c_ctrl");
         addDeparserParamRename(d, dpMeta, "adv_flow_ctl", "afc");
         addDeparserParam(d, dpMeta, "mtu_trunc_len");
         addDeparserParam(d, dpMeta, "mtu_trunc_err_f");

@@ -223,7 +223,6 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<13> mirror_hash;                // Mirror hash field.
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
-    bit<1> mirror_copy_to_cpu_ctrl;     // Mirror enable copy-to-cpu if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
     bit<9> mirror_egress_port;          // Mirror packet egress port.
     bit<7> mirror_qid;                  // Mirror packet qid.
@@ -303,7 +302,7 @@ header egress_intrinsic_metadata_t {
 
     @padding bit<1> _pad6;
 
-    bit<7> egress_qid;                  // Egress (physical) queue id via which
+    bit<7> egress_qid;                  // Egress (physical) queue id within a MAC via which
                                         // this packet was served.
 
     @padding bit<5> _pad7;
@@ -356,7 +355,6 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<13> mirror_hash;                // Mirror hash field.
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
-    bit<1> mirror_copy_to_cpu_ctrl;     // Mirror enable copy-to-cpu if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
     bit<9> mirror_egress_port;          // Mirror packet egress port.
     bit<7> mirror_qid;                  // Mirror packet qid.
