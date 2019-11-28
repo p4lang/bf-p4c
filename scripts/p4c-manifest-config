@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Script to parse manifest.json
 
@@ -21,7 +21,7 @@ try:
     programs = manifest_json['programs']
 
     if len(programs) != 1:
-        print "manifest-config only supports one program"
+        print("manifest-config only supports one program")
         sys.exit(1)
 
     schema_version = version.parse(manifest_json['schema_version'])
@@ -38,8 +38,8 @@ try:
         pipe_names.append(pipeline[pipe_name_label])
 
     if opts.pipe is not None:
-        print ' '.join(pipe_names)
+        print(' '.join(pipe_names))
         sys.exit(0)
 
 except Exception as e:
-    print e
+    print(e)

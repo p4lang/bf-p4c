@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import argparse
 import json
@@ -73,7 +73,7 @@ def main():
     p4_info["program-name"] = args.name
     p4_pipelines=p4_info['p4_pipelines']
     npipes = len(args.pipe)
-    for index, pipe in zip(range(npipes),args.pipe):
+    for index, pipe in zip(list(range(npipes)),args.pipe):
         pipe_config = {}
         pipe_config["p4_pipeline_name"] = pipe
         if 'switch_16' in args.testdir:
@@ -82,7 +82,7 @@ def main():
             share_path = os.path.join(args.installdir, pipe)
         pipe_config["context"] = os.path.join(share_path, 'context.json')
         pipe_config["config"] = os.path.join(share_path, args.device + '.bin')
-        pipe_config["pipe_scope"] = [x*npipes+index for x in range(MAX_PIPES/npipes)]
+        pipe_config["pipe_scope"] = [x*npipes+index for x in range(int(MAX_PIPES/npipes))]
         pipe_config["path"] = args.installdir
         p4_pipelines.append(pipe_config)
 

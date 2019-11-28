@@ -14,6 +14,7 @@
 # agreement with Barefoot Networks, Inc.
 #
 # -*- Python -*-
+#!/usr/bin/env python3
 
 import os
 import os.path
@@ -414,8 +415,8 @@ class BarefootBackend(BackendDriver):
                                             os.path.dirname(os.path.abspath(self._source_filename)))
                 self._commandsEnabled.append('archiver')
             else:
-                print >> sys.stderr, "Please specify an output directory (using -o) to" + \
-                    " generate an archive"
+                print("Please specify an output directory (using -o) to" + \
+                    " generate an archive", file=sys.stderr)
 
     def parseManifest(self):
         """
@@ -427,7 +428,7 @@ class BarefootBackend(BackendDriver):
         manifest_filename = "{}/manifest.json".format(self._output_directory)
 
         if self._dry_run:
-            print 'parse manifest:', manifest_filename
+            print('parse manifest:', manifest_filename)
             self._pipes = [ { 'context': '{}/pipe/context.json'.format(self._output_directory),
                               'resources': '{}/pipe/resources.json'.format(self._output_directory),
                               'pipe_dir': '{}/pipe'.format(self._output_directory),
@@ -440,7 +441,7 @@ class BarefootBackend(BackendDriver):
         if not os.path.isfile(manifest_filename) or os.path.getsize(manifest_filename) == 0:
             self.exitWithError(None)
 
-        with open(manifest_filename, "rb") as json_file:
+        with open(manifest_filename, "r") as json_file:
             try:
                 self._manifest = json.load(json_file)
             except:
@@ -568,7 +569,7 @@ class BarefootBackend(BackendDriver):
             pass
         finally:
             if error_msg is not None:
-                print >> sys.stderr, str(error_msg)
+                print(str(error_msg), file=sys.stderr)
             sys.exit(1)
 
     def runAssembler(self, dirname, unique_table_offset):
@@ -638,12 +639,12 @@ class BarefootBackend(BackendDriver):
         cmd = self._commands[command]
         if cmd[0].find('/') != 0 and (find_bin(cmd[0]) == None):
             error_msg = "{}: command not found".format(cmd[0])
-            print >> sys.stderr, str(error_msg)
+            print(str(error_msg), file=sys.stderr)
             sys.exit(100)   # environment missconfiguration.
         rc = self.runCmd(command, cmd)
         if rc != 0:
             error_msg = "failed command {}".format(command)
-            print >> sys.stderr, str(error_msg)
+            print(str(error_msg), file=sys.stderr)
         # in the Python doc, a return code of None means the child did not terminate.
         # However, we seem to get a None even when the subprocess actually terminated ...
         # sometimes successfuly. We still consider a return code of None to be a failure as

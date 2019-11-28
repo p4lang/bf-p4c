@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import json
@@ -115,13 +115,13 @@ def gen_bfrt_conf(args):
     p4_info["model_json_path"] = os.path.join(args.outputdir, 'share', args.name, 'aug_model.json')
     p4_pipelines=p4_info['p4_pipelines']
     npipes = len(args.pipe)
-    for index, pipe in zip(range(npipes),args.pipe):
+    for index, pipe in zip(list(range(npipes)),args.pipe):
         pipe_config = {}
         pipe_config["p4_pipeline_name"] = pipe
         share_path = os.path.join(args.installdir, pipe)
         pipe_config["context"] = os.path.join(share_path, 'context.json')
         pipe_config["config"] = os.path.join(share_path, args.device + '.bin')
-        pipe_config["pipe_scope"] = [x*npipes+index for x in range(MAX_PIPES/npipes)]
+        pipe_config["pipe_scope"] = [x*npipes+index for x in range(int(MAX_PIPES/npipes))]
         pipe_config["path"] = args.installdir
         p4_pipelines.append(pipe_config)
     return base_conf

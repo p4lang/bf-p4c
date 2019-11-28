@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # Base class to validate json schema files.
 #
 # The class constructor initializes arguments, including the expected
@@ -10,7 +10,6 @@
 #
 # \TODO: add support for passing a generated schema as an argument.
 
-from __future__ import print_function
 import os
 import sys
 import argparse
@@ -58,7 +57,7 @@ class JSONValidator:
                     print(list(error.path))
 
                 return False
-            else: 
+            else:
                 if self._opts.debug:
                     print("successful validation")
 
