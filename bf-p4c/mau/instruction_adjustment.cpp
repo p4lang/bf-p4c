@@ -575,6 +575,7 @@ const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container co
     auto *rn = new IR::MAU::RandomNumber(tbl->srcInfo,
                                           IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
                                           "hw_rng");
+    rn->rng_unit = unit;
 
     int wrapped_lo = 0;  int wrapped_hi = 0;
     // Wrapping the slice in the function outside
@@ -587,7 +588,6 @@ const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container co
         "wrapped slice");
     le_bitrange op_bits_used = { op_bits_used_bv.min().index(), op_bits_used_bv.max().index() };
     le_bitrange immed_bits_used = op_bits_used.shiftedByBits(adi.start * 8);
-    rn->rng_unit = unit;
     return MakeSlice(rn, immed_bits_used.lo, immed_bits_used.hi);
 }
 

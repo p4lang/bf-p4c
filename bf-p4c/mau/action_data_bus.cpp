@@ -953,11 +953,9 @@ bool ActionDataBus::alloc_rng(Use &use, const ActionData::Format::Use *format, c
             continue;
         le_bitrange immed_range = { pos.first, pos.first + ad->size() - 1 };
         for (int i = 0; i < ActionData::Format::IMMEDIATE_BITS; i += 8) {
-            int bit_pos_lo = i * 8;
-            int bit_pos_hi = bit_pos_lo + 7;
-            if (!immed_range.overlaps(bit_pos_lo, bit_pos_hi))
+            if (!immed_range.overlaps(i, i + 7))
                 continue;
-            rng_bytes.setbit(i);
+            rng_bytes.setbit(i / 8);
         }
     }
     if (rng_bytes.empty())
