@@ -142,7 +142,7 @@ class RemoveInstanceRef : public Transform {
             LOG2("RemoveInstanceRef not removing " << ir->name.name);
             return ir; } }
 
-    const IR::Node *postorder(IR::MAU::SaluAction *salu) {
+    const IR::Node *postorder(IR::MAU::SaluAction *salu) override {
         // Also transform p4func for the benefit of p4v.
         visit(salu->p4func, "p4func");
 

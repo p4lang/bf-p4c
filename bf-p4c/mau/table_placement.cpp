@@ -444,7 +444,6 @@ class TablePlacement::Backfill {
      * We could try backfilling multiple tables but that is less likely to be possible or
      * useful; it is more likely that a general backtracking scheme would be a better approach.
      */
-    TablePlacement              &self;
     int                         stage;
     struct table_t {
         const IR::MAU::Table    *table;
@@ -453,7 +452,7 @@ class TablePlacement::Backfill {
     std::vector<table_t>        avail;
 
  public:
-    explicit Backfill(TablePlacement &s) : self(s) {}
+    explicit Backfill(TablePlacement &) {}
     explicit operator bool() const { return !avail.empty(); }
     std::vector<table_t>::iterator begin() { return avail.begin(); }
     std::vector<table_t>::iterator end() { return avail.end(); }

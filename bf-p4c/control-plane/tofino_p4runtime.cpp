@@ -14,6 +14,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/rewrite_action_selector.h"
+#include "bf-p4c/common/utils.h"
 #include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"
 #include "control-plane/p4RuntimeSerializer.h"
@@ -567,6 +568,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     template <typename Func>
     void forAllPipeBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
         auto main = evaluatedProgram->getMain();
+        if (!main)
+            ::fatal_error("Program does not contain a `main` module");
         auto cparams = main->getConstructorParameters();
         int index = -1;
         for (auto param : main->constantValue) {
@@ -589,6 +592,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
     template <typename Func>
     void forAllPortMetadataBlocks(const IR::ToplevelBlock* evaluatedProgram, Func function) {
         auto main = evaluatedProgram->getMain();
+        if (!main)
+            ::fatal_error("Program does not contain a `main` module");
         if (main->type->name == "MultiParserSwitch") {
             int numParsersPerPipe = Device::numParsersPerPipe();
             auto parsersName = "ig_prsr";
@@ -657,6 +662,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         int numParsersPerPipe = Device::numParsersPerPipe();
 
         auto main = evaluatedProgram->getMain();
+        if (!main)
+            ::fatal_error("Program does not contain a `main` module");
         if (main->type->name == "MultiParserSwitch") {
             forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {
                 BUG_CHECK(
@@ -969,6 +976,8 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
         int numParsersPerPipe = Device::numParsersPerPipe();
 
         auto main = evaluatedProgram->getMain();
+        if (!main)
+            ::fatal_error("Program does not contain a `main` module");
         if (main->type->name != "MultiParserSwitch") return;
 
         forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock* pkg) {

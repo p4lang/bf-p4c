@@ -2545,17 +2545,17 @@ bool Format::is_better_condense(RamSec_vec_t &ram_sects,
     if (comp_fully_rotational != best_fully_rotational)
         return comp_fully_rotational > best_fully_rotational;
 
-    size_t best_fully_packed = (best->bits_in_use().popcount() == best->size()) ? 1 : 0;
+    size_t best_fully_packed = (best->bits_in_use().popcount() == int(best->size())) ? 1 : 0;
     for (size_t i = 0; i < ram_sects.size(); i++) {
         if (i == best_skip1 || i == best_skip2) continue;
-        if (ram_sects[i]->bits_in_use().popcount() == ram_sects[i]->size())
+        if (ram_sects[i]->bits_in_use().popcount() == int(ram_sects[i]->size()))
             best_fully_packed++;
     }
 
-    size_t comp_fully_packed = (comp->bits_in_use().popcount() == comp->size()) ? 1 : 0;
+    size_t comp_fully_packed = (comp->bits_in_use().popcount() == int(comp->size())) ? 1 : 0;
     for (size_t i = 0; i < ram_sects.size(); i++) {
         if (i == comp_skip1 || i == comp_skip2) continue;
-        if (ram_sects[i]->bits_in_use().popcount() == ram_sects[i]->size())
+        if (ram_sects[i]->bits_in_use().popcount() == int(ram_sects[i]->size()))
             comp_fully_packed++;
     }
 

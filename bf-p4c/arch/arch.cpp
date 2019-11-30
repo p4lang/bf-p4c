@@ -213,7 +213,7 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) 
 
 void add_param(ordered_map<cstring, cstring>& tnaParams,
         const IR::ParameterList* params, cstring hdr, int index) {
-    if (params->parameters.size() > index) {
+    if (int(params->parameters.size()) > index) {
         auto* param = params->parameters.at(index);
         tnaParams.emplace(hdr, param->name);
     }

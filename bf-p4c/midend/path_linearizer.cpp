@@ -54,7 +54,7 @@ void PathLinearizer::postorder(const IR::ConcreteHeaderRef* href) {
     if (linearPath) linearPath->components.push_back(expr);
 }
 
-bool PathLinearizer::preorder(const IR::HeaderOrMetadata* href) {
+bool PathLinearizer::preorder(const IR::HeaderOrMetadata*) {
     // Do not visit IR::Header underneath the HeaderRef.
     return false;
 }
