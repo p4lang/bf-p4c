@@ -59,6 +59,7 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, bool> tablePlacementErrors;
     /// flag to prevent any further backtracking after a final RedoTablePlacment.
     bool final_placement = false;
+    bool no_errors_before_summary = true;
 
     int pipe_id;
     const DependencyGraph& deps;

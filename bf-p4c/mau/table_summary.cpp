@@ -29,6 +29,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     maxStage = 0;
     ingressDone = false;
     egressDone = false;
+    no_errors_before_summary = placementErrorCount() == 0;
     ++numInvoked[pipe_id];
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s)");
@@ -48,7 +49,8 @@ void TableSummary::end_apply() {
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
     if (t->logical_id < 0) {
-        addPlacementError(t->toString() + " not placed");
+        if (no_errors_before_summary)
+            addPlacementError(t->toString() + " not placed");
         return true; }
     BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
     assert(order.count(t->logical_id) == 0);

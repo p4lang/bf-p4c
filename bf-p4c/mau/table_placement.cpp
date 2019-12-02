@@ -1998,13 +1998,14 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 it++; } }
         if (work.empty()) break;
         if (trial.empty()) {
-            error("Table placement cannot make any more progress.  Though some tables have "
-                  "not yet been placed, dependency analysis has found that no more tables are "
-                  "placeable.%1%", partly_placed.empty() ? "" :
-                  "  This may be due to shared attachments on partly placed tables; may be "
-                  "able to avoid the problem with @stage on those tables");
-            for (auto *tbl : partly_placed)
-                error("partly placed: %s", tbl);
+            if (errorCount() == 0) {
+                error("Table placement cannot make any more progress.  Though some tables have "
+                      "not yet been placed, dependency analysis has found that no more tables are "
+                      "placeable.%1%", partly_placed.empty() ? "" :
+                      "  This may be due to shared attachments on partly placed tables; may be "
+                      "able to avoid the problem with @stage on those tables");
+                for (auto *tbl : partly_placed)
+                    error("partly placed: %s", tbl); }
             break; }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         const Placed *best = 0;

@@ -316,13 +316,17 @@ void BuildP4HashFunction::end_apply() {
 
 bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
     auto *tbl = findContext<IR::MAU::Table>();
+    if (!tbl->resources) {
+        // no allocation for table -- can happen it TablePlacement failed
+        return false; }
     for (auto &ce : tbl->resources->salu_ixbar.meter_alu_hash.computed_expressions) {
         if (e->expr->equiv(*ce.second)) {
             e->bit = ce.first;
             return false; } }
-     if (findContext<IR::MAU::HashDist>())
+    if (findContext<IR::MAU::HashDist>())
          return false;
-    BUG("Can't find %s in the ixbar allocation for %s", e->expr, tbl);
+    // can get here if TablePlacmenet failed
+    // BUG("Can't find %s in the ixbar allocation for %s", e->expr, tbl);
     return false;
 }
 
