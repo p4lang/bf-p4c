@@ -1214,8 +1214,11 @@ BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
 
     auto* keyJson = new Util::JsonArray();
     auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
-    for (const auto &f : parser)
-        addKeyField(keyJson, f.id, f.name, true /* mandatory */, "Ternary", f.type);
+    for (const auto &f : parser) {
+        // DRV-3112 - Make key fields not mandatory, this allows user to use a
+        // driver initialized default value (0).
+        addKeyField(keyJson, f.id, f.name, false /* mandatory */, "Ternary", f.type);
+    }
     tableJson->emplace("key", keyJson);
 
     tableJson->emplace("data", new Util::JsonArray());
@@ -2154,14 +2157,18 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
             std::regex hdrStackRegex(R"(\[([0-9]+)\]\.)");
             keyName = std::regex_replace(keyName, hdrStackRegex, "$$$1.");
 
+            // DRV-3112 - Make key fields not mandatory, this allows user to use a
+            // driver initialized default value (0).
             addKeyField(keyJson, mf.id(), keyName,
-                        true /* mandatory */, *matchType,
+                        false /* mandatory */, *matchType,
                         makeTypeBytes(mf.bitwidth(), boost::none),
                         annotations);
         }
         if (needsPriority) {
+            // DRV-3112 - Make key fields not mandatory, this allows user to use a
+            // driver initialized default value (0).
             addKeyField(keyJson, BF_RT_DATA_MATCH_PRIORITY, "$MATCH_PRIORITY",
-                        true /* mandatory */, "Exact", makeTypeInt("uint32"));
+                        false /* mandatory */, "Exact", makeTypeInt("uint32"));
         }
         tableJson->emplace("key", keyJson);
 
