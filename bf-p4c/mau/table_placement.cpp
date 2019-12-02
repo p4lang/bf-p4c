@@ -1394,7 +1394,8 @@ TablePlacement::Placed *TablePlacement::try_backfill_table(
     std::vector<Placed *> whole_stage;
     Placed *place_before = nullptr;
     for (const Placed **p = &done; *p && (*p)->stage == done->stage; ) {
-        if (!mutex(tbl, (*p)->table) && deps->container_conflict(tbl, (*p)->table)) {
+        if (!(*p)->table->created_during_tp && !mutex(tbl, (*p)->table) &&
+            deps->container_conflict(tbl, (*p)->table)) {
             LOG4("  can't backfill due to container conflict with " << (*p)->name);
             return nullptr; }
         auto clone = new Placed(**p);
