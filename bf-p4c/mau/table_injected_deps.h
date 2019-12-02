@@ -70,9 +70,15 @@ class AbstractDependencyInjector : public MauInspector {
         : dg(dg), ctrl_paths(cp) {}
 };
 
+/**
+ * Currently it is not safe to run the flow graph after Table Placement in JBay, as the
+ * DefaultNext pass won't be secure, we currently don't run it.  The flow graph really
+ * just needs to be updated to run as a ControlFlowVisitor
+ */
 class InjectMetadataControlDependencies : public AbstractDependencyInjector {
     const PhvInfo &phv;
     const FlowGraph &fg;
+    bool run_flow_graph;
     std::map<cstring, const IR::MAU::Table *> name_to_table;
 
     Visitor::profile_t init_apply(const IR::Node *node) override {
@@ -91,8 +97,8 @@ class InjectMetadataControlDependencies : public AbstractDependencyInjector {
 
  public:
     InjectMetadataControlDependencies(const PhvInfo &p, DependencyGraph &g, const FlowGraph &f,
-            const ControlPathwaysToTable &cp)
-        : AbstractDependencyInjector(g, cp), phv(p), fg(f) { }
+            const ControlPathwaysToTable &cp, bool rgf )
+        : AbstractDependencyInjector(g, cp), phv(p), fg(f), run_flow_graph(rgf) { }
 };
 
 class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
@@ -109,8 +115,8 @@ class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
 class TableFindInjectedDependencies : public PassManager {
     const PhvInfo &phv;
     DependencyGraph &dg;
-    FlowGraph fg;
     ControlPathwaysToTable ctrl_paths;
+    FlowGraph fg;
     CalculateNextTableProp cntp;
 
     profile_t init_apply(const IR::Node *root) override {
@@ -120,7 +126,8 @@ class TableFindInjectedDependencies : public PassManager {
     }
 
  public:
-    explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg);
+    explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg,
+        bool run_flow_graph);
  private:
     // Duplicates to dominators
     ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;

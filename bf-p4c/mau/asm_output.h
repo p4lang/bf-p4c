@@ -165,7 +165,8 @@ class MauAsmOutput : public MauInspector {
  public:
     MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const NextTable *nxts,
                  const BFN_Options &options)
-            : phv(phv), pipe(pipe), nxt_tbl(nxts), options(options) { }
+            : phv(phv), pipe(pipe), nxt_tbl(nxts), options(options),
+              default_next(Device::numLongBranchTags() == 0 || options.disable_long_branch) { }
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

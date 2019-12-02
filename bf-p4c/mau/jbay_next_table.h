@@ -24,43 +24,15 @@ class NextTable : public PassManager {
     NextTable();
 
  private:
-    class MultiAppliedTables : public MauInspector {
-        ordered_set<const IR::MAU::Table *> tables_visited;
-        ordered_set<const IR::MAU::Table *> repeated_tables;
-
-        profile_t init_apply(const IR::Node *n) override {
-            auto rv = MauInspector::init_apply(n);
-            tables_visited.clear();
-            repeated_tables.clear();
-            return rv;
-        }
-
-        bool preorder(const IR::MAU::Table *) override;
-
-     public:
-        bool multi_applied_table(const IR::MAU::Table *t) const {
-            BUG_CHECK(tables_visited.count(t) > 0, "Checking for a table %1% that was not found "
-                "on the visit", t->externalName());
-            return repeated_tables.count(t) > 0;
-        }
-
-        MultiAppliedTables() { visitDagOnce = false; }
-    };
-
-    MultiAppliedTables multi_applies;
-
     // Represents a long branch targeting a single destination (unique on destination)
     class LBUse {
-        // @seealso: Comments in jbay_next_table.cpp:MultiAppliedTables::preorder
-        bool multiply_applied;
-
      public:
         ssize_t fst, lst;  // First and last stages this tag is used on
         const IR::MAU::Table* dest;  // The destination related with this use
         explicit LBUse(const IR::MAU::Table* d)  // Dummy constructor for lookup by destination
-                : multiply_applied(false), fst(-1), lst(-1), dest(d) {}
-        LBUse(const IR::MAU::Table* d, size_t f, size_t l, bool ma)  // Construct a LBUse for a dest
-                : multiply_applied(ma), fst(f), lst(l), dest(d) {}
+                : fst(-1), lst(-1), dest(d) {}
+        LBUse(const IR::MAU::Table* d, size_t f, size_t l)  // Construct a LBUse for a dest
+                : fst(f), lst(l), dest(d) {}
         // Always unique on dest, ensure that the < is deterministic
         bool operator<(const LBUse& r) const {
             return dest->unique_id() < r.dest->unique_id();
@@ -70,14 +42,77 @@ class NextTable : public PassManager {
         // Returns true if on the same gress, false o.w.
         inline bool same_gress(const LBUse& r) const { return dest->thread() == r.dest->thread(); }
         // Returns true if this LB is targetable for DT, false o.w.
-        inline bool can_dt() const { return !multiply_applied; }
         inline gress_t thread() const { return dest->thread(); }
         friend std::ostream& operator<<(std::ostream& out, const LBUse& u) {
-            out << "dest: " << u.dest->name << ", rng: " << u.fst << "->" << u.lst
-                << ", multiply_applied? " << u.multiply_applied;
+            out << "dest: " << u.dest->name << ", rng: " << u.fst << "->" << u.lst;
             return out;
         }
     };
+
+
+    class LocalizeSeqs : public PassManager {
+        using TableToSeqSet =
+              ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::TableSeq *>>;
+        using TableToTableSet =
+              ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>>;
+        using SeqToThreads =
+              ordered_map<const IR::MAU::TableSeq *,
+                          safe_vector<safe_vector<const IR::MAU::Table *>>>;
+
+        TableToSeqSet table_to_seqs;
+        TableToTableSet can_localize_prop_to;
+        SeqToThreads seq_to_threads;
+
+        profile_t init_apply(const IR::Node *node) override {
+            auto rv = PassManager::init_apply(node);
+            table_to_seqs.clear();
+            can_localize_prop_to.clear();
+            seq_to_threads.clear();
+            return rv;
+        }
+
+        class BuildTableToSeqs : public MauInspector {
+            LocalizeSeqs &self;
+            profile_t init_apply(const IR::Node *node) override  {
+                auto rv = MauInspector::init_apply(node);
+                self.table_to_seqs.clear();
+                return rv;
+            }
+            bool preorder(const IR::MAU::Table *) override;
+
+         public:
+            explicit BuildTableToSeqs(LocalizeSeqs &s) : self(s) { visitDagOnce = false; }
+        };
+
+        class BuildCanLocalizeMaps : public MauInspector {
+            LocalizeSeqs &self;
+            profile_t init_apply(const IR::Node *node) override {
+                auto rv = MauInspector::init_apply(node);
+                self.can_localize_prop_to.clear();
+                return rv;
+            }
+            bool preorder(const IR::MAU::Table *) override;
+
+         public:
+            explicit BuildCanLocalizeMaps(LocalizeSeqs &s) : self(s) {}
+        };
+
+     public:
+        LocalizeSeqs() {
+            addPasses({
+               new BuildTableToSeqs(*this),
+               new BuildCanLocalizeMaps(*this)
+            });
+        }
+
+        bool can_propagate_to(const IR::MAU::Table *src, const IR::MAU::Table *dst) const {
+            auto src_pos = can_localize_prop_to.find(src);
+            if (src_pos == can_localize_prop_to.end()) return false;
+            return src_pos->second.count(dst) > 0;
+        }
+    };
+
+    LocalizeSeqs localize_seqs;
 
     // Represents a single wire with multiple LBUses in it
     class Tag {
@@ -100,7 +135,8 @@ class NextTable : public PassManager {
     std::map<int, int>                           stage_id;   // Map from stage to next open LID
     std::set<LBUse>                              lbus;       // Long branches that are needed
     std::map<UniqueId, std::set<UniqueId>>       dest_src;   // Map from dest. to set of srcs
-    std::map<UniqueId, const IR::MAU::TableSeq*> dest_ts;    // Map from dest. to containing seq
+    // Map from dest. to containing seqs
+    std::map<UniqueId, ordered_set<const IR::MAU::TableSeq *>> dest_ts;
     std::set<UniqueId>                           al_runs;    // Set of tables that always run
     int                                          max_stage;  // The last stage seen
 
@@ -113,8 +149,8 @@ class NextTable : public PassManager {
         struct NTInfo;
         // Adds a table and corresponding table sequence to props map
         void add_table_seq(const IR::MAU::Table*, std::pair<cstring, const IR::MAU::TableSeq*>);
-        void local_prop(const NTInfo& nti);  // Calculates and adds local (same stage) propagation
-        void cross_prop(const NTInfo& nti);  // Calculates cross stage propagation
+        void local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
+        void cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths);
         bool preorder(const IR::MAU::Table*) override;
         bool preorder(const IR::BFN::Pipe*) override;  // Early abort
 
@@ -168,7 +204,7 @@ class NextTable : public PassManager {
         IR::Node* preorder(IR::MAU::Table*) override;  // Set always run tags
         IR::Node* preorder(IR::MAU::TableSeq*) override;  // Add specified tables to table sequences
      public:
-        explicit TagReduce(NextTable& ntp) : self(ntp) {}
+        explicit TagReduce(NextTable& ntp) : self(ntp) { visitDagOnce = false; }
     };
 };
 

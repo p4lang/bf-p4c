@@ -186,7 +186,8 @@ void InjectMetadataControlDependencies::end_apply() {
                       "doesn't appear in the TableGraph?", second_table);
             auto inject_points = ctrl_paths.get_inject_points(name_to_table.at(first_table),
                                                              name_to_table.at(second_table));
-            BUG_CHECK(fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
+            BUG_CHECK(!run_flow_graph ||
+                fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
                 "Metadata initialization analysis incorrect.  Live ranges between %s and %s "
                 "overlap", first_table, second_table);
             dg.add_edge(name_to_table.at(first_table), name_to_table.at(second_table),
@@ -198,7 +199,8 @@ void InjectMetadataControlDependencies::end_apply() {
                 auto inj2 = inject_point.second->to<IR::MAU::Table>();
                 LOG3("  Metadata inject points " << inj1->name << " " << inj2->name
                      << " from tables " << first_table << " " << second_table);
-                BUG_CHECK(fg.can_reach(inj1, inj2), "Metadata initialization analysis incorrect.  "
+                BUG_CHECK(!run_flow_graph || fg.can_reach(inj1, inj2),
+                     "Metadata initialization analysis incorrect.  "
                      "Cannot inject dependency between %s and %s", inj1, inj2);
                 // Instead of adding injection points at the control point, just going to
                 // rely on the metadata check in table placement, as this could eventually be
@@ -271,14 +273,17 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
 }
 
 TableFindInjectedDependencies
-        ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d)
+        ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d, bool run_flow_graph)
         : phv(p), dg(d) {
     addPasses({
         new DominatorAnalysis(dg, dominators),
         new InjectControlDependencies(dg, dominators),
-        new FindFlowGraph(fg),
+        // After Table Placement for JBay, it is unsafe to run DefaultNext, which is run for
+        // flow graph at the moment.  This is only used for a validation check for metadata
+        // dependencies, nothing else.  Has never failed after table placement
+        run_flow_graph ? new FindFlowGraph(fg) : nullptr,
         &ctrl_paths,
-        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
+        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths, run_flow_graph),
         &cntp,
         new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths)
     });

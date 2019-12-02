@@ -131,8 +131,185 @@
  *
  */
 
-/*
-*/
+
+
+/**
+ * This is the first pass that is designed to deal with the new Table Placement IR restrictions,
+ * specifically the ones that have arisen because of the Tofino2 placement algorithm, tagged
+ * as P4C-2325.  Previously, it was a guarantee that a table would appear in a single TableSeq
+ * object.  However, this is no longer the case, specifically after table placement.  Let's delve
+ * into why for this example.
+ *
+ * The program looked like the following:
+ *
+ * apply {
+ *     if (condition) {
+ *         t1.apply();
+ *         switch(t2.apply().action_run()) {
+ *             a1 : {}
+ *             a2 : { t3.apply(); t4.apply(); }
+ *         }
+ *     }
+ * }
+ *
+ * In table placement, the condition was being combined with table t2.  In order to maintain the
+ * correct IR structure, t1 must now be applied on all of t2's actions, including possibly a
+ * new default action choice.
+ *
+ * In Tofino this would be fine as the IR could look something like this:
+ *
+ * apply {
+ *     switch(condition && t2.apply().action_run()) {
+ *         a1 : { t1.apply(); }
+ *         a2 : {
+ *            t3.apply();
+ *            switch(t4.apply().action_run()) {
+ *                default : { t1.apply(); }
+ *            }
+ *         }
+ *         default : { t1.apply(); }
+ *     }
+ * }
+ *
+ * This is because when t2 is placed, both t3 and t4 would be guaranteed to be placed before t1 is
+ * placed, as next table propagation arises from a single table.
+ *
+ * However in Tofino2 and onwards, due to the next table propagation expanding, the following
+ * placement is allowed.
+ *
+ * apply {
+ *     switch(condition && t2.apply().action_run()) {
+ *         a1 : { t1.apply(); }
+ *         a2 : { t3.apply(); t1.apply(); t4.apply(); }
+ *         default : { t1.apply(); }
+ *     }
+ *
+ * This is because the next table propagation can completely interleave tables inside and outside
+ * of control blocks.  The ordering of tables in both of these programs comes from their logical
+ * ids, and t1's logical id can now be interleaved anywhere from the beginning of t3 to the end of
+ * t4.
+ *
+ * This obviously breaks the IR implicit restriction that tables only appear in a single table
+ * sequence.  Furthermore this breaks the default next assumption, that each table has a single
+ * default next table.  This is fine to break in theory, as these should not be the restrictions.
+ * This leads me to propose three IR guarantees for tables that should be the rules (after
+ * table placement and eventually before table placement).
+ *
+ * 1.  Each table apply statement should be mutually exclusive, specifically a table should
+ *     not be applied more than one time a packet.  This one is fairly obvious why.  A table
+ *     can only be applied once by the hardware.
+ *
+ * 2.  The control flow off of a table must be the same in each pathway.  Thus the following
+ *     program is not possible:
+ *
+ *         if (t0.apply().hit) {
+ *             switch (t1.apply().action_run) {
+ *                 a1 : { t2.apply(); }
+ *                 a2 : { t3.apply(); }
+ *             }
+ *         } else {
+ *             switch (t1.apply().action_run) {
+ *                 a1 : { t3.apply(); }
+ *                 a2 : { t2.apply(); }
+ *             }
+ *         }
+ *
+ *     In the Tofino HW, the entry holds the next table to run, and is static.   This cannot be
+ *     changed by which pathway reached the table.
+ *
+ * 3.  The tables must have a topological order.  Thus the following program is invalid.
+ *
+ *         switch (t1.apply().action_run) {
+ *             a1 : { t2.apply(); t3.apply(); }
+ *             a2 : { t3.apply(); t2.apply(); } 
+ *         }
+ *
+ *     This is because the tables themselves have a logical order through predication.  This
+ *     would also make the following program impossible:
+ *
+ *         switch (t1.apply().action_run) {
+ *             a1 : { t2.apply(); t3.apply(); }
+ *             a2 : { t3.apply(); t4.apply(); } 
+ *             a3 : { t4.apply(); t2.apply(); }
+ *         }
+ *
+ * 4.  In Tofino only, the default next table must be the same on all pathways.  In Tofino, not
+ *     Tofino2, this program is impossible:
+ *
+ *         switch (t1.apply().action_run) {
+ *             a1 : { t2.apply(); }
+ *             a2 : { t2.apply(); t3.apply(); }
+ *         }
+ *
+ *     The default next table out of t2 would not be valid.
+ *
+ * Passes can be run that can guarantee these properties.  Right now, guaranteeing them after
+ * table placement only in Tofino2 is sufficient.
+ */
+
+/**
+ * The purpose of this pass is to determine which tables always precede another table in
+ * table placement.  Let's take a look at an example, similar to p4c-2325.p4
+ *
+ * apply {
+ *     switch (t1.apply().action_run) {
+ *         a1 : { t3.apply(); }
+ *         a2 : { t2.apply(); t3.apply(); t4.apply(); }
+ *     }
+ * }
+ *
+ * In this example, in order to lower the propagation down to the lowest level, one can note
+ * that t2 always precedes t3 and t4, but that t3 does not always precede t4.  Thus it is not
+ * safe to execute t4 from when t3 is running.  Let say the allocation is the following:
+ *
+ *  t1    t2    t3    t4   TABLES
+ * ----------------------
+ *  0  1  2  3  4  5  6    STAGES
+ *
+ * In the original case now two long branches would be required, a long branch that runs from
+ * set by t1 and read by t3, and another long branch set by t1 and read by t2 and t4.  With
+ * the localizing of the long branches, now instead of propagating a long branch between t1 and t4,
+ * t2 can set a long branch directly to t4 and reuse the long branch to t3.  This localization,
+ * while it does not reduce long branch requirements, does reduce dummy table requirements in
+ * order to merge.
+ */
+bool NextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const IR::MAU::Table *tbl) {
+    auto seq = findContext<IR::MAU::TableSeq>();
+    self.table_to_seqs[tbl].insert(seq);
+    return true;
+}
+
+bool NextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Table *tbl) {
+    bool first_run = true;
+    ordered_set<const IR::MAU::Table *> seen_after;
+    for (auto seq : self.table_to_seqs.at(tbl)) {
+        bool before_table = true;
+        ordered_set<const IR::MAU::Table *> local_seen_after;
+        for (auto seq_tbl : seq->tables) {
+            if (seq_tbl == tbl) {
+                before_table = false;
+                continue;
+            }
+            if (before_table) continue;
+            local_seen_after.insert(seq_tbl);
+        }
+
+        BUG_CHECK(!before_table, "BuildTableToSeqs is broekn");
+        if (first_run) {
+            seen_after = local_seen_after;
+        } else {
+            seen_after &= local_seen_after;
+        }
+        first_run = false;
+    }
+    self.can_localize_prop_to[tbl] = seen_after;
+
+    LOG4("\t    LocalizeSequences : " << tbl->externalName());
+    for (auto t_a : seen_after) {
+        LOG4("\t\tAfter table " << t_a->externalName());
+    }
+    return true;
+}
 
 /* Holds next table prop information for a specific table sequence. One created per call to
  * add_table_seq. Note that add_table_seq may be called on the same table sequence multiple times,
@@ -183,8 +360,6 @@ bool NextTable::LBUse::operator&(const LBUse& r) const {
 void NextTable::LBUse::extend(const IR::MAU::Table* t) {
     ssize_t st = t->stage();
     BUG_CHECK(ssize_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
-    BUG_CHECK(multiply_applied, "Table %1% requires more than one long branch pathways is only "
-                                "applied once?", t->name);
     // If tables are in the same stage, we don't need to do anything
     if (st == fst) return;
     fst = st < fst ? st : fst;
@@ -215,10 +390,9 @@ bool NextTable::Prop::preorder(const IR::BFN::Pipe*) {
     return self.rebuild;
 }
 
-void NextTable::Prop::local_prop(const NTInfo& nti) {
-    // Add tables that are in the same stage as the parent to the parent's set of LOCAL_EXEC tables
-    // for the given sequence
+void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
     if (size_t(nti.first_stage) >= nti.stages.size()) return;
+    // Guarantee that all tables no matter what are preceded by the parent control table
     for (auto nt : nti.stages.at(nti.first_stage)) {
         BUG_CHECK(nti.parent->logical_id <= nt->logical_id,
                   "Table %s has LID %d, less than parent table %s (LID %d)", nt->name,
@@ -226,6 +400,7 @@ void NextTable::Prop::local_prop(const NTInfo& nti) {
         LOG3("  - " << nt->name << " to " << nti.seq_nm << "; LOCAL_EXEC from " << nti.parent->name
              << " in stage " << nt->stage());
         self.props[get_uid(nti.parent)][nti.seq_nm].insert(get_uid(nt));
+        executed_paths[nti.first_stage].setbit(nt->logical_id);
     }
     // Vertically compress each stage; i.e. calculate all of the local_execs, giving us a single
     // representative table for each stage to use in cross stage propagation
@@ -235,64 +410,86 @@ void NextTable::Prop::local_prop(const NTInfo& nti) {
 
         // Tables should be in logical ID order. The "representative" table (lowest LID) for this
         // stage and its set of $run_if_ran tables
-        auto rep = tables.at(0);
-        auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"];
-        for (auto nt : tables) {
-            // Skip the representative
-            if (nt == rep) continue;
-            BUG_CHECK(rep->logical_id < nt->logical_id,
-                      "Tables not in logical ID order; representative %s has greater LID than %s.",
-                      rep->name, nt->name);
-            LOG3("  - " << nt->name << " on $run_if_ran; LOCAL_EXEC from " << rep->name
-                 << " in stage " << nt->stage());
-            r_i_r.insert(get_uid(nt));
+        bitvec local_exec_tables;
+        for (size_t j = 0; j < tables.size(); j++) {
+            auto rep = tables.at(j);
+            auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"];
+            for (size_t k = j + 1; k < tables.size(); k++) {
+                auto nt = tables.at(k);
+                BUG_CHECK(rep->logical_id < nt->logical_id,
+                          "Tables not in logical ID order; representative %s has greater LID "
+                          "than %s.", rep->name, nt->name);
+                if (local_exec_tables.getbit(k)) continue;
+                // In order to be local exec by another table, must be propagated to
+                if (self.localize_seqs.can_propagate_to(rep, nt)) {
+                    LOG3("  - " << nt->name << " on $run_if_ran; LOCAL_EXEC from " << rep->name
+                         << " in stage " << nt->stage());
+                    r_i_r.insert(get_uid(nt));
+                    local_exec_tables.setbit(k);
+                    executed_paths[i].setbit(nt->logical_id);
+                }
+            }
         }
     }
 }
 
-void NextTable::Prop::cross_prop(const NTInfo& nti) {
+void NextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
     auto stages = nti.stages;
-    auto prev_t = nti.parent;  // The table from which we will propagate
-    int prev_st = nti.first_stage;  // The stage that prev_t is in
-    cstring branch = nti.seq_nm;  // The name of the seq branch. Will be $run_if_ran after parent
-
-    for (int i = nti.first_stage + 1; i <= nti.last_stage; ++i) {
+    for (int i = nti.first_stage + 1; i <= nti.last_stage; i++) {
         if (stages[i].empty()) continue;
-        BUG_CHECK(prev_st < i, "Previous is not previous!");
-        // The representative for this stage that will receive (and pass) cross-stage propagation
-        auto rep = stages[i][0];
-
-        // Logging
-        if (prev_st == i-1) {  // Global exec
-            LOG3("  - " << rep->name << " on " << branch
-                 << "; GLOBAL_EXEC from " << prev_t->name << " on range [" << prev_st << " -- "
-                 << i << "]");
-        } else {  // Long branch
-            BUG_CHECK(prev_t->stage() + 1 < rep->stage(),
-                      "LB used between %s in stage %d and %s in stage %d!",
-                      prev_t->name, prev_t->stage(), rep->name, rep->stage());
-            LOG3("  - " << rep->name << " on " << branch
-                 << "; LONG_BRANCH from " << prev_t->name << " on range [" << prev_st << " -- "
-                 << i << "]");
-            if (self.lbus.count(LBUse(rep))) {  // If we already have an lb for this dest, extend it
-                auto it = self.lbus.find(LBUse(rep));
-                auto lb = *it;
-                self.lbus.erase(it);
-                lb.extend(prev_t);
-                self.lbus.insert(lb);
-            } else {  // Otherwise, create a new LBUse
-                self.lbus.insert(
-                    LBUse(rep, prev_st, i, self.multi_applies.multi_applied_table(rep)));
+        for (auto rep : stages.at(i)) {
+            if (executed_paths[i].getbit(rep->logical_id)) continue;
+            cstring branch = "$run_if_ran";
+            int prev_st = 0;
+            const IR::MAU::Table *prev_t = nullptr;
+            for (int j = i - 1; j >= nti.first_stage; j--) {
+                for (auto pt : stages.at(j)) {
+                    // P4C-2325: Must be propagated to
+                    if (!self.localize_seqs.can_propagate_to(pt, rep))
+                        continue;
+                    prev_t = pt;
+                    prev_st = j;
+                    break;
+                }
+                if (prev_t != nullptr)
+                    break;
             }
-            self.dest_src[get_uid(rep)].insert(get_uid(prev_t));
-            self.dest_ts[get_uid(rep)] = nti.ts;
+            if (prev_t == nullptr) {
+                prev_t = nti.parent;
+                branch = nti.seq_nm;
+                prev_st = nti.parent->stage();
+            }
+
+            // Logging
+            if (prev_st == i-1) {  // Global exec
+                LOG3("  - " << rep->name << " on " << branch
+                     << "; GLOBAL_EXEC from " << prev_t->name << " on range [" << prev_st << " -- "
+                     << i << "]");
+            } else {  // Long branch
+                BUG_CHECK(prev_t->stage() + 1 < rep->stage(),
+                          "LB used between %s in stage %d and %s in stage %d!",
+                          prev_t->name, prev_t->stage(), rep->name, rep->stage());
+                LOG3("  - " << rep->name << " on " << branch
+                     << "; LONG_BRANCH from " << prev_t->name << " on range [" << prev_st << " -- "
+                     << i << "]");
+
+                // If we already have an lb for this dest, extend it
+                if (self.lbus.count(LBUse(rep))) {
+                    auto it = self.lbus.find(LBUse(rep));
+                    auto lb = *it;
+                    self.lbus.erase(it);
+                    lb.extend(prev_t);
+                    self.lbus.insert(lb);
+                } else {  // Otherwise, create a new LBUse
+                    self.lbus.insert(LBUse(rep, prev_st, i));
+                }
+                self.dest_src[get_uid(rep)].insert(get_uid(prev_t));
+                self.dest_ts[get_uid(rep)].insert(nti.ts);
+            }
+            // Add to the propagation map for asm gen
+            self.props[get_uid(prev_t)][branch].insert(get_uid(rep));
+            executed_paths[i].setbit(rep->logical_id);
         }
-        // Add to the propagation map for asm gen
-        self.props[get_uid(prev_t)][branch].insert(get_uid(rep));
-        // Update previous
-        prev_t = rep;
-        prev_st = i;
-        branch = "$run_if_ran";
     }
 }
 
@@ -305,10 +502,12 @@ bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
     if (!findContext<IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
     // Add all of the table's table sequences
+    LOG1("    Prop preorder Table " << t->externalName());
     for (auto ts : t->next) {
+        std::map<int, bitvec> executed_paths;
         NTInfo nti(t, ts);
-        local_prop(nti);
-        cross_prop(nti);
+        local_prop(nti, executed_paths);
+        cross_prop(nti, executed_paths);
     }
     return true;
 }
@@ -324,75 +523,7 @@ void NextTable::Prop::end_apply() {
     LOG1("FINISHED NEXT TABLE PROPAGATION");
 }
 
-
-/**
- * Currently, a compiler limitation in the compiler restricts certain long branches from
- * being reduced via dummy tables.
- *
- * Let's use the following example:
- *
- *    if (t1.apply().hit) {
- *         t3.apply();
- *    } else if (t2.apply().hit) {
- *         t3.apply();
- *    }
- *
- * In this example, t3 is applied twice.  Let's use the following placement:
- *
- *     t1    t2          t3           TABLES
- * -----------------------------------------------
- *  0  1  2  3  4  5  6  7  8  (...)  STAGES
- *     |                 |
- * first_stage       last_stage
- *
- *
- * Now if this was to be dummy tabled, the dummy tables would have to range from stage 2
- * to stage 6.
- *
- * The original table sequence graph is:
- *
- *    t1    t2
- *     \    |
- *      \   |
- *  $hit \  | $hit
- *        \ |
- *         t3 
- *
- * is now replaced by
- *
- *     t1    t2
- *      |    /
- *      |   /
- * $hit |  / $hit
- *      | /    
- *     [ dummy2, dummy3, dummy4, dummy5, dummy6, t3]
- *
- * But this is illegal, as t2 would happen after dummy2 logical but precedes it in the
- * table sequence.
- *
- * The TableGraph IR solution would be:
- *     t1
- *      |
- *      | 
- * $hit |
- *      |    
- *    [ dummy2, dummy3 ]    t2
- *                  |       /
- *         $default |      /
- *                  |     / $hit
- *                  |    /
- *                [ dummy4, dummy5, dummy6, t3]
- *
- * but currently the long branch allocation does not have support for this, so we just prevent
- * it from being dummy tabled.
- */
-bool NextTable::MultiAppliedTables::preorder(const IR::MAU::Table *tbl) {
-    if (tables_visited.count(tbl))
-        repeated_tables.insert(tbl);
-    tables_visited.insert(tbl);
-    LOG1("   Table visited " << tbl->name);
-    return true;
-} NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
+NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
     // Clear old values
     self.stage_tags.clear();
@@ -553,7 +684,21 @@ IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
     // Get the original pointer
     auto key = dynamic_cast<const IR::MAU::TableSeq*>(getOriginal());
     // Add new tables
-    ts->tables.insert(ts->tables.end(), dumb_tbls[key].begin(), dumb_tbls[key].end());
+
+    auto control_tbl = findContext<IR::MAU::Table>();
+    if (control_tbl == nullptr)
+        return ts;
+
+    if (dumb_tbls[key].empty())
+        return ts;
+
+    // Only add tables that are after the table starting this particular part of the sequence
+    for (auto dumb_tbl : dumb_tbls[key]) {
+        if (dumb_tbl->logical_id > control_tbl->logical_id) {
+            ts->tables.push_back(dumb_tbl);
+        }
+    }
+
     // Put tables into LID sorted order
     std::sort(ts->tables.begin(), ts->tables.end(),
               [](const IR::MAU::Table* t1, const IR::MAU::Table* t2)
@@ -643,15 +788,11 @@ NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
     for (auto& lu : l) {
         for (auto& ru : r) {
             if (!(lu & ru)) continue;  // Skip if there's no overlap
-            if (!lu.can_dt() && !ru.can_dt()) {  // Early exit if overlap and can't DT both
-                rv.success = false;
-                return rv;
-            }
             std::set<int> dts;
             LBUse* key;  // The LB which dummy tables were added to
             // Handles when one tag fully covers another
             auto overlap = [&](LBUse* lrg, LBUse* sml) {
-                               if (sml->can_dt()) {  // Try to get rid of smaller
+                               if (true) {  // Try to get rid of smaller
                                    dts = addrng(sml->fst + 1, sml->lst);
                                    sml->fst = sml->lst;
                                    key = sml;
@@ -670,7 +811,7 @@ NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
                       bool on = lft->same_gress(*rgt);
                       int lbeg = on ? lft->fst : std::max(lft->fst + 1, rgt->fst - 1);
                       int rend = on ? lft->lst : std::min(lft->lst + 1, rgt->lst - 1);
-                      if (!rgt->can_dt() || cap(lbeg) > cap(rend)) {
+                      if (cap(lbeg) > cap(rend)) {
                           dts = addrng(lbeg, lft->lst);
                           lft->lst = lbeg;
                           key = lft;
@@ -742,7 +883,6 @@ bool NextTable::TagReduce::merge_tags() {
         }
         LOG2("  Merging tags " << fst << " and " << snd);
         for (auto kv : mrg.dum) {  // Associate all of the dummy tables with the table sequence
-            auto ts = self.dest_ts[get_uid(kv.first.dest)];
             auto dtbls =
                 std::accumulate(kv.second.begin(), kv.second.end(), std::vector<IR::MAU::Table*>(),
                                 [&](std::vector<IR::MAU::Table*> a, int st) {
@@ -756,7 +896,8 @@ bool NextTable::TagReduce::merge_tags() {
                                     a.push_back(dt);
                                     return a;
                                 });
-            dumb_tbls[ts].insert(dumb_tbls[ts].end(), dtbls.begin(), dtbls.end());
+            for (auto ts : self.dest_ts[get_uid(kv.first.dest)])
+                dumb_tbls[ts].insert(dumb_tbls[ts].end(), dtbls.begin(), dtbls.end());
         }
         // Delete the old tags and add the merged tag
         self.stage_tags[fst] = mrg.merged;
@@ -791,12 +932,11 @@ void NextTable::TagReduce::alloc_dt_mems() {
 
 // FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
 NextTable::NextTable() {
-    addPasses({&multi_applies,
+    addPasses({ &localize_seqs,
                new Prop(*this),
-               &multi_applies,
                new LBAlloc(*this),
                new TagReduce(*this),
-               &multi_applies,
+               &localize_seqs,
                new Prop(*this),
                new LBAlloc(*this)});
 }

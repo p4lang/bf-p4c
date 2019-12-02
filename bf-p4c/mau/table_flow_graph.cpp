@@ -60,7 +60,8 @@ Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
     auto rv = Inspector::init_apply(node);
     fg.clear();
     fg.add_sink_vertex();
-    def_next = new DefaultNext();
+    // Currently already running the default next pass before
+    def_next = new DefaultNext(false);
     node->apply(*def_next);
     return rv;
 }

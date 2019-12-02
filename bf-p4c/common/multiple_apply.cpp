@@ -268,6 +268,8 @@ MultipleApply::MultipleApply() {
             new MergeTails(equiv_tails)
         }, [this]()->bool { return equiv_tails.empty(); }),
         new DistinctTables(distinct_errors),
-        new DefaultNext(),
+        // Still currently guaranteeing this data for both Tofino and JBay, until we change the
+        // IR rules
+        new DefaultNext(true),
     });
 }

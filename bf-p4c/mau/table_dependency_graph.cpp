@@ -1225,7 +1225,8 @@ bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
                                          cstring dotFileName,
-                                         cstring passCont) :
+                                         cstring passCont,
+                                         bool run_flow_graph) :
         Logging::PassManager("table_dependency_graph", Logging::Mode::AUTO),
         dg(out), dotFile(dotFileName),
         passContext(passCont) {
@@ -1235,7 +1236,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         &con_paths,
         &ignore,
         new GatherReductionOrReqs(red_info),
-        new TableFindInjectedDependencies(phv, dg),
+        new TableFindInjectedDependencies(phv, dg, run_flow_graph),
         new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
         new DepStagesThruDomFrontier(ntp, dg, *this),
         new PrintPipe

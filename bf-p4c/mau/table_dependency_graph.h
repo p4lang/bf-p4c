@@ -599,7 +599,6 @@ class PrintPipe : public MauInspector {
     PrintPipe() { }
 };
 
-
 class FindDependencyGraph : public Logging::PassManager {
     bool _add_logical_deps = true;
 
@@ -628,7 +627,7 @@ class FindDependencyGraph : public Logging::PassManager {
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     void set_add_logical_deps(bool add) { _add_logical_deps = add; }
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "",
-        cstring passContext = "");
+        cstring passContext = "", bool run_flow_graph = true);
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

@@ -310,7 +310,7 @@ class CharacterizePower: public MauInspector {
   void postorder(const IR::MAU::TableSeq* seq) override;
 
   // copied from asm_output.cpp, but changed to return UniqueId
-  UniqueId next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def);
+  std::set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def);
 
  private:
   /**
@@ -406,8 +406,10 @@ class CharacterizePower: public MauInspector {
 #endif
                               bool display_power_budget,
                               bool disable_power_check,
-                              bool debug_info) :
+                              bool debug_info,
+                              bool long_branch_disabled) :
      dep_graph_(dep_graph),
+     default_next_(long_branch_disabled),
 #if BAREFOOT_INTERNAL
      no_power_check_(no_power_check),
 #endif

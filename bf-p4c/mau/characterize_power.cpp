@@ -668,6 +668,11 @@ bool CharacterizePower::preorder(const IR::MAU::TableSeq *seq) {
     return true;
 }
 
+/**
+ * This pass should really be a ControlFlowVisitor, as the max data needs to be found on a single
+ * control flow through the entire path, rather than building the graph this way.  It's not
+ * correct, especially for JBay.
+ */
 void CharacterizePower::postorder(const IR::MAU::TableSeq *seq) {
     for (auto t : seq->tables) {
         SimpleTableGraph* graph = get_graph(t->gress);
@@ -683,45 +688,47 @@ void CharacterizePower::postorder(const IR::MAU::TableSeq *seq) {
 
         for (auto n : t->next) {
           // LOG4("      n.first = " << n.first);
-          auto def_next = next_for(t, n.first, default_next_);
-
-          if (table_to_attached_gateway.find(def_next) != table_to_attached_gateway.end()) {
-              // LOG4("         default_next (pre) = " << def_next);
-              def_next = table_to_attached_gateway.at(def_next);
+          for (auto def_next : next_for(t, n.first, default_next_)) {
+              if (table_to_attached_gateway.find(def_next) != table_to_attached_gateway.end()) {
+                  // LOG4("         default_next (pre) = " << def_next);
+                  def_next = table_to_attached_gateway.at(def_next);
+                  if (has_gateway && (n.first == "$false")) {
+                    auto gw_uid = table_to_attached_gateway.at(t->unique_id());
+                    graph->add_edge(gw_uid, def_next, n.first);
+                  } else if (has_gateway && (n.first == "$true")) {
+                    auto gw_uid = table_to_attached_gateway.at(t->unique_id());
+                    graph->add_edge(gw_uid, def_next, n.first);
+                  } else {
+                    graph->add_edge(t->unique_id(), def_next, n.first);
+                  }
+              }
+              // LOG4("         default_next = " << def_next);
           }
-          // LOG4("         default_next = " << def_next);
-
-          if (has_gateway && (n.first == "$false")) {
-            auto gw_uid = table_to_attached_gateway.at(t->unique_id());
-            graph->add_edge(gw_uid, def_next, n.first);
-          } else if (has_gateway && (n.first == "$true")) {
-            auto gw_uid = table_to_attached_gateway.at(t->unique_id());
-            graph->add_edge(gw_uid, def_next, n.first);
-          } else {
-            graph->add_edge(t->unique_id(), def_next, n.first);
-          }
-        }
-        auto def_tbl_hit = next_for(t, "$default", default_next_);
-        if (table_to_attached_gateway.find(def_tbl_hit) != table_to_attached_gateway.end()) {
-            // LOG4("         default_tbl_hit (pre) = " << def_tbl_hit);
-            def_tbl_hit = table_to_attached_gateway.at(def_tbl_hit);
-        }
-        // LOG4("     default_tbl_hit = " << def_tbl_hit);
-
-        // floating gateway false condition
-        if (t->gateway_rows.size() > 0 && !t->gateway_name) {
-          graph->add_edge(t->unique_id(), def_tbl_hit, "false");
-        } else {
-          graph->add_edge(t->unique_id(), def_tbl_hit, "tbl-hit");
         }
 
-        auto def_tbl_miss = next_for(t, "$miss", default_next_);
-        if (table_to_attached_gateway.find(def_tbl_miss) != table_to_attached_gateway.end()) {
-            // LOG4("         def_tbl_miss (pre) = " << def_tbl_miss);
-            def_tbl_miss = table_to_attached_gateway.at(def_tbl_miss);
+        for (auto def_tbl_hit : next_for(t, "$default", default_next_)) {
+            if (table_to_attached_gateway.find(def_tbl_hit) != table_to_attached_gateway.end()) {
+                // LOG4("         default_tbl_hit (pre) = " << def_tbl_hit);
+                def_tbl_hit = table_to_attached_gateway.at(def_tbl_hit);
+            }
+            // LOG4("     default_tbl_hit = " << def_tbl_hit);
+
+            // floating gateway false condition
+            if (t->gateway_rows.size() > 0 && !t->gateway_name) {
+              graph->add_edge(t->unique_id(), def_tbl_hit, "false");
+            } else {
+              graph->add_edge(t->unique_id(), def_tbl_hit, "tbl-hit");
+            }
         }
-        // LOG4("     default_tbl_miss = " << def_tbl_miss);
-        graph->add_edge(t->unique_id(), def_tbl_miss, "tbl-miss");
+
+        for (auto def_tbl_miss : next_for(t, "$miss", default_next_)) {
+            if (table_to_attached_gateway.find(def_tbl_miss) != table_to_attached_gateway.end()) {
+                // LOG4("         def_tbl_miss (pre) = " << def_tbl_miss);
+                def_tbl_miss = table_to_attached_gateway.at(def_tbl_miss);
+            }
+            // LOG4("     default_tbl_miss = " << def_tbl_miss);
+            graph->add_edge(t->unique_id(), def_tbl_miss, "tbl-miss");
+        }
     }
 }
 
@@ -957,26 +964,30 @@ void CharacterizePower::add_unattached_memory_accesses() {
   * Partially copied from asm_output.cpp, but modified to return a UniqueId.
   * There's probably a way to reference that function instead of copying it.
   */
-UniqueId CharacterizePower::next_for(const IR::MAU::Table *tbl,
-                                     cstring what,
-                                     const DefaultNext &def) {
+std::set<UniqueId> CharacterizePower::next_for(const IR::MAU::Table *tbl,
+                                               cstring what,
+                                               const DefaultNext &def) {
+  std::set<UniqueId> rv;
   if (what == "$miss") {
       cstring tns = "$try_next_stage";
       if (tbl->next.count(tns)) {
-          if (!tbl->next.at(tns)->empty())
-              return tbl->next.at(tns)->front()->unique_id();
+          if (!tbl->next.at(tns)->empty()) {
+              rv.insert(tbl->next.at(tns)->front()->unique_id());
+          }
       }
   }
   if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
-      return UniqueId("END");
+      rv.insert(UniqueId("END"));
   if (tbl->next.count(what)) {
       if (tbl->next.at(what) && !tbl->next.at(what)->empty())
-          return tbl->next.at(what)->front()->unique_id();
+          rv.insert(tbl->next.at(what)->front()->unique_id());
   } else if (tbl->next.count("$default")) {
       if (!tbl->next.at("$default")->empty())
-          return tbl->next.at("$default")->front()->unique_id();
+          rv.insert(tbl->next.at("$default")->front()->unique_id());
   }
-  return def.next_in_thread_uniq_id(tbl);
+  if (rv.empty())
+      return def.possible_next_uniq_id(tbl);
+  return rv;
 }
 
 void SimpleTableNode::add_child(SimpleTableNode* child, cstring edge_name) {
