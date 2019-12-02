@@ -389,10 +389,9 @@ bool Table::validate_instruction(Table::Call &call) const {
         return false;
     }
 
-    if ((actions->count() && !field_address && default_action.empty())
-        || (actions->count() > 2 && !field_address && !default_action.empty())) {
-        error(lineno, "No field to select between multiple action in table %s format", name());
-    }
+    if (actions->hit_actions_count() > 1 && !field_address)
+      error(lineno, "No field to select between multiple action in table %s format", name());
+
     return true;
 }
 
@@ -1244,6 +1243,14 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                                 p4_params_list.emplace_back(std::move(p));
                             }
                         }
+                    } else if (a.key == "hit_allowed") {
+                      if CHECKTYPE(a.value, tMAP) {
+                          for (auto &p : a.value.map) {
+                              if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tSTR)) {
+                                  if (p.key == "allowed")
+                                      hit_allowed = get_bool(p.value);
+                                  else if (p.key == "reason")
+                                      hit_disallowed_reason = p.value.s; } } }
                     } else if (a.key == "default_action" || a.key == "default_only_action") {
                         if CHECKTYPE(a.value, tMAP) {
                             for (auto &p : a.value.map) {
@@ -1283,6 +1290,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                                 k->second.is_constant = true;
                                 k->second.value = a.value.i; }
                         } else alias.emplace(a.key.s, a.value); } }
+
         } else if (CHECKTYPE2(i, tSTR, tCMD)) {
             VECTOR(value_t) tmp;
             if (i.type == tSTR) {
@@ -1313,6 +1321,22 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
             error(kv.key.lineno, "Duplicate action %s", name.c_str());
             continue; }
         actions.emplace(name, tbl, this, kv, pos++); }
+}
+
+int Table::Actions::hit_actions_count() const {
+  int cnt = 0;
+  for (auto &a : actions) {
+    if (a.second.hit_allowed)
+      ++cnt; }
+  return cnt;
+}
+
+int Table::Actions::default_actions_count() const {
+  int cnt = 0;
+  for (auto &a : actions) {
+    if (a.second.default_allowed)
+      ++cnt; }
+  return cnt;
 }
 
 AlwaysRunTable::AlwaysRunTable(gress_t gress, Stage *stage, pair_t &init)
@@ -1855,6 +1879,9 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         if (act.instr.empty() || action_cfg.count("primitives") == 0)
             action_cfg["primitives"] = json::vector();
         act.add_indirect_resources(action_cfg["indirect_resources"]);
+        if (!act.hit_allowed && !act.default_allowed)
+          error(act.lineno, "Action %s must be allowed to be hit and/or default action.", act.name.c_str());
+        action_cfg["allowed_as_hit_action"] = act.hit_allowed;
         // XXX(amresh): allowed_as_default_action info is directly passed through assembly
         // This will be 'false' for following conditions:
         // 1. Action requires hardware in hit path i.e. hash distribution or

@@ -357,6 +357,15 @@ int Stage::adr_dist_delay(gress_t gress) {
         return 0;
 }
 
+int Stage::cycles_contribute_to_latency(gress_t gress) {
+    if (stage_dep[gress] == MATCH_DEP || stageno == 0)
+        return pipelength(gress);
+    else if (stage_dep[gress] == CONCURRENT && options.target == TOFINO)
+        return 1;
+    else
+        return 2;  // action dependency 
+}
+
 int Stage::pipelength(gress_t gress) {
     return Target::MAU_BASE_DELAY() + tcam_delay(gress) + adr_dist_delay(gress);
 }
@@ -514,19 +523,22 @@ void Stage::output(json::map &ctxt_json) {
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
     if (stageno < Target::NUM_MAU_STAGES())
         TopLevel::all->set_mau_stage(stageno, buf, regs);
-    gen_stage_dependency(*regs, ctxt_json["stage_dependency"]);
+    gen_mau_stage_characteristics(*regs, ctxt_json["mau_stage_characteristics"]);
     gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
 }
 
 template<class REGS>
-void Stage::gen_stage_dependency(REGS &regs, json::vector &stg_dependency) {
+void Stage::gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characteristics) {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         json::map anon;
         anon["stage"] = stageno;
         anon["gress"] = P4Table::direction_name(gress);
         anon["match_dependent"] = (regs.dp.cur_stage_dependency_on_prev[gress] == 0)
                                        ? true : false;
-        stg_dependency.push_back(std::move(anon));
+        anon["clock_cycles"] = pipelength(gress);
+        anon["predication_cycle"] = pred_cycle(gress);
+        anon["cycles_contribute_to_latency"] = cycles_contribute_to_latency(gress);
+        stg_characteristics.push_back(std::move(anon));
     }
 }
 

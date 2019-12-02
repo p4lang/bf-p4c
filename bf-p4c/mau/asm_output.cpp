@@ -1957,6 +1957,11 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         BUG_CHECK(vliw_instr, "failed to allocate instruction memory for %s", act);
         out << "(" << vliw_instr->mem_code << ", " << vliw_instr->gen_addr() << "):" << std::endl;
         action_context_json(act);
+        out << indent << "- hit_allowed: {"
+            << " allowed: " << std::boolalpha << (act->hit_allowed);
+        if (!act->hit_allowed)
+            out << ", reason: " << act->hit_disallowed_reason;
+        out << " }" << std::endl;
         out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
             << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
         if (!act->default_allowed || act->hit_path_imp_only)

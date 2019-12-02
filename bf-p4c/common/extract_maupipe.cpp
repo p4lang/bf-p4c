@@ -199,59 +199,88 @@ class ActionFunctionSetup : public PassManager {
  *  or not the action can be used as a default action, or if specifically it is meant only for the
  *  default action.  This information must be passed back directly to the context JSON.
  */
-class DefaultActionInit : public MauModifier {
+class SetupActionProperties : public MauModifier {
     const IR::P4Table *table;
     const IR::ActionListElement *elem;
     P4::ReferenceMap *refMap;
 
     bool preorder(IR::MAU::Action *act) override {
+        bool has_constant_default_action = false;
         auto prop = table->properties->getProperty(IR::TableProperties::defaultActionPropertyName);
-        if (prop == nullptr) {
-            error("%s: This table has no default action defined, and cannot be understood by "
-                  " the backend compiler", table->srcInfo, table->externalName());
-            return false;
+        if (prop && prop->isConstant)
+          has_constant_default_action = true;
+
+        bool is_the_default_action = false;
+        bool is_const_default_action = false;
+        bool can_be_hit_action = true;
+        cstring hit_disallowed_reason = "";
+        bool can_be_default_action = !has_constant_default_action;
+        cstring default_disallowed_reason = "";
+
+        // First, check for action annotations
+        auto table_only_annot = elem->annotations->getSingle("tableonly");
+        auto default_only_annot = elem->annotations->getSingle("defaultonly");
+        if (has_constant_default_action)
+          default_disallowed_reason = "has_const_default_action";
+        if (table_only_annot) {
+          can_be_default_action = false;
+          default_disallowed_reason = "user_indicated_table_only";
+        }
+        if (default_only_annot) {
+          can_be_hit_action = false;
+          hit_disallowed_reason = "user_indicated_default_only";
         }
 
+        // Second, see if this action is the default action and/or constant default action
         auto default_action = table->getDefaultAction();
-        if (!default_action)
-            return false;
         const IR::Vector<IR::Argument> *args = nullptr;
-        if (auto mc = default_action->to<IR::MethodCallExpression>()) {
-            default_action = mc->method;
-            args = mc->arguments;
-        }
-        // Indicates that this action is to be used only as a miss
-        auto def_only_annot = elem->annotations->getSingle("defaultonly");
+        if (default_action) {
+          if (auto mc = default_action->to<IR::MethodCallExpression>()) {
+              default_action = mc->method;
+              args = mc->arguments;
+          }
 
-        auto path = default_action->to<IR::PathExpression>();
-        if (!path)
-            BUG("Default action path %s cannot be found", default_action);
-        auto actName = refMap->getDeclaration(path->path, true)->externalName();
+          auto path = default_action->to<IR::PathExpression>();
+          if (!path)
+              BUG("Default action path %s cannot be found", default_action);
+          auto actName = refMap->getDeclaration(path->path, true)->externalName();
 
-        if (actName == act->name) {
-            if (def_only_annot)
-                act->miss_action_only = true;
-            act->init_default = true;
-            if (args)
-                act->default_params = *args;
-            if (prop->isConstant)
-                act->is_constant_action = true;
-        } else {
-            if (def_only_annot)
-                error("%s: Action %s is marked as default only, but is not the default action",
-                      elem->srcInfo, elem);
-            // Default action is marked constant, and cannot be changed by the runtime
-            if (prop->isConstant) {
-                act->disallowed_reason = "has_const_default";
-                return false; }
+          if (actName == act->name) {
+            is_the_default_action = true;
+            if (has_constant_default_action) {
+              can_be_default_action = true;  // this is the constant default action
+              default_disallowed_reason = "";
+              is_const_default_action = true;
+            }
+          }
         }
-        act->default_allowed = true;
+
+        // Finally, set Action IR node attributes.
+        act->hit_allowed = can_be_hit_action;
+        act->hit_disallowed_reason = hit_disallowed_reason;
+        act->default_allowed = can_be_default_action;
+        act->disallowed_reason = default_disallowed_reason;
+
+        if (is_the_default_action) {
+          if (is_const_default_action)
+            act->is_constant_action = true;
+          // The program-specified default action will be initialized by the compiler.
+          act->init_default = true;
+          if (args)
+            act->default_params = *args;
+        }
+        if (default_only_annot) {
+          act->miss_action_only = true;
+          if (has_constant_default_action && !is_const_default_action)
+            error("%s: Action %s cannot be default only when there is another "
+                  "constant default action.", elem->srcInfo, elem);
+        }
         return false;
     }
 
  public:
-    DefaultActionInit(const IR::P4Table *t, const IR::ActionListElement *ale,
-                      P4::ReferenceMap *rm)
+    SetupActionProperties(const IR::P4Table *t, const IR::ActionListElement *ale,
+                          P4::ReferenceMap *rm)
         : table(t), elem(ale), refMap(rm) {}
 };
 
@@ -1427,10 +1456,10 @@ class GetBackendTables : public MauInspector {
             // to IR::MethodCallExpression.
             auto mce = act->expression->to<IR::MethodCallExpression>();
             auto newaction = createActionFunction(decl, mce->arguments);
-            DefaultActionInit dai(table, act, refMap);
-            auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
-            if (!tt->actions.count(newaction_defact->name.originalName))
-                tt->actions.emplace(newaction_defact->name.originalName, newaction_defact);
+            SetupActionProperties sap(table, act, refMap);
+            auto newaction_props = newaction->apply(sap)->to<IR::MAU::Action>();
+            if (!tt->actions.count(newaction_props->name.originalName))
+                tt->actions.emplace(newaction_props->name.originalName, newaction_props);
             else
                 error("%s: action %s appears multiple times in table %s", decl->name.srcInfo,
                           decl->name, tt->name);

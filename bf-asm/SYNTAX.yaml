@@ -273,6 +273,7 @@ stage <constant> <thread>:
                     # defines a name as an alias for (a slice of) something else
             [- p4_param_order: '{' param_name : <int>, ... '}' ]
                 # Param order specifying param name and width for context json (p4_parameters)
+            [- hit_allowed: '{' allowed: true|false, reason: <string> '}' ]
             [- default_action: '{' allowed: true|false, reason: <string> '}' ]
                # the next table to be run when the entry hits with this action, could be
                # an index into the hit_next

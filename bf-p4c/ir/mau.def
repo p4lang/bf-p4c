@@ -699,13 +699,15 @@ class Action : VLIWInstruction, IAnnotated {
     optional Annotations        annotations = Annotations::empty;
     bool miss_action_only = false;
     bool init_default = false;
-    bool default_allowed = false;
+    bool hit_allowed = true;  // action is allowed to be used with table hit
+    bool default_allowed = false;  // action is allowed to be used with table miss
     bool is_constant_action = false;
     // Currently if a table used hash distribution or the RNG, then the table must go
     // go through the hit pathway.  However, due to different driver implementation, this
     // could be different than being table_only, and thus it is left out of the
     // visit_children of the table.
     bool hit_path_imp_only = false;
+    cstring hit_disallowed_reason = "none";
     cstring disallowed_reason = "none";
     inline Vector<Argument> default_params = {};
     bool exitAction = false;  // should exit pipeline after action (next == EOP)
@@ -724,7 +726,7 @@ class Action : VLIWInstruction, IAnnotated {
         return nullptr; }
 
     cstring externalName() const;
-    bool hit_only() const { return default_allowed == false; }
+    bool hit_only() const { return hit_allowed && !default_allowed; }
     bool miss_only() const { return miss_action_only == true; }
 
     Annotations getAnnotations() const override { return annotations; }

@@ -80,13 +80,14 @@ public:
     template<class REGS>
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
     template<class REGS>
-        void gen_stage_dependency(REGS &regs, json::vector &stg_dependency);
+        void gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characteristics);
     template<class REGS> void write_regs(REGS &regs);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     int adr_dist_delay(gress_t gress);
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);
+    int cycles_contribute_to_latency(gress_t gress);
     static int first_table(gress_t gress);
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
     static Stage *stage(int stageno);

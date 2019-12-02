@@ -425,9 +425,11 @@ public:
             bitvec                              slot_use;
             unsigned                            handle = 0;
             p4_params                           p4_params_list;
+            bool                                hit_allowed = true;
             bool                                default_allowed = false;
             bool                                default_only = false;
             bool                                is_constant = false;
+            std::string                         hit_disallowed_reason = "";
             std::string                         default_disallowed_reason = "";
             std::vector<Call>                   attached;
             int                                 next_table_encode = -1;
@@ -487,6 +489,8 @@ public:
         iterator end() { return iterator(actions.end()); }
         const_iterator end() const { return const_iterator(actions.end()); }
         int count() { return actions.size(); }
+        int hit_actions_count() const;
+        int default_actions_count() const;
         Action *action(const std::string &n) {
             auto it = actions.find(n);
             return it == actions.end() ? nullptr : &it->second; }

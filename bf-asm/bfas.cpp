@@ -102,7 +102,7 @@ void output_all() {
     ctxtJson["parser"] = json::map();
     ctxtJson["phv_allocation"] = json::vector();
     ctxtJson["tables"] = json::vector();
-    ctxtJson["stage_dependency"] = json::vector();
+    ctxtJson["mau_stage_characteristics"] = json::vector();
     ctxtJson["configuration_cache"] = json::vector();
 
     Section::output_all(ctxtJson);
