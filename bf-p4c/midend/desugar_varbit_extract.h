@@ -160,6 +160,8 @@ class RewriteVarbitUses : public Modifier {
     std::map<const IR::StructField*,
              std::map<unsigned, IR::Type_Header*>> varbit_field_to_header_types;
 
+    std::map<const IR::StructField*, IR::Type_Header*> varbit_field_to_post_header_type;
+
     std::map<cstring, IR::Vector<IR::Type>> tuple_types_to_rewrite;
 
  private:
@@ -174,14 +176,22 @@ class RewriteVarbitUses : public Modifier {
 
     const IR::ParserState*
     create_end_state(const IR::BFN::TnaParser* parser,
-                     const IR::ParserState* state, cstring name);
+                     const IR::ParserState* state, cstring name,
+                     const IR::StructField* varbit_field,
+                     const IR::Type_Header* orig_header,
+                     cstring orig_hdr_name);
 
     bool preorder(IR::BFN::TnaParser*) override;
     bool preorder(IR::ParserState*) override;
 
     bool preorder(IR::MethodCallExpression*) override;
     bool preorder(IR::BlockStatement*) override;
+
+    IR::Vector<IR::Expression>
+    filter_post_header_fields(const IR::Vector<IR::Expression>& components);
+
     bool preorder(IR::ListExpression* list) override;
+    bool preorder(IR::Member* member) override;
 
  public:
     explicit RewriteVarbitUses(const CollectVarbitExtract& cve) : cve(cve) {}

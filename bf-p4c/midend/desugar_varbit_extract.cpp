@@ -200,7 +200,14 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
 
     auto hdr_type = hdr_inst->type->to<IR::Type_Header>();
 
-    const IR::StructField* varbit_field = hdr_type->fields.back();
+    const IR::StructField* varbit_field = nullptr;
+
+    for (auto field : hdr_type->fields) {
+        if (field->type->is<IR::Type::Varbits>()) {
+            varbit_field = field;
+            break;
+        }
+    }
 
     const IR::Expression* encode_var = nullptr;
     std::map<unsigned, const IR::Constant*> compile_time_constants;
@@ -331,9 +338,9 @@ static cstring create_instance_name(cstring name) {
 }
 
 static IR::Type_Header*
-create_varbit_header_type(cstring orig_header,
+create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst,
                           const IR::StructField* varbit_field, unsigned length) {
-    cstring name = create_instance_name(orig_header) + "_" + varbit_field->name + "_"
+    cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_"
                    + cstring::to_cstring(length) + "b_t";
 
     auto hdr = new IR::Type_Header(name);
@@ -409,6 +416,7 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
             statements.push_back(create_add_statement(method, path, header));
         }
     }
+
     auto branch_state = new IR::ParserState(name, statements, select);
 
     LOG3("create state " << name);
@@ -418,7 +426,10 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
 
 const IR::ParserState*
 RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
-                                    const IR::ParserState* state, cstring name) {
+                                    const IR::ParserState* state, cstring name,
+                                    const IR::StructField* varbit_field,
+                                    const IR::Type_Header* orig_header,
+                                    cstring orig_hdr_name) {
     for (auto& kv : state_to_branches) {
         auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
@@ -429,7 +440,51 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
         }
     }
 
+    // If varbit field is in the middle of the header type, we need to create
+    // a seperate header type for the fields that follow the varbit field.
+    //
+    // header xxx_t {
+    //   bit<4>   a;
+    //   bit<4>   b;
+    //   varbit<320> c;
+    //   bit<32>  x;
+    //   bit<16>  y;
+    // }
+
+    cstring post_hdr_name = orig_hdr_name + "_" + varbit_field->name + "_post_t";
+    auto post_hdr = new IR::Type_Header(post_hdr_name);
+
+    bool seen_varbit = false;
+    for (auto field : orig_header->fields) {
+        if (seen_varbit)
+            post_hdr->fields.push_back(field);
+
+        if (field->type->is<IR::Type_Varbits>())
+            seen_varbit = true;
+    }
+
     IR::IndexedVector<IR::StatOrDecl> statements;
+
+    auto call = cve.varbit_field_to_extract_call.at(varbit_field);
+    auto path = (*call->arguments)[0]->expression->to<IR::Member>()
+                                         ->expr->to<IR::PathExpression>();
+
+    if (post_hdr->fields.size()) {
+        varbit_field_to_post_header_type[varbit_field] = post_hdr;
+
+        auto post_hdr_inst = create_instance_name(post_hdr_name);
+        auto extract = create_extract_statement(parser, path, post_hdr_inst);
+
+        statements.push_back(extract);
+    }
+
+    if (cve.varbit_field_to_csum_call.count(varbit_field)) {
+        for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
+            auto method = call->method->to<IR::Member>();
+            statements.push_back(create_add_statement(method, path, post_hdr));
+        }
+    }
+
     if (cve.state_to_csum_verify.count(state))
         statements.push_back(cve.state_to_csum_verify.at(state));
 
@@ -441,7 +496,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
     ordered_map<unsigned, const IR::ParserState*> match_to_branch_state;
 
     auto parser = cve.state_to_parser.at(state);
-    auto orig_header = cve.state_to_varbit_header.at(state);
+    auto orig_hdr = cve.state_to_varbit_header.at(state);
     auto orig_hdr_inst = cve.varbit_field_to_header_instance.at(varbit_field);
     auto encode_var = cve.state_to_encode_var.at(state);
 
@@ -455,7 +510,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
         auto length = kv.second->asUnsigned();
 
         if (length) {
-            auto header = create_varbit_header_type(orig_header->name, varbit_field, length);
+            auto header = create_varbit_header_type(orig_hdr, orig_hdr_inst, varbit_field, length);
             varbit_field_to_header_types[varbit_field][length] = header;
 
             const IR::Expression* select = nullptr;
@@ -472,14 +527,16 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
             match_to_branch_state[match] = branch_state;
         } else {
-            no_option_state = create_end_state(parser, state, no_option_state_name);
+            no_option_state = create_end_state(parser, state, no_option_state_name,
+                                               varbit_field, orig_hdr, orig_hdr_inst);
 
             match_to_branch_state[match] = no_option_state;
         }
     }
 
     if (!no_option_state) {
-        no_option_state = create_end_state(parser, state, no_option_state_name);
+        no_option_state = create_end_state(parser, state, no_option_state_name,
+                                           varbit_field, orig_hdr, orig_hdr_inst);
         match_to_branch_state[0] = no_option_state;
     }
 
@@ -568,6 +625,7 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
         auto path = new IR::PathExpression(next_state->name);
         state->selectExpression = path;
     }
+
     // Removing verify call from the original state
     if (cve.state_to_csum_verify.count(orig)) {
        IR::IndexedVector<IR::StatOrDecl> components;
@@ -627,11 +685,18 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
 
                         if (cve.header_type_to_varbit_field.count(type)) {
                             auto varbit_field = cve.header_type_to_varbit_field.at(type);
+                            auto path = arg->expression->to<IR::Member>()->expr;
 
                             for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
-                                auto path = arg->expression->to<IR::Member>()->expr;
                                 auto emit = create_emit_statement(method, path,
                                                    create_instance_name(kv.second->name));
+                                components.push_back(emit);
+                            }
+
+                            if (varbit_field_to_post_header_type.count(varbit_field)) {
+                                auto type = varbit_field_to_post_header_type.at(varbit_field);
+                                auto emit = create_emit_statement(method, path,
+                                                   create_instance_name(type->name));
                                 components.push_back(emit);
                             }
                         }
@@ -644,6 +709,41 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
     }
 
     return true;
+}
+
+IR::Vector<IR::Expression>
+RewriteVarbitUses::filter_post_header_fields(const IR::Vector<IR::Expression>& components) {
+    IR::Vector<IR::Expression> filtered;
+
+    for (auto c : components) {
+        if (auto member = c->to<IR::Member>()) {
+            if (auto type = member->expr->type->to<IR::Type_Header>()) {
+                if (cve.header_type_to_varbit_field.count(type)) {
+                    auto varbit_field = cve.header_type_to_varbit_field.at(type);
+
+                    if (varbit_field_to_post_header_type.count(varbit_field)) {
+                        auto post = varbit_field_to_post_header_type.at(varbit_field);
+
+                        bool is_in_post_header = false;
+
+                        for (auto field : post->fields) {
+                            if (field->name == member->member) {
+                                is_in_post_header = true;
+                                break;
+                            }
+                        }
+
+                        if (is_in_post_header)
+                            continue;
+                    }
+                }
+            }
+        }
+
+        filtered.push_back(c);
+    }
+
+    return filtered;
 }
 
 bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
@@ -659,14 +759,16 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
         if (auto member = c->to<IR::Member>()) {
             if (member->type->is<IR::Type_Varbits>()) {
                 if (has_varbit)
-                    ::error("More than one varbit expressions in %1%", list);
+                    ::error("More than one varbit expression in %1%", list);
 
                 auto type = member->expr->type->to<IR::Type_Header>();
                 auto varbit_field = cve.header_type_to_varbit_field.at(type);
+
                 if (deparser) {
                     has_varbit = true;
+                    auto path = member->expr->to<IR::Member>();
+
                     for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
-                        auto path = member->expr->to<IR::Member>();
                         auto hdr = kv.second;
                         auto field = hdr->fields[0];
 
@@ -685,12 +787,14 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
                         }
                     }
                 }
+
+                continue;
             }
         }
 
-        if (!has_varbit)
-            components.push_back(c);
+        components.push_back(c);
     }
+
     if (has_varbit) {
         list->components = components;
 
@@ -711,12 +815,63 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
 
                 if (type_args.size() == 1) {
                     auto tuple_type = type_args[0];
+
                     if (auto name = tuple_type->to<IR::Type_Name>()) {
                         auto tuple_name = name->path->name;
                         tuple_types_to_rewrite[tuple_name] = types;
+
+                        bool filter = false;
+
+                        for (auto& kv : cve.header_type_to_varbit_field) {
+                            if (kv.first->name == tuple_name) {
+                                filter = true;
+                                break;
+                            }
+                        }
+
+                        // if the tuple type is the original header type
+                        // we need to remove the fields after the varbit field from the
+                        // tuple as they have been moved into its own header type and
+                        // instance
+
+                        if (filter)
+                            list->components = filter_post_header_fields(components);
                     }
                 } else if (type_args.size() > 1) {
-                    ::error("More than one type in type argument of %1%", list);
+                    ::error("More than one type in %1%", list);
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool RewriteVarbitUses::preorder(IR::Member* member) {
+    if (auto type = member->expr->type->to<IR::Type_Header>()) {
+        if (cve.header_type_to_varbit_field.count(type)) {
+            auto varbit_field = cve.header_type_to_varbit_field.at(type);
+
+            if (varbit_field_to_post_header_type.count(varbit_field)) {
+                auto post = varbit_field_to_post_header_type.at(varbit_field);
+
+                bool is_in_post_header = false;
+
+                for (auto field : post->fields) {
+                    if (field->name == member->member) {
+                        is_in_post_header = true;
+                        break;
+                    }
+                }
+
+                // rewrite path to fields that are after the varbit field
+                // these fields have been moved into its own header type and instance
+
+                if (is_in_post_header) {
+                    auto path = member->expr->to<IR::Member>();
+                    auto post_hdr = varbit_field_to_post_header_type.at(varbit_field);
+                    auto post_hdr_inst = create_instance_name(post_hdr->name);
+                    member->expr = new IR::Member(path->expr, post_hdr_inst);
                 }
             }
         }
@@ -758,8 +913,8 @@ bool RewriteVarbitTypes::preorder(IR::P4Program* program) {
             program->objects.insert(program->objects.begin(), lt.second);
     }
 
-    // TODO add these to the header decl section instead of
-    // prepending to beginning of program
+    for (auto& kv : rvu.varbit_field_to_post_header_type)
+        program->objects.insert(program->objects.begin(), kv.second);
 
     return true;
 }
@@ -787,6 +942,13 @@ bool RewriteVarbitTypes::preorder(IR::Type_Struct* type_struct) {
                 type_struct->fields.push_back(field);
             }
         }
+
+        for (auto& kv : rvu.varbit_field_to_post_header_type) {
+            auto type = kv.second;
+            auto field = new IR::StructField(create_instance_name(type->name),
+                                     new IR::Type_Name(type->name));
+            type_struct->fields.push_back(field);
+        }
     } else {
         for (auto& kv : rvu.tuple_types_to_rewrite) {
             if (type_struct->name == kv.first) {
@@ -812,8 +974,10 @@ bool RewriteVarbitTypes::preorder(IR::Type_Header* header) {
         IR::IndexedVector<IR::StructField> fields;
 
         for (auto field : header->fields) {
-            if (!field->type->is<IR::Type::Varbits>())
-                fields.push_back(field);
+            if (field->type->is<IR::Type::Varbits>())
+                break;
+
+            fields.push_back(field);
         }
 
         header->fields = fields;
