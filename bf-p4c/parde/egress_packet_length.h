@@ -140,7 +140,7 @@ class AdjustEgressPacketLength : public PassManager {
     AdjustEgressPacketLength(const PhvInfo& phv, const FieldDefUse& defuse) {
         // TODO(zma) put this in the compiler_generated_meta header?
         IR::TempVar* egressPacketLengthAdjust =
-            new IR::TempVar(IR::Type::Bits::get(16), false, "egress_pkt_len_adjust");
+            new IR::TempVar(IR::Type::Bits::get(16), false, "egress::egress_pkt_len_adjust");
 
         addPasses({
             new ExtractEgressPacketLengthAdjust(phv, defuse, egressPacketLengthAdjust),

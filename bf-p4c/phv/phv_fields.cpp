@@ -170,14 +170,9 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
 
     int start = by_id.size();
     int offset = 0;
-    auto annot = type->getAnnotations();
-    bool bridged = false;
-    if (annot->getSingle("layout")) {
-        LOG3("Candidate bridged metadata header (found layout annotation): " << name);
-        bridged = true; }
     for (auto f : type->fields)
         offset += f->type->width_bits();
-    add_struct(name, type, gress, meta, bridged, offset);
+    add_struct(name, type, gress, meta, false, offset);
 
     if (meta) {
         int end = by_id.size();
@@ -1163,13 +1158,13 @@ class CollectPhvFields : public Inspector {
 
     /// Collect field information for alias sources.
     bool preorder(const IR::BFN::AliasMember* alias) override {
-        alias->source->apply(CollectPhvFields(phv, getGress()));
+        visit(alias->source);
         return true;
     }
 
     /// Collect field information for alias sources.
     bool preorder(const IR::BFN::AliasSlice* alias) override {
-        alias->source->apply(CollectPhvFields(phv, getGress()));
+        visit(alias->source);
         return true;
     }
 
@@ -1319,7 +1314,7 @@ struct ComputeFieldAlignments : public Inspector {
         if (!lval) return false;
 
         auto* fieldInfo = phv.field(lval->field);
-        if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
+        if (!fieldInfo) {
             ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
                       extract->dest);
             return false;
@@ -1374,35 +1369,24 @@ struct ComputeFieldAlignments : public Inspector {
         for (auto* emitPrimitive : deparser->emits) {
             if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
                 for (auto &sourceToOffset : checksum->source_index_to_offset) {
-                     auto phv_field = phv.field(
-                                      checksum->sources[sourceToOffset.first]->field->field);
-                     if (phv_field->metadata && phv_field->size % 8) {
-                         phv_field->updateAlignment(FieldAlignment(le_bitrange(
-                           StartLen((sourceToOffset.second + phv_field->size), phv_field->size))));
-                     }
+                    auto f = phv.field(
+                            checksum->sources[sourceToOffset.first]->field->field);
+                    if (f->metadata && f->size % 8) {
+                        const auto alignment = FieldAlignment(le_bitrange(
+                                    StartLen((sourceToOffset.second + f->size), f->size)));
+                        LOG3("B. Updating alignment of " << f->name << " to " << alignment);
+                        f->updateAlignment(alignment);
+                    }
                 }
             }
             auto* emit = emitPrimitive->to<IR::BFN::EmitField>();
             if (!emit) continue;
 
             auto* fieldInfo = phv.field(emit->source->field);
-            if (!fieldInfo || fieldInfo->is_ignore_alloc()) {
+            if (!fieldInfo) {
                 ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
                           emit->source);
                 currentBit = 0;
-                continue;
-            }
-
-            // XXX(seth): We don't need to infer any constraints from the
-            // deparser for bridged metadata fields; they get their alignment
-            // from the hack in `preorder(Extract)`. (We just duplicate the
-            // egress alignment constraints, which are inferred from the
-            // parser, for the ingress versions of the fields.) For now, we just
-            // skip to the next byte-aligned position.
-            if (fieldInfo->bridged) {
-                currentBit += fieldInfo->size;
-                if (currentBit % 8 != 0)
-                    currentBit += 8 - currentBit % 8;
                 continue;
             }
 
@@ -1632,6 +1616,7 @@ class CollectPardeConstraints : public Inspector {
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
         src_field->set_emitted(true);
+        LOG3("   marking field " << src_field << " as emitted");
 
         if (!src_field->privatized()) return;
 
@@ -1938,6 +1923,44 @@ class MarkTimestampAndVersion : public Inspector {
     explicit MarkTimestampAndVersion(PhvInfo& phv) : phv_i(phv) { }
 };
 
+class MarkFieldAsBridged : public Inspector {
+    PhvInfo& phv_i;
+
+    cstring getOppositeGressFieldName(cstring name) {
+        if (name.startsWith("ingress::")) {
+            return ("egress::" + name.substr(9));
+        } else if (name.startsWith("egress::")) {
+            return ("ingress::" + name.substr(8));
+        } else {
+            BUG("Called getOppositeGressFieldName on unknown gress fieldname %1%", name);
+            return cstring();
+        }
+    }
+
+    void end_apply() {
+        for (auto& f : phv_i) {
+            if ((f.is_flexible() || f.metadata) && f.emitted()) {
+                // ignore $constant generated from decaf, which is never bridged
+                std::string f_name(f.name.c_str());
+                if (f_name.find("$constant") != std::string::npos)
+                    continue;
+                f.bridged = true;
+                LOG3("   marking field " << f << " as bridged");
+                // Set the egress version of bridged fields to metadata
+                // XXX(hanw): explain why
+                auto otherGress = getOppositeGressFieldName(f.name);
+                auto field = phv_i.field(otherGress);
+                if (!field) continue;
+                field->metadata = true;
+                LOG3("   marking field " << field << " as metadata");
+            }
+        }
+    }
+
+ public:
+    explicit MarkFieldAsBridged(PhvInfo& phv) : phv_i(phv) { }
+};
+
 Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::Node* root) {
     auto& matrix = phv_i.getBridgedExtractedTogether();
     matrix.clear();
@@ -1965,6 +1988,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AllocatePOVBits(phv),
         new MapFieldToParserStates(phv),
         new CollectPardeConstraints(phv),
+        new MarkFieldAsBridged(phv),
         new ComputeFieldAlignments(phv),
         new AddIntrinsicConstraints(phv),
         new MarkTimestampAndVersion(phv),

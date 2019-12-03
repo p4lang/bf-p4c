@@ -154,7 +154,7 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
     auto hdr_type_name = tbl->name + "__metadata_t";
     auto hdr_instance_name = tbl->name + "__metadata";
     auto pidx_field_name = tbl->name + "_partition_index";
-    auto tv_name = hdr_instance_name + "." + pidx_field_name;
+    auto tv_name = createThreadName(tbl->gress, hdr_instance_name + "." + pidx_field_name);
     auto tv = new IR::TempVar(IR::Type_Bits::get(partition_index_bits), false, tv_name.c_str());
 
     auto tables = new IR::Vector<IR::MAU::Table>();

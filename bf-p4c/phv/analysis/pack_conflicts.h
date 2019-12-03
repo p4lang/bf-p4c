@@ -16,7 +16,7 @@
 class PackConflicts : public PassManager {
  private:
     PhvInfo                         &phv;
-    // const DependencyGraph           &dg;
+    const DependencyGraph           &dg;
     IgnoreTableDeps                 ignore;
     const TablesMutuallyExclusive   &mutex;
     const MauBacktracker            &bt;
@@ -54,14 +54,16 @@ class PackConflicts : public PassManager {
     /// written in those actions.
     void generateNoPackConstraints(const IR::MAU::Table* t1, const IR::MAU::Table* t2);
 
+    void generateNoPackConstraintsForBridgedFields(const IR::MAU::Table*, const IR::MAU::Table*);
+
     /// Update the PHV::Field object for every field with the number of fields with which it cannot
     /// be packed
     void updateNumPackConstraints();
 
  public:
-    PackConflicts(PhvInfo &p, const DependencyGraph &, const TablesMutuallyExclusive &m,
+    PackConflicts(PhvInfo &p, const DependencyGraph &d, const TablesMutuallyExclusive &m,
             const MauBacktracker &b, const ActionMutuallyExclusive &a) :
-        phv(p), /* dg(d), */ mutex(m), bt(b), amutex(a) {
+        phv(p), dg(d), mutex(m), bt(b), amutex(a) {
         addPasses({
             new GatherWrites(*this),
             &ignore

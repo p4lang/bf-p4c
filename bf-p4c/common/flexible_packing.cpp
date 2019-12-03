@@ -2174,11 +2174,28 @@ FlexiblePacking::FlexiblePacking(
           bmUses(p, packHeaders, parserMappings, e, parserStatesToModify),
           log(p) {
               addPasses({
-                      &bridgedFields,
+                      // XXX hack.
+                      // CollectBridgedFields &&
+                      // ReplaceOriginalFieldWithBridged were only used for
+                      // p4-14 and p4-16 v1model programs. They cannot handle
+                      // alias slice and the implementation is not sound when
+                      // multiple bridge header are used. However, they are
+                      // still useful right now to workaround issues in the
+                      // auto-alias pass for p4-14 program.  We will keep them
+                      // for now, and the next step should be fix the issue in
+                      // auto-alias and remove these two passes.
+                      ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14) ||
+                       ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16) &&
+                        (BackendOptions().arch == "v1model"))) ?
+                            &bridgedFields : nullptr,
                       // XXX(hanw): GatherParserStateToModify must run before
                       // ReplaceOriginalFieldWithBridged.
                       new GatherParserStateToModify(p, parserStatesToModify),
-                      new ReplaceOriginalFieldWithBridged(p, bridgedFields),
+                      // XXX see comments above
+                      ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14) ||
+                       ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16) &&
+                        (BackendOptions().arch == "v1model"))) ?
+                            new ReplaceOriginalFieldWithBridged(p, bridgedFields) : nullptr,
                       new FindDependencyGraph(p, dg),
                       new PHV_Field_Operations(p),
                       new PragmaContainerSize(p),

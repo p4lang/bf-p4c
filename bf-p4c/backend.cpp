@@ -138,13 +138,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         options.privatization ? new Privatization(phv, deps, doNotPrivatize, defuse) : nullptr,
                                   // For read-only fields, generate private TPHV and PHV copies.
 
-        // This is the backtracking point from table placement to PHV allocation. Based on a
-        // container conflict-free PHV allocation, we generate a number of no-pack conflicts between
-        // fields (these are fields written in different nonmutually exclusive actions in the same
-        // stage). As some of these no-pack conflicts may be related to bridged metadata fields, we
-        // need to pull out the backtracking point from close to PHV allocation to before bridged
-        // metadata packing.
-        &table_alloc,
         new CollectPhvInfo(phv),
         // Aliasing replaces all uses of the alias source field with the alias destination field.
         // Therefore, run it first in the backend to ensure that all other passes use a union of the
@@ -156,6 +149,13 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new DumpPipe("Before packing"),
         flexiblePacking,
         new DumpPipe("After packing"),
+        // This is the backtracking point from table placement to PHV allocation. Based on a
+        // container conflict-free PHV allocation, we generate a number of no-pack conflicts between
+        // fields (these are fields written in different nonmutually exclusive actions in the same
+        // stage). As some of these no-pack conflicts may be related to bridged metadata fields, we
+        // need to pull out the backtracking point from close to PHV allocation to before bridged
+        // metadata packing.
+        &table_alloc,
         new ResolveSizeOfOperator(),
         new DumpPipe("After ResolveSizeOfOperator"),
         // Run after bridged metadata packing as bridged packing updates the parser state.

@@ -77,6 +77,45 @@ bool PackConflicts::GatherWrites::preorder(const IR::BFN::Digest* digest) {
     return true;
 }
 
+void PackConflicts::generateNoPackConstraintsForBridgedFields(
+        const IR::MAU::Table* t1, const IR::MAU::Table* t2) {
+    ordered_set<const PHV::Field*> fields1;
+    ordered_set<const PHV::Field*> fields2;
+
+    if (!tableActions.count(t1)) {
+        LOG6("\t\tNo actions in table " << t1);
+        return; }
+    if (!tableActions.count(t2)) {
+        LOG6("\t\tNo actions in table " << t2);
+        return; }
+    for (auto act1 : tableActions.at(t1)) {
+        for (auto act2 : tableActions.at(t2)) {
+            if (amutex(act1, act2)) {
+                LOG6("Actions " << act1->name << " and " << act2->name << " are mutually "
+                        "exclusive.");
+            } else {
+                LOG6("\t  Non mutually exclusive actions " << act1->name << " and " << act2->name);
+                fields1.insert(actionWrites[act1].begin(), actionWrites[act1].end());
+                fields2.insert(actionWrites[act2].begin(), actionWrites[act2].end()); } } }
+
+    LOG5("\tFor table: " << t1->name << ", number of fields written across actions: " <<
+            fields1.size());
+    LOG5("\tFor table: " << t2->name << ", number of fields written across actions: " <<
+            fields2.size());
+
+    for (auto f1 : fields1) {
+        for (auto f2 : fields2) {
+            LOG3("checking f1 " << f1 << " and f2 " << f2);
+            if (f1 == f2) continue;
+            if (!f1->bridged && !f1->is_digest()) continue;
+            if (!f2->bridged && !f1->is_digest()) continue;
+            phv.addFieldNoPack(f1, f2);
+            LOG6("\t" << phv.isFieldNoPack(f1, f2) << " Setting no pack for " << f1->name <<
+                    " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")");
+        }
+    }
+}
+
 void PackConflicts::end_apply() {
     for (auto row1 : tableActions) {
         for (auto row2 : tableActions) {
@@ -96,6 +135,15 @@ void PackConflicts::end_apply() {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table "
                       << t2->name << " due to stage pragmas");
                 generateNoPackConstraints(t1, t2);
+            }
+
+            // from table dependency graph, we can estimate if two tables will be placed
+            // in the same stage. If they happen to write to bridge fields, do not pack
+            // the bridge fields together due to container conflicts.
+            if (dg.min_stage(t1) == dg.min_stage(t2)) {
+                LOG4("\tGenerate no pack conditions for table " << t1->name << " and table "
+                      << t2->name << " for bridge fields");
+                generateNoPackConstraintsForBridgedFields(t1, t2);
             }
         }
     }
@@ -151,7 +199,6 @@ void PackConflicts::generateNoPackConstraints(const IR::MAU::Table* t1, const IR
             } else {
                 ++numSet;
                 phv.addFieldNoPack(f1, f2);
-                phv.addFieldNoPack(f2, f1);
                 LOG6("\t" << phv.isFieldNoPack(f1, f2) << " Setting no pack for " << f1->name <<
                      " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")"); } } }
 
