@@ -386,6 +386,11 @@ int main(int ac, char **av) {
     } catch (const Util::CompilationError &e) {
         std::cerr << e.what() << std::endl;
         return PROGRAM_ERROR;
+#if BAREFOOT_INTERNAL
+    } catch (const std::exception &e) {
+        std::cerr << "Internal compiler error: " << e.what() << std::endl;
+        return INTERNAL_COMPILER_ERROR;
+#endif
     } catch (...) {
         std::cerr << "Internal compiler error. Please submit a bug report with your code."
                   << std::endl;
