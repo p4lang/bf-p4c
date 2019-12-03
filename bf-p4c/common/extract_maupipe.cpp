@@ -1378,6 +1378,12 @@ class GetBackendTables : public MauInspector {
     }
 
     void setup_tt_match(IR::MAU::Table *tt, const IR::P4Table *table) {
+        auto annot = table->getAnnotations();
+        // Set compiler generated flag if hidden annotation present
+        // Can be on a keyless table, hence we check this at the beginning
+        auto h = annot->getSingle("hidden");
+        if (h) tt->is_compiler_generated = true;
+
         auto *key = table->getKey();
         if (key == nullptr)
             return;
@@ -1385,7 +1391,6 @@ class GetBackendTables : public MauInspector {
 
         boost::optional<cstring> partition_index = boost::make_optional(false, cstring());
         // Fold 'atcam_partition_index' annotation into InputXbarRead IR node.
-        auto annot = table->getAnnotations();
         auto s = annot->getSingle("atcam_partition_index");
         if (s)
             partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
