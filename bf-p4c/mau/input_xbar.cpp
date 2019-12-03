@@ -3256,6 +3256,10 @@ void IXBar::determineHashDistInUse(int hash_group, bitvec &units_in_use, bitvec 
         units_in_use |= hash_dist_inuse[i];
         hash_bits_in_use |= hash_dist_bit_inuse[i];
     }
+    // Because for some hash, no matrix bits are used by the seed is used.  Really this
+    // could potentially done with the immediate_default register, but this isn't happening
+    // with the current assembly
+    hash_bits_in_use |= hash_used_per_function[hash_group];
 }
 
 /**
@@ -3463,6 +3467,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
     }
     hash_dist_groups[asm_unit / HASH_DIST_SLICES] = hash_group;
     hash_group_use[hash_group] |= hash_table_input;
+    hash_used_per_function[hash_group] |= hash_bits_used;
 }
 
 /**
@@ -4222,6 +4227,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
         && hash_dist_groups[hash_dist_48_bit_unit] != -1)
         BUG("Conflicting hash distribution unit groups");
     hash_dist_groups[hash_dist_48_bit_unit] = hash_dist_alloc.hash_group();
+    hash_used_per_function[hash_dist_alloc.hash_group()] = hash_dist_alloc.galois_matrix_bits();
 }
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
@@ -4625,6 +4631,14 @@ bitvec IXBar::HashDistUse::destinations() const {
     bitvec rv;
     for (auto &ir_alloc : ir_allocations) {
         rv.setbit(static_cast<int>(ir_alloc.dest));
+    }
+    return rv;
+}
+
+bitvec IXBar::HashDistUse::galois_matrix_bits() const {
+    bitvec rv;
+    for (auto &ir_alloc : ir_allocations) {
+        rv |= ir_alloc.use.hash_dist_hash.galois_matrix_bits;
     }
     return rv;
 }

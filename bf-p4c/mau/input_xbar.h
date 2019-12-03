@@ -490,6 +490,7 @@ struct IXBar {
         int hash_group() const;
         bitvec destinations() const;
         unsigned hash_table_inputs() const;
+        bitvec galois_matrix_bits() const;
 
         cstring used_by;
         std::string used_for() const;
