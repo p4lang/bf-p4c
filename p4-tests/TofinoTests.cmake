@@ -24,7 +24,7 @@ set (P16_TNA_EXCLUDE_PATTERNS "tofino\\.h")
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
 # p4c-1813.p4 and p4c-2030.p4 are handled separately so we can add
 # "--auto-init-metadata".
-set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-1813\\.p4" "p4c-2030\\.p4" "p4c-1812\\.p4" "p4c-2032\\.p4" "p4c-2012\\.p4" "p4c-2143\\.p4" "p4c-2189\\.p4" "p4c-2178\\.p4" "p4c-2191\\.p4" "p4c-2226\\.p4" "p4c-2269\\.p4")
+set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-1813\\.p4" "p4c-2030\\.p4" "p4c-1812\\.p4" "p4c-2032\\.p4" "p4c-2012\\.p4" "p4c-2143\\.p4" "p4c-2189\\.p4" "p4c-2178\\.p4" "p4c-2191\\.p4" "p4c-2226\\.p4" "p4c-2269\\.p4" "obfuscated-ref-baremetal\\.p4" "obfuscated-ref-nat\\.p4" "obfuscated-ref-default\\.p4" "obfuscated-ref-nat-static\\.p4")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
@@ -86,38 +86,48 @@ set (TOFINO_TNA_TEST_SUITES
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # p4_16/customer/arista/p4c-1813.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-1813.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2012.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2012.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2012.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2030.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2030.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2032.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2032.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2143.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4" "-Xp4c=--disable-power-check")
 
 # p4_16/customer/arista/p4c-2178.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2189.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4" "--auto-init-metadata")
 
 # p4_16/customer/arista/p4c-2191.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-Xp4c=\"--auto-init-metadata\" -to 1200")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "--auto-init-metadata -to 1200")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4" PROPERTIES TIMEOUT 1200)
 
 # p4_16/customer/arista/p4c-2226.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2226.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2226.p4" "--auto-init-metadata")
+
+# Arista profiles
+# p4_16/customer/arista/obfuscated-ref-baremetal.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-baremetal.p4" "--auto-init-metadata")
+# p4_16/customer/arista/obfuscated-ref-nat.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat.p4" "--auto-init-metadata")
+# p4_16/customer/arista/obfuscated-ref-default.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-default.p4" "--auto-init-metadata")
+# p4_16/customer/arista/obfuscated-ref-nat-static.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat-static.p4" "--auto-init-metadata")
 
 # p4_16/customer/extreme/p4c-1812.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4" "--auto-init-metadata")
 
 # p4_16/customer/extreme/p4c-2269.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2269.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2269.p4" "--auto-init-metadata")
 
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")
@@ -136,6 +146,10 @@ p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4")
 #p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4")
 # p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4")
@@ -156,19 +170,19 @@ set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-on
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_SPGW -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all")
 
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
@@ -796,6 +810,10 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2178.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2189.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-baremetal.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-default.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat-static.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1562-1.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1572-b1.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1809.p4

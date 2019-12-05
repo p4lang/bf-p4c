@@ -1670,3 +1670,17 @@ p4c_add_xfail_reason("tofino"
   "BfruntimeReadWriteRpcException"
   p4_16_programs_tna_ternary_match
 )
+
+# Arista regression failure - MUST_PASS for rel_9_1
+# P4C-2375
+p4c_add_xfail_reason("tofino"
+  "Splitting table .* cannot be resolved for stage table .*"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static.p4
+)
+
+# Arista regression failure - MUST_PASS for rel_9_1
+# P4C-2375
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4
+)

@@ -56,11 +56,11 @@ set (JBAY_JNA_TEST_SUITES
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 # p4_16/customer/extreme/p4c-2262-2.p4 needs automatic metadata initialization.
-p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2262-2.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2262-2.p4" "--auto-init-metadata")
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4")
 
 # p4_16/customer/extreme/p4c-2238.p4 needs automatic metadata initialization.
-p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2238.p4" "-Xp4c=--auto-init-metadata")
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2238.p4" "--auto-init-metadata")
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4")
 
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
@@ -89,19 +89,19 @@ set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-on
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_SPGW -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^int")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all ^spgw")
 p4c_add_ptf_test_with_ptfdir_and_spec (
     "tofino2" fabric-DWITH_SPGW-DWITH_INT_TRANSIT ${ONOS_FABRIC_P4}
-    "${testExtraArgs} -Xp4c=--auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
+    "${testExtraArgs} --auto-init-metadata -DWITH_SPGW -DWITH_INT_TRANSIT -arch v1model"
     ${ONOS_FABRIC_PTF} "all")
 
 p4c_add_ptf_test_with_ptfdir (
