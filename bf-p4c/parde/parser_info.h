@@ -220,6 +220,11 @@ class ParserGraphImpl : public DirectedGraph {
                 return kv.first;
         }
 
+        for (auto& kv : _loopbacks) {
+            if (kv.second.count(t))
+                return kv.first.first;
+        }
+
         return nullptr;
     }
 

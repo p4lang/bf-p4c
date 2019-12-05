@@ -35,18 +35,12 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         return ParserTransform::init_apply(root);
     }
 
-    const IR::BFN::Parser* parser = nullptr;
-
-    IR::BFN::Parser* preorder(IR::BFN::Parser* p) override {
-        parser = getOriginal<IR::BFN::Parser>();
-        return p;
-    }
-
     // keep track of number stall states from orig_state
     std::map<cstring, unsigned> orig_state_to_stall_cnt;
 
     void insert_stall_state_for_oob_save(IR::BFN::Transition* t) {
         auto orig = getOriginal<IR::BFN::Transition>();
+        auto parser = findOrigCtxt<IR::BFN::Parser>();
         auto src = parser_info.graph(parser).get_src(orig);
 
         auto cnt = orig_state_to_stall_cnt[src->name]++;
@@ -59,6 +53,12 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         auto to_dst = new IR::BFN::Transition(match_t(), 0, t->next);
         stall->transitions.push_back(to_dst);
         t->next = stall;
+
+        // move loop back to stall state
+        if (t->loop) {
+            to_dst->loop = t->loop;
+            t->loop = cstring();
+        }
     }
 
     struct GetMaxSavedRVal : Inspector {
