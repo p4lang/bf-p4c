@@ -24,7 +24,7 @@ if (ENABLE_STATIC_LIBS)
   set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
   # Force linking libstdc++ statically. Note that dependencies may bring in
   # dynamic versions of it, so that's why we look above for .a
-  set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+  set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-z,muldefs")
 
   # Link Boost statically
   set(Boost_USE_STATIC_LIBS ON)
