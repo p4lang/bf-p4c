@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Copyright 2013-present Barefoot Networks, Inc.
 #
@@ -42,7 +42,7 @@ def main():
     channel = grpc.insecure_channel('localhost:50051')
     stub = p4runtime_pb2.P4RuntimeStub(channel)
 
-    print "Sending P4 config"
+    print("Sending P4 config")
     request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
     request.device_id = 0
     config = request.config

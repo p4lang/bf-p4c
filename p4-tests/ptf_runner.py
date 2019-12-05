@@ -1,4 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
+
+from __future__ import print_function
 
 import argparse
 from collections import OrderedDict
@@ -99,7 +101,7 @@ def get_parser():
     return parser
 
 DEFAULT_NUM_IFACES = 16
-DEFAULT_IFACES = ["veth{}".format(i) for i in xrange((DEFAULT_NUM_IFACES + 1) * 2)]
+DEFAULT_IFACES = ["veth{}".format(i) for i in range((DEFAULT_NUM_IFACES + 1) * 2)]
 # Add Ethernet CPU port
 DEFAULT_IFACES += ["veth250", "veth251"]
 
@@ -185,7 +187,7 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     else:
         os.environ['PYTHONPATH'] = pypath
 
-    for iface_idx, iface_name in port_map.items():
+    for iface_idx, iface_name in list(port_map.items()):
         ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
@@ -210,7 +212,7 @@ def run_pi_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     return p.returncode == 0
 
 def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform, port_map,
-                     verbose_model_logging, extra_args=[], port_map_file=None, test_port=None, 
+                     verbose_model_logging, extra_args=[], port_map_file=None, test_port=None,
                      installdir="/usr/local"):
     if verbose_model_logging:
         enable_verbose_model_logging()
@@ -222,23 +224,24 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
         os.environ['PYTHONPATH'] += ":" + ptfutils
     else:
         os.environ['PYTHONPATH'] = ptfutils
+    pythondir = 'python{}.{}'.format(sys.version_info.major, sys.version_info.minor)
     # find pd generated python files
-    site_pkg = os.path.join('lib', 'python2.7', 'site-packages')
+    site_pkg = os.path.join('lib', pythondir, 'site-packages')
     # for switchapi
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg)
     # for pdfixed
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device+'pd')
     os.environ['PYTHONPATH'] += ":" + os.path.join(testdir, site_pkg, device)
     # res_pd_rpc -- bf-drivers still uses tofino to install res_pd_rpc: 'tofino' should be device
-    if installdir == "/usr/local":
-        res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'dist-packages', 'tofino')
+    if installdir == "/usr/local" or sys.version_info.major == 3:
+        res_pd_rpc = os.path.join(installdir, 'lib', pythondir, 'dist-packages', 'tofino')
     else:
-        res_pd_rpc = os.path.join(installdir, 'lib', 'python2.7', 'site-packages', 'tofino')
+        res_pd_rpc = os.path.join(installdir, 'lib', pythondir, 'site-packages', 'tofino')
     os.environ['PYTHONPATH'] += ":" + res_pd_rpc
     info('PYTHONPATH={}'.format(os.environ['PYTHONPATH']))
 
     if port_map_file is None:
-        for iface_idx, iface_name in port_map.items():
+        for iface_idx, iface_name in list(port_map.items()):
             ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
@@ -256,10 +259,10 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     # Pass api_model_json for bf_switch
     if 'switch_16' in testdir:
         test_params += ';api_model_json=\'{}\''.format(os.path.join(testdir, 'share/switch/aug_model.json'))
-    
+
     if test_port is not None:
         test_params += ';test_port={}'.format(test_port)
-  
+
     if port_map_file is not None:
         test_params += ';port_map_file=\'{}\''.format(port_map_file)
 
@@ -279,7 +282,7 @@ def run_pd_ptf_tests(PTF, device, p4name, config_file, ptfdir, testdir, platform
     return p.returncode == 0
 
 # model uses the context json to lookup names when logging
-def start_model(model, out=None, context_json=None, config=None, port_map_path=None, 
+def start_model(model, out=None, context_json=None, config=None, port_map_path=None,
                 device=None, extra_ptf_args=None, disable_logging=None):
     cmd = [model]
     if context_json is not None:
@@ -450,12 +453,12 @@ def main():
             error("PI only supports one tofino.bin and context.json")
             sys.exit(1)
         compiler_out_dir = os.path.join(compiler_out_dir, args.run_bfrt_as_pi[0])
-    
+
     bin_path = os.path.join(compiler_out_dir, args.device + '.bin')
     if args.bfrt_test is None and not os.path.exists(bin_path):
         error("Binary config file {} not found".format(bin_path))
         sys.exit(1)
-    
+
     # bf_switch has a different context.json path
     if args.bfrt_test and 'switch_16' in compiler_out_dir:
         cxt_json_path = os.path.join(compiler_out_dir, 'p4src/switch/pipe/context.json')
@@ -507,7 +510,7 @@ def main():
         # Default ports for Tofino2 have offset 8
         if 'tofino2' in args.device:
             base_if_index = 8
-        for iface_idx in xrange(base_if_index, base_if_index + DEFAULT_NUM_IFACES):
+        for iface_idx in range(base_if_index, base_if_index + DEFAULT_NUM_IFACES):
             port_map[iface_idx] = 'veth{}'.format(2 * veth_start_index + 1)
             veth_start_index += 1
         # Ethernet CPU port: 64 for Tofino and 2 for Tofino2
@@ -542,7 +545,7 @@ def main():
                 error("Error when parsing JSON port mapping file {}".format(
                     port_map_path))
                 sys.exit(1)
-        if not check_ifaces(port_map.values()):
+        if not check_ifaces(list(port_map.values())):
             warn("Some interfaces referenced in the port mapping file don't exist")
 
     PTF = findbin(top_builddir, 'PTF')
@@ -561,12 +564,12 @@ def main():
         if args.pdtest:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                        args.testdir, args.platform, port_map, args.verbose_model_logging,
-                                       extra_ptf_args, args.port_map_file, args.test_port, 
+                                       extra_ptf_args, args.port_map_file, args.test_port,
                                        installdir=BFD_INSTALLDIR)
         elif args.bfrt_test and not args.run_bfrt_as_pi:
             success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
                                        args.testdir, args.platform, port_map, args.verbose_model_logging,
-                                       extra_ptf_args, args.port_map_file, args.test_port, 
+                                       extra_ptf_args, args.port_map_file, args.test_port,
                                        installdir=BFD_INSTALLDIR)
         else:
             success = run_pi_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
@@ -617,7 +620,7 @@ def main():
 
         # Ensure that there are no instances of tofino-model or bf_switchd running
         run_setup()
- 
+
         disable_model_logging = True
         if args.enable_model_logging:
 	    disable_model_logging = False
@@ -662,12 +665,12 @@ def main():
             if args.pdtest is not None:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.pdtest, args.ptfdir,
                                            args.testdir, args.platform, port_map, args.verbose_model_logging,
-                                           extra_ptf_args, args.port_map_file, args.test_port, 
+                                           extra_ptf_args, args.port_map_file, args.test_port,
                                            installdir=BFD_INSTALLDIR)
             elif args.bfrt_test and not args.run_bfrt_as_pi:
                 success = run_pd_ptf_tests(PTF, args.device, args.name, args.bfrt_test, args.ptfdir,
                                            args.testdir, args.platform, port_map, args.verbose_model_logging,
-                                           extra_ptf_args, args.port_map_file, args.test_port, 
+                                           extra_ptf_args, args.port_map_file, args.test_port,
                                            installdir=BFD_INSTALLDIR)
             else:
                 success = update_config(args.name, args.grpc_addr,
@@ -688,7 +691,7 @@ def main():
     success = run()
 
 
-    for pname, p in processes.items():
+    for pname, p in list(processes.items()):
         try:
             # Terminate the process
             debug("Killing process: {0} with pid: {1}".format(pname, p.pid))

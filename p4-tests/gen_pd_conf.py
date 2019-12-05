@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import argparse
 import json
@@ -76,10 +76,10 @@ def main():
     p4_info["pd-thrift"] = os.path.join(libpath, 'libpdthrift.so')
 
     if len(args.pipe) > 0:
-        print (args.pipe[0])
-	share_path = os.path.join(args.testdir, 'share', args.device+'pd', args.name, args.pipe[0])
+        print(args.pipe[0])
+        share_path = os.path.join(args.testdir, 'share', args.device+'pd', args.name, args.pipe[0])
     else:
-    	share_path = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
+        share_path = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
 
     p4_info["table-config"] = os.path.join(share_path, 'context.json')
     p4_info["tofino-bin"] = os.path.join(share_path, args.device + '.bin')
