@@ -259,6 +259,13 @@ class BfRtSchemaGenerator {
     static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);
     static void addLpfDataFields(Util::JsonArray* dataJson);
     static void addWredDataFields(Util::JsonArray* dataJson);
+
+    static Util::JsonObject* initTableJson(const std::string& name, P4Id id, cstring tableType,
+                                           int64_t size, Util::JsonArray* annotations = nullptr);
+
+
+    static void addToDependsOn(Util::JsonObject* tableJson, P4Id id);
+
     /// Add register data fields to the JSON data array for a BFRT table. Field
     /// ids are assigned incrementally starting at @idOffset, which is 1 by
     /// default.
@@ -795,6 +802,14 @@ struct BfRtSchemaGenerator::ActionProf {
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
+    static P4Id makeActProfId(P4Id implementationId) {
+      return makeBfRtId(implementationId, ::barefoot::P4Ids::ACTION_PROFILE);
+    }
+
+    static P4Id makeActSelectorId(P4Id implementationId) {
+      return makeBfRtId(implementationId, ::barefoot::P4Ids::ACTION_SELECTOR);
+    }
+
     static boost::optional<ActionProf> from(const p4configv1::P4Info& p4info,
                                             const p4configv1::ActionProfile& actionProfile) {
         const auto& pre = actionProfile.preamble();
@@ -878,8 +893,8 @@ struct BfRtSchemaGenerator::Register {
 
 struct BfRtSchemaGenerator::PortMetadata {
     P4Id id;
-    cstring name;
-    cstring key_name;
+    std::string name;
+    std::string key_name;
     p4configv1::P4DataTypeSpec typeSpec;
     Util::JsonArray* annotations;
 
@@ -1201,16 +1216,34 @@ BfRtSchemaGenerator::addKeyField(Util::JsonArray* dataJson, P4Id id, cstring nam
     dataJson->append(dataField);
 }
 
+/* static */ Util::JsonObject*
+BfRtSchemaGenerator::initTableJson(const std::string& name,
+                                   P4Id id,
+                                   cstring tableType,
+                                   int64_t size,
+                                   Util::JsonArray* annotations) {
+    auto* tableJson = new Util::JsonObject();
+    tableJson->emplace("name", name);
+    tableJson->emplace("id", id);
+    tableJson->emplace("table_type", tableType);
+    tableJson->emplace("size", size);
+    if (annotations != nullptr) tableJson->emplace("annotations", annotations);
+    tableJson->emplace("depends_on", new Util::JsonArray());
+    return tableJson;
+}
+
+/* static */ void
+BfRtSchemaGenerator::addToDependsOn(Util::JsonObject* tableJson, P4Id id) {
+    auto* dependsOnJson = tableJson->get("depends_on")->to<Util::JsonArray>();
+    CHECK_NULL(dependsOnJson);
+    dependsOnJson->append(id);
+}
+
 void
 BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
                                  const ValueSet& valueSet) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", valueSet.name);
-    tableJson->emplace("id", valueSet.id);
-    tableJson->emplace("table_type", "ParserValueSet");
-    tableJson->emplace("size", valueSet.size);
-    tableJson->emplace("annotations", valueSet.annotations);
+    auto* tableJson = initTableJson(
+        valueSet.name, valueSet.id, "ParserValueSet", valueSet.size, valueSet.annotations);
 
     auto* keyJson = new Util::JsonArray();
     auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
@@ -1232,13 +1265,8 @@ BfRtSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
 
 void
 BfRtSchemaGenerator::addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", counter.name);
-    tableJson->emplace("id", counter.id);
-    tableJson->emplace("table_type", "Counter");
-    tableJson->emplace("size", counter.size);
-    tableJson->emplace("annotations", counter.annotations);
+    auto* tableJson = initTableJson(
+        counter.name, counter.id, "Counter", counter.size, counter.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_COUNTER_INDEX, "$COUNTER_INDEX",
@@ -1277,12 +1305,7 @@ BfRtSchemaGenerator::addCounterDataFields(Util::JsonArray* dataJson, const Count
 
 void
 BfRtSchemaGenerator::addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", meter.name);
-    tableJson->emplace("id", meter.id);
-    tableJson->emplace("table_type", "Meter");
-    tableJson->emplace("size", meter.size);
+    auto* tableJson = initTableJson(meter.name, meter.id, "Meter", meter.size);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_METER_INDEX, "$METER_INDEX",
@@ -1350,12 +1373,7 @@ BfRtSchemaGenerator::addRegisterDataFields(Util::JsonArray* dataJson,
 void
 BfRtSchemaGenerator::addRegisterCommon(Util::JsonArray* tablesJson,
                                        const Register& register_) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", register_.name);
-    tableJson->emplace("id", register_.id);
-    tableJson->emplace("table_type", "Register");
-    tableJson->emplace("size", register_.size);
+    auto* tableJson = initTableJson(register_.name, register_.id, "Register", register_.size);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_REGISTER_INDEX, "$REGISTER_INDEX",
@@ -1444,12 +1462,8 @@ BfRtSchemaGenerator::addMeterDataFields(Util::JsonArray* dataJson, const Meter& 
 void
 BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
                                          const ActionProf& actionProf) const {
-    auto* tableJson = new Util::JsonObject();
-    tableJson->emplace("name", actionProf.name);
-    tableJson->emplace("id", actionProf.id);
-    tableJson->emplace("table_type", "Action");
-    tableJson->emplace("size", actionProf.size);
-    tableJson->emplace("annotations", actionProf.annotations);
+    auto* tableJson = initTableJson(
+        actionProf.name, actionProf.id, "Action", actionProf.size, actionProf.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
@@ -1469,6 +1483,7 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
     tableJson->emplace("attributes", new Util::JsonArray());
+    addToDependsOn(tableJson, actionProf.id);
 
     tablesJson->append(tableJson);
 }
@@ -1476,14 +1491,12 @@ BfRtSchemaGenerator::addActionProfCommon(Util::JsonArray* tablesJson,
 void
 BfRtSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
                                              const ActionSelector& actionSelector) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", actionSelector.name);
-    tableJson->emplace("id", actionSelector.id);
-    tableJson->emplace("table_type", "Selector");
+    // TODO(antonin): formalize ID allocation for selector tables
+    // repeat same annotations as for action table
     // the maximum number of groups is the table size for the selector table
-    tableJson->emplace("size", actionSelector.num_groups);
-    tableJson->emplace("annotations", actionSelector.annotations);
+    auto* tableJson = initTableJson(
+        actionSelector.name, actionSelector.id, "Selector",
+        actionSelector.num_groups, actionSelector.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
@@ -1536,12 +1549,9 @@ BfRtSchemaGenerator::addLearnFilterCommon(Util::JsonArray* learnFiltersJson,
 void
 BfRtSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
                                      const PortMetadata& portMetadata) const {
-    auto* tableJson = new Util::JsonObject();
-    tableJson->emplace("name", portMetadata.name);
-    tableJson->emplace("id", portMetadata.id);
-    tableJson->emplace("table_type", "PortMetadata");
-    tableJson->emplace("size", Device::numMaxChannels());
-    tableJson->emplace("annotations", portMetadata.annotations);
+    auto* tableJson = initTableJson(
+        portMetadata.name, portMetadata.id, "PortMetadata", Device::numMaxChannels(),
+        portMetadata.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, portMetadata.key_name + ".ingress_port",
@@ -1586,12 +1596,10 @@ void
 BfRtSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     // Add <hash>.$CONFIGURE Table
-    auto* tableJson = new Util::JsonObject();
-    tableJson->emplace("name", dynHash.getConfigTableName());
-    tableJson->emplace("id", dynHash.cfgId);
-    tableJson->emplace("table_type", "DynHashConfigure");
-    tableJson->emplace("size", 1);
-    tableJson->emplace("annotations", dynHash.annotations);
+    auto* tableJson = initTableJson(
+        dynHash.getConfigTableName(), dynHash.cfgId, "DynHashConfigure",
+        1 /* size */, dynHash.annotations);
+
     tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
@@ -1617,12 +1625,9 @@ void
 BfRtSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     // Add <hash>.$COMPUTE Table
-    auto* tableJson = new Util::JsonObject();
-    tableJson->emplace("name", dynHash.getComputeTableName());
-    tableJson->emplace("id", dynHash.cmpId);
-    tableJson->emplace("table_type", "DynHashCompute");
-    tableJson->emplace("size", 1);
-    tableJson->emplace("annotations", dynHash.annotations);
+    auto* tableJson = initTableJson(
+        dynHash.getComputeTableName(), dynHash.cmpId, "DynHashCompute",
+        1 /* size */, dynHash.annotations);
 
     P4Id id = 1;
     size_t hashNameIdx = 0;
@@ -1682,13 +1687,7 @@ BfRtSchemaGenerator::addLpfDataFields(Util::JsonArray* dataJson) {
 
 void
 BfRtSchemaGenerator::addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", lpf.name);
-    tableJson->emplace("id", lpf.id);
-    tableJson->emplace("table_type", "Lpf");
-    tableJson->emplace("size", lpf.size);
-    tableJson->emplace("annotations", lpf.annotations);
+    auto* tableJson = initTableJson(lpf.name, lpf.id, "Lpf", lpf.size, lpf.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_LPF_INDEX, "$LPF_INDEX",
@@ -1735,13 +1734,7 @@ BfRtSchemaGenerator::addWredDataFields(Util::JsonArray* dataJson) {
 
 void
 BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", wred.name);
-    tableJson->emplace("id", wred.id);
-    tableJson->emplace("table_type", "Wred");
-    tableJson->emplace("size", wred.size);
-    tableJson->emplace("annotations", wred.annotations);
+    auto* tableJson = initTableJson(wred.name, wred.id, "Wred", wred.size, wred.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_WRED_INDEX, "$WRED_INDEX",
@@ -1760,14 +1753,10 @@ BfRtSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) cons
 
 void
 BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& snapshot) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", snapshot.name);
-    tableJson->emplace("id", snapshot.id);
-    tableJson->emplace("table_type", "Snapshot");
     // There cannot be more than one snapshot per stage (snapshots cannot
     // overlap)
-    tableJson->emplace("size", Device::numStages());
+    auto size = Device::numStages();
+    auto* tableJson = initTableJson(snapshot.name, snapshot.id, "Snapshot", size);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_TRIGGER_STAGE, "$SNAPSHOT_TRIGGER_STAGE",
@@ -1959,12 +1948,9 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
 void
 BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
                                          const Snapshot& snapshot) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", snapshot.name + "_LIVENESS");
-    tableJson->emplace("id", makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS));
-    tableJson->emplace("table_type", "SnapshotLiveness");
-    tableJson->emplace("size", 0);  // read-only table
+    auto* tableJson = initTableJson(
+        snapshot.name + "_LIVENESS", makeBfRtId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS),
+        "SnapshotLiveness", 0 /* size, read-only table */);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "$SNAPSHOT_LIVENESS_FIELD_NAME",
@@ -1989,12 +1975,9 @@ BfRtSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
 void
 BfRtSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
                                       const ParserChoices& parserChoices) const {
-    auto* tableJson = new Util::JsonObject();
-
-    tableJson->emplace("name", parserChoices.name);
-    tableJson->emplace("id", parserChoices.id);
-    tableJson->emplace("table_type", "ParserInstanceConfigure");
-    tableJson->emplace("size", Device::numParsersPerPipe());
+    auto* tableJson = initTableJson(
+        parserChoices.name, parserChoices.id, "ParserInstanceConfigure",
+        Device::numParsersPerPipe() /* size */);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_PARSER_INSTANCE, "$PARSER_INSTANCE",
@@ -2083,26 +2066,29 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
     for (const auto& table : p4info.tables()) {
         const auto& pre = table.preamble();
 
-        auto* tableJson = new Util::JsonObject();
-        tableJson->emplace("name", pre.name());
-        tableJson->emplace("id", pre.id());
         auto* annotations = transformAnnotations(
             pre.annotations().begin(), pre.annotations().end());
-        tableJson->emplace("annotations", annotations);
 
         cstring tableType = "MatchAction_Direct";
-        auto actProfId = table.implementation_id();
-        if (actProfId > 0) {
-            auto hasSelector = actProfHasSelector(actProfId);
+        auto implementationId = table.implementation_id();
+        auto actProfId = static_cast<P4Id>(0);
+        auto actSelectorId = static_cast<P4Id>(0);
+        if (implementationId > 0) {
+            auto hasSelector = actProfHasSelector(implementationId);
             if (hasSelector == boost::none) {
-                ::error("Invalid implementation id in p4info: %1%", actProfId);
+                ::error("Invalid implementation id in p4info: %1%", implementationId);
                 continue;
             }
             tableType = *hasSelector ? "MatchAction_Indirect_Selector" : "MatchAction_Indirect";
+            actProfId = ActionProf::makeActProfId(implementationId);
+            if (*hasSelector) actSelectorId = ActionProf::makeActSelectorId(implementationId);
         }
 
-        tableJson->emplace("table_type", tableType);
-        tableJson->emplace("size", table.size());
+        auto* tableJson = initTableJson(
+            pre.name(), pre.id(), tableType, table.size(), annotations);
+
+        if (actProfId > 0) addToDependsOn(tableJson, actProfId);
+        if (actSelectorId > 0) addToDependsOn(tableJson, actSelectorId);
 
         tableJson->emplace("has_const_default_action", table.const_default_action_id() != 0);
 
