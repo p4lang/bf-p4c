@@ -77,7 +77,8 @@ class ExtractDeparser : public DeparserInspector {
             for (auto fieldList : digest->fieldLists) {
                 if (fieldList->idx < 0 ||
                     fieldList->idx > static_cast<int>(Device::maxCloneId(deparser->thread))) {
-                    ::error("Invalid %1% index %2% in %3%", name, fieldList->idx, deparser->thread);
+                    ::error("Invalid %1% index %2% in %3%", name, fieldList->idx,
+                            int(deparser->thread));
                 }
             }
         }

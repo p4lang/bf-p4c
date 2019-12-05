@@ -108,11 +108,7 @@ const IR::Primitive *ConstantsToActionData::preorder(IR::Primitive *prim) {
 
 const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
     has_constant = true;
-    unsigned constant_value;
-    if (constant->value.fits_uint_p())
-        constant_value = constant->value.get_ui();
-    else
-        constant_value = static_cast<unsigned>(constant->asInt());
+    unsigned constant_value = static_cast<unsigned>(constant->value);
     ActionData::Parameter *param = new ActionData::Constant(constant_value,
                                                             constant->type->width_bits());
     constant_rename_key.param = param;

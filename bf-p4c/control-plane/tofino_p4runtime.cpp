@@ -256,7 +256,7 @@ struct ValueSet {
             ::error("@size should be a positive integer for declaration %1%", instance);
             return boost::none;
         }
-        size = sizeConstant->value.get_si();
+        size = static_cast<int64_t>(sizeConstant->value);
         auto typeSpec = TypeSpecConverter::convert(
             refMap, typeMap, instance->elementType, p4RtTypeInfo);
         CHECK_NULL(typeSpec);
@@ -299,7 +299,7 @@ struct Register {
 
         return Register{declaration->controlPlaneName(),
                         typeSpec,
-                        size->to<IR::Constant>()->asInt(),
+                        int64_t(size->to<IR::Constant>()->value),
                         declaration->to<IR::IAnnotated>()};
     }
 

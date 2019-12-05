@@ -87,9 +87,9 @@ bool SplitAlpm::values_through_pragmas(const IR::MAU::Table *tbl,
         ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid %s "
                 "for table %s", tbl->srcInfo, ALGORITHMIC_LPM_PARTITIONS, tbl->name);
 
-        auto alg_lpm_partitions_value = mpz_get_ui(pragma_val->value.get_mpz_t());
+        auto alg_lpm_partitions_value = static_cast<unsigned>(pragma_val->value);
         if (valid_partition_values.find(alg_lpm_partitions_value) != valid_partition_values.end()) {
-            number_partitions = mpz_get_ui(pragma_val->value.get_mpz_t());
+            number_partitions = static_cast<int>(pragma_val->value);
         } else {
             ::error("Unsupported %s value of %s for table %s."
                             "\n  Allowed values are 1024, 2048, 4096, and 8192.",
@@ -104,7 +104,7 @@ bool SplitAlpm::values_through_pragmas(const IR::MAU::Table *tbl,
         ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid %s "
                 "for table %s", tbl->srcInfo, ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, tbl->name);
 
-        auto alg_lpm_subtrees_value = mpz_get_ui(pragma_val->value.get_mpz_t());
+        auto alg_lpm_subtrees_value = static_cast<int>(pragma_val->value);
         if (alg_lpm_subtrees_value <= 10) {
             number_subtrees_per_partition = alg_lpm_subtrees_value;
         } else {

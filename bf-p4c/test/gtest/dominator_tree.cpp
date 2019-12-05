@@ -14,8 +14,6 @@
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
-using namespace std;
-
 namespace Test {
 
 class DominatorTreeTest : public TofinoBackendTest {};

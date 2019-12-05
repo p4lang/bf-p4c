@@ -826,14 +826,10 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
     // FIXME: Could use a helper function on IR::Constant, but not pressing, though
     // for the purposes must fit within a 32 bit section
     // Constant can be from MINX_INT <= x <= MAX_UINT
-    BUG_CHECK(constant->value.fits_uint_p() || constant->fitsInt(), "%s: Constant "
+    BUG_CHECK(constant->value >= INT_MIN && constant->value <= UINT_MAX, "%s: Constant "
               "value in an instruction not split correctly", constant->srcInfo);
 
-    uint32_t constant_value;
-    if (constant->value.fits_uint_p())
-        constant_value = constant->value.get_ui();
-    else
-        constant_value = static_cast<uint32_t>(constant->asInt());
+    uint32_t constant_value = static_cast<uint32_t>(constant->value);
 
     int bits_seen = 0;
     for (auto read_bits : read_bits_brs) {
@@ -889,14 +885,10 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
     // FIXME: Could use a helper function on IR::Constant, but not pressing, though
     // for the purposes must fit within a 32 bit section
     // Constant can be from MINX_INT <= x <= MAX_UINT
-    BUG_CHECK(constant->value.fits_uint_p() || constant->fitsInt(), "%s: Constant "
+    BUG_CHECK(constant->fitsUint() || constant->fitsInt(), "%s: Constant "
               "value in an instruction not split correctly", constant->srcInfo);
 
-    uint32_t constant_value;
-    if (constant->value.fits_uint_p())
-        constant_value = constant->value.get_ui();
-    else
-        constant_value = static_cast<uint32_t>(constant->asInt());
+    uint32_t constant_value = static_cast<uint32_t>(constant->value);
 
     // Tries to determine if the constant has an action data allocation in the
     // ActionData::Format::Use oject

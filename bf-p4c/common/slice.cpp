@@ -124,15 +124,13 @@ safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
 
     auto value = mask->right->to<IR::Constant>()->value;
     auto expr = mask->left;
-    mp_bitcnt_t zero_pos = 0;
-    mp_bitcnt_t one_pos = mpz_scan1(value.get_mpz_t(), zero_pos);
-    while (static_cast<size_t>(one_pos)
-           < static_cast<size_t>(expr->type->width_bits())) {
-        zero_pos = mpz_scan0(value.get_mpz_t(), one_pos);
-        auto slice = MakeSlice(mask->left, static_cast<size_t>(one_pos),
-                               static_cast<size_t>(zero_pos - 1));
+    unsigned zero_pos = 0;
+    unsigned one_pos = Util::scan1(value, zero_pos);
+    while (one_pos < static_cast<size_t>(expr->type->width_bits())) {
+        zero_pos = Util::scan0(value, one_pos);
+        auto slice = MakeSlice(mask->left, one_pos, zero_pos - 1);
         slice_vector.push_back(slice);
-        one_pos = mpz_scan1(value.get_mpz_t(), zero_pos);
+        one_pos = Util::scan1(value, zero_pos);
     }
     return slice_vector;
 }

@@ -1042,10 +1042,9 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "clear value %1% must be a constant",
                       prim->operands.at(1));
             } else {
-                uintptr_t raw[4];
-                size_t size = 4;
-                mpz_export(raw, &size, -1, sizeof(uintptr_t), 0, 0, v->value.get_mpz_t());
-                clear_value.setraw(raw, size); } }
+                clear_value.putrange(0, 64, static_cast<uint64_t>(v->value));
+                clear_value.putrange(64, 64,
+                    static_cast<uint64_t>(static_cast<big_int>(v->value >> 64))); } }
         if (prim->operands.size() > 1) {
             auto *v = prim->operands.at(2)->to<IR::Constant>();
             if (!v) {

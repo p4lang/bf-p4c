@@ -24,7 +24,7 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
     explicit operator bool() const { return rv; }
 };
 
-static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
+static big_int SliceReduce(IR::Operation::Relation *rel, big_int val) {
     int slice = ffs(val);
     if (slice > 0) {
         val >>= slice;
@@ -137,10 +137,10 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     return e;
 }
 
-static mpz_class maxValueOfType(const IR::Type *type_) {
+static big_int maxValueOfType(const IR::Type *type_) {
     auto *type = type_->to<IR::Type::Bits>();
     BUG_CHECK(type, "%s is not an integral type", type_);
-    mpz_class rv = 1U;
+    big_int rv = 1U;
     rv <<= type->size - type->isSigned;
     return rv - 1;
 }

@@ -73,8 +73,8 @@ const IR::Node* BackendConstantFolding::postorder(IR::Slice* e) {
         return e;
     }
 
-    mpz_class value = cbase->value >> l;
-    mpz_class mask = 1;
+    big_int value = cbase->value >> l;
+    big_int mask = 1;
     mask = (mask << (m - l + 1)) - 1;
     value = value & mask;
     return new IR::Constant(e->srcInfo, e->type, value, cbase->base, true);

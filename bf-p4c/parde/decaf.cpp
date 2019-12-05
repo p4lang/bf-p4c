@@ -1415,8 +1415,7 @@ void CreateConstants::create_temp_var_for_parser_constant_bytes(gress_t gress,
         auto cc = *c;
 
         while (width) {
-            auto x = cc & IR::Constant(IR::Type::Bits::get(c->type->width_bits()), 0xffU);
-            uint8_t l_s_byte = x.value.get_ui();
+            uint8_t l_s_byte = static_cast<uint8_t>(static_cast<big_int>(cc.value & 0xff));
 
             const_to_bytes[gress][c].insert(
                 const_to_bytes[gress][c].begin(), l_s_byte);  // order is important

@@ -2038,7 +2038,7 @@ BfRtSchemaGenerator::makeActionSpecs(const p4configv1::Table& table, P4Id* maxAc
                 spec->emplace("action_scope", "DefaultOnly");
                 break;
             default:
-                ::error("Invalid action ref scope '%1%' in P4Info", action_ref.scope());
+                ::error("Invalid action ref scope '%1%' in P4Info", int(action_ref.scope()));
                 break;
         }
         auto* annotations = transformAnnotations(
@@ -2110,7 +2110,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                     break;
             }
             if (matchType == boost::none) {
-                ::error("Unsupported match type for BF-RT: %1%", mf.match_type());
+                ::error("Unsupported match type for BF-RT: %1%", int(mf.match_type()));
                 continue;
             }
             if (*matchType == "Ternary" || *matchType == "Range") needsPriority = true;

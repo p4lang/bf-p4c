@@ -1632,7 +1632,7 @@ class ConstructSymbolTable : public Inspector {
         auto dest = mce->arguments->at(0)->expression;
         // check hi bound must be 2**W-1
         auto max_value = mce->arguments->at(2)->expression->to<IR::Constant>()->value;
-        if (!mpz_fits_slong_p(max_value.get_mpz_t()))
+        if (max_value < LONG_MIN || max_value > LONG_MAX)
             error("%s: The random declaration %s max size %d is too large to be supported",
                     node->srcInfo, randName, max_value);
         bool isPowerOfTwoMinusOne = false;

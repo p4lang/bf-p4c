@@ -224,12 +224,7 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
     }
 
     if (crc_algorithm_set) {
-        mpz_class poly, init, final_xor;
-        mpz_import(poly.get_mpz_t(), 1, 0, sizeof(hash_alg.poly), 0, 0, &hash_alg.poly);
-
-        mpz_import(init.get_mpz_t(), 1, 0, sizeof(hash_alg.init), 0, 0, &hash_alg.init);
-        mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(hash_alg.final_xor), 0, 0,
-                   &hash_alg.final_xor);
+        big_int poly = hash_alg.poly, init = hash_alg.init, final_xor = hash_alg.final_xor;
         auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width);
         args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
         args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
@@ -382,20 +377,20 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
             break;
         case 4:
             if (auto k = args->at(4)->expression->to<IR::Constant>())
-                final_xor = k->value.get_ui();
+                final_xor = static_cast<uint64_t>(k->value);
             else
                 BUG("Hash function method call misconfigured");
             break;
         case 3:
             if (auto k = args->at(3)->expression->to<IR::Constant>())
-                init = k->value.get_ui();
+                init = static_cast<uint64_t>(k->value);
             else
                 BUG("Hash function method call misconfigured");
             break;
         case 2:
             if (auto k = args->at(2)->expression->to<IR::Constant>()) {
                 size = k->type->width_bits();
-                poly = toKoopman(k->value.get_ui(), size);
+                poly = toKoopman(static_cast<uint64_t>(k->value), size);
             } else {
                 return false;
             }
@@ -420,15 +415,14 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
 
 /* convert polynomial in tna to koopman representation used by backend */
 uint64_t IR::MAU::HashFunction::toKoopman(uint64_t poly, uint32_t width) {
-    mpz_class koopman;
-    mpz_import(koopman.get_mpz_t(), 1, 0, sizeof(poly), 0, 0, &poly);
-    mpz_class upper_bit = 1;
-    mpz_class mask = (upper_bit << width) - 1;
+    big_int koopman = poly;
+    big_int upper_bit = 1;
+    big_int mask = (upper_bit << width) - 1;
     koopman |= upper_bit << width;
     koopman >>= 1;
     koopman &= mask;
     LOG3("upper_bit : " << upper_bit << " mask " << mask << " koopman: " << koopman);
-    return koopman.get_ui();
+    return static_cast<uint64_t>(koopman);
 }
 
 /*

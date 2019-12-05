@@ -1,3 +1,4 @@
+#include "lib/stringify.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/dynhash.h"
@@ -297,15 +298,14 @@ void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
     _algo->emplace("extend", algorithm->extend);
     _algo->emplace("reverse", algorithm->reverse);
     // Convert poly in koopman notation to actual value
-    mpz_class poly, init, final_xor;
-    mpz_import(poly.get_mpz_t(), 1, 0, sizeof(algorithm->poly), 0, 0, &algorithm->poly);
+    big_int poly, init, final_xor;
+    poly = algorithm->poly;
     poly = (poly << 1) + 1;
-    _algo->emplace("poly", "0x" + poly.get_str(16));
-    mpz_import(init.get_mpz_t(), 1, 0, sizeof(algorithm->init), 0, 0, &algorithm->init);
-    _algo->emplace("init", "0x" + init.get_str(16));
-    mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(algorithm->final_xor),
-                                                        0, 0, &algorithm->final_xor);
-    _algo->emplace("final_xor", "0x" + final_xor.get_str(16));
+    _algo->emplace("poly", Util::toString(&poly, 16));
+    init = algorithm->init;
+    _algo->emplace("init", Util::toString(&init, 16));
+    final_xor = algorithm->final_xor;
+    _algo->emplace("final_xor", Util::toString(&final_xor, 16));
     _algos->append(_algo);
     is_default = false;  // only set 1st algo to default
 }
@@ -572,15 +572,14 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
                 _algo->emplace("extend", algorithm->extend);
                 _algo->emplace("reverse", algorithm->reverse);
                 // Convert poly in koopman notation to actual value
-                mpz_class poly, init, final_xor;
-                mpz_import(poly.get_mpz_t(), 1, 0, sizeof(algorithm->poly), 0, 0, &algorithm->poly);
+                big_int poly, init, final_xor;
+                poly = algorithm->poly;
                 poly = (poly << 1) + 1;
-                _algo->emplace("poly", "0x" + poly.get_str(16));
-                mpz_import(init.get_mpz_t(), 1, 0, sizeof(algorithm->init), 0, 0, &algorithm->init);
-                _algo->emplace("init", "0x" + init.get_str(16));
-                mpz_import(final_xor.get_mpz_t(), 1, 0, sizeof(algorithm->final_xor),
-                                                                    0, 0, &algorithm->final_xor);
-                _algo->emplace("final_xor", "0x" + final_xor.get_str(16));
+                _algo->emplace("poly", Util::toString(&poly, 16));
+                init = algorithm->init;
+                _algo->emplace("init", Util::toString(&init, 16));
+                final_xor = algorithm->final_xor;
+                _algo->emplace("final_xor", Util::toString(&final_xor, 16));
                 _algos->append(_algo);
                 is_default = false;  // only set 1st algo to default
             }

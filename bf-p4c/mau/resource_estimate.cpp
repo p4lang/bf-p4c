@@ -7,6 +7,8 @@ constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
 constexpr int StageUseEstimate::MAX_DLEFT_HASH_SIZE;
 
+constexpr int StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS;
+constexpr int StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
 constexpr int StageUseEstimate::MAX_MOD;
 constexpr int StageUseEstimate::MAX_POOL_RAMLINES;
 constexpr int StageUseEstimate::MAX_MOD_SHIFT;
