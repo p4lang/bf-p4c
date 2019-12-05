@@ -5328,6 +5328,7 @@ control SwitchIngress(
     IngressSystemAcl(
         INGRESS_SYSTEM_ACL_TABLE_SIZE, DROP_STATS_TABLE_SIZE, COPP_METER_SIZE) system_acl;
     Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash;
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash2;
     switch_lookup_fields_t lkp;
     @pa_container_size("ingress", "hash_1", 16)
     bit<32> hash;
@@ -5354,7 +5355,7 @@ control SwitchIngress(
                               lkp.l4_src_port});
     }
     action compute_non_ip_hash() {
-        hash = flow_hash.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
+        hash = flow_hash2.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
     }
     apply {
         npb_ing_flowtable_v4.apply(

@@ -283,19 +283,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/stful/stful.p4
 )
 
-# Expected failures due to program error
 p4c_add_xfail_reason("tofino2"
-  "Dynamic hashes must have the same field list and sets of algorithm for each get call"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  "This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )
 
 p4c_add_xfail_reason("tofino2"

@@ -5643,6 +5643,7 @@ control SwitchIngress(
     MulticastFlooding(BD_FLOOD_TABLE_SIZE) flood;
     IngressSystemAcl() system_acl;
     Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash;
+    Hash<bit<32>>(HashAlgorithm_t.CRC32) flow_hash2;
     switch_lookup_fields_t lkp;
     switch_lookup_fields_t lkp_nsh;
     @pa_container_size("ingress", "hash_1", 16)
@@ -5675,7 +5676,7 @@ control SwitchIngress(
                               lkp.l4_src_port});
     }
     action compute_non_ip_hash() {
-        hash = flow_hash.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
+        hash = flow_hash2.get({lkp.mac_type, lkp.mac_src_addr, lkp.mac_dst_addr});
     }
     apply {
         ig_intr_md_for_tm.ucast_egress_port = ig_intr_md.ingress_port;
