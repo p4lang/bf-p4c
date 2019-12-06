@@ -2198,6 +2198,9 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         } else if (sl->e0->is<IR::MAU::HashDist>()) {
             handle_hash_dist(sl);
             return false;
+        } else if (sl->e0->is<IR::MAU::RandomNumber>()) {
+            handle_random_number(sl);
+            return false;
         } else {
             BUG("Only HashDist, RandomNumber, and MultiOperands can be wrapped");
         }
