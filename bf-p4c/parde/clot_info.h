@@ -297,8 +297,7 @@ class ClotInfo {
     }
 
     /// @return a set of parser states to which no more CLOTs may be allocated,
-    /// because doing so would exceed the maximum number CLOTs allowed per
-    /// state or per packet.
+    /// because doing so would exceed the maximum number CLOTs allowed per packet.
     const std::set<const IR::BFN::ParserState*>* find_full_states(
             const IR::BFN::ParserGraph* graph) const;
 
@@ -485,12 +484,29 @@ class ClotInfo {
     /// @return true if the given @arg slice is covered by the given @arg clot.
     bool clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const;
 
-    std::string print(const PhvInfo* phvInfo = nullptr) const;
+    std::string print(const CollectParserInfo& parserInfo, const PhvInfo* phvInfo = nullptr) const;
 
  private:
     void add_alias(const PHV::Field* f1, const PHV::Field* f2);
 
     void clear();
+
+    /// Finds the paths with the largest number of CLOTs allocated.
+    ///
+    /// @arg memo is a memoization table that maps each visited parser state to the corresponding
+    ///     result of the recursive call.
+    ///
+    /// @return the maximum number of CLOTs allocated on paths starting at the given @arg state,
+    ///     paired with the aggregate set of nodes on those maximal paths.
+    //
+    // DANGER: This function assumes the parser graph is a DAG.
+    std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
+            const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
+            const IR::BFN::ParserGraph* graph,
+            const IR::BFN::ParserState* state,
+            std::map<const IR::BFN::ParserState*,
+                     std::pair<unsigned,
+                               std::set<const IR::BFN::ParserState*>*>*>* memo = nullptr) const;
 };
 
 class CollectClotInfo : public Inspector {
@@ -710,6 +726,8 @@ class AllocateClot : public PassManager {
     CollectParserInfo parserInfo;
 
  public:
+    const CollectParserInfo& getParserInfo() const { return parserInfo; }
+
     explicit AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses);
 };
 
@@ -718,12 +736,14 @@ class AllocateClot : public PassManager {
  * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
  */
 class ClotAdjuster : public Visitor {
+    const AllocateClot* clotAllocator;
     ClotInfo& clotInfo;
     const PhvInfo& phv;
     Logging::FileLog* log = nullptr;
 
  public:
-    ClotAdjuster(ClotInfo& clotInfo, const PhvInfo& phv) : clotInfo(clotInfo), phv(phv) { }
+    ClotAdjuster(const AllocateClot* clotAllocator, ClotInfo& clotInfo, const PhvInfo& phv)
+        : clotAllocator(clotAllocator), clotInfo(clotInfo), phv(phv) { }
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     const IR::Node *apply_visitor(const IR::Node* root, const char*) override;

@@ -105,6 +105,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
+
+    auto* allocateClot = Device::currentDevice() == Device::JBAY && options.use_clot ?
+        new AllocateClot(clot, phv, uses) : nullptr;
+
     addPasses({
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
@@ -186,8 +190,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new GatherExternalNames(phv),
 
         new CheckForHeaders(),
-        Device::currentDevice() == Device::JBAY && options.use_clot ?
-            new AllocateClot(clot, phv, uses) : nullptr,
+        allocateClot,
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
 
@@ -198,7 +201,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Validate results of PHV allocation.
         new PHV::ValidateAllocation(phv, clot, doNotPrivatize),
 
-        new ClotAdjuster(clot, phv),
+        allocateClot == nullptr ? nullptr : new ClotAdjuster(allocateClot, clot, phv),
 
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                 // Undo results of privatization for the doNotPrivatize fields

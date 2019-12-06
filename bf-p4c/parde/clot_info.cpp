@@ -154,7 +154,7 @@ class FieldSliceExtractInfo {
     remove_conflicts(const CollectParserInfo& parserInfo, const ClotCandidate* candidate) const;
 };
 
-std::string ClotInfo::print(const PhvInfo* phvInfo) const {
+std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* phvInfo) const {
     std::stringstream out;
 
     unsigned total_unused_fields_in_clots = 0;
@@ -162,6 +162,8 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
     unsigned total_bits = 0;
 
     std::set<int> unaligned_clots;
+
+    out << std::endl;
     for (auto gress : (gress_t[2]) {INGRESS, EGRESS}) {
         out << "CLOT Allocation (" << toString(gress) << "):" << std::endl;
         TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
@@ -224,6 +226,26 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
         tp.addRow({"", "Total Bits", std::to_string(total_bits), ""});
         tp.print();
         out << std::endl;
+
+        // Also report the maximum number of CLOTs a packet will use.
+        for (auto& kv : parserInfo.graphs()) {
+            auto& graph = kv.second;
+            if (graph->root->gress != gress) continue;
+
+            auto state_to_clots = parser_state_to_clots(gress);
+            auto largest = find_largest_paths(state_to_clots, graph, graph->root);
+            out << "  Packets will use up to " << largest->first << " CLOTs." << std::endl;
+            out << "  The parser path(s) that will use the most CLOTs contain the following "
+                << "states:" << std::endl;
+            for (auto state : *largest->second) {
+                int num_clots_in_state = 0;
+                if (state_to_clots.count(state->name))
+                    num_clots_in_state = state_to_clots.at(state->name).size();
+                out << "    " << state->name << " (" << num_clots_in_state << " CLOTs)"
+                    << std::endl;
+            }
+            out << std::endl;
+        }
     }
 
     unsigned total_unused_fields = 0;
@@ -732,22 +754,13 @@ ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
     return containers;
 }
 
-/// Finds the paths with the largest number of CLOTs allocated.
-///
-/// @arg memo is a memoization table that maps each visited parser state to the corresponding
-///     result of the recursive call.
-///
-/// @return the maximum number of CLOTs allocated on paths starting at the given @arg state, paired
-///     with the aggregate set of nodes on those maximal paths.
-//
-// DANGER: This function assumes the parser graph is a DAG.
-std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
+std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* ClotInfo::find_largest_paths(
         const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
         const IR::BFN::ParserGraph* graph,
         const IR::BFN::ParserState* state,
         std::map<const IR::BFN::ParserState*,
                  std::pair<unsigned,
-                           std::set<const IR::BFN::ParserState*>*>*>* memo = nullptr) {
+                           std::set<const IR::BFN::ParserState*>*>*>* memo /*= nullptr*/) const {
     // Create the memoization table if needed, and make sure we haven't visited the state already.
     if (memo == nullptr) {
         memo = new std::map<const IR::BFN::ParserState*,
@@ -1516,14 +1529,40 @@ class GreedyClotAllocator : public Visitor {
             } else {
                 auto graph = parserInfo.graphs().at(parserInfo.parser(state));
                 auto full_states = clotInfo.find_full_states(graph);
+                if (!full_states->empty()) {
+                    if (LOGGING(6)) {
+                      LOG6("The following states are now full.");
+                      LOG6("Allocating more CLOTs would violate the max-CLOTs-per-packet "
+                           "constraint.");
+
+                      for (auto state : *full_states)
+                          LOG6("  " << state->name);
+
+                      LOG6("");
+                    }
+                }
+
+                // Set of removed candidates; used for logging.
+                ClotCandidateSet removed_candidates;
+
                 for (auto other_candidate : *candidates) {
                     if (full_states->count(other_candidate->state())) {
                         // Candidate's state is full. Remove from candidacy.
+                        if (LOGGING(3)) removed_candidates.insert(other_candidate);
                         continue;
                     }
 
                     auto adjusted = adjust_for_allocation(other_candidate, candidate);
                     new_candidates->insert(adjusted->begin(), adjusted->end());
+                }
+
+                if (LOGGING(3) && !removed_candidates.empty()) {
+                    LOG3("Removed the following from candidacy to satisfy the "
+                         "max-CLOTs-per-packet constraint:");
+                    for (auto candidate : removed_candidates)
+                        LOG3("  Candidate " << candidate->id
+                             << " (state " << candidate->state()->name << ")");
+                    LOG3("");
                 }
             }
 
@@ -1589,7 +1628,7 @@ class GreedyClotAllocator : public Visitor {
         if (auto *pipe = root->to<IR::BFN::Pipe>())
             Logging::FileLog parserLog(pipe->id, "parser.log");
 
-        LOG2(clotInfo.print());
+        LOG2(clotInfo.print(parserInfo));
 
         return root;
     }
@@ -1632,7 +1671,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
     if (pipe)
         Logging::FileLog parserLog(pipe->id, "parser.log");
-    LOG1(clotInfo.print(&phv));
+    LOG1(clotInfo.print(clotAllocator->getParserInfo(), &phv));
 
     return root;
 }
