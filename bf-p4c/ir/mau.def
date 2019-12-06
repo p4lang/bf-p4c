@@ -241,7 +241,8 @@ class Table : BFN::Unit {
     bool has_exit_recursive() const;  // is there an exit here or any control dependent table?
     int get_random_seed() const;
     int get_pragma_max_actions() const;
-    bool is_force_immediate() const;
+    /// Returns 0 or 1 (the value of the pragma) if the pragma exists, boost::none otherwise
+    boost::optional<int> is_force_immediate() const;
     bool has_match_data() const;
     bool for_dleft() const;
     bool getAnnotation(cstring name, int &val) const;

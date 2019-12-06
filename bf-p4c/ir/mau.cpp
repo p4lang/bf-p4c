@@ -632,16 +632,16 @@ int IR::MAU::Table::get_pragma_max_actions() const {
     return -1;
 }
 
-bool IR::MAU::Table::is_force_immediate() const {
+boost::optional<int> IR::MAU::Table::is_force_immediate() const {
     int pragma_val;
     if (getAnnotation("force_immediate", pragma_val)) {
             if (pragma_val == 0 || pragma_val == 1) {
-                return pragma_val == 1;
+                return pragma_val;
             } else {
               error(ErrorType::ERR_INVALID, "Invalid force_immediate pragma usage on table %2%.  "
                     "Only 0 and 1 are allowed.", srcInfo, externalName());
-              return false; } }
-    return false;
+              return boost::none; } }
+    return boost::none;
 }
 
 bool IR::MAU::Table::has_match_data() const {

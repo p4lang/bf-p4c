@@ -441,8 +441,10 @@ void DoTableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU
  */
 void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
-    bool immediate_allowed = true;
-    bool immediate_forced = tbl->is_force_immediate();
+    auto immediate_annotation_value = tbl->is_force_immediate();
+    // If @immediate(0) do not allow immediates. If @immediate(1) force immediate
+    bool immediate_allowed = immediate_annotation_value ? (immediate_annotation_value != 0) : true;
+    bool immediate_forced = immediate_annotation_value ? (immediate_annotation_value == 1) : false;
     // Action Profiles cannot have any immediate data
     if (tbl->layout.action_addr.address_bits != 0)
         immediate_allowed = false;
