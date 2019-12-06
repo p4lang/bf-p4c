@@ -89,7 +89,7 @@ COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
 WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
 RUN /usr/local/bin/ccache --zero-stats && \
-    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
+    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                                  -DINSTALL_LIBDYNHASH=OFF \
                                  -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
