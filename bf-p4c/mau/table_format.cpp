@@ -167,6 +167,7 @@ bool TableFormat::analyze_layout_option() {
     full_match_groups_per_RAM.resize(layout_option.way.width, 0);
     shared_groups_per_RAM.resize(layout_option.way.width, 0);
     search_bus_per_width.resize(layout_option.way.width, 0);
+    use->match_group_map.resize(layout_option.way.width);
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         use->match_groups.emplace_back();
@@ -504,6 +505,9 @@ bool TableFormat::find_format(Use *u) {
         redistribute_entry_priority();
     }
     redistribute_next_table();
+    LOG3("Build match group map");
+    if (!build_match_group_map())
+        return false;
     verify();
     LOG2("SRAM Table format is successful");
     return true;
@@ -2168,6 +2172,8 @@ void TableFormat::redistribute_entry_priority() {
  * which entries are split across multiple RAMs.  Thus, this is to redistribute the next
  * table mapping after this information is known so that multi-ram entries have less significant
  * bit next tables.
+ *
+ * @seealso comments over build_match_group_map for a full description.
  */
 void TableFormat::redistribute_next_table() {
     int next_index;
@@ -2220,6 +2226,206 @@ void TableFormat::redistribute_next_table() {
             next_mask_entry++;
         }
     }
+}
+
+
+/**
+ * In each RAM word, one can have data for up to 5 separate table entries.  These entries,
+ * which will described from hereonforth as hit-entries are numbered 0-4.  The number of entries
+ * per wide RAM line will be referred to as table-entries.  The purpose of this map is to
+ * coordinate table-entries to hit-entries.
+ *
+ * The hit-entries have two rules to follow:
+ *
+ * Rule #1: All of entries 2, 3, 4's match data and overhead data must reside in that RAM word
+ * Entries 0, 1 can have their data spread across multiple RAM words, which is then combined
+ * later in a hitmap_ixbar.  This is decribed in uArch section 6.4.3.1 Exact Match Physical Row
+ * Result Generation.
+ *
+ * Rule #2: If the next table pointer is stored with the entry, then the next table pointer
+ * has a particular range of bits where it can be extracted from.  This is described in
+ * uArch section 6.4.3.1.2. Next Table Bits.  However, this description is not correct, according
+ * to Mike Ferrera and the register: rams.array.row.ram.match_next_table_bitpos.  The following
+ * table is the range of bits the next table pointer can live in:
+ *
+ *      Hit-Entry |  Overhead Range
+ *          0     |    0-7, but must start at bit position 0
+ *          1     |    1-15
+ *          2     |    1-23 (uArch says 2-23, incorrect)
+ *          3     |    1-31 (uArch says 3-31, incorrect)
+ *          4     |    1-39 (uArch says 4-39, incorrect)
+ *
+ * This is the only example where the overhead has a minimum range based on the entry.
+ * This could occasionally break the algorithm.  Currently, the allocation works so that overhead
+ * is always placed before match at the lsb, and then RAM data is placed next.  Let's say I have
+ * the following scenario:
+ *
+ * 3 table entries, 2 RAMs wide: Let's say the next table pointer for table-entries 0 and 1 are
+ * in RAM word 0 and the next table pointe for table-entry 2 is in RAM word 1, all packed at the
+ * lsb.  Now during the match allocation, let's say the match data for table-entries 0 and 1 are
+ * in both RAM word 0 and 1, while table-entry 2 is fully in RAM word 1.  This allocation would
+ * become problematic in RAM word 1.
+ *
+ * In RAM word 1, because table-entries 0 and 1 have some match data there, this takes up both
+ * hit-entries in RAM word 0 and 1.  However, because the next table pointer of table-entry 2
+ * has been allocated to the lsb of RAM word 1, starting at bit 0, this means that it cannot
+ * be extracted as any entry of either hit-entry 2, 3, or 4.
+ *
+ * In order to not run into this scenario, the algorithm will have to potentially adjust overhead
+ * position as the determination of what table-entries are spread across multiple RAMs.  Right
+ * now, the algorithm will just fail in this and return false, invalidating a possible table
+ * format if the algorithm could take this extra constraint into account.
+ *
+ ***********************************************************************************************
+ *
+ * The match_group_map is output as a vector of vectors in an assembly file:
+ *     The 1st dimension of the vector is the RAM word
+ *     The 2nd dimension of the vector is the hit-entry
+ *     The values are the table entry.
+ *
+ * Let's say we have a 2 RAM wide 5 table entry match.  Let's say table the overhead for table
+ * entries 0-2 is in RAM word 0 and table entries 3-4 is in RAM word 1.  The match data for table
+ * entries 0-1 is completely in RAM word 0, the match data for table entry 3 is completely in RAM
+ * word 1, and the match data for entries 2 and 4 are in both RAM word 0 and 1.
+ *
+ * The following would be a valid match_group_map in assembly:
+ *
+ * - [ [ 2, 4, 0, 1 ] , [ 4, 2, 3 ] ]
+ *
+ * This is because table entries 2 and 4 are shared across multiple RAM lines, and thus must be
+ * hit-entries 0 and 1, while the remaining table entries, because they are stored on a single
+ * RAM line, can be the higher hit-entries.
+ */
+bool TableFormat::build_match_group_map() {
+    int next_index = -1;
+    bool ntp_in_ram = true;
+    if (!tbl->action_chain())
+        ntp_in_ram = false;
+    else if (hit_actions() <= NEXT_MAP_TABLE_ENTRIES)
+        next_index = ACTION;
+    else
+        next_index = NEXT;
+
+    if (ntp_in_ram) {
+        // A next table pointer may not be needed even if it is an action chain, i.e. a single
+        // hit action would mean only one next table is possible on hit
+        ntp_in_ram &= bits_necessary(static_cast<type_t>(next_index)) > 0;
+    }
+
+    safe_vector<safe_vector<int>> entries_per_width(layout_option.way.width);
+    std::set<int> wide_entries;
+
+    int result_buses_seen = 0;
+    for (int idx = 0; idx < layout_option.way.width; idx++) {
+        for (int entry = result_buses_seen;
+             entry < result_buses_seen + overhead_groups_per_RAM[idx]; entry++) {
+             bitvec entry_overhead = use->match_groups[entry].overhead_mask();
+
+             // If an entry does not have any match data or overhead but does use the result bus
+             // of that RAM line, then that entry must be considered a hit-entry.  This is
+             // especially important for ATCAM tables, where the entries must chain to the same
+             // result bus in order for predication to work
+             BUG_CHECK(entry_overhead.empty() ||
+                       (entry_overhead.min().index() >= idx * SINGLE_RAM_BITS &&
+                        entry_overhead.max().index() < idx * SINGLE_RAM_BITS + OVERHEAD_BITS),
+                       "Illegal overhead entry");
+             std::set<int> ram_sections;
+             ram_sections.insert(idx);
+             // Mark which entries are in which RAM sectionm and which entries are wide
+             for (int i = 0; i < layout_option.way.width; i++) {
+                 if (use->match_groups[entry].overhead_in_RAM_word(i) ||
+                     use->match_groups[entry].match_data_in_RAM_word(i))
+                     ram_sections.insert(i);
+             }
+             for (auto sect : ram_sections)
+                 entries_per_width[sect].push_back(entry);
+             if (ram_sections.size() > 1)
+                 wide_entries.insert(entry);
+        }
+        result_buses_seen += overhead_groups_per_RAM[idx];
+    }
+
+    result_buses_seen = 0;
+    for (int idx = 0; idx < layout_option.way.width; idx++) {
+        // If an entry has a next table starting at bit 0, then by definition it must be
+        // hit-entry 0, even if it isn't a wide entry
+        int zero_ntp_non_wide_entry = -1;
+        if (ntp_in_ram) {
+            for (int entry = result_buses_seen;
+                 entry < result_buses_seen + overhead_groups_per_RAM[idx];
+                 entry++) {
+                if (wide_entries.count(entry)) continue;
+                if (use->match_groups[entry].mask[next_index].min().index() ==
+                    idx * SINGLE_RAM_BITS) {
+                    zero_ntp_non_wide_entry = entry;
+                    break;
+                }
+            }
+        }
+
+        // Entries spanning multiple RAM lines have higher priority
+        std::sort(entries_per_width[idx].begin(), entries_per_width[idx].end(),
+                [&](const ssize_t &a, const ssize_t &b) {
+            int t;
+            if (a == zero_ntp_non_wide_entry && b != zero_ntp_non_wide_entry)
+                return true;
+            if (b == zero_ntp_non_wide_entry && a != zero_ntp_non_wide_entry)
+                return false;
+
+            if ((t = wide_entries.count(a) - wide_entries.count(b)) != 0)
+                return t > 0;
+            if (ntp_in_ram) {
+                // If you have two shared words, pick the shared word that is in the
+                // overhead
+                if (use->match_groups.at(a).overhead_in_RAM_word(idx) !=
+                    use->match_groups.at(b).overhead_in_RAM_word(idx))
+                    return use->match_groups.at(a).overhead_in_RAM_word(idx);
+                return use->match_groups.at(a).mask[next_index].min().index() <
+                       use->match_groups.at(b).mask[next_index].min().index();
+            }
+            return a < b;
+        });
+
+        int access_to_nt_bitpos_0 = 0;
+        for (auto entry : entries_per_width[idx]) {
+            if (wide_entries.count(entry) > 0)
+                access_to_nt_bitpos_0++;
+        }
+
+        if (zero_ntp_non_wide_entry >= 0)
+            access_to_nt_bitpos_0++;
+
+        // As described in the comments, the algorithm currently cannot safely guarantee this
+        // Just returning false for now, so that the algorithm can run with a different pack
+        if (access_to_nt_bitpos_0 > MAX_SHARED_GROUPS) return false;
+
+        for (auto entry : entries_per_width[idx]) {
+            if (ntp_in_ram && wide_entries.count(entry) == 0)
+                BUG_CHECK(use->match_groups.at(entry).overhead_in_RAM_word(idx), "Single entry "
+                   "must have data in this RAM");
+            // Assume that the ntp has been moved to the correct position by the
+            // redistribute_next_table function
+            if (ntp_in_ram && use->match_groups[entry].overhead_in_RAM_word(idx)) {
+                int min_next_bit = use->match_groups[entry].mask[next_index].min().index();
+                int max_next_bit = use->match_groups[entry].mask[next_index].max().index();
+                int next_bit_lower_bound = use->match_group_map[idx].size() == 0 ? 0 : 1;
+                next_bit_lower_bound += idx * SINGLE_RAM_BITS;
+                int next_bit_upper_bound = FULL_NEXT_TABLE_BITS *
+                                           (use->match_group_map[idx].size() + 1) - 1;
+                next_bit_upper_bound += idx * SINGLE_RAM_BITS;
+                // Bounds described in the comments
+                LOG1("   Help me out " << idx << " " << entry << " " <<  min_next_bit << " "
+                     << max_next_bit << " " << next_bit_lower_bound << " "
+                     << next_bit_upper_bound << " " << use->match_group_map[idx].size());
+                BUG_CHECK(min_next_bit >= next_bit_lower_bound &&
+                          max_next_bit <= next_bit_upper_bound,
+                          "Next table pointers not saved correctly to entries");
+            }
+            use->match_group_map[idx].push_back(entry);
+        }
+        result_buses_seen += overhead_groups_per_RAM[idx];
+    }
+    return true;
 }
 
 int ByteInfo::hole_size(HoleType_t hole_type, int *hole_start_pos) const {

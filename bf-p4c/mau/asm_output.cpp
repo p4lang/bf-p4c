@@ -1707,6 +1707,17 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
             out << ", "; }
         out << field; }
     if (!first) out << " ]" << std::endl;
+
+    if (!use.match_group_map.empty()) {
+        out << indent << "match_group_map: [ ";
+        std::string sep = "";
+        for (auto ram_entries : use.match_group_map) {
+            out << sep << "[ " << emit_vector(ram_entries) << " ]";
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        indent--;
+    }
 }
 
 void MauAsmOutput::emit_ternary_match(std::ostream &out, indent_t indent,

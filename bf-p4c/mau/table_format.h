@@ -112,6 +112,19 @@ struct TableFormat {
             bitvec overhead_mask() const {
                 return entry_info_bit_mask() - match_bit_mask();
             }
+
+
+            bool overhead_in_RAM_word(int RAM_word) const {
+                bitvec bv = overhead_mask();
+                bv = bv & bitvec(RAM_word * SINGLE_RAM_BITS, SINGLE_RAM_BITS);
+                return !bv.empty();
+            }
+
+            bool match_data_in_RAM_word(int RAM_word) const {
+                bitvec bv = match_bit_mask();
+                bv = bv & bitvec(RAM_word * SINGLE_RAM_BITS, SINGLE_RAM_BITS);
+                return !bv.empty();
+            }
         };
 
         struct TCAM_use {
@@ -129,6 +142,7 @@ struct TableFormat {
 
         bool only_one_result_bus = false;
         safe_vector<match_group_use> match_groups;
+        safe_vector<safe_vector<int>> match_group_map;
         safe_vector<TCAM_use> tcam_use;
         int split_midbyte = -1;
 
@@ -145,6 +159,7 @@ struct TableFormat {
         void clear() {
             ghost_bits.clear();
             match_groups.clear();
+            match_group_map.clear();
             tcam_use.clear();
 
             ixbar_group_per_width.clear();
@@ -298,6 +313,7 @@ struct TableFormat {
     void allocate_full_fits(int width_sect);
     void redistribute_entry_priority();
     void redistribute_next_table();
+    bool build_match_group_map();
     bool interleave_match_and_overhead();
 
  public:
