@@ -427,17 +427,26 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
         used_idx = unused_idx ^ 1;
 
     if (used % 2) {
+        map[unused_idx].dst->rewrite();
+
         *map[unused_idx].dst = *map[used_idx].dst;
         *map[unused_idx].src = *map[used_idx].src;
+
         if (map[used_idx].src_type)
             *map[unused_idx].src_type = *map[used_idx].src_type;
 
         // mark the dummy write dest as multi-write
 
         if (*map[used_idx].dst < 224) {
+            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
+            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
+
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
         } else if (*map[used_idx].dst >= 256) {
+            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
+            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
+
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
         }
@@ -464,6 +473,8 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
     if (used % 4) {
         for (auto i : { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 }) {
             if (map[i].dst->value == 511) {
+                map[i].dst->rewrite();
+
                 *map[i].dst = *map[used_idx].dst;
                 *map[i].src = 0;
                 *map[i].src_type = 1;
@@ -473,9 +484,15 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
         // mark the dummy write dest as multi-write
 
         if (*map[used_idx].dst < 224) {
+            regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
+            regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
+
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
         } else if (*map[used_idx].dst >= 256) {
+            regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
+            regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
+
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
         }
