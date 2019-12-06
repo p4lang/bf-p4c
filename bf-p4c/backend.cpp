@@ -88,7 +88,7 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
              *n << unindent << endl); }
 }
 
-Backend::Backend(const BFN_Options& options, int pipe_id) :
+Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& extracted_together) :
     clot(uses),
     phv(mutually_exclusive_field_ids),
     uses(phv),
@@ -97,8 +97,11 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     bridged_fields(phv),
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
+    // extracted_together info comes from midend, not the flexible packing in backend
+    auto __unused = new ordered_map<cstring, ordered_set<cstring>>;
     flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
-                                          extracted_together, table_alloc);
+                                          *__unused, table_alloc, true);
+    flexibleLogging = new LogRepackedHeaders(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, table_alloc);
@@ -148,10 +151,11 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // constraints of the alias source and alias destination fields.
         new Alias(phv),
         new CollectPhvInfo(phv),
+        new DumpPipe("After Alias"),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
-        new DumpPipe("Before packing"),
         flexiblePacking,
+        flexibleLogging,
         new DumpPipe("After packing"),
         // This is the backtracking point from table placement to PHV allocation. Based on a
         // container conflict-free PHV allocation, we generate a number of no-pack conflicts between

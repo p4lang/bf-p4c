@@ -1609,7 +1609,6 @@ class CollectPardeConstraints : public Inspector {
 
     void postorder(const IR::BFN::EmitField* emit) override {
         auto* src_field = phv.field(emit->source->field);
-        if (!src_field) return;  // FIXME(hanw): padding field. Need a better way to identify it.
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
         // XXX(cole): These two constraints will be subsumed by deparser schema.
@@ -1974,6 +1973,8 @@ Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::N
             if (!f2) continue;
             // Ignore extracted together for padding fields.
             if (f1->padding || f2->padding) continue;
+
+            LOG3("extract together " << kv.first << " and " << fName << " together");
             matrix(f1->id, f2->id) = true;
         }
     }

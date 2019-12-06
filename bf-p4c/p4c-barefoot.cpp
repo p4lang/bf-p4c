@@ -10,6 +10,7 @@
 #include "backend.h"
 #include "backends/graphs/controls.h"
 #include "bf-p4c-options.h"
+#include "bf-p4c/backend.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
@@ -18,6 +19,7 @@
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/dynhash.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
@@ -176,7 +178,7 @@ class GenerateOutputs : public PassManager {
         addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
                                 // information in assembly
                     new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
-                                       b.get_flexible_packing(), b.get_nxt_tbl(),
+                                       b.get_flexible_logging(), b.get_nxt_tbl(),
                                        o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),
@@ -188,7 +190,8 @@ class GenerateOutputs : public PassManager {
 };
 
 /// use pipe.n to generate output directory.
-void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
+void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options,
+        ExtractedTogether& et) {
     if (::errorCount() > 0)
         return;
     if (!maupipe)
@@ -198,7 +201,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
         std::cout << "Compiling " << maupipe->name << std::endl;
 
     auto pipeName = maupipe->name;
-    BFN::Backend backend(options, maupipe->id);
+    BFN::Backend backend(options, maupipe->id, et);
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
@@ -230,8 +233,9 @@ int main(int ac, char **av) {
     // context,json generation, as we need to generate as much as we can
     // for failed programs
     constexpr unsigned SUCCESS = 0;
-    // Backend error. This can be fitting or other issues in the backend, where we may have
-    // hope to generate partial context and visualizations.
+    // PerPipeResourceAllocation error. This can be fitting or other issues in
+    // the backend, where we may have hope to generate partial context and
+    // visualizations.
     constexpr unsigned COMPILER_ERROR = 1;
     // Program or programmer errors. Nothing to do until the program is fixed
     constexpr unsigned INVOCATION_ERROR = 2;
@@ -284,28 +288,29 @@ int main(int ac, char **av) {
 
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook, true);
+
     // so far, everything is still under the same program for 32q, generate two separate threads
     program = program->apply(midend);
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
 
-#if 0
-    // apply bridge packing to IR::P4Program
+    /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
-    BFN::PostMidEnd bridgePacking(options, true);
+    auto map = new RepackedHeaderTypes;
+    auto extractedTogether = new ExtractedTogetherFields;
+    BFN::PostMidEnd bridgePacking(options, map, extractedTogether, true);
     bridgePacking.addDebugHook(hook, true);
 
-    program = program->apply(bridgePacking);
-    LOG3(program);
+    program->apply(bridgePacking);
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
-#endif
 
-    BFN::PostMidEnd postmid(options, false);
+    BFN::PostMidEnd postmid(options, map, extractedTogether, false);
     postmid.addDebugHook(hook, true);
 
     program = program->apply(postmid);
+    log_dump(program, "After postmid");
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
 
@@ -337,8 +342,6 @@ int main(int ac, char **av) {
         return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
     }
 
-    // collect global pragma
-
     for (auto& pipe : postmid.pipe) {
         manifest.setPipe(pipe->id, pipe->name.name);
         // generate graphs
@@ -358,14 +361,19 @@ int main(int ac, char **av) {
             LOG2("Generating parser graphs");
             program->apply(manifest);  // generate graph entries for parsers in manifest
         }
-
+        ordered_map<cstring, ordered_set<cstring>> et;
+        if (extractedTogether->count(pipe->name))
+            et = extractedTogether->at(pipe->name);
 #if BAREFOOT_INTERNAL
         if (!options.skipped_pipes.count(pipe->name))
-            execute_backend(pipe, options);
+            execute_backend(pipe, options, et);
 #else
-            execute_backend(pipe, options);
+            execute_backend(pipe, options, et);
 #endif
     }
+
+    if (::errorCount() > 0)
+        return PROGRAM_ERROR;
 
     // and output the manifest. This gets called for successful compilation.
     manifest.setSuccess(::errorCount() == 0);

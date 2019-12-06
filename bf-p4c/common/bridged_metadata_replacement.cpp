@@ -19,6 +19,7 @@ void CollectBridgedFields::postorder(const IR::MAU::Instruction* inst) {
 
         LOG5("Found bridged field:" << left << " --> " << right);
         BUG_CHECK(bridged_to_orig.count(left->name) == 0, "Duplicated initialzation of bridged.");
+
         auto* leftMember = inst->operands[0]->to<IR::Member>();
         BUG_CHECK(leftMember, "Expected bridged field to be an IR::Member: %1%",
                   inst->operands[0]);

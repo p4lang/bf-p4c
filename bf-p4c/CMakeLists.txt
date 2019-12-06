@@ -541,6 +541,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/bridge_metadata.cpp
   arch/check_extern_invocation.cpp
   arch/collect_bridged_fields.cpp
+  arch/helpers.cpp
   arch/program_structure.cpp
   arch/psa.cpp
   arch/psa_converters.cpp
@@ -549,6 +550,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/remove_set_metadata.cpp
   arch/rewrite_action_selector.cpp
   arch/rewrite_packet_path.cpp
+  arch/bridge.cpp
   arch/tna.cpp
   arch/v1model.cpp
   arch/fromv1.0/add_metadata_parser_states.cpp
@@ -573,6 +575,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/bridge_metadata.h
   arch/check_extern_invocation.h
   arch/collect_bridged_fields.h
+  arch/helpers.h
   arch/program_structure.h
   arch/psa.h
   arch/psa_converters.h
@@ -581,6 +584,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/remove_set_metadata.h
   arch/rewrite_action_selector.h
   arch/rewrite_packet_path.h
+  arch/bridge.h
   arch/tna.h
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h

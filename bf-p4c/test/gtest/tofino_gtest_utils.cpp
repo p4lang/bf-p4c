@@ -59,7 +59,7 @@ TofinoPipeTestCase::create(const std::string& source) {
                   << " errors while executing midend" << std::endl;
         return boost::none;
     }
-    BFN::PostMidEnd postmid(options, false);
+    BFN::PostMidEnd postmid(options, nullptr, nullptr, false);
     midendProgram->apply(postmid);
     if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;

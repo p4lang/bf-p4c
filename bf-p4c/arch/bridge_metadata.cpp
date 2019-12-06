@@ -164,7 +164,8 @@ struct BridgeIngressToEgress : public Transform {
         auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                 IR::ID(BRIDGED_MD));
-        state->components.push_back(createExtractCall(packetInParam, member));
+        auto extractCall = createExtractCall(packetInParam, BRIDGED_MD_HEADER, member);
+        state->components.push_back(extractCall);
 
         // Copy all of the bridged fields to their final locations.
         for (auto& bridgedField : fieldsToBridge) {
@@ -246,7 +247,9 @@ struct BridgeIngressToEgress : public Transform {
         auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
                         IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto* callExpr = new IR::MethodCallExpression(method, args);
+        auto* typeArgs = new IR::Vector<IR::Type>();
+        typeArgs->push_back(new IR::Type_Name(IR::ID(BRIDGED_MD_HEADER)));
+        auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
 
         auto* body = control->body->clone();
         body->components.insert(body->components.begin(),

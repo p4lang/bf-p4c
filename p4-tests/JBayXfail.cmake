@@ -354,12 +354,6 @@ p4c_add_xfail_reason("tofino2"
   p4c_1585_a
 )
 
-# P4C-2291
-p4c_add_xfail_reason("tofino2"
-  "Expected packet was not received"
-  p4c_1585_b
-)
-
 # DRV-3247
 p4c_add_xfail_reason("tofino2"
   "BfruntimeReadWriteRpcException"

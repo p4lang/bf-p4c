@@ -49,7 +49,7 @@ class Primitives : public Section {
                 }
             }
         }
-        return merged; 
+        return merged;
     }
 
     // If primitives json is present this function will merge the primitives

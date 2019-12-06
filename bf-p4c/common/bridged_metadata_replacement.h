@@ -16,6 +16,18 @@
  * @pre This pass must run after CollectNameAnnotations, because the
  * externalName of original field needs to be moved to bridged field, and the
  * mapping is saved here.
+ *
+ * XXX(hanw): The logic in this pass is incorrect if there are multiple
+ * bridge headers, e.g.,
+ * meta.f0 = 8w0;
+ *
+ * - hdr.bridge0.f0 = meta.f0;
+ * - hdr.bridge1.f0 = meta.f0;
+ *
+ * if (hdr.bridge0.isValid())
+ *   emit(hdr.bridge0)
+ * if (hdr.bridge1.isValid())
+ *   emit(hdr.bridge1)
  */
 class CollectBridgedFields : public Inspector {
  private:

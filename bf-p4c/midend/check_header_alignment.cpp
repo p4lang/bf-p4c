@@ -1,4 +1,5 @@
 #include "bf-p4c/midend/check_header_alignment.h"
+#include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/device.h"
 #include "frontends/p4/typeMap.h"
 #include "lib/pad_alignment.h"
@@ -7,14 +8,6 @@
 #include "ir/ir.h"
 
 namespace BFN {
-
-static bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
-    for (auto f : header->fields) {
-        auto anno = f->getAnnotation("flexible");
-        if (anno != nullptr)
-            return true; }
-    return false;
-}
 
 /**
  * We do not need user to byte-align headers used in Mirror/Resubmit/Digest

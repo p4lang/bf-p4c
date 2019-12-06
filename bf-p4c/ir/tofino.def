@@ -50,7 +50,7 @@ class BFN::Pipe {
             return thread;
         }
     }
-    thread_t[2] thread = {};  // INGRESS and EGRESS
+    thread_t[2] thread = {};
     NullOK MAU::TableSeq ghost_thread = nullptr;  // GHOST -- just mau, no parser or deparser
 
 #emit
@@ -85,6 +85,48 @@ class BFN::Pipe {
                 v.flow_merge_global_from("-EXIT-");
                 v.visit(th.deparser, "deparser"); }
             v.visit(ghost_thread, "ghost_thread"); } }
+}
+
+// BridgePipe stores ingress and egress that share the same bridge header.
+// Bridge metadata packing operates on BridgePipe to optimize the bridge header
+// layout. Ingress and egress may come from different BFN::Pipe, therefore
+// BridgePipe has additional fields to remember which BFN::Pipe ingress/egress
+// belong to.
+class BFN::BridgePipe : BFN::Pipe {
+    ID[2] pipe = {};   // pipe name specified in P4, may be different for ingress/egress.
+#noconstructor
+    BridgePipe() = default;
+    BridgePipe(cstring ingress, cstring egress) {
+        pipe[INGRESS] = ingress;
+        pipe[EGRESS] = egress;
+    }
+#nodbprint
+}
+
+// BFN::Toplevel stores the midend and backend representation of a P4Program.
+// Backend processing is applied to this node to enable backtracking into the
+// midend. Sometimes, this is beneficial and simplifies program transformation.
+// For example, when a flexible header is repacked, it would be easier to
+// transform the midend IR, instead of backend IR.
+class BFN::Toplevel {
+    // original P4Program which is used to regenerate backend IR after
+    // optimizing flexible header packing, by default, not visited.
+    IR::P4Program program;
+
+    // Pipeline implementation on a physical pipe, denoted by the 'Pipeline'
+    // keyword in TNA.
+    IR::Vector<IR::BFN::Pipe> pipes;
+
+    // Pairs of ingress & egress threads that has bridge metadata
+    // by default, not visited
+    IR::Vector<IR::BFN::BridgePipe> bridge_pipes;
+
+#nodbprint
+
+#apply
+    visit_children {
+        v.visit(pipes);
+    }
 }
 
 abstract BFN::Unit {
@@ -227,7 +269,7 @@ class Padding : BFN::Reference {
 class BFN::Type_FixedSizeHeader : Type_Header {
     int fixed_size;
     toString { return cstring("fixed_size_header ") + externalName(); }
-    dbprint { out << name; }
+#nodbprint
 }
 
 /** A reference to a PHV container.  At the hardware level, Barefoot switches

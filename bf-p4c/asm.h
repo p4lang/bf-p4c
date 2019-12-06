@@ -30,7 +30,7 @@ class AsmOutput : public Inspector {
     const PhvInfo     &phv;
     const ClotInfo    &clot;
     const FieldDefUse &defuse;
-    const FlexiblePacking *flexiblePacking;
+    const LogRepackedHeaders *flex;
     const NextTable *nxt_tbl;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
@@ -45,11 +45,11 @@ class AsmOutput : public Inspector {
     AsmOutput(const PhvInfo &phv,
               const ClotInfo &clot,
               const FieldDefUse& defuse,
-              const FlexiblePacking *flexPack,
+              const LogRepackedHeaders *flex,
               const NextTable* nxts,
               const BFN_Options &opts,
               bool success)
-        : phv(phv), clot(clot), defuse(defuse), flexiblePacking(flexPack), nxt_tbl(nxts),
+        : phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
           options(opts), _successfulCompile(success) {}
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
@@ -77,7 +77,7 @@ class AsmOutput : public Inspector {
                 out << ParserAsmOutput(pipe, EGRESS)
                     << DeparserAsmOutput(pipe, phv, clot, EGRESS)
                     << mauasm << std::endl
-                    << flexiblePacking->asm_output() << std::endl;
+                    << flex->asm_output() << std::endl;
             }
             out << std::flush;
         }

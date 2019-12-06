@@ -179,7 +179,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
             generateDigest(digests["pktgen"], "pktgen", expr, mc, nullptr, true /* singleEntry */);
         } else {
             fatal_error(ErrorType::ERR_UNSUPPORTED,
-                        "Unsupported method call %1% in deparser", mc);
+                        "method call %1% in deparser", mc);
         }
     } else if (em->method->name == "pack") {
         if (em->actualExternType->getName() == "Digest") {

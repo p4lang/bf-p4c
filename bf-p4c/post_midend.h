@@ -11,6 +11,7 @@
 #include "bf-p4c/midend/blockmap.h"
 #include "bf-p4c/midend/simplify_references.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/flexible_packing.h"
 
 namespace BFN {
 
@@ -20,15 +21,19 @@ class PostMidEnd : public PassManager {
     ParamBinding* bindings;
     ApplyEvaluator *evaluator;
     BackendConverter *conv;
+    RepackedHeaderTypes *map;
+    ExtractedTogetherFields *extractedTogether;
 
  public:
     P4::ReferenceMap refMap;
     P4::TypeMap typeMap;
 
  public:
-    explicit PostMidEnd(BFN_Options& options, bool with_bridge_packing = false);
+    PostMidEnd(BFN_Options& options, RepackedHeaderTypes* repackMap,
+               ExtractedTogetherFields* extractedTogether,
+               bool with_bridge_packing = false);
 
-    std::vector<const IR::BFN::Pipe*> pipe;
+    IR::Vector<IR::BFN::Pipe> pipe;
 
     const ProgramThreads &getThreads() const { return conv->getThreads(); }
     const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }

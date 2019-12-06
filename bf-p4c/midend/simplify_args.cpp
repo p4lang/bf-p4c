@@ -53,6 +53,9 @@ const IR::Annotations* FlattenHeader::mergeAnnotations() const {
 }
 
 bool FlattenHeader::preorder(IR::Type_Header* headerType) {
+    if (policy(getChildContext(), headerType)) {
+        LOG3("\t skip flattening " << headerType->name << " due to policy");
+        return false; }
     LOG3("visiting header " << headerType);
     flattenedHeader = headerType->clone();
     flattenedHeader->fields.clear();
@@ -345,19 +348,22 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
             return (new IR::Argument(arg->srcInfo, list));
         }
     } else if (extName == "Digest" || extName == "Mirror" || extName == "Resubmit") {
-        const IR::Type *type = nullptr;
+        const IR::Type_StructLike *type = nullptr;
         if (auto path = arg->expression->to<IR::PathExpression>()) {
-            if (path->type->is<IR::Type_StructLike>())
+            if (path->type->is<IR::Type_StructLike>()) {
                 type = path->type->to<IR::Type_StructLike>();
-            else
-                return arg;
-        } else if (auto mem = arg->expression->to<IR::Member>()) {
-            if (mem->type->is<IR::Type_StructLike>())
-                type = mem->type->to<IR::Type_StructLike>();
-            else
+            } else {
                 return arg; }
+        } else if (auto mem = arg->expression->to<IR::Member>()) {
+            if (mem->type->is<IR::Type_StructLike>()) {
+                type = mem->type->to<IR::Type_StructLike>();
+            } else {
+                return arg; } }
 
         if (!type) return arg;
+
+        if (policy(getChildContext(), type))
+            return arg;
 
         cstring type_name;
         auto fieldList = IR::IndexedVector<IR::NamedExpression>();

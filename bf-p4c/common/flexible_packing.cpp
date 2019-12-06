@@ -13,6 +13,32 @@
 #include "bf-p4c/phv/pragma/pa_solitary.h"
 #include "bf-p4c/common/table_printer.h"
 
+// included by PackFlexibleHeaders
+#include "bf-p4c/common/alias.h"
+#include "bf-p4c/common/check_for_unimplemented_features.h"
+#include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/common/multiple_apply.h"
+#include "bf-p4c/mau/empty_controls.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/push_pop.h"
+#include "bf-p4c/mau/selector_update.h"
+#include "bf-p4c/mau/stateful_alu.h"
+#include "bf-p4c/parde/add_jbay_pov.h"
+#include "bf-p4c/parde/egress_packet_length.h"
+#include "bf-p4c/parde/stack_push_shims.h"
+#include "bf-p4c/phv/create_thread_local_instances.h"
+#include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
+#include "bf-p4c/phv/privatization.h"
+
+// helper function
+bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
+    for (auto f : header->fields) {
+        auto anno = f->getAnnotation("flexible");
+        if (anno != nullptr)
+            return true; }
+    return false;
+}
+
 // XXX(Deep): BRIG-333
 // We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
 // used to represent intrinsic metadata in ingress and egress at the moment. As noted in the
@@ -110,8 +136,8 @@ void RepackFlexHeaders::resetState() {
     if (LOGGING(1))
         LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
     for (auto kv : fields.bridged_to_orig) {
-        cstring origName = getEgressFieldName(kv.second);
-        cstring bridgedName = getEgressFieldName(kv.first);
+        cstring origName = getOppositeGressFieldName(kv.second);
+        cstring bridgedName = getOppositeGressFieldName(kv.first);
         egressBridgedMap[origName] = bridgedName;
         reverseEgressBridgedMap[bridgedName] = origName;
     }
@@ -146,23 +172,24 @@ Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
         for (auto kv : egressBridgedMap)
             LOG3("\t  " << kv.first << "\t" << kv.second); }
 
-    LOG1("Printing parser aligned fields");
+    LOG3("Printing parser aligned fields");
     for (auto kv : parserAlignedFields.getAlignedMap()) {
-        LOG1("\tField: " << kv.first);
+        LOG3("\tField: " << kv.first);
         for (auto* f : kv.second)
-            LOG1("\t\t" << f);
+            LOG3("\t\t" << f);
     }
 
 
     return Transform::init_apply(root);
 }
 
+// FIXME:
 cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring fName) const {
     cstring egressBridgedName;
     if (fName.startsWith(EGRESS_FIELD_PREFIX))
         egressBridgedName = fName;
     else
-        egressBridgedName = getEgressFieldName(fName);
+        egressBridgedName = getOppositeGressFieldName(fName);
     for (auto kv : egressBridgedMap) {
         if (kv.second == egressBridgedName)
             return kv.first;
@@ -281,6 +308,7 @@ SymBitMatrix RepackFlexHeaders::mustPack(
     // Populate set of egress fields.
     ordered_set<const PHV::Field*> egressFields;
     for (const auto* f : fields) {
+        // FIXME
         cstring egressFieldName = getNonBridgedEgressFieldName(f->name);
         BUG_CHECK(egressFieldName, "No egress version of the field %1%", f->name);
         const auto* egressField = phv.field(egressFieldName);
@@ -719,9 +747,11 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         // Also summarize the egress version of this field, as alignment
         // constraints may be induced by uses of the egress version of the
         // bridged field.
+        // FIXME
         cstring egressFieldName = getNonBridgedEgressFieldName(field->name);
+        // FIXME
         cstring bridgedFieldName = (field->gress == INGRESS) ?
-             getEgressFieldName(field->name) : field->name;
+             getOppositeGressFieldName(field->name) : field->name;
         BUG_CHECK(egressFieldName, "No egress version of the field %1%", field->name);
         const auto* egressField = phv.field(egressFieldName);
         // Add the ingress field and its egress version to visit.
@@ -763,6 +793,7 @@ void RepackFlexHeaders::determineAlignmentConstraints(
             continue; }
 
         for (const PHV::Field* f : relatedFields) {
+            // FIXME
             if (field->gress == INGRESS && f->name == bridgedFieldName) continue;
             // ignore the alignment on the current field
             if (f->name == field->name) continue;
@@ -863,21 +894,16 @@ const IR::StructField* RepackFlexHeaders::getPaddingField(int size, int id, bool
     }
 }
 
-cstring RepackFlexHeaders::getEgressFieldName(cstring ingressName) {
-    if (!ingressName.startsWith(INGRESS_FIELD_PREFIX)) {
-        BUG("Called getEgressFieldName on ingress fieldname %1%", ingressName);
-        return cstring(); }
-    // ingress::foo.bar -> egress::foo.bar
-    return (EGRESS_FIELD_PREFIX + ingressName.substr(9));
-}
-
-cstring RepackFlexHeaders::getIngressFieldName(cstring egressName) {
-    if (!egressName.startsWith(EGRESS_FIELD_PREFIX)) {
-        BUG("Called getIngressFieldName on ingress fieldname %1%", egressName);
+// FIXME
+cstring RepackFlexHeaders::getOppositeGressFieldName(cstring name) {
+    if (name.startsWith(INGRESS_FIELD_PREFIX)) {
+        return (EGRESS_FIELD_PREFIX + name.substr(9));
+    } else if (name.startsWith(EGRESS_FIELD_PREFIX)) {
+        return (INGRESS_FIELD_PREFIX + name.substr(8));
+    } else {
+        BUG("Called getOppositeGressFieldName on unknown gress fieldname %1%", name);
         return cstring();
     }
-    // egress::foo.bar -> ingress::foo.bar
-    return (INGRESS_FIELD_PREFIX + egressName.substr(8));
 }
 
 cstring RepackFlexHeaders::getFieldName(cstring hdr, const IR::StructField* field) const {
@@ -1255,9 +1281,9 @@ RepackFlexHeaders::verifyPackingAcrossBytes(const std::vector<const PHV::Field*>
 boost::optional<const IR::HeaderOrMetadata*>
 RepackFlexHeaders::checkIfAlreadyPacked(const IR::HeaderOrMetadata* h) {
     // If it is an egress header, take its new type from the repacked ingress version.
-    if (repackedTypes.count(h->type)) {
+    if (repackedTypes.count(h->type->name)) {
         auto* repackedHeaderType = new IR::Type_Header(h->type->name, h->type->annotations,
-                repackedTypes.at(h->type)->fields);
+                repackedTypes.at(h->type->name)->fields);
         auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
         repackedHeaders[h->name] = repackedHeader;
         originalHeaders[h->name] = h;
@@ -1331,6 +1357,9 @@ RepackFlexHeaders::getPhvFieldToStructFieldMap(const IR::BFN::DigestFieldList* d
 bool RepackFlexHeaders::isFlexibleHeader(const IR::HeaderOrMetadata* h) {
     if (h->type->is<IR::BFN::Type_FixedSizeHeader>()) {
         headerToFlexibleStructsMap.emplace(h);
+        for (auto f : h->type->fields)
+            if (f->getAnnotation("flexible"))
+                headerToFlexibleStructsMap[h].insert(f);
         return true;
     }
     for (auto f : h->type->fields)
@@ -1343,6 +1372,9 @@ bool RepackFlexHeaders::isFlexibleHeader(const IR::BFN::DigestFieldList* d) {
     /// Type_FixedSizeHeader is resubmit or phase0 header.
     if (d->type->is<IR::BFN::Type_FixedSizeHeader>()) {
         digestToFlexibleStructsMap.emplace(d);
+        for (auto f : d->type->fields)
+            if (f->getAnnotation("flexible"))
+                digestToFlexibleStructsMap[d].insert(f);
         return true;
     }
     /// empty field list does not have a header type.
@@ -1366,8 +1398,14 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     // Only process bridged metadata headers.
     cstring headerName = h->name;
 
-    if (auto rv = checkIfAlreadyPacked(h))
+    if (auto rv = checkIfAlreadyPacked(h)) {
         return *rv;
+    } else {
+        if (skip_bridge) {
+            LOG3("DO NOT BRIDGE");
+            return h;
+        }
+    }
 
     BUG_CHECK(headerToFlexibleStructsMap.count(h),
               "The compiler has detected a header %1% with flexible structs, but "
@@ -1433,7 +1471,7 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     auto* repackedHeaderType = new IR::Type_Header(h->type->name, h->type->annotations, fields);
     auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
     repackedHeaders[headerName] = repackedHeader;
-    repackedTypes[h->type] = repackedHeaderType;
+    repackedTypes[h->type->name] = repackedHeaderType;
     originalHeaders[headerName] = h;
     ingressFlexibleTypes[h] = repackedHeader;
     LOG1("Repacked header: " << repackedHeader->name);
@@ -1559,8 +1597,11 @@ const IR::Node* RepackDigestFieldList::preorder(IR::BFN::DigestFieldList* d) {
         }
     }
 
-    auto* repackedHeaderType = new IR::Type_Header(d->type->name, d->type->annotations, fields);
-    repackedTypes[d->type] = repackedHeaderType;
+    auto annotations = new IR::Annotations(d->type->annotations->annotations);
+    annotations->addAnnotationIfNew("flexible", {});
+
+    auto* repackedHeaderType = new IR::Type_Header(d->type->name, annotations, fields);
+    repackedTypes[d->type->name] = repackedHeaderType;
 
     std::map<cstring, int> original_field_indices;
     int index = 0;
@@ -1699,8 +1740,9 @@ Visitor::profile_t ReplaceFlexFieldUses::init_apply(const IR::Node* root) {
     extractedTogether.clear();
 
     auto repackedHeaders = pack.getRepackedHeaders();
-    for (const auto h : repackedHeaders)
-        addBridgedFields(h.second);
+    for (const auto h : repackedHeaders) {
+        LOG3("repacked " << h.first);
+        addBridgedFields(h.second); }
 
     if (bridgedFields.size() > 0) {
         LOG3("\tNumber of flexible fields: " << bridgedFields.size());
@@ -1920,6 +1962,7 @@ IR::Node* ReplaceFlexFieldUses::postorder(IR::BFN::Deparser* d) {
 void ReplaceFlexFieldUses::end_apply() {
     auto& extracted = pack.getExtractedTogether();
     if (LOGGING(6)) {
+        LOG6("\tegressBridgeMap");
         for (auto kv : egressBridgedMap)
             LOG6("\t\t" << kv.first << " : " << kv.second);
         for (auto kv : extracted) {
@@ -1933,16 +1976,19 @@ void ReplaceFlexFieldUses::end_apply() {
         LOG6("\t  " << kv.first);
         if (paddingFieldNames.count(kv.first)) continue;
         cstring key = kv.first;
-        if (key.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX))
-            key = pack.getEgressFieldName(kv.first);
+        // FIXME
+        if (key.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX) ||
+            key.startsWith(RepackFlexHeaders::EGRESS_FIELD_PREFIX))
+            key = pack.getOppositeGressFieldName(kv.first);
         if (egressBridgedMap.count(key))
             key = egressBridgedMap.at(key);
         LOG6("\t\tKey: " << key);
         for (auto s : kv.second) {
             if (paddingFieldNames.count(s)) continue;
             cstring value = s;
-            if (s.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX))
-                value = pack.getEgressFieldName(s);
+            if (s.startsWith(RepackFlexHeaders::INGRESS_FIELD_PREFIX) ||
+                s.startsWith(RepackFlexHeaders::EGRESS_FIELD_PREFIX))
+                value = pack.getOppositeGressFieldName(s);
             LOG6("\t\t  Original value: " << value);
             if (egressBridgedMap.count(value))
                 value = egressBridgedMap.at(value);
@@ -2160,7 +2206,8 @@ FlexiblePacking::FlexiblePacking(
         DependencyGraph& dg,
         CollectBridgedFields& b,
         ordered_map<cstring, ordered_set<cstring>>& e,
-        const MauBacktracker& alloc)
+        const MauBacktracker& alloc,
+        bool skip_bridge)
         : Logging::PassManager("flexible_packing_"),
           bridgedFields(b),
           packConflicts(p, dg, tMutex, alloc, aMutex),
@@ -2169,7 +2216,7 @@ FlexiblePacking::FlexiblePacking(
           packDigestFieldLists(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes),
           packHeaders(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
-                      parserAlignedFields, alloc, repackedTypes),
+                      parserAlignedFields, alloc, repackedTypes, skip_bridge),
           parserMappings(p),
           bmUses(p, packHeaders, parserMappings, e, parserStatesToModify),
           log(p) {
@@ -2209,20 +2256,17 @@ FlexiblePacking::FlexiblePacking(
                       new GatherDeparserParameters(p, deparserParams),
                       new GatherPhase0Fields(p, noPackFields),
                       &parserAlignedFields,
-                      &packDigestFieldLists,
-                      &packHeaders,
+                      (!skip_bridge) ? nullptr : &packDigestFieldLists,  // pack digest in backend
+                      &packHeaders,  // pack bridge in midend
                       &parserMappings,
+                      // bmUses is only used to replace digest field list.
                       &bmUses,
                       &log,
-                      // rerun CollectPhvInfo because repack might have introduced
-                      // new tempvars
-                      new CollectPhvInfo(p),
               });
 }
 
 // Return a Json representation of flexible headers to be saved in .bfa/context.json
-std::string FlexiblePacking::asm_output() const {
-    const auto repacked = log.repackedHeaders();
+std::string LogRepackedHeaders::asm_output() const {
     if (repacked.empty())
         return std::string("");
 
@@ -2263,3 +2307,46 @@ std::string FlexiblePacking::asm_output() const {
     out << "]\n";  // list of headers
     return out.str();
 }
+
+PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options) :
+    phv(mutually_exclusive_field_ids),
+    uses(phv),
+    defuse(phv),
+    bridged_fields(phv),
+    table_alloc(phv.field_mutex()) {
+    flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
+            extracted_together, table_alloc);
+    flexiblePacking->addDebugHook(options.getDebugHook(), true);
+    addPasses({
+        new CreateThreadLocalInstances,
+        new CheckForUnimplementedFeatures(),
+        new RemoveEmptyControls,
+        new MultipleApply,
+        new AddSelectorSalu,
+        new FixupStatefulAlu,
+        new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
+        new CollectPhvInfo(phv),
+        &defuse,
+        Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
+        Device::currentDevice() == Device::TOFINO ?
+            new ResetInvalidatedChecksumHeaders(phv) : nullptr,
+        new CollectPhvInfo(phv),
+        &defuse,
+        new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances, but
+                                     // cannot be run after InstructionSelection.
+        new RemovePushInitialization,
+        new StackPushShims,
+        new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
+        new HeaderPushPop,
+        new InstructionSelection(options, phv),
+        new FindDependencyGraph(phv, deps, "program_graph", "After Instruction Selection"),
+        new CollectPhvInfo(phv),
+        new Alias(phv),
+        new CollectPhvInfo(phv),
+        // Repacking of flexible headers (including bridged metadata) in the backend.
+        // Needs to be run after InstructionSelection but before deadcode elimination.
+        flexiblePacking,
+    });
+}
+
+

@@ -456,6 +456,7 @@ p4c_add_xfail_reason("tofino"
   ba101_20-simple_l2
 
   # P4C-1778
+  # fit if
   ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1168/comp_1168.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1169/case8847.p4
@@ -1318,9 +1319,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/neg_test_1_lpf_constant_param.p4
 )
 
-# Negative test: ensure the compiler does not seg fault
 p4c_add_xfail_reason("tofino"
-  "error: mirror.emit: Unsupported unconditional mirror.emit"
+  "Unsupported unconditional mirror.emit"
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1588-neg.p4
   )
 
@@ -1633,6 +1633,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
+  "No matching table for suffix 'IngressB.test'"
+  extensions/p4_tests/p4_16/stf/serializer.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "Checksum destination field .* is not byte-aligned in the header. Checksum engine is unable to update a field if it is not byte-aligned"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/checksum_align.p4
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
@@ -1657,12 +1662,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
   p4c_1585_a
-)
-
-# P4C-2291
-p4c_add_xfail_reason("tofino"
-  "Expected packet was not received"
-  p4c_1585_b
 )
 
 # DRV-3247

@@ -8,8 +8,10 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"
 #include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
+#include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/midend/simplify_references.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/stateful_alu.h"
@@ -1698,7 +1700,7 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
 // custom visitor to the main package block to generate the
 // toplevel pipeline structure.
 bool BackendConverter::preorder(const IR::P4Program* program) {
-    ApplyEvaluator eval;
+    ApplyEvaluator eval(refMap, typeMap);
     program->apply(eval);
 
     toplevel = eval.getToplevelBlock();
@@ -1722,6 +1724,8 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     CollectGlobalPragma collect_pragma;
     program->apply(collect_pragma);
 
+    CollectBridgedFieldsUse collectBridgedFields(refMap, typeMap, collect_pragma);
+
     auto npipe = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
@@ -1730,6 +1734,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
         auto name = getPipelineName(program, npipe);
         auto rv = new IR::BFN::Pipe(name, npipe);
         std::list<gress_t> gresses = {INGRESS, EGRESS};
+
         for (auto gress : gresses) {
             if (!arch->threads.count(std::make_pair(npipe, gress))) {
                 ::error("Unable to find thread %1%", npipe);
@@ -1744,11 +1749,13 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
                     parser->apply(ExtractParser(refMap, typeMap, rv, arch));
+                    parser->apply(collectBridgedFields);
                 }
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
                 dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
                 dprsr->apply(ExtractChecksum(rv));
+                dprsr->apply(collectBridgedFields);
             }
         }
         if (arch->threads.count(std::make_pair(npipe, GHOST))) {
@@ -1763,11 +1770,17 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
 
         rv->global_pragmas = collect_pragma.global_pragmas();
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
-                stateful_selectors, bindings);
+                                              stateful_selectors, bindings);
+        auto p = rv->apply(processBackendPipe);
+        collectBridgedFields.updatePipeInfo(p);
 
-        pipe.push_back(rv->apply(processBackendPipe));
+        pipe.push_back(p);
         npipe++;
     }
+
+
+    auto bridge_pipes = collectBridgedFields.getPipes();
+    top = new IR::BFN::Toplevel(program, &pipe, bridge_pipes);
 
     return false;
 }

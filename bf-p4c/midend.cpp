@@ -299,6 +299,12 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     return true;
 }
 
+bool skipFlexibleHeader(const Visitor::Context *ctxt, const IR::Type_StructLike* e) {
+    if (e->getAnnotation("flexible"))
+        return false;
+    return true;
+}
+
 // FIXME -- perhaps just remove this pass altogether and check for unsupported
 // div/mod in instruction selection.
 class CompileTimeOperations : public P4::CompileTimeOperations {
@@ -311,18 +317,6 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
                     return false; } }
 #endif
         return true;
-    }
-};
-
-/**
- * When flattening nested struct, save the '@flexible' annotation on struct
- * to struct fields.
- */
-class SaveFlexibleAnnotation : public P4::AnnotationSelectionPolicy {
-    bool keep(const IR::Annotation* annot) override {
-        if (annot->name == "flexible" || annot->name == "padding")
-            return true;
-        return false;
     }
 };
 

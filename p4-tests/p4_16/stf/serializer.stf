@@ -1,0 +1,9 @@
+# Default action forwards out port 72
+add IngressA.test hdr.sample.a:0x1111 act1()
+add IngressB.test hdr.sample.a:0x1111 act1()
+
+#        a    b    c    CSUM1 CSUM2
+wire 129 -> 129
+expect 1 1111 2222 3333 8888 7777
+packet 0 1111 2222 3333 1111 7777
+

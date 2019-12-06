@@ -13,6 +13,15 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 
+using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
+/**
+ * Map from a egress field to other egress fields in a pipe.
+ */
+using ExtractedTogetherFields = ordered_map<cstring /* pipe */,
+    ordered_map<cstring /* field */, ordered_set<cstring> /* fields */>>;
+
+bool findFlexibleAnnotation(const IR::Type_StructLike*);
+
 /// This class gathers all the bridged metadata fields also used as deparser parameters. The
 /// CollectPhvInfo pass sets the deparsed_bottom_bits() property for all deparser parameters to
 /// true. Therefore, this alignment constraint needs to be recognized and respected during bridged
@@ -154,14 +163,10 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
             const IR::HeaderOrMetadata* h,
             const IR::Type_Struct* flexType);
 
-    /** @returns the egress version of a field name when the @ingressName is specified.
+    /** @returns the egress version of a field name when the ingress name is specified.
+     *  @returns the ingress version of a field name when the egress name is specified.
       */
-    static cstring getEgressFieldName(cstring ingressName);
-
-    /** @returns the ingress version of a field name when the @egressName is specified. Only works
-      * if called on egress names.
-      */
-    static cstring getIngressFieldName(cstring egressName);
+    static cstring getOppositeGressFieldName(cstring name);
 
  protected:
     /// Not a const PhvInfo because this pass create padding PHV::Field.
@@ -241,7 +246,10 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
      * both passes modify the map. RepackDigestFieldList modifies it first,
      * RepackFlexHeaders read and modifies the map next.
      */
-    ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& repackedTypes;
+    RepackedHeaderTypes& repackedTypes;
+
+    /// XXX(hanw): do_not_repack_bridge
+    bool skip_bridge;
 
     /**
      * Map of header name ot the old header type before repacking.
@@ -427,9 +435,11 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         const ordered_set<const PHV::Field*>& d,
         const GatherParserExtracts& pa,
         const MauBacktracker& b,
-        ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
+        RepackedHeaderTypes& rt,
+        bool skip_bridge)
         : phv(p), uses(u), fields(f), actionConstraints(a), doNotPack(s), noPackFields(z),
-          deparserParams(d), parserAlignedFields(pa), alloc(b), repackedTypes(rt) { }
+          deparserParams(d), parserAlignedFields(pa), alloc(b), repackedTypes(rt),
+          skip_bridge(skip_bridge) { }
 
     /// @returns the set of all repacked headers.
     const ordered_map<cstring, const IR::HeaderOrMetadata*> getRepackedHeaders() const {
@@ -521,8 +531,8 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             const ordered_set<const PHV::Field*>& d,
             const GatherParserExtracts& pa,
             const MauBacktracker& b,
-            ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*>& rt)
-        : RepackFlexHeaders(p, u, f, a, s, z, d, pa, b, rt) { }
+            RepackedHeaderTypes& rt)
+        : RepackFlexHeaders(p, u, f, a, s, z, d, pa, b, rt, true) { }
 
     profile_t init_apply(const IR::Node* root) override;
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override { return h; }
@@ -671,8 +681,10 @@ class LogRepackedHeaders : public Inspector {
 
  public:
     explicit LogRepackedHeaders(const PhvInfo& p) : phv(p) { }
-    const RepackedHeaders &repackedHeaders() const { return repacked; }
+
+    std::string asm_output() const;
 };
+
 
 class FlexiblePacking : public Logging::PassManager {
  private:
@@ -692,8 +704,7 @@ class FlexiblePacking : public Logging::PassManager {
     ordered_set<const PHV::Field*>                      deparserParams;
     ordered_set<cstring>                                parserStatesToModify;
     LogRepackedHeaders                                  log;
-
-    ordered_map<const IR::Type_StructLike*, const IR::Type_StructLike*> repackedTypes;
+    RepackedHeaderTypes                                 repackedTypes;
 
  public:
     explicit FlexiblePacking(
@@ -702,11 +713,38 @@ class FlexiblePacking : public Logging::PassManager {
             DependencyGraph& dg,
             CollectBridgedFields& b,
             ordered_map<cstring, ordered_set<cstring>>& e,
-            const MauBacktracker& alloc);
+            const MauBacktracker& alloc,
+            bool skip_bridge = false);
 
     // Return a Json representation of flexible headers to be saved in .bfa/context.json
     // must be called after the pass is applied
     std::string asm_output() const;
+
+    RepackedHeaderTypes getRepackedTypes() { return repackedTypes; }
 };
+
+using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
+
+// A collection of passes that rewrite the program optimize bridge metadata packing.
+// Both input and output are a vector of IR::BFN::Pipe.
+class PackFlexibleHeaders : public PassManager {
+    std::vector<const IR::BFN::Pipe*> pipe;
+    SymBitMatrix mutually_exclusive_field_ids;
+    PhvInfo phv;
+    PhvUse uses;
+    FieldDefUse defuse;
+    DependencyGraph deps;
+    CollectBridgedFields bridged_fields;
+    ExtractedTogether extracted_together;
+    MauBacktracker table_alloc;
+    FlexiblePacking *flexiblePacking;
+
+ public:
+    explicit PackFlexibleHeaders(const BFN_Options& options);
+
+    RepackedHeaderTypes getPackedHeaders() { return flexiblePacking->getRepackedTypes(); }
+    ExtractedTogether* getExtractedTogether() { return &extracted_together; }
+};
+
 
 #endif  /* EXTENSIONS_BF_P4C_COMMON_FLEXIBLE_PACKING_H_ */

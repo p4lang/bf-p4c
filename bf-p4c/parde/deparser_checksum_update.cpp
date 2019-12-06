@@ -399,6 +399,7 @@ analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
 struct ChecksumMethodCheck : public Inspector {
     bool preorder(const IR::MethodCallExpression* methodCall) {
         auto* member = methodCall->method->to<IR::Member>();
+        if (member == nullptr) return false;
         auto* expr = member->expr->to<IR::PathExpression>();
         auto* type = expr->type->to<IR::Type_Extern>();
         if (type && type->name == "Checksum" && member->member != "update") {

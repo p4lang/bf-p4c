@@ -164,6 +164,18 @@ const IR::Statement* createExtractCall(cstring pkt, IR::Expression* member) {
     return new IR::MethodCallStatement(callExpr);
 }
 
+/// @return an `extract()` call that extracts the given header.
+const IR::Statement* createExtractCall(cstring pkt, cstring typeName,
+        IR::Expression* member) {
+    auto *method = new IR::Member(new IR::PathExpression(pkt),
+                                  IR::ID("extract"));
+    auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
+    auto* typeArgs = new IR::Vector<IR::Type>();
+    typeArgs->push_back(new IR::Type_Name(IR::ID(typeName)));
+    auto *callExpr = new IR::MethodCallExpression(method, typeArgs, args);
+    return new IR::MethodCallStatement(callExpr);
+}
+
 /// @return a lookahead expression for the given size of `bit<>` type.
 const IR::Expression* createLookaheadExpr(cstring pkt, int bits) {
     auto *method = new IR::Member(new IR::PathExpression(pkt), IR::ID("lookahead"));

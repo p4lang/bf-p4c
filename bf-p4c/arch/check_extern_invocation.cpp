@@ -1,4 +1,5 @@
 #include "frontends/p4/methodInstance.h"
+#include "bf-p4c/arch/helpers.h"
 #include "bf-p4c/arch/check_extern_invocation.h"
 
 namespace BFN {
@@ -7,19 +8,7 @@ bool CheckExternInvocationCommon::preorder(const IR::MethodCallExpression *expr)
     auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
     if (auto extMethod = mi->to<P4::ExternMethod>()) {
         cstring obj_name = extMethod->object->getName().name;
-        cstring name = nullptr;
-        if (auto inst = extMethod->object->to<IR::Declaration_Instance>()) {
-            if (auto tn = inst->type->to<IR::Type_Name>()) {
-                name = tn->path->name;
-            } else if (auto ts = inst->type->to<IR::Type_Specialized>()) {
-                if (auto bt = ts->baseType->to<IR::Type_Name>()) {
-                    name = bt->path->name; } }
-        } else if (auto param = extMethod->object->to<IR::Parameter>()) {
-            if (auto tn = param->type->to<IR::Type_Name>()) {
-                name = tn->path->name;
-            }
-        }
-        BUG_CHECK(name != nullptr, "cannot find type for name %1%", obj_name);
+        auto name = extMethod->originalExternType->name;
 
         bitvec pos;
         int index = 0;

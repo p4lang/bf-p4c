@@ -136,16 +136,19 @@ class BackendConverter : public Inspector {
     ParseTna *arch;
     const IR::ToplevelBlock* toplevel;
     StatefulSelectors stateful_selectors;
-    std::vector<const IR::BFN::Pipe*>& pipe;
+    IR::Vector<IR::BFN::Pipe>& pipe;
+    const IR::BFN::Toplevel* top;
 
  public:
     BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-            ParamBinding* bindings, std::vector<const IR::BFN::Pipe*>& pipe)
+            ParamBinding* bindings, IR::Vector<IR::BFN::Pipe>& pipe)
     : refMap(refMap), typeMap(typeMap), bindings(bindings), pipe(pipe) { arch = new ParseTna(); }
 
     cstring getPipelineName(const IR::P4Program* program, int index);
     const ProgramThreads &getThreads() const { return arch->threads; }
     bool preorder(const IR::P4Program* program) override;
+
+    const IR::BFN::Toplevel* getTop() { return top; }
 };
 
 }  // namespace BFN

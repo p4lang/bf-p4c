@@ -51,8 +51,13 @@ class FlattenHeader : public Modifier {
     IR::ListExpression* flatten_list(const IR::ListExpression* args);
     void explode(const IR::Expression*, IR::Vector<IR::Expression>*);
 
+    std::function<bool(const Context*, const IR::Type_StructLike*)> policy;
+
  public:
-    explicit FlattenHeader(P4::TypeMap* typeMap) : typeMap(typeMap) {}
+    explicit FlattenHeader(P4::TypeMap* typeMap,
+            std::function<bool(const Context*, const IR::Type_StructLike*)> policy =
+            [](const Context*, const IR::Type_StructLike*) -> bool { return false; }) :
+        typeMap(typeMap), policy(policy) {}
     bool preorder(IR::Type_Header* header) override;
     bool preorder(IR::Member* member) override;
     void postorder(IR::Member* member) override;
@@ -65,10 +70,12 @@ class FlattenHeader : public Modifier {
 class EliminateHeaders : public Transform {
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
+    std::function<bool(const Context*, const IR::Type_StructLike*)> policy;
 
  public:
-    EliminateHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) :
-        refMap(refMap), typeMap(typeMap) { setName("EliminateHeaders"); }
+    EliminateHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+            std::function<bool(const Context*, const IR::Type_StructLike*)> policy) :
+        refMap(refMap), typeMap(typeMap), policy(policy) { setName("EliminateHeaders"); }
     std::map<cstring, IR::Vector<IR::Type>> rewriteTupleType;
     std::map<const IR::MethodCallExpression* , const IR::Type*> rewriteOtherType;
     const IR::Node* preorder(IR::Argument* arg) override;
@@ -126,8 +133,10 @@ class RewriteTypeArguments : public Transform {
  */
 class SimplifyEmitArgs : public PassManager {
  public:
-    SimplifyEmitArgs(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-        auto eliminateHeaders = new EliminateHeaders(refMap, typeMap);
+    SimplifyEmitArgs(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            std::function<bool(const Context *, const IR::Type_StructLike*)> policy =
+            [](const Context*, const IR::Type_StructLike*) -> bool { return false; } ) {
+        auto eliminateHeaders = new EliminateHeaders(refMap, typeMap, policy);
         auto rewriteTypeArguments = new RewriteTypeArguments(eliminateHeaders);
         passes.push_back(new FlattenHeader(typeMap));
         passes.push_back(new P4::ClearTypeMap(typeMap));

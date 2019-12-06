@@ -37,6 +37,7 @@ const IR::Statement* createSetMetadata(const IR::Expression* dest,
 const IR::Statement* createSetValid(cstring header, cstring field);
 const IR::Statement* createExtractCall(cstring pkt, cstring hdr);
 const IR::Statement* createExtractCall(cstring pkt, IR::Expression* member);
+const IR::Statement* createExtractCall(cstring pkt, cstring typeName, IR::Expression* member);
 const IR::Expression* createLookaheadExpr(cstring pkt, int bits);
 
 /// Add the standard TNA ingress metadata to the given parser. The original
