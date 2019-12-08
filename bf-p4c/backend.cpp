@@ -98,9 +98,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
     // extracted_together info comes from midend, not the flexible packing in backend
-    auto __unused = new ordered_map<cstring, ordered_set<cstring>>;
+    auto _unused = new ordered_map<cstring, ordered_set<cstring>>;
     flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
-                                          *__unused, table_alloc, true);
+                                          *_unused, table_alloc, true);
     flexibleLogging = new LogRepackedHeaders(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,

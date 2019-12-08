@@ -14,6 +14,7 @@ from operator import mul
 from types import StringTypes
 
 import chip
+from functools import reduce
 
 ########################################################################
 ## Utility functions
@@ -425,9 +426,9 @@ class csr_composite_object (csr_object):
                 outfile.write("%sif (!%s.disabled()) {\n" % (indent, field_name(a)))
                 indent += '  '
                 if single.msb >= 64:
-                    for w in (range(single.msb//32, -1, -1) 
+                    for w in (list(range(single.msb//32, -1, -1))
                               if args.reverse_write else
-                              range(0, single.msb//32 + 1)):
+                              list(range(0, single.msb//32 + 1))):
                         outfile.write("%sout << binout::tag('R') << binout::byte4" % indent +
                                       "(%s + 0x%x) << binout::byte4(%s.value.getrange(%d, 32));\n" %
                                       (addr_var, a.offset//address_unit + 4, field_name(a), w*32))
@@ -1269,7 +1270,7 @@ class address_map(csr_composite_object):
 
     def print_as_text(self, indent):
         if self.templatization_behavior != "disabled":
-            print "%saddress_map %s%s:" % (indent, self.name, str(self.count))
+            print("%saddress_map %s%s:" % (indent, self.name, str(self.count)))
             for ch in self.objs:
                 ch.print_as_text(indent+"  ")
 
@@ -1330,12 +1331,12 @@ class address_map_instance(csr_composite_object):
             self.map.gen_type(outfile, args, schema, parent, name, indent)
 
     def print_as_text(self, indent):
-        print "%saddress_map_instance %s%s: offset=0x%x%s" % (
+        print("%saddress_map_instance %s%s: offset=0x%x%s" % (
             indent, self.name, str(self.count), self.offset,
-            " stride=0x%x" % self.stride if self.stride else "")
+            " stride=0x%x" % self.stride if self.stride else ""))
         if self.map.templatization_behavior == "top_level":
-            print "%s  address_map %s%s: (top level %s)" % (
-                indent, self.name, str(self.count), self.map.name)
+            print("%s  address_map %s%s: (top level %s)" % (
+                indent, self.name, str(self.count), self.map.name))
         else:
             self.map.print_as_text(indent+"  ")
 
@@ -1374,9 +1375,9 @@ class group(address_map):
         return self.stride
 
     def print_as_text(self, indent):
-        print "%sgroup %s%s: offset=0x%x%s" % (
+        print("%sgroup %s%s: offset=0x%x%s" % (
             indent, self.name, str(self.count), self.offset,
-            " stride=0x%x" % self.stride if self.stride else "")
+            " stride=0x%x" % self.stride if self.stride else ""))
         for ch in self.objs:
             ch.print_as_text(indent+"  ")
 
@@ -1451,7 +1452,7 @@ class reg(csr_composite_object):
                 width = field.msb-field.lsb+1
                 if field.count == (1,):
                     value = data[field.name]
-                    if type(value) is not int and type(value) is not long:
+                    if type(value) is not int:
                         raise CsrException(
                             "Expected integer value for field '%s.%s' but found value of type %s" % (
                             self.name, field.name, type(value).__name__
@@ -1475,7 +1476,7 @@ class reg(csr_composite_object):
                         for idx in range(0, field.count[-1]):
                             context[-1] = idx
                             value = sub_data[idx]
-                            if type(value) is not int and type(value) is not long:
+                            if type(value) is not int:
                                 raise CsrException(
                                     "Expected integer value for field '%s.%s%s' but found value of type %s" % (
                                     self.name, field.name, array_str(context), type(value).__name__
@@ -1533,7 +1534,7 @@ class reg(csr_composite_object):
         return self
     def address_stride(self):
         return self.width // 8
-        
+
     def disabled(self):
         return False
     def top_level(self):
@@ -1623,8 +1624,8 @@ class reg(csr_composite_object):
         outfile.write("%s}\n" % indent)
 
     def print_as_text(self, indent):
-        print "%sreg %s%s: offset=0x%x width=%d" % (
-            indent, self.name, str(self.count), self.offset, self.width)
+        print("%sreg %s%s: offset=0x%x width=%d" % (
+            indent, self.name, str(self.count), self.offset, self.width))
         for ch in self.fields:
             ch.print_as_text(indent+"  ")
 
@@ -1675,9 +1676,9 @@ class field(csr_object):
         return "name = %s  count = %s  msb = %s  lsb = %s  default = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.default), str(self.parent))
 
     def print_as_text(self, indent):
-        print "%sfield %s%s: [%d:%d]%s" % (
-            indent, self.name, str(self.count), self.msb, self.lsb, 
-            " default=" + str(self.default) if self.default else "")
+        print("%sfield %s%s: [%d:%d]%s" % (
+            indent, self.name, str(self.count), self.msb, self.lsb,
+            " default=" + str(self.default) if self.default else ""))
 
 
 ########################################################################
@@ -1695,7 +1696,7 @@ def parse_resets(reset_str):
     tuple, just for consistency of iterability.
     """
     reset_strs = reset_str.replace("[","").replace("]","").split(",")
-    resets = map(lambda x: int(x,0), reset_strs)
+    resets = [int(x,0) for x in reset_strs]
     return tuple(resets)
 
 def parse_array_size(size_str):
@@ -1712,7 +1713,7 @@ def parse_array_size(size_str):
     tuple, just for consistency of iterability.
     """
     size_strs = size_str.replace("]","").split("[")[1:]
-    sizes = map(int, size_strs)
+    sizes = list(map(int, size_strs))
     if len(sizes) > 0:
         return tuple(sizes)
     else:
@@ -1945,8 +1946,8 @@ if __name__ == "__main__":
     }
     z = y.generate_binary(data, None, [traversal_history("root")])
     if z.value != "0246":
-        print "ERROR: Expected 32-bit object to have string value '6420'"
-        print "    32 bit value was " + z.value
+        print("ERROR: Expected 32-bit object to have string value '6420'")
+        print("    32 bit value was " + z.value)
 
     y = reg("baz", (1,), 0, 40, None)
     y.fields.append(field("y1", (1,),  7,  0, y))
@@ -1963,5 +1964,5 @@ if __name__ == "__main__":
     }
     z = y.generate_binary(data, None, [traversal_history("root")])
     if z.value != "02468":
-        print "Expected 40-bit field to have string value '86420'"
-        print "    40 bit value was " + z.value
+        print("Expected 40-bit field to have string value '86420'")
+        print("    40 bit value was " + z.value)

@@ -116,12 +116,16 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_
 # Arista profiles
 # p4_16/customer/arista/obfuscated-ref-baremetal.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-baremetal.p4" "--auto-init-metadata")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4" PROPERTIES TIMEOUT 1200)
 # p4_16/customer/arista/obfuscated-ref-nat.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat.p4" "--auto-init-metadata")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4" PROPERTIES TIMEOUT 1200)
 # p4_16/customer/arista/obfuscated-ref-default.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-default.p4" "--auto-init-metadata")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4" PROPERTIES TIMEOUT 1200)
 # p4_16/customer/arista/obfuscated-ref-nat-static.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-nat-static.p4" "--auto-init-metadata")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static.p4" PROPERTIES TIMEOUT 1200)
 
 # p4_16/customer/extreme/p4c-1812.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4" "--auto-init-metadata")
@@ -876,4 +880,3 @@ foreach(t IN LISTS NON_PR)
   file(RELATIVE_PATH test_path ${P4C_SOURCE_DIR} ${t})
   p4c_add_test_label("tofino" "NON_PR_TOFINO" ${test_path})
 endforeach()
-

@@ -96,7 +96,7 @@ def annotate_names (obj, threshold, path=""):
             for elem in obj:
                 annotate_names(elem, threshold, path)
     elif type(obj) is dict:
-        for key, elem in obj.items():
+        for key, elem in list(obj.items()):
             annotate_names(elem, threshold, (path+"_" if len(path)>0 else "")+key)
 
 def print_schema_info (schema_file, schema):
@@ -190,7 +190,7 @@ def read_template_file(template_file, args, schema):
         disabled_objs = templatization_cfg["ignore"]
         if "global" in templatization_cfg:
             parse_template_args(args, templatization_cfg["global"])
-    for section_name, section in schema.items():
+    for section_name, section in list(schema.items()):
         if section_name not in top_level_objs:
             if section_name[0] != "_":
                 sys.stderr.write("no template cfg for "+section_name+", ignoring\n");
@@ -199,7 +199,7 @@ def read_template_file(template_file, args, schema):
             section[obj].templatization_behavior = "top_level"
             section[obj].object_name = None
             if top_level_objs[section_name][obj] is None: continue
-            for fname, params in top_level_objs[section_name][obj].items():
+            for fname, params in list(top_level_objs[section_name][obj].items()):
                 for p in params:
                     if p[:5] == 'name=':
                         section[obj].object_name = p[5:]
@@ -217,7 +217,7 @@ def generate_templates (args, schema):
         os.makedirs(args.o)
 
     top_level_objs = read_template_file(args.generate_templates, args, schema)
-    for section_name, section in schema.items():
+    for section_name, section in list(schema.items()):
         if section_name not in top_level_objs:
             continue;
         for top_level_obj in top_level_objs[section_name]:
@@ -229,7 +229,7 @@ def generate_templates (args, schema):
                 annotate_names(sizes, args.template_indices)
 
             # Copy in schema metadata
-            schema_metadata = [key for key in schema.keys() if key[0]=="_"]
+            schema_metadata = [key for key in list(schema.keys()) if key[0]=="_"]
             for metadata in schema_metadata:
                 template[metadata] = schema[metadata]
                 sizes[metadata] = schema[metadata]
@@ -286,25 +286,25 @@ def generate_cpp (args, schema):
         os.makedirs(args.o)
 
     top_level_objs = read_template_file(args.generate_cpp, args, schema)
-    for section_name, section in schema.items():
+    for section_name, section in list(schema.items()):
         if section_name not in top_level_objs:
             continue;
-        for top_level_obj,files in top_level_objs[section_name].items():
+        for top_level_obj,files in list(top_level_objs[section_name].items()):
             if files is None: continue
-            for generate_file,params in files.items():
+            for generate_file,params in list(files.items()):
                 generate_cpp_file(open(os.path.join(args.o, generate_file), "w"),
                                   section[top_level_obj], extend_args(args, params), schema)
 
 def print_schema_text(args, schema):
     def do_print(indent, obj):
-        for key,val in obj.items():
+        for key,val in list(obj.items()):
             if type(val) is str:
-                print "%s%s: %s" % (indent, key, val)
+                print("%s%s: %s" % (indent, key, val))
             elif type(val) is dict:
-                print "%s%s:" % (indent, key)
+                print("%s%s:" % (indent, key))
                 do_print(indent+"  ", val)
             elif val.templatization_behavior == "top_level":
-                print "%s%s:" % (indent, key)
+                print("%s%s:" % (indent, key))
                 val.print_as_text(indent+"  ")
 
     read_template_file(args.print_schema, args, schema)
@@ -393,7 +393,7 @@ def walle_process(parser, args=None):
         schema = csr.build_schema(args.generate_schema, __version__)
         with open(args.schema, "wb") as outfile:
             pickle.dump(schema, outfile, protocol=2)
-            print "Schema generated from:\n"
+            print("Schema generated from:\n")
             cmd = 'echo | git -C %s log -1' % args.generate_schema
             output = subprocess.check_output(cmd, shell=True)
             print(output)
@@ -418,7 +418,7 @@ def walle_process(parser, args=None):
         if args.schema_info:
             print_schema_info(os.path.abspath(args.schema), schema)
         elif args.dump_schema:
-            print yaml.dump(schema)
+            print(yaml.dump(schema))
         elif args.print_schema:
             print_schema_text(args, schema)
         elif args.generate_templates != None:
