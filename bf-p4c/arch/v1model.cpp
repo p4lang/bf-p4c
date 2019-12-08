@@ -855,7 +855,7 @@ class ConstructSymbolTable : public Inspector {
                 if (index != 0)
                     fieldAnnotations->annotations.push_back(
                             new IR::Annotation(IR::ID("flexible"), {}));
-                if (auto nestedTuple = t->to<IR::Type_Tuple>()) {
+                if (auto nestedTuple = t->to<IR::Type_BaseList>()) {
                     convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
                     cstring stName = prefix + fname + "_struct_t";
                     auto ttype = new IR::Type_Name(stName);
@@ -876,7 +876,7 @@ class ConstructSymbolTable : public Inspector {
             int index = 0;
             for (auto t : *components) {
                 cstring fname = "__field_" + std::to_string(index);
-                if (auto nestedTuple = t->to<IR::Type_Tuple>()) {
+                if (auto nestedTuple = t->to<IR::Type_BaseList>()) {
                     convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
                     cstring stName = prefix + fname + "_struct_t";
                     auto *fieldAnnotations = new IR::Annotations({
@@ -899,7 +899,7 @@ class ConstructSymbolTable : public Inspector {
     }
 
     const IR::Type_Header* convertTypeNameToHeaderType(cstring prefix, const IR::Type_Name* st,
-            const IR::Type_Tuple* fixedPositionTypes) {
+            const IR::Type_BaseList* fixedPositionTypes) {
         cstring hdName = prefix + "_header_t";
         auto fields = new IR::IndexedVector<IR::StructField>();
         int index = 0;
@@ -939,7 +939,7 @@ class ConstructSymbolTable : public Inspector {
             LOG3(" source type " << std::get<1>(f));
             /// if there is a nested tuple, convert it to a nested StructInitializerExpression
             /// and do so recursively.
-            if (std::get<1>(f)->is<IR::Type_Tuple>()) {
+            if (std::get<1>(f)->is<IR::Type_BaseList>()) {
                 auto list = std::get<2>(f)->to<IR::ListExpression>();
                 auto digestFieldsFromTuple = new std::vector<DigestFieldInfo>();
                 int index = 0;
@@ -1017,13 +1017,13 @@ class ConstructSymbolTable : public Inspector {
          */
         auto field_list = mce->arguments->at(1);
 
-        if (field_list->expression->is<IR::Type_Tuple>()) {
+        if (field_list->expression->is<IR::Type_BaseList>()) {
             for (auto t : field_list->expression->to<IR::ListExpression>()->components) {
                 LOG3("name " << t << " type " << t->type);
             }
         }
 
-        if (field_list->expression->is<IR::Type_Tuple>() ||
+        if (field_list->expression->is<IR::Type_BaseList>() ||
                 field_list->expression->is<IR::Type_Name>()) {
             cstring uniqName = genUniqueName("__digest");
             // createNewType
@@ -1271,12 +1271,12 @@ class ConstructSymbolTable : public Inspector {
         cstring cloneHeaderName;
         cstring cloneType = mce->arguments->at(0)->expression->to<IR::Member>()->member;
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
-        if (mce->typeArguments->size() > 0 && mce->typeArguments->at(0)->is<IR::Type_Tuple>()) {
+        if (mce->typeArguments->size() > 0 && mce->typeArguments->at(0)->is<IR::Type_BaseList>()) {
             if (hasData) {
                 auto fl = mce->arguments->at(2)->to<IR::Argument>();
                 BUG_CHECK(fl != nullptr, "invalid clone3 method argument");
                 if (auto list = fl->expression->to<IR::ListExpression>()) {
-                    if (auto tpl_type = fl->expression->type->to<IR::Type_Tuple>()) {
+                    if (auto tpl_type = fl->expression->type->to<IR::Type_BaseList>()) {
                         // generate a header type from tuple, used by repacking algorithm
                         auto components = new IR::Vector<IR::Type>();
                         components->push_back(IR::Type::Bits::get(8));  // mirror_source
@@ -1572,11 +1572,11 @@ class ConstructSymbolTable : public Inspector {
         digestFieldsGeneratedByCompiler->push_back(info);
 
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
-        if (mce->typeArguments->at(0)->is<IR::Type_Tuple>()) {
+        if (mce->typeArguments->at(0)->is<IR::Type_BaseList>()) {
             if (auto arg = mce->arguments->at(0)->to<IR::Argument>()) {
                 auto fl = arg->expression;   // resubmit field list
                 if (auto list = fl->to<IR::ListExpression>()) {
-                    if (auto tpl = list->type->to<IR::Type_Tuple>()) {
+                    if (auto tpl = list->type->to<IR::Type_BaseList>()) {
                         auto components = new IR::Vector<IR::Type>();
                         components->push_back(IR::Type::Bits::get(8));
                         components->append(tpl->components);

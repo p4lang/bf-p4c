@@ -798,7 +798,7 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
     if (has_varbit) {
         list->components = components;
 
-        if (auto tuple = list->type->to<IR::Type_Tuple>()) {
+        if (auto tuple = list->type->to<IR::Type_BaseList>()) {
             IR::Vector<IR::Type> types;
 
             for (auto type : tuple->components) {

@@ -340,7 +340,7 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
             if (mc->typeArguments->size()) {
                 if (auto type = mc->typeArguments->at(0)->to<IR::Type_Name>()) {
                     rewriteTupleType[type->path->name] =
-                                 list->type->to<IR::Type_Tuple>()->components;
+                                 list->type->to<IR::Type_BaseList>()->components;
                 } else {
                     rewriteOtherType[mc] = list->type;
                 }

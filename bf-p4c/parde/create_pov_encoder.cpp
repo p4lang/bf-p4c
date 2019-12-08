@@ -12,7 +12,7 @@ static const IR::Entry* create_static_entry(unsigned key_size,
         components.insert(components.begin(), new IR::Constant(bit_i));
     }
 
-    auto keys = new IR::ListExpression(new IR::Type_Tuple, components);
+    auto keys = new IR::ListExpression(components);
 
     auto params = new IR::ParameterList;
 
