@@ -327,7 +327,7 @@ class MidEndLast : public PassManager {
 
 MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
-    setName("MidEnd");;;
+    setName("MidEnd");
     refMap.setIsV1(true);
     auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
     auto typeInference = new BFN::TypeInference(&refMap, &typeMap, true);

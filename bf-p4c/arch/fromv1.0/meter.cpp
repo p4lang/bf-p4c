@@ -7,7 +7,8 @@ P4V1::MeterConverter::MeterConverter() {
 
 const IR::Type_Extern *P4V1::MeterConverter::convertExternType(P4V1::ProgramStructure *structure,
                                                                const IR::Type_Extern *, cstring) {
-    structure->include("tofino/meter.p4");
+    if (use_v1model())
+        structure->include("tofino/meter.p4");
     return nullptr;
 }
 

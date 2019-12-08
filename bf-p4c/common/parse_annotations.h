@@ -85,6 +85,8 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaPacketEntry, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaPhase0, PARSE_TRIPLE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaPlacementPriority, PARSE_EXPRESSION_LIST, extPragma);
+        BFN_PARSE(PragmaOverridePhase0TableName, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaOverridePhase0ActionName, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaPreColor, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaProxyHashAlgorithm, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaProxyHashWidth, PARSE, Expression, extPragma);
@@ -126,6 +128,12 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaDisableDeparseZero, PARSE_PAIR, StringLiteral, intPragma);
         BFN_PARSE(PragmaNotDeparsed, PARSE, StringLiteral, extPragma);
         BFN_PARSE(PragmaNotParsed, PARSE, StringLiteral, extPragma);
+
+        // internal annotation to be removed
+        BFN_PARSE(PragmaActionSelectorHashFieldCalcName, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaActionSelectorHashFieldListName, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaAlgorithm, PARSE, StringLiteral, intPragma);
+        BFN_PARSE(PragmaActionSelectorHashFieldCalcOutputWidth, PARSE, Expression, intPragma);
     }
 };
 

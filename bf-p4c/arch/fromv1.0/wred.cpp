@@ -7,7 +7,8 @@ P4V1::WREDConverter::WREDConverter() {
 
 const IR::Type_Extern *P4V1::WREDConverter::convertExternType(P4V1::ProgramStructure *structure,
                                                              const IR::Type_Extern *, cstring) {
-    structure->include("tofino/wred.p4");
+    if (use_v1model())
+        structure->include("tofino/wred.p4");
     return nullptr;
 }
 

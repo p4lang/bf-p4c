@@ -154,6 +154,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Unsupported condition && in mirror.emit"
+  extensions/p4_tests/p4_16/compile_only/p4c-1150-nested-ifs.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "HashAlgorithm_t.CSUM16: Invalid enum tag"
   testdata/p4_14_samples/issue894.p4
 )

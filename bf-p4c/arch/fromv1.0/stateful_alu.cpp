@@ -11,7 +11,9 @@ const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
     P4V1::ProgramStructure *structure, const IR::Type_Extern *, cstring) {
     if (!has_stateful_alu) {
         has_stateful_alu = true;
-        structure->include("tofino/stateful_alu.p4"); }
+        if (use_v1model())
+            structure->include("tofino/stateful_alu.p4");
+    }
     return nullptr;
 }
 
@@ -366,11 +368,18 @@ class CreateMathUnit : public Inspector {
         if (!exp_shift) exp_shift = new IR::Constant(0);
         if (!output_scale) output_scale = new IR::Constant(0);
         if (!table) table = new IR::ExpressionListValue({});
-        auto *tuple_type = new IR::Type_Tuple;
-        for (int i = table->expressions.size(); i > 0; --i)
-            tuple_type->components.push_back(utype);
-        auto mutype = new IR::Type_Specialized(new IR::Type_Name("math_unit"),
-                               new IR::Vector<IR::Type>({ utype, tuple_type }));
+        /// XXX(hanw): remove when v1model is retired
+        IR::Type* mutype;
+        if (P4V1::use_v1model()) {
+            auto *tuple_type = new IR::Type_Tuple;
+            for (int i = table->expressions.size(); i > 0; --i)
+                tuple_type->components.push_back(utype);
+            mutype = new IR::Type_Specialized(new IR::Type_Name("math_unit"),
+                    new IR::Vector<IR::Type>({ utype, tuple_type }));
+        } else {
+            mutype = new IR::Type_Specialized(new IR::Type_Name("MathUnit"),
+                    new IR::Vector<IR::Type>({ utype }));
+        }
         auto *ctor_args = new IR::Vector<IR::Argument>({
             new IR::Argument(exp_invert),
             new IR::Argument(exp_shift),
@@ -385,6 +394,7 @@ class CreateMathUnit : public Inspector {
     }
     static const IR::Declaration_Instance *create(P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type::Bits *utype) {
+        LOG3("creating math unit " << ext);
         CreateMathUnit create_math(structure->makeUniqueName(ext->name + "_math_unit"), utype);
         ext->apply(create_math);
         return create_math.unit; }
@@ -542,7 +552,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
                 new IR::Argument(new IR::PathExpression(new IR::Path(info.reg->name))) });
         auto *math = CreateMathUnit::create(structure, ext, info.utype);
         if (math)
-            structure->declarations->push_back(math);
+            scope->push_back(math);
         auto *block = new IR::BlockStatement({
             CreateSaluApplyFunction::create(annots, structure, ext, info.rtype, info.utype,
                                             math ? math->name.name : cstring(),

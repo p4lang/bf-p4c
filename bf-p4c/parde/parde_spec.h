@@ -129,7 +129,6 @@ class TofinoPardeSpec : public PardeSpec {
     unsigned numDeparserChecksumUnits() const override { return 6; }
 };
 
-#if HAVE_JBAY
 class JBayPardeSpec : public PardeSpec {
  public:
     size_t bytePhase0Size() const override { return 16; }
@@ -166,7 +165,6 @@ class JBayPardeSpec : public PardeSpec {
     unsigned numDeparserConstantBytes() const override { return 8; }
     unsigned numDeparserChecksumUnits() const override { return 8; }
 };
-#endif /* HAVE_JBAY */
 
 #if HAVE_CLOUDBREAK
 class CloudbreakPardeSpec : public PardeSpec {

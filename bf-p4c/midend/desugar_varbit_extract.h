@@ -2,6 +2,7 @@
 #define BF_P4C_MIDEND_DESUGAR_VARBIT_EXTRACT_H_
 
 #include "ir/ir.h"
+#include "frontends/p4/cloner.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 
@@ -266,6 +267,7 @@ class DesugarVarbitExtract : public PassManager {
             rewrite_varbit_uses,
             rewrite_parser_verify,
             rewrite_varbit_types,
+            new P4::ClonePathExpressions,
             new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true)
         });

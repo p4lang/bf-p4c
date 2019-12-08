@@ -64,7 +64,9 @@ class ExtractEgressPacketLengthAdjust : public ParserModifier {
     }
 
     bool preorder(IR::BFN::ParserState* state) override {
-        if (state->name.startsWith("egress::$mirror_field_list_")) {
+        if (state->name.startsWith("egress::$mirror_field_list_") ||
+            state->name.startsWith("egress::__parse_ingress_mirror_header_") ||
+            state->name.startsWith("egress::__parse_egress_mirror_header_")) {
             IR::Vector<IR::BFN::FieldLVal> dests;
             for (auto stmt : state->statements) {
                 if (auto extract = stmt->to<IR::BFN::Extract>()) {

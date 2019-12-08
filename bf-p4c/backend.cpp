@@ -135,7 +135,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new StackPushShims,
         new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
-        (options.arch == "v1model" && options.adjust_egress_packet_length) ?
+        (((options.langVersion == BFN_Options::FrontendVersion::P4_14 && options.arch == "tna") ||
+          options.arch == "v1model") && options.adjust_egress_packet_length) ?
             new AdjustEgressPacketLength(phv, defuse) : nullptr,
         new CollectPhvInfo(phv),
         new InstructionSelection(options, phv),

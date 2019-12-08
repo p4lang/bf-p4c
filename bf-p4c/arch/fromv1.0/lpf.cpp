@@ -7,7 +7,8 @@ P4V1::LpfConverter::LpfConverter() {
 
 const IR::Type_Extern *P4V1::LpfConverter::convertExternType(P4V1::ProgramStructure *structure,
                                                              const IR::Type_Extern *, cstring) {
-    structure->include("tofino/lpf.p4");
+    if (use_v1model())
+        structure->include("tofino/lpf.p4");
     return nullptr;
 }
 

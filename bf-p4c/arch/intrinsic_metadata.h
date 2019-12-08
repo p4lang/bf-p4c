@@ -173,6 +173,7 @@ static void addEgressMetadata(IR::BFN::TnaParser *parser,
     parser->states.push_back(checkMirroredState);
 
     // This state handles the extraction of egress intrinsic metadata.
+    // auto headerParam = parser->tnaParams.at("hdr");
     auto *egMetadataState =
         createGeneratedParserState("egress_metadata", {
             createSetMetadata("eg_intr_md_from_prsr", "parser_err", 16, 0),

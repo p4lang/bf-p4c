@@ -115,7 +115,6 @@ class TofinoDevice : public Device {
     bool getIfMemoryCoreSplit() const override { return false; }
 };
 
-#if HAVE_JBAY
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
@@ -173,8 +172,6 @@ class JBayUDevice : public JBayDevice {
     int getNumStages() const override { return 20; }
     cstring get_name() const override { return "Tofino2U"; }
 };
-
-#endif /* HAVE_JBAY */
 
 #if HAVE_CLOUDBREAK
 class CloudbreakDevice : public Device {

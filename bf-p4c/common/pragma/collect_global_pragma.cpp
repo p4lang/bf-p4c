@@ -41,6 +41,8 @@ bool CollectGlobalPragma::preorder(const IR::StructField* s) {
             BUG("Pragma %1% on Struct Field %2% without a name", ann->name.name, s);
         // For the notParsedDeparsedAnnotation, create a new annotation that includes
         // structFieldName.
+        if (!ann->expr.size())
+            continue;
         const IR::StringLiteral* gress = ann->expr.at(0)->to<IR::StringLiteral>();
         if (!gress || (gress->value != "ingress" && gress->value != "egress")) {
             ::warning("Ignoring @pragma %1% on %2% as it does not apply to ingress or egress",

@@ -592,6 +592,20 @@ const char *PragmaPhase0::help = "@pragma phase0 1\n"
     "\n"
     "Note: for P4-16 on Tofino, use the port_metadata_unpack extern.";
 
+const char *PragmaOverridePhase0TableName::name = "override_phase0_table_name";
+const char *PragmaOverridePhase0TableName::description = "";
+const char *PragmaOverridePhase0TableName::help = "@pragma override_phase0_table_name(...)\n"
+    "+ attached to P4 parser state\n"
+    "\n"
+    "Specifies the name of phase0 table in context.json\n";
+
+const char *PragmaOverridePhase0ActionName::name = "override_phase0_action_name";
+const char *PragmaOverridePhase0ActionName::description = "";
+const char *PragmaOverridePhase0ActionName::help = "@pragma override_phase0_action_name(...)\n"
+    "+ attached to P4 parser state\n"
+    "\n"
+    "Specifies the name of phase0 action in context.json\n";
+
 const char *PragmaPlacementPriority::name = "placement_priority";
 const char *PragmaPlacementPriority::description =
     "Changes the order in which tables are considered for placement in a stage.";
@@ -888,6 +902,24 @@ const char *PragmaNotParsed::help = "@pragma not_parsed [ingress/egress]\n"
     "to infer the correct deparse order of the header.  This can be "
     "achieved using an invalid select condition to branch to a parse state "
     "where the extraction occurs.";
+
+// internal annotations to be removed
+const char *PragmaActionSelectorHashFieldCalcName::name = "action_selector_hash_field_calc_name";
+const char *PragmaActionSelectorHashFieldCalcName::description = "internal";
+const char *PragmaActionSelectorHashFieldCalcName::help = "internal";
+
+const char *PragmaActionSelectorHashFieldListName::name = "action_selector_hash_field_list_name";
+const char *PragmaActionSelectorHashFieldListName::description = "internal";
+const char *PragmaActionSelectorHashFieldListName::help = "internal";
+
+const char *PragmaActionSelectorHashFieldCalcOutputWidth::name =
+                                                    "action_selector_hash_field_calc_output_width";
+const char *PragmaActionSelectorHashFieldCalcOutputWidth::description = "internal";
+const char *PragmaActionSelectorHashFieldCalcOutputWidth::help = "internal";
+
+const char *PragmaAlgorithm::name = "algorithm";
+const char *PragmaAlgorithm::description = "internal";
+const char *PragmaAlgorithm::help = "internal";
 
 /*
 

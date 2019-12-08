@@ -4,11 +4,13 @@
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/lib/pad_alignment.h"
 #include "bf-p4c/midend/path_linearizer.h"
 #include "bf-p4c/midend/type_categories.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/arch/fromv1.0/programStructure.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
@@ -92,8 +94,9 @@ struct Phase0TableMetadata {
 struct FindPhase0Table : public Inspector {
     static constexpr int phase0TableSize = 288;
 
-    FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-        : refMap(refMap), typeMap(typeMap) { }
+    FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            P4V1::TnaProgramStructure* structure)
+        : refMap(refMap), typeMap(typeMap), structure(structure) { }
 
     boost::optional<Phase0TableMetadata> phase0;
 
@@ -160,7 +163,7 @@ struct FindPhase0Table : public Inspector {
         }
 
         // Check if this table meets all of the phase 0 criteria.
-        if (!tableInIngress()) {
+        if (!tableInIngressBeforeInline() && !tableInIngressAfterInline()) {
             cstring errGress = "Invalid gress; table expected in Ingress";
             LOG3(" - " << errGress);
             return checkPhase0Pragma(phase0PragmaSet, table, errGress);
@@ -223,11 +226,23 @@ struct FindPhase0Table : public Inspector {
     }
 
  private:
-    bool tableInIngress() const {
+    // used by v1model translation
+    bool tableInIngressAfterInline() const {
         // The phase 0 table must always be in Ingress
         auto* control = findContext<IR::BFN::TnaControl>();
         if (!control) return false;
         return control->thread == INGRESS;
+    }
+
+    // used by p14 to tna translation
+    bool tableInIngressBeforeInline() const {
+        if (!structure) return false;
+        auto* control = findContext<IR::P4Control>();
+        if (!control) return false;
+        if (!structure->mapControlToGress.count(control->name))
+            return false;
+        auto gress = structure->mapControlToGress.at(control->name);
+        return gress == INGRESS;
     }
 
     bool hasCorrectSize(const IR::P4Table* table) const {
@@ -335,7 +350,7 @@ struct FindPhase0Table : public Inspector {
         auto* action = decl->to<IR::P4Action>();
 
         // Save the action name for assembly output.
-        phase0->actionName = action->externalName();
+        phase0->actionName = canon_name(action->externalName());
 
         // The action should have only action data parameters.
         errStr = "Invalid action; action does not have only action data parameters";
@@ -436,12 +451,22 @@ struct FindPhase0Table : public Inspector {
 
         // The body of the `if` should consist only of the table apply call.
         errStr = errStr + " and should consist of only the table apply call";
-        if (!ifStatement->ifTrue->is<IR::MethodCallStatement>()) return false;
-        phase0->applyCallToReplace = ifStatement->ifTrue->to<IR::MethodCallStatement>();
+        const IR::StatOrDecl* statement = nullptr;
+        if (ifStatement->ifTrue->is<IR::BlockStatement>()) {
+            auto* containingStmts = ifStatement->ifTrue->to<IR::BlockStatement>();
+            if (containingStmts->components.size() != 1) return false;
+            statement = containingStmts->components.at(0);
+            if (!statement->is<IR::MethodCallStatement>()) return false;
+        } else if (ifStatement->ifTrue->is<IR::MethodCallStatement>()) {
+            statement = ifStatement->ifTrue;
+        } else {
+            return false; }
+        phase0->applyCallToReplace = statement->to<IR::MethodCallStatement>();
         auto* mi = P4::MethodInstance::resolve(phase0->applyCallToReplace,
                                                refMap, typeMap);
         if (!mi->isApply() || !mi->to<P4::ApplyMethod>()->isTableApply()) return false;
-        if (mi->object != table) return false;
+        if (!mi->object->is<IR::P4Table>()) return false;
+        if (!table->equiv(*(mi->object->to<IR::P4Table>()))) return false;
 
         errStr = "";
         return true;
@@ -455,9 +480,7 @@ struct FindPhase0Table : public Inspector {
 
             // Align the field so that its LSB lines up with a byte boundary,
             // which (usually) reproduces the behavior of the PHV allocator.
-            // XXX(seth): Once `@layout("flexible")` is properly supported in
-            // the backend, we won't need this (or any padding), so we should
-            // remove it at that point.
+            // XXX(hanw): replace impl with @flexible annotation
             const int fieldSize = param->type->width_bits();
             const int alignment = getAlignment(fieldSize);
             bool is_pad_field   = param->getAnnotation("padding");
@@ -498,18 +521,15 @@ struct FindPhase0Table : public Inspector {
             fields.push_back(new IR::StructField(packedField.source, fieldType));
         }
 
-        // Generate the P4 type. We add an `@layout("flexible")` annotation to
-        // allow PHV allocation to choose an optimal layout for the header.
-        auto* layoutKind = new IR::StringLiteral(IR::ID("flexible"));
-        phase0->p4Type = new IR::Type_Header("__phase0_header", new IR::Annotations({
-                new IR::Annotation(IR::ID("layout"), { layoutKind })
-            }), fields);
+        // Generate the P4 type.
+        phase0->p4Type = new IR::Type_Header("__phase0_header", fields);
 
         return true;
     }
 
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
+    P4V1::TnaProgramStructure* structure;
 };
 
 /// Generate the phase 0 program features based upon the Phase0TableMetadata
@@ -553,7 +573,7 @@ struct RewritePhase0IfPresent : public Transform {
         // Inject a new field to hold the phase 0 data.
         LOG4("Injecting field for phase 0 data into: " << type);
         type->fields.push_back(new IR::StructField("__phase0_data",
-                                                   phase0->p4Type));
+                                                   new IR::Type_Name(phase0->p4Type->name)));
         return type;
     }
 
@@ -566,9 +586,6 @@ struct RewritePhase0IfPresent : public Transform {
         // implicitly removed anyway when we do dead code elimination later.
         if (getOriginal<IR::MethodCallStatement>() == phase0->applyCallToReplace) {
             LOG4("Removing phase 0 table apply() call: " << methodCall);
-            BUG_CHECK(getParent<IR::IfStatement>() != nullptr,
-                      "Expected apply call for phase 0 table to be the body of "
-                      "an `if` statement: %1%", methodCall);
             return new IR::BlockStatement;
         }
 
@@ -589,7 +606,7 @@ struct RewritePhase0IfPresent : public Transform {
         auto *fieldVec = &phase0->p4Type->fields;
         auto handle = 0x20 << 24;
         parser->phase0 =
-            new IR::BFN::Phase0(fieldVec, size, handle, tableName, actionName, keyName);
+            new IR::BFN::Phase0(fieldVec, size, handle, tableName, actionName, keyName, false);
         return parser;
     }
 
@@ -598,34 +615,51 @@ struct RewritePhase0IfPresent : public Transform {
         prune();
 
         auto* tnaContext = findContext<IR::BFN::TnaParser>();
-        BUG_CHECK(tnaContext, "Phase 0 state not within translated parser?");
-        BUG_CHECK(tnaContext->thread == INGRESS, "Phase 0 state not in ingress?");
+        // handling v1model
+        const IR::Member* member = nullptr;
+        if (tnaContext) {
+            const IR::Member* method = nullptr;
+            // Add "pkt.extract(compiler_generated_meta.__phase0_data)"
+            auto cgMeta = tnaContext->tnaParams.at(COMPILER_META);
+            auto packetInParam = tnaContext->tnaParams.at("pkt");
+            method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
+            member = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("__phase0_data"));
+            // Clear the existing statements in the state, which are just
+            // placeholders.
+            state->components.clear();
 
-        // Clear the existing statements in the state, which are just
-        // placeholders.
-        state->components.clear();
+            auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
+            auto* callExpr = new IR::MethodCallExpression(method, args);
+            auto* extract = new IR::MethodCallStatement(callExpr);
+            LOG4("Generated extract for phase 0 data: " << extract);
+            state->components.push_back(extract);
+        } else {
+            const IR::PathExpression* method = nullptr;
+            // Add "pkt.extract(meta.compiler_generated_meta.__phase0_data)"
+            auto cgMeta = new IR::Member(new IR::PathExpression("meta"), COMPILER_META);
+            member = new IR::Member(cgMeta, IR::ID("__phase0_data"));
+            method = new IR::PathExpression(BFN::ExternPortMetadataUnpackString);
+            // Clear the existing statements in the state, which are just
+            // placeholders.
+            state->components.clear();
 
-        // Add "pkt.extract(compiler_generated_meta.__phase0_data)"
-        auto cgMeta = tnaContext->tnaParams.at(COMPILER_META);
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
-        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-        auto* member = new IR::Member(new IR::PathExpression(cgMeta),
-                                      IR::ID("__phase0_data"));
-        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto* callExpr = new IR::MethodCallExpression(method, args);
-        auto* extract = new IR::MethodCallStatement(callExpr);
-        LOG4("Generated extract for phase 0 data: " << extract);
-        state->components.push_back(extract);
+            auto* args = new IR::Vector<IR::Argument>({
+                    new IR::Argument(new IR::PathExpression("pkt")) });
+            auto* typeArgs = new IR::Vector<IR::Type>({ new IR::Type_Name(phase0->p4Type->name) });
+            auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
+            auto* assignment = new IR::AssignmentStatement(member, callExpr);
+            LOG4("Generated extract for phase 0 data: " << assignment);
+            state->components.push_back(assignment);
+        }
 
+        P4::ClonePathExpressions cloner;
         // Generate assignments that copy the extracted phase 0 fields to their
         // final locations. The original extracts will get optimized out.
         for (auto& paramWrite : phase0->paramWrites) {
-            auto* member = new IR::Member(new IR::PathExpression(cgMeta),
-                                          IR::ID("__phase0_data"));
             auto* fieldMember =
                 new IR::Member(member, IR::ID(paramWrite.sourceParam));
-            auto* assignment = new IR::AssignmentStatement(paramWrite.dest, fieldMember);
+            auto* assignment = new IR::AssignmentStatement(paramWrite.dest->apply(cloner),
+                    fieldMember->apply(cloner));
             LOG4("Generated assignment for phase 0 write from parameter: "
                     << assignment);
             state->components.push_back(assignment);
@@ -633,12 +667,19 @@ struct RewritePhase0IfPresent : public Transform {
 
         // Generate assignments for the constant writes.
         for (auto& constant : phase0->constantWrites) {
-            auto* assignment = new IR::AssignmentStatement(constant.dest,
+            auto* assignment = new IR::AssignmentStatement(constant.dest->apply(cloner),
                                                            constant.value);
             LOG4("Generated assignment for phase 0 write from constant: "
                     << assignment);
             state->components.push_back(assignment);
         }
+
+        LOG4("Add phase0 annotation: " << phase0->table->name);
+        state->annotations = state->annotations->addAnnotation("override_phase0_table_name",
+                new IR::StringLiteral(phase0->table->name));
+
+        state->annotations = state->annotations->addAnnotation("override_phase0_action_name",
+                new IR::StringLiteral(phase0->actionName));
 
         return state;
     }
@@ -649,19 +690,18 @@ struct RewritePhase0IfPresent : public Transform {
 
 }  // namespace
 
-TranslatePhase0::TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
-    auto* findPhase0Table = new FindPhase0Table(refMap, typeMap);
+TranslatePhase0::TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+        P4V1::TnaProgramStructure* structure) {
+    auto* findPhase0Table = new FindPhase0Table(refMap, typeMap, structure);
     addPasses({
         findPhase0Table,
         new RewritePhase0IfPresent(findPhase0Table->phase0),
-        new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
     });
 }
 
 bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
-    LOG3("visiting method call expression: " << expr);
     auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
     // Get extern method
     if (auto extFunction = mi->to<P4::ExternFunction>()) {
@@ -689,6 +729,27 @@ bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
     return true;
 }
 
+bool CollectPhase0Annotation::preorder(const IR::ParserState* state) {
+    auto annot = state->getAnnotations();
+    if (auto ann = annot->getSingle("override_phase0_table_name")) {
+        if (auto phase0 = ann->expr.at(0)->to<IR::StringLiteral>()) {
+            auto parser = findOrigCtxt<IR::P4Parser>();
+            if (!parser) return false;
+            auto name = parser->externalName();
+            phase0_name_annot->emplace(name, phase0->value);
+        }
+    }
+    if (auto ann = annot->getSingle("override_phase0_action_name")) {
+        if (auto phase0 = ann->expr.at(0)->to<IR::StringLiteral>()) {
+            auto parser = findOrigCtxt<IR::P4Parser>();
+            if (!parser) return false;
+            auto name = parser->externalName();
+            phase0_action_annot->emplace(name, phase0->value);
+        }
+    }
+    return false;
+}
+
 /* Use the header map generated in CheckPhase0Extern to update the Phase0 Node
  * in IR with relevant headers
  */
@@ -705,6 +766,8 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
         // XXX(amresh): Once phase0 node is properly supported in the
         // backend, we won't need this (or any padding), so we should remove
         // it at that point.
+        if (param->annotations->getSingle("padding"))
+            continue;
         const int fieldSize = param->type->width_bits();
         const int alignment = getAlignment(fieldSize);
         bool is_pad_field   = param->getAnnotation("padding");
@@ -755,10 +818,22 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     if (parser->thread == EGRESS) return parser;
     auto *origParser = getOriginal<IR::BFN::TnaParser>();
     auto size = Device::numMaxChannels();
-    cstring tableName = (parser->pipeName.isNullOrEmpty()) ?
-                        parser->name.toString() : parser->pipeName;
-    tableName = "$PORT_METADATA";
-    auto actionName = "set_port_metadata";
+    cstring tableName;
+    cstring actionName;
+    bool namedByAnnotation;
+    if (phase0_name_annot->count(parser->externalName())) {
+        tableName = phase0_name_annot->at(parser->externalName());
+        namedByAnnotation = true;
+    } else {
+        tableName = "$PORT_METADATA";
+        namedByAnnotation = false;
+    }
+
+    if (phase0_action_annot->count(parser->externalName())) {
+        actionName = phase0_action_annot->at(parser->externalName());
+    } else {
+        actionName = "set_port_metadata";
+    }
 
     auto *params = parser->getApplyParameters();
     cstring keyName = getPhase0TableKeyName(params);
@@ -781,7 +856,7 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
     }
 
     parser->phase0 = new IR::BFN::Phase0(packedFields, size,
-                            handle, tableName, actionName, keyName);
+                            handle, tableName, actionName, keyName, namedByAnnotation);
 
     // The parser header needs the total phase0 bit to be extracted/skipped.
     // We check if there is any additional ingress padding for port metadata
@@ -843,13 +918,11 @@ IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_
     return nullptr; }
 
 IR::Node* ConvertPhase0AssignToExtract::preorder(IR::MethodCallExpression* expr) {
-    LOG3("visiting method call expr: " << expr);
     auto* extract = generate_phase0_extract_method_call(nullptr, expr);
     if (extract) return extract;
     return expr; }
 
 IR::Node* ConvertPhase0AssignToExtract::preorder(IR::AssignmentStatement* stmt) {
-    LOG3("visiting assignment stmt: " << stmt);
     auto* lExpr = stmt->left;
     auto* rExpr = stmt->right->to<IR::MethodCallExpression>();
     if (!lExpr || !rExpr) return stmt;

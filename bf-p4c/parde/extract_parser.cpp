@@ -490,9 +490,8 @@ GetBackendParser::createBackendParser() {
         parserName = multiParserName;
     }
 
-    IR::BFN::Phase0 *phase0 = nullptr;
-    if (parser->phase0) {
-        phase0 = parser->phase0->clone();
+    if (parser->phase0 && !parser->phase0->namedByAnnotation) {
+        auto phase0 = parser->phase0->clone();
         // V1Model adds an arch name 'ingressParserImpl' or 'egressParserImpl'
         // which is not used in phase0 table name in backend
         if ((BackendOptions().arch != "v1model") && (!arch->hasMultipleParsers))
@@ -501,9 +500,11 @@ GetBackendParser::createBackendParser() {
         // in the multi parser name generated through block info mapping
         else if (arch->hasMultipleParsers)
             phase0->tableName = multiParserName + "." + phase0->tableName;
+        return new IR::BFN::Parser(parser->thread, startState, parserName, phase0, parser->portmap);
     }
 
-    return new IR::BFN::Parser(parser->thread, startState, parserName, phase0, parser->portmap);
+    return new IR::BFN::Parser(parser->thread, startState, parserName,
+                               parser->phase0, parser->portmap);
 }
 
 void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
@@ -518,7 +519,17 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         if (sizeConstant == nullptr || !sizeConstant->fitsUint())
             ::fatal_error("parser value set should have an unsigned integer as size %1%", valueSet);
         sz = sizeConstant->asUnsigned();
-        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSet->controlPlaneName(), sz);
+        // P4-14 allows pvs in ingress and egress to share the same name.  We
+        // supports this feature in TNA with the 'pd_pvs_name' annotation by
+        // overriding the pvs name with the name in the annotation.
+        cstring valueSetName;
+        if (auto anno = valueSet->annotations->getSingle("pd_pvs_name")) {
+            auto name = anno->expr.at(0)->to<IR::StringLiteral>();
+            valueSetName = name->value;
+        } else {
+            valueSetName = valueSet->controlPlaneName();
+        }
+        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSetName, sz);
     } else {
         match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
     }

@@ -29,6 +29,7 @@
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
+#include "frontends/p4/fromv1.0/converters.h"
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "arch/fromv1.0/programStructure.h"
@@ -257,12 +258,16 @@ int main(int ac, char **av) {
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
-    // FIXME -- should be based on the architecture option
-    P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
-
     auto hook = options.getDebugHook();
 
-    auto program = P4::parseP4File(options);
+    const IR::P4Program* program = nullptr;
+    if (options.arch == "tna" && options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
+        program = P4::parseP4File<P4V1::TnaConverter>(options);
+    } else {
+        // XXX(hanw): used by 14-to-v1model path, to be removed
+        P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
+        program = P4::parseP4File(options);
+    }
     if (!program || ::errorCount() > 0)
         return PROGRAM_ERROR;
 

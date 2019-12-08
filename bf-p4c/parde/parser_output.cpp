@@ -22,15 +22,11 @@ namespace {
 // expects a unique pvs handle for each gress.
 // However this is not the case with V1Model as it always instantiates the same parser
 //
-//                  P4-14                P4-16
+//                  P4-14                      P4-16
 //
-// V1-Model     Share PVS Handle    Share PVS Handle
-//              across and          across and
-//              within ig/eg        within ig/eg
-//
-// TNA           - NA -             Share PVS Handle
-//                                  only within ig/eg
-//                                  Don't share across ig/eg
+// TNA          Share PVS Handle           Share PVS Handle
+//              across and                 only within ig/eg
+//              within ig/eg               Don't share across ig/eg
 //
 static int pvs_handle = 512;
 static std::map<cstring, int> pvs_handles;

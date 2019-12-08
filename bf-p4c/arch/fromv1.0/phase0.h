@@ -8,6 +8,10 @@ class ReferenceMap;
 class TypeMap;
 }  // namespace P4
 
+namespace P4V1 {
+class TnaProgramStructure;
+}
+
 namespace BFN {
 
 /**
@@ -34,7 +38,8 @@ namespace BFN {
  * @post The transformations above are applied if a phase 0 table is found.
  */
 struct TranslatePhase0 : public PassManager {
-    TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
+    TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            P4V1::TnaProgramStructure* s = nullptr);
 };
 
 typedef std::map<const IR::BFN::TnaParser*, const IR::Type_StructLike*> Phase0CallMap;
@@ -59,11 +64,28 @@ class CheckPhaseZeroExtern: public Inspector {
     Phase0CallMap *phase0_calls;
 };
 
+using Phase0AnnotMap = std::map<cstring, cstring>;
+
+class CollectPhase0Annotation : public Inspector {
+ public:
+    explicit CollectPhase0Annotation(Phase0AnnotMap* name, Phase0AnnotMap* action) :
+        phase0_name_annot(name), phase0_action_annot(action) {
+        CHECK_NULL(name);
+        CHECK_NULL(action);
+    }
+    bool preorder(const IR::ParserState* state) override;
+    Phase0AnnotMap* phase0_name_annot;
+    Phase0AnnotMap* phase0_action_annot;
+};
+
 class UpdatePhase0NodeInParser: public Transform {
  public:
     explicit UpdatePhase0NodeInParser(
-            Phase0CallMap *phase0_calls, IR::IndexedVector<IR::Node> *decls)
-            : phase0_calls(phase0_calls), declarations(decls) {
+            Phase0CallMap *phase0_calls, IR::IndexedVector<IR::Node> *decls,
+            Phase0AnnotMap *phase0_name_annot, Phase0AnnotMap *phase0_action_annot)
+            : phase0_calls(phase0_calls), declarations(decls),
+              phase0_name_annot(phase0_name_annot),
+              phase0_action_annot(phase0_action_annot) {
         setName("UpdatePhase0NodeInParser"); }
 
  private:
@@ -75,6 +97,8 @@ class UpdatePhase0NodeInParser: public Transform {
 
     Phase0CallMap *phase0_calls;
     IR::IndexedVector<IR::Node> *declarations;
+    Phase0AnnotMap* phase0_name_annot;
+    Phase0AnnotMap* phase0_action_annot;
     int phase0_count = 0;
 };
 
@@ -88,7 +112,6 @@ class UpdatePhase0Header: public Transform {
 
  private:
     IR::Node* preorder(IR::Type_Struct* s) override {
-        LOG3("visiting struct : " << s);
         if (auto* d = declarations->getDeclaration(s->name.toString())) {
             LOG4("modifying struct " << s << " to header " << d->to<IR::Type_Header>());
             return d->to<IR::Node>()->clone(); }
@@ -138,14 +161,19 @@ class ConvertPhase0 : public PassManager {
     ConvertPhase0(P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
         auto* phase0_calls = new Phase0CallMap();
         auto* decls = new IR::IndexedVector<IR::Node>();
+        auto* phase0_name_annot = new Phase0AnnotMap();
+        auto* phase0_action_annot = new Phase0AnnotMap();
         addPasses({
             new CheckPhaseZeroExtern(refMap, typeMap, phase0_calls),
-            new UpdatePhase0NodeInParser(phase0_calls, decls),
+            new CollectPhase0Annotation(phase0_name_annot, phase0_action_annot),
+            new UpdatePhase0NodeInParser(phase0_calls, decls,
+                    phase0_name_annot, phase0_action_annot),
             new UpdatePhase0Header(decls),
             new ConvertPhase0AssignToExtract(refMap, typeMap),
         });
     }
 };
+
 
 }  // namespace BFN
 

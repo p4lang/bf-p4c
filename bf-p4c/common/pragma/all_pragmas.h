@@ -51,6 +51,8 @@ DEFINE_PRAGMA_CLASS(PragmaPack);
 DEFINE_PRAGMA_CLASS(PragmaPadding);
 DEFINE_PRAGMA_CLASS(PragmaPacketEntry);
 DEFINE_PRAGMA_CLASS(PragmaPhase0);
+DEFINE_PRAGMA_CLASS(PragmaOverridePhase0TableName);
+DEFINE_PRAGMA_CLASS(PragmaOverridePhase0ActionName);
 DEFINE_PRAGMA_CLASS(PragmaPlacementPriority);
 DEFINE_PRAGMA_CLASS(PragmaPreColor);
 DEFINE_PRAGMA_CLASS(PragmaProxyHashAlgorithm);
@@ -82,6 +84,12 @@ DEFINE_PRAGMA_CLASS(PragmaPayloadChecksum);
 DEFINE_PRAGMA_CLASS(PragmaNotParsed);
 DEFINE_PRAGMA_CLASS(PragmaNotDeparsed);
 DEFINE_PRAGMA_CLASS(PragmaDisableDeparseZero);
+
+// internal annotations to be removed
+DEFINE_PRAGMA_CLASS(PragmaActionSelectorHashFieldCalcName);
+DEFINE_PRAGMA_CLASS(PragmaActionSelectorHashFieldListName);
+DEFINE_PRAGMA_CLASS(PragmaAlgorithm);
+DEFINE_PRAGMA_CLASS(PragmaActionSelectorHashFieldCalcOutputWidth);
 
 /*
 DEFINE_PRAGMA_CLASS(Pragma);

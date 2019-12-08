@@ -7,6 +7,16 @@
 
 typedef std::map<const IR::Declaration*, std::set<cstring>> DeclToStates;
 
+struct ChecksumInfo {
+    bool with_payload;
+    const IR::Expression* cond;
+    const IR::Expression* fieldList;
+    const IR::Expression* destField;
+    std::set<gress_t> parserUpdateLocations;
+    std::set<gress_t> deparserUpdateLocations;
+    boost::optional<cstring> residulChecksumName;
+};
+
 namespace BFN {
 namespace V1 {
 

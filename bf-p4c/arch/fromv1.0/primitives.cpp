@@ -1,10 +1,45 @@
+#include <cmath>
 #include "frontends/p4/fromv1.0/converters.h"
+#include "bf-p4c/arch/fromv1.0/programStructure.h"
+#include "bf-p4c/device.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace P4V1 {
 
+#define OPS_CK(primitive, n) BUG_CHECK((primitive)->operands.size() == n, \
+                                       "Expected " #n " operands for %1%", primitive)
+
+// Concatenate a field string with list of fields within a method call
+// argument. The field list is specified as a ListExpression
+static void generate_fields_string(const IR::Expression* expr,
+        std::string& fieldString) {
+    std::ostringstream fieldListString;
+    if (auto fieldList = expr->to<IR::ListExpression>()) {
+        for (auto comp : fieldList->components) {
+            fieldListString << comp; } }
+    fieldString += fieldListString.str();
+}
+
+// Generate a 64-bit hash for input field string, lookup hash vector for
+// presence of hash, add new entry if not found. This function is common to
+// resubmit, digest and clone indexing
+static unsigned getIndex(const IR::Expression *expr,
+        std::map<unsigned long, unsigned>& hashIndexMap) {
+    std::string fieldsString;
+    generate_fields_string(expr, fieldsString);
+    std::hash<std::string> hashFn;
+
+    auto fieldsStringHash = hashFn(fieldsString);
+    if (hashIndexMap.count(fieldsStringHash) == 0)
+        hashIndexMap.emplace(fieldsStringHash, hashIndexMap.size());
+
+    return hashIndexMap[fieldsStringHash];
+}
+
 CONVERT_PRIMITIVE(bypass_egress) {
     if (primitive->operands.size() != 0) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     return new IR::MethodCallStatement(primitive->srcInfo,
             IR::ID(primitive->srcInfo, "bypass_egress"), {});
 }
@@ -87,7 +122,8 @@ static bool makeMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructure 
 
 CONVERT_PRIMITIVE(execute_meter, 5) {
     if (primitive->operands.size() != 4) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     // FIXME -- convert this to a custom primitive so TNA translation can convert
     // FIXME -- it to an execute call on a TNA meter
@@ -112,7 +148,8 @@ CONVERT_PRIMITIVE(execute_meter_from_hash) {
             return nullptr;
     } else {
         // has pre-color, so need TNA specific call
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        if (use_v1model())
+            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
@@ -139,7 +176,8 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or) {
             return nullptr;
     } else {
         // has pre-color, so need TNA specific call
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        if (use_v1model())
+            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
@@ -168,7 +206,8 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
             return nullptr;
     } else {
         // has pre-color, so need TNA specific call
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        if (use_v1model())
+            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
                 IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
@@ -184,7 +223,8 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
 
 CONVERT_PRIMITIVE(invalidate) {
     if (primitive->operands.size() != 1) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     auto arg = conv.convert(primitive->operands.at(0));
     return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
@@ -194,7 +234,8 @@ CONVERT_PRIMITIVE(invalidate) {
 
 CONVERT_PRIMITIVE(invalidate_digest) {
     if (primitive->operands.size() != 0) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     // Since V1model does not understand the Tofino metadata, this is a simple pass through
     // and will be translated to `invalidate(ig_intr_md_for_dprsr.digest_type)` in
@@ -206,55 +247,17 @@ CONVERT_PRIMITIVE(invalidate_digest) {
 
 CONVERT_PRIMITIVE(recirculate, 5) {
     if (primitive->operands.size() != 1) return nullptr;
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     ExpressionConverter conv(structure);
     auto port = primitive->operands.at(0);
     if (!port->is<IR::Constant>() && !port->is<IR::ActionArg>()) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
     port = conv.convert(port);
     port = new IR::Cast(IR::Type::Bits::get(9), port);
-    return new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw",
+    auto recirc = new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw",
                                        { new IR::Argument(port) });
+    return recirc;
 }
-
-CONVERT_PRIMITIVE(sample_e2e) {
-    if (primitive->operands.size() < 2 || primitive->operands.size() > 3) return nullptr;
-    structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
-    ExpressionConverter conv(structure);
-    auto session = conv.convert(primitive->operands.at(0));
-    auto length = conv.convert(primitive->operands.at(1));
-
-    auto args = new IR::Vector<IR::Argument>();
-    auto enumref = new IR::TypeNameExpression(
-        new IR::Type_Name(new IR::Path(structure->v1model.clone.cloneType.Id())));
-    auto kindarg = new IR::Member(enumref, structure->v1model.clone.cloneType.e2e.Id());
-    args->push_back(new IR::Argument(kindarg));
-    args->push_back(new IR::Argument(new IR::Cast(primitive->operands.at(0)->srcInfo,
-                                                  structure->v1model.clone.sessionType, session)));
-    args->push_back(new IR::Argument(length));
-    if (primitive->operands.size() == 3) {
-        auto list = structure->convertFieldList(primitive->operands.at(2));
-        if (list != nullptr)
-            args->push_back(new IR::Argument(list)); }
-
-    auto fn = IR::ID(primitive->srcInfo, args->size() == 4 ? "sample4" : "sample3");
-    return new IR::MethodCallStatement(new IR::MethodCallExpression(fn.srcInfo,
-                        new IR::PathExpression(fn), args));
-}
-
-CONVERT_PRIMITIVE(swap) {
-    if (primitive->operands.size() != 2) return nullptr;
-    ExpressionConverter conv(structure);
-    auto temp = IR::ID(structure->makeUniqueName("temp"));
-    auto v1 = primitive->operands.at(0);
-    auto v2 = primitive->operands.at(1);
-    auto type = v1->type;
-    return new IR::BlockStatement({
-        new IR::Declaration_Variable(temp, type, conv.convert(v1)),
-        structure->assign(primitive->srcInfo, conv.convert(v1), conv.convert(v2), type),
-        structure->assign(primitive->srcInfo, conv.convert(v2), new IR::PathExpression(temp), type)
-    });
-}
-
 
 // This function is identical to the one in frontend in all aspects except that
 // the field list used as argument after conversion is a modified class of
@@ -303,6 +306,73 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
     block->components.push_back(result);
 
     return block;
+}
+
+CONVERT_PRIMITIVE(generate_digest, 1) {
+    ExpressionConverter conv(structure);
+    OPS_CK(primitive, 2);
+    auto args = new IR::Vector<IR::Argument>();
+    auto receiver = conv.convert(primitive->operands.at(0));
+    args->push_back(
+        new IR::Argument(new IR::Cast(primitive->operands.at(0)->srcInfo,
+                                      structure->v1model.digest_receiver.receiverType, receiver)));
+    auto list = structure->convertFieldList(primitive->operands.at(1));
+    auto type = structure->createFieldListType(primitive->operands.at(1));
+    structure->types.emplace(type);
+
+    IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
+    auto mem = new IR::Member(path, "digest_type");
+    auto st = dynamic_cast<TnaProgramStructure*>(structure);
+    if (st == nullptr) return nullptr;
+    unsigned digestId = getIndex(list, st->digestIndexHashes);
+    if (digestId > Device::maxDigestId()) {
+        ::error("Too many digest() calls in %1%", primitive->name);
+        return nullptr;
+    }
+    unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxDigestId())));
+    auto idx = new IR::Constant(IR::Type::Bits::get(bits), digestId);
+    auto stmt = new IR::AssignmentStatement(mem, idx);
+    return stmt;
+}
+
+CONVERT_PRIMITIVE(sample_e2e) {
+    if (primitive->operands.size() < 2 || primitive->operands.size() > 3) return nullptr;
+    if (use_v1model())
+        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    ExpressionConverter conv(structure);
+    auto session = conv.convert(primitive->operands.at(0));
+    auto length = conv.convert(primitive->operands.at(1));
+
+    auto args = new IR::Vector<IR::Argument>();
+    auto enumref = new IR::TypeNameExpression(
+        new IR::Type_Name(new IR::Path(structure->v1model.clone.cloneType.Id())));
+    auto kindarg = new IR::Member(enumref, structure->v1model.clone.cloneType.e2e.Id());
+    args->push_back(new IR::Argument(kindarg));
+    args->push_back(new IR::Argument(new IR::Cast(primitive->operands.at(0)->srcInfo,
+                                                  structure->v1model.clone.sessionType, session)));
+    args->push_back(new IR::Argument(length));
+    if (primitive->operands.size() == 3) {
+        auto list = structure->convertFieldList(primitive->operands.at(2));
+        if (list != nullptr)
+            args->push_back(new IR::Argument(list)); }
+
+    auto fn = IR::ID(primitive->srcInfo, args->size() == 4 ? "sample4" : "sample3");
+    return new IR::MethodCallStatement(new IR::MethodCallExpression(fn.srcInfo,
+                        new IR::PathExpression(fn), args));
+}
+
+CONVERT_PRIMITIVE(swap) {
+    if (primitive->operands.size() != 2) return nullptr;
+    ExpressionConverter conv(structure);
+    auto temp = IR::ID(structure->makeUniqueName("temp"));
+    auto v1 = primitive->operands.at(0);
+    auto v2 = primitive->operands.at(1);
+    auto type = v1->type;
+    return new IR::BlockStatement({
+        new IR::Declaration_Variable(temp, type, conv.convert(v1)),
+        structure->assign(primitive->srcInfo, conv.convert(v1), conv.convert(v2), type),
+        structure->assign(primitive->srcInfo, conv.convert(v2), new IR::PathExpression(temp), type)
+    });
 }
 
 }  // end namespace P4V1

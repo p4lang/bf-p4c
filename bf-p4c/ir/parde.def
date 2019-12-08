@@ -320,6 +320,8 @@ class Phase0 {
     cstring tableName;
     cstring actionName;
     cstring keyName;
+    // true if name is from @phase0 annotation
+    bool namedByAnnotation;
 
     dbprint {
         out << "phase0: tableName: " << tableName

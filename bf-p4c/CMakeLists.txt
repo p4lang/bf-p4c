@@ -166,6 +166,7 @@ set (BF_P4C_BACKEND_CONV_SRCS
   arch/fromv1.0/programStructure.cpp
   arch/fromv1.0/stateful_alu.cpp
   arch/fromv1.0/wred.cpp
+  arch/tna/primitives.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_SRCS}")
 
@@ -176,6 +177,7 @@ set (BF_P4C_BACKEND_CONV_HDRS
   arch/fromv1.0/programStructure.h
   arch/fromv1.0/stateful_alu.h
   arch/fromv1.0/wred.h
+  arch/tna/primitives.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONV_HDRS}")
 
@@ -185,15 +187,6 @@ foreach(src IN LISTS BF_P4C_IR_SRCS)
   set(QUAL_BF_P4C_IR_SRCS ${QUAL_BF_P4C_IR_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
 set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_BF_P4C_IR_SRCS} PARENT_SCOPE)
-
-# sources that need to be linked directly in p4test to properly handle
-# p4 14 to 16 conversion
-
-set(QUAL_BF_P4C_P4_14_CONV_SRCS)
-foreach(src IN LISTS BF_P4C_BACKEND_CONV_SRCS)
-  set(QUAL_BF_P4C_P4_14_CONV_SRCS ${QUAL_BF_P4C_P4_14_CONV_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
-endforeach()
-set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_BF_P4C_P4_14_CONV_SRCS} PARENT_SCOPE)
 
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
