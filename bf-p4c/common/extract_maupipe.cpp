@@ -1092,8 +1092,9 @@ void AttachTables::InitializeStatefulAlus
             if (self.stateful_selectors.count(reg))
                 error("%1% bound to both %2% and %3%", reg, self.stateful_selectors.at(reg), sel);
             salu->selector = sel;
-            // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
-            salu->size = 120*1024;  // one ram?
+            int ram_lines = SelectorRAMLinesPerEntry(sel);
+            ram_lines = ((ram_lines * sel->num_pools + 1023) / 1024) * 1024;
+            salu->size = ram_lines * 128;
         } else if (regtype->toString().startsWith("Register<")) {
             salu->direct = false;
             salu->size = getConstant(reg->arguments->at(0));
