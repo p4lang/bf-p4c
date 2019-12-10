@@ -171,6 +171,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
@@ -1443,16 +1444,8 @@ p4c_add_xfail_reason("tofino"
 # Expected failures due to program error
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1687,4 +1680,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "This program violates action constraints imposed by Tofino"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
