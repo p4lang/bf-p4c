@@ -44,6 +44,22 @@ ENV P4C_RUNTIME_DEPS cpp \
                      doxygen \
                      aspell
 
+ENV PYTHON3_DEPS Cython \
+                 distro \
+                 ipaddr \
+                 jsl \
+                 jsonschema \
+                 packaging \
+                 pexpect \
+                 ply==3.9 \
+                 prettytable \
+                 pyinstaller \
+                 pyroute2 \
+                 pyyaml \
+                 scapy \
+                 texttable \
+                 xlsxwriter
+
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
     apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS && \
@@ -66,8 +82,9 @@ RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging p
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
-# Install python3 packaging for test_p4c_driver.py
-RUN pip3 install packaging jsl xlsxwriter
+# Install python3 packages
+RUN pip3 install $PYTHON3_DEPS
+
 # Force /usr/bin to be before /usr/local/bin because bf-driver
 # installs a version of python3 in /usr/local and that version is not
 # picking up modules installed with pip3

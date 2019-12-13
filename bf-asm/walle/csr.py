@@ -11,7 +11,6 @@ import copy
 import string
 
 from operator import mul
-from types import StringTypes
 
 import chip
 from functools import reduce
@@ -937,7 +936,7 @@ class csr_composite_object (csr_object):
                 else:
                     raise CsrException("unknown conversion '%%%s' in name\n" % ch)
                 format = False
-            elif ch in string.letters or ch in string.digits or ch == '_':
+            elif ch in string.ascii_letters or ch in string.digits or ch == '_':
                 namestr += ch
             elif ch == '.':
                 namestr += '_'
@@ -1116,7 +1115,7 @@ class address_map(csr_composite_object):
         if data == 0:
             # No-op
             return {}
-        elif isinstance(data, StringTypes):
+        elif isinstance(data, basestring):
             # Refernce to template
 
             type_name = self.parent + "." + self.name
@@ -1134,7 +1133,7 @@ class address_map(csr_composite_object):
             for obj in self.objs:
                 if obj.name not in data:
                     raise CsrException("Could not find key '"+obj.name+"'")
-                if data[obj.name] != 0 and not isinstance(data[obj.name], StringTypes):
+                if data[obj.name] != 0 and not isinstance(data[obj.name], basestring):
                     if obj.count == (1,):
                         if type(data[obj.name]) is not dict:
                             raise CsrException("Expected dictionary at key '"+obj.name+"'")
@@ -1419,7 +1418,7 @@ class reg(csr_composite_object):
         if data == 0:
             # No-op
             return None
-        elif isinstance(data, StringTypes):
+        elif isinstance(data, basestring):
             # Refernce to template
 
             path[-1].path.append(self.name)

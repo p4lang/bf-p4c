@@ -44,6 +44,22 @@ ENV P4C_RUNTIME_DEPS cpp \
                      doxygen \
                      aspell
 
+ENV PYTHON3_DEPS Cython \
+                 distro \
+                 ipaddr \
+                 jsl \
+                 jsonschema \
+                 packaging \
+                 pexpect \
+                 ply==3.9 \
+                 prettytable \
+                 pyinstaller \
+                 pyroute2 \
+                 pyyaml \
+                 scapy \
+                 texttable \
+                 xlsxwriter
+
 ENV DEV_PKGS vim \
              gdb \
              telnet \
@@ -64,10 +80,8 @@ RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging p
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
-# Install python3 packaging for test_p4c_driver.py
-RUN pip3 install packaging jsl xlsxwriter
-# Install jsonschema for python3
-RUN pip3 install jsonschema
+# Install python3 packages
+RUN pip3 install $PYTHON3_DEPS
 
 ENV PATH="/usr/bin:${PATH}"
 
