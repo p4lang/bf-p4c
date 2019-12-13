@@ -11,6 +11,7 @@
 #include "bf-p4c/arch/fromv1.0/phase0.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 
 namespace P4V1 {
 
@@ -2338,7 +2339,12 @@ void TnaProgramStructure::createMain() {
     auto pipe0 = new IR::Path("pipe");
     auto expr = new IR::PathExpression(pipe0);
     args->push_back(new IR::Argument(expr));
-    auto result = new IR::Declaration_Instance(name, type, args, nullptr);
+
+    auto* annotations = new IR::Annotations();
+    annotations->annotations.push_back(
+        new IR::Annotation(IR::ID(PragmaAutoInitMetadata::name), {}));
+
+    auto result = new IR::Declaration_Instance(name, annotations, type, args, nullptr);
     declarations->push_back(result);
 }
 

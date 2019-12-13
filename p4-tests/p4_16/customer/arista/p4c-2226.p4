@@ -2,6 +2,8 @@
 #include <tofino.p4>
 #include <tna.p4>
 
+@pa_auto_init_metadata
+
 header Sagerton {
     bit<8> Exell;
     @flexible 

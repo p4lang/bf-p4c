@@ -1,5 +1,6 @@
 #include "v1_program_structure.h"
 #include "v1_converters.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 
 namespace BFN {
 
@@ -118,7 +119,11 @@ void ProgramStructure::createMain() {
     auto expr = new IR::PathExpression(pipe0);
     args->push_back(new IR::Argument(expr));
 
-    auto result = new IR::Declaration_Instance(name, typeSpecialized, args, nullptr);
+    auto* annotations = new IR::Annotations();
+    annotations->annotations.push_back(
+        new IR::Annotation(IR::ID(PragmaAutoInitMetadata::name), {}));
+
+    auto result = new IR::Declaration_Instance(name, annotations, typeSpecialized, args, nullptr);
     declarations.push_back(result);
 }
 

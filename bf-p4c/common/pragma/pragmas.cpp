@@ -71,6 +71,17 @@ const char *PragmaAtcamPartitionIndex::help =
     "field is not part of the algorithmic TCAM table’s match key.  This "
     "pragma turns on the algorithmic TCAM implementation path.";
 
+const char *PragmaAutoInitMetadata::name = "pa_auto_init_metadata";
+const char *PragmaAutoInitMetadata::description =
+    "Enables automatic metadata initialization.";
+const char *PragmaAutoInitMetadata::help =
+    "@pragma pa_auto_init_metadata\n"
+    "+ at the beginning of the P4 source file"
+    "\n"
+    "Indicates that the compiler should automatically initialize metadata to false 0. This is "
+    "always enabled for P4_14. Initialization of individual fields can be disabled by using the "
+    "pa_no_init annotation.";
+
 const char *PragmaCalculatedFieldUpdateLocation::name = "calculated_field_update_location";
 const char *PragmaCalculatedFieldUpdateLocation::description =
     "Specifies the pipe to update the checksum for a calculated field object.";

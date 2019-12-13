@@ -2,6 +2,8 @@
 #include <tofino.p4>
 #include <tna.p4>
 
+@pa_auto_init_metadata
+
 @pa_alias("ingress" , "Provencal.Darien.Hiland" , "Provencal.Norma.Hiland") @pa_alias("ingress" , "Provencal.RossFork.Blairsden" , "Provencal.RossFork.Standish") @pa_container_size("ingress" , "Provencal.SourLake.Nenana" , 32) @pa_atomic("ingress" , "Provencal.Basalt.Beaverdam") @pa_no_overlay("ingress" , "Provencal.SourLake.Placedo") @pa_no_overlay("ingress" , "Ramos.McGonigle.Selawik") header Sagerton {
     bit<8> Exell;
     @flexible 

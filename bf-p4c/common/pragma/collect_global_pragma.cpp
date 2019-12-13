@@ -1,11 +1,13 @@
 #include "collect_global_pragma.h"
 #include <algorithm>
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 const std::vector<cstring>*
 CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaAlias::name,
     PragmaAtomic::name,
+    PragmaAutoInitMetadata::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,
     PragmaMutuallyExclusive::name,

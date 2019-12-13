@@ -1,5 +1,7 @@
 #include <t2na.p4>
 
+@pa_auto_init_metadata
+
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<128> ipv6_addr_t;

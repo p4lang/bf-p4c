@@ -1,7 +1,21 @@
 #include "auto_init_metadata.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/phv/pragma/pa_no_init.h"
 
+bool DisableAutoInitMetadata::auto_init_metadata(const IR::BFN::Pipe* pipe) const {
+    for (auto* anno : pipe->global_pragmas) {
+        if (anno->name.name == PragmaAutoInitMetadata::name) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
+    // If the user requested automatic metadata initialization, then don't do anything here.
+    if (auto_init_metadata(pipe)) return Transform::preorder(pipe);
+
     prune();
 
     for (auto field : defuse.getUninitializedFields()) {

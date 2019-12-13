@@ -14,6 +14,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/common/parse_annotations.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/common/pragma/pragma.h"
 #include "bf-p4c/arch/arch.h"
@@ -118,7 +119,16 @@ BFN_Options::BFN_Options() {
         [this](const char *) { privatization = false; return true; },
         "Do not use TPHV/PHV privatization");
     registerOption("--auto-init-metadata", nullptr,
-        [this](const char *) { auto_init_metadata = true; return true; },
+        [this](const char *) {
+            auto_init_metadata = true;
+            ::warning(ErrorType::WARN_DEPRECATED,
+                "The --auto-init-metadata command-line option is deprecated and will be "
+                "removed in a future release. Please use modify your P4 source to use the "
+                "%s annotation instead.",
+                PragmaAutoInitMetadata::name);
+            return true;
+        },
+        "DEPRECATED. Use the pa_auto_init_metadata annotation instead. "
         "Automatically initialize metadata to false or 0. This is always enabled for P4_14. "
         "Initialization of individual fields can be disabled by using the pa_no_init annotation.");
     registerOption("--disable-dark-allocation", nullptr,
@@ -246,10 +256,6 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     if (!processed) {
         processed = true;
-
-        // Always auto-initialize metadata for P4_14.
-        auto_init_metadata |=
-            langVersion == CompilerOptions::FrontendVersion::P4_14;
 
         Target t = { target, arch };
         if (!supportedTargets.count(t)) {

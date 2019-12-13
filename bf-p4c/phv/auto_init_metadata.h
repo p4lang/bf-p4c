@@ -20,6 +20,10 @@ class DisableAutoInitMetadata : public Transform {
     explicit DisableAutoInitMetadata(const FieldDefUse& defuse) : defuse(defuse) { }
 
     const IR::Node* preorder(IR::BFN::Pipe* pipe) override;
+
+ private:
+    /// @return true iff the user requested automatic initialization of metadata.
+    bool auto_init_metadata(const IR::BFN::Pipe* pipe) const;
 };
 
 /// Removes unnecessary metadata initializations. An assignment to a metadata field is deemed an

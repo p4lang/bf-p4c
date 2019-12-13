@@ -2,6 +2,8 @@
 #include <tofino.p4>
 #include <tna.p4>
 
+@pa_auto_init_metadata
+
 struct Exell {
     bit<16> Toccopola;
     bit<16> Roachdale;

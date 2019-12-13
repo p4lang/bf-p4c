@@ -1,3 +1,5 @@
+@pa_auto_init_metadata
+
 # 1 "/home/parallels/Downloads/p4c-2269/npb.p4"
 # 1 "<built-in>"
 # 1 "<command-line>"
