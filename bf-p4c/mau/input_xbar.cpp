@@ -2705,8 +2705,8 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     mah.allocated = true;
     mah.group = hash_group;
     mah.algorithm = as->algorithm;
-    int mode_width_bits = as->mode == "resilient" ? RESILIENT_MODE_HASH_BITS : FAIR_MODE_HASH_BITS;
-
+    int mode_width_bits = as->mode == IR::MAU::SelectorMode::RESILIENT ?
+                                      RESILIENT_MODE_HASH_BITS : FAIR_MODE_HASH_BITS;
     if (mah.algorithm.size_from_algorithm()) {
         if (mode_width_bits > mah.algorithm.size) {
             // FIXME: Debatably be moved to an error, but have to wait on a p4-tests update

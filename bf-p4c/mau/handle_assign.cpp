@@ -129,8 +129,8 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
                 self.initial_table.at(sel), sel->max_pool_size,
                 StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE);
     }
-    le_bitrange hash_bits = { 0, (sel->mode == "resilient" ? IXBar::RESILIENT_MODE_HASH_BITS
-                                                           : IXBar::FAIR_MODE_HASH_BITS) - 1};
+    le_bitrange hash_bits = { 0, (sel->mode == IR::MAU::SelectorMode::RESILIENT ?
+                             IXBar::RESILIENT_MODE_HASH_BITS : IXBar::FAIR_MODE_HASH_BITS) - 1};
 
     P4HashFunction *sel_func = new P4HashFunction();
     sel_func->inputs = sel_key_vec;

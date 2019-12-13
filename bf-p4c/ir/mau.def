@@ -530,7 +530,7 @@ class StatefulAlu : MeterBus2Port {
 
 class Selector : AttachedMemory {
     ID type = {};
-    ID mode = {};
+    SelectorMode mode = SelectorMode::FAIR;
     HashFunction algorithm = {};
     const char *kind() const override { return "selector"; }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::SELECTOR; }

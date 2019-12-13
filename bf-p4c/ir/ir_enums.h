@@ -21,6 +21,7 @@ enum class AddrLocation { DIRECT, OVERHEAD, HASH, STFUL_COUNTER, GATEWAY_PAYLOAD
 enum class PfeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
 enum class TypeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
 enum class ColorMapramAddress { IDLETIME, STATS, MAPRAM_ADDR_TYPES, NOT_SET };
+enum class SelectorMode { FAIR, RESILIENT, SELECTOR_MODES };
 
 }  // end namespace MAU
 
@@ -51,6 +52,9 @@ bool operator>>(cstring s, IR::MAU::TypeLocation &t);
 
 std::ostream& operator<<(std::ostream &out, const IR::MAU::ColorMapramAddress &cma);
 bool operator>>(cstring s, IR::MAU::ColorMapramAddress &cma);
+
+std::ostream& operator<<(std::ostream &out, const IR::MAU::SelectorMode &sm);
+bool operator>>(cstring s, IR::MAU::SelectorMode &sm);
 
 std::ostream& operator<<(std::ostream &out, const IR::BFN::ChecksumMode &t);
 bool operator>>(cstring s, IR::BFN::ChecksumMode &t);

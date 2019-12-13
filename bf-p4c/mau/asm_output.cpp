@@ -3721,7 +3721,29 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr,
                     nullptr, nullptr, nullptr, tbl, false);
-    out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
+    out << indent << "mode: ";
+    out << ((as->mode == IR::MAU::SelectorMode::FAIR) ? "fair": "resilient");
+    /**
+     * This is the parameter that programs the following two registers:
+     *     rams.match.map_alu.meter_group.selector.selector_alu_ctl.resilient_hash_enable
+     *     rams.match.map_alu.meter_group.selector.selector_alu_ctl.selector_fair_hash_select 
+     *
+     * The fair hash has 3 bit locations to choose from, galois bits 0-13, 14-27, and 28-41
+     *     The location is the selector_fair_hash_select 
+     *
+     * The resilient hash can take up to 3 inputs.  This is currently not P4 programmatic, so
+     * currently the algorithm takes all 3 inputs, or 0x7.
+     */
+    if (as->mode == IR::MAU::SelectorMode::FAIR) {
+        bitvec galois_bits = tbl->resources->selector_ixbar.meter_alu_hash.bit_mask;
+        BUG_CHECK(galois_bits.is_contiguous() &&
+                  galois_bits.popcount() == IXBar::FAIR_MODE_HASH_BITS &&
+                  (galois_bits.min().index() % IXBar::FAIR_MODE_HASH_BITS) == 0 ,
+                  "Selector Bits for fair selector incorrectly programmed");
+        out << " " << (galois_bits.min().index() / IXBar::FAIR_MODE_HASH_BITS) << std::endl;
+    } else {
+        out << " 7" << std::endl;
+    }
     // out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
     // either the tofino native definitions or pragmas

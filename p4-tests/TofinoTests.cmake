@@ -508,6 +508,9 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "brig_569"
 p4c_add_ptf_test_with_ptfdir ("tofino" "case6684" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/BRIG-847/case6684.ptf")
 
+p4c_add_ptf_test_with_ptfdir ("tofino" "p4c-2229" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-2229/p4src/simple_l3_lag_ecmp.p4
+    "${testExtraArgs} -pd -DRESILIENT_SELECTION" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/p4c-2229/ptf")
+
 p4c_add_ptf_test_with_ptfdir ("tofino" "simple_l3_checksum" ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.p4
     "${testExtraArgs} -pd" "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/COMPILER-1008/simple_l3_checksum.ptf")
 

@@ -167,6 +167,24 @@ bool operator>>(cstring s, IR::MAU::ColorMapramAddress &cma) {
     return false;
 }
 
+static const char *selector_mode_to_str[] = {
+    "FAIR", "RESILIENT", "SELECTOR_MODES"
+};
+
+std::ostream &operator<<(std::ostream &out, const IR::MAU::SelectorMode &t) {
+    out << selector_mode_to_str[static_cast<int>(t)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::SelectorMode &t) {
+    for (int i = 0; i <= static_cast<int>(IR::MAU::SelectorMode::SELECTOR_MODES); i++) {
+        if (selector_mode_to_str[i] == s) {
+            t = static_cast<IR::MAU::SelectorMode>(i); return true;
+        }
+    }
+    return false;
+}
+
 static const char *checksum_mode_to_str[] = {
     "VERIFY", "RESIDUAL", "CLOT"
 };

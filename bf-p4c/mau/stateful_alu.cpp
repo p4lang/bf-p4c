@@ -1138,7 +1138,8 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             if (onebit_cmpl) opcode += 'c';
             /* For non-resilient hashes, all the bits must be updated whenever a port comes
              * up or down and hence must use the adjust_total instructions */
-            if (salu->selector && salu->selector->mode == "fair") opcode += "_at";
+            if (salu->selector && salu->selector->mode == IR::MAU::SelectorMode::FAIR)
+                opcode += "_at";
             rv = onebit = new IR::MAU::Instruction(opcode);
             break; }
         if (predicate)
@@ -1317,7 +1318,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         ordered_set<cstring> set_clr { "set_bit", "clr_bit" };
         if (salu->selector) {
             set_clr = ordered_set<cstring> { "set_bit_at", "clr_bit_at" };
-            if (salu->selector->mode == "resilient") {
+            if (salu->selector->mode == IR::MAU::SelectorMode::RESILIENT) {
                 set_clr.insert("set_bit");
                 set_clr.insert("clr_bit"); } }
         for (auto &salu_action : salu->instruction) {

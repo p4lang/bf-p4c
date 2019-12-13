@@ -552,9 +552,12 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 continue;
             if (p->name == "mode") {
                 if (arg->expression->to<IR::Member>()->member.name == "FAIR")
-                    sel->mode = IR::ID("fair");
+                    sel->mode = IR::MAU::SelectorMode::FAIR;
+                else if (arg->expression->to<IR::Member>()->member.name == "RESILIENT")
+                    sel->mode = IR::MAU::SelectorMode::RESILIENT;
                 else
-                    sel->mode = IR::ID("resilient");
+                    ::error("%1%: Selector mode of %2% must be either FAIR or RESILIENT",
+                        sel->srcInfo, sel->name);
             } else if (p->name == "hash") {
                 auto inst = P4::ExternInstance::resolve(arg->expression, refMap, typeMap);
                 if (inst != boost::none) {
