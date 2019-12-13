@@ -1009,12 +1009,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/test_config_408_xor_hashes.p4
   )
 
-# P4C-1389
-p4c_add_xfail_reason("tofino"
-  "table .* and table .* are not mutually exclusive"
-  ../glass/testsuite/p4_tests/mau/COMPILER-445/comp_445_counter.p4
-  )
-
 # BRIG-604
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Operand.*of instruction.*operating on container.*must be a PHV"

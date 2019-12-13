@@ -35,7 +35,7 @@ action do() { modify_field(ig_intr_md_for_tm.ucast_egress_port, FP_PORT_2); }
 table t {
     reads { ig_intr_md.ingress_port : exact; }
     actions { nop; do; }
-    default_action : do();
+    default_action : do;
 }
 
 control ingress { apply(t); }
