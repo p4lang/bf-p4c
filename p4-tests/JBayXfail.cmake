@@ -364,3 +364,9 @@ p4c_add_xfail_reason("tofino2"
   "BfruntimeReadWriteRpcException"
   p4_16_programs_tna_ternary_match
 )
+
+# REL-462
+p4c_add_xfail_reason("tofino2"
+  "SyntaxError: invalid syntax"
+  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+)

@@ -1687,3 +1687,19 @@ p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
+
+# REL-462
+p4c_add_xfail_reason("tofino"
+  "SyntaxError: invalid syntax"
+  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
+  smoketest_programs_stful
+)
+
+# power.p4 PTF failure
+# hw team uses it to do some manual testing
+# to measure the SRAM and TCAM power draw
+# keeping it in regression for compile_only
+p4c_add_xfail_reason("tofino"
+  "TypeError: %d format: a number is required, not NoneType"
+  extensions/p4_tests/p4-programs/internal_p4_14/power/power.p4
+)
