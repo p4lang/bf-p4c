@@ -184,7 +184,8 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
     phv_use_slots *usable_slots = get_phv_use_slots(dest->reg.size);
 
     auto &slot = usable_slots[0];
-    int id = dest->reg.parser_id();
+
+    auto id = dest->reg.parser_id();
     *map[slot.idx].dst = id;
     used |= slot.usemask;
 
@@ -214,6 +215,9 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
         // see model/src/shared/parser.cpp:621
         bool swizzle = where->reg.size == 32 &&
                        (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
+
+        // also swizzle 2x8->16
+        swizzle |= where->reg.size == 16 && (slot.idx == phv_8b_0 || slot.idx == phv_8b_2);
 
         int byte = lo;
         for (int i = slot.idx; slot.usemask & (1U << i); i++, byte += slot.size/8U) {
@@ -290,6 +294,9 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
         // see model/src/shared/parser.cpp:621
         bool swizzle = where->reg.size == 32 &&
                        (slot.idx == phv_8b_0 || slot.idx == phv_16b_0 || slot.idx == phv_16b_2);
+
+        // also swizzle 2x8->16
+        swizzle |= where->reg.size == 16 && (slot.idx == phv_8b_0 || slot.idx == phv_8b_2);
 
         shift = 0;
         for (int i = slot.idx; slot.usemask & (1U << i); i++) {
@@ -421,6 +428,16 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
         }
     }
 
+    // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
+    // see MODEL-210 for discussion.
+
+    for (auto& c : match->csum) {
+        if (c.type == 0 && c.dest && c.dest->reg.size == 16 && used != 4) {
+            used++;
+            break;
+        }
+    }
+
     if (used == 1)
         unused_idx = used_idx ^ 1;
     else if (used == 3)
@@ -467,6 +484,16 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
         if (map[i].dst->value != 511) {
             used++;
             if (used_idx == -1) used_idx = i;
+        }
+    }
+
+    // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
+    // see MODEL-210 for discussion.
+
+    for (auto& c : match->csum) {
+        if (c.type == 0 && c.dest && c.dest->reg.size == 8 && used != 4) {
+            used++;
+            break;
         }
     }
 

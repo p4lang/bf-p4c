@@ -285,42 +285,35 @@ struct AllocateParserState : public ParserTransform {
             inbuf_extractor_use(size_t container_size) = 0;
 
             virtual
-            std::pair<size_t, unsigned>
-            constant_extractor_use(uint32_t value, size_t container_size) = 0;
+            std::map<size_t, unsigned>
+            constant_extractor_use_choices(uint32_t value, size_t container_size) = 0;
 
-            boost::optional<std::pair<size_t, unsigned>>
-            constant_extractor_needed(PHV::Container container,
+            std::map<size_t, unsigned>
+            constant_extractor_use_choices(PHV::Container container,
                              const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
-                boost::optional<std::pair<size_t, unsigned>> rv;
+                std::map<size_t, unsigned> rv;
 
                 unsigned c = merge_const_source(extracts);
                 if (c) {
-                    rv = constant_extractor_use(c, container.size());
+                    rv = constant_extractor_use_choices(c, container.size());
 
                     LOG4("constant: " << c);
-                    LOG4("extractors needed: " << (*rv).first << " : " << (*rv).second);
+
+                    for (auto& kv : rv)
+                        LOG4("extractors needed: " << kv.first << " : " << kv.second);
                 }
 
                 return rv;
             }
 
             std::map<size_t, unsigned>
-            total_extractor_needed(PHV::Container container,
+            inbuf_extractor_needed(PHV::Container container,
                              const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 std::map<size_t, unsigned> rv;
 
                 if (has_inbuf_extract(extracts)) {
                     auto iu = inbuf_extractor_use(container.size());
                     rv.insert(iu);
-                }
-
-                auto cu = constant_extractor_needed(container, extracts);
-
-                if (cu) {
-                    if (rv.count((*cu).first))
-                        rv[(*cu).first] += (*cu).second;
-                    else
-                        rv.insert((*cu));
                 }
 
                 return rv;
@@ -360,7 +353,8 @@ struct AllocateParserState : public ParserTransform {
             void allocate() override {
                 std::map<size_t, unsigned> extractors_by_size;
 
-                unsigned constants = 0;
+                std::map<size_t, unsigned> constants_by_size;
+
                 PHV::FieldUse use(PHV::FieldUse::WRITE);
 
                 // reserve extractor for checksum verification
@@ -383,6 +377,12 @@ struct AllocateParserState : public ParserTransform {
 
                             extractors_by_size[container.size()]++;
 
+                            // reserve a dummy for checksum verification
+                            // see MODEL-210 for discussion.
+
+                            if (Device::currentDevice() == Device::TOFINO)
+                                extractors_by_size[container.size()]++;
+
                             LOG2("reserved " << container.size()
                                              << "b extractor for checksum verification");
                         }
@@ -393,32 +393,78 @@ struct AllocateParserState : public ParserTransform {
                     auto container = kv.first;
                     auto& extracts = kv.second;
 
-                    auto needed = total_extractor_needed(container, extracts);
+                    auto ibuf_needed = inbuf_extractor_needed(container, extracts);
 
-                    auto cu = constant_extractor_needed(container, extracts);
-
-                    bool extractor_avail = true;
-
-                    for (auto& kv : needed) {
-                        auto avail = Device::pardeSpec().extractorSpec().at(kv.first);
-
-                        if (extractors_by_size[kv.first] + kv.second > avail) {
-                            extractor_avail = false;
-
-                            for (auto e : extracts) {
-                                LOG3("spill " << e << " (ran out of " << kv.first
-                                              << "b extractors in " << sa.state->name << ")");
-                            }
-
-                            break;
-                        }
-                    }
+                    auto constant_choices = constant_extractor_use_choices(container, extracts);
 
                     bool constant_avail = true;
 
-                    if (Device::currentDevice() == Device::JBAY && cu) {
-                        BUG_CHECK((*cu).first == 16, "non 16-bit constant extract?");
-                        constant_avail = (*cu).second + constants <= 2;
+                    if (!constant_choices.empty()) {
+                        if (Device::currentDevice() == Device::TOFINO) {
+                            std::map<size_t, unsigned> valid_choices;
+
+                            for (auto& choice : constant_choices) {
+                                if (choice.first == 16 || choice.first == 32) {
+                                    if (choice.second + constants_by_size[choice.first] > 2)
+                                        continue;
+                                }
+
+                                valid_choices.insert(choice);
+                            }
+
+                            constant_choices = valid_choices;
+                            constant_avail = !valid_choices.empty();
+                        } else if (Device::currentDevice() == Device::JBAY) {
+                            constant_avail = constant_choices.at(16) + constants_by_size[16] <= 2;
+                        }
+                    }
+
+                    bool extractor_avail = true;
+
+                    std::pair<size_t, unsigned> constant_needed;
+
+                    std::map<size_t, unsigned> total_needed;
+
+                    if (!constant_choices.empty()) {
+                        extractor_avail = false;
+
+                        for (auto it = constant_choices.rbegin();
+                                  it != constant_choices.rend(); ++it) {
+                            auto choice = *it;
+
+                            total_needed = ibuf_needed;
+
+                            if (total_needed.count(choice.first))
+                                total_needed[choice.first] += choice.second;
+                            else
+                                total_needed.insert(choice);
+
+                            bool choice_ok = true;
+
+                            for (auto& kv : total_needed) {
+                                auto avail = Device::pardeSpec().extractorSpec().at(kv.first);
+                                if (extractors_by_size[kv.first] + kv.second > avail) {
+                                    choice_ok = false;
+                                    break;
+                                }
+                            }
+
+                            if (choice_ok) {
+                                extractor_avail = true;
+                                constant_needed = choice;
+                                break;
+                            }
+                        }
+                    } else {
+                        total_needed = ibuf_needed;
+
+                        for (auto& kv : total_needed) {
+                            auto avail = Device::pardeSpec().extractorSpec().at(kv.first);
+                            if (extractors_by_size[kv.first] + kv.second > avail) {
+                                extractor_avail = false;
+                                break;
+                            }
+                        }
                     }
 
                     bool oob = false;
@@ -427,7 +473,6 @@ struct AllocateParserState : public ParserTransform {
                         for (auto e : extracts) {
                             if (out_of_buffer(e) || straddles_buffer(e)) {
                                 oob = true;
-                                LOG3("spill " << e << " (out of buffer)");
                                 break;
                             }
                         }
@@ -438,12 +483,20 @@ struct AllocateParserState : public ParserTransform {
                         for (auto e : extracts)
                             current.push_back(e);
 
-                        for (auto& kv : needed)
+                        for (auto& kv : total_needed)
                             extractors_by_size[kv.first] += kv.second;
 
-                        if (cu)
-                            constants += (*cu).second;
+                        constants_by_size[constant_needed.first] += constant_needed.second;
                     } else {
+                        std::stringstream reason;
+
+                        if (oob) reason << "(out of buffer) ";
+                        if (!extractor_avail) reason << "(ran out of extractors) ";
+                        if (!constant_avail) reason << "(ran out of constants) ";
+
+                        for (auto e : extracts)
+                            LOG3("spill " << e << " { " << reason.str() << "}");
+
                         // spill
                         for (auto e : extracts)
                             spilled.push_back(e);
@@ -499,17 +552,22 @@ struct AllocateParserState : public ParserTransform {
                 return false;
             }
 
-            std::pair<size_t, unsigned>
-            constant_extractor_use(unsigned value, size_t container_size) override {
+            std::map<size_t, unsigned>
+            constant_extractor_use_choices(unsigned value, size_t container_size) override {
+                std::map<size_t, unsigned> rv;
+
                 for (const auto extractor_size : { PHV::Size::b32, PHV::Size::b16, PHV::Size::b8}) {
                     // can not use larger extractor on smaller container
                     if (container_size < size_t(extractor_size))
                         continue;
 
                     if (can_extract(value, unsigned(extractor_size)))
-                        return {size_t(extractor_size), container_size / unsigned(extractor_size)};
+                        rv[size_t(extractor_size)] = container_size / unsigned(extractor_size);
                 }
-                BUG("Impossible constant value write in parser: %1%", value);
+
+                BUG_CHECK(!rv.empty(), "Impossible constant value write in parser: %1%", value);
+
+                return rv;
             }
 
             std::pair<size_t, unsigned>
@@ -525,12 +583,20 @@ struct AllocateParserState : public ParserTransform {
         };
 
         class JBayExtractAllocator : public ExtractAllocator {
-            std::pair<size_t, unsigned>
-            constant_extractor_use(uint32_t value, size_t container_size) override {
+            std::map<size_t, unsigned>
+            constant_extractor_use_choices(uint32_t value, size_t container_size) override {
+                std::map<size_t, unsigned> rv;
+
+                unsigned num = 0;
+
                 if (container_size == size_t(PHV::Size::b32))
-                    return {16, bool(value & 0xffff) + bool(value >> 16)};
+                    num = bool(value & 0xffff) + bool(value >> 16);
                 else
-                    return {16 , 1};
+                    num = 1;
+
+                rv[16] = num;
+
+                return rv;
             }
 
             std::pair<size_t, unsigned>

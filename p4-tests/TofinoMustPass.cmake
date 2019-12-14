@@ -103,6 +103,7 @@ set (TOFINO_MUST_PASS_TESTS
 # extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2030.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2370.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
   # Uncomment when P4C-2375 is resolved
