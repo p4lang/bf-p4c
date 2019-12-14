@@ -32,6 +32,13 @@ def ref2Type(reference):
         return json_name, cls[-1] # We want only the class name
     return "XXX"
 
+def getTitle(name):
+    if '_' not in name:
+        # To retain capitalization in the middle of the name (eg: ConstraintReason)
+        return name[0].capitalize() + name[1:]
+    else:
+        return name.title()
+
 class DataMember(object):
     def __init__(self, name, typeName = None, body = None, isOptional = False):
         self.name = name
@@ -96,9 +103,12 @@ class DataMember(object):
             generator.write('if (' + ref + self.memberName() + ' != ' +
                             self.defaultValue() + ') {\n')
             generator.incrIndent()
+        if self.isObjectType():
+            generator.write('if (' + self.serializeMember() + ' != nullptr) {\n')
         if writeKey: generator.write('writer.Key("' + self.name + '");\n')
         if self.isObjectType():
             generator.write(self.serializeMember() + '->serialize(writer);\n')
+            generator.write('}\n')
         else:
             generator.write('writer.' + self.jsonType() + '(' + ref + self.serializeMember(isPtr = isPtr) + ');\n')
         if self.isOptional:
@@ -319,12 +329,12 @@ class UnionDataMember(DataMember):
         i = 0
         for p in self.body['oneOf']:
             memberName = "data" + str(i)
-            self.dataMembers.append(getDataMember(memberName, p, name + '_type_t'))
+            self.dataMembers.append(getDataMember(memberName, p))
             i += 1
     def cppType(self):
-        return self.name + '_t'
+        return self.name
     def jsonType(self):
-        return 'Int'
+        return self.name
     def isBasicType(self):
         return True
     def isArrayType(self):
@@ -334,7 +344,7 @@ class UnionDataMember(DataMember):
     def defaultValue(self):
         return self.dataMembers[0].defaultValue()
     def serializeMember(self, varName = None):
-        return self.memberName() + "._data0"
+        return 'e->serialize(' + varName + ');'
     def genTypeDecl(self, generator):
         for p in self.dataMembers:
             if isinstance(p, EnumDataMember):
@@ -342,13 +352,15 @@ class UnionDataMember(DataMember):
         generator.write('class ' + self.cppType() + ' {\n')
         generator.incrIndent()
         for p in self.dataMembers:
-            generator.write(p.cppType() + ' *' + p.memberName() + ';\n')
+            ptr = ' *' if not p.isObjectType() else ''
+            generator.write(p.cppType() + ptr + p.memberName() + ';\n')
         generator.write('public:\n')
         for p in self.dataMembers:
             isConst = 'const ' if not p.cppType().startswith('const') else ''
-            generator.write(self.cppType() + '(' + isConst + p.cppType() + ' e) {\n')
+            cppName = p.cppClassName() if p.isObjectType() else p.cppType()
+            generator.write(self.cppType() + '(' + isConst + cppName + ' e) {\n')
             generator.incrIndent()
-            generator.write(p.memberName() + ' = new ' + p.cppType() + '(e);\n')
+            generator.write(p.memberName() + ' = new ' + cppName + '(e);\n')
             for q in self.dataMembers:
                 if q != p:
                     generator.write(q.memberName() + ' = nullptr;\n')
@@ -370,6 +382,8 @@ class UnionDataMember(DataMember):
                 generator.incrIndent()
                 p.genSerializer(generator, writeKey = False, isPtr = True)
                 generator.decrIndent()
+            if isinstance(p, ObjectDataMember):
+                generator.write(p.memberName() + '->serialize(writer);\n')
             else:
                 generator.write('writer.' + p.jsonType() + '(*' + p.serializeMember() + ');\n',
                                 generator.indentIncr)
@@ -385,10 +399,11 @@ class UnionDataMember(DataMember):
 class ArrayDataMember(DataMember):
     def __init__(self, name, typeName, body, isOptional):
         super(ArrayDataMember, self).__init__(name, typeName, body, isOptional)
-        self.elemType = getDataMember(name.title(), body['items'])
+        self.elemType = getDataMember(getTitle(name), body['items'])
 
     def cppType(self):
-        return 'std::vector<' + self.elemType.cppType() + '>'
+        ptr = '*' if self.hasArrayOfUnion(self.body['items']) else ''
+        return 'std::vector<' + self.elemType.cppType() + ptr + '>'
     def jsonType(self):
         return 'Array'
     def isBasicType(self):
@@ -399,6 +414,8 @@ class ArrayDataMember(DataMember):
         return False
     def defaultValue(self):
         return 'nullptr'
+    def hasArrayOfUnion(self, items):
+        return items.get('oneOf', False)
 
     def genAccessor(self, generator):
         generator.write(self.cppType() + '& get' + self.memberName() + '() { ')
@@ -408,17 +425,23 @@ class ArrayDataMember(DataMember):
         generator.write('writer.StartArray();\n')
         generator.write('for ( auto e : ' + self.memberName() + ')\n')
         if self.elemType.isObjectType():
-            #generator.write('writer.StartObject();\n', generator.indentIncr)
             generator.write('e->serialize(writer);\n', generator.indentIncr)
-            # generator.write('writer.EndObject(); }\n', generator.indentIncr)
         else:
-            generator.write('writer.' + self.elemType.jsonType() + '(' +
+            # Custom data type (array of one of classes)
+            if self.elemType.jsonType() == self.elemType.cppType():
+                generator.write(self.elemType.serializeMember('writer') + '\n', generator.indentIncr)
+            else:
+                generator.write('writer.' + self.elemType.jsonType() + '(' +
                             self.elemType.serializeMember('e') + ');\n', generator.indentIncr)
         generator.write('writer.EndArray();\n')
     def genSetter(self, generator, unique = True):
         methodName = 'append'
         if not unique: methodName += self.memberName()
-        generator.write('void ' + methodName +'(' + self.elemType.cppType() + ' item) {\n')
+        ptr = '*' if self.hasArrayOfUnion(self.body['items']) else ''
+        generator.write('void ' + methodName +'(' + self.elemType.cppType() + ptr + ' item) {\n')
+        # Guard when trying to append null item
+        if self.elemType.isObjectType():
+            generator.write('if (item != nullptr)\n')
         generator.write(self.memberName() + '.push_back(item);\n', generator.indentIncr)
         generator.write('}\n')
 
@@ -461,6 +484,7 @@ def getDataMember(name, body, typeName = None, isOptional = False):
             t = typeName if typeName is not None else "std::<vector>"
             return ArrayDataMember(name, t, body, isOptional)
         if body['type'] == 'object':
+            # TODO: Check why we need t here
             t = typeName if typeName is not None else name
             return ObjectDataMember(name, typeName, jsonName = name, body = body, isOptional = isOptional)
     if body.get('$ref', False):
@@ -469,8 +493,70 @@ def getDataMember(name, body, typeName = None, isOptional = False):
         return ObjectDataMember(name, t, jsonName, body, isOptional)
     if body.get('oneOf', False):
         return UnionDataMember(name, typeName, body, isOptional)
+    if body.get('allOf', False):
+        c = getDataMember(name, body['allOf'][1], typeName, isOptional)
+        c.body = body
+        return c
 
     raise NotImplementedError("Unhandled: " + name + " " + str(body))
+
+def getDataMembers(classBody, className):
+    # retrieve the data members and list the required ones first
+    dataMembers = []
+    optionalMembers = []
+    if classBody.get('properties', False):
+        for p in sorted(classBody['properties'].keys()):
+            isOptional = p not in classBody['required']
+            m = getDataMember(p, classBody['properties'][p], isOptional = isOptional)
+            if debug > 2: print(m)
+            if isOptional: optionalMembers.append(m)
+            else:          dataMembers.append(m)
+    dataMembers.extend(optionalMembers)
+    if debug > 3:
+        names = [ (m.name, m.isOptional) for m in dataMembers ]
+        print(className, "dataMembers:", names)
+    return dataMembers
+
+def getSuperClass(generator, classBody):
+    if classBody.get('allOf', False):
+        scName = ref2Type(classBody['allOf'][0])[1]
+        scBody = generator.schema['definitions'][scName]
+        nextSC = getDataMember(scName, scBody)
+        return nextSC
+    else:
+        return None
+
+def needToRegenerate(className, classBody, sc):
+    # Regenerate classes for data memebers as Classes
+    dataMembers = getDataMembers(classBody, className)
+    for dm in dataMembers:
+        if dm.name.title() == sc.name:
+            return True
+    return False
+
+def genSubClass(generator, subClass):
+    if debug > 3: print('Building subclass:', subClass.name, subClass.body)
+    cls = ClassGenerator(generator, subClass.name, subClass.body)
+    cls.generate(indent=True)
+
+def getChildClasses(generator, className):
+    childClasses = []
+    allClasses = generator.schema['definitions']
+    for aClass in allClasses:
+        aClassBody = allClasses[aClass]
+        if aClassBody.get('allOf', False):
+            superClass = ref2Type(aClassBody['allOf'][0])[1]
+            if superClass == className:
+                childClasses.append(aClass)
+    return childClasses
+
+def writeDataMembers(cls, dataMembers, superClasses, first, indent):
+    for d in dataMembers:
+        if not d.isBasicType() and len(superClasses) < 1: continue
+        if not first: cls.write(',\n' + ' '*indent, None)
+        else:         first = False
+        cls.write(d.constructorParam(), None)
+    return first
 
 class ClassGenerator:
     def __init__(self, generator, className, classBody, root = None):
@@ -480,22 +566,32 @@ class ClassGenerator:
         self.root = root
         self.generator = generator
         self.subClasses = []
+        self.superClasses = []
+        self.scDataMembers = []
+
+        if classBody.get('allOf', False):
+            # add the cpp class name
+            superClass = getSuperClass(self.generator, self.classBody)
+            self.superClasses.append(superClass)
+            self.classBody = self.classBody['allOf'][1]
+            if debug > 3:
+                print('found superclass', superClass, 'and new body', self.classBody)
 
         if debug > 1: print(' '*generator.indent, 'class ', className)
-        if debug > 5: print(classBody)
+        if debug > 5: print(self.classBody)
         # order all classes such that we generate first the ones that do not have any subclasses
-        if classBody.get('definitions', False):
-            for d in classBody['definitions']:
+        if self.classBody.get('definitions', False):
+            for d in self.classBody['definitions']:
                 if debug > 2: print(' '*generator.indent, ' ----> ', d)
-                forwardClass = getDataMember(d, classBody['definitions'][d])
+                forwardClass = getDataMember(d, self.classBody['definitions'][d])
                 if forwardClass.isObjectType():
                     self.subClasses.append(forwardClass)
 
         # class declarations inside properties
-        if classBody.get('properties', False):
-            for p in classBody['properties']:
-                prop = classBody['properties'][p]
-                isRequired = p in classBody['required']
+        if self.classBody.get('properties', False):
+            for p in self.classBody['properties']:
+                prop = self.classBody['properties'][p]
+                isRequired = p in self.classBody['required']
                 forwardClass = getDataMember(p, prop, isOptional = not isRequired)
                 if forwardClass.isArrayType():
                     arrayElem = forwardClass.elemType
@@ -504,10 +600,11 @@ class ClassGenerator:
                         print('in ', className, 'found subclass', arrayElem.name, 'in?', subClsNames,
                               self.generator.classes)
                     if arrayElem.isObjectType() and \
-                       arrayElem.jsonName() not in subClsNames and \
-                       arrayElem.jsonName() not in self.generator.classes:
-                        if debug > 1: print('appending', arrayElem.jsonName())
-                        self.subClasses.insert(0, arrayElem)
+                        arrayElem.jsonName() not in subClsNames:
+                        if arrayElem.jsonName() not in self.generator.classes or \
+                            len(self.superClasses) > 0: # Add subclasses for classes with inheritance
+                            if debug > 1: print('appending', arrayElem.jsonName())
+                            self.subClasses.insert(0, arrayElem)
                     if forwardClass.isObjectType():
                         self.subClasses.append(forwardClass)
 
@@ -515,19 +612,16 @@ class ClassGenerator:
             self.generator.classes.add(c.name)
 
         # retrieve the data members and list the required ones first
-        self.dataMembers = []
-        optionalMembers = []
-        if classBody.get('properties', False):
-            for p in sorted(classBody['properties'].keys()):
-                isOptional = p not in classBody['required']
-                m = getDataMember(p, classBody['properties'][p], isOptional = isOptional)
-                if debug > 2: print(m)
-                if isOptional: optionalMembers.append(m)
-                else:          self.dataMembers.append(m)
-        self.dataMembers.extend(optionalMembers)
-        if debug > 3:
-            names = [ (m.name, m.isOptional) for m in self.dataMembers ]
-            print(self.className, "dataMembers:", names)
+        self.dataMembers = getDataMembers(self.classBody, self.className)
+        # For inheritance, list all the data memebers upto the root
+        if len(self.superClasses) > 0:
+            sc = self.superClasses[0]
+            while sc is not None:
+                cb = sc.body
+                if cb.get('allOf', False): cb = cb['allOf'][1]
+                scDataMembers = getDataMembers(cb, sc.name)
+                self.scDataMembers.extend(scDataMembers)
+                sc = getSuperClass(self.generator, sc.body)
 
     def write(self, stmt, indent = 0):
         self.generator.write(stmt, indent)
@@ -543,12 +637,21 @@ class ClassGenerator:
                 self.write('/// TODO: handle ' + self.cppClassName + ' ' + self.classBody['type'])
                 return
 
+        # Check if this class has a superClass and generate that first if not already generated
+        if len(self.superClasses) > 0:
+            if self.superClasses[0].name not in self.generator.classesGenerated:
+                cls = ClassGenerator(self.generator, self.superClasses[0].name,
+                    self.superClasses[0].body)
+                cls.generate(indent=True)
         self.write('class ' + self.cppClassName)
         if self.root is not None:
             self.write(' : public ' + self.root, None)
+        elif len(self.superClasses) > 0:
+            self.write(' : public ' + ', '.join([sc.name for sc in self.superClasses]), None)
         self.write(' {\n', None)
         self.write('public:\n')
         self.generator.incrIndent()
+        self.generator.classesGenerated.add(self.cppClassName)
 
         # forward declare all classes in this scope so that they can be used
         self.write('/// forward declarations\n')
@@ -559,8 +662,10 @@ class ClassGenerator:
         self.write('/// type declarations\n')
         # generate subclasses
         for c in self.subClasses:
-            cls = ClassGenerator(self.generator, c.name, c.body)
-            cls.generate(indent=True)
+            if c.name not in self.generator.classesGenerated or needToRegenerate(self.cppClassName, self.classBody, c):
+                if debug > 3: print('Building subclass:', c.name, c.body)
+                cls = ClassGenerator(self.generator, c.name, c.body)
+                cls.generate(indent=True)
         # types for other data members
         for d in self.dataMembers:
             d.genTypeDecl(self.generator)
@@ -576,7 +681,7 @@ class ClassGenerator:
         self.write('public:\n', indent = -2)
 
         # constructor
-        self.genConstructor()
+        self.genConstructor(self.superClasses)
         # destructor
         self.genDestructor()
 
@@ -592,6 +697,23 @@ class ClassGenerator:
             arrayMembers = [ m for m in self.dataMembers if m.isArrayType() ]
             d.genSetter(self.generator, unique = (len(arrayMembers) < 2))
 
+        # internal serializer
+        childClasses = getChildClasses(self.generator, self.cppClassName)
+        internalSerializerGenerated = False
+        if len(childClasses) > 0:
+            self.write('/// internal serializer\n')
+            isOverride = ''
+            if self.root is not None: isOverride = ' override'
+            self.write('virtual void internalSerialize(Writer &writer) const' + isOverride + ' {\n')
+            self.generator.incrIndent()
+            for d in self.dataMembers:
+                d.genSerializer(self.generator)
+            if len(self.superClasses) > 0:
+                self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
+            self.generator.decrIndent()
+            self.write('}\n')
+            internalSerializerGenerated = True
+
         # serializer
         self.write('/// serializer\n')
         isOverride = ''
@@ -599,8 +721,13 @@ class ClassGenerator:
         self.write('virtual void serialize(Writer &writer) const' + isOverride + ' {\n')
         self.generator.incrIndent()
         self.write('writer.StartObject();\n')
-        for d in self.dataMembers:
-            d.genSerializer(self.generator)
+        if internalSerializerGenerated:
+            self.write('internalSerialize(writer);\n')
+        else:
+            for d in self.dataMembers:
+                d.genSerializer(self.generator)
+            if len(self.superClasses) > 0:
+                self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
         self.write('writer.EndObject();\n')
         self.generator.decrIndent()
         self.write('}\n')
@@ -609,7 +736,7 @@ class ClassGenerator:
         self.write('};\n\n')
         if indent: self.generator.decrIndent()
 
-    def genConstructor(self):
+    def genConstructor(self, superClasses):
         self.write('// Constructor\n')
         self.write(self.cppClassName + '(')
         argIndent = len(self.cppClassName) + 1;
@@ -617,26 +744,42 @@ class ClassGenerator:
         first = self.root is None
         if self.root is not None:
             self.write('const char * __fileName', None)
-        for d in self.dataMembers:
-            if not d.isBasicType(): continue
-            if not first: self.write(',\n' + ' '*indent, None)
-            else:         first = False
-            self.write(d.constructorParam(), None)
+        first = writeDataMembers(self, self.dataMembers, superClasses, first, indent)
+        first = writeDataMembers(self, self.scDataMembers, superClasses, first, indent)
         self.write(')', None)
-
 
         self.generator.incrIndent()
         if self.root is not None: self.write(': Logger(__fileName)', None)
+        # For inheritance, invoke all the base classes
+        scConstructorInitializer = ''
+        if len(superClasses) > 0:
+            sc = superClasses[0]
+            scConstructorInitializer += sc.name + '('
+            dmAdded = 0
+            while sc is not None:
+                cb = sc.body
+                if cb.get('allOf', False): cb = cb['allOf'][1]
+                dataMembers = getDataMembers(cb, sc.name)
+                for d in dataMembers:
+                    scConstructorInitializer += d.name + ', '
+                    dmAdded += 1
+                sc = getSuperClass(self.generator, sc.body)
+            if dmAdded > 0:
+                scConstructorInitializer = scConstructorInitializer[:-2]
+            scConstructorInitializer += '),'
+        
         first = self.root is None
         for d in self.dataMembers:
-            if not d.isBasicType(): continue
+            if not d.isBasicType() and len(superClasses) < 1: continue
             if not first:
                 self.write(',\n', None)
             else:
-                self.write(': \n', None)
+                self.write(': ' + scConstructorInitializer + '\n', None)
                 first = False
-            self.write(d.constructorInitializer())
-
+            self.write(d.constructorInitializer(), argIndent)
+        # Add scConstructorInitializer if exists for classes with no data members
+        if len(self.dataMembers) < 1 and len(scConstructorInitializer) > 0:
+            self.write(': ' + scConstructorInitializer[:-1], None)
         if self.root is not None:
             self.write(' {\n', None)
             self.write('if (schema_version != "' + self.generator.schema_version + '")\n', 2)
@@ -652,7 +795,11 @@ class ClassGenerator:
         self.generator.incrIndent()
         for d in self.dataMembers:
             if d.isObjectType():
+                self.write('if (' + d.memberName() + ' != nullptr) {\n')
+                self.generator.incrIndent()
                 self.write('delete ' + d.memberName() + ';\n')
+                self.generator.decrIndent()
+                self.write('}\n')
             if d.isArrayType() and d.elemType.isObjectType():
                 self.write('for (auto e : ' + d.memberName() + ') ')
                 self.write('delete e;\n', None)
@@ -668,6 +815,7 @@ class Generator:
         self.define = "_EXTENSIONS_" + file_name.upper() + "_H_"
         # classes that we have already generated code for
         self.classes = set()
+        self.classesGenerated = set()
         self.indent = 0
         self.indentIncr = 2
 
@@ -677,8 +825,6 @@ class Generator:
         cls = ClassGenerator(self, file_name.title() + "_Logger", self.schema, root="Logger")
         cls.generate(self)
         self.genEpilog()
-
-
 
     def genPreamble(self):
         self.write('// Automatically generated file, please do not modify!\n')
@@ -743,5 +889,12 @@ for schema in opts.schemas:
     else:
         if debug > 0: print("loading JSON")
         schema_json = json.load(open(schema, 'r'))
+    if debug > 0: 
+        out_path = os.path.join(MYPATH, "..", "..", "build/p4c/extensions/bf-p4c/logging/")
+        json_file = os.path.join(out_path, file_name + '.json')
+        print('Writing intermediate json: {}'.format(json_file))
+        with open(json_file, 'w') as sjson:
+            json.dump(schema_json, sjson, indent=4, separators=(',', ': '))
+            sjson.write('\n')
     gen = Generator(schema_json, schema_version, file_name, opts.output)
     gen.generate()

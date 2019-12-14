@@ -54,6 +54,10 @@ MESSAGE(STATUS "Found manifest schema version ${MANIFEST_SCHEMA_VERSION}")
 set_source_files_properties(logging/manifest.cpp PROPERTIES
   COMPILE_DEFINITIONS MANIFEST_SCHEMA_VERSION=\"${MANIFEST_SCHEMA_VERSION}\")
 
+get_schema_version(phv_schema PHV_SCHEMA_VERSION)
+MESSAGE(STATUS "Found phv schema version ${PHV_SCHEMA_VERSION}")
+add_definitions("-DPHV_SCHEMA_VERSION=\"${PHV_SCHEMA_VERSION}\"")
+
 get_schema_version(context_schema CONTEXT_SCHEMA_VERSION)
 MESSAGE(STATUS "Found context schema version ${CONTEXT_SCHEMA_VERSION}")
 if (ENABLE_UNIFIED_COMPILATION)

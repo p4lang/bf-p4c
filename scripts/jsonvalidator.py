@@ -52,9 +52,12 @@ class JSONValidator:
                 print(pretty_name + " schema validation failed:")
 
                 for error in errors:
-                    print(error.message)
-                    print("error path:")
+                    print("error path: ")
                     print(list(error.path))
+                    print("error: ", error.message)
+                    print("More details: ")
+                    for suberror in sorted(error.context, key=lambda e: e.schema_path):
+                        print(list(suberror.schema_path), suberror.message, sep=", ")
 
                 return False
             else:

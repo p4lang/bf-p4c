@@ -95,7 +95,8 @@ void PhvInfo::clear() {
 
 void PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
-        bool bridged, bool pad, bool overlay, bool flex, bool fixed_size) {
+        bool bridged, bool pad, bool overlay, bool flex, bool fixed_size,
+        boost::optional<Util::SourceInfo> srcInfo) {
     // Set the egress version of bridged fields to metadata
     if (gress == EGRESS && bridged)
         meta = true;
@@ -118,6 +119,7 @@ void PhvInfo::add(
     info->overlayable = overlay;
     info->set_flexible(flex);
     info->set_fixed_size_header(fixed_size);
+    info->srcInfo = srcInfo;
     by_id.push_back(info);
 }
 
@@ -150,8 +152,11 @@ void PhvInfo::add_struct(
         // "flexible" annotation indicates flexible fields
         bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
         bool isFixedSizeHeader = type->is<IR::BFN::Type_FixedSizeHeader>();
+        boost::optional<Util::SourceInfo> srcInfo = boost::none;
+        if (f->srcInfo.isValid())
+            srcInfo = f->srcInfo;
         add(f_name, gress, size, offset -= size, meta, false, bridged, isPad, isOverlayable,
-            isFlexible, isFixedSizeHeader);
+            isFlexible, isFixedSizeHeader, srcInfo);
     }
     if (!meta) {
         int end = by_id.size();

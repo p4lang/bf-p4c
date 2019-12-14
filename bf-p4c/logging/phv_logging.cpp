@@ -69,20 +69,20 @@ void PhvLogging::end_apply(const IR::Node *root) {
     populateContainerGroups("deparser");
 
     logHeaders();
+    logFields();
     logContainers();
     logger.log();
     Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");
 }
 
-void PhvLogging::logHeaders() {
-    /// Map of all headers and their fields.
-    ordered_map<cstring, ordered_set<const PHV::Field*>> headerFields;
+ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
+    ordered_map<cstring, ordered_set<const PHV::Field*>> fields;
 
     /* Determine set of all allocated fields and the headers to which they belong */
     for (const auto& f : phv) {
         bitvec allocatedBits;
         f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            headerFields[f.header()].insert(&f);
+            fields[f.header()].insert(&f);
             bitvec sliceBits(alloc.field_bit, alloc.width);
             allocatedBits |= sliceBits;
         });
@@ -118,19 +118,175 @@ void PhvLogging::logHeaders() {
         }
     }
 
+    return fields;
+}
+
+Phv_Schema_Logger::FieldSlice*
+PhvLogging::logFieldSlice(const PHV::Field* f) {
+    std::string fieldName(f->name);
+    auto si = new Slice(0, f->size - 1);
+    auto fs = new FieldSlice(fieldName, si);
+    return fs;
+}
+
+Phv_Schema_Logger::FieldSlice*
+PhvLogging::logFieldSlice(const PHV::Field::alloc_slice& sl) {
+    std::string fieldName(sl.field->name);
+    auto si = new Slice(sl.field_bit, sl.field_hi());
+    auto fs = new FieldSlice(fieldName, si);
+    return fs;
+}
+
+Phv_Schema_Logger::ContainerSlice*
+PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl) {
+    const auto& phvSpec = Device::phvSpec();
+    auto fs = logFieldSlice(sl);
+    auto ps = new Slice(sl.container_bit, sl.container_hi());
+    auto cid = phvSpec.physicalAddress(phvSpec.containerToId(sl.container),
+                                                   PhvSpec::MAU);
+    auto cs = new ContainerSlice(fs, cid, ps);
+
+    ordered_set<PardeInfo> parde;
+    // Add all the parser/deparser writes/reads.
+    getAllParserDefs(sl.field, parde);
+    getAllDeparserUses(sl.field, parde);
+
+    auto dType = getDeparserAccessType(sl.field);
+    std::for_each(parde.begin(), parde.end(),
+                  [&](PardeInfo& entry) {
+                      if (entry.unit == "parser")
+                          cs->append_writes(new Access(ParserLocation("ibuf",
+                                                                      entry.parserState,
+                                                                      entry.unit)));
+                      else if (entry.unit == "deparser" && strcmp(dType, "none") != 0)
+                          cs->append_reads(new Access(DeparserLocation(dType,
+                                                                       entry.unit)));
+                  });
+
+    // Add all the MAU reads/writes.
+    PHV::FieldSlice slice(sl.field, sl.field_bits());
+    addTableKeys(slice, cs);
+    addVLIWReads(slice, cs);
+    addVLIWWrites(slice, cs);
+    return cs;
+}
+
+void PhvLogging::logFields() {
+    /// Map of all headers and their fields.
+    ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
+    /* Add fields to the log file */
+    for (auto kv : fields) {
+        std::string headerName(kv.first);
+        for (const auto* f : kv.second) {
+            std::string fieldName(f->name);
+
+            // TODO: Get different states ("allocated", "unallocated", "partially allocated",
+            // "unreferenced", "eliminated")
+            auto state = "unallocated";
+            if (!info.uses.is_referenced(f))
+                state = "unreferenced";
+            if (sizeof(f->get_alloc()) > 0)
+                state = "allocated";
+
+            auto fi = new FieldInfo(f->size, getFieldType(f), fieldName, getGress(f), "");
+            auto field = new Field(fi, state, headerName);
+
+            for (auto& sl : f->get_alloc()) {
+                auto fs = logFieldSlice(sl);
+                field->append_field_slices(logFieldSlice(sl));
+                field->append_phv_slices(logContainerSlice(sl));
+
+                auto c = new Constraint(fs);
+                auto s_loc = new SourceLocation("DummyFile", -1);
+
+                if (f->srcInfo != boost::none) {
+                    s_loc = new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
+                                              f->srcInfo->toPosition().sourceLine);
+                }
+
+                // Solitary Constraints
+                if (sl.field->is_solitary()) {
+                    if (sl.field->deparsed_bottom_bits()) {
+                        auto sc = new SolitaryConstraint("last_byte",
+                            "SOLITARY_LAST_BYTE: Can not pack field with any other field"
+                            " in its non-full last byte",
+                                    s_loc);
+                        c->append(sc);
+                    } else {
+                        if (sl.field->getSolitaryConstraint().isALU()) {
+                            auto sc = new SolitaryConstraint("alu",
+                                "SOLITARY: Can not pack field with any other field",
+                                        s_loc);
+                            c->append(sc);
+                        } else if (sl.field->getSolitaryConstraint().isDigest()) {
+                            if (sl.field->getDigestConstraint().isMirror()) {
+                                auto sc = new SolitaryConstraint("mirror",
+                                "SOLITARY_MIRROR: Cannot pack this field instance with"
+                                " any field that is mirrored",
+                                        s_loc);
+                                c->append(sc);
+                            } else if (sl.field->getDigestConstraint().isLearning()) {
+                                auto sc = new SolitaryConstraint("learning_digest",
+                                "SOLITARY_EXCEPT_DIGEST: Cannot pack this field with"
+                                " any other field that does not belong to the same"
+                                " digest field lists",
+                                        s_loc);
+                                c->append(sc);
+                            }
+                        }
+                    }
+                }
+
+                // Different Container Constraint
+                if (sl.field->is_solitary() && sl.field->getSolitaryConstraint().isALU()) {
+                    for (const auto* f2 : kv.second) {
+                        if (sl.field == f2) continue;
+                        if (phv.isFieldNoPack(sl.field, f2)) {
+                            std::string fieldNamePack(f2->name);
+                            auto fPack = new FieldInfo(f2->size, getFieldType(f2),
+                                             fieldNamePack, getGress(f2), "");
+                            auto s_loc_Pack = new SourceLocation("DummyFile", -1);
+                            if (f2->srcInfo != boost::none) {
+                                s_loc_Pack = new SourceLocation(
+                                                std::string(f2->srcInfo->toPosition().fileName),
+                                                f2->srcInfo->toPosition().sourceLine);
+                            }
+                            auto dcc = new DifferentContainerConstraint(fPack, s_loc_Pack,
+                                       "alu",
+                                       "DIFFERENT_CONTAINER: This field instance cannot"
+                                       " be packed with another field instance",
+                                       s_loc);
+                            c->append(dcc);
+                        }
+                    }
+                }
+
+                if (c->get_ConstraintReason().size() > 0)
+                    field->append_constraints(c);
+            }
+
+            logger.append_fields(field);
+        }
+    }
+}
+
+void PhvLogging::logHeaders() {
+    /// Map of all headers and their fields.
+    ordered_map<cstring, ordered_set<const PHV::Field*>> headerFields = getFields();
     /* Add header structures to the log file */
     for (auto kv : headerFields) {
         std::string headerName(kv.first);
-        auto* s = new Phv_Schema_Logger::Structures(headerName, "header");
+        auto* s = new Structure(headerName, "header");
         for (const auto* f : kv.second) {
-            std::string fieldName(f->name);
-            s->append(fieldName); }
+            auto fs = logFieldSlice(f);
+            s->append(fs); }
         logger.append_structures(s); }
 }
 
 void PhvLogging::populateContainerGroups(cstring groupType) {
     // Extract MAU group specific information from phvSpec
     const auto& phvSpec = Device::phvSpec();
+    // TODO: Need to model and add "tagalong" resource type
     auto phvGroup = groupType == "mau" ? PhvSpec::MAU : PhvSpec::DEPARSER;
     for (auto r : phvSpec.physicalAddressSpec(phvGroup)) {
         auto bit_width = int(r.first.size());
@@ -171,12 +327,19 @@ const char * PhvLogging::getGress(const PHV::Field* f) const {
 }
 
 const char * PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
-    if (f->metadata && f->is_intrinsic()) return "imeta";
+    if (f->is_intrinsic()) return "imeta";
     if (f->bridged) return "bridge";
     if (f->pov) return "pov";
     if (f->is_checksummed()) return "checksum";
-    if (f->deparsed()) return "pkt";
-    return "";
+    if (f->is_digest() && f->getDigestConstraint().isMirror()) return "mirror_digest";
+    if (f->is_digest() && f->getDigestConstraint().isResubmit()) return "resubmit_digest";
+    if (f->is_digest() && f->getDigestConstraint().isLearning()) return "learning_digest";
+    if (f->is_digest() && f->getDigestConstraint().isPktGen()) return "pktgen";
+    if (f->metadata && f->deparsed()) return "bridge";
+    if (f->metadata && !f->deparsed()) return "none";
+    if (!f->metadata) return "pkt";
+    ::error("Unsupported deparser access type for %1%", f->name);
+    return "none";
 }
 
 void
@@ -210,26 +373,25 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
     }
 }
 
-void PhvLogging::addTableKeys(const PHV::FieldSlice &sl, PhvLogging::Records *r) const {
-    auto dType = getDeparserAccessType(sl.field());
+void
+PhvLogging::addTableKeys(const PHV::FieldSlice &sl, Phv_Schema_Logger::ContainerSlice *cs) const {
     LOG4("Adding input xbar read for slice: " << sl);
     if (info.sliceXbarToTables.count(sl)) {
         for (auto& tableName : info.sliceXbarToTables.at(sl)) {
             if (tableAlloc.count(tableName) == 0)
                 continue;
-            for (int stage : tableAlloc.at(tableName))
-                r->append_reads(new Access(stage,
-                                           "" /* action_name */,
-                                           dType,
-                                           "xbar",
-                                           "" /* parser_state_name */,
-                                           tableName.c_str()));
+            for (int logicalID : tableAlloc.at(tableName))
+                cs->append_reads(new Access(MAULocation("xbar",
+                                                        logicalID/16,
+                                                        "mau",
+                                                        "" /* action_name */,
+                                                        tableName.c_str())));
         }
     }
 }
 
-void PhvLogging::addVLIWReads(const PHV::FieldSlice& sl, PhvLogging::Records* r) const {
-    auto dType = getDeparserAccessType(sl.field());
+void
+PhvLogging::addVLIWReads(const PHV::FieldSlice& sl, Phv_Schema_Logger::ContainerSlice *cs) const {
     LOG4("Adding VLIW Read for slice: " << sl);
     if (info.sliceReadToActions.count(sl)) {
         LOG4("  Found VLIW read for this slice");
@@ -243,19 +405,18 @@ void PhvLogging::addVLIWReads(const PHV::FieldSlice& sl, PhvLogging::Records* r)
             std::string actionName(cstring(act->name));
             if (tableAlloc.count(tableName) == 0)
                 continue;
-            for (int stage : tableAlloc.at(tableName))
-                r->append_reads(new Access(stage,
-                                           actionName,
-                                           dType,
-                                           "vliw",
-                                           "" /* parser_state_name */,
-                                           tableName));
+            for (int logicalID : tableAlloc.at(tableName))
+                cs->append_reads(new Access(MAULocation("vliw",
+                                                        logicalID/16,
+                                                        "mau",
+                                                        actionName,
+                                                        tableName)));
         }
     }
 }
 
-void PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, PhvLogging::Records* r) const {
-    auto dType = getDeparserAccessType(sl.field());
+void
+PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, Phv_Schema_Logger::ContainerSlice *cs) const {
     LOG4("Adding VLIW Write for slice: " << sl);
     if (info.sliceWriteToActions.count(sl)) {
         for (const IR::MAU::Action* act : info.sliceWriteToActions.at(sl)) {
@@ -269,13 +430,12 @@ void PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, PhvLogging::Records* r
             LOG4("Table name in VLIW write: " << tableName);
             if (tableAlloc.count(tableName) == 0)
                 continue;
-            for (int stage : tableAlloc.at(tableName))
-                r->append_writes(new Access(stage,
-                                           actionName,
-                                           dType,
-                                           "vliw",
-                                           "" /* parser_state_name */,
-                                           tableName));
+            for (int logicalID : tableAlloc.at(tableName))
+                cs->append_writes(new Access(MAULocation("vliw",
+                                                         logicalID/16,
+                                                         "mau",
+                                                         actionName,
+                                                         tableName)));
         }
     }
 }
@@ -291,42 +451,23 @@ void PhvLogging::logContainers() {
     for (auto kv : allocation) {
         auto c = kv.first;
         auto cid = phvSpec.physicalAddress(phvSpec.containerToId(c), PhvSpec::MAU);
+        auto mauGroupId = -1;
+        auto deparserGroupId = -1;
+        if (c.is(PHV::Kind::tagalong)) {
+            mauGroupId = phvSpec.getTagalongCollectionId(c);
+            // TODO: Check what's the deparserGroupId for tagalong containers
+            deparserGroupId = phvSpec.getTagalongCollectionId(c);
+        } else {
+            mauGroupId = phvSpec.mauGroupId(c);
+            deparserGroupId = phvSpec.deparserGroupId(c);
+        }
         auto containerEntry = new Container(c.size(), containerType(c),
-                                            phvSpec.deparserGroupId(c), phvSpec.mauGroupId(c),
+                                            deparserGroupId, mauGroupId,
                                             cid);
         for (auto sl : kv.second) {
-            std::string fieldName(sl.field->name);
-            auto r = new Records(getFieldType(sl.field),
-                                 sl.field_bit, sl.field_hi(),
-                                 fieldName,
-                                 getGress(sl.field),
-                                 sl.container_bit, sl.container_hi());
-            ordered_set<PardeInfo> parde;
-            // Add all the parser/deparser writes/reads.
-            getAllParserDefs(sl.field, parde);
-            getAllDeparserUses(sl.field, parde);
-            auto dType = getDeparserAccessType(sl.field);
-            std::for_each(parde.begin(), parde.end(),
-                          [&](PardeInfo& entry) {
-                              if (entry.unit == "parser")
-                                  r->append_writes(new Access(entry.unit,
-                                                              "" /* action_name */,
-                                                              dType,
-                                                              "ibuf",
-                                                              entry.parserState));
-                              else if (entry.unit == "deparser")
-                                  r->append_reads(new Access(entry.unit,
-                                                             "", /* action name */
-                                                             dType));
-                          });
-
-            // Add all the MAU reads/writes.
-            PHV::FieldSlice slice(sl.field, sl.field_bits());
-            addTableKeys(slice, r);
-            addVLIWReads(slice, r);
-            addVLIWWrites(slice, r);
-
-            containerEntry->append(r); }
+            auto cs = logContainerSlice(sl);
+            containerEntry->append(cs);
+        }
         logger.append_containers(containerEntry);
     }
 }

@@ -30,6 +30,7 @@ class FlattenHeader : public Modifier {
     IR::Type_Header* flattenedHeader;
     std::vector<cstring> nameSegments{};
     std::vector<const IR::Annotations*> allAnnotations{};
+    std::vector<Util::SourceInfo> srcInfos{};
     cstring makeName(cstring sep) const;
     void flattenType(const IR::Type* type);
     const IR::Annotations* mergeAnnotations() const;

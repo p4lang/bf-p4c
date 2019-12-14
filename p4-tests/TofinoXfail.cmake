@@ -823,6 +823,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
+  extensions/p4_tests/p4_16/compile_only/multi-constraint.p4
   ../glass/testsuite/p4_tests/fujitsu/COMPILER-1141/static_acl_tun_tel.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-968/comp_968.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4

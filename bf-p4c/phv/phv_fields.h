@@ -215,6 +215,9 @@ class Field : public LiftLess<Field> {
     /// If this field is an alias destination, then maintain a pointer to the alias source.
     const PHV::Field* aliasSource = nullptr;
 
+    /// Associate source info to each field
+    boost::optional<Util::SourceInfo> srcInfo;
+
     /// Represents an allocation of a field slice to a container slice.
     struct alloc_slice {
         const Field*           field;
@@ -422,8 +425,15 @@ class Field : public LiftLess<Field> {
 
     bool is_solitary() const                               { return solitary_i.hasConstraint(); }
     void set_solitary(uint32_t reason)                     { solitary_i.addConstraint(reason); }
+
+    const Constraints::SolitaryConstraint&
+        getSolitaryConstraint() const                      { return solitary_i; }
+
     bool is_digest() const                                 { return digest_i.hasConstraint(); }
     void set_digest(uint32_t source)                       { digest_i.addConstraint(source); }
+
+    const Constraints::DigestConstraint&
+         getDigestConstraint() const                       { return digest_i; }
 
     bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
@@ -1320,7 +1330,8 @@ class PhvInfo {
     void clear();
     void add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
-             bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false);
+             bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false,
+             boost::optional<Util::SourceInfo> srcInfo = boost::none);
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,

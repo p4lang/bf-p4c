@@ -58,7 +58,8 @@ ENV PYTHON3_DEPS Cython \
                  pyyaml \
                  scapy \
                  texttable \
-                 xlsxwriter
+                 xlsxwriter \
+                 ctypesgen
 
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
@@ -77,7 +78,7 @@ ARG BFN_P4C_GIT_SHA="UNKNOWN"
 # testing dependencies
 RUN apt-get install -y net-tools
 
-RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable
+RUN pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable ctypesgen
 # Install ply 3.9 for compatibility with p4c-tofino
 RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller

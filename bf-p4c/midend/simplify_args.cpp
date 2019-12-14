@@ -10,7 +10,9 @@ void FlattenHeader::flattenType(const IR::Type* type) {
         for (auto f : st->fields) {
             nameSegments.push_back(f->name);
             allAnnotations.push_back(f->annotations);
+            srcInfos.push_back(f->srcInfo);
             flattenType(typeMap->getType(f, true));
+            srcInfos.pop_back();
             allAnnotations.pop_back();
             nameSegments.pop_back();
         }
@@ -25,7 +27,8 @@ void FlattenHeader::flattenType(const IR::Type* type) {
         }
         // preserve the original name using an annotation
         auto annotations = mergeAnnotations();
-        newFields.push_back(new IR::StructField(IR::ID(newName), annotations, type));
+        newFields.push_back(new IR::StructField(srcInfos.back(),
+                            IR::ID(newName), annotations, type));
     }
 }
 

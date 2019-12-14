@@ -183,7 +183,8 @@ class GenerateOutputs : public PassManager {
                                        o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),
-                                                 b.get_table_alloc()) : nullptr,
+                                                 b.get_table_alloc())
+                                                 : nullptr,
                     &_visualization
                     });
         setName("Assembly output");
