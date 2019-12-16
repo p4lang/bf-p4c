@@ -132,6 +132,9 @@ class AllocateParserChecksums : public Logging::PassManager {
         std::map<cstring, unsigned>> decl_to_checksum_id;
 
     std::map<const IR::BFN::Parser*,
+        std::map<unsigned, std::set<cstring>>> checksum_id_to_decl;
+
+    std::map<const IR::BFN::Parser*,
         std::map<cstring, std::set<const IR::BFN::ParserState*>>> decl_to_start_states;
 
     std::map<const IR::BFN::Parser*,

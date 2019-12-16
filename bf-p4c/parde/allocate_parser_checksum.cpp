@@ -1,5 +1,4 @@
 #include <map>
-
 #include "allocate_parser_checksum.h"
 
 #include "lib/cstring.h"
@@ -148,7 +147,7 @@ struct ParserChecksumAllocator : public Visitor {
         auto at = a->to<T>();      \
         auto bt = b->to<T>();      \
         if (at && bt)              \
-            return at->dest->field == bt->dest->field; }
+            return at->dest->equiv(*bt->dest); }
 
     #define OF_TYPE(a, b, T) (a->is<T>() && b->is<T>())
 
@@ -219,16 +218,6 @@ struct ParserChecksumAllocator : public Visitor {
             ss << "  " << s->name << std::endl;
 
         return ss.str();
-    }
-
-    /// Is any state in "calc_states_" an ancestor of "dst"?
-    bool has_ancestor(const IR::BFN::Parser* parser,
-                      const ordered_set<const IR::BFN::ParserState*>& calc_states,
-                      const IR::BFN::ParserState* dst) {
-        for (auto s : calc_states)
-            if (parser_info.graph(parser).is_ancestor(s, dst))
-                return true;
-        return false;
     }
 
     bool can_share_hw_unit(const IR::BFN::Parser* parser, cstring declA, cstring declB) {
@@ -369,9 +358,7 @@ struct ParserChecksumAllocator : public Visitor {
     std::set<const IR::BFN::ParserState*>
     get_start_states(const IR::BFN::Parser* parser, cstring decl) {
         std::set<const IR::BFN::ParserState*> start_states;
-
         auto& calc_states = checksum_info.decl_name_to_states.at(parser).at(decl);
-
         for (auto a : calc_states) {
             bool is_start = true;
             for (auto b : calc_states) {
@@ -380,10 +367,10 @@ struct ParserChecksumAllocator : public Visitor {
                     break;
                 }
             }
-            if (is_start)
+            if (is_start) {
                 start_states.insert(a);
+            }
         }
-
         return start_states;
     }
 
@@ -424,9 +411,9 @@ struct ParserChecksumAllocator : public Visitor {
 
     void bind(const IR::BFN::Parser* parser, cstring csum, unsigned id) {
         self.decl_to_checksum_id[parser][csum] = id;
+        self.checksum_id_to_decl[parser][id].insert(csum);
         self.decl_to_start_states[parser][csum] = get_start_states(parser, csum);
         self.decl_to_end_states[parser][csum] = get_end_states(parser, csum);
-
         LOG1("allocated parser checksum unit " << id << " to " << csum);
     }
 
@@ -657,6 +644,172 @@ struct InsertParserClotChecksums : public PassManager {
     }
 };
 
+// There can be path in a parser which can lead to a situation where a checksum extraction
+// happen but a start bit was never set. Such path when taken consumes an extractor which was
+// unaccounted and can potentially cause parser lock ups. So the solution is to find such paths
+// and duplicate it with the unaccounted checksum extraction removed.
+//
+// Consider the following parse graph. Assume a checksum calculation starts at state a and
+// ends at d. If a path is taken from state b, then the checksum calculation
+// would be end at state d, without any start.
+//           a        b
+//            \      /
+//               c
+//               |
+//               d
+// The following pass will create new states c' and d'. The only difference is
+// that the new states no longer have the offending checksum calculations.
+//          a            b
+//          |            |
+//          c            c'
+//          |            |
+//          d            d'
+// Ticket : P4C-2236
+struct DuplicateStates : public ParserTransform {
+    std::map<cstring,
+        std::map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
+    AllocateParserChecksums& allocator;
+    const CollectParserInfo&      parser_info;
+    const CollectParserChecksums& checksum_info;
+    DuplicateStates(AllocateParserChecksums& allocator,
+                    const CollectParserInfo& parser_info,
+                    const CollectParserChecksums& checksum_info) :
+        allocator(allocator), parser_info(parser_info),
+        checksum_info(checksum_info) { }
+
+    // Finds the path that needs to be duplicated.
+    bool add_state_to_duplicate(const IR::BFN::ParserState* state,
+                            const std::set<const IR::BFN::ParserState*>& start_states,
+                            const IR::BFN::Parser* parser,
+                            ordered_set<const IR::BFN::ParserState*>& path) {
+        if (start_states.count(state)) {
+            return false;
+        }
+        if (!has_ancestor(parser, start_states, state)) {
+            path.insert(state);
+            return true;
+        }
+        auto predecessor = parser_info.graph(parser).predecessors();
+        bool result = false;
+        for (auto pred : predecessor.at(state)) {
+            result |= add_state_to_duplicate(pred, start_states, parser, path);
+            if (result) {
+                path.insert(state);
+            }
+        }
+        return result;
+    }
+
+    /// Is any state in "calc_states_" an ancestor of "dst"?
+    bool has_ancestor(const IR::BFN::Parser* parser,
+                      const std::set<const IR::BFN::ParserState*>& calc_states,
+                      const IR::BFN::ParserState* dst) {
+        for (auto s : calc_states)
+            if (parser_info.graph(parser).is_ancestor(s, dst))
+                return true;
+        return false;
+    }
+
+    void find_state_to_duplicate(const IR::BFN::Parser* parser, cstring decl) {
+        if (!(checksum_info.is_residual(parser, decl))) return;
+        std::set<const IR::BFN::ParserState*> start_states;
+        auto end_states = allocator.decl_to_end_states[parser][decl];
+        // get start state of all the residual checksums that uses same checksum engine
+        // as decl
+        unsigned id = allocator.decl_to_checksum_id[parser][decl];
+        for (auto declName : allocator.checksum_id_to_decl[parser][id]) {
+            if (!(checksum_info.is_residual(parser, declName))) return;
+            auto s = allocator.decl_to_start_states[parser][declName];
+            start_states.insert(s.begin(), s.end());
+        }
+
+        auto predecessor = parser_info.graph(parser).predecessors();
+        ordered_set<const IR::BFN::ParserState*> path_to_duplicate;
+        for (auto a : end_states) {
+            if (start_states.count(a)) continue;
+            add_state_to_duplicate(a, start_states, parser, path_to_duplicate);
+            if (path_to_duplicate.size()) {
+                auto first = *path_to_duplicate.begin();
+                path_to_duplicate.erase(first);
+                duplicate_path[first->name][decl].insert(path_to_duplicate.begin(),
+                                                      path_to_duplicate.end());
+            }
+        }
+        return;
+    }
+
+    profile_t init_apply(const IR::Node *root) override {
+        for (auto& kv : checksum_info.parser_to_decl_names) {
+            for (auto decl : kv.second) {
+                find_state_to_duplicate(kv.first, decl);
+            }
+        }
+        return Transform::init_apply(root);
+    }
+
+    IR::BFN::ParserState* get_new_state(const IR::BFN::ParserState* state,
+                                         cstring decl) {
+        auto new_state = new IR::BFN::ParserState(state->p4State,
+                                                  state->name + "$duplicate_" + decl,
+                                                  state->gress);
+        auto new_statements = new IR::Vector<IR::BFN::ParserPrimitive>();
+        for (auto statement : state->statements) {
+            if (auto pc = statement->to<IR::BFN::ParserChecksumPrimitive>()) {
+                if (pc->declName == decl)
+                    continue;
+            }
+            new_statements->push_back(statement);
+        }
+        new_state->statements = *new_statements;
+        new_state->transitions = state->transitions;
+        new_state->selects = state->selects;
+        return new_state;
+    }
+
+    IR::BFN::ParserState* make_path(const IR::BFN::ParserState* state,
+                                    cstring decl,
+                                    ordered_set<const IR::BFN::ParserState*> path) {
+        auto new_state = get_new_state(state, decl);
+        auto new_transitions = new IR::Vector<IR::BFN::Transition>();
+        for (auto transition : new_state->transitions) {
+            bool new_trans_added = false;
+            for (auto path_state : path) {
+                if (transition->next && path_state->equiv(*transition->next)) {
+                    auto new_next_state = make_path(path_state, decl, path);
+                    auto new_transition = new IR::BFN::Transition(transition->value,
+                                     transition->shift, new_next_state);
+                    LOG3("Adding a new state: " << new_next_state->name);
+                    new_transitions->push_back(new_transition);
+                    new_trans_added = true;
+                    break;
+                }
+            }
+            if (!new_trans_added) {
+                new_transitions->push_back(transition);
+            }
+        }
+        new_state->transitions = *new_transitions;
+        return new_state;
+    }
+
+    IR::Node* preorder(IR::BFN::Transition* transition) override {
+        auto state = findContext<IR::BFN::ParserState>();
+        if (!transition->next) return transition;
+        if (duplicate_path.count(state->name)) {
+            for (auto decl_state : duplicate_path.at(state->name)) {
+                for (auto &next_state : decl_state.second) {
+                    if (transition->next->equiv(*next_state)) {
+                        transition->next = make_path(next_state, decl_state.first,
+                                                     decl_state.second);
+                    }
+                }
+            }
+        }
+        return transition;
+    }
+};
+
+
 AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotInfo& clot)
         : Logging::PassManager("parser", Logging::Mode::AUTO),
           checksum_info(parser_info) {
@@ -673,6 +826,11 @@ AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotI
         elim_dead_checksums,
         Device::currentDevice() == Device::JBAY ? insert_clot_checksums : nullptr,
         LOGGING(5) ? new DumpParser("after_insert_clot_csum") : nullptr,
+        &parser_info,
+        &checksum_info,
+        allocator,
+        new DuplicateStates(*this, parser_info, checksum_info),
+        LOGGING(5) ? new DumpParser("after_adding_duplicate_states") : nullptr,
         &parser_info,
         &checksum_info,
         allocator,

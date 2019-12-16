@@ -657,7 +657,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
                          const IR::BFN::ParserState* state,
                          const std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         IR::Vector<IR::BFN::LoweredParserChecksum> loweredChecksums;
-
         std::map<cstring,
                  std::vector<const IR::BFN::ParserChecksumPrimitive*>> csum_to_prims;
 
@@ -678,7 +677,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
             if (!hasEquiv)
                 loweredChecksums.push_back(csum);
         }
-
         return loweredChecksums;
     }
     unsigned int rangeToInt(const IR::BFN::PacketRVal* range) {
