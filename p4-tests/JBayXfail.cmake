@@ -359,12 +359,6 @@ p4c_add_xfail_reason("tofino2"
   p4c_1585_a
 )
 
-# DRV-3247
-p4c_add_xfail_reason("tofino2"
-  "BfruntimeReadWriteRpcException"
-  p4_16_programs_tna_ternary_match
-)
-
 # REL-462
 p4c_add_xfail_reason("tofino2"
   "SyntaxError: invalid syntax"

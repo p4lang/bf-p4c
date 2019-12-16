@@ -1658,12 +1658,6 @@ p4c_add_xfail_reason("tofino"
   p4c_1585_a
 )
 
-# DRV-3247
-p4c_add_xfail_reason("tofino"
-  "BfruntimeReadWriteRpcException"
-  p4_16_programs_tna_ternary_match
-)
-
 # Arista regression failure - MUST_PASS for rel_9_1
 # P4C-2375
 p4c_add_xfail_reason("tofino"
