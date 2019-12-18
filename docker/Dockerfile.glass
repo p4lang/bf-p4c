@@ -29,6 +29,7 @@ ENV P4C_RUNTIME_DEPS cpp \
                      libgc1c2 \
                      libgmp10 \
                      libgmpxx4ldbl \
+                     libnl-genl-3-dev \
                      libnl-route-3-dev \
                      libssl1.0.0 \
                      pkg-config \
