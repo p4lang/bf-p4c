@@ -161,10 +161,12 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::SubSat *) override;
     bool preorder(const IR::Cmpl *) override { return true; }
     void postorder(const IR::Cmpl *) override;
-    bool preorder(const IR::BAnd *) override;
+    bool preorder(const IR::BAnd *) override { return true; }
     void postorder(const IR::BAnd *) override;
-    bool preorder(const IR::BOr *) override;
-    bool preorder(const IR::BXor *) override;
+    bool preorder(const IR::BOr *) override { return true; }
+    void postorder(const IR::BOr *) override;
+    bool preorder(const IR::BXor *) override { return true; }
+    void postorder(const IR::BXor *) override;
     bool preorder(const IR::Concat *) override;
     void postorder(const IR::Concat *) override;
     bool divmod(const IR::Operation::Binary *, cstring op);

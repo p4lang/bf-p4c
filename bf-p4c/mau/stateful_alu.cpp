@@ -813,7 +813,8 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
     if (etype == IF) {
         Pattern::Match<IR::Expression> e1, e2;
         Pattern::Match<IR::Constant> k;
-        if (((e1 & k) == e2).match(rel) && !k->fitsUint() && !k->fitsInt()) {
+        if (Device::statefulAluSpec().CmpMask &&
+            ((e1 & k) == e2).match(rel) && !k->fitsUint() && !k->fitsInt()) {
             // FIXME -- wide "neq" can be done with tmatch too?
             opcode = "tmatch";
             visit(rel->left, "left");
@@ -943,7 +944,7 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
         return false; }
 }
 
-bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
+void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "andca";
@@ -952,15 +953,7 @@ bool CreateSaluInstruction::preorder(const IR::BAnd *e) {
         else
             opcode = "and";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
-        return true;
-    } else if (etype == IF && Device::statefulAluSpec().CmpMask) {
-        return true;
-    } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo);
-        return false; }
-}
-void CreateSaluInstruction::postorder(const IR::BAnd *e) {
-    if (etype == IF) {
+    } else if (etype == IF) {
         if (operands.size() < 2) return;  // can only happen if there has been an error
         if (opcode == "tmatch") return;  // separate operands
         auto r = operands.back();
@@ -970,9 +963,11 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
                 error("%s: mask operand must be a constant", r->srcInfo);
             std::swap(r, operands.back()); }
         operands.back() = new IR::BAnd(e->srcInfo, operands.back(), r);
-        LOG4("BAnd rewrite opeands: " << operands.back()); }
+        LOG4("BAnd rewrite opeands: " << operands.back());
+    } else {
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
-bool CreateSaluInstruction::preorder(const IR::BOr *e) {
+void CreateSaluInstruction::postorder(const IR::BOr *e) {
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>())
             opcode = "orca";
@@ -981,10 +976,8 @@ bool CreateSaluInstruction::preorder(const IR::BOr *e) {
         else
             opcode = "or";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
-        return true;
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo);
-        return false; }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     if (Pattern(0).match(e->left)) {
@@ -999,17 +992,15 @@ bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     error("%sexpression too complex for stateful alu", e->srcInfo);
     return false;
 }
-bool CreateSaluInstruction::preorder(const IR::BXor *e) {
+void CreateSaluInstruction::postorder(const IR::BXor *e) {
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";
         else
             opcode = "xor";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
-        return true;
     } else {
-        error("%sexpression too complex for stateful alu", e->srcInfo);
-        return false; }
+        error("%sexpression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
     static const std::map<cstring, cstring> complement = {
