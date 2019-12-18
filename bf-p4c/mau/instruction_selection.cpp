@@ -1036,7 +1036,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
         use = IR::MAU::StatefulUse::FAST_CLEAR;
         bitvec clear_value;
         uint32_t busy_value = 0;
-        if (prim->operands.size() > 0) {
+        if (prim->operands.size() > 1) {
             auto *v = prim->operands.at(1)->to<IR::Constant>();
             if (!v) {
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "clear value %1% must be a constant",
@@ -1045,7 +1045,7 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::Primitive *prim) {
                 clear_value.putrange(0, 64, static_cast<uint64_t>(v->value));
                 clear_value.putrange(64, 64,
                     static_cast<uint64_t>(static_cast<big_int>(v->value >> 64))); } }
-        if (prim->operands.size() > 1) {
+        if (prim->operands.size() > 2) {
             auto *v = prim->operands.at(2)->to<IR::Constant>();
             if (!v) {
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "busy value %1% must be a constant",
