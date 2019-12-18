@@ -4,7 +4,7 @@ scripts_dir=$(dirname $0)
 me=$0
 
 usage() {
-    echo "Usage $me [--context <context.json>] [--resources <resources.json>] [--power <power.json] [--help]"
+    echo "Usage $me [--context <context.json>] [--resources <resources.json>] [--depgraph <depgraph.json>] [--power <power.json] [--help]"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -14,6 +14,7 @@ fi
 
 context=false
 resources=false
+depgraph=false
 phv=false
 power=false
 while [[ $# -gt 0 ]] ; do
@@ -31,6 +32,10 @@ while [[ $# -gt 0 ]] ; do
                 resources=$2
                 shift; shift;
                 ;;
+            -d|--depgraph)
+                depgraph=$2
+                shift; shift;
+                ;;
             -p|--phv)
                 phv=$2
                 shift; shift;
@@ -46,7 +51,7 @@ while [[ $# -gt 0 ]] ; do
     fi
 done
 
-# do not exit on error. We want to validate both context and resources as needed
+# do not exit on error. We want to validate context, resources and depgraph as needed
 set +e
 
 rcc=0
@@ -61,6 +66,12 @@ if [ $resources != false ]; then
     rcr=$?
 fi
 
+rcd=0
+if [ $depgraph != false ]; then
+    $scripts_dir/validate_depgraph_json $depgraph
+    rcd=$?
+fi
+
 rcp=0
 if [ $phv != false ]; then
     $scripts_dir/validate_phv_json $phv
@@ -73,7 +84,7 @@ if [ $power != false ]; then
     rcw=$?
 fi
 
-if [ $rcc != 0 ] || [ $rcr != 0 ] || [ $rcp != 0 ] || [ $rcw != 0 ]; then
+if [ $rcc != 0 ] || [ $rcr != 0 ] || [ $rcd != 0 ] || [ $rcp != 0 ] || [ $rcw != 0 ]; then
     exit 1
 fi
 

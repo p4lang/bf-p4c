@@ -32,6 +32,7 @@ class TablePlacement : public MauTransform, public Backtrack {
         RedoTablePlacement() : Backtrack::trigger(OK) {}
     };
     static bool can_duplicate(const IR::MAU::AttachedMemory *);
+    static int placement_round;
 
  protected:
     typedef enum {
@@ -85,6 +86,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct RewriteForSplitAttached;
 
     profile_t init_apply(const IR::Node *root) override;
+    void end_apply() override { placement_round++; };
     bool backtrack(trigger &) override;
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;

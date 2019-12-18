@@ -421,6 +421,14 @@ bool IR::MAU::Table::has_exit_action() const {
     return false;
 }
 
+std::vector<const IR::MAU::Action*> IR::MAU::Table::get_exit_actions() const {
+    std::vector<const IR::MAU::Action*> exit_actions;
+    for (auto &n : actions)
+        if (n.second->exitAction)
+            exit_actions.push_back(n.second);
+    return exit_actions;
+}
+
 // FIXME -- consider memoizing these boolean predicate functions for speed...
 bool IR::MAU::Table::has_exit_recursive() const {
     if (has_exit_action()) return true;

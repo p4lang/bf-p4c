@@ -6,17 +6,14 @@
 #include <boost/optional.hpp>
 #include <map>
 #include <set>
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/reduction_or.h"
 #include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/phv/phv_fields.h"
-
-namespace boost {
-    enum vertex_table_t { vertex_table };
-    BOOST_INSTALL_PROPERTY(vertex, table);
-}
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
@@ -26,34 +23,55 @@ namespace boost {
  * Note that there may be more than one edge from one table to another, each
  * representing a different dependency.
  *
- * The dependencies are:
- *
- *  - t1 -- CONTROL --> t2: Table t1 sets next-table information that decides
- *    whether t2 is applied.
- *
- *  - t1 -- OUTPUT ---> t2: Table t1 may write a field that t2 may also write.
- *
- *  - t1 -- DATA -----> t2: Table t1 may write a field that t2 may read.
- *
- *  - t1 -- ANTI -----> t2: Table t1 may read a field that t2 may write.
  */
-
+class TableGraphNode;
 struct DependencyGraph {
     typedef enum {
-        CONTROL = 1,     // Control dependence.
-        IXBAR_READ = (1 << 1),  // Read-after-write (data) dependence.
-        ACTION_READ = (1 << 2),  // Read-after-write dependence.
-                      // Different from IXBAR_READ for power analysis.
-        ANTI = (1 << 3),        // Write-after-read (anti) dependence.
-        OUTPUT = (1 << 4),      // Write-after-write (output) dependence. (ACTION?)
-        REDUCTION_OR_READ = (1 << 5),  // Read-after-write dependence,
-                            // Not a true dependency as hardware supports OR'n on
-                            // action data bus.
-        REDUCTION_OR_OUTPUT = (1 << 6),  // Write-after-write dependece,
-                              // Not a true dependency as hardware supports OR'n on
-                              // action data bus.
-        CONCURRENT = 0   // No dependency.
+        NONE                        = 1,          // No dependence label.
+        CONTROL_ACTION              = (1 << 1),   // Control dependence due to action.
+        CONTROL_COND_TRUE           = (1 << 2),   // Control dependence due to gateway
+                                                  // true condition.
+        CONTROL_COND_FALSE          = (1 << 3),   // Control dependence due to gateway
+                                                  // false condition.
+        CONTROL_TABLE_HIT           = (1 << 4),   // Control dependence due to a table hit.
+        CONTROL_TABLE_MISS          = (1 << 5),   // Control dependence due to a table miss.
+        CONTROL_DEFAULT_NEXT_TABLE  = (1 << 6),   // Control dependence due to default next table.
+        IXBAR_READ                  = (1 << 7),   // Read-after-write (data) dependence.
+        ACTION_READ                 = (1 << 8),   // Read-after-write dependence.
+                                                  // Different from IXBAR_READ for power analysis.
+        OUTPUT                      = (1 << 9),  // Write-after-write (output) dependence.(ACTION?)
+        REDUCTION_OR_READ           = (1 << 10),  // Read-after-write dependence,
+                                                  // Not a true dependency as hardware supports
+                                                  // OR'n on action data bus.
+        REDUCTION_OR_OUTPUT         = (1 << 11),  // Write-after-write dependece,
+                                                  // Not a true dependency as hardware supports
+                                                  // OR'n on action data bus.
+        CONT_CONFLICT               = (1 << 12),  // Container Conflict between 2 tables sharing
+                                                  // the same container
+        ANTI_EXIT                   = (1 << 13),  // Dependency due to an action with exit
+        ANTI_TABLE_READ             = (1 << 14),  // Action Write to a field read as
+                                                  // a previous table key
+        ANTI_ACTION_READ            = (1 << 15),  // Action Write to a field read as
+                                                  // a previous table action
+        ANTI_NEXT_TABLE_DATA        = (1 << 16),  // Data dependency between tables in
+                                                  // separate blocks
+        ANTI_NEXT_TABLE_CONTROL     = (1 << 17),  // Injected Control Dependency due to next
+                                                  // table control flow
+        ANTI_NEXT_TABLE_METADATA    = (1 << 18),  // Injected Data Dep due to a metadata field
+        CONCURRENT                  = 0           // No dependency.
     } dependencies_t;
+    static const unsigned ANTI = ANTI_EXIT
+                               | ANTI_TABLE_READ
+                               | ANTI_ACTION_READ
+                               | ANTI_NEXT_TABLE_DATA
+                               | ANTI_NEXT_TABLE_METADATA;
+    static const unsigned CONTROL = CONTROL_ACTION
+                                  | CONTROL_COND_TRUE
+                                  | CONTROL_COND_FALSE
+                                  | CONTROL_TABLE_HIT
+                                  | CONTROL_TABLE_MISS
+                                  | CONTROL_DEFAULT_NEXT_TABLE
+                                  | ANTI_NEXT_TABLE_CONTROL;
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
@@ -159,6 +177,12 @@ struct DependencyGraph {
              std::pair<ordered_set<const IR::MAU::Action*>,
              ordered_set<const IR::MAU::Action*>>>> data_annotations;
 
+    std::map<typename Graph::edge_descriptor, const std::vector<const IR::MAU::Action*>>
+                                                                    data_annotations_exit;
+    std::map<typename Graph::edge_descriptor, const PHV::Container> data_annotations_conflicts;
+    std::map<typename Graph::edge_descriptor, const PHV::FieldSlice*> data_annotations_metadata;
+    std::map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
+
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
@@ -182,6 +206,10 @@ struct DependencyGraph {
 
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
 
+    // Json variables
+    cstring passContext;
+    bool placed;
+
     DependencyGraph(void) {
         finalized = false;
     }
@@ -200,6 +228,28 @@ struct DependencyGraph {
         for (unsigned i = 0; i < 3; i++)
             max_min_stage_per_gress[i] = -1;
         display_min_edges = false;
+        passContext = "";
+        placed = false;
+    }
+
+    /// @returns boolean indicating if an edge is a type of anti edge
+    bool is_anti_edge(DependencyGraph::dependencies_t dep) const;
+
+    /// @returns boolean indicating if an edge is a type of control edge
+    bool is_ctrl_edge(DependencyGraph::dependencies_t dep) const;
+
+    /// @returns boolean indicating if an edge is critical, i.e. appears in the
+    /// min_stage_edges
+    bool is_edge_critical(typename Graph::edge_descriptor e) const {
+        auto source = get_vertex(boost::source(e, g));
+        auto target = get_vertex(boost::target(e, g));
+        if (min_stage_edges.count(target) == 0) return false;
+        for (auto s : min_stage_edges.at(target)) {
+            if ((s.first == source) && (s.second == g[e])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// @returns the length of the dependency based critical path for the program.
@@ -231,28 +281,7 @@ struct DependencyGraph {
     std::pair<typename Graph::edge_descriptor, bool> add_edge(
         const IR::MAU::Table* src,
         const IR::MAU::Table* dst,
-        dependencies_t edge_label) {
-        typename Graph::vertex_descriptor src_v, dst_v;
-        src_v = add_vertex(src);
-        dst_v = add_vertex(dst);
-
-        typename Graph::out_edge_iterator out, end;
-        for (boost::tie(out, end) = boost::out_edges(src_v, g); out != end; ++out) {
-            if (boost::target(*out, g) == dst_v && g[*out] == edge_label)
-                return {*out, false};
-        }
-
-        auto maybe_new_e = boost::add_edge(src_v, dst_v, g);
-        if (!maybe_new_e.second)
-            // A vector-based adjacency_list (i.e. Graph) is a multigraph.
-            // Inserting edges should always create new edges.
-            BUG("Boost Graph Library failed to add edge.");
-        g[maybe_new_e.first] = edge_label;
-        auto p = std::make_pair(dst, src);
-        dependency_map.emplace(p, edge_label);
-        // LOG1("DST " << dst->name << " has dep " << edge_label << " to SRC " << src->name);
-        return {maybe_new_e.first, true};
-    }
+        dependencies_t edge_label);
 
     bool container_conflict(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
         if (container_conflicts.find(t1) == container_conflicts.end())
@@ -280,8 +309,10 @@ struct DependencyGraph {
             return false; }
     }
 
-    // returns true if any table in s or control dependent on a table in s is data dependent on t1
-    bool happens_phys_before_recursive(const IR::MAU::Table* t1, const IR::MAU::TableSeq* s) const {
+    // returns true if any table in s or control dependent on a table in s is
+    // data dependent on t1
+    bool happens_phys_before_recursive(const IR::MAU::Table* t1,
+                                       const IR::MAU::TableSeq* s) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
         if (happens_phys_before_map.count(t1))
@@ -291,7 +322,8 @@ struct DependencyGraph {
     }
 
     // returns true if t2 or any table control dependent on it is data dependent on t1
-    bool happens_phys_before_recursive(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_phys_before_recursive(const IR::MAU::Table* t1,
+                                       const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
         if (happens_phys_before_map.count(t1)) {
@@ -338,6 +370,15 @@ struct DependencyGraph {
         return data_annotations.at(edge);
     }
 
+    boost::optional<std::string>
+    get_ctrl_dependency_info(typename Graph::edge_descriptor edge) const {
+        if (!ctrl_annotations.count(edge)) {
+            LOG4("Control dependency edge not found");
+            return boost::none;
+        }
+        return ctrl_annotations.at(edge);
+    }
+
     /* Gets table dependency annotations for data dependency edges (IXBAR_READ, ACTION_READ,
        OUTPUT, REDUCTION_OR_READ, REDUCTION_OR_OUTPUT, ANTI).
        Parameters: Upstream table, downstream table connected by data dependency edge.
@@ -370,7 +411,7 @@ struct DependencyGraph {
         bool found_downstream = false;
         for (boost::tie(out, end) = boost::out_edges(upstream_v, g); out != end; ++out) {
             const IR::MAU::Table* test_v = get_vertex(boost::target(*out, g));
-            if (test_v == downstream && g[*out] != DependencyGraph::CONTROL) {
+            if (test_v == downstream && (!is_ctrl_edge(g[*out]))) {
                 found_downstream = true;
                 auto edge_type = g[*out];
                 auto local_data_opt = get_data_dependency_info(*out);
@@ -440,13 +481,24 @@ struct DependencyGraph {
 
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);
     static cstring dep_to_name(dependencies_t dep) {
-        if (dep == CONTROL) {
+        if ((dep == DependencyGraph::CONTROL)
+         || (dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL)
+         || (dep == DependencyGraph::CONTROL_ACTION)
+         || (dep == DependencyGraph::CONTROL_COND_TRUE)
+         || (dep == DependencyGraph::CONTROL_COND_FALSE)
+         || (dep == DependencyGraph::CONTROL_TABLE_HIT)
+         || (dep == DependencyGraph::CONTROL_TABLE_MISS)
+         || (dep == DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE)) {
             return "control";
         } else if (dep == IXBAR_READ) {
             return "ixbar_read";
         } else if (dep == ACTION_READ) {
             return "action_read";
-        } else if (dep == ANTI) {
+        } else if ((dep == DependencyGraph::ANTI_EXIT)
+     || (dep == DependencyGraph::ANTI_TABLE_READ)
+     || (dep == DependencyGraph::ANTI_ACTION_READ)
+     || (dep == DependencyGraph::ANTI_NEXT_TABLE_DATA)
+     || (dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA)) {
             return "anti";
         } else if (dep == OUTPUT) {
             return "output";
@@ -454,10 +506,279 @@ struct DependencyGraph {
             return "concurrent";
         }
     }
-
     static void dump_viz(std::ostream &out, const DependencyGraph &dg);
+    void to_json(Util::JsonObject* dgJson, const FlowGraph &fg, cstring passContext, bool placed);
+    static dependencies_t get_control_edge_type(cstring annot) {
+        if (annot == "$hit")
+            return DependencyGraph::CONTROL_TABLE_HIT;
+        else if (annot == "$miss" || annot == "$try_next_stage")
+            return DependencyGraph::CONTROL_TABLE_MISS;
+        else if (annot == "$default")
+            return DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE;
+        else if (annot == "$true")
+            return DependencyGraph::CONTROL_COND_TRUE;
+        else if (annot == "$false")
+            return DependencyGraph::CONTROL_COND_FALSE;
+        else
+            return DependencyGraph::CONTROL_ACTION;
+    }
+
+    TableGraphNode create_node(const int id, const IR::MAU::Table *tbl) const;
 };
 
+class TableGraphField {
+ public:
+    cstring gress;
+    cstring name;
+    int lo;
+    int hi;
+};
+
+class TableGraphEdge {
+ public:
+    int id                      = -1;
+    int source                  = -1;
+    int target                  = -1;
+    int phv_number              = -1;
+    cstring action_name         = "";
+    cstring exit_action_name    = "";
+    bool is_critical            = false;
+
+    std::vector<TableGraphField> dep_fields;
+    std::vector<cstring> tags;
+    bool condition_value;
+    DependencyGraph::dependencies_t label;
+
+    // Static maps
+    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_types;
+    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_sub_types;
+    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_anti_types;
+    static std::map<DependencyGraph::dependencies_t, bool> labels_to_conds;
+
+    bool add_dep_field(const PHV::Field *s) {
+        if (!s) return false;
+
+        TableGraphField f;
+        f.name  = cstring::to_cstring(canon_name(s->name));
+        f.gress = toString(s->gress);
+        f.lo    = 0;
+        f.hi    = s->size -1;
+        dep_fields.push_back(f);
+        LOG5(" Adding Dep Field: "
+                << f.name << "[" << f.hi << ":" << f.lo << "] (" << f.gress << ")");
+        return true;
+    }
+
+    void add_dep_fields_json(Util::JsonObject* edgeMdJson) {
+        Util::JsonArray* edgeMdDepFields = new Util::JsonArray();
+        if (dep_fields.size() > 0) {
+            for (auto field : dep_fields) {
+                Util::JsonObject* edgeMdDepField = new Util::JsonObject();
+                edgeMdDepField->emplace("gress", field.gress);
+                edgeMdDepField->emplace("field_name", field.name);
+                edgeMdDepField->emplace("start_bit", field.lo);
+                edgeMdDepField->emplace("width", field.hi - field.lo + 1);
+                edgeMdDepFields->append(edgeMdDepField);
+            }
+        }
+        edgeMdJson->emplace("dep_fields", edgeMdDepFields);
+    }
+
+    void add_action_name_json(Util::JsonObject* edgeMdJson) {
+        auto act_name = cstring::to_cstring(canon_name(action_name));
+        edgeMdJson->emplace("action_name", act_name);
+    }
+
+    void add_exit_action_name_json(Util::JsonObject* edgeMdJson) {
+        auto act_name = cstring::to_cstring(canon_name(exit_action_name));
+        edgeMdJson->emplace("action_name", act_name);
+    }
+
+    void add_phv_number_json(Util::JsonObject* edgeMdJson) {
+        edgeMdJson->emplace("phv_number", phv_number);
+    }
+
+    void add_condition_value_json(Util::JsonObject* edgeMdJson) {
+        if (labels_to_conds.count(label) == 0)
+            BUG("Invalid edge type. Cannot determine condition value");
+        bool condition_value = labels_to_conds[label];
+        edgeMdJson->emplace("condition_value", condition_value);
+    }
+
+    void add_anti_type_json(Util::JsonObject* edgeMdJson) {
+        if (labels_to_anti_types.count(label) == 0)
+            BUG("Invalid edge type. Cannot determine anti type");
+
+        auto anti_type = labels_to_anti_types[label];
+        edgeMdJson->emplace("anti_type", anti_type);
+    }
+
+    void add_type_json(Util::JsonObject* edgeMdJson) {
+        if (labels_to_types.count(label) == 0)
+            BUG("Invalid edge type");
+
+        auto type = labels_to_types[label];
+        edgeMdJson->emplace("type", type);
+    }
+
+    void add_sub_type_json(Util::JsonObject* edgeMdJson) {
+        if (labels_to_sub_types.count(label) == 0)
+            BUG("Invalid edge type. Cannot determine sub type.");
+
+        auto sub_type = labels_to_sub_types[label];
+        edgeMdJson->emplace("sub_type", sub_type);
+    }
+
+    Util::JsonObject* create_edge_md_json() {
+        Util::JsonObject* edgeMdJson = new Util::JsonObject();
+
+        add_type_json(edgeMdJson);
+        add_sub_type_json(edgeMdJson);
+
+        switch (label) {
+            case DependencyGraph::IXBAR_READ                :
+                add_dep_fields_json(edgeMdJson); break;
+
+            case DependencyGraph::ACTION_READ               :
+                add_dep_fields_json(edgeMdJson);
+                add_action_name_json(edgeMdJson); break;
+
+            case DependencyGraph::OUTPUT                    :
+                add_dep_fields_json(edgeMdJson); break;
+
+            case DependencyGraph::CONT_CONFLICT             :
+                add_phv_number_json(edgeMdJson); break;
+
+            case DependencyGraph::REDUCTION_OR_READ         :
+            case DependencyGraph::REDUCTION_OR_OUTPUT       :
+                add_dep_fields_json(edgeMdJson); break;
+
+            case DependencyGraph::ANTI_TABLE_READ           :
+            case DependencyGraph::ANTI_ACTION_READ          :
+            case DependencyGraph::ANTI_NEXT_TABLE_DATA      :
+            case DependencyGraph::ANTI_NEXT_TABLE_CONTROL   :
+            case DependencyGraph::ANTI_NEXT_TABLE_METADATA  :
+                add_anti_type_json(edgeMdJson);
+                add_dep_fields_json(edgeMdJson); break;
+
+            case DependencyGraph::ANTI_EXIT                 :
+                add_exit_action_name_json(edgeMdJson); break;
+
+            case DependencyGraph::CONTROL_ACTION            :
+                add_action_name_json(edgeMdJson); break;
+
+            case DependencyGraph::CONTROL_COND_TRUE         :
+            case DependencyGraph::CONTROL_COND_FALSE        :
+                add_condition_value_json(edgeMdJson); break;
+
+            case DependencyGraph::CONTROL_TABLE_HIT         :
+            case DependencyGraph::CONTROL_TABLE_MISS        :
+            case DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE:
+                break;
+
+            /* Should never reach here */
+            default : BUG("Invalid dependency graph edge type");
+        }
+
+        if (is_critical)
+            edgeMdJson->emplace("is_critical", is_critical);
+
+        if (tags.size() > 0) {
+            Util::JsonArray* edgeMdTags = new Util::JsonArray();
+            for (auto t : tags)
+                edgeMdTags->append(t);
+            edgeMdJson->emplace("tags", edgeMdTags);
+        }
+
+        return edgeMdJson;
+    }
+
+    Util::JsonObject* create_edge_json() {
+        Util::JsonObject* edgeJson = new Util::JsonObject();
+        edgeJson->emplace("id", new Util::JsonValue(std::to_string(id)));
+        edgeJson->emplace("source", new Util::JsonValue(std::to_string(source)));
+        cstring targetStr = std::to_string(target);
+        if (target == 0) targetStr = "SINK";
+        edgeJson->emplace("target", new Util::JsonValue(targetStr));
+        edgeJson->emplace("metadata", create_edge_md_json());
+        return edgeJson;
+    }
+};
+
+class TableGraphNode {
+ public:
+    int id = -1;
+    int logical_id = -1;
+    int stage_number = -1;
+    int min_stage = -1;
+    int dep_chain = -1;
+
+    class TableGraphNodeTable {
+     public:
+        cstring name = "";
+        cstring table_type = "";
+        cstring match_type = "";
+        cstring condition = "";
+    };
+    std::vector<TableGraphNodeTable> nodeTables;
+
+    static cstring get_node_match_type(const IR::MAU::Table *tbl) {
+        auto match_type = tbl->get_table_type_string();
+        if (match_type == "exact_match")        return "exact";
+        else if (match_type == "ternary_match") return "ternary";
+        else if (match_type == "proxy_hash")    return "proxy_hash";
+        else if (match_type == "hash_action")   return "hash_action";
+        else if (tbl->layout.pre_classifier
+                || tbl->layout.alpm)            return "algorithmic_lpm";
+        else if (match_type == "atcam_match")   return "algorithmic_tcam";
+        return "none";
+    }
+
+    static cstring get_attached_table_type(const IR::MAU::AttachedMemory *att) {
+        if (att->to<IR::MAU::Counter>())                 return "statistics";
+        else if (att->to<IR::MAU::Meter>())              return "meter";
+        else if (att->to<IR::MAU::StatefulAlu>())        return "stateful";
+        else if (att->to<IR::MAU::Selector>())           return "selection";
+        else if (att->to<IR::MAU::ActionData>())         return "action";
+        else if (att->to<IR::MAU::TernaryIndirect>())    return "ternary_indirect";
+        else if (att->to<IR::MAU::IdleTime>())           return "idletime";
+        return "none";
+    }
+
+    Util::JsonObject* create_node_md_json() {
+        Util::JsonObject* nodeMdJson = new Util::JsonObject();
+
+        if (logical_id >= 0 && stage_number >= 0) {
+            Util::JsonObject* placement = new Util::JsonObject();
+            placement->emplace("logical_table_id", new Util::JsonValue(logical_id));
+            placement->emplace("stage_number", new Util::JsonValue(stage_number));
+            nodeMdJson->emplace("placement", placement);
+        }
+
+        Util::JsonArray* nodesTJsons = new Util::JsonArray();
+        for (auto n : nodeTables) {
+            Util::JsonObject* nodeTJson = new Util::JsonObject();
+            nodeTJson->emplace("name", new Util::JsonValue(n.name));
+            nodeTJson->emplace("table_type", new Util::JsonValue(n.table_type));
+            if (n.table_type == "match")
+                nodeTJson->emplace("match_type", new Util::JsonValue(n.match_type));
+            if (n.table_type == "condition")
+                nodeTJson->emplace("condition", new Util::JsonValue(n.condition));
+            nodesTJsons->append(nodeTJson);
+        }
+        nodeMdJson->emplace("tables", nodesTJsons);
+        nodeMdJson->emplace("min_stage", min_stage);
+        nodeMdJson->emplace("dep_chain", dep_chain);
+        return nodeMdJson;
+      }
+
+    Util::JsonObject* create_node_json() {
+        Util::JsonObject* nodeJson = new Util::JsonObject();
+        nodeJson->emplace("id", std::to_string(id));
+        nodeJson->emplace("metadata", create_node_md_json());
+        return nodeJson;
+    }
+};
 
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
@@ -599,6 +920,14 @@ class PrintPipe : public MauInspector {
     PrintPipe() { }
 };
 
+class FindCtrlDependencyGraph : public MauInspector {
+    DependencyGraph &dg;
+    bool preorder(const IR::MAU::Table *t);
+
+ public:
+    explicit FindCtrlDependencyGraph(DependencyGraph &out) : dg(out) {}
+};
+
 class FindDependencyGraph : public Logging::PassManager {
     bool _add_logical_deps = true;
 
@@ -612,13 +941,13 @@ class FindDependencyGraph : public Logging::PassManager {
     Visitor::profile_t init_apply(const IR::Node *node) override;
     TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
+    FlowGraph fg;
     ReductionOrInfo red_info;
     ControlPathwaysToTable con_paths;
     CalculateNextTableProp ntp;
     IgnoreTableDeps ignore;
     cstring dotFile;
     cstring passContext;
-
 
     void end_apply(const IR::Node *root) override;
 

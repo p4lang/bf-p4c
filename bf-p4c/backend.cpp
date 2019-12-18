@@ -18,6 +18,7 @@
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/check_duplicate.h"
+#include "bf-p4c/mau/dump_json_graph.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gen_prim_json.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
@@ -104,7 +105,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     flexibleLogging = new LogRepackedHeaders(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
-                                              defuse, deps, decaf, table_alloc);
+                                              defuse, deps, decaf, table_alloc /*, &jsonGraph */);
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
@@ -256,7 +257,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         // the original p4 action and how it is split across the stages to give
         // a clear idea during logging.
         new GeneratePrimitiveInfo(phv, primNode),
-        new TableAllocPass(options, phv, deps, table_summary),
+        new TableAllocPass(options, phv, deps, table_summary, &jsonGraph),
         new DumpPipe("After TableAlloc"),
         &table_summary,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
@@ -282,8 +283,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         // must be called right before characterize power
-        new FindDependencyGraph(phv, deps, "", "After Table Placement"),
-
+        new FindDependencyGraph(phv, deps, "placement_graph",
+                "After Table Placement", /* run_flow_graph */ true),
+        new DumpJsonGraph(deps, &jsonGraph, "After Table Placement", true),
         new CharacterizePower(deps,
 #if BAREFOOT_INTERNAL
                               options.no_power_check,

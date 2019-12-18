@@ -1320,6 +1320,11 @@ class PhvInfo {
     // place table t1.
     ordered_map<cstring, ordered_set<cstring>> reverseMetadataDeps;
 
+    // For each of the table pairs in above 'metadataDeps' map, below map holds
+    // the corresponding slice causing the dependency
+    typedef std::pair<cstring, cstring> tpair;
+    ordered_map<tpair, const PHV::FieldSlice*> metadataDepFields;
+
     // UnionFind struct in PhvInfo for all fields that are written in the same parser state using
     // constants.
     UnionFind<PHV::Field*>  sameStateConstantExtraction;
@@ -1536,9 +1541,17 @@ class PhvInfo {
     /// notes down a required dependence from table t1 to table t2, induced by metadata
     /// initialization to enable live range shrinking. Updates both the metadataDeps and
     /// reverseMetadataDeps members.
-    void addMetadataDependency(const IR::MAU::Table* t1, const IR::MAU::Table* t2) {
+    void addMetadataDependency(const IR::MAU::Table* t1, const IR::MAU::Table* t2,
+                                  const PHV::FieldSlice* slice = nullptr) {
         metadataDeps[t1->name].insert(t2->name);
         reverseMetadataDeps[t2->name].insert(t1->name);
+        if (slice) {
+            auto table_pair = std::make_pair(t1->name, t2->name);
+            if (metadataDepFields.emplace(table_pair, slice).second) {
+                LOG5(" Adding tables " << t1->name << " --> " << t2->name
+                    << " with metadata dependent field " << slice);
+            }
+        }
     }
 
     /// @returns the set of tables which must be placed before table @t.
@@ -1556,6 +1569,11 @@ class PhvInfo {
     /// @returns a reference to reverseMetadataDeps.
     const ordered_map<cstring, ordered_set<cstring>>& getReverseMetadataDeps() const {
         return reverseMetadataDeps;
+    }
+
+    /// @returns a reference to metadataDepFields.
+    const ordered_map<tpair, const PHV::FieldSlice*>& getMetadataDepFields() const {
+        return metadataDepFields;
     }
 };
 

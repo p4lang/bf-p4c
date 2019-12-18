@@ -237,6 +237,7 @@ class Table : BFN::Unit {
     int get_provided_stage(const int *init_stage = nullptr, int *req_entries = nullptr) const;
     int hit_actions() const;
     bool has_exit_action() const;
+    std::vector<Action> get_exit_actions() const;
     bool has_non_exit_action() const;
     bool has_exit_recursive() const;  // is there an exit here or any control dependent table?
     int get_random_seed() const;
@@ -283,6 +284,20 @@ class Table : BFN::Unit {
 #emit
     bool operator==(const Table &a) const override;
 #end
+    cstring get_table_type_string() const {
+        cstring tbl_type = "gateway";
+        bool no_match_hit = layout.no_match_hit_path() && !gateway_only();
+        if (!gateway_only())
+            tbl_type = layout.ternary || layout.no_match_miss_path()
+                       ? "ternary_match" : "exact_match";
+        if (layout.proxy_hash)
+            tbl_type = "proxy_hash";
+        if (no_match_hit)
+            tbl_type = "hash_action";
+        if (layout.atcam)
+            tbl_type = "atcam_match";
+        return tbl_type;
+    }
     bool uses_gateway() const { return !gateway_rows.empty(); }
     bool uses_gateway_payload() const {
         for (auto row : gateway_rows) {

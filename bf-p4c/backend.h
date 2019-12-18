@@ -44,8 +44,10 @@ class Backend : public PassManager {
     // Primitives Json Node, is populated before instruction adjustment and
     // passed to AsmOutput to output primitive json file
     Util::JsonObject primNode;
-    // Dynamic Hash Calculations Node, is populated at the end of backend passes
-    Util::JsonObject dynHashNode;
+    // Dependency Flow Graph Json, is a collection of graphs populated when
+    // passed as a parameter to FindDependencyGraph pass. By default graphs are
+    // generated once before and once after table placement.
+    Util::JsonObject jsonGraph;
 
     FlexiblePacking *flexiblePacking;
     LogRepackedHeaders *flexibleLogging;
@@ -60,7 +62,7 @@ class Backend : public PassManager {
     const FieldDefUse   &get_defuse()  const { return defuse; }
     const NextTable *get_nxt_tbl() const { return nextTblProp; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
-    const Util::JsonObject &get_dynhash_json() const { return dynHashNode; }
+    const Util::JsonObject &get_json_graph() const { return jsonGraph; }
     const FlexiblePacking  *get_flexible_packing() const { return flexiblePacking; }
     const LogRepackedHeaders *get_flexible_logging() const { return flexibleLogging; }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }

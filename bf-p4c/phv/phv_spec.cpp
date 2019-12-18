@@ -340,6 +340,10 @@ unsigned PhvSpec::getContainersPerGroup(
     return rv;
 }
 
+unsigned PhvSpec::physicalAddress(const PHV::Container &c, ArchBlockType_t interface) const {
+    return physicalAddress(containerToId(c), interface);
+}
+
 Util::JsonObject *PhvSpec::toJson() const {
     // Create the "phv_containers" node.
     auto *phv_containers = new Util::JsonObject();

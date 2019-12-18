@@ -30,7 +30,7 @@ std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
     return out;
 }
 
-static void dump_viz(std::ostream &out, FlowGraph &fg) {
+void FlowGraph::dump_viz(std::ostream &out, const FlowGraph &fg) {
     auto all_vertices = boost::vertices(fg.g);
     if (++all_vertices.first == all_vertices.second) {
         out << "digraph empty {\n}" << std::endl;
@@ -66,45 +66,62 @@ Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
     return rv;
 }
 
-bool FindFlowGraph::next_incomplete(const IR::MAU::Table *t) {
+std::pair<bool, cstring> FindFlowGraph::next_incomplete(const IR::MAU::Table *t) {
     // TODO: Handle $try_next_stage
     if (t->next.count("$hit") && t->next.count("$miss"))
-        return false;
-    if (t->next.count("$hit") || t->next.count("$miss"))
-        return true;
+        return std::make_pair(false, "");
+    if (t->next.count("$hit") || t->next.count("$miss")) {
+        if (t->next.count("$hit")) {
+            return std::make_pair(true, "$miss");
+        }
+        return std::make_pair(true, "$hit");
+    }
     if (t->next.count("$true") && t->next.count("$false"))
-        return false;
+        return std::make_pair(false, "");
     if (t->next.count("$true") || t->next.count("$false")) {
         // BUG("Gateway has one of true or false but not both");
-        return true;
+        if (t->next.count("$true")) {
+            return std::make_pair(true, "$false");
+        }
+        return std::make_pair(true, "$true");
     }
     if (t->next.count("$default"))
-        return false;
+        return std::make_pair(false, "");
     if (t->next.size() == 0)
-        return true;
+        return std::make_pair(true, "$default");
     for (auto kv : t->actions) {
-        if (!t->next.count(kv.first))
-            return true;
+        if (!t->next.count(kv.first)) {
+            return std::make_pair(true, "$hit");
+        }
     }
-    return false;
+    return std::make_pair(false, "");
 }
 
 bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
     for (auto options : t->next) {
+        const IR::MAU::Table *dst;
         if (options.second->tables.size() > 0) {
-            fg.add_edge(t, options.second->tables[0], FlowGraph::CONTROL);
+            dst = options.second->tables[0];
         } else {
-            const IR::MAU::Table *default_next = def_next->next(t);
             // This will sometimes be null, which will cause an edge to be added to v_sink
-            fg.add_edge(t, default_next, FlowGraph::CONTROL);
+            dst = def_next->next(t);
         }
+        auto dst_name = dst ? dst->name : "SINK";
+        LOG1("Parent : " << t->name << " --> " << options.first << " --> " << dst_name);
+        auto edge_pair = fg.add_edge(t, dst, FlowGraph::CONTROL);
+        fg.ctrl_annotations[edge_pair.first] = options.first;
     }
     LOG3("Table: " << t->name << " Next: " <<
         (def_next->next(t) ? def_next->next(t)->name : "<null>"));
-    if (next_incomplete(t)) {
+    auto n = next_incomplete(t);
+    LOG3("next - " << n.first << ":" << n.second);
+    if (n.first) {
         const IR::MAU::Table *default_next = def_next->next(t);
+        auto dst_name = default_next ? default_next->name : "SINK";
+        LOG1("Parent : " << t->name << " --> " << n.second << " --> " << dst_name);
         // This will sometimes be null, which will cause an edge to be added to v_sink
-        fg.add_edge(t, default_next, FlowGraph::CONTROL);
+        auto edge_pair = fg.add_edge(t, default_next, FlowGraph::CONTROL);
+        fg.ctrl_annotations[edge_pair.first] = n.second;
     }
     return true;
 }
@@ -126,9 +143,9 @@ void FindFlowGraph::end_apply() {
             }
         }
     }
-    LOG1(fg);
-    if (LOGGING(1))
-        dump_viz(std::cout, fg);
+    LOG4(fg);
+    if (LOGGING(4))
+        FlowGraph::dump_viz(std::cout, fg);
 
     for (boost::tie(v, v_end) = boost::vertices(fg.g); v != v_end; ++v) {
         if (*v != fg.v_sink)

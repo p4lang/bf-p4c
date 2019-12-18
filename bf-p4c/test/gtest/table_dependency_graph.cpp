@@ -221,11 +221,11 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         DependencyGraph::dependencies_t edge_type = dg.g[*edges];
         if (src == t2 && dst == t3) {
             num_checks++;
-            EXPECT_EQ(edge_type, DependencyGraph::CONTROL);
+            EXPECT_EQ(dg.is_ctrl_edge(edge_type), true);
         }
         if (src == t3 && dst == t4) {
             num_checks++;
-            EXPECT_EQ(edge_type, DependencyGraph::CONTROL);
+            EXPECT_EQ(dg.is_ctrl_edge(edge_type), true);
         }
         if (src == t2) {
             num_checks++;
@@ -366,6 +366,7 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     EXPECT_NE(t11, nullptr);
     EXPECT_NE(t12, nullptr);
 
+    DependencyGraph::dump_viz(std::cout, dg);
     auto not_found = dg.get_data_dependency_info(t1, t2);
     EXPECT_EQ(not_found, boost::none);
 
@@ -387,9 +388,15 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     EXPECT_NE(dep_types.count(DependencyGraph::IXBAR_READ), UINT32_C(0));
     EXPECT_NE(dep_types.count(DependencyGraph::ACTION_READ), UINT32_C(0));
     EXPECT_NE(dep_types.count(DependencyGraph::OUTPUT), UINT32_C(0));
-    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL), UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_ACTION),              UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_COND_TRUE),           UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_COND_FALSE),          UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_TABLE_HIT),           UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_TABLE_MISS),          UINT32_C(0));
+    EXPECT_EQ(dep_types.count(DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE),  UINT32_C(0));
     EXPECT_EQ(field_names.size(), UINT32_C(2));
     EXPECT_EQ(dep_info.size(), UINT32_C(4));
+
     for (const auto& kv : dep_info) {
         auto field = kv.first.first;
         auto dep_type = kv.first.second;

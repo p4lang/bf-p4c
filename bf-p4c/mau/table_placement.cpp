@@ -72,6 +72,8 @@
  ** isn't really needed (minimizing the difference between Tofino1 and Tofino2 here).
  */
 
+int TablePlacement::placement_round = 1;
+
 TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
                                const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,

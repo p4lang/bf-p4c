@@ -222,11 +222,12 @@ class Manifest : public Inspector {
         auto *files = getPipeOutputs(pipe);
         files->_resources.insert(PathAndType(path, type));
     }
-    void addGraph(int pipe, cstring graphType, cstring graphName, gress_t gress) {
+    void addGraph(int pipe, cstring graphType,
+            cstring graphName, gress_t gress, cstring ext = ".dot") {
         auto path = BFNContext::get().getOutputDirectory("graphs", pipe)
-            .substr(_options.outputDir.size()+1) + "/" + graphName + ".dot";
+            .substr(_options.outputDir.size()+1) + "/" + graphName + ext;
         auto *files = getPipeOutputs(pipe);
-        files->_graphs.insert(GraphOutput(path, gress, graphType));
+        files->_graphs.insert(GraphOutput(path, gress, graphType, ext));
     }
     void addLog(int pipe, cstring logType, cstring logName) {
         auto path = BFNContext::get().getOutputDirectory("logs", pipe)

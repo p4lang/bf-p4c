@@ -82,6 +82,7 @@ void PhvInfo::clear() {
     zeroContainers[1].clear();
     reverseMetadataDeps.clear();
     metadataDeps.clear();
+    metadataDepFields.clear();
     deparser_no_pack_i.clear();
     field_no_pack_i.clear();
     digest_no_pack_i.clear();

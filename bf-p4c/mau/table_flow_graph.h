@@ -9,13 +9,18 @@
 #include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
+
+namespace boost {
+    enum vertex_table_t { vertex_table };
+    BOOST_INSTALL_PROPERTY(vertex, table);
+}
 
 struct FlowGraph {
     typedef enum {
         CONTROL = 1,     // Control dependence.
         CONCURRENT = 0   // No dependency.
     } dependencies_t;
+
     typedef boost::adjacency_list<
         boost::vecS,
         boost::vecS,
@@ -34,11 +39,30 @@ struct FlowGraph {
     // false.
     bool emptyFlowGraph = true;
 
+    std::map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
+
+    boost::optional<std::string>
+    get_ctrl_dependency_info(typename Graph::edge_descriptor edge) const {
+        if (!ctrl_annotations.count(edge)) {
+            LOG4("Control dependency edge not found");
+            return boost::none;
+        }
+        return ctrl_annotations.at(edge);
+    }
     FlowGraph(void) {
         gress = boost::none;
     }
     std::map<const IR::MAU::Table*,
         typename Graph::vertex_descriptor> labelToVertex;
+
+    // Check if graph is empty
+    bool is_empty() const {
+        auto all_vertices = boost::vertices(g);
+        if (++all_vertices.first == all_vertices.second) {
+            return true;
+        }
+        return false;
+    }
 
     /** Clear the state for the FlowGraph.
       */
@@ -121,6 +145,7 @@ struct FlowGraph {
     }
 
     friend std::ostream &operator<<(std::ostream &, const FlowGraph&);
+    static void dump_viz(std::ostream &out, const FlowGraph &fg);
 };
 
 /** Custom breadth-first visitor that determines the reachability of various nodes from a given node
@@ -147,10 +172,11 @@ class FindFlowGraph : public MauInspector {
 
     bool preorder(const IR::MAU::Table *) override;
     Visitor::profile_t init_apply(const IR::Node* node) override;
-    bool next_incomplete(const IR::MAU::Table *t);
+    std::pair<bool, cstring> next_incomplete(const IR::MAU::Table *t);
     void end_apply() override;
 
  public:
+    static Util::JsonObject* cfgsJson;
     explicit FindFlowGraph(FlowGraph& out)
     : fg(out) {}
 };

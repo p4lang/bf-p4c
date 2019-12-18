@@ -115,8 +115,8 @@ class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
 class TableFindInjectedDependencies : public PassManager {
     const PhvInfo &phv;
     DependencyGraph &dg;
+    FlowGraph &fg;
     ControlPathwaysToTable ctrl_paths;
-    FlowGraph fg;
     CalculateNextTableProp cntp;
 
     profile_t init_apply(const IR::Node *root) override {
@@ -127,7 +127,7 @@ class TableFindInjectedDependencies : public PassManager {
 
  public:
     explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg,
-        bool run_flow_graph);
+                                           FlowGraph& fg, bool run_flow_graph);
  private:
     // Duplicates to dominators
     ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;

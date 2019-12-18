@@ -3079,20 +3079,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     auto unique_id = tbl->unique_id();
     LOG1("Emitting table " << unique_id);
-    TableMatch fmt(*this, phv, tbl);
-    const char *tbl_type = "gateway";
-    indent_t    indent(1);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
-    if (!tbl->gateway_only())
-        tbl_type = tbl->layout.ternary || tbl->layout.no_match_miss_path()
-                   ? "ternary_match" : "exact_match";
-    if (tbl->layout.proxy_hash)
-        tbl_type = "proxy_hash";
-    if (no_match_hit)
-        tbl_type = "hash_action";
-    if (tbl->layout.atcam)
-        tbl_type = "atcam_match";
-    out << indent++ << tbl_type << ' ' << unique_id << ' ' << tbl->logical_id % 16U
+    TableMatch fmt(*this, phv, tbl);
+    indent_t    indent(1);
+    out << indent++ << tbl->get_table_type_string()
+        << ' ' << unique_id << ' ' << tbl->logical_id % 16U
         << ':' << std::endl;
     if (tbl->always_run)
         out << indent << "always_run: true" << std::endl;

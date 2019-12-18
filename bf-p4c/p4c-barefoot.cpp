@@ -20,6 +20,7 @@
 #include "bf-p4c/logging/resources.h"
 #include "bf-p4c/mau/dynhash.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/mau/table_flow_graph.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
@@ -80,6 +81,7 @@ class GenerateOutputs : public PassManager {
     BFN::Visualization _visualization;
     BFN::DynamicHashJson _dynhash;
     const Util::JsonObject &_primitives;
+    const Util::JsonObject &_depgraph;
 
     /// Output a skeleton context.json in case compilation fails.
     /// It is required by all our tools. If the assembler can get far enough, it will overwrite it.
@@ -147,11 +149,28 @@ class GenerateOutputs : public PassManager {
             // Output resources json file
             auto logsDir = BFNContext::get().getOutputDirectory("logs", _pipeId);
             cstring resourcesFile = logsDir + "/resources.json";
-            LOG2("ASM generation for resources: " << resourcesFile);
+            LOG2("Resources json generation for P4i: " << resourcesFile);
             std::ofstream res(resourcesFile);
             res << _visualization << std::endl << std::flush;
             // relative path to the output directory
             manifest.addResources(_pipeId, resourcesFile.substr(_options.outputDir.size()+1));
+
+            auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
+            // Output dependency graph json file
+            if (_depgraph.size() > 0) {
+                cstring depFileName = "dep";
+                cstring depFile = graphsDir + "/" + depFileName + ".json";
+                LOG2("Dependency graph json generation for P4i: " << depFile);
+                std::ofstream dep(depFile);
+                _depgraph.serialize(dep);
+                // relative path to the output directory
+                // TBD: In manifest, add an option to indicate a program graph
+                // which includes both ingress and egress. Currently the graph node
+                // in manifest only accepts one gress since the dot graphs are
+                // generated per gress. To satisfy schema we use INGRESS, this does
+                // not have any affect on p4i interpretation.
+                manifest.addGraph(_pipeId, "table", depFileName, INGRESS, ".json");
+            }
         }
         if (!_success) {
             // \TODO: how much info do we need from context.json in
@@ -166,11 +185,11 @@ class GenerateOutputs : public PassManager {
     }
 
  public:
-    explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o,
-                             int pipeId, const Util::JsonObject& p,
+    explicit GenerateOutputs(const BFN::Backend &b, const BFN_Options& o, int pipeId,
+                             const Util::JsonObject& p, const Util::JsonObject& d,
                              bool success = true) :
-        _options(o), _pipeId(pipeId), _success(success),
-        _visualization(b.get_clot()), _dynhash(b.get_phv()), _primitives(p) {
+        _options(o), _pipeId(pipeId), _success(success), _visualization(b.get_clot()),
+        _dynhash(b.get_phv()), _primitives(p), _depgraph(d) {
         setStopOnError(false);
         _outputDir = BFNContext::get().getOutputDirectory("", pipeId);
         if (_outputDir == "") exit(1);
@@ -187,6 +206,7 @@ class GenerateOutputs : public PassManager {
                                                  : nullptr,
                     &_visualization
                     });
+
         setName("Assembly output");
     }
 };
@@ -209,12 +229,14 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options,
 #endif  // BFP4C_CATCH_EXCEPTIONS
         maupipe = maupipe->apply(backend);
         bool success = maupipe != nullptr;
-        GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), success);
+        GenerateOutputs as(backend, options, maupipe->id,
+                backend.get_prim_json(), backend.get_json_graph(), success);
         if (maupipe)
             maupipe->apply(as);
 #if BFP4C_CATCH_EXCEPTIONS
     } catch (...) {
-        GenerateOutputs as(backend, options, maupipe->id, backend.get_prim_json(), false);
+        GenerateOutputs as(backend, options, maupipe->id,
+                backend.get_prim_json(), backend.get_json_graph(), false);
         if (maupipe)
             maupipe->apply(as);
 

@@ -2,6 +2,8 @@
 #define EXTENSIONS_BF_P4C_MAU_MAU_ALLOC_H_
 
 #include "ir/ir.h"
+#include "lib/json.h"
+
 #include "bf-p4c-options.h"
 #include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -19,7 +21,10 @@ class TableAllocPass : public Logging::PassManager {
     TablesMutuallyExclusive             mutex;
 
  public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps, TableSummary &);
+    static int table_placement_round;
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv,
+                    DependencyGraph &deps, TableSummary &, Util::JsonObject*);
 };
+
 
 #endif /* EXTENSIONS_BF_P4C_MAU_MAU_ALLOC_H_ */

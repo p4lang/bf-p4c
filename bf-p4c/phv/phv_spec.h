@@ -246,6 +246,10 @@ class PhvSpec {
     /// in the pipeline: PARSER, MAU, DEPARSER.
     virtual unsigned physicalAddress(unsigned container_id, ArchBlockType_t interface) const = 0;
 
+    /// @return the target-specific address of @container, for the specified interface
+    /// in the pipeline: PARSER, MAU, DEPARSER.
+    unsigned physicalAddress(const PHV::Container &c, ArchBlockType_t interface) const;
+
     /// @return the target-specific address specification for the specified interface
     virtual AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const = 0;
 

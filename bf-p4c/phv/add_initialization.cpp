@@ -280,8 +280,11 @@ void ComputeDependencies::noteDependencies(
                         continue;
                     }
                     if (readTable != initTable) {
-                        phv.addMetadataDependency(readTable, initTable);
-                        LOG2("\t" << readTable->name << " --> " << initTable->name);
+                        auto *fieldSlice = new PHV::FieldSlice(readSlice.field(),
+                                                              readSlice.field_slice());
+                        phv.addMetadataDependency(readTable, initTable, fieldSlice);
+                        LOG5("\t" << readTable->name << " --> " <<
+                                initTable->name << " fieldSlice: " << fieldSlice);
                     }
                 }
             }

@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/handle_assign.h"
 #include "bf-p4c/mau/attached_output.h"
+#include "bf-p4c/mau/dump_json_graph.h"
 #include "bf-p4c/mau/check_duplicate.h"
 #include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/split_gateways.h"
@@ -11,8 +12,10 @@
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/remove_noop_gateway.h"
 
+int TableAllocPass::table_placement_round = 1;
+
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
-                               TableSummary &summary)
+                               TableSummary &summary, Util::JsonObject* jsonGraph)
     : Logging::PassManager("table_placement_"), siaa(mutex, ignore) {
         addPasses({
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
@@ -25,7 +28,9 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),
             new CheckTableNameDuplicate,
-            new FindDependencyGraph(phv, deps, "", "Before Table Placement"),
+            new FindDependencyGraph(phv, deps, "",
+                    "Before Table Placement", /* run_flow_graph */ true),
+            new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
             &ignore,
             &mutex,
             &siaa,

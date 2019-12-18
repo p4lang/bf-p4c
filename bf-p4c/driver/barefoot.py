@@ -508,6 +508,10 @@ class BarefootBackend(BackendDriver):
                     if res['type'] == "resources":
                         self._pipes[pipe_id]['resources'] = os.path.join(self._output_directory,
                                                                          res['path'])
+                for graph in pipe['files']['graphs']:
+                    if graph['graph_format'] == ".json" and graph['graph_type'] == 'table':
+                        self._pipes[pipe_id]['graph'] = os.path.join(self._output_directory,
+                                                                        graph['path'])
                 for log in pipe['files']['logs']:
                     if log['log_type'] == 'phv' and log['path'].endswith('phv.json'):
                         self._pipes[pipe_id]['phv_json'] = os.path.join(self._output_directory,
@@ -733,6 +737,7 @@ class BarefootBackend(BackendDriver):
                     # A map of file key and verifier option
                     toBeVerified = {
                         'context'   : 'c',
+                        'graph'     : 'd',
                         'resources' : 'r',
                         'phv_json'  : 'p',
                         'power_json': 'w'

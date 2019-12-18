@@ -112,8 +112,8 @@ void InjectControlDependencies::postorder(const IR::MAU::TableSeq *seq) {
             if (t == tbl_parent) {
                 break;
             }
-            LOG2("Connecting table " << t->name << " to " << tbl_parent->name);
-            dg.add_edge(t, tbl_parent, DependencyGraph::CONTROL);
+            LOG5("Connecting table " << t->name << " to " << tbl_parent->name);
+            dg.add_edge(t, tbl_parent, DependencyGraph::ANTI_NEXT_TABLE_CONTROL);
         }
 
         tbl_parent = nullptr;
@@ -129,8 +129,28 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
         const IR::MAU::Table* parent;
         parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
+
+
         for (auto child : seq->tables) {
-            dg.add_edge(parent, child, DependencyGraph::CONTROL);
+             auto edge_label = DependencyGraph::NONE;
+            auto ctrl_annot = "";
+            // Find control type relationship between parent & child
+            for (auto options : parent->next) {
+                for (auto dst : options.second->tables) {
+                    if (dst == child) {
+                        ctrl_annot = options.first;
+                        edge_label = DependencyGraph::get_control_edge_type(ctrl_annot);
+                        break;
+                    }
+                }
+            }
+            BUG_CHECK(edge_label != DependencyGraph::NONE,
+                    "Cannot resolve Injected Control Edge Type");
+
+            auto edge_pair = dg.add_edge(parent, child, edge_label);
+            LOG3("Injecting CONTROL edge between " << parent->name << " --> " << child->name);
+
+            dg.ctrl_annotations[edge_pair.first] = ctrl_annot;  // Save annotation
         }
     }
 
@@ -154,14 +174,14 @@ void InjectControlDependencies::end_apply() {
  * This analysis to guarantee these possibilities is all handled by PHV allocation.  However,
  * the allocation implicitly adds dependencies that cannot be directly tracked by the table
  * dependency graph.  The rule is that all tables that use the metadata in the first live range
- * must appear before any tables using metadata in the second live range. 
+ * must appear before any tables using metadata in the second live range.
  * This by definition is a control dependence between two tables.
  *
  * In Tofino, specifically, putting a control dependence in the current analysis won't necessarily
  * work.  The table placement algorithm only works by placing all tables that require next table
  * propagation through them.  Data dependencies between any next table propagation of these
  * two tables are tracked through the TableSeqDeps (a separate analysis than PHV).  However,
- * control dependencies, like this metadata overlay, are not possible to track. 
+ * control dependencies, like this metadata overlay, are not possible to track.
  *
  * The only way to truly track these, while still being able to use the correct analysis of
  * the dependency analysis is to mark two tables in the same TableSeq as Control Dependent.
@@ -190,9 +210,15 @@ void InjectMetadataControlDependencies::end_apply() {
                 fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
                 "Metadata initialization analysis incorrect.  Live ranges between %s and %s "
                 "overlap", first_table, second_table);
-            dg.add_edge(name_to_table.at(first_table), name_to_table.at(second_table),
-                        DependencyGraph::ANTI);
-            LOG3("  Injecting ANTI dep between " << first_table << " and " << second_table
+            auto edge_pair = dg.add_edge(name_to_table.at(first_table),
+                    name_to_table.at(second_table), DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+            auto tpair = std::make_pair(first_table, second_table);
+            auto mdDepFields = phv.getMetadataDepFields();
+            if (mdDepFields.count(tpair)) {
+                auto mdDepField = mdDepFields.at(tpair);
+                dg.data_annotations_metadata.emplace(edge_pair.first, mdDepField);
+            }
+            LOG5("  Injecting ANTI dep between " << first_table << " and " << second_table
                  << " due to metadata initializaation");
             for (auto inject_point : inject_points) {
                 auto inj1 = inject_point.first->to<IR::MAU::Table>();
@@ -258,13 +284,17 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
                     // Add an anti-dependency to curTable from each next-table leaf of the
                     // predecessor.
                     for (auto leaf : cntp.next_table_leaves.at(sibling)) {
-                        dg.add_edge(leaf, curTable, DependencyGraph::ANTI);
+                        auto edge_pair = dg.add_edge(leaf, curTable, DependencyGraph::ANTI_EXIT);
+                        dg.data_annotations_exit.emplace(edge_pair.first,
+                                                            table->get_exit_actions());
                     }
                 } else {
                     // Add an anti-dependency edge from each next-table leaf of curTable to the
                     // successor.
                     for (auto leaf : cntp.next_table_leaves.at(curTable)) {
-                        dg.add_edge(leaf, sibling, DependencyGraph::ANTI);
+                        auto edge_pair = dg.add_edge(leaf, sibling, DependencyGraph::ANTI_EXIT);
+                        dg.data_annotations_exit.emplace(edge_pair.first,
+                                                            table->get_exit_actions());
                     }
                 }
             }
@@ -273,8 +303,9 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
 }
 
 TableFindInjectedDependencies
-        ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d, bool run_flow_graph)
-        : phv(p), dg(d) {
+        ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d,
+                                        FlowGraph& f, bool run_flow_graph)
+        : phv(p), dg(d), fg(f) {
     addPasses({
         new DominatorAnalysis(dg, dominators),
         new InjectControlDependencies(dg, dominators),
