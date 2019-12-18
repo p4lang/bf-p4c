@@ -55,31 +55,73 @@ class AllocationReport {
        return ss.str();
     }
 
+    /// Information about a set of PHV containers.
+    struct PhvOccupancyMetric {
+        unsigned containersUsed = 0;
+        unsigned bitsUsed = 0;
+        unsigned bitsAllocated = 0;
+
+        std::set<gress_t> gress;   // MAU group can consists containers of mixed gress
+
+        inline PhvOccupancyMetric& operator+=(const PhvOccupancyMetric& src) {
+            containersUsed += src.containersUsed;
+            bitsUsed += src.bitsUsed;
+            bitsAllocated += src.bitsAllocated;
+            gress.insert(src.gress.begin(), src.gress.end());
+
+            return *this;
+        }
+    };
+
     /// Information about PHV containers in each MAU group
     struct MauGroupInfo {
         size_t  size = 0;
         int     groupID = 0;
-        size_t  containersUsed = 0;
-        size_t  bitsUsed = 0;
-        size_t  bitsAllocated = 0;
-        size_t  totalContainers = 0;
-        std::set<gress_t> gress;   // MAU group can consists containers of mixed gress
+
+        PhvOccupancyMetric totalStats;
+        std::map<PHV::Kind, PhvOccupancyMetric, std::greater<PHV::Kind>> statsByContainerKind;
 
         MauGroupInfo() {}
 
-        explicit MauGroupInfo(size_t sz, int i, bool cont, size_t used, size_t allocated,
-                boost::optional<gress_t> gr)
-            : size(sz), groupID(i), bitsUsed(used), bitsAllocated(allocated) {
-            containersUsed = cont ? 1 : 0;
-            if (gr) gress.insert(*gr);
-            totalContainers = Device::phvSpec().numContainersInGroup();
+        /// Initializes a new MauGroupInfo with usage information from a single container.
+        explicit MauGroupInfo(size_t sz, int i, PHV::Kind containerKind, bool cont, size_t used,
+                              size_t allocated, boost::optional<gress_t> gr)
+            : size(sz), groupID(i) {
+            auto& kindStats = statsByContainerKind[containerKind];
+
+            if (cont) {
+                ++totalStats.containersUsed;
+                ++kindStats.containersUsed;
+            }
+
+            totalStats.bitsUsed = kindStats.bitsUsed = used;
+            totalStats.bitsAllocated = kindStats.bitsAllocated = allocated;
+
+            if (gr) {
+                totalStats.gress.insert(*gr);
+                kindStats.gress.insert(*gr);
+            }
         }
 
-        void update(bool cont, size_t used, size_t allocated, boost::optional<gress_t> gr) {
-            containersUsed += (cont ? 1 : 0);
-            bitsUsed += used;
-            bitsAllocated += allocated;
-            if (gr) gress.insert(*gr);
+        void update(PHV::Kind containerKind, bool cont, size_t used, size_t allocated,
+                boost::optional<gress_t> gr) {
+            auto& kindStats = statsByContainerKind[containerKind];
+
+            if (cont) {
+                ++totalStats.containersUsed;
+                ++kindStats.containersUsed;
+            }
+
+            totalStats.bitsUsed += used;
+            kindStats.bitsUsed += used;
+
+            totalStats.bitsAllocated += allocated;
+            kindStats.bitsAllocated += allocated;
+
+            if (gr) {
+                totalStats.gress.insert(*gr);
+                kindStats.gress.insert(*gr);
+            }
         }
     };
 

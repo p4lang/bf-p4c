@@ -108,6 +108,9 @@ class PhvSpec {
     /// @return the PHV container kinds available on this device.
     const std::set<PHV::Kind>& containerKinds() const;
 
+    /// Determines whether the device has the given kind of PHV container.
+    bool hasContainerKind(PHV::Kind kind) const;
+
     /// @return the map from PHV groups to the types supported by that group.
     const std::map<PHV::Size, std::set<PHV::Type>> groupsToTypes() const;
 
@@ -139,6 +142,9 @@ class PhvSpec {
     /// this device. Different devices have different PHV containers, so ids are
     /// not consistent between devices.
     unsigned containerToId(PHV::Container container) const;
+
+    /// Filters a set of containers for a single container kind.
+    bitvec filterContainerSet(const bitvec& set, PHV::Kind kind) const;
 
     /// @return a string representation of the provided @set of containers.
     cstring containerSetToString(const bitvec& set) const;

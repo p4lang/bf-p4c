@@ -14,6 +14,7 @@ class JSONLoader;
 namespace PHV {
 
 // all possible PHV container kinds in BFN devices
+// The values here are used to define operator< on Kinds.
 enum class Kind : unsigned short {
     tagalong = 0,
     dark     = 1,
@@ -22,6 +23,13 @@ enum class Kind : unsigned short {
 };
 
 const Kind KINDS[] = { Kind::tagalong, Kind::dark, Kind::mocha, Kind::normal };
+
+const std::map<Kind, cstring> STR_OF_KIND = {
+  { Kind::tagalong, "tagalong" },
+  { Kind::dark, "dark" },
+  { Kind::mocha, "mocha" },
+  { Kind::normal, "normal" }
+};
 
 // all possible contexts a PHV container can participate in
 enum class Context : unsigned short {
@@ -50,28 +58,39 @@ inline std::vector<Context> all_contexts(Kind kind) {
     }
 }
 
-/** Provides a partial ordering over PHV container kinds, denoting subset
- * inclusion over the set of capabilities each kind supports.  For example,
- * `tagalong < normal`, because tagalong containers don't support reads/writes
- * in the MAU, whereas normal containers do.
+/** Provides a total ordering over PHV container kinds, denoting a refinement of the ordering
+ * induced by subset inclusion over the set of capabilities each kind supports.  For example,
+ * `tagalong < normal`, because tagalong containers don't support reads/writes in the MAU, whereas
+ * normal containers do.
  */
+// XXX(Jed): This was previously a partial order. Turned into a total order so that things behave
+// properly when Kind is used as a key in std::map or an element in std::set. It's hard to search
+// for all the places where this operator is used, so I'm not confident that this won't break
+// anything.
+//
+// Previous ordering: normal > mocha > dark, mocha > tagalong. Deep had a comment that dark and
+// tagalong don't occur together, so an ordering between them didn't need to be established, but
+// the same could be said for tagalong and mocha.
+//
+// Current ordering: normal > mocha > dark > tagalong.
 inline bool operator<(Kind left, Kind right) {
     // Unfortunately, using the all_contexts map to define this inequality causes a massive slowdown
     // (>2x) in compilation times.
     // XXX(Deep): Figure out a way to use the all_contexts map to define this inequality.
-    // Normal containers support the most operations.
-    if (left == Kind::normal) return false;
-    if (right == Kind::normal) return true;
-    // Mocha containers support the second most operations.
-    if (left == Kind::mocha) return false;
-    if (right == Kind::mocha) return true;
-    // Dark and tagalong won't occur together. So, no need to define the relationship between the
-    // two.
-    return false;
+
+    return (size_t) left < (size_t) right;
 }
 
 inline bool operator<=(Kind left, Kind right) {
     return left == right || left < right;
+}
+
+inline bool operator>(Kind left, Kind right) {
+    return right < left;
+}
+
+inline bool operator>=(Kind left, Kind right) {
+    return left == right || left > right;
 }
 
 // all possible PHV container sizes in BFN devices

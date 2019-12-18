@@ -27,6 +27,10 @@ const std::set<PHV::Kind>& PhvSpec::containerKinds() const {
     return definedKinds;
 }
 
+bool PhvSpec::hasContainerKind(PHV::Kind kind) const {
+    return definedKinds.count(kind);
+}
+
 const std::map<PHV::Size, std::set<PHV::Type>> PhvSpec::groupsToTypes() const {
     return sizeToTypeMap;
 }
@@ -61,15 +65,65 @@ unsigned PhvSpec::containerToId(PHV::Container container) const {
            containerTypeToId(container.type());
 }
 
-cstring PhvSpec::containerSetToString(const bitvec& set) const {
-    bool first = true;
-    std::stringstream setAsString;
+bitvec PhvSpec::filterContainerSet(const bitvec& set, PHV::Kind kind) const {
+    bitvec result;
     for (auto member : set) {
-        if (!first) setAsString << ", ";
-        first = false;
-        setAsString << idToContainer(member);
+        if (idToContainer(member).type().kind() == kind) result.setbit(member);
     }
-    return cstring(setAsString);
+
+    return result;
+}
+
+struct TypeComparator {
+    bool operator()(const PHV::Type& left, const PHV::Type& right) const {
+        if (left.kind() != right.kind()) return left.kind() > right.kind();
+        return left.size() < right.size();
+    }
+};
+
+cstring PhvSpec::containerSetToString(const bitvec& set) const {
+    std::map<PHV::Type, std::set<unsigned>, TypeComparator> containersByType;
+    for (auto member : set) {
+        auto container = idToContainer(member);
+        containersByType[container.type()].insert(container.index());
+    }
+
+
+    bool first = true;
+    std::stringstream result;
+
+    auto outputRange = [&](PHV::Type type, unsigned min, unsigned max) {
+        if (!first) result << ", ";
+        first = false;
+
+        result << PHV::Container(type, min);
+        if (min != max) result << "-" << max;
+    };
+
+    for (auto& kv : containersByType) {
+        boost::optional<unsigned> curRangeStart;
+        boost::optional<unsigned> curRangeEnd;
+        for (auto idx : kv.second) {
+            if (!curRangeStart) {
+                curRangeStart = idx;
+                curRangeEnd = idx;
+                continue;
+            }
+
+            if (*curRangeEnd == idx - 1) {
+                curRangeEnd = idx;
+                continue;
+            }
+
+            outputRange(kv.first, *curRangeStart, *curRangeEnd);
+            curRangeStart = idx;
+            curRangeEnd = idx;
+        }
+
+        outputRange(kv.first, *curRangeStart, *curRangeEnd);
+    }
+
+    return cstring(result);
 }
 
 bitvec

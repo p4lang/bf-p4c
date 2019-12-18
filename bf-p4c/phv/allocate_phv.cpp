@@ -2268,6 +2268,8 @@ void AllocatePHV::formatAndThrowError(
     msg << std::endl;
     errorMessage << msg.str();
 
+    bool have_tagalong = Device::phvSpec().hasContainerKind(PHV::Kind::tagalong);
+
     if (LOGGING(1)) {
         msg << "Fields successfully allocated: " << std::endl;
         msg << alloc << std::endl; }
@@ -2275,8 +2277,7 @@ void AllocatePHV::formatAndThrowError(
         for (auto* rotational_cluster : super_cluster->clusters()) {
             for (auto* cluster : rotational_cluster->clusters()) {
                 for (auto& slice : cluster->slices()) {
-                    // XXX(cole): Need to update this for JBay.
-                    bool can_be_tphv = cluster->okIn(PHV::Kind::tagalong);
+                    bool can_be_tphv = have_tagalong && cluster->okIn(PHV::Kind::tagalong);
                     unallocated_bits += slice.size();
                     if (slice.gress() == INGRESS) {
                         if (!can_be_tphv)
@@ -2295,8 +2296,10 @@ void AllocatePHV::formatAndThrowError(
             << "..........Unallocated bits = " << unallocated_bits << std::endl;
         msg << "..........ingress phv bits = " << ingress_phv_bits << std::endl;
         msg << "..........egress phv bits = " << egress_phv_bits << std::endl;
-        msg << "..........ingress t_phv bits = " << ingress_t_phv_bits << std::endl;
-        msg << "..........egress t_phv bits = " << egress_t_phv_bits << std::endl;
+        if (have_tagalong) {
+            msg << "..........ingress t_phv bits = " << ingress_t_phv_bits << std::endl;
+            msg << "..........egress t_phv bits = " << egress_t_phv_bits << std::endl;
+        }
         msg << std::endl; }
 
     PHV::AllocationReport report(alloc, true);

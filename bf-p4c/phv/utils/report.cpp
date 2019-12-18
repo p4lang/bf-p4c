@@ -338,8 +338,8 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
 
     ordered_map<bitvec, MauGroupInfo> mauGroupInfos;
 
-    for (auto cid : Device::phvSpec().physicalContainers()) {
-        PHV::Container c = Device::phvSpec().idToContainer(cid);
+    for (auto cid : phvSpec.physicalContainers()) {
+        PHV::Container c = phvSpec.idToContainer(cid);
         if (boost::optional<bitvec> mauGroup = phvSpec.mauGroup(cid)) {
             // groupID represents the unique string that identifies an MAU group
             int groupID = phvSpec.mauGroupId(c);
@@ -349,11 +349,11 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
             auto gress = container_to_gress.at(c);
 
             if (mauGroupInfos.count(mauGroup.get())) {
-                mauGroupInfos[mauGroup.get()].update(containerUsed,
+                mauGroupInfos[mauGroup.get()].update(c.type().kind(), containerUsed,
                         bits_used, bits_allocated, gress);
             } else {
                 mauGroupInfos[mauGroup.get()] = MauGroupInfo(c.size(), groupID,
-                        containerUsed, bits_used, bits_allocated, gress);
+                        c.type().kind(), containerUsed, bits_used, bits_allocated, gress);
             }
         }
     }
@@ -361,75 +361,148 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
     std::stringstream ss;
     ss << std::endl << "MAU Groups:" << std::endl;
 
+    // Figure out what kinds of PHV containers to report. (Don't report on T-PHVs.)
+    std::set<PHV::Kind> containerKinds(phvSpec.containerKinds());
+    containerKinds.erase(PHV::Kind::tagalong);
+
     TablePrinter tp(ss, {
-       "MAU Group", "Gress", "Containers Used", "Bits Used", "Bits Allocated", "Available Bits"
+       containerKinds.size() == 1 ? "MAU Group" : "Container Set",
+       "Gress", "Containers Used", "Bits Used", "Bits Allocated", "Available Bits"
        }, TablePrinter::Align::CENTER);
 
-    auto tContainersUsed = 0, tBitsUsed = 0, tBitsAllocated = 0,
-         tTotalBits = 0, tTotalContainers = 0;
+    PhvOccupancyMetric overallStats;
+    auto overallTotalBits = 0;
+    auto overallTotalContainers = 0;
 
-    for (auto containerSize : Device::phvSpec().containerSizes()) {
-        // Calculate total size-wise
-        auto sz_containersUsed = 0, sz_bitsUsed = 0, sz_bitsAllocated = 0,
-             sz_totalBits = 0, sz_totalContainers = 0, size = 0;
+    std::map<PHV::Size, PhvOccupancyMetric> statsByContainerSize;
+    std::map<PHV::Size, unsigned> totalContainersBySize;
 
-        for (auto mauGroup : Device::phvSpec().mauGroups(containerSize)) {
+    std::map<PHV::Kind, PhvOccupancyMetric> statsByContainerKind;
+    std::map<PHV::Kind, unsigned> totalBitsByKind;
+    std::map<PHV::Kind, unsigned> totalContainersByKind;
+
+    int groupNum = 1;
+
+    for (auto containerSize : phvSpec.containerSizes()) {
+        auto& sizeStats = statsByContainerSize[containerSize];
+
+        bool firstGroup = true;
+        for (auto mauGroup : phvSpec.mauGroups(containerSize)) {
             auto& info = mauGroupInfos[mauGroup];
 
-            size = (size == 0) ? info.size : size;
-            sz_containersUsed += info.containersUsed;
-            sz_bitsUsed += info.bitsUsed;
-            sz_bitsAllocated += info.bitsAllocated;
-            auto totalBits = info.totalContainers * info.size;
-            sz_totalBits += totalBits;
-            sz_totalContainers += info.totalContainers;
+            sizeStats += info.totalStats;
+            totalContainersBySize[containerSize] += mauGroup.popcount();
 
-            std::stringstream group, containers, bits;
-            group << Device::phvSpec().idToContainer(*mauGroup.min()) << "--"
-                  << Device::phvSpec().idToContainer(*mauGroup.max());
+            if (!firstGroup && containerKinds.size() > 1) {
+                // We have more than one container kind in each group. Separate each group with a
+                // line.
+                tp.addSep();
+            }
 
-            tp.addRow({group.str(),
-                       info.bitsUsed ? to_string(info.gress) : "",
-                       formatUsage(info.containersUsed, info.totalContainers),
-                       formatUsage(info.bitsUsed, totalBits),
-                       formatUsage(info.bitsAllocated, totalBits),
-                       std::to_string(totalBits)});
+            firstGroup = false;
+
+            // Print a line for each container kind in this group.
+            for (auto& kv : info.statsByContainerKind) {
+                auto& kind = kv.first;
+                auto& kindInfo = kv.second;
+
+                auto subgroup = phvSpec.filterContainerSet(mauGroup, kind);
+                auto curTotalBits = subgroup.popcount() * size_t(containerSize);
+                totalContainersByKind[kind] += subgroup.popcount();
+
+                statsByContainerKind[kind] += kindInfo;
+                totalBitsByKind[kind] += curTotalBits;
+                overallTotalBits += curTotalBits;
+
+                std::stringstream containerSet;
+                containerSet << phvSpec.containerSetToString(subgroup);
+
+                tp.addRow({containerSet.str(),
+                           kindInfo.bitsUsed ? to_string(kindInfo.gress) : "",
+                           formatUsage(kindInfo.containersUsed, subgroup.popcount()),
+                           formatUsage(kindInfo.bitsUsed, curTotalBits),
+                           formatUsage(kindInfo.bitsAllocated, curTotalBits),
+                           std::to_string(curTotalBits)});
+            }
+
+            if (containerKinds.size() > 1) {
+                // Output a summary for the group.
+                tp.addBlank();
+                std::stringstream group;
+                group << "Usage for Group " << groupNum++;
+
+                auto totalStats = info.totalStats;
+                auto totalContainers = mauGroup.popcount();
+                auto curTotalBits = totalContainers * size_t(containerSize);
+
+                tp.addRow({group.str(),
+                           "",
+                           formatUsage(totalStats.containersUsed, totalContainers),
+                           formatUsage(totalStats.bitsUsed, curTotalBits),
+                           formatUsage(totalStats.bitsAllocated, curTotalBits),
+                           std::to_string(curTotalBits)});
+            }
         }
 
-        if (Device::phvSpec().mauGroups(containerSize).size() != 0) {
-            // Size wise occupancy metrics
-            // Ensure that these lines appears only for B, H, and W; not for TB, TH, TW
-            tContainersUsed += sz_containersUsed;
-            tBitsUsed += sz_bitsUsed;
-            tBitsAllocated += sz_bitsAllocated;
-            tTotalBits += sz_totalBits;
-            tTotalContainers += sz_totalContainers;
-
-            std::stringstream group;
-            group << "Usage for " << size << "b";
-
-            tp.addBlank();
-
-            tp.addRow({group.str(),
-                       "",
-                       formatUsage(sz_containersUsed, sz_totalContainers),
-                       formatUsage(sz_bitsUsed, sz_totalBits),
-                       formatUsage(sz_bitsAllocated, sz_totalBits),
-                       std::to_string(sz_totalBits)
-                      });
-
+        if (phvSpec.mauGroups(containerSize).size() != 0) {
             tp.addSep();
         }
+
+        overallStats += sizeStats;
+        overallTotalContainers += totalContainersBySize[containerSize];
     }
 
-    // Print "Overal usage" stats.
+    // Print stats for usage by container size.
+    for (auto& kv : statsByContainerSize) {
+        auto& size = kv.first;
+        auto& stats = kv.second;
 
+        auto totalContainers = totalContainersBySize.at(size);
+        auto curTotalBits = totalContainers * size_t(size);
+
+        std::stringstream ss;
+        ss << "Usage for " << size_t(size) << "b";
+
+        tp.addRow({ss.str(),
+                   "",
+                   formatUsage(stats.containersUsed, totalContainers),
+                   formatUsage(stats.bitsUsed, curTotalBits),
+                   formatUsage(stats.bitsAllocated, curTotalBits),
+                   std::to_string(curTotalBits)});
+    }
+
+    tp.addSep();
+
+    if (containerKinds.size() > 1) {
+        // Print stats for usage by container kind.
+        for (auto& kv : statsByContainerKind) {
+            auto& kind = kv.first;
+            auto& stats = kv.second;
+
+            auto curTotalBits = totalBitsByKind.at(kind);
+            auto totalContainers = totalContainersByKind.at(kind);
+
+            std::stringstream ss;
+            ss << "Usage for " << PHV::STR_OF_KIND.at(kind);
+
+            tp.addRow({ss.str(),
+                       "",
+                       formatUsage(stats.containersUsed, totalContainers),
+                       formatUsage(stats.bitsUsed, curTotalBits),
+                       formatUsage(stats.bitsAllocated, curTotalBits),
+                       std::to_string(curTotalBits)});
+        }
+
+        tp.addSep();
+    }
+
+    // Print stats for overall usage.
     tp.addRow({"Overall PHV Usage",
                "",
-               formatUsage(tContainersUsed, tTotalContainers),
-               formatUsage(tBitsUsed, tTotalBits),
-               formatUsage(tBitsAllocated, tTotalBits),
-               std::to_string(tTotalBits)
+               formatUsage(overallStats.containersUsed, overallTotalContainers),
+               formatUsage(overallStats.bitsUsed, overallTotalBits),
+               formatUsage(overallStats.bitsAllocated, overallTotalBits),
+               std::to_string(overallTotalBits)
               });
 
     tp.print();
