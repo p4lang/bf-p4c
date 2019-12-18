@@ -5,9 +5,9 @@
 // This template works for JBay and Cloudbreak...
 template<typename REGS>
 void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act) {
-    if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
+    if (act != tbl->stage->imem_addr_use[imem_thread(tbl->gress)][act->addr]) {
         LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
-             tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
+             tbl->stage->imem_addr_use[imem_thread(tbl->gress)][act->addr]->name);
         return; }
     LOG2(this);
     auto &imem = regs.dp.imem;
