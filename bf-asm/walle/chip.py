@@ -60,7 +60,7 @@ class indirect_reg(chip_object):
         if len(hexstr) % 2 != 0:
             hexstr = '0' + hexstr
         self.value=bytearray.fromhex(hexstr)
-        self.value = self.value.rjust(self.width/8,chr(0))
+        self.value = self.value.rjust(self.width//8,chr(0))
         self.value.reverse()
         self.orig_value = value
 
@@ -77,7 +77,7 @@ class indirect_reg(chip_object):
 
         # Make sure to write pieces of the register starting from the
         # most-significant end, to ensure atomicity
-        offset = (self.width/8) - 4
+        offset = (self.width//8) - 4
         byte_str = ""
         while offset >= 0:
             byte_str += "\0\0\0R" + struct.pack("<I",self.addr+offset) + self.value[offset:offset+4].ljust(4,chr(0))
@@ -115,7 +115,7 @@ class dma_block(chip_object):
         if len(hexstr) % 2 != 0:
             hexstr = '0' + hexstr
         self.values.append(bytearray.fromhex(hexstr))
-        self.values[-1] = self.values[-1].rjust(self.width/8,chr(0))
+        self.values[-1] = self.values[-1].rjust(self.width//8,chr(0))
         self.values[-1].reverse()
 
     def __str__(self):
@@ -135,8 +135,8 @@ class dma_block(chip_object):
                 sys.exit(1)
             new_values = []
             for value in self.values:
-                for chunk in range(0, self.width/8, 16):
-                    new_values.append(value[chunk:chunk+16].rjust(128/8,chr(0)))
+                for chunk in range(0, self.width//8, 16):
+                    new_values.append(value[chunk:chunk+16].rjust(128//8,chr(0)))
             self.values = new_values
             self.width = 128
 

@@ -396,8 +396,8 @@ def walle_process(parser, args=None):
             print("Schema generated from:\n")
             cmd = 'echo | git -C %s log -1' % args.generate_schema
             output = subprocess.check_output(cmd, shell=True)
-            print(output)
-            outfile.write('\n\n' + output)
+            print(output.decode('utf-8'))
+            outfile.write(b'\n\n' + output)
 
         if args.generate_templates != None:
             if not os.path.isfile(args.schema):

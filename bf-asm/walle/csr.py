@@ -1100,7 +1100,7 @@ class address_map(csr_composite_object):
             if obj_end > width:
                 width = obj_end
 
-        width /= 8
+        width //= 8
 
         if round_to_power_of_2:
             # Round stride up to the next largest power of 2
@@ -1200,7 +1200,7 @@ class address_map(csr_composite_object):
                             reg_values.append(mem)
                         else:
                             offset = [0]
-                            width = obj.width/8 #TODO: warn if not power of (8 or 32 or w/e)?
+                            width = obj.width//8 #TODO: warn if not power of (8 or 32 or w/e)?
                             def reg_loop(sub_data, context):
                                 path[-1].path.append(context)
                                 for idx in range(0, obj.count[-1]):
@@ -1763,7 +1763,7 @@ def parse_csrcompiler_csv (filename, section_name):
     active_reg = None
     active_reg_default = 0
 
-    with open(filename, "rb") as csv_file:
+    with open(filename, "rt", encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         row_num = 0
         for row in csv_reader:
@@ -1922,7 +1922,7 @@ def build_schema (dir, walle_version):
 
     with open(version_file, "r") as version_file_handle:
         reg_version = version_file_handle.read()
-        hasher.update(reg_version)
+        hasher.update(reg_version.encode('utf-8'))
 
     new_schema["_reg_version"] = reg_version
     new_schema["_walle_version"] = walle_version
