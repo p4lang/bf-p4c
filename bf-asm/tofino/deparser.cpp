@@ -185,22 +185,22 @@ void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     // QFDE constraint that it can only drive four stage 2 buses for compression.
 
     unsigned max_bytes_for_rows_occupied = 4 * (row + 1);
-    float occupancy = 0.0;
+    double occupancy = 0.0;
 
     if (max_bytes_for_rows_occupied > 0)
-        occupancy = (float)total_bytes / (float)max_bytes_for_rows_occupied;
+        occupancy = (double)total_bytes / (double)max_bytes_for_rows_occupied;
 
     if (total_bytes > 64 && occupancy < (240.0 / 288.0)) {
-         std::stringstream error_msg;
-         error_msg.precision(2);
-         error_msg << "Deparser field dictionary occupancy is too sparse.";
-         error_msg << "\nHardware requires an occupancy of " << 100.0 * 240.0 / 288.0 << " to deparse the output header,";
-         error_msg << "\nbut the PHV layout for the header structures was such that the occupancy was only " << 100.0 * occupancy << ".";
-         error_msg << "\nThis situation is usually caused by a program that has one or more of the following requirements:";
-         error_msg << "\n  1. many 'short' headers that are not guaranteed to coexist (e.g. less than 4 bytes)";
-         error_msg << "\n  2. many packet headers that are not multiples of 4 bytes";
-         error_msg << "\n  3. many conditionally updated checksums";
-         error(0, "%s", error_msg.str().c_str());
+         std::stringstream warn_msg;
+         warn_msg.precision(4);
+         warn_msg << "Deparser field dictionary occupancy is too sparse.";
+         warn_msg << "\nHardware requires an occupancy of " << 100.0 * 240.0 / 288.0 << " to deparse the output header,";
+         warn_msg << "\nbut the PHV layout for the header structures was such that the occupancy was only " << 100.0 * occupancy << ".";
+         warn_msg << "\nThis situation is usually caused by a program that has one or more of the following requirements:";
+         warn_msg << "\n  1. many 'short' headers that are not guaranteed to coexist (e.g. less than 4 bytes)";
+         warn_msg << "\n  2. many packet headers that are not multiples of 4 bytes";
+         warn_msg << "\n  3. many conditionally updated checksums";
+         warning(0, "%s", warn_msg.str().c_str());
     }
 }
 
