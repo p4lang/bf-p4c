@@ -1372,7 +1372,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
         source |= 1 << 1;
 
     statements->push_back(BFN::createSetMetadata("meta",
-                "compiler_generated_meta", "clone_src", 4, source));
+                COMPILER_META, "clone_src", 4, source));
 
     // Construct a value for `mirror_source`, which is
     // compiler-generated metadata that's prepended to the user field
@@ -1394,7 +1394,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     const unsigned gressTag = (gress == INGRESS) ? 0 : 1 << 4;
     unsigned mirror_source = index | isMirroredTag | gressTag;
     statements->push_back(BFN::createSetMetadata("meta",
-                "compiler_generated_meta", "mirror_source", 8, mirror_source));
+                COMPILER_META, "mirror_source", 8, mirror_source));
 
     P4::ClonePathExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
@@ -1495,7 +1495,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     // with resubmit_type.
     unsigned resubmit_source = index;
     statements->push_back(BFN::createSetMetadata("meta",
-                "compiler_generated_meta", "resubmit_source", 8, resubmit_source));
+                COMPILER_META, "resubmit_source", 8, resubmit_source));
 
 
     P4::ClonePathExpressions cloner;
@@ -1641,17 +1641,17 @@ TnaProgramStructure::createDigestEmit(cstring headerType, unsigned index,
     if (ext_name == "mirror")
         args->push_back(new IR::Argument(
             new IR::Member(new IR::Member(new IR::PathExpression("meta"),
-                "compiler_generated_meta"), "mirror_id")));
+                COMPILER_META), "mirror_id")));
     auto expr = field_list.second;
     BUG_CHECK(expr->is<IR::ListExpression>(), "expect digest field list to be a list expression");
     auto list = expr->to<IR::ListExpression>();
     auto components = new IR::Vector<IR::Expression>();
     if (ext_name == "mirror")
         components->push_back(new IR::Member(new IR::Member(new IR::PathExpression("meta"),
-                        "compiler_generated_meta"), "mirror_source"));
+                        COMPILER_META), "mirror_source"));
     else if (ext_name == "resubmit")
         components->push_back(new IR::Member(new IR::Member(new IR::PathExpression("meta"),
-                        "compiler_generated_meta"), "resubmit_source"));
+                        COMPILER_META), "resubmit_source"));
     components->append(list->components);
     auto fl = new IR::ListExpression(*components);
     args->push_back(new IR::Argument(fl));
@@ -2371,7 +2371,7 @@ void TnaProgramStructure::createCompilerGeneratedTypes() {
     cgm->fields.push_back(
             new IR::StructField("instance_type", IR::Type::Bits::get(32)));
 
-    auto meta = new IR::Metadata("compiler_generated_meta", cgm);
+    auto meta = new IR::Metadata(COMPILER_META, cgm);
     metadata.emplace(meta);
 }
 

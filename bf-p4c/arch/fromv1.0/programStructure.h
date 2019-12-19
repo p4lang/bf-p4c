@@ -24,6 +24,8 @@
 
 namespace P4V1 {
 
+static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta";
+
 // XXX(hanw) older definition of ProgramStructure used by 14-to-v1model conversion path
 // to be removed
 // ** BEGIN **
@@ -312,7 +314,7 @@ class ConvertMetadata : public Transform {
         cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_parser_err", 16,
                      mkMember("eg_intr_md_from_parser_aux", "parser_err", 16));
         cvt(EGRESS, "eg_intr_md_from_parser_aux.clone_src", 4,
-                    mkMember("meta", "compiler_generated_meta", "clone_src", 4));
+                    mkMember("meta", COMPILER_META, "clone_src", 4));
         cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_global_tstamp", 48,
                     mkMember("eg_intr_md_from_parser_aux", "global_tstamp", 48));
         cvt(EGRESS, "eg_intr_md_for_oport.drop_ctl", 3,

@@ -165,7 +165,7 @@ convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_
     block->components.push_back(new IR::AssignmentStatement(mirrorIdx, rhs));
 
     auto *compilerMetadataPath =
-            new IR::Member(new IR::PathExpression("meta"), "compiler_generated_meta");
+            new IR::Member(new IR::PathExpression("meta"), COMPILER_META);
     auto *mirrorId = new IR::Member(compilerMetadataPath, "mirror_id");
     auto *mirrorIdValue = conv.convert(primitive->operands.at(0));
     /// p4-14 mirror_id is 32bit, cast to bit<10>
@@ -194,7 +194,7 @@ convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_
     const unsigned gressTag = (gress == INGRESS) ? 0 : 1 << 4;
     unsigned mirror_source = index | isMirroredTag | gressTag;
     block->components.push_back(BFN::createSetMetadata("meta",
-                "compiler_generated_meta", "mirror_source", 8, mirror_source));
+                COMPILER_META, "mirror_source", 8, mirror_source));
 
     return block;
 }
@@ -242,7 +242,7 @@ convertResubmit(ProgramStructure *structure, const IR::Primitive* primitive) {
     // XXX(hanw): reuse the PHV container for `resubmit_type`
     unsigned resubmit_source = index;
     block->components.push_back(BFN::createSetMetadata("meta",
-                "compiler_generated_meta", "resubmit_source", 8, resubmit_source));
+                COMPILER_META, "resubmit_source", 8, resubmit_source));
 
     return block;
 }
