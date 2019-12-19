@@ -1649,12 +1649,6 @@ p4c_add_xfail_reason("tofino"
   p4c_1585_a
 )
 
-# DRV-3247
-p4c_add_xfail_reason("tofino"
-  "BfruntimeReadWriteRpcException"
-  p4_16_programs_tna_ternary_match
-)
-
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
