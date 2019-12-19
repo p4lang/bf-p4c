@@ -15,5 +15,5 @@ shift
 shift
 
 $bindir/p4c-barefoot --std=p4-14 --Wdisable -o /dev/null \
-                     --target tofino --arch v1model \
+                     --target tofino --arch tna \
                      --pp $outfile $infile $@
