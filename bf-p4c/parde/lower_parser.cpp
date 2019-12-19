@@ -135,7 +135,6 @@ struct ExtractSimplifier {
 
     /// Add a new extract operation to the sequence.
     void add(const IR::BFN::Extract* extract) {
-        LOG4("adding " << extract);
         if (auto ec = extract->to<IR::BFN::ExtractClot>())
             add(ec);
         else if (auto ep = extract->to<IR::BFN::ExtractPhv>())
@@ -206,6 +205,7 @@ struct ExtractSimplifier {
 
                 LOG4("mapping input buffer field slice " << bufferRange
                       << " into " << slice.container << " " << containerRange
+                      << " named " << extract->dest
                       << ". Final buffer range: " << finalBufferRange);
 
                 const auto byteFinalBufferRange =

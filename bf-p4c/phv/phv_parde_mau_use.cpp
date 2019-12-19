@@ -37,6 +37,10 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
     auto* f = phv.field(lval->field);
     BUG_CHECK(f, "Extract to non-PHV destination: %1%", e);
     extracted_i[thread][f->id] = true;
+
+    auto rval = e->source->to<IR::BFN::ConstantRVal>();
+    if (rval)
+        extracted_from_const_i[thread][f->id] = true;
     return true;
 }
 
@@ -154,6 +158,16 @@ bool Phv_Parde_Mau_Use::is_extracted(const PHV::Field *f, boost::optional<gress_
     else
         return extracted_i[*gress][f->id];
 }
+
+bool Phv_Parde_Mau_Use::is_extracted_from_constant(const PHV::Field *f,
+        boost::optional<gress_t> gress) const {
+    BUG_CHECK(f, "Null field");
+    if (!gress)
+        return extracted_from_const_i[INGRESS][f->id] || extracted_from_const_i[EGRESS][f->id];
+    else
+        return extracted_from_const_i[*gress][f->id];
+}
+
 
 //***********************************************************************************
 //

@@ -28,6 +28,9 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// Fields extracted in the parser.
     bitvec      extracted_i[3];
 
+    /// Fields extracted in the parser from a constant.
+    bitvec      extracted_from_const_i[3];
+
     /// Used to associate $stkvalid and $valid fields for header stacks.
     BFN::HeaderStackInfo* stacks;
 
@@ -70,6 +73,10 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
     /// @returns true if @f is extracted in the (ingress or egress) parser.
     bool is_extracted(const PHV::Field *f, boost::optional<gress_t> gress = boost::none) const;
+
+    /// @returns true if @f is extracted in the (ingress or egress) parser from a constant.
+    bool is_extracted_from_constant(const PHV::Field *f,
+            boost::optional<gress_t> gress = boost::none) const;
 
  protected:
     const PhvInfo &phv;

@@ -772,7 +772,8 @@ bool CoreAllocation::satisfies_constraints(
 
     bool hasExtracted = std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const
                 PHV::FieldSlice& s) {
-        return !s.field()->pov && uses_i.is_extracted(s.field());
+        return !s.field()->pov && uses_i.is_extracted(s.field()) &&
+            !uses_i.is_extracted_from_constant(s.field());
     });
 
     bool isThisSliceExtracted = !slice.field()->pov && uses_i.is_extracted(slice.field());
@@ -797,8 +798,8 @@ bool CoreAllocation::satisfies_constraints(
     if (isThisSliceExtracted && (hasUninitializedRead || hasExtracted)) {
         if (!hasExtractedTogether || !hasUninitializedRead) {
             LOG5("        constraint: this slice is extracted, "
-                    "can not be packed, because allocated fields has "
-                    << (hasExtracted ? "extracted" : "uninitialized"));
+                 "can not be packed, because allocated fields has "
+                 << (hasExtracted ? "extracted" : "uninitialized"));
             return false; } }
 
     return true;

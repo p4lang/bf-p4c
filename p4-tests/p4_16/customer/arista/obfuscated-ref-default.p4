@@ -13,7 +13,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -64,43 +64,43 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<16> Anacortes;
-    @flexible 
+    @flexible
     bit<3>  Corinth;
-    @flexible 
+    @flexible
     bit<12> Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<1>  Florien;
-    @flexible 
+    @flexible
     bit<6>  Freeburg;
 }
 
@@ -4771,7 +4771,7 @@ control Osakis(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_m
         Ranier();
         Osyka.Wisdom.Heuvelton = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(7) @name(".Corum") table Corum {
+    @disable_atomic_modify(1) @name(".Corum") table Corum {
         actions = {
             Ranier();
             Hartwell();
