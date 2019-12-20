@@ -1760,6 +1760,7 @@ class MauAsmOutput::NextTableSet {
         return tables.front().build_name(); }
     bool operator==(const NextTableSet &a) const { return tables == a.tables; }
     bool operator<(const NextTableSet &a) const { return tables < a.tables; }
+    bool empty() const { return tables.empty(); }
     bool insert(const IR::MAU::Table *t) {
         return t ? tables.insert(t->unique_id()).second : false; }
     bool insert(UniqueId ui) { return tables.insert(ui).second; }
@@ -3074,6 +3075,162 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
     }
 }
 
+/**
+ * The purpose of this function is to print out the value of the next table hitmap for this
+ * table, which should coordinate to the following registers
+ *
+ * In Tofino:
+ *     rams.match.merge.next_table_map_data
+ *
+ * In JBay:
+ *     rams.match.merge.pred_map_loca
+ *     rams.match.merge.pred_map_glob
+ *
+ * This is the 8 entry table that can be used as an indirection table from an address stored in
+ * the RAM entry to the next table/next table set to run.  For Tofino, only one next table
+ * is stored per entry, while for JBay a set of next tables is stored per entry.  The
+ * implementation of this is described in the comments of jbay_next_table.cpp
+ *
+ * A next table pointer by itself is 8 bits, and so would require each entry to store up to
+ * 8 bits per entry.  However, if there are only 2 choices for next table, then by saving a
+ * single bit with the entry, and by using this table to convert a single bit to an 8 bit address.
+ * significant overhead in the entry can be saved.  Furthermore, this is the only hardware
+ * that can enable local_exec, global_exec, and long branch.
+ *
+ * This table is really only necessary for action chaining, or next table being based on which
+ * action is to run.  In P4, this looks like:
+ *
+ *     switch (t1.apply().action_run) {
+ *         a1 : { t2.apply(); }
+ *         a2 : { t3.apply(); }
+ *         default : { t4.apply(); }
+ *     }
+ *
+ * This means that when an entry is written with a particular action, the entry also saves a
+ * next table pointer (or a pointer into this 8-entry table). 
+ *
+ * There are multiple levels to this optimization.  If t1 for instance had less than 8 hit
+ * actions, then (as instructions have the same type of indirection table), the instruction
+ * pointer and the next table pointer can be the same hardware.  If t1 has more than 8 actions,
+ * but has less than 8 next tables (in the example, it has 3 next tables), then the next table
+ * pointer can look into this table.  If it has more than 8 next table choices, then the hardware
+ * must use the direct next table pointer, and not use this hardware, so this table will be empty.
+ *
+ * A couple of notes:
+ *
+ * If a table is linked with a gateway, then this gateway is considered one of the hit actions.
+ * This is currently done as the gateway uses the hit pathway on inhibit, and sends a signal
+ * to be extracted.  Currently, with an all 0 payload, the instruction that is extracted will be
+ * the 0 index.  If the table is sharing the next table and instruction overhead as the same
+ * index, then the entry in the next table cannot be used for a match-entry's next table.
+ *
+ * For Tofino and JBay, gateways do not use their payload when they inhibit for their next
+ * table.  Instead the register they use is:
+ *
+ *     rams.match.merge.gateway_next_table_lut
+ *
+ * This contains the next table pointer for each gateway row.  However, in JBay, if the gateway
+ * needs to use local_exec/global_exec/long_branch, which in general is true because of the
+ * way jbay_next_table.cpp is run, then the gateway also needs to access these registers,
+ * as this is the only hardware that contains local_exec, global_exec, and long branch.  This
+ * means that potentially one and possibly more entries must be saved in the hitmap.  The gateway
+ * can access them by instead of saving a next table pointer in the gateway_next_table_lut,
+ * instead saving a pointer into the indirection table.
+ *
+ * Unfortunately, because nothing is simple in the compiler, I can't just add the entries to
+ * the table, as the program uses whether this table has more than one entry to determine if the
+ * address has to store the next table, instead of through a call like all other tables.
+ * The assembler currently just appends them to the back of the table, and crashes if it cannot.
+ *
+ * This lead to an odd corner case where an action chain table had 7 actions and a gateway
+ * attached, noted as P4C-2405.  Now, because the all 0th next table entry is unused, a gateway
+ * entry can populate that particular entry.  This runs a BUG_CHECK to guarantee this.
+ *
+ * TODO: table_format.cpp must be updated for this to determine the next table requirements for
+ * the combination of gateway and match table next table requirements.  Also just put both the
+ * gateway and match table's NextTableSets in here, which means adjusting the assembler's
+ * assumption that a hitmap.size() > 1 means that the next table must be saved
+ */
+void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+        NextTableSet &next_hit, NextTableSet &gw_miss, bool no_match_hit, bool gw_can_miss) const {
+    ordered_set<NextTableSet> gw_next_tables;
+    for (auto row : tbl->gateway_rows) {
+        if (!row.second) continue;
+        auto nts = next_for(tbl, row.second);
+        if (gw_next_tables.count(nts)) continue;
+        gw_next_tables.insert(nts);
+    }
+
+    safe_vector<NextTableSet> next_table_map;
+    bool reserved_entry_0 = false;
+    if (tbl->action_chain()) {
+        // Should this be P4C_UNIMPLEMENTED?  One could write a program like this, but
+        // supporting it would require having the driver writer the gateway payload for
+        // the default action it wants to install, if there is more than one.  See
+        // testdata/p4_16_samples/def-use.cpp.
+        BUG_CHECK(!no_match_hit || !gw_can_miss,
+                  "A hash action table cannot have an action chain.");
+        int ntb = tbl->resources->table_format.next_table_bits();
+        // The instruction and next table are the same pointer
+        if (ntb == 0) {
+            int ntm_size = tbl->hit_actions() + (tbl->uses_gateway() ? 1 : 0);
+            reserved_entry_0 = tbl->uses_gateway();
+            next_table_map.resize(ntm_size);
+            for (auto act : Values(tbl->actions)) {
+                if (act->miss_action_only) continue;
+                auto &instr_mem = tbl->resources->instr_mem;
+                auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
+                BUG_CHECK(vliw_instr.mem_code >= 0 && vliw_instr.mem_code < ntm_size,
+                          "Instruction has an invalid mem_code");
+                next_table_map[vliw_instr.mem_code] = next_for(tbl, act->name.originalName);
+            }
+        } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
+            next_table_non_action_map(tbl, next_table_map);
+        }
+    } else {
+        if (gw_can_miss && no_match_hit)
+            next_table_map.push_back(gw_miss);
+        else
+            next_table_map.push_back(next_hit);
+    }
+    if (!no_match_hit) {
+        if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
+            ordered_set<NextTableSet> unique_gw_next_tables;
+            // Guaranteeing that the next table for the match and gateway can fit in the same
+            // space.  Entry 0 can potentially be used
+            for (auto entry : gw_next_tables) {
+                auto begin = reserved_entry_0 ? next_table_map.begin() + 1 : next_table_map.begin();
+                if (std::find(begin, next_table_map.end(), entry) == next_table_map.end())
+                    unique_gw_next_tables.insert(entry);
+            }
+
+            BUG_CHECK(unique_gw_next_tables.size() + next_table_map.size() - reserved_entry_0
+                <= TableFormat::NEXT_MAP_TABLE_ENTRIES, "Table %1% combined with a gateway "
+                "cannot correctly allocate its next tables", tbl->externalName());
+
+            ///> Specifically currently for P4C-2405
+            if (reserved_entry_0 && unique_gw_next_tables.size() > 0)
+                next_table_map[0] = *unique_gw_next_tables.begin();
+        }
+    }
+
+
+    if (no_match_hit) {
+        out << indent << "next: " << gw_miss << std::endl;
+    } else {
+        // The hit vector represents the 8 map values that will appear in the 8 entry
+        // next_table_map_data.  If that map is not used, then the map will be empty
+        out << indent << "hit: [ ";
+        const char *nt_sep = "";
+        for (auto nt : next_table_map) {
+            out << nt_sep << nt;
+            nt_sep = ", ";
+        }
+        out << " ]" << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss") << std::endl;
+    }
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
        gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
@@ -3173,51 +3330,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             return;
     }
 
-    safe_vector<NextTableSet> next_table_map;
-    if (tbl->action_chain()) {
-        // Should this be P4C_UNIMPLEMENTED?  One could write a program like this, but
-        // supporting it would require having the driver writer the gateway payload for
-        // the default action it wants to install, if there is more than one.  See
-        // testdata/p4_16_samples/def-use.cpp.
-        BUG_CHECK(!no_match_hit || !gw_can_miss,
-                  "A hash action table cannot have an action chain.");
-        int ntb = tbl->resources->table_format.next_table_bits();
-        if (ntb == 0) {
-            int ntm_size = tbl->hit_actions() + (tbl->uses_gateway() ? 1 : 0);
-            next_table_map.resize(ntm_size);
-            for (auto act : Values(tbl->actions)) {
-                if (act->miss_action_only) continue;
-                auto &instr_mem = tbl->resources->instr_mem;
-                auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
-                BUG_CHECK(vliw_instr.mem_code >= 0 && vliw_instr.mem_code < ntm_size,
-                          "Instruction has an invalid mem_code");
-                next_table_map[vliw_instr.mem_code] = next_for(tbl, act->name.originalName);
-            }
-        } else if (ntb <= ceil_log2(TableFormat::NEXT_MAP_TABLE_ENTRIES)) {
-            next_table_non_action_map(tbl, next_table_map);
-        }
-    } else {
-        if (gw_can_miss && no_match_hit)
-            next_table_map.push_back(gw_miss);
-        else
-            next_table_map.push_back(next_hit);
-    }
-
-    if (no_match_hit) {
-        out << indent << "next: " << gw_miss << std::endl;
-    } else {
-        // The hit vector represents the 8 map values that will appear in the 8 entry
-        // next_table_map_data.  If that map is not used, then the map will be empty
-        out << indent << "hit: [ ";
-        const char *nt_sep = "";
-        for (auto nt : next_table_map) {
-            out << nt_sep << nt;
-            nt_sep = ", ";
-        }
-        out << " ]" << std::endl;
-        out << indent << "miss: " << next_for(tbl, "$miss") << std::endl;
-    }
-
+    emit_table_hitmap(out, indent, tbl, next_hit, gw_miss, no_match_hit, gw_can_miss);
     emit_static_entries(out, indent, tbl);
     bitvec source;
     source.setbit(ActionData::IMMEDIATE);

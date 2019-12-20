@@ -119,6 +119,9 @@ class MauAsmOutput : public MauInspector {
              bool hash_action, NextTableSet next_hit, NextTableSet &gw_miss) const;
     void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
             const IR::MAU::Table *tbl) const;
+    void emit_table_hitmap(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+            NextTableSet &next_hit, NextTableSet &gw_miss, bool no_match_hit,
+            bool gw_can_miss) const;
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
             const TableMatch *tm, bool ternary, bool no_match) const;
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
