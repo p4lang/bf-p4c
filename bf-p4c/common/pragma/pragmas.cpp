@@ -518,7 +518,10 @@ const char *PragmaPadding::description =
 const char *PragmaPadding::help = "@pragma padding\n"
     "+attached to header fields\n"
     "\n"
-    "Specifies that the associated header field is padding field.";
+    "Specifies that the associated header field is padding field. A padding field represents a "
+    "set of fields that can hold any value and the programmer/protocol does not care what value "
+    "it is. This allows the compiler to overlap it with other fields and involve them in ALU "
+    "operations that may polute the value stored.";
 
 
 const char *PragmaPacketEntry::name = "packet_entry";
