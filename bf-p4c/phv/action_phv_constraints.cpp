@@ -79,10 +79,9 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                 action_to_reads[act].insert(*fr.phv_used);
             } else if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                 fr.ad = true;
-                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL) {
-                    fr.special_ad = true;
+                fr.special_ad = read.speciality;
+                if (LOGGING(5) && read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
                     LOG5("      ...speciality action data read: " << fr);
-                }
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                 fr.constant = true;
                 if (read.expr->is<IR::Constant>()) {
@@ -588,12 +587,20 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
     ordered_set<PHV::AllocSlice> slices_written_by_ad;
     ordered_set<PHV::AllocSlice> slices_written_by_special_ad;
     ordered_set<PHV::AllocSlice> padding_slices;
+    bool has_non_special_slices_written_by_constant_only = true;
+    unsigned speciality_type = ActionAnalysis::ActionParam::NO_SPECIAL;
     for (auto slice : slices) {
         for (auto operand : constraint_tracker.sources(slice, action)) {
             if (operand.ad || operand.constant) {
                 slices_written_by_ad.insert(slice);
-                if (operand.special_ad)
-                    slices_written_by_special_ad.insert(slice); } }
+                if (operand.special_ad) {
+                    speciality_type |= operand.special_ad;
+                    slices_written_by_special_ad.insert(slice);
+                } else {
+                    has_non_special_slices_written_by_constant_only &= operand.constant;
+                }
+            }
+        }
         if (initActions.count(slice.field()) && initActions.at(slice.field()).count(action))
             slices_written_by_ad.insert(slice);
         bool is_padding = !uses.is_referenced(slice.field()) || slice.field()->padding;
@@ -652,13 +659,20 @@ ActionPhvConstraints::ActionDataUses ActionPhvConstraints::all_or_none_constant_
 
     if (check_speciality_packing && num_slices_written_by_special_ad != 0 &&
             num_slices_written_by_ad != num_slices_written_by_special_ad) {
-        // We currently disable packing of field slices if there is a mixture of speciality action
-        // data and normal action data reads in the same action. This may be relaxed in the future
-        // when action data packing becomes more efficient.
-        LOG5("\t\t\t\t  This packing will require combining a speciality action data with other "
-             "action data for action " << action->name << ". The compiler currently does not "
-             "support this feature.");
-        return COMPLEX_AD_PACKING_REQ; }
+        // For an action where some slices are written by a HASH_DIST operation and the other slices
+        // are all written by constants (not action data), packing is possible.
+        if (speciality_type == ActionAnalysis::ActionParam::HASH_DIST &&
+                has_non_special_slices_written_by_constant_only) {
+            LOG5("\t\t\t\t  Can combine HASH_DIST sources with constant data.");
+        } else {
+            // We currently disable packing of field slices if there is a mixture of speciality
+            // action data and normal action data reads in the same action. This may be relaxed in
+            // the future when action data packing becomes more efficient.
+            LOG5("\t\t\t\t  This packing will require combining a speciality action data with "
+                 "other action data for action " << action->name << ". The compiler currently does "
+                 "not support this feature.");
+            return COMPLEX_AD_PACKING_REQ; }
+    }
     if (num_slices_written_by_ad + num_slices_padding == slices.size()) {
         LOG5("\t\t\t\t  All slices in proposed packing written by action data/constant in action "
              << action->name);

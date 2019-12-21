@@ -447,7 +447,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         else
             bitsAfter += field->size;
         bitsAfterField[field] = bitsAfter;
-        LOG1("\tBits after " << field->name << " : " << bitsAfter);
+        LOG5("\tBits after " << field->name << " : " << bitsAfter);
     }
 
     LOG5("Starting new slice list:");
@@ -942,7 +942,8 @@ void Clustering::MakeSuperClusters::end_apply() {
                                // involved in wide arithmetic to ensure that the slices of those
                                // fields can bbe placed adjacently.
                                || kv.first->used_in_wide_arith() || is_exact_containers
-                               || kv.first->written_in_force_immediate_table();
+                               || kv.first->written_in_force_immediate_table()
+                               || actions_i.hasSpecialityReads(kv.first);
 
         // XXX(hanw): if any slice of a field is already assigned to a slice
         // list, do not create additional slice list from the field.  This is

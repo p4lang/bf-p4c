@@ -218,6 +218,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2257.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1421,6 +1422,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
   ba101_07-simple_l3_ind_cntr
+  extensions/p4_tests/p4_14/compile_only/p4c-2271.p4
 )
 
 p4c_add_xfail_reason("tofino"

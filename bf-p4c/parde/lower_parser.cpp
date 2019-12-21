@@ -445,9 +445,9 @@ struct ExtractSimplifier {
     /// The sequence of extract operations to be simplified. They're organized
     /// by container so that multiple extracts to the same container can be
     /// merged.
-    std::map<PHV::Container, ExtractSequence> extractFromPacketByContainer;
-    std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
-    std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
+    ordered_map<PHV::Container, ExtractSequence> extractFromPacketByContainer;
+    ordered_map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
+    ordered_map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
     std::map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
 };

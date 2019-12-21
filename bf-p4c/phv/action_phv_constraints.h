@@ -65,7 +65,7 @@ class ActionPhvConstraints : public Inspector {
         // An operand is either action data (ad), a constant (constant), or
         // drawn from a PHV container (phv_used).
         bool ad = false;
-        bool special_ad = false;
+        unsigned special_ad = ActionAnalysis::ActionParam::NO_SPECIAL;
         bool constant = false;
         int64_t const_value = 0;
         boost::optional<PHV::FieldSlice> phv_used = boost::none;
@@ -603,9 +603,7 @@ class ActionPhvConstraints : public Inspector {
     /// @returns true if the field @f is written using a speciality read (METER_ALU, HASH_DIST,
     /// RANDOM, or METER_COLOR).
     bool hasSpecialityReads(const PHV::Field* f) const {
-        ordered_set<const PHV::Field*> fields;
-        fields.insert(f);
-        return (!checkSpecialityPacking(fields) || is_meter_color_destination(f));
+        return (special_no_pack.count(f) || is_meter_color_destination(f));
     }
 
     /// @returns all the fields that are written using meter color fields.

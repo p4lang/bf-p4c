@@ -222,6 +222,7 @@ class Clustering : public PassManager {
         PhvInfo& phv_i;
         const PackConflicts& conflicts_i;
         const PragmaContainerSize& pa_sizes_i;
+        const ActionPhvConstraints& actions_i;
 
         /// Track headers already visited, by tracking the IDs of the first
         /// fields.
@@ -269,8 +270,12 @@ class Clustering : public PassManager {
                 ordered_set<PHV::SuperCluster::SliceList*>& slice_lists);
 
      public:
-        explicit MakeSuperClusters(Clustering &self, const PragmaContainerSize& pa)
-        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), pa_sizes_i(pa) { }
+        explicit MakeSuperClusters(
+                Clustering &self,
+                const PragmaContainerSize& pa,
+                const ActionPhvConstraints& a)
+        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), pa_sizes_i(pa),
+          actions_i(a) { }
     };
 
     /** For the deparser zero optimization, we need to make sure that every deparser zero
@@ -288,7 +293,8 @@ class Clustering : public PassManager {
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const PragmaContainerSize& pa)
+    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const PragmaContainerSize& pa,
+            const ActionPhvConstraints& a)
         : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this, pa) {
         addPasses({
             new ClearClusteringStructs(*this),          // clears pre-existing maps
@@ -296,7 +302,7 @@ class Clustering : public PassManager {
             &slice_i,
             new MakeAlignedClusters(*this),             // populates aligned_clusters_i
             new MakeRotationalClusters(*this),          // populates rotational_clusters_i
-            new MakeSuperClusters(*this, pa),           // populates super_clusters_i
+            new MakeSuperClusters(*this, pa, a),        // populates super_clusters_i
             new ValidateDeparserZeroClusters(*this)     // validate clustering is correct for
                                                         // deparser zero optimization
         });

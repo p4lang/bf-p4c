@@ -202,7 +202,7 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     CalcParserCriticalPath parser_critical_path(phv);
     FieldDefUse defuse(phv);
     PragmaContainerSize pragma(phv);
-    Clustering clustering(phv, uses, conflicts, pragma);
+    Clustering clustering(phv, uses, conflicts, pragma, actions);
 
     auto *post_pm_pipe = runMockPasses(test->pipe, phv, uses,
                                        defuse,
