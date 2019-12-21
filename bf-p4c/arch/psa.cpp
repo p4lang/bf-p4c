@@ -693,7 +693,7 @@ class LoadTargetArchitecture : public Inspector {
         std::vector<const char *>filenames;
         if (Device::currentDevice() == Device::TOFINO)
             filenames.push_back("tofino.p4");
-#if HAVE_JBAY
+#if HAVE_JBAY || HAVE_CLOUDBREAK
         else
             filenames.push_back("tofino2.p4");
 #endif  // HAVE_JBAY

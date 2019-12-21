@@ -270,6 +270,12 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
             preprocessor_options += " -D__TARGET_TOFINO__=2";
             preprocessor_options += " -D__TOFINO2_VARIANT__=" +
                 std::to_string(supportedT2Variants.at(target));
+#if HAVE_CLOUDBREAK
+        } else if (target == "tofino3") {
+            preprocessor_options += " -D__TARGET_TOFINO__=3";
+#endif /* HAVE_CLOUDBREAK */
+        } else {
+            BUG("Unknown target %s", target);
         }
 
         // Cache the names of the output directory and the program name
