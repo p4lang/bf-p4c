@@ -90,16 +90,18 @@ else
 fi
 
 install_python_packages() {
+    pipVersion=$1
     # do not upgrade pip until Ubuntu sorts out their issues
     # If you have already upgraded, do: sudo apt-get remove python-pip python-pip-whl
     # $SUDO pip install --upgrade pip
-    $SUDO pip install setuptools || die "Failed to install setuptools packages"
-    $SUDO pip install pyinstaller || die "Failed to install pyinstaller packages"
-    $SUDO pip install ply==3.9 || die "Failed to install ply packages"
-    $SUDO pip install jsl jsonschema || die "Failed to install jsl packages"
-    $SUDO pip install thrift==0.9.2 || die "Failed to install thrift packages"  # need this one instead
-    $SUDO pip install packaging || die "Failed to install packaging packages"
-    $SUDO pip install pexpect || die "Failed to install pexpect packages"
+    $SUDO pip$pipVersion install setuptools || die "Failed to install setuptools packages"
+    $SUDO pip$pipVersion install Cython pyinstaller || die "Failed to install pyinstaller and Cython packages"
+    $SUDO pip$pipVersion install ply==3.9 || die "Failed to install ply packages"
+    $SUDO pip$pipVersion install jsl jsonschema || die "Failed to install jsl packages"
+    $SUDO pip$pipVersion install thrift==0.9.2 || die "Failed to install thrift packages"  # need this one instead
+    $SUDO pip$pipVersion install packaging || die "Failed to install packaging packages"
+    $SUDO pip$pipVersion install pexpect || die "Failed to install pexpect packages"
+    $SUDO pip$pipVersion install ipaddr pyyaml scapy || die "Failed to install python packages"
 }
 
 install_linux_packages() {
@@ -107,11 +109,10 @@ install_linux_packages() {
         # please keep this list in alphabetical order
         apt_packages="automake autopoint bison cmake curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
-                 libgc-dev libgmp-dev libjudy-dev \
+                 libgc-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
                  libtool pkg-config \
-                 python2.7 python python-ipaddr python-pip \
-                 python-scapy python-yaml \
+                 python2.7 python python3 python-pip python3-pip \
                  rpm texinfo unzip"
         if [[ $linux_distro == "Ubuntu" && $linux_version =~ "18.04" ]]; then
             apt_packages="$apt_packages libboost-all-dev libfl-dev \
@@ -141,7 +142,7 @@ install_linux_packages() {
               ! ($linux_distro == "Debian" && $linux_version =~ "9.5") ]]; then
             install_cmake "3.5.2"
             install_rapidjson "1.1.0"
-            install_boost "1.58.0"
+            install_boost "1.67.0"
         elif [[ $linux_distro == "Debian" && $linux_version =~ "9.5" ]]; then
             install_rapidjson "1.1.0"
         fi
@@ -151,10 +152,10 @@ install_linux_packages() {
         yum_packages="automake bison bzip2-devel cmake curl doxygen flex \
                  gcc-c++ git \
                  libcli-devel libedit-devel libevent-devel \
-                 gc gmp-devel json-devel Judy-devel \
+                 gc json-devel Judy-devel \
                  libpcap-devel openssl-devel \
                  libtool pkg-config \
-                 python2 python python-devel python-ipaddr python-pip python-yaml \
+                 python2 python python-devel python-pip python3 python3-devel python3-pip \
                  rapidjson-devel rpm texinfo unzip"
         if [[ $linux_distro == "CentOS Linux" ]]; then
             # python-pip and software collections for newer versions of gcc
@@ -175,15 +176,15 @@ install_linux_packages() {
             fi
         fi
         install_bison "3.0.4"
-        install_gmp "6.1.2"
         install_cmake "3.5.2"
         install_libgc
         install_rapidjson "1.1.0"
-        install_boost "1.58.0"
+        install_boost "1.67.0"
         $SUDO pip install scapy
     fi
 
-    install_python_packages
+    install_python_packages 2
+    install_python_packages 3
 }
 
 function install_bison() {
@@ -203,24 +204,6 @@ function install_bison() {
         popd
     else
         echo "Found bison version $installed_ver"
-    fi
-}
-
-function install_gmp() {
-    local gmp_ver=$1
-
-    local installed_ver=$(yum info gmp-devel | grep Version | head -1 | awk '{ print $3; }')
-    if version_LT $installed_ver $bison_ver ; then
-        pushd /tmp
-        wget https://gmplib.org/download/gmp/gmp-${gmp_ver}.tar.bz2
-        tar jxf gmp-${gmp_ver}.tar.bz2
-        cd gmp-${gmp_ver} && ./configure --enable-cxx && \
-        make -j $nprocs && \
-        $SUDO make install || die "Failed to install libgmp"
-        cd .. && rm -rf gmp-${gmp_ver}
-        popd
-    else
-        echo "Found gmp version $installed_ver"
     fi
 }
 
@@ -434,7 +417,7 @@ install_macos_packages() {
         /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
     fi
 
-    brew_packages="autoconf automake bison bdw-gc boost ccache cmake coreutils doxygen dpkg flex gcc5 git gmp graphviz libtool openssl pkg-config python rapidjson"
+    brew_packages="autoconf automake bison bdw-gc boost ccache cmake coreutils doxygen dpkg flex gcc5 git graphviz libtool openssl pkg-config python rapidjson"
     # libedit-dev libeditline-dev libevent-dev libjudy-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev
     brew install $brew_packages || die "Failed to install brew packages"
     # force to use the newer installed bison

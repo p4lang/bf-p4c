@@ -185,7 +185,7 @@ def parse_template_args(args, params):
 
 def read_template_file(template_file, args, schema):
     with open(template_file, "rb") as template_objects_file:
-        templatization_cfg = yaml.load(template_objects_file)
+        templatization_cfg = yaml.load(template_objects_file, Loader=yaml.SafeLoader)
         top_level_objs = templatization_cfg["generate"]
         disabled_objs = templatization_cfg["ignore"]
         if "global" in templatization_cfg:
