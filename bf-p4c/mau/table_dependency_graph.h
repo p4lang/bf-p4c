@@ -219,15 +219,26 @@ struct DependencyGraph {
         g.clear();
         finalized = false;
         max_min_stage = -1;
+        happens_after_work_map.clear();
         happens_before_work_map.clear();
+        happens_phys_after_map.clear();
         happens_before_control_map.clear();
-        dependency_map.clear();
+        happens_logi_after_map.clear();
+        happens_logi_before_map.clear();
+        dep_type_map.clear();
         labelToVertex.clear();
+        dependency_map.clear();
+        data_annotations.clear();
+        data_annotations_exit.clear();
+        data_annotations_conflicts.clear();
+        data_annotations_metadata.clear();
+        ctrl_annotations.clear();
         stage_info.clear();
         min_stage_edges.clear();
         for (unsigned i = 0; i < 3; i++)
             max_min_stage_per_gress[i] = -1;
         display_min_edges = false;
+        vertex_rst.clear();
         passContext = "";
         placed = false;
     }
