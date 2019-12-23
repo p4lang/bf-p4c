@@ -56,6 +56,29 @@ void CollectHeaderStackInfo::postorder(IR::Primitive* prim) {
             error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); }
         LOG3("CollectHeaderStackInfo: ...maxpush: " << stacks->at(hsname).maxpush);
         LOG3("CollectHeaderStackInfo: ...maxpop: " << stacks->at(hsname).maxpop);
+      // Get maxpush and maxpop after push and pop is converted in to modify/set
+    } else if (prim->name == "modify_field" || prim->name == "set") {
+        auto operand0 = prim->operands[0]->to<IR::Slice>();
+        auto operand1 = prim->operands[1]->to<IR::Slice>();
+        if (!operand0 || !operand1) return;
+        auto op0 = operand0->e0->to<IR::Member>();
+        auto op1 = operand1->e0->to<IR::Member>();
+        if (!op0 || !op1) return;
+        if (op0->member == "$stkvalid" && op0->expr->type->is<IR::Type_Stack>() &&
+            op1->member == "$stkvalid" && op1->expr->type->is<IR::Type_Stack>()) {
+            auto &s = stacks->at(op0->expr->toString());
+            // Because of the way stkvalid is formatted, the lower limit of the
+            // first the operand will always be equal to maxpop
+            if (auto e2 = operand0->e2->to<IR::Constant>()) {
+                int total_size = op0->type->width_bits();
+                s.maxpop = e2->asInt();
+                s.maxpush = total_size - s.maxpop - s.size;
+                LOG3("CollectHeaderStackInfo: ...MAXPUSH: " <<
+                                       stacks->at(op0->expr->toString()).maxpush);
+                LOG3("CollectHeaderStackInfo: ...MAXPOP: " <<
+                                       stacks->at(op0->expr->toString()).maxpop);
+            }
+        }
     }
 }
 

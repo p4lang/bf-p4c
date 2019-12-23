@@ -177,6 +177,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new CollectPhvInfo(phv),
         &defuse,
         new AlpmSetup,
+        new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new ValidToStkvalid(phv),   // Alias header stack $valid fields with $stkvalid slices.
                                     // Must happen before ElimUnused.
