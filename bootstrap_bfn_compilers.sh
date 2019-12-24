@@ -132,6 +132,7 @@ mkdir -p ${builddir}
 pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${ENABLED_COMPONENTS} \
+      -DENABLE_GMP=OFF \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=1\
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $otherArgs
 if [[ `uname -s` == "Linux" ]]; then

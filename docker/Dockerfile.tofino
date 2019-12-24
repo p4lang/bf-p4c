@@ -1,4 +1,7 @@
-FROM barefootnetworks/model:tofino_master
+# and 'jarvis' for jarvis image
+ARG MODEL_TAG=tofino_master
+
+FROM barefootnetworks/model:${MODEL_TAG}
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 ENV DEBIAN_FRONTEND noninteractive
@@ -9,9 +12,7 @@ ENV P4C_DEPS autoconf \
              build-essential \
              flex \
              g++-6 \
-             libboost-dev \
-             libboost-graph-dev \
-             libboost-iostreams-dev \
+             libboost1.67-dev \
              libfl-dev \
              libgc-dev \
              libgmp-dev \
@@ -25,7 +26,6 @@ ENV P4C_DEPS autoconf \
 ENV P4C_RUNTIME_DEPS cpp \
                      cmake \
                      ethtool \
-                     libboost-iostreams1.58.0 \
                      libgc1c2 \
                      libgmp10 \
                      libgmpxx4ldbl \
@@ -62,7 +62,20 @@ ENV PYTHON3_DEPS Cython \
                  xlsxwriter \
                  ctypesgen
 
+# Packages for jarvis image
+ENV DEV_PKGS vim \
+             gdb \
+             telnet \
+             distcc
+
+# Packages for release image
+ENV REL_PKGS wget
+
+# Clean up default instance of libboost1.58 from base ubuntu image
+RUN apt-get --purge remove -y libboost*-dev
+
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    add-apt-repository ppa:mhier/libboost-latest && \
     apt-get update && \
     apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10 && \
@@ -74,9 +87,31 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
 # building locally or you know there are more cores available, you may want to
 # override this.
 ARG MAKEFLAGS=-j2
+# Use 'jarvis' to build a jarvis image
+#     'release' to build a release image
+#     'glass' to build a base image for glass
+ARG BUILD_FOR=tofino
 
-# Use 'test' if you wish to keep the build artifacts
-ARG IMAGE_TYPE=release
+RUN (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
+    (test "$BUILD_FOR" = "jarvis" && apt-get install -y $DEV_PKGS) || \
+    (test "$BUILD_FOR" = "release" && apt-get install -y $REL_PKGS) || \
+    (test "$BUILD_FOR" = "glass" && echo "Building for glass")
+
+WORKDIR /tmp
+RUN (test "$BUILD_FOR" = "release" && \
+     wget http://downloads.sourceforge.net/project/boost/boost/1.67.0/boost_1_67_0.tar.bz2 && \
+     tar xvjf boost_1_67_0.tar.bz2 && \
+     cd boost_1_67_0 && \
+     ./bootstrap.sh --prefix=/usr/local && \
+     ./b2 -$MAKEFLAGS --build-type=minimal variant=release && \
+     ./b2 install -$MAKEFLAGS --build-type=minimal variant=release && \
+     cd /tmp && rm -rf boost_1_67_0*) || \
+    (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
+    (test "$BUILD_FOR" = "jarvis" && echo "Building for jarvis") || \
+    (test "$BUILD_FOR" = "glass" && echo "Building for glass")
+
+# Use 'release' if you don't wish to keep the build artifacts
+ARG IMAGE_TYPE=test
 # Use 'true' if you wish to build glass for p4v or p4i
 ARG BUILD_GLASS=false
 # Use 'true' if you wish to generate ref outputs for p4i
@@ -97,14 +132,20 @@ RUN pip3 install $PYTHON3_DEPS
 # picking up modules installed with pip3
 ENV PATH="/usr/bin:${PATH}"
 
-COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
 COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
 
+# Workaround as conditional COPY not supported in Dockerfile 
+COPY . /bfn/bf-p4c-compilers/
+RUN (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
+    (test "$BUILD_FOR" = "jarvis" && rm -rf /bfn/bf-p4c-compilers/) || \
+    (test "$BUILD_FOR" = "release" && echo "Building for release") || \
+    (test "$BUILD_FOR" = "glass" && echo "Building for glass")
+
 WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
-RUN /usr/local/bin/ccache --zero-stats && \
+RUN (test "$BUILD_FOR" = "tofino" && /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                                  -DINSTALL_LIBDYNHASH=OFF \
                                  -DENABLE_P4C_GRAPHS=OFF \
@@ -113,13 +154,30 @@ RUN /usr/local/bin/ccache --zero-stats && \
                                  && \
     cd build && \
     make && \
-    make install && \
-    /usr/local/bin/ccache -p --show-stats && \
+    make install) || \
+    (test "$BUILD_FOR" = "jarvis") || \
+    (test "$BUILD_FOR" = "release" && /usr/local/bin/ccache --zero-stats && \
+                                   ./scripts/package_p4c_for_tofino.sh --build-dir build) || \
+    (test "$BUILD_FOR" = "glass" && /usr/local/bin/ccache --zero-stats && \
+    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE \
+                                 -DINSTALL_LIBDYNHASH=OFF \
+                                 -DENABLE_P4C_GRAPHS=OFF \
+                                 -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
+                                 -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
+                                 -DENABLE_STATIC_LIBS=ON \
+                                 -DENABLE_BAREFOOT_INTERNAL=OFF \
+                                 -DENABLE_GTESTS=OFF)
+
+WORKDIR /bfn/bf-p4c-compilers
+RUN ((test "$BUILD_FOR" = "tofino" || test "$BUILD_FOR" = "release" || \
+     test "$BUILD_FOR" = "glass") && \
+     /usr/local/bin/ccache -p --show-stats && \
     apt-get autoremove --purge -y && \
     rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
     rm -rf bf-asm/walle/build/* && \
     find . -name '*.o' -type f -delete && \
-    find . -name '*.a' -type f -delete
+    find . -name '*.a' -type f -delete) || \
+    (test "$BUILD_FOR" = "jarvis")
 
 # make and install glass if BUILD_GLASS=true
 WORKDIR /bfn/bf-p4c-compilers/glass/p4-hlir/
@@ -142,7 +200,7 @@ RUN (test "$GEN_REF_OUTPUTS" = "true" && \
 
 # Delete git history
 WORKDIR /bfn/bf-p4c-compilers
-RUN (rm -rf .git)
+RUN rm -rf .git
 
 WORKDIR /bfn/
 RUN (test "$IMAGE_TYPE" = "release" && rm -rf bf-p4c-compilers) || \
