@@ -1384,7 +1384,7 @@ void Table::Actions::Action::check_next_ref(Table *tbl, const Table::Ref &ref) c
  */
 void Table::Actions::Action::check_next(Table *tbl) {
     if (next_table_encode >= 0) {
-        if (tbl->get_hit_next().size() == 0 || tbl->get_hit_next().size() < next_table_encode) {
+        if (next_table_encode >= tbl->get_hit_next().size()) {
             error(lineno, "The encoding on action %s is outside the range of the hitmap in "
                           "table %s", name.c_str(), tbl->name());
         } else {

@@ -530,12 +530,23 @@ bool TableFormat::allocate_overhead() {
     if (!allocate_next_table())
         return false;
     LOG3("Next Table");
-    if (!allocate_selector_length())
-        return false;
-    LOG3("Selector Length");
-    if (!allocate_all_instr_selection())
-        return false;
-    LOG3("Instruction Selection");
+    if (tbl->action_chain() && bits_necessary(NEXT) == 0) {
+        // if we use action chaining and share action/next bits, allocate action bits
+        // first, so group 0 ends up being at bit 0, as required for next
+        if (!allocate_all_instr_selection())
+            return false;
+        LOG3("Instruction Selection");
+        if (!allocate_selector_length())
+            return false;
+        LOG3("Selector Length");
+    } else {
+        if (!allocate_selector_length())
+            return false;
+        LOG3("Selector Length");
+        if (!allocate_all_instr_selection())
+            return false;
+        LOG3("Instruction Selection");
+    }
     if (!allocate_all_indirect_ptrs())
         return false;
     LOG3("Indirect Pointers");
