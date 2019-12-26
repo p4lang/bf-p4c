@@ -358,9 +358,3 @@ p4c_add_xfail_reason("tofino2"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
   p4c_1585_a
 )
-
-# REL-462
-p4c_add_xfail_reason("tofino2"
-  "SyntaxError: invalid syntax"
-  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
-)
