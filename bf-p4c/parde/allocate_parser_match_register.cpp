@@ -14,12 +14,10 @@ using namespace Parser;
 // before it where we can insert the save instructions.
 struct InsertInitSaveState : public ParserTransform {
     IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
-        if (!parser->start->selects.empty()) {
-            auto init = new IR::BFN::ParserState(nullptr, "$init_match", parser->start->gress);
-            auto next = new IR::BFN::Transition(match_t(), 0, parser->start);
-            init->transitions = { next };
-            parser->start = init;
-        }
+        auto init = new IR::BFN::ParserState(nullptr, "$init_match", parser->start->gress);
+        auto next = new IR::BFN::Transition(match_t(), 0, parser->start);
+        init->transitions = { next };
+        parser->start = init;
 
         return parser;
     }
@@ -28,7 +26,10 @@ struct InsertInitSaveState : public ParserTransform {
 // Insert a stall state on transition whose next state requires
 // branch word that is out of the input buffer of the current state.
 struct ResolveOutOfBufferSaves : public ParserTransform {
+    const ParserUseDef& parser_use_def;
     CollectParserInfo parser_info;
+
+    explicit ResolveOutOfBufferSaves(const ParserUseDef& pud) : parser_use_def(pud) { }
 
     profile_t init_apply(const IR::Node* root) override {
         root->apply(parser_info);
@@ -93,6 +94,29 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
                 return int(t->shift + max_save.rv / 8 + 1) >
                    Device::pardeSpec().byteInputBufferSize();
             }
+
+            // If scratch regs are available, we may need the additional choice of
+            // scratching at the predecessors. Therefore if the branch words are
+            // more than 32 bytes away at the incoming transitions to the def states
+            // we need to insert stall states.
+
+            if (!Device::pardeSpec().scratchRegisters().empty()) {
+                auto parser = findOrigCtxt<IR::BFN::Parser>();
+                auto use_def = parser_use_def.at(parser);
+
+                for (auto& ud : use_def.use_to_defs) {
+                    for (auto d : ud.second) {
+                        if (d->state->name == next->name) {
+                            if (auto buf = d->rval->to<IR::BFN::PacketRVal>()) {
+                                if (int(t->shift + buf->range.hi / 8 + 1) >
+                                        Device::pardeSpec().byteInputBufferSize()) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return false;
@@ -115,6 +139,8 @@ bool equiv(const std::vector<std::pair<MatchRegister, nw_bitrange>>& a,
     return true;
 }
 
+typedef std::map<const IR::BFN::Transition*, const IR::BFN::ParserState*> DefSet;
+
 /// This is the match register allocation. We implements a greedy
 /// graph coloring algorthim where two select's interfere if their
 /// live range overlap.
@@ -132,6 +158,10 @@ class MatcherAllocator : public Visitor {
     std::map<const IR::BFN::Transition*,
              std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
 
+    // Registers to scratches on this transition.
+    std::map<const IR::BFN::Transition*,
+             std::set<MatchRegister>> transition_scratches;
+
     // The register slices that this select should match against.
     std::map<const Use*,
              std::vector<std::pair<MatchRegister, nw_bitrange>>> save_reg_slices;
@@ -144,8 +174,7 @@ class MatcherAllocator : public Visitor {
 
         std::vector<const Use*> members;
 
-        std::map<const IR::BFN::Transition*,
-                 const IR::BFN::ParserState*> def_transition_to_state;
+        std::vector<DefSet> def_transition_sets;
 
         unsigned bits_in_group = 0;
 
@@ -169,19 +198,41 @@ class MatcherAllocator : public Visitor {
             return rv;
         }
 
-        const IR::BFN::ParserState*
-        get_def_state(const IR::BFN::Transition* def_transition) const {
-            return def_transition_to_state.at(def_transition);
+        const Def*
+        get_def(const IR::BFN::ParserState* def_state) const {
+            auto leader = members.front();
+            return use_def.get_def(leader, def_state);
         }
 
-        std::vector<const IR::BFN::Transition*>
-        get_def_transitions() const {
-            std::vector<const IR::BFN::Transition*> rv;
+        const IR::BFN::ParserState*
+        get_def_state(const IR::BFN::Transition* def_transition) const {
+            for (auto& def_set : def_transition_sets) {
+                if (def_set.count(def_transition))
+                    return def_set.at(def_transition);
+            }
 
-            for (auto& kv : def_transition_to_state)
-                rv.push_back(kv.first);
+            return nullptr;
+        }
 
-            return rv;
+        DefSet get_pred_def_set(const IR::BFN::ParserGraph& graph,
+                                const std::vector<const IR::BFN::ParserState*> def_states) {
+            DefSet def_set;
+
+            for (auto def_state : def_states) {
+                for (auto pred : graph.predecessors().at(def_state)) {
+                    for (auto t : graph.transitions(pred, def_state))
+                        def_set[t] = def_state;
+                }
+
+                for (auto& kv : graph.loopbacks()) {
+                    if (kv.first.second == def_state->name) {
+                        for (auto t : kv.second)
+                            def_set[t] = def_state;
+                    }
+                }
+            }
+
+            return def_set;
         }
 
         /// For each select, computes a set of transitions where
@@ -196,39 +247,48 @@ class MatcherAllocator : public Visitor {
                 BUG_CHECK(graph.predecessors().count(use_state),
                           "select state has no predecessors");
 
-                for (auto pred : graph.predecessors().at(use_state)) {
-                    for (auto t : graph.transitions(pred, use_state))
-                        def_transition_to_state[t] = use_state;
-                }
+                DefSet def_set = get_pred_def_set(graph, def_states);
 
-                for (auto& kv : graph.loopbacks()) {
-                    if (kv.first.second == use_state->name) {
-                        for (auto t : kv.second)
-                            def_transition_to_state[t] = use_state;
-                    }
-                }
+                def_transition_sets.push_back(def_set);
             } else {  // case 2: def states are ancestor states
+                DefSet succ_def_set;
+
                 for (auto def_state : def_states) {
                     for (auto succ : graph.successors().at(def_state)) {
                         if (succ == use_state || graph.is_ancestor(succ, use_state)) {
                             for (auto t : graph.transitions(def_state, succ))
-                                def_transition_to_state[t] = def_state;
+                                succ_def_set[t] = def_state;
                         }
+                    }
+                }
+
+                def_transition_sets.push_back(succ_def_set);
+
+                // If scratch regs are available, we may need the additional choice of
+                // scratching at the predecessors
+                if (!Device::pardeSpec().scratchRegisters().empty()) {
+                    DefSet pred_def_set = get_pred_def_set(graph, def_states);
+
+                    def_transition_sets.push_back(pred_def_set);
+                }
+            }
+
+            if (LOGGING(5)) {
+                std::clog << "group: " << print() << " has " << def_transition_sets.size()
+                          << " def sets:" << std::endl;
+
+                unsigned id = 0;
+                for (auto& def_set : def_transition_sets) {
+                    std::clog << "def set " << id++ << ":" << std::endl;
+
+                    for (auto& kv : def_set) {
+                        std::clog << graph.get_src(kv.first)->name << " -> "
+                                  << kv.first->next->name << std::endl;
                     }
                 }
             }
 
-            auto def_transitions = get_def_transitions();
-
-            if (LOGGING(5)) {
-                std::clog << "group: " << print() << " has def on:" << std::endl;
-                for (auto t : def_transitions) {
-                    std::clog << graph.get_src(t)->name << " -> "
-                              << t->next->name << std::endl;
-                }
-            }
-
-            BUG_CHECK(!def_transitions.empty(), "no def transitions for select group?");
+            BUG_CHECK(!def_transition_sets.empty(), "no def transition sets for select group?");
         }
 
         nw_bitrange get_range(const IR::BFN::ParserState* def_state) const {
@@ -391,7 +451,7 @@ class MatcherAllocator : public Visitor {
  private:
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
         for (auto& kv : parser_use_def)
-            allocate(kv.first, kv.second);
+            allocate_all(kv.first, kv.second);
 
         return root;
     }
@@ -538,22 +598,28 @@ class MatcherAllocator : public Visitor {
 
     /// returns true if x's defs intersects y's (def,use)
     bool overlap(const IR::BFN::ParserGraph& graph,
-                 const UseGroup* x, const UseGroup* y) {
-        auto x_defs = x->get_def_transitions();
-
+                 const UseGroup* x, const DefSet& x_defs,
+                 const UseGroup* y, const DefSet& y_defs) {
         auto y_use = y->get_use_state();
-        auto y_defs = y->get_def_transitions();
 
-        auto same_defs = x->have_same_defs(y);
+        for (auto& kv : x_defs) {
+            auto x_def = kv.first;
+            auto x_def_state = kv.second;
 
-        for (auto x_def : x_defs) {
             if (is_ancestor(graph, x_def, y_use)) {
-                for (auto y_def : y_defs) {
-                    if (!same_defs) {
-                        auto x_def_src = graph.get_src(x_def);
-                        if (x_def == y_def || is_ancestor(graph, y_def, x_def_src))
-                            return true;
-                    }
+                for (auto& xy : y_defs) {
+                    auto y_def = xy.first;
+                    auto y_def_state = xy.second;
+                    auto x_def_src = graph.get_src(x_def);
+
+                    auto xd = x->get_def(x_def_state);
+                    auto yd = y->get_def(y_def_state);
+
+                    if (xd->equiv(yd))
+                        continue;
+
+                    if (x_def == y_def || is_ancestor(graph, y_def, x_def_src))
+                        return true;
                 }
             }
         }
@@ -563,24 +629,86 @@ class MatcherAllocator : public Visitor {
 
     /// returns true if a and b's live range intersection is not null
     bool interfere(const IR::BFN::ParserGraph& graph,
-                   const UseGroup* a, const UseGroup* b) {
-        if (overlap(graph, a, b))
+                   const UseGroup* a, const DefSet& a_defs,
+                   const UseGroup* b, const DefSet& b_defs) {
+        if (overlap(graph, a, a_defs, b, b_defs))
             return true;
 
-        if (overlap(graph, b, a))
+        if (overlap(graph, b, b_defs, a, a_defs))
             return true;
 
         return false;
     }
 
+    struct Allocation {
+        std::map<const UseGroup*, std::vector<MatchRegister>> group_to_alloc_regs;
+        std::map<const UseGroup*, DefSet> group_to_def_set;
+    };
+
+    bool can_scratch(const UseGroup* group,
+                     MatchRegister scratch,
+                     const Allocation& allocation,
+                     const DefSet& def_set) {
+        for (auto& kv : def_set) {
+            auto transition = kv.first;
+
+            for (auto& gr : allocation.group_to_def_set) {
+                if (gr.second.count(transition)) {
+                    for (auto reg : allocation.group_to_alloc_regs.at(gr.first)) {
+                        if (group->have_subset_defs(gr.first) || gr.first->have_subset_defs(group))
+                            continue;
+
+                        if (reg.name == scratch.name.substr(5))
+                            return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     std::vector<MatchRegister>
-    get_available_regs(const ordered_set<MatchRegister>& used) {
+    get_available_regs(const IR::BFN::Parser* parser,
+                       const UseGroup* group,
+                       const Allocation& allocation,
+                       const DefSet& def_set) {
+        auto& graph = parser_info.graph(parser);
+
+        ordered_set<MatchRegister> used_regs;
+
+        for (auto& their : allocation.group_to_alloc_regs) {
+            auto they = their.first;
+            auto& their_regs = their.second;
+            auto& their_defs = allocation.group_to_def_set.at(they);
+
+            if (interfere(graph, group, def_set, they, their_defs)) {
+                for (auto& r : their_regs)
+                    used_regs.insert(r);
+
+                LOG3("group " << group->print() << " interferes with "
+                              << they->print());
+            }
+        }
+
         std::vector<MatchRegister> avail;
 
         for (auto reg : Device::pardeSpec().matchRegisters()) {
-            if (!used.count(reg))
+            if (!used_regs.count(reg))
                 avail.push_back(reg);
         }
+
+        for (auto reg : Device::pardeSpec().scratchRegisters()) {
+            if (!used_regs.count(reg)) {
+                if (can_scratch(group, reg, allocation, def_set)) {
+                    avail.push_back(reg);
+                }
+            }
+        }
+
+        LOG3("available regs are:");
+        for (auto reg : avail)
+            LOG3(reg.name);
 
         return avail;
     }
@@ -643,6 +771,15 @@ class MatcherAllocator : public Visitor {
         return alloc_ascend;
     }
 
+    MatchRegister get_match_register(MatchRegister scratch) {
+        for (auto reg : Device::pardeSpec().matchRegisters()) {
+            if (reg.name == scratch.name.substr(5))
+                return reg;
+        }
+
+        BUG("Match register does not exist for %1%", scratch);
+    }
+
     /// Success is not final, failure is fatal.
     void fail(const UseGroup* group) {
         std::stringstream avail;
@@ -668,12 +805,15 @@ class MatcherAllocator : public Visitor {
     /// Bind the allocation results to the group. Also create the
     /// match register read and write intructions which will be
     /// inserted into the IR by the subsequent InsertSaveAndSelect pass.
-    void save_result(const IR::BFN::Parser* parser, const UseGroup* group,
-                     const std::vector<MatchRegister>& alloc_regs) {
-         auto& graph = parser_info.graph(parser);
+    void bind_def(const IR::BFN::Parser* parser, const UseGroup* group,
+                  const std::vector<MatchRegister>& alloc_regs,
+                  const DefSet& def_set) {
+        auto& graph = parser_info.graph(parser);
 
         // def
-        for (auto transition : group->get_def_transitions()) {
+        for (auto& kv : def_set) {
+            auto transition = kv.first;
+
             auto src_state = graph.get_src(transition);
             auto def_state = group->get_def_state(transition);
 
@@ -686,7 +826,7 @@ class MatcherAllocator : public Visitor {
 
             unsigned bytes = 0;
 
-            for (auto& reg : alloc_regs) {
+            for (auto reg : alloc_regs) {
                 unsigned lo = group_range.lo + bytes;
                 nw_byterange reg_range(lo, lo + reg.size - 1);
 
@@ -698,6 +838,13 @@ class MatcherAllocator : public Visitor {
                 BUG_CHECK(reg_range.lo >= 0 &&
                           reg_range.hi <= Device::pardeSpec().byteInputBufferSize(),
                           "branch word out of current input buffer!");
+
+                bool scratch = false;
+
+                if (reg.name.startsWith("save_")) {
+                    reg = get_match_register(reg);
+                    scratch = true;
+                }
 
                 auto save = new IR::BFN::SaveToRegister(reg, reg_range);
 
@@ -712,10 +859,16 @@ class MatcherAllocator : public Visitor {
                 if (!saved)
                     transition_saves[transition].push_back(save);
 
+                if (scratch)
+                    transition_scratches[transition].insert(reg);
+
                 bytes += reg.size;
             }
         }
+    }
 
+    void bind_use(const UseGroup* group,
+                  const std::vector<MatchRegister>& alloc_regs) {
         // use
         for (auto use : group->members) {
             auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
@@ -725,11 +878,6 @@ class MatcherAllocator : public Visitor {
 
                 BUG_CHECK(eq, "select has different allocations based on the use context: %1%",
                           use->print());
-
-                // XXX(zma) This check is really an aritificial constraint; We can
-                // of course give different allocations based on the context (use state).
-                // The thing is I'm not really sure how the subsequent Modifier can
-                // perform a context based revisit on the IR::BFN::Select node.
             } else {
                 save_reg_slices[use] = reg_slices;
             }
@@ -737,10 +885,16 @@ class MatcherAllocator : public Visitor {
     }
 
     void bind_alloc(const IR::BFN::Parser* parser, const UseGroup* group,
-                    std::map<const UseGroup*, std::vector<MatchRegister>>& group_to_alloc_regs,
-                    const std::vector<MatchRegister>& alloc_regs) {
-        group_to_alloc_regs[group] = alloc_regs;
-        save_result(parser, group, alloc_regs);
+                    Allocation& allocation,
+                    const std::vector<MatchRegister>& alloc_regs,
+                    const DefSet& def_set) {
+        allocation.group_to_alloc_regs[group] = alloc_regs;
+
+        allocation.group_to_def_set[group] = def_set;
+
+        bind_def(parser, group, alloc_regs, def_set);
+
+        bind_use(group, alloc_regs);
 
         if (LOGGING(1)) {
             std::clog << "allocated { ";
@@ -749,53 +903,61 @@ class MatcherAllocator : public Visitor {
         }
     }
 
+    void allocate_group(const IR::BFN::Parser* parser, const UseGroup* group,
+                        Allocation& allocation) {
+        bool success = false;
+
+        LOG3(">>>>>>>>>>>>>>>>");
+        LOG3("allocating " << group->print());
+
+        // try all def transition sets of group
+        unsigned id = 0;
+
+        for (auto& def_set : group->def_transition_sets) {
+            LOG3("try def set " << id++);
+
+            auto avail_regs = get_available_regs(parser, group, allocation, def_set);
+
+            auto alloc_regs = allocate(group, avail_regs);
+
+            if (!alloc_regs.empty()) {
+                success = true;
+                bind_alloc(parser, group, allocation, alloc_regs, def_set);
+                LOG3("success");
+                break;
+            } else {
+                LOG3("not ok");
+            }
+        }
+
+        LOG3("<<<<<<<<<<<<<<<<");
+
+        if (!success)
+            fail(group);
+    }
+
     /// This is the core allocation routine. The basic idea to use two select
     /// groups' interference relationship to determine whether they can be
     /// allocated to the same set of registers.
-    void allocate(const IR::BFN::Parser* parser, const UseDef& use_def) {
+    void allocate_all(const IR::BFN::Parser* parser, const UseDef& use_def) {
         auto coalesced_groups = coalesce_uses(parser, use_def);
 
-        auto& graph = parser_info.graph(parser);
-
-        std::map<const UseGroup*, std::vector<MatchRegister>> group_to_alloc_regs;
+        Allocation allocation;
 
         for (auto group : coalesced_groups) {
             try {
-                if (group_to_alloc_regs.count(group))
+                if (allocation.group_to_alloc_regs.count(group))
                     continue;
 
-                std::vector<MatchRegister> alloc_regs;
+                allocate_group(parser, group, allocation);
 
-                ordered_set<MatchRegister> cannot_alloc_regs;
-
-                for (auto& gr : group_to_alloc_regs) {
-                    if (interfere(graph, group, gr.first)) {
-                        for (auto& r : gr.second)
-                            cannot_alloc_regs.insert(r);
-
-                        LOG3("group " << group->print() << " interferes with "
-                                      << gr.first->print());
-                    }
-                }
-
-                auto avail_regs = get_available_regs(cannot_alloc_regs);
-
-                if (avail_regs.empty()) fail(group);
-
-                alloc_regs = allocate(group, avail_regs);
-
-                if (alloc_regs.empty()) fail(group);
-
-                bind_alloc(parser, group, group_to_alloc_regs, alloc_regs);  // success
-
-                // propagate alloc to all groups that have shared def
-                for (auto other : coalesced_groups) {
-                    if (!group_to_alloc_regs.count(other)) {
-                        if (group->have_subset_defs(other) || other->have_subset_defs(group)) {
-                            LOG3("group " << other->print() << " can share registers with "
-                                          << group->print());
-
-                            bind_alloc(parser, other, group_to_alloc_regs, alloc_regs);
+                if (Device::pardeSpec().scratchRegisters().empty()) {
+                    for (auto other : coalesced_groups) {
+                        if (!allocation.group_to_alloc_regs.count(other)) {
+                            if (group->have_subset_defs(other) ||
+                                other->have_subset_defs(group)) {
+                                allocate_group(parser, other, allocation);
+                            }
                         }
                     }
                 }
@@ -815,14 +977,17 @@ struct InsertSaveAndSelect : public ParserModifier {
         : rst(saves) { }
 
     void postorder(IR::BFN::Transition* transition) override {
-        auto* original_transition = getOriginal<IR::BFN::Transition>();
-        if (rst.transition_saves.count(original_transition)) {
-            for (const auto* save : rst.transition_saves.at(original_transition)) {
-                transition->saves.push_back(save);
-                auto state = findContext<IR::BFN::ParserState>();
+        auto original_transition = getOriginal<IR::BFN::Transition>();
 
-                LOG4("insert " << save << " on " << state->name << " -> "
-                               << transition->next->name);
+        if (rst.transition_saves.count(original_transition)) {
+            for (auto save : rst.transition_saves.at(original_transition)) {
+                transition->saves.push_back(save);
+            }
+        }
+
+        if (rst.transition_scratches.count(original_transition)) {
+            for (auto reg : rst.transition_scratches.at(original_transition)) {
+                transition->scratches.insert(reg);
             }
         }
     }
@@ -1057,35 +1222,35 @@ struct AdjustMatchValue : public ParserModifier {
     }
 };
 
+const IR::BFN::ParserState*
+can_remove(const IR::BFN::ParserState* state) {
+    if (!state->statements.empty())
+        return nullptr;
+
+    if (!state->selects.empty())
+        return nullptr;
+
+    if (state->transitions.size() != 1)
+        return nullptr;
+
+    auto t = state->transitions[0];
+
+    if (!t->saves.empty())
+        return nullptr;
+
+    if (t->shift == 0)
+        return t->next;
+
+    return nullptr;
+}
+
 // After match register allocation, if the start state is empty and its
 // transition to the next state contains no writes to the match register,
 // we can safely remove this empty state.
 struct RemoveEmptyStartState : public ParserTransform {
-    const IR::BFN::ParserState*
-    is_empty(const IR::BFN::ParserState* state) {
-        if (!state->statements.empty())
-            return nullptr;
-
-        if (!state->selects.empty())
-            return nullptr;
-
-        if (state->transitions.size() != 1)
-            return nullptr;
-
-        auto t = state->transitions[0];
-
-        if (!t->saves.empty())
-            return nullptr;
-
-        if (t->shift == 0)
-            return t->next;
-
-        return nullptr;
-    }
-
     IR::BFN::Parser* preorder(IR::BFN::Parser* parser) {
         if (parser->start) {
-            if (auto next = is_empty(parser->start)) {
+            if (auto next = can_remove(parser->start)) {
                 parser->start = next;
                 LOG4("removed empty parser start state on " << parser->gress);
             }
@@ -1095,15 +1260,31 @@ struct RemoveEmptyStartState : public ParserTransform {
     }
 };
 
+// If the stall state did not receive reg allocation, we can also
+// safely remove this stall state.
+struct RemoveEmptyStallState : public ParserModifier {
+    void postorder(IR::BFN::Transition* t) override {
+        if (t->next && t->next->name.find("$oob_stall")) {
+            if (auto next = can_remove(t->next)) {
+                t->next = next;
+                LOG4("removed empty parser stall state  " << t->next->name);
+            }
+        }
+    }
+};
+
 AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
     auto* parserInfo = new CollectParserInfo;
     auto* collectUseDef = new CollectParserUseDef(phv, *parserInfo);
+    auto* resolveOobDefs = new ResolveOutOfBufferSaves(collectUseDef->parser_use_def);
     auto* allocator = new MatcherAllocator(*parserInfo, collectUseDef->parser_use_def);
 
     addPasses({
         LOGGING(4) ? new DumpParser("before_parser_match_alloc") : nullptr,
         new InsertInitSaveState,
-        new ResolveOutOfBufferSaves,
+        parserInfo,
+        collectUseDef,
+        resolveOobDefs,
         LOGGING(4) ? new DumpParser("after_resolve_oob_saves") : nullptr,
         parserInfo,
         collectUseDef,
@@ -1111,6 +1292,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         new InsertSaveAndSelect(*allocator),
         new AdjustMatchValue,
         new RemoveEmptyStartState,
+        new RemoveEmptyStallState,
         LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr
     });
 }

@@ -834,11 +834,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         auto* loweredState =
           new IR::BFN::LoweredParserState(sanitizeName(state->name), state->gress);
 
-        // Report the original state name in the debug info, and merge in any
-        // debug information it had.
-        loweredState->debug.info.push_back("from state " + state->name);
-        loweredState->debug.mergeWith(state->debug);
-
         std::vector<const IR::BFN::ParserChecksumPrimitive*> checksums;
 
         IR::Vector<IR::BFN::ParserCounterPrimitive> counters;
@@ -915,22 +910,12 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 saves.push_back(new IR::BFN::LoweredSave(save->dest, source));
             }
 
-            IR::BFN::LoweredMatchValue* match_value = nullptr;
-
-            if (auto* const_value = transition->value->to<IR::BFN::ParserConstMatchValue>()) {
-                match_value = new IR::BFN::LoweredConstMatchValue(const_value->value);
-            } else if (auto* pvs = transition->value->to<IR::BFN::ParserPvsMatchValue>()) {
-                match_value =
-                    new IR::BFN::LoweredPvsMatchValue(pvs->name, pvs->size, pvs->mapping);
-            } else {
-                BUG("Unknown match value %1%", transition->value);
-            }
-
             auto* loweredMatch = new IR::BFN::LoweredParserMatch(
-                    match_value,
+                    transition->value,
                     transition->shift,
                     loweredExtracts,
                     saves,
+                    transition->scratches,
                     loweredChecksums,
                     counters,
                     priority,

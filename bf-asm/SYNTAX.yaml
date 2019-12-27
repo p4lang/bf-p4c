@@ -110,10 +110,13 @@ parser [<thread>] [<port_use>, ...]:
                     # modificate to the offset
                 priority: <constant> | @ <offset> [ >> <constant> ] [ & <constant> ]
                     # update the packet priority
-                save: { <matcher> : <byte-loc>, ... } | <matcher>
+                load: { <matcher> : <byte-loc>, ... } | <matcher>
                     # specifies one or more values from the input stream to be
                     # loaded into specific matchers or specific matchers to have
                     # their values preserved for use by later states
+                save: [ <matcher>, ... ]
+                    # specifies on more more values from the matchers to be
+                    # saved into the scratch pad registers
                 shift: <constant>
                     # number of bytes to shift out
                 [rotate] <constant> : [offset] <phv_location>

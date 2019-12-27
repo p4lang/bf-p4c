@@ -99,33 +99,47 @@ template <> int Parser::State::write_lookup_config(Target::JBay::parser_regs &re
                 if (p->key.data[i].byte != key.data[i].byte)
                     error(p->lineno, "Incompatible match fields between states "
                           "%s and %s, triggered from state %s", name.c_str(),
-                          p->name.c_str(), state->name.c_str()); } }
+                          p->name.c_str(), state->name.c_str());
+            }
+        }
         if (set && key.data[i].byte != MatchKey::USE_SAVED) {
             int off = key.data[i].byte + ea_row.shift_amt;
             if (off < 0 || off >= 32) {
                 error(key.lineno, "Match offset of %d in state %s out of range "
                       "for previous state %s", key.data[i].byte, name.c_str(),
-                      state->name.c_str()); }
+                      state->name.c_str());
+            }
             ea_row.lookup_offset_8[i] = off;
             ea_row.ld_lookup_8[i] = 1;
-            max_off = std::max(max_off, off); } }
+            max_off = std::max(max_off, off);
+        }
+    }
     return max_off;
 }
 
-template <> int Parser::State::Match::write_future_config(Target::JBay::parser_regs &regs,
+template <> int Parser::State::Match::write_load_config(Target::JBay::parser_regs &regs,
             Parser *pa, State *state, int row) const {
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
     int max_off = -1;
     for (int i = 0; i < 4; i++) {
-        if (future.data[i].bit < 0) continue;
-        if (future.data[i].byte != MatchKey::USE_SAVED) {
-            int off = future.data[i].byte;
+        if (load.data[i].bit < 0) continue;
+        if (load.data[i].byte != MatchKey::USE_SAVED) {
+            int off = load.data[i].byte;
             if (off < 0 || off >= 32) {
-                error(future.lineno, "Save offset of %d in state %s out of range",
-                      future.data[i].byte, state->name.c_str()); }
+                error(load.lineno, "Load offset of %d in state %s out of range",
+                      load.data[i].byte, state->name.c_str());
+            }
             ea_row.lookup_offset_8[i] = off;
             ea_row.ld_lookup_8[i] = 1;
-            max_off = std::max(max_off, off); } }
+            max_off = std::max(max_off, off);
+        }
+        ea_row.sv_lookup_8[i] = (1 << i) && load.save;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        if (load.save && (1 << i))
+            ea_row.lookup_offset_8[i] = 60 + i;
+    }
     return max_off;
 }
 

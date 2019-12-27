@@ -55,9 +55,11 @@ class PardeSpec {
     /// state.
     virtual const std::map<unsigned, unsigned>& extractorSpec() const = 0;
 
-    /// Specifies the available match registers in bits. Note that they can be
-    /// combined and used as a larger match key.
+    /// Specifies the available match registers
     virtual const std::vector<MatchRegister> matchRegisters() const = 0;
+
+    /// Specifies the available scracth registers
+    virtual const std::vector<MatchRegister> scratchRegisters() const = 0;
 
     /// Total parsers supported ingress/egress
     virtual int numParsers() const = 0;
@@ -105,9 +107,19 @@ class TofinoPardeSpec : public PardeSpec {
     }
 
     const std::vector<MatchRegister> matchRegisters() const override {
-        return { MatchRegister("half"),
-                 MatchRegister("byte0"),
-                 MatchRegister("byte1") };
+        static std::vector<MatchRegister> spec;
+
+        if (spec.empty()) {
+            spec = { MatchRegister("half"),
+                     MatchRegister("byte0"),
+                     MatchRegister("byte1") };
+        }
+
+        return spec;
+    }
+
+    const std::vector<MatchRegister> scratchRegisters() const override {
+        return { };
     }
 
     int numParsers() const override { return 18; }
@@ -142,10 +154,29 @@ class JBayPardeSpec : public PardeSpec {
     }
 
     const std::vector<MatchRegister> matchRegisters() const override {
-        return { MatchRegister("byte0"),
-                 MatchRegister("byte1"),
-                 MatchRegister("byte2"),
-                 MatchRegister("byte3") };
+        static std::vector<MatchRegister> spec;
+
+        if (spec.empty()) {
+            spec = { MatchRegister("byte0"),
+                     MatchRegister("byte1"),
+                     MatchRegister("byte2"),
+                     MatchRegister("byte3") };
+        }
+
+        return spec;
+    }
+
+    const std::vector<MatchRegister> scratchRegisters() const override {
+        static std::vector<MatchRegister> spec;
+
+        if (spec.empty()) {
+            spec = { MatchRegister("save_byte0"),
+                     MatchRegister("save_byte1"),
+                     MatchRegister("save_byte2"),
+                     MatchRegister("save_byte3") };
+        }
+
+        return spec;
     }
 
     // TBD
@@ -167,42 +198,7 @@ class JBayPardeSpec : public PardeSpec {
 };
 
 #if HAVE_CLOUDBREAK
-class CloudbreakPardeSpec : public PardeSpec {
- public:
-    size_t bytePhase0Size() const override { return 16; }
-    size_t byteIngressPrePacketPaddingSize() const override { return 8; }
-
-    const std::map<unsigned, unsigned>& extractorSpec() const override {
-        static const std::map<unsigned, unsigned> extractorSpec = {
-            {16, 20}
-        };
-        return extractorSpec;
-    }
-
-    const std::vector<MatchRegister> matchRegisters() const override {
-        return { MatchRegister("byte0"),
-                 MatchRegister("byte1"),
-                 MatchRegister("byte2"),
-                 MatchRegister("byte3") };
-    }
-
-    // TBD
-    int numParsers() const override { return 36; }
-    int numTcamRows() const override { return 256; }
-
-    unsigned maxClotsPerState() const override { return 2; }
-
-    // Cap max size to 56 as a workaround of TF2LAB-44
-    unsigned byteMaxClotSize() const override { return 56;  /* 64 */ }
-
-    unsigned numClotsPerGress() const override { return 64; }
-    unsigned maxClotsLivePerGress() const override { return 16; }
-    unsigned byteInterClotGap() const override { return 3; }
-    unsigned bitMaxClotPos() const override { return 384 * 8; /* 384 bytes */ }
-
-    unsigned numDeparserConstantBytes() const override { return 8; }
-    unsigned numDeparserChecksumUnits() const override { return 8; }
-};
+class CloudbreakPardeSpec : public JBayPardeSpec { };
 #endif /* HAVE_CLOUDBREAK */
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_ */

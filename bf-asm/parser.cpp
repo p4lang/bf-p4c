@@ -839,6 +839,16 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
                 return -1; }
             ctr_neg = width++;
             return 0;
+        } else if (!strncmp(spec.s, "save_byte", 9)) {
+            if (options.target == TOFINO)
+                error(spec.lineno, "Tofino does not have scratch registers in the parser");
+
+            int i = spec.s[9] - '0';
+            if (i < 0 || i > 4)
+                error(spec.lineno, "Invalid parser save source %s", spec.s);
+            save = 1 << i;
+            width += 8;
+            return 0;
         } else if (at < 0 && (at = Parser::match_key_loc(spec, false)) >= 0) {
             if (options.target == TOFINO && at == 0 && add_byte(1, 0, true) < 0) return -1;
             return add_byte(at, 0, true); }
@@ -946,8 +956,8 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 error(kv.value.lineno, "Syntax error for parser counter");
             }
         } else if (kv.key == "hdr_len_inc_stop") {
-            if (options.target != JBAY)
-                error(kv.key.lineno, "Target does not support hdr_len_inc_stop");
+            if (options.target == TOFINO)
+                error(kv.key.lineno, "Tofino does not support hdr_len_inc_stop");
             else if (hdr_len_inc_stop)
                 error(kv.key.lineno, "Mulitple hdr_len_inc_stop in match");
             hdr_len_inc_stop = HdrLenIncStop(kv.value);
@@ -978,12 +988,30 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 error(kv.key.lineno, "Multiple next settings in match");
                 error(next.lineno, "previously set here"); }
             next = kv.value;
-        } else if (kv.key == "save") {
-            if (future.lineno) {
-                error(kv.value.lineno, "Multiple save entries in match");
-                error(future.lineno, "previous specified here");
+        } else if (kv.key == "load") {
+            if (load.lineno) {
+                error(kv.value.lineno, "Multiple load entries in match");
+                error(load.lineno, "previous specified here");
             } else
-                future.setup(kv.value);
+                load.setup(kv.value);
+        } else if (kv.key == "save") {
+            if (options.target == TOFINO)
+                error(kv.key.lineno, "Tofino does not have scratch registers in the parser");
+
+            if (load.save)
+                error(kv.value.lineno, "Multiple save entries in match");
+
+            if (CHECKTYPE(kv.value, tVEC)) {
+                for (int i = 0; i < kv.value.vec.size; i++) {
+                    if (CHECKTYPE(kv.value[i], tSTR)) {
+                             if (kv.value[i] == "byte0") load.save = 1 << 0;
+                        else if (kv.value[i] == "byte1") load.save = 1 << 1;
+                        else if (kv.value[i] == "byte2") load.save = 1 << 2;
+                        else if (kv.value[i] == "byte3") load.save = 1 << 3;
+                        else error(lineno, "Unexpected parser save source");
+                    }
+                }
+            }
         } else if (kv.key == "checksum") {
             csum.emplace_back(gress, kv);
         } else if (kv.key == "field_mapping") {
@@ -1443,9 +1471,9 @@ void Parser::State::pass2(Parser *pa) {
             stateno.word1 = s;
             pa->state_use[s] = 1; } }
     unsigned def_saved = 0;
-    if (def && def->future.lineno >= 0) {
+    if (def && def->load.lineno >= 0) {
         for (int i = 0; i < 4; i++)
-            if (def->future.data[i].bit >= 0)
+            if (def->load.data[i].bit >= 0)
                 def_saved |= 1 << i;
         if (def_saved && def->next)
             def->next->key.preserve_saved(def_saved); }
@@ -1454,12 +1482,12 @@ void Parser::State::pass2(Parser *pa) {
     for (auto m : match) {
         m->pass2(pa, this);
         unsigned saved = def_saved;
-        if (m->future.lineno) {
+        if (m->load.lineno) {
             for (int i = 0; i < 4; i++)
-                if (m->future.data[i].bit >= 0)
+                if (m->load.data[i].bit >= 0)
                     saved |= 1 << i;
-                else if (def && def->future.lineno && def->future.data[i].bit >= 0)
-                    m->future.data[i] = def->future.data[i]; }
+                else if (def && def->load.lineno && def->load.data[i].bit >= 0)
+                    m->load.data[i] = def->load.data[i]; }
         if (saved) {
             if (m->next)
                 m->next->key.preserve_saved(saved);
@@ -1586,7 +1614,7 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
         max_off = std::max(max_off, int(ea_row.shift_amt = shift) - 1);
     else if (def)
         max_off = std::max(max_off, int(ea_row.shift_amt = def->shift) - 1);
-    max_off = std::max(max_off, write_future_config(regs, pa, state, row));
+    max_off = std::max(max_off, write_load_config(regs, pa, state, row));
     if (auto &next = (!this->next && def) ? def->next : this->next) {
         std::vector<State *> prev;
         for (auto n : next) {

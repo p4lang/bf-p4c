@@ -92,6 +92,7 @@ class Parser {
             short   specified;
             short   ctr_zero, ctr_neg;
             short   width;
+            short   save = 0;
             MatchKey() : lineno(0), specified(0), ctr_zero(-1), ctr_neg(-1), width(0) {
                 for (auto &a : data) a.bit = -1; }
             void setup(value_t &);
@@ -126,7 +127,7 @@ class Parser {
             PriorityUpdate      priority;
 
             Ref         next;
-            MatchKey    future;
+            MatchKey    load;
 
             int row = -1;
             bool has_narrow_to_wide_extract = false;
@@ -201,7 +202,7 @@ class Parser {
             void pass2(Parser *pa, State *state);
             OutputUse output_use() const;
             void merge_outputs(OutputUse);
-            template<class REGS> int write_future_config(REGS &, Parser *, State *, int) const;
+            template<class REGS> int write_load_config(REGS &, Parser *, State *, int) const;
             template<class REGS> void write_lookup_config(REGS &, State *, int) const;
             template<class EA_REGS> void write_counter_config(EA_REGS &) const;
             template<class REGS> void write_common_row_config(REGS &, Parser *, State *, int,

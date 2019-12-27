@@ -329,11 +329,18 @@ struct CollectParserUseDef : PassManager {
 
             return false;
         }
+
+        bool preorder(const IR::BFN::Parser* parser) override {
+            parser_use_def[parser] = {};
+            return true;
+        }
     };
 
     void end_apply() override {
-        for (auto& kv : parser_use_def)
+        for (auto& kv : parser_use_def) {
+            LOG3(kv.first->gress << " parser:");
             LOG3(parser_use_def[kv.first].print());
+        }
     }
 
     explicit CollectParserUseDef(const PhvInfo& phv, const CollectParserInfo& parser_info) {

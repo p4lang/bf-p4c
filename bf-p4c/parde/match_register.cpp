@@ -1,8 +1,9 @@
 #include "match_register.h"
 
-#include <string>
 #include <sstream>
 #include "ir/ir.h"
+
+int MatchRegister::s_id = 0;
 
 cstring MatchRegister::toString() const {
     std::stringstream tmp;
@@ -10,27 +11,13 @@ cstring MatchRegister::toString() const {
     return tmp.str();
 }
 
-MatchRegister::MatchRegister(cstring n) : name(n) {
-    std::string str(name);
-    if (str.length() < 4)
-        BUG("Invalid parser match register '%s'", name);
-
-    if (str.substr(0, 4) == "byte")
+MatchRegister::MatchRegister(cstring n) : name(n), id(s_id++) {
+    if (name.find("byte"))
         size = 1;
-    else if (str.substr(0, 4) == "half")
+    else if (name.find("half"))
         size = 2;
     else
-        BUG("Invalid parser match register '%s'", name);
-
-    if (str.length() > 4) {
-        char* end = nullptr;
-        auto v = std::strtol(str.substr(4).c_str(), &end, 10);
-
-        if (*end)
-            BUG("Invalid parser match register '%s'", name);
-
-        id = v;
-    }
+        BUG("Invalid parser match register %s", name);
 }
 
 void MatchRegister::toJSON(JSONGenerator& json) const {

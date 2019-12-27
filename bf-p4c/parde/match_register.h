@@ -24,7 +24,9 @@ class MatchRegister {
 
     cstring name;
     size_t  size;
-    int     id = 0;
+    int     id;
+
+    static int s_id;
 
     bool operator<(const MatchRegister& other) const {
         if (size < other.size) return true;

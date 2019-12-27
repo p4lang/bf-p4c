@@ -92,18 +92,18 @@ template <> int Parser::State::write_lookup_config(Target::Tofino::parser_regs &
     return max_off;
 }
 
-template <> int Parser::State::Match::write_future_config(Target::Tofino::parser_regs &regs,
+template <> int Parser::State::Match::write_load_config(Target::Tofino::parser_regs &regs,
             Parser *pa, State *state, int row) const {
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
     int max_off = -1;
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
-        if (future.data[i].bit < 0) continue;
-        if (future.data[i].byte != MatchKey::USE_SAVED) {
-            int off = future.data[i].byte;
+        if (load.data[i].bit < 0) continue;
+        if (load.data[i].byte != MatchKey::USE_SAVED) {
+            int off = load.data[i].byte;
             if (off < 0 || off >= 32) {
-                error(future.lineno, "Save offset of %d in state %s out of range",
-                      future.data[i].byte, state->name.c_str());
+                error(load.lineno, "Load offset of %d in state %s out of range",
+                      load.data[i].byte, state->name.c_str());
             } else if (i) {
                 ea_row.lookup_offset_8[(i-2)] = off;
                 ea_row.ld_lookup_8[(i-2)] = 1;

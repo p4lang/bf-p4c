@@ -124,20 +124,7 @@ struct ParserAsmSerializer : public ParserInspector {
     bool preorder(const IR::BFN::LoweredParserState* state) override {
         AutoIndent indentState(indent, 2);
 
-        out << indent << canon_name(state->name) << ':';
-
-        // Print human-friendly debug information about this state - any unhandled
-        // primitives it included, the higher-level states it may have been
-        // constructed from, etc.
-        for (auto& info : state->debug.info) {
-            if (state->debug.info.size() == 1)
-                out << "  # ";
-            else
-                out << std::endl << indent << "      # - ";
-            out << info;
-        }
-
-        out << std::endl;
+        out << indent << canon_name(state->name) << ':' << std::endl;
 
         if (!state->select->regs.empty() || !state->select->counters.empty()) {
             AutoIndent indentSelect(indent);
@@ -172,13 +159,13 @@ struct ParserAsmSerializer : public ParserInspector {
     void outputMatch(const IR::BFN::LoweredParserMatch* match) {
         AutoIndent indentMatchPattern(indent);
 
-        if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
+        if (auto* const_val = match->value->to<IR::BFN::ParserConstMatchValue>()) {
             out << indent << const_val->value << ':' << std::endl;
-        } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
+        } else if (auto* pvs = match->value->to<IR::BFN::ParserPvsMatchValue>()) {
             out << indent << "value_set " << pvs->name << " " << pvs->size << ":" << std::endl;
             AutoIndent indentMatch(indent);
             out << indent << "handle: " << getPvsHandle(pvs->name) << std::endl;
-            out << indent << "field_mapping" << ":" << std::endl;
+            out << indent << "field_mapping:" << std::endl;
             AutoIndent indentFieldMap(indent);
             for (const auto& m : pvs->mapping) {
                 cstring fieldname = m.first.first;
@@ -213,7 +200,11 @@ struct ParserAsmSerializer : public ParserInspector {
                 BUG("unknown lowered parser primitive type");
         }
 
-        outputSave(match->saves);
+        if (!match->saves.empty())
+            outputSave(match->saves);
+
+        if (!match->scratches.empty())
+            outputScratch(match->scratches);
 
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
@@ -239,17 +230,26 @@ struct ParserAsmSerializer : public ParserInspector {
     }
 
     void outputSave(const IR::Vector<IR::BFN::LoweredSave>& saves) {
-        if (!saves.size()) {
-            return; }
-        const char* sep = "save: { ";
+        const char* sep = "load: { ";
         out << indent;
         for (const auto* save : saves) {
             if (auto* source = save->source->to<IR::BFN::LoweredInputBufferRVal>()) {
                 auto bytes = source->range;
                 out << sep << save->dest << " : " << Range(bytes.lo, bytes.hi);
-                sep = ", "; }
+                sep = ", ";
+            }
         }
         out << " }" << std::endl;
+    }
+
+    void outputScratch(const std::set<MatchRegister>& scratches) {
+        const char* sep = "save: [ ";
+        out << indent;
+        for (auto reg : scratches) {
+            out << sep << reg.name;
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
     }
 
     void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {

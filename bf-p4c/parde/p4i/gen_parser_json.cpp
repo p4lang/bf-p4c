@@ -42,11 +42,11 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
         match_on.hardware_id   = reg.id;
         match_on.bit_width     = reg.size * 8;
 
-        if (auto* const_val = match->value->to<IR::BFN::LoweredConstMatchValue>()) {
+        if (auto* const_val = match->value->to<IR::BFN::ParserConstMatchValue>()) {
             std::stringstream v;
             v << const_val->value;
             match_on.value = v.str();
-        } else if (auto* pvs = match->value->to<IR::BFN::LoweredPvsMatchValue>()) {
+        } else if (auto* pvs = match->value->to<IR::BFN::ParserPvsMatchValue>()) {
             match_on.value_set = pvs->name;
         } else {
             BUG("Unknown parser match value type: %1%", match->value);

@@ -296,6 +296,7 @@ abstract ParserMatchValue { }
 class ParserConstMatchValue : ParserMatchValue {
     match_t value;
     dbprint { out << "const: " << value; }
+    toString { std::stringstream ss; ss << value; return ss.str().c_str(); }
 }
 
 /// One PVS is value vector that is matched against ALL select fields in that states.
@@ -308,6 +309,7 @@ class ParserPvsMatchValue : ParserMatchValue {
     cstring name;
     int size;
     dbprint { out << "name: " << name << " " << size; }
+    toString { return name; }
 }
 
 /// Phase0 representation in the parser. The phase0 or port metadata can be
@@ -362,6 +364,9 @@ class Transition {
 
     /// The save to registers need to perform for this transition.
     optional inline Vector<SaveToRegister>  saves;
+
+    /// registers to scratch pad on write
+    optional std::set<MatchRegister> scratches; 
 }
 
 /// A parser selection operation. These represent a load of a value from some

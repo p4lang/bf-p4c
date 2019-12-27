@@ -180,33 +180,6 @@ class LoweredSelect {
 #end
 }
 
-/// base class for value types that a state can match against.
-abstract LoweredMatchValue { }
-
-/// A constant value that is defined in the P4 program
-class LoweredConstMatchValue : LoweredMatchValue {
-    dbprint { out << "const: " << value; }
-    toString { std::stringstream ss; ss << value; return ss.str().c_str(); }
-    match_t value;
-}
-
-/// Parser value set(PVS) value; populated at runtime by the driver
-class LoweredPvsMatchValue : LoweredMatchValue {
-#emit
-    using FieldSlice = std::pair<cstring, nw_bitrange>;
-    using MatcherSlice = std::pair<MatchRegister, le_bitrange>;
-    using pvsFieldMatches = ordered_map<FieldSlice, MatcherSlice>;
-    pvsFieldMatches mapping;
-
-    LoweredPvsMatchValue(cstring name, int size, const pvsFieldMatches &m)
-        : mapping(m), name(name), size(size) {}
-#end
-    dbprint { out << "pvs: " << name << " " << size; }
-    toString { return name; }
-    cstring name;
-    int size;
-}
-
 /// This class represents the operations to perform on a match at
 /// the current parser state. Each LoweredParserMatch uses a single
 /// TCAM row in the parser for constant matches, and multiple TCAM rows
@@ -215,11 +188,11 @@ class LoweredPvsMatchValue : LoweredMatchValue {
 class LoweredParserMatch {
 #emit
     LoweredParserMatch(match_t value, unsigned shift, const LoweredParserState* next)
-        : value(new IR::BFN::LoweredConstMatchValue(value)),
+        : value(new ParserConstMatchValue(value)),
           shift(shift), bufferRequired(0), next(next) { }
 #end
     /// The match value: constant or a value set
-    LoweredMatchValue value;
+    ParserMatchValue value;
 
     /// Number of bytes to shift out of input buffer at current state
     unsigned shift;
@@ -232,6 +205,9 @@ class LoweredParserMatch {
 
     /// Save match word to registers
     inline Vector<LoweredSave> saves;
+
+    /// registers to scratch pad on write
+    std::set<MatchRegister> scratches;
 
     /// Checksum calculations
     inline Vector<LoweredParserChecksum> checksums;
@@ -292,12 +268,6 @@ class LoweredParserState : Unit {
 
     /// The possible transitions out of this state.
     inline Vector<LoweredParserMatch> transitions;
-
-#emit
-    /// Debugging information about the high-level parser states that were used
-    /// to generate this low-level parser state.
-    ::BFN::DebugInfo debug;
-#end
 }
 
 /// The lowered representation of a parser. This is the representation used

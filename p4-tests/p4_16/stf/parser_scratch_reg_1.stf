@@ -1,0 +1,5 @@
+expect 2 0bffff deadbeef ffffffff ffff ff
+packet 0 0bffff deadbeef ffffffff ffff ff
+
+expect 2 0cffff 0d ff
+packet 0 0cffff 0d ff
