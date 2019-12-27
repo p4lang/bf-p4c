@@ -427,6 +427,8 @@ class Counter : Synth2Port {
     int max_width = -1; // Perhaps to play with a range of widths
     int threshold = -1;
     int interval = -1;
+    bool true_egress_accounting = false;
+
     const char *kind() const override { return "stats"; }
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }
@@ -444,6 +446,8 @@ class Meter : MeterBus2Port {
     int red_value = -1;
     int profile = -1;
     int sweep_interval = -1;
+    bool true_egress_accounting = false;
+
     NullOK Expression  result = nullptr;     // Field which meter writes, eventually be deprecated
                                              // as it should be contained in AttachedOutput
     NullOK HashDist    pre_color = nullptr;  // Field to pre-color the meter.  Eventually

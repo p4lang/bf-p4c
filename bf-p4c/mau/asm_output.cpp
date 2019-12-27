@@ -20,6 +20,9 @@
 
 int DefaultNext::id_counter = 0;
 
+// TODO(zma) not sure how the tEOP buses are shared, punt it for another day
+static int teop = 0;
+
 class MauAsmOutput::EmitAttached : public Inspector {
     friend class MauAsmOutput;
     const MauAsmOutput          &self;
@@ -3700,6 +3703,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
             count_type = "";
     }
     out << indent << "count: " << count_type << std::endl;
+    if (counter->true_egress_accounting) {
+        if (teop == 4)
+            ::error("Ran out of tEOP buses for true egress accounting: %1%", counter);
+        out << indent << "teop: " << teop++ << std::endl;
+    }
     out << indent << "format: {";
     int per_row = CounterPerWord(counter);
     counter_format(out, counter->type, per_row);
@@ -3742,6 +3750,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     else
         imp_type = meter->implementation.name;
     out << indent << "type: " << imp_type << std::endl;
+    if (meter->true_egress_accounting) {
+        if (teop == 4)
+            ::error("Ran out of tEOP buses for true egress accounting: %1%", meter);
+        out << indent << "teop: " << teop++ << std::endl;
+    }
     if (imp_type == "wred") {
         out << indent << "red_output: { ";
         out << " drop: " << meter->red_drop_value;

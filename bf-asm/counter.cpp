@@ -5,6 +5,14 @@
 #include "stage.h"
 #include "tables.h"
 
+#include "tofino/counter.cpp"            // tofino template specializations
+#if HAVE_JBAY
+#include "jbay/counter.cpp"              // jbay template specializations
+#endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/counter.cpp"        // cloudbreak template specializations
+#endif // HAVE_CLOUDBREAK
+
 DEFINE_TABLE_TYPE(CounterTable)
 
 void CounterTable::setup(VECTOR(pair_t) &data) {
@@ -21,6 +29,13 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "both" || kv.value == "packets_and_bytes")
                 type = BOTH;
             else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
+        } else if (kv.key == "teop") {
+            if (!Target::SUPPORT_TRUE_EOP())
+                error(kv.value.lineno, "tEOP is not available on device");
+            if (CHECKTYPE(kv.value, tINT)) {
+                teop = kv.value.i;
+                if (teop < 0 || teop > 3)
+                    error(kv.value.lineno, "Invalid tEOP bus %d, valid values are 0-3", teop); }
         } else if (kv.key == "lrt") {
             if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
             collapse_list_of_maps(kv.value, true);
@@ -42,6 +57,8 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+    if (teop >= 0 && type != BYTES && type != BOTH)
+        error(lineno, "tEOP bus can only used when counting bytes");
     alloc_rams(true, stage->sram_use);
 }
 
@@ -264,11 +281,15 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
     movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
     movereg_stats_ctl.movereg_stats_ctl_direct = direct;
     if (run_at_eop) {
-        adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_en = 1;
-        adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
-        if (gress)
-            regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
-        movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+        if (teop >= 0) {
+            setup_teop_regs(regs, stats_group_index);
+        } else {
+            adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_en = 1;
+            adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
+            if (gress)
+                regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
+            movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+        }
         adrdist.stats_bubble_req[gress].bubble_req_1x_class_en |= 1 << (4 + stats_group_index);
     } else {
         adrdist.packet_action_at_headertime[0][stats_group_index] = 1;

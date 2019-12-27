@@ -646,7 +646,9 @@ extern Counter<W, I> {
     /// @type_param W : width of the counter value.
     /// @type_param I : width of the counter index.
     /// @param type : counter type. Packet an byte counters are supported.
-    Counter(bit<32> size, CounterType_t type);
+    /// @param true_egress_accounting : Use the final byte count from egress deparser after the final
+    ///                                 output packet has been re-assembled (available in egress only).
+    Counter(bit<32> size, CounterType_t type, @optional bool true_egress_accounting);
 
     /// Increment the counter value.
     /// @param index : index of the counter to be incremented.
@@ -655,22 +657,22 @@ extern Counter<W, I> {
 
 /// DirectCounter
 extern DirectCounter<W> {
-    DirectCounter(CounterType_t type);
+    DirectCounter(CounterType_t type, @optional bool true_egress_accounting);
     void count();
 }
 
 /// Meter
 extern Meter<I> {
-    Meter(bit<32> size, MeterType_t type);
-    Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
+    Meter(bit<32> size, MeterType_t type, @optional bool true_egress_accounting);
+    Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green, @optional bool true_egress_accounting);
     bit<8> execute(in I index, in MeterColor_t color);
     bit<8> execute(in I index);
 }
 
 /// Direct meter.
 extern DirectMeter {
-    DirectMeter(MeterType_t type);
-    DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
+    DirectMeter(MeterType_t type, @optional bool true_egress_accounting);
+    DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green, @optional bool true_egress_accounting);
     bit<8> execute(in MeterColor_t color);
     bit<8> execute();
 }

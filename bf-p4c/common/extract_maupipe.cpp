@@ -26,6 +26,10 @@
 
 namespace BFN {
 
+static bool getBool(const IR::Argument* arg) {
+    return arg->expression->to<IR::BoolLiteral>()->value;
+}
+
 static int getConstant(const IR::Argument* arg) {
     return arg->expression->to<IR::Constant>()->asInt();
 }
@@ -480,6 +484,34 @@ static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
     hashFunc.type = IR::MAU::HashFunction::CRC;
 }
 
+template<typename T>
+static void check_true_egress_accounting(const T* ctr, const IR::MAU::Table *match_table) {
+    CHECK_NULL(match_table);
+
+    if (match_table->gress != EGRESS) {
+        ::error(ErrorType::ERR_INVALID,
+            "%1%: True egress accounting is only available on egress.", ctr);
+    }
+    if (ctr->type != IR::MAU::DataAggregation::BOTH &&
+        ctr->type != IR::MAU::DataAggregation::BYTES) {
+        ::error(ErrorType::ERR_INVALID,
+            "%1%: True egress accounting is only valid for counting bytes", ctr);
+    }
+}
+
+static int get_meter_color(const IR::Argument* arg) {
+    auto expr = arg->expression;
+
+    if (!expr->is<IR::Constant>())
+        ::error(ErrorType::ERR_INVALID, "Invalid meter color value. "
+                                    "Value must be constant: %1%", expr);
+    auto value = arg->expression->to<IR::Constant>()->asInt();
+    if (value < 0 || value > 255)
+        ::error(ErrorType::ERR_OVERLIMIT, "Meter color value out of range. "
+                                  "Value must be in the range of 0-255: %1%", expr);
+    return value;
+}
+
 /**
  * TODO(hanw): Pass ExternInstance* as a parameter, instead of srcInfo, name, type,
  * substitution, annot.
@@ -632,11 +664,15 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
 
         for (auto p : *substitution->getParametersInOrder()) {
             auto arg = substitution->lookup(p);
+            if (arg == nullptr) continue;
             if (p->name == "type") {
                 ctr->settype(arg->expression->as<IR::Member>().member.name);
             } else if (p->name == "size") {
                 ctr->size = getConstant(arg);
-            } }
+            } else if (p->name == "true_egress_accounting") {
+                ctr->true_egress_accounting = getBool(arg);
+            }
+        }
 
         if (typeArgs != nullptr && typeArgs->size() != 0) {
             ctr->min_width = typeArgs->at(0)->width_bits();
@@ -651,19 +687,25 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 ctr->threshold = getConstant(anno);
             else if (anno->name == "interval")
                 ctr->interval = getConstant(anno);
+            else if (anno->name == "true_egress_accounting")
+                ctr->true_egress_accounting = true;
         }
+        if (ctr->true_egress_accounting)
+            check_true_egress_accounting(ctr, match_table);
+
         return ctr;
-    } else if (tname == "Meter") {
+    } else if (tname == "Meter" || tname == "DirectMeter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        mtr->direct = tname == "DirectMeter";
         // Ideally, we would access the arguments by name, however, the P4 frontend IR only
         // populate the 'name' field of IR::Argument when it is used as a named argument.
         // We had to access the name by 'index' and be careful about not to access indices
         // that do not exist.
         for (auto p : *substitution->getParametersInOrder()) {
             auto arg = substitution->lookup(p);
-            if (arg == nullptr)
-                continue;
+            if (arg == nullptr) continue;
             auto expr = arg->expression;
+            if (!expr) continue;
             if (p->name == "size") {
                 if (!expr->is<IR::Constant>())
                     ::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%");
@@ -674,35 +716,13 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                                                     "PACKETS or BYTES", expr);
                 mtr->settype(arg->expression->as<IR::Member>().member.name);
             } else if (p->name == "red") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'red_value'. "
-                                                    "Supported values must be constant.");
-                auto red_value = arg->expression->to<IR::Constant>()->asInt();
-                if (red_value < 0 || red_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'red_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->red_value = red_value;
+                mtr->red_value = get_meter_color(arg);
             } else if (p->name == "yellow") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'yellow_value'. "
-                                                    "Supported values must be constant.");
-                auto yellow_value = arg->expression->to<IR::Constant>()->asInt();
-                if (yellow_value < 0 || yellow_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'yellow_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->yellow_value = yellow_value;
+                mtr->yellow_value = get_meter_color(arg);
             } else if (p->name == "green") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'green_value'. "
-                                                    "Supported values must be constant.");
-                auto green_value = arg->expression->to<IR::Constant>()->asInt();
-                if (green_value < 0 || green_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'green_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->green_value = green_value;
+                mtr->green_value = get_meter_color(arg);
+            } else if (p->name == "true_egress_accounting") {
+                mtr->true_egress_accounting = getBool(arg);
             }
         }
         // annotations are supported for p4-14.
@@ -721,50 +741,14 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 mtr->profile = getConstant(anno);
             else if (anno->name == "meter_sweep_interval")
                 mtr->sweep_interval = getConstant(anno);
+            else if (anno->name == "true_egress_accounting")
+                mtr->true_egress_accounting = true;
             else
-                WARNING("unknown annotation " << anno->name << " on " << tname); }
-        return mtr;
-    } else if (tname == "DirectMeter") {
-        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
-        mtr->direct = true;
-        for (auto p : *substitution->getParametersInOrder()) {
-            auto arg = substitution->lookup(p);
-            if (arg == nullptr)
-                continue;
-            auto expr = arg->expression;
-            if (p->name == "type") {
-                mtr->settype(arg->expression->as<IR::Member>().member.name);
-            } else if (p->name == "red") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'red_value'. "
-                                                    "Supported values must be constant.");
-                auto red_value = arg->expression->to<IR::Constant>()->asInt();
-                if (red_value < 0 || red_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'red_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->red_value = red_value;
-            } else if (p->name == "yellow") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'yellow_value'. "
-                                                    "Supported values must be constant.");
-                auto yellow_value = arg->expression->to<IR::Constant>()->asInt();
-                if (yellow_value < 0 || yellow_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'yellow_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->yellow_value = yellow_value;
-            } else if (p->name == "green") {
-                if (!expr) continue;
-                if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid 'green_value'. "
-                                                    "Supported values must be constant.");
-                auto green_value = arg->expression->to<IR::Constant>()->asInt();
-                if (green_value < 0 || green_value > 255)
-                    ::error(ErrorType::ERR_OVERLIMIT, "Invalid 'green_value'."
-                                                      "Supported values are in the range [0:255].");
-                mtr->green_value = green_value;
-            } }
+                WARNING("Unknown annotation " << anno->name << " on " << tname);
+        }
+        if (mtr->true_egress_accounting)
+            check_true_egress_accounting(mtr, match_table);
+
         return mtr;
     } else if (tname == "Lpf") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);

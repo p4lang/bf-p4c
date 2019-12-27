@@ -55,6 +55,7 @@
     M(int, LONG_BRANCH_TAGS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
     M(int, NUM_MAU_STAGES) M(int, END_OF_PIPE) \
+    M(bool, SUPPORT_TRUE_EOP) \
     M(int, PHASE0_FORMAT_WIDTH) \
     M(int, STATEFUL_CMP_UNITS) M(int, STATEFUL_OUTPUT_UNITS) M(int, STATEFUL_PRED_MASK) \
     M(int, STATEFUL_CONST_WIDTH) M(int, STATEFUL_TMATCH_UNITS) \
@@ -144,6 +145,7 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_FD_ENTRIES = 192,
         END_OF_PIPE = 0xff,
+        SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         LONG_BRANCH_TAGS = 0,
         MAU_BASE_DELAY = 20,
@@ -251,6 +253,7 @@ class Target::JBay : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         END_OF_PIPE = 0x1ff,
+        SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,

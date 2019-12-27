@@ -100,7 +100,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaSymmetric, PARSE_PAIR, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaStage, PARSE_EXPRESSION_LIST, extPragma);
         BFN_PARSE(PragmaTerminateParsing, PARSE, StringLiteral, extPragma);
-        BFN_PARSE_EMPTY(PragmaDontUnroll,  PARSE_EMPTY, intPragma);
+        BFN_PARSE_EMPTY(PragmaDontUnroll,  PARSE_EMPTY, extPragma);
 
         BFN_PARSE(PragmaTernary, PARSE, Expression, intPragma);  // unlikely to need it
         BFN_PARSE(PragmaUseHashAction, PARSE, Expression, extPragma);
@@ -111,6 +111,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaRed,    PARSE, Expression, intPragma);
         BFN_PARSE(PragmaYellow, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaGreen,  PARSE, Expression, intPragma);
+        BFN_PARSE_EMPTY(PragmaTrueEgressAccounting,  PARSE_EMPTY, extPragma);
 
         BFN_PARSE_EMPTY(PragmaHeaderChecksum,  PARSE_EMPTY, intPragma);
         BFN_PARSE_EMPTY(PragmaPayloadChecksum, PARSE_EMPTY, intPragma);

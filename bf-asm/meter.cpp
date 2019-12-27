@@ -4,6 +4,14 @@
 #include "stage.h"
 #include "tables.h"
 
+#include "tofino/meter.cpp"            // tofino template specializations
+#if HAVE_JBAY
+#include "jbay/meter.cpp"              // jbay template specializations
+#endif // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+#include "cloudbreak/meter.cpp"        // cloudbreak template specializations
+#endif // HAVE_CLOUDBREAK
+
 DEFINE_TABLE_TYPE(MeterTable)
 
 void MeterTable::setup(VECTOR(pair_t) &data) {
@@ -73,6 +81,13 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "packets")
                 count = PACKETS;
             else error(kv.value.lineno, "Unknown meter count %s", value_desc(kv.value));
+        } else if (kv.key == "teop") {
+            if (!Target::SUPPORT_TRUE_EOP())
+                error(kv.value.lineno, "tEOP is not available on device");
+            if (CHECKTYPE(kv.value, tINT)) {
+                teop = kv.value.i;
+                if (teop < 0 || teop > 3)
+                    error(kv.value.lineno, "Invalid tEOP bus %d, valid values are 0-3", teop); }
         } else if (kv.key == "green") {
             if (CHECKTYPE(kv.value, tINT)) {
                 green_value = kv.value.i;
@@ -107,6 +122,8 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+    if (teop >= 0 && count != BYTES)
+        error(lineno, "tEOP bus can only used when counting bytes");
     alloc_rams(true, stage->sram_use);
 }
 
@@ -538,10 +555,14 @@ void MeterTable::write_regs(REGS &regs) {
         meter_color_logical_to_phys(regs, m->logical_id, home->row/4U);
         adrdist.mau_ad_meter_virt_lt[home->row/4U] |= 1 << m->logical_id; }
     if (run_at_eop()) {
-        adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
-        adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
-        if (gress)
-            regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
+        if (teop >= 0 ) {
+            setup_teop_regs(regs, home->row/4U);
+        } else {
+            adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
+            adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
+            if (gress)
+                regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
+        }
         if (push_on_overflow)
             adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
         adrdist.meter_bubble_req[gress].bubble_req_1x_class_en |= 1 << ((home->row/4U)+4);

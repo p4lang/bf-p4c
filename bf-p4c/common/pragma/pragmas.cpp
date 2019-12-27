@@ -770,7 +770,7 @@ const char *PragmaTerminateParsing::name = "terminate_parsing";
 const char *PragmaTerminateParsing::description =
     "Unconditionally terminate parsing in the annotated parser state.";
 const char *PragmaTerminateParsing::help = "@pragma terminate_parsing ingress/egress\n"
-    "+ attached to to a parser state.\n"
+    "+ attached to a parser state.\n"
     "\n"
     "It informs the ingress/egress parser to ignore the instructions, "
     "header extractions, and branching decisions performed in that state "
@@ -783,7 +783,7 @@ const char *PragmaDontUnroll::name = "dont_unroll";
 const char *PragmaDontUnroll::description =
     "do not unroll the annotated parser state (if in a loop).";
 const char *PragmaDontUnroll::help = "@pragma dont_unroll\n"
-    "+ attached to to a parser state.\n"
+    "+ attached to a parser state.\n"
     "\n"
     "By default, the compiler unrolls parser loops. "
     "Use this pragma to keep the parser loops.";
@@ -856,6 +856,21 @@ const char *PragmaYellow::help = "";
 const char *PragmaGreen::name = "green";
 const char *PragmaGreen::description = "To be documented";  // FIXME
 const char *PragmaGreen::help = "To be documented";
+
+const char *PragmaTrueEgressAccounting::name = "true_egress_accounting";
+const char *PragmaTrueEgressAccounting::description =
+    "Use the final byte count for the packet for counter or meter.";
+const char *PragmaTrueEgressAccounting::help = "@pragma true_egress_accounting\n"
+    "+ attached to a counter or meter (egress only).\n"
+    "\n"
+    "By default, counter or meter at egress uses the computed packet length "
+    "for the ingress pipeline. This means that the counter or meter is unaware "
+    "of the final packet size and will not reflect the real output packets on the "
+    "wire. Use this pragma to use the final byte count from egress deparser after "
+    "the final output packet has been re-assembled.\n"
+    "\n"
+    "This feature is only available for the egress pipeline and on Tofino2 and later"
+    " devices.";
 
 const char *PragmaHeaderChecksum::name = "header_checksum";
 const char *PragmaHeaderChecksum::description =
