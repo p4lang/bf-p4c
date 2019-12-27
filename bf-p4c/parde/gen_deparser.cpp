@@ -193,6 +193,33 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
     return false;
 }
 
+bool ExtractDeparser::preorder(const IR::AssignmentStatement* stmt) {
+     const IR::Type* leftType = nullptr;
+     if (stmt->left->is<IR::Member>()) {
+         leftType = stmt->left->to<IR::Member>()->expr->type;
+     } else if (stmt->left->is<IR::Slice>()) {
+         auto slice = stmt->left->to<IR::Slice>();
+         auto member =  slice->e0->to<IR::Member>();
+         if (member) {
+             leftType = member->expr->type;
+         }
+     } else {
+         leftType = stmt->left->type;
+     }
+     auto methodCall = stmt->right->to<IR::MethodCallExpression>();
+     if (!methodCall) {
+         auto ifStmt = findContext<IR::IfStatement>();
+         AssignmentStmtErrorCheck errorCheck(leftType);
+         ifStmt->apply(errorCheck);
+         if (!errorCheck.stmtOk) {
+             ::error("Assignment to a header field in the deparser is only allowed when "
+                    "the source is checksum update, mirror, resubmit or learning digest. "
+                    "Please move the assignment into the control flow %1%", stmt);
+         }
+     }
+     return false;
+}
+
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
 // Collect information to generate assembly output.
 // @param singleEntry is used by jbay pktgen, as the pktgen_tbl has only one entry.

@@ -120,11 +120,8 @@ void checkDestHeader(const IR::Member* destField) {
 
 static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment) {
     auto destField = assignment->left->to<IR::Member>();
-    if (!destField) return false;
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
-    if (!destField || !methodCall || !methodCall->method)
-        return false;
-
+    if (!destField || !methodCall || !methodCall->method) return false;
     auto member = methodCall->method->to<IR::Member>();
     if (!member || member->member != "update")
         return false;
@@ -250,9 +247,6 @@ FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerTofields,
 FieldListInfo*
 analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
                                ChecksumUpdateInfo* csum) {
-    if (!checksumUpdateSanityCheck(assignment))
-        return nullptr;
-
     auto destField = assignment->left->to<IR::Member>();
     auto methodCall = assignment->right->to<IR::MethodCallExpression>();
     bool zerosAsOnes = false;
@@ -415,9 +409,10 @@ struct CollectUpdateChecksums : public Inspector {
     ChecksumUpdateInfoMap checksums;
     ChecksumUpdateInfo* csum;
     bool preorder(const IR::AssignmentStatement* assignment) {
+        if (!checksumUpdateSanityCheck(assignment)) {
+            return false;
+        }
         auto dest = assignment->left->to<IR::Member>();
-        if (!dest)
-            return false;  // TODO(apatil): program error?
         if (checksums.count(dest->toString())) {
             csum = checksums[dest->toString()];
         } else {

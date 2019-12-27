@@ -53,7 +53,7 @@ class ExtractDeparser : public DeparserInspector {
     bool preorder(const IR::Declaration_Instance *decl) override;
     bool preorder(const IR::IfStatement *ifstmt) override;
     bool preorder(const IR::MethodCallExpression* mc) override;
-
+    bool preorder(const IR::AssignmentStatement* stmt) override;
     void end_apply() override;
 
  public:
@@ -116,6 +116,37 @@ class ExtractDeparser : public DeparserInspector {
         }
 
         rv->thread[deparser->thread].deparser = dprsr; }
+};
+//// check if the LHS of the assignment statements are being used
+// in mirror, digest or resubmit.
+struct AssignmentStmtErrorCheck : public DeparserInspector {
+    const IR::Type* left = nullptr;
+    bool stmtOk = false;
+    explicit AssignmentStmtErrorCheck(const IR::Type* left) : left(left) { }
+
+    void postorder(const IR::MethodCallExpression* methodCall) override {
+        auto member = methodCall->method->to<IR::Member>();
+        auto expr = member->expr->to<IR::PathExpression>();
+        if (!expr) return;
+        const IR::Type_Extern* type = nullptr;
+        if (auto spType = expr->type->to<IR::Type_SpecializedCanonical>()) {
+            type = spType->baseType->to<IR::Type_Extern>();
+        } else {
+            type = expr->type->to<IR::Type_Extern>();
+        }
+        if (!type) return;
+        if (type->name != "Mirror" && type->name != "Digest" && type->name != "Resubmit") {
+            return;
+        }
+        auto arguments = *methodCall->arguments;
+        for (auto argument : arguments) {
+            if (argument->expression->type->equiv(*left)) {
+                stmtOk = true;
+                return;
+            }
+        }
+        return;
+    }
 };
 
 }  // namespace BFN

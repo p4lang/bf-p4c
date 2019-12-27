@@ -1665,3 +1665,9 @@ p4c_add_xfail_reason("tofino"
   "TypeError: %d format: a number is required, not NoneType"
   extensions/p4_tests/p4-programs/internal_p4_14/power/power.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "Assignment to a header field in the deparser is only allowed when the source is checksum update, mirror, resubmit or learning digest"
+  extensions/p4_tests/p4_16/compile_only/p4c-1858_neg.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-1867.p4
+)
