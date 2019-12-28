@@ -19,7 +19,7 @@ static bool is_mutable_field(const FieldDefUse& defuse, const PHV::Field* f) {
     return false;
 }
 
-using StateSet = std::set<const IR::BFN::ParserState*>;
+using StateSet = ordered_set<const IR::BFN::ParserState*>;
 
 class FindParsingFrontier : public ParserInspector {
  public:
@@ -294,6 +294,14 @@ class FindParsingFrontier : public ParserInspector {
         auto push_up = compute_frontier_by_push_up(graph, cutset);
         auto push_down = compute_frontier_by_push_down(graph, cutset);
 
+        if (LOGGING(5)) {
+            std::clog << "push up frontier:" << std::endl;
+            push_up.print();
+
+            std::clog << "push down frontier:" << std::endl;
+            push_down.print();
+        }
+
         auto frontier = reconcile_push_up_and_push_down(push_up, push_down);
         return frontier;
     }
@@ -528,11 +536,11 @@ class RewriteParde : public PardeTransform {
         auto& graph = parserInfo.graph(p);
 
         for (auto f : front) {
-            if (!graph.is_ancestor(s, f))
-                return false;
+            if (graph.is_ancestor(s, f))
+                return true;
         }
 
-        return true;
+        return false;
     }
 
     bool is_below_frontier(const IR::BFN::Parser* p, const IR::BFN::ParserState* s) {
@@ -540,11 +548,11 @@ class RewriteParde : public PardeTransform {
         auto& graph = parserInfo.graph(p);
 
         for (auto f : front) {
-            if (!graph.is_descendant(s, f))
-                return false;
+            if (graph.is_descendant(s, f))
+                return true;
         }
 
-        return true;
+        return false;
     }
 
     IR::Node* preorder(IR::BFN::Parser* parser) override {

@@ -60,14 +60,9 @@ class Pseudoheader : public LiftLess<Pseudoheader> {
                           const std::vector<const PHV::Field*> fields)
         : id(nextId++), pov_bits(pov_bits), fields(fields) { }
 
-    /// Lexicographic ordering on (fields, pov_bits).
+    /// Ordering on id.
     bool operator<(const Pseudoheader& other) const {
-        if (fields != other.fields)
-            return std::lexicographical_compare(fields.begin(), fields.end(),
-                                                other.fields.begin(), other.fields.end(),
-                                                PHV::Field::Less());
-
-        return pov_bits < other.pov_bits;
+        return id < other.id;
     }
 };
 
@@ -90,13 +85,13 @@ class ClotInfo {
 
     /// Maps the fields extracted from the packet in each state to the state-relative byte indices
     /// occupied by the field.
-    std::map<const IR::BFN::ParserState*,
-             std::map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
+    ordered_map<const IR::BFN::ParserState*,
+             ordered_map<const PHV::Field*, std::set<unsigned>>> field_to_byte_idx;
 
     /// Maps state-relative byte indices in each state to the fields occupying
     /// that byte.
-    std::map<const IR::BFN::ParserState*,
-             std::map<unsigned, std::set<const PHV::Field*>>> byte_idx_to_field;
+    ordered_map<const IR::BFN::ParserState*,
+             std::map<unsigned, ordered_set<const PHV::Field*>>> byte_idx_to_field;
 
     std::set<const PHV::Field*> checksum_dests_;
     std::map<const PHV::Field*,
@@ -107,7 +102,7 @@ class ClotInfo {
     std::map<gress_t, std::map<cstring, std::set<const Clot*>>> parser_state_to_clots_;
 
     std::map<const IR::BFN::ParserState*,
-             std::map<const PHV::Field*, nw_bitrange>> field_range_;
+             ordered_map<const PHV::Field*, nw_bitrange>> field_range_;
 
     std::map<const Clot*, std::vector<const IR::BFN::EmitChecksum*>> clot_to_emit_checksum_;
 
@@ -298,7 +293,7 @@ class ClotInfo {
 
     /// @return a set of parser states to which no more CLOTs may be allocated,
     /// because doing so would exceed the maximum number CLOTs allowed per packet.
-    const std::set<const IR::BFN::ParserState*>* find_full_states(
+    const ordered_set<const IR::BFN::ParserState*>* find_full_states(
             const IR::BFN::ParserGraph* graph) const;
 
     // A field may participate in multiple checksum updates, e.g. IPv4 fields
@@ -500,13 +495,13 @@ class ClotInfo {
     ///     paired with the aggregate set of nodes on those maximal paths.
     //
     // DANGER: This function assumes the parser graph is a DAG.
-    std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* find_largest_paths(
+    std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>* find_largest_paths(
             const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state,
             std::map<const IR::BFN::ParserState*,
                      std::pair<unsigned,
-                               std::set<const IR::BFN::ParserState*>*>*>* memo = nullptr) const;
+                               ordered_set<const IR::BFN::ParserState*>*>*>* memo = nullptr) const;
 };
 
 class CollectClotInfo : public Inspector {

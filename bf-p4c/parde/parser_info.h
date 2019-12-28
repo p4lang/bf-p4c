@@ -53,7 +53,7 @@ class DirectedGraph {
 };
 
 template <class State>
-struct ParserStateMap : public std::map<const State*, std::set<const State*>> { };
+struct ParserStateMap : public ordered_map<const State*, ordered_set<const State*>> { };
 
 template <class Parser, class State, class Transition>
 class ParserGraphImpl : public DirectedGraph {
@@ -350,7 +350,7 @@ class CollectParserInfoImpl : public PardeInspector {
     using GraphType = ParserGraphImpl<Parser, State, Transition>;
 
  public:
-    const std::map<const Parser*, GraphType*>& graphs() const { return _graphs; }
+    const ordered_map<const Parser*, GraphType*>& graphs() const { return _graphs; }
     const GraphType& graph(const Parser* p) const { return *(_graphs.at(p)); }
 
     const Parser* parser(const State* state) const {
@@ -483,7 +483,7 @@ class CollectParserInfoImpl : public PardeInspector {
             g.second->map_to_boost_graph();
     }
 
-    std::map<const Parser*, GraphType*> _graphs;
+    ordered_map<const Parser*, GraphType*> _graphs;
     std::map<const State*, const Parser*> _state_to_parser;
 };
 

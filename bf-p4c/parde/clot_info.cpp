@@ -754,24 +754,24 @@ ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
     return containers;
 }
 
-std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* ClotInfo::find_largest_paths(
+std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>* ClotInfo::find_largest_paths(
         const std::map<cstring, std::set<const Clot*>>& parser_state_to_clots,
         const IR::BFN::ParserGraph* graph,
         const IR::BFN::ParserState* state,
         std::map<const IR::BFN::ParserState*,
                  std::pair<unsigned,
-                           std::set<const IR::BFN::ParserState*>*>*>* memo /*= nullptr*/) const {
+                           ordered_set<const IR::BFN::ParserState*>*>*>* memo /*= nullptr*/) const {
     // Create the memoization table if needed, and make sure we haven't visited the state already.
     if (memo == nullptr) {
         memo = new std::map<const IR::BFN::ParserState*,
-                             std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>*>();
+                             std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>*>();
     } else if (memo->count(state)) {
         return memo->at(state);
     }
 
     // Recursively find the largest paths of the children, and aggregate the results.
     unsigned max_clots = 0;
-    auto max_path_states = new std::set<const IR::BFN::ParserState*>();
+    auto max_path_states = new ordered_set<const IR::BFN::ParserState*>();
     if (graph->successors().count(state)) {
         for (auto child : graph->successors().at(state)) {
             const auto result = find_largest_paths(parser_state_to_clots, graph, child, memo);
@@ -791,22 +791,22 @@ std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>* ClotInfo::find_larg
         max_clots += parser_state_to_clots.at(state->name).size();
     max_path_states->insert(state);
     auto result =
-        new std::pair<unsigned, std::set<const IR::BFN::ParserState*>*>(
+        new std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>(
             max_clots, max_path_states);
     return (*memo)[state] = result;
 }
 
 // DANGER: This method assumes the parser graph is a DAG.
-const std::set<const IR::BFN::ParserState*>* ClotInfo::find_full_states(
+const ordered_set<const IR::BFN::ParserState*>* ClotInfo::find_full_states(
         const IR::BFN::ParserGraph* graph) const {
     auto root = graph->root;
     auto gress = root->thread();
     const auto MAX_LIVE_CLOTS = Device::pardeSpec().maxClotsLivePerGress();
-    std::set<const IR::BFN::ParserState*>* result;
+    ordered_set<const IR::BFN::ParserState*>* result;
 
     // Find states that are part of paths on which the maximum number of live CLOTs are allocated.
     if (num_clots_allocated(gress) < MAX_LIVE_CLOTS) {
-        result = new std::set<const IR::BFN::ParserState*>();
+        result = new ordered_set<const IR::BFN::ParserState*>();
     } else {
         auto largest = find_largest_paths(parser_state_to_clots(gress), graph, root);
         BUG_CHECK(largest->first <= MAX_LIVE_CLOTS,
@@ -816,7 +816,7 @@ const std::set<const IR::BFN::ParserState*>* ClotInfo::find_full_states(
 
         result =
             largest->first < MAX_LIVE_CLOTS
-                ? new std::set<const IR::BFN::ParserState*>()
+                ? new ordered_set<const IR::BFN::ParserState*>()
                 : largest->second;
     }
 
@@ -1117,7 +1117,7 @@ class GreedyClotAllocator : public Visitor {
 
  private:
     typedef std::map<const Pseudoheader*,
-                     std::map<const PHV::Field*, FieldSliceExtractInfo*>,
+                     ordered_map<const PHV::Field*, FieldSliceExtractInfo*>,
                      Pseudoheader::Less> FieldSliceExtractInfoMap;
     typedef std::set<const ClotCandidate*, ClotCandidate::Greater> ClotCandidateSet;
 
