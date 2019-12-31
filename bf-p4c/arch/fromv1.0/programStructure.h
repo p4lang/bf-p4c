@@ -43,9 +43,6 @@ class TNA_ProgramStructure : public ProgramStructure {
 };
 // ** END **
 
-extern const std::map<cstring, int> intrinsic_metadata;
-extern const std::vector<std::tuple<cstring, cstring, IR::Direction>> intrinsic_metadata_type;
-
 using StateToExtracts = std::map<const IR::ParserState*, std::vector<const IR::Member*> >;
 using ExtractToState = std::map<const IR::Member*, const IR::ParserState*>;
 using DigestFieldList = std::map<cstring,
@@ -161,7 +158,7 @@ class TnaProgramStructure : public ProgramStructure {
     void createCompilerGeneratedTypes();
     cstring convertLinearPathToStructFieldName(BFN::LinearPath* path);
     void checkForReservedTnaTypes();
-    const IR::P4Control* collectHeaderReference(const IR::V1Control* control);
+    void collectHeaderReference(const IR::V1Control* control);
     gress_t getGress(cstring name);
     void parseUpdateLocationAnnotation(std::set<gress_t>&, const IR::Annotation*, cstring);
     bool useResidualChecksum();

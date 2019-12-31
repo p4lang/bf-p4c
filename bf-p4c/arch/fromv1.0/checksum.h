@@ -626,7 +626,7 @@ class InsertChecksumError : public PassManager {
                         state->components.push_back(checksumError);
 
                         LOG3("verify " << toString(parser->thread) << " "
-                             << decl->name << " in state " << endState);
+                             << decl->name.name << " in state " << endState);
                     }
                 }
             }

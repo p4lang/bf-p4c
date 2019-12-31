@@ -87,6 +87,7 @@ static bool using_tna_arch() {
 CONVERT_PRIMITIVE(bypass_egress, 1) {
     if (!using_tna_arch()) return nullptr;
     if (primitive->operands.size() != 0) return nullptr;
+    (void)structure;  // use the parameter to avoid warning
     return BFN::createSetMetadata("ig_intr_md_for_tm", "bypass_egress", 1, 1);
 }
 
@@ -136,7 +137,7 @@ static IR::Expression* flatten(const IR::ListExpression* args) {
 
 static const IR::Statement *
 convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_t gress,
-        bool reserve_entry_zero = false) {
+             bool reserve_entry_zero = false) {
     BUG_CHECK(primitive->operands.size() == 1 || primitive->operands.size() == 2,
               "Expected 1 or 2 operands for %1%", primitive);
     ExpressionConverter conv(structure);
@@ -253,7 +254,7 @@ CONVERT_PRIMITIVE(resubmit, 1) {
 }
 
 static const IR::Statement *
-convertDrop(ProgramStructure *structure, const IR::Primitive *primitive) {
+convertDrop(ProgramStructure *structure, const IR::Primitive *) {
     // walk all controls.
     // walk all tables.
     // walk all actions.
@@ -287,6 +288,7 @@ CONVERT_PRIMITIVE(invalidate, 1) {
 
 CONVERT_PRIMITIVE(invalidate_digest, 1) {
     if (!using_tna_arch()) return nullptr;
+    (void)structure;  // use the parameter to avoid warning
     IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
     auto mem = new IR::Member(path, "digest_type");
     auto stmt = new IR::MethodCallStatement(primitive->srcInfo, IR::ID("invalidate"),
@@ -410,7 +412,6 @@ CONVERT_PRIMITIVE(modify_field_rng_uniform, 2) {
 
     auto typeArgs = new IR::Vector<IR::Type>({field->type});
     auto type = new IR::Type_Specialized(new IR::Type_Name("Random"), typeArgs);
-    auto param = new IR::Vector<IR::Argument>();
     auto randName = structure->makeUniqueName("random");
 
     // check hi bound must be 2**W-1
@@ -469,8 +470,7 @@ CONVERT_PRIMITIVE(recirculate, 8) {
         auto right = structure->convertFieldList(operand);
         if (right == nullptr)
             return nullptr;
-        auto index = computeDigestIndex(
-                dynamic_cast<TnaProgramStructure*>(structure), primitive, right);
+        computeDigestIndex(dynamic_cast<TnaProgramStructure*>(structure), primitive, right);
         auto block = new IR::BlockStatement;
         block->push_back(
                 generate_recirc_port_assignment(new IR::Constant(IR::Type::Bits::get(9), 68)));

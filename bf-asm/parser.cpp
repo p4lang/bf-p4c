@@ -603,7 +603,7 @@ Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.l
                     else if (kv.value == "byte2") src = 2;
                     else if (kv.value == "byte3") src = 3;
                     else error(lineno, "Unexpected counter load source");
-                } 
+                }
             }
         } else if (kv.key != "push" && kv.key != "update_with_top") {
             error(lineno, "Syntax error in parser counter init expression");
@@ -909,17 +909,17 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
 
                 bool from_ctr_init_ram = false;
 
-                for (auto &kv : MapIterChecked(kv.value.map, true)) {
-                    if (kv.key == "src") {
+                for (auto &kkv : MapIterChecked(kv.value.map, true)) {
+                    if (kkv.key == "src") {
                         from_ctr_init_ram = true;
-                    } else if (kv.key == "push" && CHECKTYPE(kv.value, tINT)) {
+                    } else if (kkv.key == "push" && CHECKTYPE(kkv.value, tINT)) {
                         if (options.target == TOFINO)
-                            error(kv.key.lineno, "Tofino does not have counter stack");
-                        ctr_stack_push = kv.value.i;
-                    } else if (kv.key == "update_with_top" && CHECKTYPE(kv.value, tINT)) {
+                            error(kkv.key.lineno, "Tofino does not have counter stack");
+                        ctr_stack_push = kkv.value.i;
+                    } else if (kkv.key == "update_with_top" && CHECKTYPE(kkv.value, tINT)) {
                         if (options.target == TOFINO)
-                            error(kv.key.lineno, "Tofino does not have counter stack");
-                        ctr_stack_upd_w_top = kv.value.i;
+                            error(kkv.key.lineno, "Tofino does not have counter stack");
+                        ctr_stack_upd_w_top = kkv.value.i;
                     }
                 }
 
@@ -927,11 +927,11 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                     ctr_ld_src = 1;
                     ctr_instr = new CounterInit(gress, kv);
                 } else {  // load from immediate
-                    for (auto &kv : MapIterChecked(kv.value.map, true)) {
-                        if (kv.key == "imm" && CHECKTYPE(kv.value, tINT))
-                            ctr_imm_amt = kv.value.i;
-                        else if (kv.key != "push" && kv.key != "update_with_top")
-                            error(kv.value.lineno, "Unknown parser counter init command");
+                    for (auto &kkv : MapIterChecked(kv.value.map, true)) {
+                        if (kkv.key == "imm" && CHECKTYPE(kkv.value, tINT))
+                            ctr_imm_amt = kkv.value.i;
+                        else if (kkv.key != "push" && kkv.key != "update_with_top")
+                            error(kkv.value.lineno, "Unknown parser counter init command");
                     }
                 }
             } else if (kv.value.type == tCMD) {
@@ -1725,4 +1725,3 @@ void Parser::State::write_config(REGS &regs, Parser *pa, json::vector &ctxt_json
         }
     }
 }
-

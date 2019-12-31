@@ -415,8 +415,8 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
     auto symmetricAnnotation = fl->annotations->getSingle("symmetric");
     if (symmetricAnnotation) {
         if (symmetricAnnotation->expr.size() == 2) {
-            auto name1 = symmetricAnnotation->expr[0];
-            auto name2 = symmetricAnnotation->expr[1];
+            // auto name1 = symmetricAnnotation->expr[0];
+            // auto name2 = symmetricAnnotation->expr[1];
             annos->addAnnotation("symmetric", new IR::ListExpression(symmetricAnnotation->expr));
         } else {
             ::error("Invalid pragma usage: symmetric");
@@ -799,7 +799,7 @@ class FindHeaderReference : public Inspector {
     void postorder(const IR::Primitive* p) override {
         if (auto act = structure->actions.get(p->name)) {
             act->apply(FindHeaderReference(structure, control, gress, use));
-        } else if (auto ctrl = structure->controls.get(p->name)) {
+        } else if (structure->controls.get(p->name)) {
             LOG4("\tadd param use from control " << p->name);
             if (structure->controlParamUse.count(p->name)) {
                 use |= structure->controlParamUse.at(p->name); }
@@ -922,7 +922,7 @@ TnaProgramStructure::findActionInTables(const IR::V1Control* control) {
     return actionsInTables;
 }
 
-const IR::P4Control*
+void
 TnaProgramStructure::collectHeaderReference(const IR::V1Control* control) {
     bitvec use;
     auto visitor = new FindHeaderReference(this, control->name, currentGress, use);
@@ -974,7 +974,6 @@ gress_t TnaProgramStructure::getGress(cstring name) {
 const IR::P4Control*
 TnaProgramStructure::convertControl(const IR::V1Control* control, cstring newName) {
     LOG3("Converting backend " << control->name);
-    auto currentGress = getGress(control->name);
     collectHeaderReference(control);
     auto ctrl = ProgramStructure::convertControl(control, newName);
 
@@ -1398,7 +1397,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
 
     P4::ClonePathExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
-        if (auto list = e->to<IR::ListExpression>()) {
+        if (e->to<IR::ListExpression>()) {
             BUG("\tnested field list");
             // FIXME: handle nested field list.
         } else {
@@ -1500,7 +1499,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
 
     P4::ClonePathExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
-        if (auto list = e->to<IR::ListExpression>()) {
+        if (e->to<IR::ListExpression>()) {
             BUG("\tnested field list");
             // FIXME: handle nested field list.
         } else {
@@ -1561,7 +1560,7 @@ TnaProgramStructure::createEgressParserStates() {
         auto member = new IR::Member(new IR::PathExpression("meta"),
                 IR::ID("bridged_header"));
         bridgeStateStmts.push_back(BFN::createExtractCall("pkt", member));
-        auto* header = new IR::Header("bridged_header", new IR::Type_Header("bridged_header_t"));
+
         for (auto f : bridgedFields) {
             if (!bridgedFieldInfo.count(f))
                 continue;
@@ -1855,7 +1854,7 @@ void TnaProgramStructure::createChecksumUpdateStatements(
     });
 }
 
-void TnaProgramStructure::createChecksumVerifyStatements(gress_t gress) {
+void TnaProgramStructure::createChecksumVerifyStatements(gress_t) {
     ExpressionConverter conv(this);
     for (auto cf : calculated_fields) {
         LOG3("Converting " << cf);
@@ -2509,7 +2508,7 @@ void TnaProgramStructure::loadModel() {
     headerInstances.insert("generator_metadata_t_0");
 }
 
-bool CollectBridgedFields::preorder(const IR::MethodCallExpression* m) {
+bool CollectBridgedFields::preorder(const IR::MethodCallExpression*) {
     // skip
     return false;
 }
@@ -2724,4 +2723,3 @@ bool use_v1model() {
 }
 
 }  // namespace P4V1
-
