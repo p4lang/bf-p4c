@@ -122,6 +122,13 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new MultipleApply,
         new AddSelectorSalu,
         new FixupStatefulAlu,
+        // CanonGatewayExpr checks gateway rows in table and tries to optimize
+        // on gateway expressions. Since it can ellminate/modify condition
+        // tables, this pass must run before PHV Analysis to ensure we do not
+        // generate invalid metadata dependencies. Placing it early in backend,
+        // as it will also error out on invalid gateway expressions and we fail
+        // early in those cases.
+        new CanonGatewayExpr,  // Must be before PHV_Analysis
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,

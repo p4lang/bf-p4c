@@ -1512,7 +1512,8 @@ control Gamaliel(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
         size = 8192;
         idle_timeout = true;
     }
-    @atcam_partition_index("Cuprum.Jenners") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(5 , 16384) @name(".Garrison") table Garrison {
+    // *ALEX* Removed stage(5) leading to table allocation fail - JIRA p4c-2314
+    @atcam_partition_index("Cuprum.Jenners") @atcam_number_partitions(8192) @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Garrison") table Garrison {
         actions = {
             Terral();
             HighRock();
@@ -1616,11 +1617,12 @@ control Gamaliel(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
                     Milano.apply();
                 } else if (Osyka.Candle.Madera == 16w0) {
                     Pinetop.apply();
-                    if (Osyka.Belview.Jenners != 16w0) {
-                        Dacono.apply();
-                    } else if (Osyka.Candle.Madera == 16w0) {
-                        Pineville.apply();
-                    }
+		    // JIRA p4c-2314 - Removing redundant if clauses resulting in PHV Allocation fail
+                    // if (Osyka.Belview.Jenners != 16w0) {
+                    //   Dacono.apply();
+                    // } else if (Osyka.Candle.Madera == 16w0) {
+                         Pineville.apply();
+                    // }
                 }
             } else if (Osyka.Broussard.TroutRun == 1w0 && (Osyka.LaUnion.Level == 1w1 || Osyka.Ackley.Placedo & 4w0x1 == 4w0x1 && Osyka.LaUnion.Bicknell == 3w0x3)) {
                 Nooksack.apply();
@@ -4683,7 +4685,8 @@ control Trail(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_me
         Osyka.Wisdom.Kenney = Halltown;
         Osyka.LaUnion.Beasley[31:0] = Brookneal.global_tstamp[31:0];
     }
-    @disable_atomic_modify(1) @placement_priority(".Bigspring") @ways(3) @stage(5) @name(".Dundee") table Dundee {
+    // *ALEX* Removed stage(5) leading to table allocation fail - JIRA p4c-2314
+    @disable_atomic_modify(1) @placement_priority(".Bigspring") @ways(3) @name(".Dundee") table Dundee {
         actions = {
             Batchelor();
             @defaultonly NoAction();
