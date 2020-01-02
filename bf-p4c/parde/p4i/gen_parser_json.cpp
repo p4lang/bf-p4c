@@ -3,6 +3,7 @@
 #include <boost/optional.hpp>
 #include <vector>
 
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/common/asm_output.h"
 
 std::vector<P4iParserExtract>
@@ -178,7 +179,6 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
     BUG_CHECK(parsers.count(parser_ir->name) > 0, "Parser %1% not added to map", parser_ir->name);
     P4iParser *p = parsers[parser_ir->name];
 
-    // auto prev_state = findContext<IR::BFN::LoweredParserState>();
     for (const auto* match : state->transitions) {
         LOG1("State Match: " << match);
         cstring next_state;
@@ -188,7 +188,8 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
             next_state = match->loop;
         else
             next_state = "END";
-        p->states.push_back(generateStateTransitionByMatch(next_state, state, match));
+        auto t = generateStateTransitionByMatch(stripThreadPrefix(next_state), state, match);
+        p->states.push_back(t);
     }
 
     if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
