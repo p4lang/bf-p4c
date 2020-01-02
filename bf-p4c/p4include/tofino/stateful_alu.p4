@@ -27,6 +27,9 @@ extern math_unit<T, U> {
     T execute(in T x);
 }
 
+extern T max<T>(in T t1, in T t2);
+extern T min<T>(in T t1, in T t2);
+
 extern RegisterAction<T, I, U> {
     RegisterAction(register<T> reg);
     U execute(in I index);

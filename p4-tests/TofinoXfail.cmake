@@ -1473,11 +1473,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/cisco/COMPILER-1147/comp_1147.p4
 )
 
-# P4C-2130
+# XFAIL_NEG_TEST
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected"
-  ../glass/testsuite/p4_tests/kaust/COMPILER-1155/test_config_425_salu_ops.p4
-  # XFAIL_NEG_TEST
   ../glass/testsuite/p4_tests/stordis/COMPILER-1095/case7871.p4
 )
 

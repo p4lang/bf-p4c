@@ -314,6 +314,7 @@ static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
                      opSSUBU("ssubu", 0x12), opSSUBS("ssubs", 0x13),
                      opMINU("minu", 0x14, true), opMINS("mins", 0x15, true),
                      opMAXU("maxu", 0x16, true), opMAXS("maxs", 0x17, true),
+                     opNOP("nop", 0x18, true, AluOP::Decode::NONE),
                      opSUBR("subr", 0x1f, &opSUB),
                      opSSUBRU("ssubru", 0x1a, &opSSUBU), opSSUBRS("ssubrs", 0x1b, &opSSUBS),
 
@@ -351,6 +352,9 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     } else if (idx < op.size && op[idx] == "hi") {
         rv->dest = HI;
         idx++;
+    } else if (idx == op.size && name == "nop") {
+        // allow nop without even a destination -- assume lo
+        rv->dest = LO;
     } else
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
     if (operands == NONE) {

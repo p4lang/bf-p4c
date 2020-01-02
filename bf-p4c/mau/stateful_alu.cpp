@@ -380,6 +380,10 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
             if (idx >= cmp_instr.size() || cmp_instr[idx] == nullptr)
                 return_encoding->cmp_used &= ~mask; }
         LOG4("  return_encoding->cmp_used = 0x" << hex(return_encoding->cmp_used)); }
+    if (action->action.empty()) {
+        action->action.push_back(new IR::MAU::Instruction("nop"));
+        warning(ErrorType::ERR_EXPECTED, "stateful action '%2%' to have instructions "
+            "assigned. Please verify the action is valid.", salu, action->name); }
     clearFuncState();
 }
 
@@ -1336,9 +1340,6 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
 
     const IR::MAU::SaluAction *first = nullptr;;
     for (auto salu_action : Values(salu->instruction)) {
-        ERROR_CHECK((salu_action->action.size() > 0), ErrorType::ERR_EXPECTED,
-            "stateful action '%2%' to have instructions assigned."
-            " Please verify the action is valid.", salu, salu_action->name);
         auto chain = salu_action->annotations->getSingle("chain_address");
         if (first) {
             if (salu->chain_vpn != (chain != nullptr))

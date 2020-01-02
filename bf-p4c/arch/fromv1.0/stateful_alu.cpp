@@ -169,6 +169,10 @@ class CreateSaluApplyFunction : public Inspector {
                 return attr; }
             return self.makeRegFieldMember(
                     new IR::PathExpression(attr->srcInfo, self.rtype, var), idx); }
+        const IR::Expression *postorder(IR::Primitive *prim) override {
+            if (prim->name == "salu_min") prim->name = "min";
+            if (prim->name == "salu_max") prim->name = "max";
+            return prim; }
 
      public:
         explicit RewriteExpr(CreateSaluApplyFunction &self) : self(self) {}
