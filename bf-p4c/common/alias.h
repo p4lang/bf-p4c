@@ -90,7 +90,8 @@ class Alias : public PassManager {
             new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
             new AddValidityBitSets(phv, pragmaAlias),
-            new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions)
+            new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions),
+            new VisitFunctor([this]() { LOG1(pragmaAlias.pretty_print()); })
         });
     }
 };

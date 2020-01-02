@@ -31,7 +31,7 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
 }
 
 Visitor::profile_t ReplaceAllAliases::init_apply(const IR::Node* root) {
-    if (LOGGING(1)) {
+    if (LOGGING(3)) {
         LOG1("    All aliasing fields: ");
         for (auto &kv : pragmaAlias.getAliasMap()) {
             std::stringstream ss;

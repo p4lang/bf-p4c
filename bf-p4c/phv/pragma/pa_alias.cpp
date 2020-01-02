@@ -1,7 +1,10 @@
 #include <string>
 #include <numeric>
+#include <sstream>
+
 #include "lib/log.h"
 #include "bf-p4c/common/utils.h"
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
@@ -143,10 +146,11 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
     return boost::none;
 }
 
-bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2, bool suppressWarning) {
+bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
+        bool suppressWarning, PragmaAlias::CreatedBy who) {
     auto mayAlias = mayAddAlias(f1, f2, suppressWarning);
     if (!mayAlias) return false;
-    aliasMap[mayAlias->second->name] = { mayAlias->first->name, boost::none };
+    aliasMap[mayAlias->second->name] = { mayAlias->first->name, boost::none, who };
     fieldsWithAliasing[mayAlias->second->id] = true;
     fieldsWithAliasing[mayAlias->first->id] = true;
     LOG1("\t  " << mayAlias->second->name << " --> " << mayAlias->first->name);
@@ -232,7 +236,7 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         if (!processPragma) continue;
         for (const auto* field : fields) {
             if (field == aliasDest) continue;
-            aliasMap[field->name] = { aliasDest->name, boost::none };
+            aliasMap[field->name] = { aliasDest->name, boost::none, PragmaAlias::PRAGMA };
             fieldsWithAliasing[field->id] = true;
             fieldsWithAliasing[aliasDest->id] = true;
             LOG1("\t  " << field->name << " --> " << aliasDest->name);
@@ -255,4 +259,24 @@ std::ostream &operator<<(std::ostream& out, const PragmaAlias::AliasDestination&
     if (dest.range)
         out << "[" << dest.range->hi << ":" << dest.range->lo << "]";
     return out;
+}
+
+std::string PragmaAlias::pretty_print() {
+    std::stringstream out;
+    out << "Alias pragmas:" << std::endl;
+
+    TablePrinter* tp = new TablePrinter(out, {"Destination", "Source",
+            "Created By"}, TablePrinter::Align::CENTER);
+    tp->addSep();
+
+    for (auto kv : aliasMap) {
+        tp->addRow({std::string(kv.first.c_str()),
+                    std::string(kv.second.field.c_str()),
+                    std::string((kv.second.who == PragmaAlias::PRAGMA) ? "PRAGMA" :
+                                (kv.second.who == PragmaAlias::COMPILER) ? "COMPILER" :
+                                "UNKNOWN")}); }
+
+    tp->print();
+    out << std::endl;
+    return out.str();
 }

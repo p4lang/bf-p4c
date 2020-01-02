@@ -141,7 +141,7 @@ void DetermineCandidateFields::end_apply() {
                 ss << action->name << " ";
         }
         if (srcField != nullptr) {
-            if (!pragma.addAlias(f, srcField, true))
+            if (!pragma.addAlias(f, srcField, true, PragmaAlias::COMPILER))
                 LOG1("\tCould not add alias for fields " << f->name << " and " << srcField->name);
             else
                 LOG1(ss.str());

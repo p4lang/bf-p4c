@@ -6,6 +6,7 @@
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/pragma/pretty_print.h"
 
 /** pa_alias pragma support.
  *
@@ -13,8 +14,13 @@
  * mapping from a field to another field that it aliases with.
  *
  */
-class PragmaAlias : public Inspector {
+class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
  public:
+    enum CreatedBy {
+        PRAGMA,
+        COMPILER
+    };
+
     struct AliasDestination {
         /// The alias destination field.
         cstring field;
@@ -22,6 +28,9 @@ class PragmaAlias : public Inspector {
         /// The range of the field being aliased, or boost::none when the
         /// entire field is aliased.
         boost::optional<le_bitrange> range;
+
+        /// Who created the pragma?
+        CreatedBy who;
     };
 
     /// Map type from alias sources to destinations.
@@ -62,7 +71,10 @@ class PragmaAlias : public Inspector {
             const PHV::Field* f2,
             bool suppressWarning = false);
 
-    bool addAlias(const PHV::Field* f1, const PHV::Field* f2, bool suppressWarning = false);
+    bool addAlias(const PHV::Field* f1, const PHV::Field* f2,
+            bool suppressWarning = false, CreatedBy who = PRAGMA);
+
+    std::string pretty_print() override;
 };
 
 std::ostream& operator<<(std::ostream& out, const PragmaAlias& pa_a);
