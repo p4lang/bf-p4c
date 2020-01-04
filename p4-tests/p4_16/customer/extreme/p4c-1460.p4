@@ -1,5 +1,5 @@
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -536,7 +536,7 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_ECT0 = 0b10;
 const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_ECT1 = 0b01;
 const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11;
 typedef MirrorId_t switch_mirror_id_t;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 typedef bit<4> switch_mirror_type_t;
 #else
 typedef bit<3> switch_mirror_type_t;
@@ -663,7 +663,7 @@ header switch_bridged_metadata_t {
     switch_tc_t tc;
     switch_cpu_reason_t cpu_reason;
     bit<48> timestamp;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<1> _pad5;
 #else
     bit<3> _pad5;
@@ -683,7 +683,7 @@ header switch_bridged_metadata_tunnel_extension_t {
     bit<16> entropy_hash;
 }
 header switch_port_metadata_t {
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<64> _pad;
 #endif
     bit<6> _pad1;
@@ -691,7 +691,7 @@ header switch_port_metadata_t {
     switch_port_lag_label_t port_lag_label;
     switch_ifindex_t ifindex;
     bit<16> _pad2;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<64> _pad3;
 #endif
 }
@@ -5546,7 +5546,7 @@ control SwitchEgress(
             vlan_xlate.apply(hdr, eg_md.port_lag_index, eg_md.bd);
         }
         system_acl.apply(hdr, eg_md, eg_intr_md, eg_intr_md_for_dprsr);
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         eg_intr_md_for_dprsr.mirror_io_select = 1;
 #endif
         eg_intr_md_for_oport.capture_tstamp_on_tx = (bit<1>)eg_md.flags.capture_ts;

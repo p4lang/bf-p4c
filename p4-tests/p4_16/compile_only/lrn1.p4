@@ -1,4 +1,4 @@
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -110,7 +110,7 @@ parser iPrsr(packet_in pkt, out headers hdr, out metadata md,
              out ingress_intrinsic_metadata_t ig_intr_md) {
   state start {
     pkt.extract(ig_intr_md);
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     pkt.advance(128 + 64);
 #else
     pkt.advance(64);

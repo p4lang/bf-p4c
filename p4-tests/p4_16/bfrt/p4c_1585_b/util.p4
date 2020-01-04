@@ -112,7 +112,7 @@ action set_ig_intr_md(in switch_ingress_metadata_t ig_md,
     ig_intr_md_for_tm.mcast_grp_b = ig_md.multicast.id;
 #if __TARGET_TOFINO__ == 1
     ig_intr_md_for_dprsr.mirror_type = (bit<3>) ig_md.mirror.type;
-#elif __TARGET_TOFINO__ == 2
+#elif __TARGET_TOFINO__ >= 2
     ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
 #endif
     ig_intr_md_for_tm.qid = ig_md.qos.qid;
@@ -129,7 +129,7 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
 
 #if __TARGET_TOFINO__ == 1
     eg_intr_md_for_dprsr.mirror_type = (bit<3>) eg_md.mirror.type;
-#elif __TARGET_TOFINO__ == 2
+#elif __TARGET_TOFINO__ >= 2
     eg_intr_md_for_dprsr.mirror_type = (bit<4>) eg_md.mirror.type;
     eg_intr_md_for_dprsr.mirror_io_select = 1;
 #endif

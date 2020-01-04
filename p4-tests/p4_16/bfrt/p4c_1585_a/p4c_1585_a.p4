@@ -29,7 +29,7 @@
 #else /* Default profile */
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -542,7 +542,7 @@ control SwitchEgress(
         }
 
 //      system_acl.apply(hdr, eg_md, eg_intr_md, eg_intr_md_for_dprsr);
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         eg_intr_md_for_dprsr.mirror_io_select = 1;
 #endif
         eg_intr_md_for_oport.capture_tstamp_on_tx = (bit<1>) eg_md.flags.capture_ts;

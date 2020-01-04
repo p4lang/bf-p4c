@@ -443,7 +443,7 @@ header switch_mirror_metadata_t {
     bit<32> timestamp;
     bit<6> _pad;
     switch_mirror_id_t session_id;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<2> _pad1;
 #endif
 }

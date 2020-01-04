@@ -90,7 +90,7 @@ control Fib<T>(in ipv4_addr_t dst_addr,
     }
 
     @alpm(1)
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     @alpm_partitions(2048)
     @alpm_subtrees_per_partition(2)
 #else

@@ -22,7 +22,7 @@
  ******************************************************************************/
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #elif __TARGET_TOFINO__ == 1
 #include <tna.p4>

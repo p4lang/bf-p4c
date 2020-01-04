@@ -20,7 +20,7 @@
  *
  ******************************************************************************/
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
@@ -125,7 +125,7 @@ parser ParserI(packet_in packet,
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
 
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         pctr.set(hdr.ipv4.ihl, 8w255, 8w6, 8w60, 8w20);
 #elif __TARGET_TOFINO__ == 1
         pctr.set(hdr.ipv4.ihl, 8w255, 8w6, 3w5, 8w21);

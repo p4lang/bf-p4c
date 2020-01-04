@@ -660,7 +660,7 @@ struct switch_port_metadata_t {
 @pa_container_size("ingress", "ig_md.mirror.src", 8)
 @pa_container_size("ingress", "ig_md.mirror.type", 8)
 @pa_alias("ingress", "ig_md.egress_port", "ig_intr_md_for_tm.ucast_egress_port")
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 @pa_container_size("ingress", "ig_md.hash", 32)
 @pa_container_size("ingress", "ig_md.lkp.l4_src_port", 8)
 #endif

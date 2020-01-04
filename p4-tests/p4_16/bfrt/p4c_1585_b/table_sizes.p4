@@ -40,13 +40,13 @@ const bit<32> DOUBLE_TAG_TABLE_SIZE = 4096;
 const bit<32> BD_TABLE_SIZE = 5120;
 
 // 16K MACs
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 const bit<32> MAC_TABLE_SIZE = 65536;
 #else
 const bit<32> MAC_TABLE_SIZE = 16384;
 #endif
 
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 // IP Hosts/Routes
 const bit<32> IPV4_LPM_TABLE_SIZE = 131072;
 const bit<32> IPV6_LPM_TABLE_SIZE = 32768;
@@ -87,7 +87,7 @@ const bit<32> TUNNEL_REWRITE_TABLE_SIZE = 512;
 const bit<32> ECMP_GROUP_TABLE_SIZE = 1024;
 const bit<32> OUTER_ECMP_GROUP_TABLE_SIZE = 4096;
 const bit<32> ECMP_SELECT_TABLE_SIZE = 16384;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 const bit<32> NEXTHOP_TABLE_SIZE = 65536;
 #else
 const bit<32> NEXTHOP_TABLE_SIZE = 32768;
@@ -95,7 +95,7 @@ const bit<32> NEXTHOP_TABLE_SIZE = 32768;
 const bit<32> OUTER_NEXTHOP_TABLE_SIZE = 4096;
 
 // Ingress ACLs
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 const bit<32> INGRESS_MAC_ACL_TABLE_SIZE = 512;
 const bit<32> INGRESS_IPV4_ACL_TABLE_SIZE = 4096;
 const bit<32> INGRESS_IPV6_ACL_TABLE_SIZE = 1024;

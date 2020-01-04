@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -62,7 +62,7 @@ parser SwitchIngressParser(
     }
 
     state parse_port_metadata {
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         pkt.advance(192);
 #else
         pkt.advance(64);

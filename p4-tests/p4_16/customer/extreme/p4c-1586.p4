@@ -1,5 +1,5 @@
 #include <core.p4>
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -527,7 +527,7 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_ECT1 = 0b01;
 const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11;
 typedef MirrorId_t switch_mirror_session_t;
 const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 typedef bit<4> switch_mirror_type_t;
 #else
 typedef bit<3> switch_mirror_type_t;
@@ -674,7 +674,7 @@ header switch_bridged_metadata_t {
     switch_tc_t tc;
     switch_cpu_reason_t cpu_reason;
     bit<48> timestamp;
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<1> _pad5;
 #else
     bit<3> _pad5;

@@ -337,7 +337,7 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11; // Congestion encou
 typedef MirrorId_t switch_mirror_session_t; // Defined in tna.p4
 const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
 
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 typedef bit<4> switch_mirror_type_t;
 #else
 typedef bit<3> switch_mirror_type_t;
@@ -571,7 +571,7 @@ header switch_bridged_metadata_t {
 // 6 bytes
     bit<48> timestamp;
 // 1 byte
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<1> _pad5;
 #else
     bit<3> _pad5;

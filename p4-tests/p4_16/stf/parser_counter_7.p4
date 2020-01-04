@@ -1,4 +1,4 @@
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include "t2na.p4"
 #else
 #include "tna.p4"
@@ -28,7 +28,7 @@ parser ParserImpl(packet_in packet, out headers hdr,
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.a);
 
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         pctr.set(hdr.a.f, 8w255, 8w6, 8w255, 8w246);  // (max, rot, mask, add)
 #else
         pctr.set(hdr.a.f, 8w255, 8w6, 3w7, 8w246);  // (max, rot, mask, add)

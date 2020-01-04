@@ -20,7 +20,7 @@
  *
  **************************************************************************************************/
 
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include "t2na.p4"
 #else
 #include <tna.p4>
@@ -46,7 +46,7 @@ parser parserI(
         out ingress_intrinsic_metadata_t ig_intr_md)
 {
     state start {
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
         b.advance(256);
 #else
         b.advance(128);

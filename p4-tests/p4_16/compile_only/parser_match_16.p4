@@ -1,4 +1,4 @@
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
 #include <t2na.p4>
 #else
 #include <tna.p4>
@@ -27,7 +27,7 @@ struct headers {
 }
 
 header ingress_skip_t {
-#if __TARGET_TOFINO__ == 2
+#if __TARGET_TOFINO__ >= 2
     bit<192> pad;
 #else
     bit<64> pad;

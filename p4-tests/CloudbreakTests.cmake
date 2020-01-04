@@ -222,6 +222,8 @@ p4c_add_bf_backend_tests("tofino3" "cb" "t2na" "base" "${CLOUDBREAK_JNA_TEST_SUI
 #file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_hwlrn" ${p4_16_internal_p4_16_path}/hwlrn/hwlrn.p4 "${testExtraArgs} -tofino3 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+set_property(TEST "tofino3/extensions/p4_tests/p4_16/jbay/hwlearn1.p4"
+  APPEND PROPERTY ENVIRONMENT "CTEST_P4C_ARGS=--no-bf-rt-schema")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE
 #  "p4_16_internal_p4_16_ipv4_checksum" ${p4_16_internal_p4_16_path}/ipv4_checksum/ipv4_checksum.p4 "${testExtraArgs} -tofino3 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 #p4c_add_test_with_args ("tofino3" ${P4C_RUNTEST} FALSE  
