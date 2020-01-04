@@ -90,8 +90,9 @@ class BarefootBackend(BackendDriver):
         if top_src_dir:
             scripts_dir = os.path.join(top_src_dir, 'scripts')
             if os.path.isdir(scripts_dir):
-                self.add_command('verifier', os.path.join(scripts_dir, 'validate_output.sh'))
                 self.add_command('manifest-verifier', os.path.join(scripts_dir, 'validate_manifest'))
+                self._commandsEnabled.append('manifest-verifier')
+                self.add_command('verifier', os.path.join(scripts_dir, 'validate_output.sh'))
                 self.runVerifiers = True
 
         # order of commands
@@ -672,6 +673,7 @@ class BarefootBackend(BackendDriver):
         run_archiver = 'archiver' in self._commandsEnabled
         run_compiler = 'compiler' in self._commandsEnabled
         run_verifier = 'verifier' in self._commandsEnabled
+        run_manifest_verifier = 'manifest-verifier' in self._commandsEnabled
         run_summary_logs = 'summary_logging' in self._commandsEnabled
         run_p4c_gen_conf = 'p4c-gen-conf' in self._commandsEnabled
 
@@ -682,7 +684,11 @@ class BarefootBackend(BackendDriver):
         start_t = time.time()
         rc = BackendDriver.run(self)
         self.compilation_time = time.time() - start_t
-
+        
+        rmc = 0
+        if run_manifest_verifier:
+            rmc = self.checkAndRunCmd('manifest-verifier')
+        
         # Error codes defined in p4c-barefoot.cpp:main
         if rc is None: rc = 1
         if rc > 1 or rc < 0:
@@ -702,6 +708,10 @@ class BarefootBackend(BackendDriver):
         # print pragmas also needs to exit early, it's just like help
         if self._ir_to_json is not None or self.pragmas_help:
             return rc
+
+        if rmc != 0:
+            print("Manifest validation failed")
+            return rmc
 
         # we ran the compiler, now we need to parse the manifest and run the assembler
         # for each P4-16 pipe

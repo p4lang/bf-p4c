@@ -8,6 +8,7 @@ tests_dir = os.path.abspath(os.path.dirname(__file__))
 p4_14_program = os.path.join(tests_dir, 'p4-programs/internal_p4_14/emulation/emulation.p4')
 v1model_program = os.path.join(tests_dir, 'p4_16/ptf/verify_checksum.p4')
 p4_16_default = os.path.join(tests_dir, 'p4_16/compile_only/simple_32q.p4')
+p4_16_lrn1 = os.path.join(tests_dir, 'p4_16/compile_only/lrn1.p4')
 p4_16_path = os.path.join(tests_dir, 'p4-programs/p4_16_programs')
 tna_program = os.path.join(p4_16_path, 'tna_digest/tna_digest.p4')
 tna32q_program = os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4')
@@ -52,6 +53,9 @@ test_matrix = {
     'p4_16_tna_archive_source': (['--target', 'tofino', '--arch', 'tna', '--archive',
                                   '--archive-source', '-o', 'p4_16_tna_archive_source',
                                   '-I', p4_16_path, tna_program], None),
+    'lrn1': (['--target', 'tofino', '--arch', 'tna', '-o', 'lrn1', p4_16_lrn1],
+                                  "PHV allocation was not successful"),
+
     # Tofino 32q
     'p4_16_t32q': (['--target', 'tofino', '--arch', 'tna',
                     '-I', p4_16_path, tna32q_program], None),

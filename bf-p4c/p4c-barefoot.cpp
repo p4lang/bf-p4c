@@ -109,6 +109,7 @@ class GenerateOutputs : public PassManager {
         writer.Key("egress"); writer.StartArray(); writer.EndArray();
         writer.EndObject();
         writer.Key("learn_quanta"); writer.StartArray(); writer.EndArray();
+        writer.Key("mau_stage_characteristics"); writer.StartArray(); writer.EndArray();
         writer.Key("dynamic_hash_calculations"); writer.StartArray(); writer.EndArray();
         writer.Key("configuration_cache"); writer.StartArray(); writer.EndArray();
         writer.Key("driver_options");
@@ -228,9 +229,11 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options,
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
         maupipe = maupipe->apply(backend);
-        bool success = maupipe != nullptr;
+        bool mau_success = maupipe != nullptr;
+        bool comp_success = (::errorCount() > 0) ? false : true;
         GenerateOutputs as(backend, options, maupipe->id,
-                backend.get_prim_json(), backend.get_json_graph(), success);
+                backend.get_prim_json(), backend.get_json_graph(),
+                mau_success && comp_success);
         if (maupipe)
             maupipe->apply(as);
 #if BFP4C_CATCH_EXCEPTIONS
@@ -399,9 +402,6 @@ int main(int ac, char **av) {
             execute_backend(pipe, options, et);
 #endif
     }
-
-    if (::errorCount() > 0)
-        return PROGRAM_ERROR;
 
     // and output the manifest. This gets called for successful compilation.
     manifest.setSuccess(::errorCount() == 0);

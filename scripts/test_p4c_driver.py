@@ -336,6 +336,10 @@ class Test:
             print(e, file=sys.stderr)
             print("********************", file=sys.stderr)
             return 1
+        except Exception:
+            print("Some other error occured")
+            print(traceback.format_exc(), file=sys.stderr)
+            return 1
 
         try:
             if not self._keep_output and not self._dry_run:
@@ -361,14 +365,17 @@ class Test:
         Returns a string with the test result: PASS, FAIL, XFAIL, XPASS.
 
         """
-        rc = self.runCompiler(options, xfail_msg)
-        if rc == 0 and xfail_msg is None:
-            rc = self.checkTest(options)
+        rcCode = self.runCompiler(options, xfail_msg)
+        #if rc == 0 and xfail_msg is None:
+        ctCode = self.checkTest(options)
+        if rcCode == 0 and ctCode == 0 and xfail_msg is None:
+            return "PASS"
+        elif ctCode != 0: return "VALIDATION_FAIL"
         if xfail_msg is None:
-            if rc == 0: return "PASS"
+            if rcCode == 0: return "PASS"
             else: return "FAIL"
         else:
-            if rc == 0: return "XFAIL"
+            if rcCode == 0: return "XFAIL"
             else: return "XPASS"
 
 
