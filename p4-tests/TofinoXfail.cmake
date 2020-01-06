@@ -575,6 +575,7 @@ p4c_add_xfail_reason("tofino"
   p4testgen_laymen_0
   testdata/p4_14_samples/action_inline.p4
   ../glass/testsuite/p4_tests/microsoft/COMPILER-606/case3259.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2336.p4
   )
 
 p4c_add_xfail_reason("tofino"

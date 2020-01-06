@@ -653,8 +653,6 @@ class TypedPrimitive : Primitive {
 /// destination and two sources as an "add" primitive, with the additional constraints that
 /// the dest and first source are PHV while second source can be PHV, action bus, or constant.
 /// We convert the primitive into an instruction when we check those constraints
-// TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
-// class for those or reuse this?  Currently reusing this.
 class Instruction : Primitive {
 #nodbprint
 #emit
@@ -663,14 +661,45 @@ class Instruction : Primitive {
     // This is a vector, filled after BackendCopyPropagation, indicating which operands
     // have been copy propagated from an earlier instruction.  Copy propagated operands
     // don't have to be checked in order to guarantee parallelism
-    safe_vector<bool> copy_propagated = {};
+    bitvec copy_propagated = {};
     Instruction(const Primitive &p) : Primitive(p) {}
     Instruction(cstring op, const std::vector<Expression> &args) : Primitive(op) {
         for (auto a : args) operands.push_back(a); }
     Instruction(Util::SourceInfo si, cstring op, const std::vector<Expression> &args)
         : Primitive(si, op) { for (auto a : args) operands.push_back(a); }
     bool isOutput(int operand_index) const override { return operand_index == 0; }
+    virtual Expression getOutput() const { return operands.empty() ? operands.at(0) : nullptr; }
     validate { BUG_CHECK(name, "empty name in instruction"); }
+}
+
+// SALU Instructions are mostly like other MAU instructions, so we reuse them.  One
+// difference is they might have predicates before the destination (or no destination at all)
+class SaluInstruction : Instruction {
+    int output_operand;  // which operand (index) is the dest of this instruction, generally:
+                         // -1 : no destination (an output instruction with implicit dest, or nop
+                         //  0 : first operand (no predicate)
+                         //  1 : second operand (first operand is predicate)
+#nodbprint
+#noconstructor
+    SaluInstruction(cstring op) : Instruction(op), output_operand(-1) {}
+    SaluInstruction(cstring op, int out, const std::vector<Expression> &args)
+    : Instruction(op, args), output_operand(out) {}
+    SaluInstruction(cstring op, int out, Vector<Expression> args)
+    : Instruction(op, args), output_operand(out) {}
+    SaluInstruction(Util::SourceInfo si, cstring op, int out, const std::vector<Expression> &args)
+    : Instruction(si, op, args), output_operand(out) {}
+    SaluInstruction(Util::SourceInfo si, cstring op, int out, Vector<Expression> args)
+    : Instruction(si, op, args), output_operand(out) {}
+    SaluInstruction(cstring op, int out, Expression a1)
+    : Instruction(op, a1), output_operand(out) {}
+    SaluInstruction(cstring op, int out, Expression a1, Expression a2)
+    : Instruction(op, a1, a2), output_operand(out) {}
+    SaluInstruction(cstring op, int out, Expression a1, Expression a2, Expression a3)
+    : Instruction(op, a1, a2, a3), output_operand(out) {}
+
+    bool isOutput(int operand_index) const override { return operand_index == output_operand; }
+    Expression getOutput() const override {
+        return output_operand >= 0.? operands.at(output_operand) : nullptr; }
 }
 
 /// The IR::MAU::Action argument.

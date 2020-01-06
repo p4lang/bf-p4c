@@ -48,9 +48,8 @@ bool TofinoWriteContext::isWrite(bool root_value) {
         else
             return false; } } } } } } }
 
-    // Write in first index, read in all others
-    if (ctxt->node->to<IR::MAU::Instruction>())
-        return ctxt->child_index == 0;
+    if (auto *instr = ctxt->node->to<IR::MAU::Instruction>())
+        return instr->isOutput(ctxt->child_index);
 
     return rv;
 }
@@ -124,8 +123,8 @@ bool TofinoWriteContext::isRead(bool root_value) {
         else
             return false; } } } } } } }
 
-    if (ctxt->node->is<IR::MAU::Instruction>())
-        return ctxt->child_index > 0;
+    if (auto *instr = ctxt->node->to<IR::MAU::Instruction>())
+        return !instr->isOutput(ctxt->child_index);
 
     if (findContext<IR::MAU::TableKey>())
         return true;

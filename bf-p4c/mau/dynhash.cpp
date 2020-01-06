@@ -98,8 +98,14 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
 
     auto pos = hash_gen_alloc.find(dyn_hash_name);
     if (pos == hash_gen_alloc.end()) {
+#if 0
+        // FIXME -- HashGenExpressions used directly in SaluActions have no hash_dist
+        // associated with them, so we currently can't generate json for them.  For
+        // now just leave them out -- runtime will not be able to change the hash function
+        // See p4_tests/p4_16/customer/extreme/p4c-1314.p4
         BUG_CHECK(!all_placed, "No allocation for dyn hash object %s to coordinate against",
                 dyn_hash_name);
+#endif
         return;
     }
 

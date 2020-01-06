@@ -777,7 +777,7 @@ static std::map<cstring, cstring> negate_op = {
     { "lss.s", "geq.s" }, { "lss.u", "geq.u" },
 };
 
-const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction *cmp,
+const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::SaluInstruction *cmp,
                                                             int idx) {
     if (operands.size() + 1 != cmp->operands.size()) return nullptr;
     for (unsigned i = 0; i < operands.size(); ++i)
@@ -1082,14 +1082,17 @@ bool CreateSaluInstruction::outputEnumAsPredicate(const IR::Member *mem) {
     return true;
 }
 
-const IR::MAU::Instruction *CreateSaluInstruction::setup_output() {
+const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
     if (outputs.size() <= size_t(output_index)) outputs.resize(output_index+1);
     auto &output = outputs[output_index];
-    if (Device::statefulAluSpec().OutputWords > 1)
+    int out_idx = -1;
+    if (Device::statefulAluSpec().OutputWords > 1) {
         operands.insert(operands.begin(), new IR::MAU::SaluReg(operands.at(0)->type,
                                 "word" + std::to_string(output_index), false));
-    if (predicate)
+        out_idx = 0; }
+    if (predicate) {
         operands.insert(operands.begin(), predicate);
+        if (out_idx >= 0) ++out_idx; }
     if (is_address_output(operands.back()) && address_subword) {
         if (predicate && output_address_subword_predicate.count(output_index)) {
             auto &subword_predicate = output_address_subword_predicate[output_index];
@@ -1109,15 +1112,15 @@ const IR::MAU::Instruction *CreateSaluInstruction::setup_output() {
                 return output;
         } else if (predicate) {
             return output; } }
-    return output = new IR::MAU::Instruction("output", &operands);
+    return output = new IR::MAU::SaluInstruction("output", out_idx, &operands);
 }
 
-const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
-    const IR::MAU::Instruction *rv = nullptr;
+const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
+    const IR::MAU::SaluInstruction *rv = nullptr;
     auto k = operands.back()->to<IR::Constant>();
     switch (etype) {
     case IF:
-        action->action.push_back(rv = new IR::MAU::Instruction(opcode, &operands));
+        action->action.push_back(rv = new IR::MAU::SaluInstruction(opcode, 0, &operands));
         LOG3("  add " << *action->action.back());
         break;
     case VALUE:
@@ -1135,11 +1138,12 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
              * up or down and hence must use the adjust_total instructions */
             if (salu->selector && salu->selector->mode == IR::MAU::SelectorMode::FAIR)
                 opcode += "_at";
-            rv = onebit = new IR::MAU::Instruction(opcode);
+            rv = onebit = new IR::MAU::SaluInstruction(opcode);
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
-        action->action.push_back(rv = new IR::MAU::Instruction(opcode, &operands));
+        action->action.push_back(rv = new IR::MAU::SaluInstruction(opcode, predicate ? 1 : 0,
+                                                                   &operands));
         LOG3("  add " << *action->action.back());
         break;
     case OUTPUT:
@@ -1147,7 +1151,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             opcode = onebit ? onebit->name : "read_bit";
             if (onebit_cmpl) opcode += "c";
-            rv = onebit = new IR::MAU::Instruction(opcode);
+            rv = onebit = new IR::MAU::SaluInstruction(opcode);
             operands.clear();
             operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
         } else if (k && k->value == 0) {
@@ -1164,11 +1168,11 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             // use ALU_HI to drive the output as it is otherwise unused
             auto *val = operands.at(0);
             if (predicate)
-                action->action.push_back(new IR::MAU::Instruction(
-                        "alu_a", predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));
+                action->action.push_back(new IR::MAU::SaluInstruction(
+                        "alu_a", 1, predicate, new IR::MAU::SaluReg(val->type, "hi", true), val));
             else
-                action->action.push_back(new IR::MAU::Instruction(
-                        "alu_a", new IR::MAU::SaluReg(val->type, "hi", true), val));
+                action->action.push_back(new IR::MAU::SaluInstruction(
+                        "alu_a", 0, new IR::MAU::SaluReg(val->type, "hi", true), val));
             LOG3("  add " << *action->action.back());
             operands.at(0) = new IR::MAU::SaluReg(val->type, "alu_hi", true);
         } else if (k && (k->value & (k->value-1)) == 0) {
@@ -1333,7 +1337,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
             LOG4("SALU " << salu->name << " adding " << sc << " instruction");
             auto instr_action = new IR::MAU::SaluAction(IR::ID(sc + "_alu$0"));
             salu->instruction.addUnique(sc + "_alu$0", instr_action);
-            auto set_clr_instr = new IR::MAU::Instruction(sc);
+            auto set_clr_instr = new IR::MAU::SaluInstruction(sc);
             instr_action->action.push_back(set_clr_instr);
         }
     }

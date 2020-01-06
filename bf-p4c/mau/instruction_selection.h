@@ -269,19 +269,17 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
         FieldImpact(le_bitrange db, const IR::Expression *r) : dest_bits(db), read(r) { }
     };
     ordered_map<const PHV::Field *, safe_vector<FieldImpact>> copy_propagation_replacements;
+    bool elem_copy_propagated;
 
     const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override;
     const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
         prune(); return sc;
     }
-    const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override {
-        prune(); return ba;
-    }
     const IR::MAU::Action *preorder(IR::MAU::Action *a) override;
-    void update(const IR::MAU::Instruction *instr);
-    const IR::Expression *propagate(const IR::MAU::Instruction *instr,
-        const IR::Expression *e, bool &elem_copy_propagated);
+    const IR::Expression *preorder(IR::Expression *a) override;
+    void update(const IR::MAU::Instruction *instr, const IR::Expression *e);
+    const IR::Expression *propagate(const IR::MAU::Instruction *instr, const IR::Expression *e);
 
  public:
     explicit BackendCopyPropagation(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
@@ -296,7 +294,7 @@ class VerifyParallelWritesAndReads : public MauInspector, TofinoWriteContext {
     ordered_map<const PHV::Field *, safe_vector<le_bitrange>> writes;
 
     bool preorder(const IR::MAU::Action *) override;
-    bool preorder(const IR::MAU::Instruction *) override;
+    void postorder(const IR::MAU::Instruction *) override;
     bool preorder(const IR::MAU::StatefulCall *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool is_parallel(const IR::Expression *e, bool is_write);

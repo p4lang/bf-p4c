@@ -1,5 +1,6 @@
 #include <regex>
 #include <string>
+#include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/ir/tofino_write_context.h"
@@ -424,7 +425,9 @@ class MauAsmOutput::EmitHashExpression : public Inspector {
             BUG("%s too complex in EmitHashExpression", c);
         }
         return false; }
-    bool preorder(const IR::Constant *) override { return false; }
+    bool preorder(const IR::Constant *) override {
+        // FIXME -- if the constant is non-zero, it should be included into the 'seed'
+        return false; }
     bool preorder(const IR::Expression *e) override {
         le_bitrange     bits;
         if (auto *field = self.phv.field(e, &bits)) {
@@ -437,9 +440,44 @@ class MauAsmOutput::EmitHashExpression : public Inspector {
                 if (overlap.width() > 1)
                     out << ".." << (bit + overlap.width() - 1);
                 out << ": " << overlap << std::endl; }
+        } else if (e->is<IR::Slice>()) {
+            // allow for slice on HashGenExpression
+            return true;
         } else {
             BUG("%s too complex in EmitHashExpression", e);
         }
+        return false; }
+    bool preorder(const IR::MAU::HashGenExpression *hge) override {
+        auto *fl = hge->expr->to<IR::MAU::FieldListExpression>();
+        BUG_CHECK(fl, "HashGenExpression not a field list: %s", hge);
+        if (hge->algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+            // For identity, just output each field individually
+            for (auto *el : boost::adaptors::reverse(fl->components)) {
+                visit(el, "component");
+                bit += el->type->width_bits(); }
+            return false; }
+        le_bitrange br = { 0, hge->hash_output_width };
+        if (auto *sl = getParent<IR::Slice>()) {
+            br.lo = sl->getL();
+            br.hi = sl->getH(); }
+        out << indent << bit << ".." << (bit + br.size() - 1) << ": ";
+        safe_vector<const IR::Expression *> field_list_order;
+        int total_bits = 0;
+        for (auto e : fl->components)
+            field_list_order.push_back(e);
+        if (hge->algorithm.ordered()) {
+            std::multimap<int, Slice> match_data_map;
+            std::map<le_bitrange, const IR::Constant*> constant_map;
+            LTBitMatrix sym_keys;  // FIXME -- needed?  always empty for now
+            self.emit_ixbar_gather_map(match_data_map, constant_map, match_data,
+                                       field_list_order, sym_keys, total_bits);
+            out << FormatHash(nullptr, &match_data_map, &constant_map, nullptr,
+                              hge->algorithm, total_bits, &br);
+        } else {
+            // FIXME -- need to set total_bits to something?
+            out << FormatHash(&match_data, nullptr, nullptr, nullptr,
+                              hge->algorithm, total_bits, &br); }
+        out << std::endl;
         return false; }
 
  public:
@@ -930,7 +968,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
 }
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
+        const safe_vector<Slice> &match_data, const IXBar::Use::MeterAluHash &mah,
         const safe_vector<const IR::Expression *> &field_list_order,
         const LTBitMatrix &sym_keys) const {
     if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
@@ -1003,7 +1041,8 @@ void MauAsmOutput::emit_ixbar_proxy_hash(std::ostream &out, indent_t indent,
  * the CRC function they requested, but a variation on it
  */
 void MauAsmOutput::emit_ixbar_gather_map(std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map, safe_vector<Slice> &match_data,
+        std::map<le_bitrange, const IR::Constant*> &constant_map,
+        const safe_vector<Slice> &match_data,
         const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
         int &total_size) const {
     std::map<int, int> field_start_bits;

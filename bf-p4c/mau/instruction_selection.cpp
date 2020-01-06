@@ -1737,17 +1737,11 @@ const IR::MAU::Action *BackendCopyPropagation::preorder(IR::MAU::Action *a) {
 
 const IR::MAU::Instruction *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
     instr->copy_propagated.clear();
-    instr->copy_propagated.resize(instr->operands.size(), false);
     // In order to maintain the sequential property, the reads have to be visited before the writes
     for (ssize_t i = instr->operands.size() - 1; i >= 0; i--) {
-        bool is_write = i == 0;
-        bool elem_copy_propagated = false;
-        if (is_write)
-            update(instr);
-        else
-            instr->operands[i] = propagate(instr, instr->operands[i], elem_copy_propagated);
-        instr->copy_propagated[i] = elem_copy_propagated;
-    }
+        elem_copy_propagated = false;
+        visit(instr->operands[i], "operands", i);
+        instr->copy_propagated[i] = elem_copy_propagated; }
     prune();
     return instr;
 }
@@ -1755,8 +1749,10 @@ const IR::MAU::Instruction *BackendCopyPropagation::preorder(IR::MAU::Instructio
   * is a set instruction.  Otherwise, remove instr->operands[0] from the set of copy propagation
   * candidates.
   */
-void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
-    const IR::Expression *e = instr->operands[0];
+void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR::Expression *e) {
+    if (findContext<IR::MAU::SaluAction>()) {
+        // don't propagate within or out of SALU actions
+        return; }
     auto act = findContext<IR::MAU::Action>();
     if (act == nullptr) {
         return;
@@ -1796,6 +1792,7 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
     }
 
     if (!replaced && instr->name == "set") {
+        LOG5("BackendCopyProp: saving " << instr->operands[0] << " = " << instr->operands[1]);
         copy_propagation_replacements[field].emplace_back(bits, instr->operands[1]);
     }
 }
@@ -1805,25 +1802,37 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr) {
   * to false).
   */
 const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instruction *instr,
-    const IR::Expression *e, bool &elem_copy_propagated) {
+    const IR::Expression *e) {
     auto act = findContext<IR::MAU::Action>();
     if (act == nullptr) {
-        elem_copy_propagated = false;
+        prune();
         return e;
     }
 
     le_bitrange bits = { 0, 0 };
     auto field = phv.field(e, &bits);
     if (field == nullptr) {
-        elem_copy_propagated = false;
         return e;
     }
+    bool isSalu = findContext<IR::MAU::SaluAction>() != nullptr;
 
+    prune();
     // If a read is possibly replaced with a copy propagated value, replace this value
     for (auto replacement : copy_propagation_replacements[field]) {
+        if (isSalu && replacement.read->is<IR::MAU::ActionArg>()) {
+            // can't access action args in the SALU
+            continue; }
         if (replacement.dest_bits.contains(bits)) {
             elem_copy_propagated = true;
-            return MakeSlice(replacement.read, bits.lo, bits.hi);
+            auto rv = MakeSlice(replacement.read, bits.lo, bits.hi);
+            if (isSalu && replacement.read->is<IR::MAU::HashDist>()) {
+                // FIXME -- SALU uses hash directly, not via hash dist; need refactoring
+                // of IXBarExpression/HashGenExpression to make this more sane
+                auto *hd = replacement.read->to<IR::MAU::HashDist>();
+                rv = MakeSlice(hd->expr, bits.lo, bits.hi);
+                rv = new IR::MAU::IXBarExpression(rv); }
+            LOG4("BackendCopyProp: " << e << " -> " << rv);
+            return rv;
         } else if (!replacement.dest_bits.intersectWith(bits).empty()) {
            ::error("%s: Currently the field %s[%d:%d] in action %s is read in a way "
                    "too complex for the compiler to currently handle.  Please consider "
@@ -1832,10 +1841,21 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         }
     }
 
-    elem_copy_propagated = false;
     return e;
 }
 
+const IR::Expression *BackendCopyPropagation::preorder(IR::Expression *expr) {
+    auto instr = findContext<IR::MAU::Instruction>();
+    if (!instr) {
+        prune();
+    } else if (isWrite()) {
+        prune();
+        update(instr, expr);
+    } else {
+        return propagate(instr, expr);
+    }
+    return expr;
+}
 
 /** The purpose of this pass is to verify that an action is able to be performed in parallel
  *  Because the semantics of P4 are that instructions are sequential, and the actions in
@@ -1936,14 +1956,13 @@ bool VerifyParallelWritesAndReads::is_parallel(const IR::Expression *e, bool is_
 /** Determines if any values of this particular instruction have previously been written
  *  within this action, and if so, throw an error
  */
-bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Instruction *instr) {
+void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) {
     auto act = findContext<IR::MAU::Action>();
     for (ssize_t i = instr->operands.size() -1; i >= 0; i--) {
         // Skip copy propagated values
         if (instr->copy_propagated[i])
             continue;
-        bool is_write = i == 0;
-        if (!is_parallel(instr->operands[i], is_write)) {
+        if (!is_parallel(instr->operands[i], instr->isOutput(i))) {
             le_bitrange bits = {0, 0};
             auto field = phv.field(instr->operands[i], &bits);
             ::error(ErrorType::ERR_UNSUPPORTED,
@@ -1954,7 +1973,6 @@ bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Instruction *instr) {
                     instr, act, (i+1), field->name, bits.lo, bits.hi);
         }
     }
-    return false;
 }
 
 bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
