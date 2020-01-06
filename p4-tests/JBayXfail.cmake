@@ -293,12 +293,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
-  #extensions/p4_tests/p4_16/stf/sful_enum_out1.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
 )
