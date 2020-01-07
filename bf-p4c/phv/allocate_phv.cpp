@@ -712,13 +712,60 @@ bool CoreAllocation::satisfies_constraints(
                     " but slice needs " << f->gress);
         return false; }
 
-    // Check parser group gress.
+    // Check parser group constraints.
     auto parserGroupGress = alloc.parserGroupGress(c);
     bool isExtracted = uses_i.is_extracted(f);
-    if (isExtracted && parserGroupGress && *parserGroupGress != f->gress) {
-        LOG5("        constraint: container " << c << " has parser group gress " <<
-             *parserGroupGress << " but slice needs " << f->gress);
-        return false; }
+    if (isExtracted && parserGroupGress) {
+        // Check 1: all containers within parser group must have same gress assignment
+        if (*parserGroupGress != f->gress) {
+            LOG5("        constraint: container " << c << " has parser group gress " <<
+                 *parserGroupGress << " but slice needs " << f->gress);
+            return false;
+        }
+
+        // Check 2: all constainers within parser group must have same parser write mode
+        const PhvSpec& phvSpec = Device::phvSpec();
+        unsigned slice_cid = phvSpec.containerToId(slice.container());
+
+        boost::optional<IR::BFN::ParserWriteMode> write_mode;
+
+        if (field_to_parser_states_i.field_to_extracts.count(f)) {
+            for (auto e : field_to_parser_states_i.field_to_extracts.at(f)) {
+                write_mode = e->write_mode;
+            }
+        }
+
+        BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
+
+        for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
+            auto other = phvSpec.idToContainer(cid);
+            auto cs = alloc.getStatus(other);
+
+            if (c == other)
+                continue;
+
+            if (cs) {
+                for (auto sl : (*cs).slices) {
+                    if (!field_to_parser_states_i.field_to_extracts.count(sl.field()))
+                        continue;
+
+                    boost::optional<IR::BFN::ParserWriteMode> other_write_mode;
+
+                    for (auto e : field_to_parser_states_i.field_to_extracts.at(sl.field())) {
+                        other_write_mode = e->write_mode;
+                    }
+
+                    if (*write_mode != *other_write_mode) {
+                        LOG5("        constraint: container " << c << " has parser write mode " <<
+                              *write_mode << " but " << other << " in parser group has conflicting"
+                              " write mode " << *other_write_mode);
+
+                        return false;
+                    }
+                }
+            }
+        }
+    }
 
     // Check deparser group gress.
     auto deparserGroupGress = alloc.deparserGroupGress(c);

@@ -383,6 +383,7 @@ class Allocation {
     /// only.  @c must exist in this Allocation.
     virtual void setDeparserGroupGress(PHV::Container c, GressAssignment gress);
 
+ public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
@@ -395,7 +396,6 @@ class Allocation {
 
     friend class Transaction;
 
- public:
     /// Iterate through container-->allocation slices.
     virtual const_iterator begin() const = 0;
     virtual const_iterator end() const = 0;
@@ -616,6 +616,7 @@ class ConcreteAllocation : public Allocation {
      */
     ConcreteAllocation(const SymBitMatrix&, const PhvUse&, bitvec containers);
 
+ public:
     /// Uniform abstraction for accessing a container state.
     /// @returns the ContainerStatus of this allocation, if present.  Failing
     ///          that, check its ancestors.  If @c has no status yet, return boost::none.
@@ -626,7 +627,6 @@ class ConcreteAllocation : public Allocation {
     ///          that, check its ancestors.  If @f has no status yet, return an empty FieldStatus.
     FieldStatus getStatus(const PHV::Field* f) const override;
 
- public:
     /** @returns an allocation initialized with the containers present in
      * Device::phvSpec, with the gress set for any hard-wired containers, but
      * no slices allocated.

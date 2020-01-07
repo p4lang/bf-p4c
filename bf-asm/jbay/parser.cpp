@@ -308,9 +308,10 @@ template <> void Parser::State::Match::Set::write_output_config(Target::JBay::pa
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     unsigned what = this->what << where->lo;
-    for (unsigned i = 0; i < 4; ++i)
-        if (((what >> (8*i)) & 0xff) == 0)
-            mask &= ~(1 << i);
+    if (what) {
+        for (unsigned i = 0; i < 4; ++i)
+            if (((what >> (8*i)) & 0xff) == 0)
+                mask &= ~(1 << i); }
     if (where->reg.size == 8) {
         BUG_CHECK((mask & ~1) == 0);
         if (where->reg.index & 1) {

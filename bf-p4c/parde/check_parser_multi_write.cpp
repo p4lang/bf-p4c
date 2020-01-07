@@ -8,7 +8,7 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-struct InferWriteMode : public ParserModifier {
+struct InferWriteMode : public ParserTransform {
     const PhvInfo& phv;
     const CollectParserInfo& parser_info;
     const MapFieldToParserStates& field_to_states;
@@ -18,6 +18,8 @@ struct InferWriteMode : public ParserModifier {
         phv(ph), parser_info(pi), field_to_states(fs) { }
 
     std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
+
+    ordered_set<const IR::BFN::Extract*> zero_inits;
 
     ordered_set<const IR::BFN::Extract*>
     find_inits(const ordered_set<const IR::BFN::Extract*>& extracts) {
@@ -54,8 +56,10 @@ struct InferWriteMode : public ParserModifier {
         ordered_set<const IR::BFN::Extract*> rv;
 
         for (auto e : extracts) {
-            if (is_zero_extract(e) && inits.count(e))
+            if (is_zero_extract(e) && inits.count(e)) {
+                zero_inits.insert(e);
                 continue;
+            }
 
             rv.insert(e);
         }
@@ -255,17 +259,23 @@ struct InferWriteMode : public ParserModifier {
         }
     }
 
-    bool preorder(IR::BFN::Extract* extract) override {
+    IR::Node* preorder(IR::BFN::Extract* extract) override {
         auto orig = getOriginal<IR::BFN::Extract>();
+
+        if (zero_inits.count(orig)) {
+            LOG3("removed zero init " << extract);
+            return nullptr;
+        }
 
         if (extract_to_write_mode.count(orig))
             extract->write_mode = extract_to_write_mode.at(orig);
 
         auto dest = phv.field(extract->dest->field);
+
         if (dest && dest->name.endsWith("$stkvalid"))
             extract->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
 
-        return false;
+        return extract;
     }
 
     profile_t init_apply(const IR::Node* root) override {
@@ -283,7 +293,7 @@ struct InferWriteMode : public ParserModifier {
                 infer_write_mode(kv.first, kv.second);
         }
 
-        return ParserModifier::init_apply(root);
+        return ParserTransform::init_apply(root);
     }
 };
 

@@ -1558,6 +1558,13 @@ class CollectPardeConstraints : public Inspector {
             BUG_CHECK(f, "Found extract %1% to a non-field object", lval->field);
             f->set_parsed(true);
             LOG3("\tMarking " << f->name << " as parsed");
+
+            // TODO(zma): this constraint can be refined, if the multi-write
+            // happens before other writes, it can still be packed.
+            if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+                f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
+                LOG3("Marking parser multi-write field " << f << " as no_pack");
+            }
         }
 
         return false;

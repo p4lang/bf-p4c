@@ -112,11 +112,13 @@ struct SliceExtracts : public ParserModifier {
 
             BUG_CHECK(const_slice.fitsUint(), "Constant slice larger than 32-bit?");
 
-            if (const_slice.asUnsigned())
+            if (const_slice.asUnsigned() ||
+                extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
                 src_slice = new IR::BFN::ConstantRVal(IR::Type::Bits::get(width),
-                                                      const_slice.asUnsigned());
-            else
+                                                  const_slice.asUnsigned());
+            } else {
                 return nullptr;
+            }
         } else {
             BUG("unknown extract source");
         }
@@ -292,9 +294,11 @@ struct AllocateParserState : public ParserTransform {
             constant_extractor_use_choices(PHV::Container container,
                              const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
                 std::map<size_t, unsigned> rv;
+                bool has_clr_on_write = false;
 
-                unsigned c = merge_const_source(extracts);
-                if (c) {
+                unsigned c = merge_const_source(extracts, has_clr_on_write);
+
+                if (c || has_clr_on_write) {
                     rv = constant_extractor_use_choices(c, container.size());
 
                     LOG4("constant: " << c);
@@ -328,7 +332,8 @@ struct AllocateParserState : public ParserTransform {
             }
 
             unsigned
-            merge_const_source(const ordered_set<const IR::BFN::ExtractPhv*>& extracts) {
+            merge_const_source(const ordered_set<const IR::BFN::ExtractPhv*>& extracts,
+                               bool& has_clr_on_write) {
                 unsigned merged = 0;
                 PHV::FieldUse use(PHV::FieldUse::WRITE);
 
@@ -344,6 +349,9 @@ struct AllocateParserState : public ParserTransform {
                             "extract allocator expects dest to be individual slice");
 
                         merged |= c->constant->asUnsigned() << alloc_slices[0].container_bit;
+
+                        if (e->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+                            has_clr_on_write = true;
                     }
                 }
 
@@ -589,7 +597,7 @@ struct AllocateParserState : public ParserTransform {
 
                 unsigned num = 0;
 
-                if (container_size == size_t(PHV::Size::b32))
+                if (container_size == size_t(PHV::Size::b32) && value)
                     num = bool(value & 0xffff) + bool(value >> 16);
                 else
                     num = 1;

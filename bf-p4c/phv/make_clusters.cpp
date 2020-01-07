@@ -880,6 +880,10 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
             }
         }
 
+        if (f->is_solitary()) {
+            continue;
+        }
+
         // Check if any no-pack constraints have been inferred on the candidate field f, the fields
         // the candidate field must be packed with, and any other field already in the slice list.
         bool any_pack_conflicts = false;
@@ -890,9 +894,6 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
                     any_pack_conflicts = true; } }
         if (any_pack_conflicts) {
             LOG5("    Ignoring POV bit " << f->name << " because of a pack conflict");
-            continue; }
-        if (f->is_solitary()) {
-            ::error("POV Bit %1% is marked as no-pack", f->name);
             continue; }
 
         for (auto& slice : toBeAddedFields) {
