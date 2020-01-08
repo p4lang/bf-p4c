@@ -130,6 +130,9 @@ p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1809.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/p4c-1812.p4")
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-leaf.p4")
+p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4")
+
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
@@ -804,6 +807,8 @@ set (NON_PR
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1812.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2269.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-1832.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2410-leaf.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2410-spine.p4
   # Customer Tests to run in nightly
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2218.p4
   # Other XFails in compilers repo to run in nightly
