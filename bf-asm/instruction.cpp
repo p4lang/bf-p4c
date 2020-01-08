@@ -26,6 +26,17 @@ Instruction::Decode::Decode(const char *name, target_t target, int set, bool ts)
             BUG_CHECK(d->targets > 1); } }
     opcode[set].emplace(name, this);
 }
+Instruction::Decode::Decode(const char *name, std::set<target_t> target, int set, bool ts)
+: type_suffix(ts), targets(0) {
+    for (auto t : target)
+        targets |= 1 << t;
+    BUG_CHECK(targets > 1);
+    for (auto d : ValuesForKey(opcode[set], name)) {
+        if (d->targets & 1) {
+            d->targets &= ~targets;
+            BUG_CHECK(d->targets > 1); } }
+    opcode[set].emplace(name, this);
+}
 
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
                                  const VECTOR(value_t) &op) {

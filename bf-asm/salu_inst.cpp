@@ -590,12 +590,16 @@ Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     return this;
 }
 
-#if HAVE_JBAY
+#if HAVE_JBAY || HAVE_CLOUDBREAK
+
 struct TMatchOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string     name;
         unsigned        opcode;
-        Decode(const char *n) : Instruction::Decode(n, JBAY, STATEFUL_ALU), name(n) {}
+        Decode(const char *n, target_t target)
+        : Instruction::Decode(n, target, STATEFUL_ALU), name(n) {}
+        Decode(const char *n, std::set<target_t> target)
+        : Instruction::Decode(n, target, STATEFUL_ALU), name(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
@@ -619,7 +623,14 @@ struct TMatchOP : public SaluInstruction {
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
-static TMatchOP::Decode opTMatch("tmatch");
+static TMatchOP::Decode opTMatch("tmatch", {
+#if HAVE_JBAY
+    JBAY,
+#endif
+#if HAVE_CLOUDBREAK
+    CLOUDBREAK,
+#endif
+});
 
 Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {

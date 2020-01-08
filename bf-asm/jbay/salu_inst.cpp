@@ -19,16 +19,19 @@ struct DivMod : public AluOP {
     Instruction *pass1(Table *tbl, Table::Actions::Action *act) override {
         tbl->stage->table_use[timing_thread(tbl->gress)] |= Stage::USE_STATEFUL_DIVIDE;
         return AluOP::pass1(tbl, act); }
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act)
-    override {
-        AluOP::write_regs(regs, tbl, act);
-        int logical_home_row = tbl->layout[0].row;
-        auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
-        auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
-        salu_instr_common.salu_divide_enable |= 1; }
+    FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 DivMod::Decode opDIVMOD("divmod", JBAY, 0x00); // setz op, so can OR with alu1hi to get that result
+
+void DivMod::write_regs(Target::Tofino::mau_regs &, Table *, Table::Actions::Action *) { BUG(); }
+void DivMod::write_regs(Target::JBay::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {
+    AluOP::write_regs(regs, tbl, act);
+    int logical_home_row = tbl->layout[0].row;
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    salu_instr_common.salu_divide_enable |= 1;
+}
 
 struct MinMax : public SaluInstruction {
     const struct Decode : public Instruction::Decode {

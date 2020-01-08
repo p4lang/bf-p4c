@@ -6,6 +6,15 @@
 
 DivMod::Decode cb_opDIVMOD("divmod", CLOUDBREAK, 0x00); // setz op, so can OR with alu1hi to get that result
 
+void DivMod::write_regs(Target::Cloudbreak::mau_regs &regs, Table *tbl,
+                        Table::Actions::Action *act) {
+    AluOP::write_regs(regs, tbl, act);
+    int logical_home_row = tbl->layout[0].row;
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    salu_instr_common.salu_divide_enable |= 1;
+}
+
 MinMax::Decode cb_opMIN8("min8", CLOUDBREAK, 0), cb_opMAX8("max8", CLOUDBREAK, 1),
                cb_opMIN16("min16", CLOUDBREAK, 2), cb_opMAX16("max16", CLOUDBREAK, 3);
 

@@ -34,6 +34,7 @@ struct Instruction {
         unsigned        targets;
         Decode(const char *name, int set = VLIW_ALU, bool ts = false);
         Decode(const char *name, target_t target, int set = VLIW_ALU, bool ts = false);
+        Decode(const char *name, std::set<target_t> target, int set = VLIW_ALU, bool ts = false);
         const Decode &alias(const char *name, int set = VLIW_ALU, bool ts = false) {
             opcode[set].emplace(name, this);
             return *this; }
