@@ -50,7 +50,7 @@ class Backend : public PassManager {
     Util::JsonObject jsonGraph;
 
     FlexiblePacking *flexiblePacking;
-    LogRepackedHeaders *flexibleLogging;
+    LogFlexiblePacking *flexibleLogging;
     CollectPhvLoggingInfo *phvLoggingInfo;
     NextTable *nextTblProp;
 
@@ -64,7 +64,8 @@ class Backend : public PassManager {
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_json_graph() const { return jsonGraph; }
     const FlexiblePacking  *get_flexible_packing() const { return flexiblePacking; }
-    const LogRepackedHeaders *get_flexible_logging() const { return flexibleLogging; }
+    const LogRepackedHeaders *get_flexible_logging() const {
+        return flexibleLogging->get_flexible_logging(); }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }
     const ordered_map<cstring, ordered_set<int>>& get_table_alloc() const {
         return table_summary.getTableAlloc();

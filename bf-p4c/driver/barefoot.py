@@ -332,7 +332,8 @@ class BarefootBackend(BackendDriver):
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:3"
             phv_verbosity = str(2 * opts.verbose - 1)
-            pa_logging = "allocate_phv:" + phv_verbosity
+            pa_logging = "allocate_phv:" + phv_verbosity + \
+                         ",alias:1"
             parde_verbosity = str(2 * opts.verbose - 1)
             parde_logging = ",clot_info:" + parde_verbosity + \
                             ",split_parser_state:" + parde_verbosity + \
@@ -684,11 +685,11 @@ class BarefootBackend(BackendDriver):
         start_t = time.time()
         rc = BackendDriver.run(self)
         self.compilation_time = time.time() - start_t
-        
+
         rmc = 0
         if run_manifest_verifier:
             rmc = self.checkAndRunCmd('manifest-verifier')
-        
+
         # Error codes defined in p4c-barefoot.cpp:main
         if rc is None: rc = 1
         if rc > 1 or rc < 0:

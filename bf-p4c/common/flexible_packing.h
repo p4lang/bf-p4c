@@ -685,8 +685,22 @@ class LogRepackedHeaders : public Inspector {
     std::string asm_output() const;
 };
 
+class LogFlexiblePacking : public Logging::PassManager {
+    LogRepackedHeaders* flexibleLogging;
 
-class FlexiblePacking : public Logging::PassManager {
+ public:
+    explicit LogFlexiblePacking(const PhvInfo& phv) :
+    Logging::PassManager("flexible_packing", Logging::Mode::AUTO) {
+        flexibleLogging = new LogRepackedHeaders(phv);
+        addPasses({
+            flexibleLogging,
+        });
+    }
+
+    const LogRepackedHeaders *get_flexible_logging() const { return flexibleLogging; }
+};
+
+class FlexiblePacking : public PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
     PackConflicts                                       packConflicts;
@@ -703,7 +717,6 @@ class FlexiblePacking : public Logging::PassManager {
     ordered_set<const PHV::Field*>                      noPackFields;
     ordered_set<const PHV::Field*>                      deparserParams;
     ordered_set<cstring>                                parserStatesToModify;
-    LogRepackedHeaders                                  log;
     RepackedHeaderTypes                                 repackedTypes;
 
  public:

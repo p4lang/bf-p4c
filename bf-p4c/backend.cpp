@@ -102,7 +102,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     auto _unused = new ordered_map<cstring, ordered_set<cstring>>;
     flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
                                           *_unused, table_alloc, true);
-    flexibleLogging = new LogRepackedHeaders(phv);
+    flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, table_alloc /*, &jsonGraph */);

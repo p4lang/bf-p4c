@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 #include "bf-p4c/phv/transforms/auto_alias.h"
@@ -78,20 +79,24 @@ class AddValidityBitSets : public Transform {
   * metadata, PragmaAlias pass chooses one of them as the alias source. Aliasing is not allowed when
   * both fields belong to packet headers.
   */
-class Alias : public PassManager {
+class Alias : public Logging::PassManager {
  private:
      ordered_map<cstring, const IR::Member*> fieldExpressions;
      PragmaAlias pragmaAlias;
 
  public:
-    explicit Alias(PhvInfo& phv) : pragmaAlias(phv) {
+    explicit Alias(PhvInfo& phv) :
+        Logging::PassManager("pragmas", Logging::Mode::AUTO), pragmaAlias(phv) {
         addPasses({
             &pragmaAlias,
             new AutoAlias(phv, pragmaAlias),
             new FindExpressionsForFields(phv, fieldExpressions),
             new AddValidityBitSets(phv, pragmaAlias),
             new ReplaceAllAliases(phv, pragmaAlias, fieldExpressions),
-            new VisitFunctor([this]() { LOG1(pragmaAlias.pretty_print()); })
+            new VisitFunctor([this]() {
+                if (LOGGING(1)) {
+                    LOG1(pragmaAlias.pretty_print()); }
+            })
         });
     }
 };

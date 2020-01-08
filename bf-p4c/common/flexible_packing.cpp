@@ -133,8 +133,7 @@ void RepackFlexHeaders::resetState() {
     digestFlexFields.clear();
     clusterFields.clear();
 
-    if (LOGGING(1))
-        LOG1("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
+    LOG3("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
     for (auto kv : fields.bridged_to_orig) {
         cstring origName = getOppositeGressFieldName(kv.second);
         cstring bridgedName = getOppositeGressFieldName(kv.first);
@@ -1287,9 +1286,9 @@ RepackFlexHeaders::checkIfAlreadyPacked(const IR::HeaderOrMetadata* h) {
         auto* repackedHeader = new IR::Header(h->name, repackedHeaderType);
         repackedHeaders[h->name] = repackedHeader;
         originalHeaders[h->name] = h;
-        LOG1("Repacked egress header: " << repackedHeader);
-        LOG1("Repacked egress header type: " << repackedHeaderType);
-        LOG1("Repacked egress header size: " << getHeaderBytes(repackedHeader) << "B");
+        LOG3("Repacked egress header: " << repackedHeader);
+        LOG3("Repacked egress header type: " << repackedHeaderType);
+        LOG3("Repacked egress header size: " << getHeaderBytes(repackedHeader) << "B");
         return repackedHeader;
     }
     return boost::none;
@@ -1474,9 +1473,9 @@ const IR::Node* RepackFlexHeaders::preorder(IR::HeaderOrMetadata* h) {
     repackedTypes[h->type->name] = repackedHeaderType;
     originalHeaders[headerName] = h;
     ingressFlexibleTypes[h] = repackedHeader;
-    LOG1("Repacked header: " << repackedHeader->name);
-    LOG1("Repacked header type: " << repackedHeader->type);
-    LOG1("Repacked header size: " << getHeaderBits(repackedHeader) << "b");
+    LOG3("Repacked header: " << repackedHeader->name);
+    LOG3("Repacked header type: " << repackedHeader->type);
+    LOG3("Repacked header size: " << getHeaderBits(repackedHeader) << "b");
 
     return repackedHeader;
 }
@@ -2207,8 +2206,7 @@ FlexiblePacking::FlexiblePacking(
         CollectBridgedFields& b,
         ordered_map<cstring, ordered_set<cstring>>& e,
         const MauBacktracker& alloc,
-        bool skip_bridge)
-        : Logging::PassManager("flexible_packing_"),
+        bool skip_bridge) :
           bridgedFields(b),
           packConflicts(p, dg, tMutex, alloc, aMutex),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
@@ -2218,8 +2216,7 @@ FlexiblePacking::FlexiblePacking(
           packHeaders(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
                       parserAlignedFields, alloc, repackedTypes, skip_bridge),
           parserMappings(p),
-          bmUses(p, packHeaders, parserMappings, e, parserStatesToModify),
-          log(p) {
+          bmUses(p, packHeaders, parserMappings, e, parserStatesToModify) {
               addPasses({
                       // XXX hack.
                       // CollectBridgedFields &&
@@ -2261,7 +2258,6 @@ FlexiblePacking::FlexiblePacking(
                       &parserMappings,
                       // bmUses is only used to replace digest field list.
                       &bmUses,
-                      &log,
               });
 }
 
