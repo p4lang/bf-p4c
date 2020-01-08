@@ -3052,7 +3052,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
                 return false;
             phv_src_inuse[alu_slot_index] = true;
             mah.computed_expressions[start_bit] = source->expr;
-            mah.bit_mask.setrange(start_bit, salu->source_width());
+            mah.bit_mask.setrange(start_bit, source->expr->type->width_bits());
         }
     }
 
