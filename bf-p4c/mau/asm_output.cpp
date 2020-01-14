@@ -3005,7 +3005,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::next_table_non_action_map(const IR::MAU::Table *tbl,
          safe_vector<NextTableSet> &next_table_map) const {
-     std::set<NextTableSet> possible_next_tables;
+     ordered_set<NextTableSet> possible_next_tables;
      for (auto act : Values(tbl->actions)) {
          if (act->miss_action_only) continue;
          possible_next_tables.insert(next_for(tbl, act->name.originalName));

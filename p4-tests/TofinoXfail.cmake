@@ -542,7 +542,7 @@ p4c_add_xfail_reason("tofino"
 
 # are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
-  "error: .*: no such field in standard_metadata"
+  "error: .*: Not found no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 

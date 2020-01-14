@@ -93,7 +93,7 @@ struct ChecksumUpdateInfo {
     }
 };
 
-using ChecksumUpdateInfoMap = std::map<cstring, ChecksumUpdateInfo*>;
+using ChecksumUpdateInfoMap = ordered_map<cstring, ChecksumUpdateInfo*>;
 
 using ParserStateChecksumMap = std::map<const IR::ParserState*,
     std::vector<const IR::MethodCallExpression*>>;
@@ -185,7 +185,7 @@ bool checkIncorrectCsumFields(const IR::HeaderOrMetadata* last,
     }
 }
 
-using ChecksumHeaderToFieldInfo = std::map<const IR::HeaderRef*, std::map<cstring, int>>;
+using ChecksumHeaderToFieldInfo = ordered_map<const IR::HeaderRef*, std::map<cstring, int>>;
 
 FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerTofields,
                              const IR::Member* destField) {

@@ -3962,12 +3962,9 @@ bool Memories::allocate_all_idletime() {
         }
     }
 
-    std::sort(idletime_groups.begin(), idletime_groups.end(),
+    std::stable_sort(idletime_groups.begin(), idletime_groups.end(),
         [](const SRAM_group *a, const SRAM_group *b){
-        int t;
-        if ((t = a->left_to_place() - b->left_to_place()) != 0)
-            return t > 0;
-        return a->ta->table->name < b->ta->table->name;
+        return a->left_to_place() > b->left_to_place();
     });
 
     for (auto* idletime_group : idletime_groups) {
