@@ -1,5 +1,10 @@
-#include <core.p4>
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
+#else
+#error Unsupported target
+#endif
 
 # 1 "npb/features.p4" 1
 /*******************************************************************************
@@ -781,7 +786,7 @@ typedef bit<16> switch_uint16_t;
 typedef bit<8> switch_uint8_t;
 
 typedef PortId_t switch_port_t;
-const switch_port_t SWITCH_PORT_INVALID = 9w0x1ff;
+const switch_port_t SWITCH_PORT_INVALID = 0x1ff;
 
 typedef QueueId_t switch_qid_t;
 
@@ -1222,7 +1227,11 @@ header switch_bridged_metadata_t {
 // 1 byte
     switch_pkt_src_t src;
 // 2 bytes
+#if __TARGET_TOFINO__ >= 3
+    bit<5> _pad0;
+#else
     bit<7> _pad0;
+#endif
     switch_port_t ingress_port;
 // 2 bytes
     switch_ifindex_t ingress_ifindex;

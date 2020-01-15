@@ -136,8 +136,8 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
 
     auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl");
-#if HAVE_JBAY
-    if (Device::currentDevice() == Device::JBAY) {
+#if HAVE_JBAY || HAVE_CLOUDBREAK
+    if (Device::currentDevice() != Device::TOFINO) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
         addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
         addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");
@@ -167,8 +167,8 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
 
     auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
     addDeparserParam(d, dpMeta, "drop_ctl");
-#if HAVE_JBAY
-    if (Device::currentDevice() == Device::JBAY) {
+#if HAVE_JBAY || HAVE_CLOUDBREAK
+    if (Device::currentDevice() != Device::TOFINO) {
         addDeparserParamRename(d, dpMeta, "mirror_hash", "mirr_hash");
         addDeparserParamRename(d, dpMeta, "mirror_io_select", "mirr_io_sel");
         addDeparserParamRename(d, dpMeta, "mirror_egress_port", "mirr_epipe_port");

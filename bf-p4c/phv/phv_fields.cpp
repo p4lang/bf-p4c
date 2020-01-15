@@ -2021,7 +2021,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &slice) {
     out << slice.container << " " << slice.container_bits() << " <-- "
         << PHV::FieldSlice(slice.field, slice.field_bits());
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::currentDevice() != Device::TOFINO) {
         out << " live at [" << slice.min_stage.first << slice.min_stage.second << ", " <<
             slice.max_stage.first << slice.max_stage.second << "]";
         if (!slice.init_i.empty) {
@@ -2089,8 +2089,10 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.used_in_wide_arith()) out << " wide_arith";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::phvSpec().hasContainerKind(PHV::Kind::mocha)) {
         if (field.is_mocha_candidate()) out << " mocha";
+    }
+    if (Device::phvSpec().hasContainerKind(PHV::Kind::dark)) {
         if (field.is_dark_candidate()) out << " dark";
     }
     if (field.is_checksummed()) out << " checksummed";
@@ -2178,8 +2180,10 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
     if (field.used_in_wide_arith()) out << " wide_arith";
     if (field.privatized()) out << " TPHV-priv";
     if (field.privatizable()) out << " PHV-priv";
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::phvSpec().hasContainerKind(PHV::Kind::mocha)) {
         if (field.is_mocha_candidate()) out << " mocha";
+    }
+    if (Device::phvSpec().hasContainerKind(PHV::Kind::dark)) {
         if (field.is_dark_candidate()) out << " dark";
     }
     out << " [" << fs.range().lo << ":" << fs.range().hi << "]";

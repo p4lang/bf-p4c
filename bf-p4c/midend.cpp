@@ -311,7 +311,11 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
     bool preorder(const IR::Declaration_Instance *di) {
 #ifdef HAVE_JBAY
         // JBay supports (limited) div/mod in RegisterAction
-        if (Device::currentDevice() == Device::JBAY) {
+        if (Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+            || Device::currentDevice() == Device::CLOUDBREAK
+#endif /* HAVE_CLOUDBREAK */
+        ) {
             if (auto st = di->type->to<IR::Type_Specialized>()) {
                 if (st->baseType->path->name.name.endsWith("Action"))
                     return false; } }
@@ -356,11 +360,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CheckDesignPattern(&refMap, &typeMap),  // add checks for p4 design pattern here.
         new EnumOn32Bits::FindStatefulEnumOutputs(*enum_policy),
         new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
+        new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
         new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
         new BFN::ElimCasts(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap, simplifyKeyPolicy, typeChecking),
-        Device::currentDevice() == Device::JBAY || options.disable_direct_exit ?
+        Device::currentDevice() != Device::TOFINO || options.disable_direct_exit ?
             new P4::RemoveExits(&refMap, &typeMap, typeChecking) : nullptr,
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),

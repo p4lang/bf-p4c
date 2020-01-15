@@ -4,6 +4,8 @@ set (CLOUDBREAK_XFAIL_TESTS
   # or open a new one.
   )
 
+## Initial failures copied from JBayXFail.cmake
+
 # Mirroring direction BOTH not supported on Tofino2 but is used by the P4Runtime
 # implementation
 p4c_add_xfail_reason("tofino3"
@@ -34,8 +36,6 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino3"
     ".* expected packet.* on port .* not seen|shorter than expected"
     extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-    extensions/p4_tests/p4_16/stf/parser_loop_2.p4
-    extensions/p4_tests/p4_16/stf/parser_loop_3.p4
   )
 
   p4c_add_xfail_reason("tofino3"
@@ -53,7 +53,6 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino3"
     "Assertion .* failed"  # model asserts
    extensions/p4_tests/p4_14/stf/decaf_1.p4 # 16-bit container repeated in FD
-   extensions/p4_tests/p4_14/stf/decaf_8.p4 # clot?
    )
 
 endif() # HARLYN_STF
@@ -290,41 +289,13 @@ p4c_add_xfail_reason("tofino3"
 #)
 
 p4c_add_xfail_reason("tofino3"
-  "Dynamic hashes must have the same field list and sets of algorithm for each get call"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  "This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "Metadata initialization analysis incorrect.  Live ranges between .* and .* overlap|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "The input .* cannot be found on the hash input"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
 )
 
 p4c_add_xfail_reason("tofino3"
   "Slicing the following supercluster is taking too long"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  ".* is not allocated contiguously by bit on the input xbar and cannot be resolved"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-a.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -342,6 +313,11 @@ p4c_add_xfail_reason("tofino3"
 #  "Name '.*' is used for multiple Register objects in the P4Info message"
 #  p4_16_internal_p4_16_t2na_fifo
 #)
+
+p4c_add_xfail_reason("tofino3"
+  "Unsupported condition && in mirror.emit"
+  extensions/p4_tests/p4_16/compile_only/p4c-1150-nested-ifs.p4
+)
 
 # P4C-2091
 # Expected failure (negative test)
@@ -375,4 +351,86 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "Each field's bit alignment in the packet should be equal to that in the checksum list. Checksum engine is unable to read .* for .* checksum update"
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
+)
+
+## new cloudbreak failures (different from JBay)
+
+#P4C-2429
+p4c_add_xfail_reason("tofino3"
+  "mismatch from expected.* at byte "
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_3.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_5.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_1.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_2.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_3.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_4.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_5.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_6.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_9.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_10.p4
+  extensions/p4_tests/p4_14/stf/zeros_as_ones.p4
+  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
+  extensions/p4_tests/p4_16/stf/header_stack_checksum.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_stack_1.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_1.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_2.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_3.p4
+  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
+  extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
+  testdata/p4_14_samples/basic_routing.p4
+  extensions/p4_tests/p4_14/bf_p4c_samples/parser_dc_full.p4
+)
+p4c_add_xfail_reason("tofino3"
+  "expected packet on port .* not seen|unexpected packet output on port"
+  extensions/p4_tests/p4_14/stf/parser_counter_1.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_2.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_3.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_4.p4
+  extensions/p4_tests/p4_14/stf/parser_counter_5.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_6.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_7.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_9.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_10.p4
+)
+
+#driver does not yet work
+p4c_add_xfail_reason("tofino3"
+  "ERROR:PTF runner:Error when starting model & switchd"
+  extensions/p4_tests/p4_14/ptf/easy_exact.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match.p4
+  extensions/p4_tests/p4_14/ptf/easy_no_match_with_gateway.p4
+  extensions/p4_tests/p4_14/ptf/easy.p4
+  extensions/p4_tests/p4_14/ptf/easy_ternary.p4
+  extensions/p4_tests/p4_14/ptf/ecmp_pi.p4
+  extensions/p4_tests/p4_14/ptf/ternary_match_constant_action_data.p4
+  extensions/p4_tests/p4_16/ptf/adata_constant_out_of_range_for_immediate.p4
+  extensions/p4_tests/p4_16/ptf/clone_v1model.p4
+  extensions/p4_tests/p4_16/ptf/ingress_checksum.p4
+  extensions/p4_tests/p4_16/ptf/ipv4_checksum.p4
+  extensions/p4_tests/p4_16/ptf/large_action_data_constant.p4
+  extensions/p4_tests/p4_16/ptf/multicast_basic.p4
+  extensions/p4_tests/p4_16/ptf/udpv4_and_v6_checksum.p4
+  extensions/p4_tests/p4_16/ptf/various_indirect_meters.p4
+  extensions/p4_tests/p4_16/ptf/verify_checksum.p4
+)
+
+# port type mismatch between v1model and cloudbreak
+p4c_add_xfail_reason("tofino3"
+  "Cannot unify bit<9> to bit<11>|Cannot unify bit<11> to bit<9>|bit<11> and bit<9>"
+  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+  extensions/p4_tests/p4_16/compile_only/parser_match_14.p4
+  extensions/p4_tests/p4_16/ptf/digest.p4
+  extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
+  extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
+  extensions/p4_tests/p4_14/stf/egress_port_init.p4
+  testdata/p4_14_samples/issue-1426.p4
+)
+
+# pd scripts have problems with tofino3?
+p4c_add_xfail_reason("tofino3"
+  "error This program is intended to compile for Tofino P4 architecture only"
+  extensions/p4_tests/p4_14/ptf/sful_split1.p4
+  extensions/p4_tests/p4_14/ptf/p4c_1962.p4
 )

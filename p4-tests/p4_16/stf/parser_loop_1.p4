@@ -20,10 +20,14 @@
  *
  ******************************************************************************/
 #include <core.p4>
-#if __TARGET_TOFINO__ >= 2
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
 #elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
+#else
+#error Unsupported target
 #endif
 
 header segment_t {

@@ -25,6 +25,15 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
+#if HAVE_CLOUDBREAK
+        if (Device::currentDevice() == Device::CLOUDBREAK) {
+            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
+        }
+    } else if (options.arch == "t3na") {
+        if (Device::currentDevice() == Device::CLOUDBREAK) {
+            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
+        }
+#endif
     } else if (options.arch == "psa") {
         passes.push_back(new BFN::PortableSwitchTranslation(refMap, typeMap, options /*map*/));
     } else {

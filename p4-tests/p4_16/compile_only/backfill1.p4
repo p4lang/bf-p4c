@@ -1,7 +1,11 @@
-#if __TARGET_TOFINO__ >= 2
-#include "t2na.p4"
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
+#include <tna.p4>
 #else
-#include "tna.p4"
+#error Unsupported target
 #endif
 
 struct metadata { }
@@ -14,7 +18,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    action setout(bit<9> port) { ig_intr_tm_md.ucast_egress_port = port; }
+    action setout(PortId_t port) { ig_intr_tm_md.ucast_egress_port = port; }
     action setb1(bit<8> val) { hdr.data.b1 = val; }
     action seth1(bit<16> val) { hdr.data.h1 = val; }
     action noop() { }

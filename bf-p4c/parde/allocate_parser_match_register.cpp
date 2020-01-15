@@ -790,6 +790,10 @@ class MatcherAllocator : public Visitor {
             avail << "1x16b, 2x8b.";
         else if (Device::currentDevice() == Device::JBAY)
             avail << "4x8b.";
+#if HAVE_CLOUDBREAK
+        else if (Device::currentDevice() == Device::CLOUDBREAK)
+            avail << "4x8b.";
+#endif /* HAVE_CLOUDBREAK */
         else
             BUG("Unknown device");
 

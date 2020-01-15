@@ -90,7 +90,7 @@ def get_parser():
                         'tests are run',
                         type=str, action='store', required=False)
     parser.add_argument('--device', help='Target device',
-                         choices=['tofino', 'tofino2'], default='tofino',
+                         choices=['tofino', 'tofino2', 'tofino3'], default='tofino',
                          type=str, action='store', required=False)
     parser.add_argument('--xml-output', action='store_true', required=False,
                         help='Generate output in JUnit XML format')
@@ -293,7 +293,9 @@ def start_model(model, out=None, context_json=None, config=None, port_map_path=N
         cmd.extend(['-f', port_map_path])
         if '2pipe' in port_map_path:
             cmd.extend(['--int-port-loop=0xa'])
-    if device is not None and 'tofino2' in device:
+    if device is not None and 'tofino3' in device:
+        cmd.extend(['--chip-type=6']) # default CHIPTYPE=6 for Cloudbreak
+    elif device is not None and 'tofino2' in device:
         cmd.extend(['--chip-type=4']) # default CHIPTYPE=4 for Jbay
     else:
         cmd.extend(['--chip-type=2']) # default CHIPTYPE=2 for TofinoB0
@@ -417,6 +419,8 @@ def main():
     toolsdevice = args.device
     if args.device == 'tofino2':
         toolsdevice = 'jbay'
+    elif args.device == 'tofino3':
+        toolsdevice = 'cb'
     if args.pdtest is not None:
         compiler_out_dir = os.path.join(args.testdir, 'share', args.device+'pd', args.name)
     else:
@@ -508,13 +512,13 @@ def main():
         veth_start_index = 0
         base_if_index = 0
         # Default ports for Tofino2 have offset 8
-        if 'tofino2' in args.device:
+        if 'tofino2' in args.device or 'tofino3' in args.device:
             base_if_index = 8
         for iface_idx in range(base_if_index, base_if_index + DEFAULT_NUM_IFACES):
             port_map[iface_idx] = 'veth{}'.format(2 * veth_start_index + 1)
             veth_start_index += 1
         # Ethernet CPU port: 64 for Tofino and 2 for Tofino2
-        if 'tofino2' in args.device:
+        if 'tofino2' in args.device or 'tofino3' in args.device:
             port_map[2] = "veth251"
         else:
             port_map[64] = "veth251"

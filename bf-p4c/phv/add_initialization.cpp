@@ -368,7 +368,8 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
 
     noteDependencies(initSlicesToOverlappingSlices, slicesToTableInits);
 
-    if (Device::currentDevice() == Device::JBAY) addDepsForDarkInitialization();
+    if (Device::phvSpec().hasContainerKind(PHV::Kind::dark))
+        addDepsForDarkInitialization();
 
     return Inspector::init_apply(root);
 }
@@ -604,8 +605,8 @@ AddSliceInitialization::AddSliceInitialization(
         &fieldToExpr,
         &init,
         new AddMetadataInitialization(fieldToExpr, init, actionsMap),
-        Device::currentDevice() == Device::JBAY ? &computeDarkInit : nullptr,
-        Device::currentDevice() == Device::JBAY
+        Device::phvSpec().hasContainerKind(PHV::Kind::dark) ? &computeDarkInit : nullptr,
+        Device::phvSpec().hasContainerKind(PHV::Kind::dark)
             ? new AddDarkInitialization(p, computeDarkInit) : nullptr,
         &dep,
         new MarkDarkInitTables(dep)

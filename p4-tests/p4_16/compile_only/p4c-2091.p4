@@ -20,10 +20,14 @@
  *
  **************************************************************************************************/
 
-#if __TARGET_TOFINO__ >= 2
-#include "t2na.p4"
-#else
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
+#else
+#error Unsupported target
 #endif
 
 header data_h {
@@ -64,7 +68,7 @@ control ingress(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    action set1(bit<9> port) {
+    action set1(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdrs.data1.a1 = hdrs.data2.a1;
         hdrs.data1.a2 = hdrs.data2.a1;

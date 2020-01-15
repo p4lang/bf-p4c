@@ -53,10 +53,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &uses,
             new PhvInfo::DumpPhvFields(phv, uses),
             // Determine candidates for mocha PHVs.
-            Device::currentDevice() == Device::JBAY ? new CollectMochaCandidates(phv, uses) :
-                        nullptr,
-            Device::currentDevice() == Device::JBAY ? new CollectDarkCandidates(phv, uses) :
-                        nullptr,
+            Device::phvSpec().hasContainerKind(PHV::Kind::mocha)
+                ? new CollectMochaCandidates(phv, uses) : nullptr,
+            Device::phvSpec().hasContainerKind(PHV::Kind::dark)
+                ? new CollectDarkCandidates(phv, uses) : nullptr,
             // Pragmas need to be run here because the later passes may add constraints encoded as
             // pragmas to various fields after the initial pragma processing is done.
             // parse and fold PHV-related pragmas
@@ -101,7 +101,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine `ideal` live ranges for metadata fields in preparation for live range
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
-            (Device::currentDevice() == Device::JBAY && !options.disable_dark_allocation)
+            (Device::phvSpec().hasContainerKind(PHV::Kind::dark) &&
+             !options.disable_dark_allocation)
                 ? &dark_live_range : nullptr,
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.

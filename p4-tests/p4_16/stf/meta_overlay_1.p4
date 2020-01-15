@@ -33,10 +33,14 @@
  *
  **************************************************************************************************/
 
-#if __TARGET_TOFINO__ >= 2
-#include "t2na.p4"
-#else
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
+#else
+#error Unsupported target
 #endif
 
 header data_h {
@@ -85,34 +89,34 @@ control ingress(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    action set1(bit<9> port, bit<16> val) {
+    action set1(PortId_t port, bit<16> val) {
         meta.m1 = val;
         meta.m2 = 4;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set2(bit<9> port) {
+    action set2(PortId_t port) {
         meta.m3 = meta.m2;
         hdrs.data1.f1 = meta.m1;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set3(bit<9> port, bit<16> val) {
+    action set3(PortId_t port, bit<16> val) {
         hdrs.data1.f2 = val;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set4(bit<9> port, bit<16> val) {
+    action set4(PortId_t port, bit<16> val) {
         hdrs.data1.f1 = val;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set5(bit<9> port, bit<16> val) {
+    action set5(PortId_t port, bit<16> val) {
         hdrs.data1.f2 = val;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set6(bit<9> port) {
+    action set6(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdrs.data2.setValid();
         hdrs.data2.f1 = 0x1234;

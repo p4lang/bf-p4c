@@ -75,10 +75,10 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
         if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS)
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
-        if (Device::currentDevice() == Device::JBAY &&
+        if (Device::currentDevice() != Device::TOFINO &&
             stage.first.first != GHOST && stage.first.second > 0)
             out << indent << "dependency: match" << std::endl;
-        if (Device::currentDevice() == Device::JBAY &&
+        if (Device::currentDevice() != Device::TOFINO &&
             stage.first.second == maxStages[stage.first.first])
             mauasm.emit_always_init_action(out, indent, stage.first);
         for (auto &tbl : stage.second) {
@@ -1653,6 +1653,9 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     int group = (ternary || gateway) ? -1 : 0;
 #ifdef HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY && gateway) group = 0;
+#endif
+#ifdef HAVE_CLOUDBREAK
+    if (Device::currentDevice() == Device::CLOUDBREAK && gateway) group = 0;
 #endif
 
     for (auto match_group : use.match_groups) {

@@ -424,6 +424,10 @@ struct AllocateParserState : public ParserTransform {
                             constant_avail = !valid_choices.empty();
                         } else if (Device::currentDevice() == Device::JBAY) {
                             constant_avail = constant_choices.at(16) + constants_by_size[16] <= 2;
+#if HAVE_CLOUDBREAK
+                        } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+                            constant_avail = constant_choices.at(16) + constants_by_size[16] <= 2;
+#endif /* HAVE_CLOUDBREAK */
                         }
                     }
 
@@ -685,6 +689,13 @@ struct AllocateParserState : public ParserTransform {
                             masked_ranges_map[r]++;
                             return true;
                         }
+#if HAVE_CLOUDBREAK
+                    } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+                        if (masked_ranges_map[r] % 2 == 0 || r.size() % 16) {
+                            masked_ranges_map[r]++;
+                            return true;
+                        }
+#endif /* HAVE_CLOUDBREAK */
                     } else {
                         BUG("unhandled device");
                     }
@@ -866,6 +877,11 @@ struct AllocateParserState : public ParserTransform {
             } else if (Device::currentDevice() == Device::JBAY) {
                 JBayExtractAllocator jea(*this);
                 ClotAllocator cla(*this);
+#if HAVE_CLOUDBREAK
+            } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+                JBayExtractAllocator jea(*this);
+                ClotAllocator cla(*this);
+#endif /* HAVE_CLOUDBREAK */
             } else {
                 BUG("Unknown device");
             }

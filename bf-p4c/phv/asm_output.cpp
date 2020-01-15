@@ -158,6 +158,10 @@ void emit_phv_field(
         PHV::Field* field) {
     if (Device::currentDevice() == Device::JBAY) {
         emit_stage_phv_field(out, field);
+#if HAVE_CLOUDBREAK
+    } else if (Device::currentDevice() == Device::CLOUDBREAK) {
+        emit_stage_phv_field(out, field);
+#endif /* HAVE_CLOUDBREAK */
     } else if (Device::currentDevice() == Device::TOFINO) {
         field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
             emit_alloc(out, slice, field);

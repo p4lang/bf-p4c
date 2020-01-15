@@ -1891,6 +1891,10 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     if (Device::currentDevice() == Device::JBAY)
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_JBAY */
+#ifdef HAVE_CLOUDBREAK
+    if (Device::currentDevice() == Device::CLOUDBREAK)
+        const_src_min = JBAY_CONST_SRC_MIN;
+#endif /* HAVE_CLOUDBREAK */
 
     if (cont_action.convert_instr_to_bitmasked_set) {
         // Bitmasked-set must be converted to action data

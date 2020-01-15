@@ -170,7 +170,7 @@ BuildDominatorTree::strictlyDominates(const IR::MAU::Table* t1, const IR::MAU::T
     if (t2 == nullptr) {
         // TODO: Remove this device-dependent dominator tree condition. This is needed currently to
         // get over fitting issues.
-        if (Device::currentDevice() == Device::JBAY) {
+        if (Device::currentDevice() != Device::TOFINO) {
             // Figure out the dominator for the deparser.
             auto dom = getNonGatewayImmediateDominator(t2, t1->gress);
             if (!dom) return false;

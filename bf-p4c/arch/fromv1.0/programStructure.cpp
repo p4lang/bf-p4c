@@ -2455,8 +2455,18 @@ void TnaProgramStructure::loadModel() {
         include("tna.p4");
     else if (BackendOptions().arch == "t2na")
         include("t2na.p4");
+#if HAVE_CLOUDBREAK
+    else if (BackendOptions().arch == "t3na")
+        include("t3na.p4");
+#endif
+    else if (BackendOptions().arch == "t2na")
+        include("t2na.p4");
     else
-        ::error("Must specify either --arch tna or --arch t2na");
+        ::error("Must specify either --arch tna or --arch t2na"
+#if HAVE_CLOUDBREAK
+                " or --arch t3na"
+#endif
+                "");
 
     // iterate over tna declarations, find the type for intrinsic metadata
     for (auto decl : *declarations) {

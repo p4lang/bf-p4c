@@ -177,7 +177,7 @@ class CharacterizePower: public MauInspector {
    *  Device memory power numbers.
    * --------------------------------------------------------*/
   // FIXME(mea): Ideally, this would reside in a common device model.
-  double max_power_ = 0.0;  // Value for all 4 pipes.
+  double max_power_ = 1.0;  // Value for all 4 pipes.
   double excess_threshold_ = 0.0;  // additional power given with disable_power_check
   double pipes_in_use_ = 4.0;  // FIXME(mea): Revisit for different architecture variants
 
@@ -508,7 +508,7 @@ class CharacterizePower: public MauInspector {
        max_selector_words_.emplace(stage, 0);
        has_stateful_.emplace(stage, false);
        has_stats_.emplace(stage, false);
-       if (Device::currentDevice() == Device::JBAY) {
+       if (Device::currentDevice() != Device::TOFINO) {
          stage_dependency_to_previous_.emplace(stage, DEP_ACTION);
        } else {
          stage_dependency_to_previous_.emplace(stage, DEP_CONCURRENT);

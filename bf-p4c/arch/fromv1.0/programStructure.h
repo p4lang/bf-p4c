@@ -277,13 +277,14 @@ class ConvertMetadata : public Transform {
 
  public:
     explicit ConvertMetadata(TnaProgramStructure* s) : structure(s) {
+        int portWidth = Device::portBitWidth();
         // metadata to translate in ingress
         cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_parser_err", 16,
                      mkMember("ig_intr_md_from_parser_aux", "parser_err", 16));
         cvt(INGRESS, "meta.standard_metadata.egress_spec", 9,
-                     mkMember("ig_intr_md_for_tm", "ucast_egress_port", 9));
+                     mkMember("ig_intr_md_for_tm", "ucast_egress_port", portWidth));
         cvt(INGRESS, "meta.standard_metadata.ingress_port", 9,
-                     mkMember("ig_intr_md", "ingress_port", 9));
+                     mkMember("ig_intr_md", "ingress_port", portWidth));
         cvt(INGRESS, "ig_intr_md_for_tm.drop_ctl", 1,
                      mkMember("ig_intr_md_for_dprsr", "drop_ctl", 1));
         cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_global_tstamp", 48,
@@ -302,10 +303,10 @@ class ConvertMetadata : public Transform {
                     mkMember("ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
         cvt(INGRESS, "ig_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
                     mkMember("ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_egress_port", 9,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_egress_port", 9));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_egress_port", portWidth,
+                    mkMember("ig_intr_md_for_dprsr", "mirror_egress_port", portWidth));
         cvt(INGRESS, "standard_metadata.ingress_port", 9,
-                    mkMember("ig_intr_md", "ingress_port", 9));
+                    mkMember("ig_intr_md", "ingress_port", portWidth));
 
         // metadata to translate in egress
         cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_parser_err", 16,
@@ -334,12 +335,12 @@ class ConvertMetadata : public Transform {
                     mkMember("eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
         cvt(EGRESS, "eg_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
                     mkMember("eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_egress_port", 9,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_egress_port", 9));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_egress_port", portWidth,
+                    mkMember("eg_intr_md_for_dprsr", "mirror_egress_port", portWidth));
         cvt(EGRESS, "meta.standard_metadata.ingress_port", 9,
-                    mkMember("meta", "ig_intr_md", "ingress_port", 9));
+                    mkMember("meta", "ig_intr_md", "ingress_port", portWidth));
         cvt(EGRESS, "standard_metadata.ingress_port", 9,
-                     mkMember("meta", "ig_intr_md", "ingress_port", 9));
+                     mkMember("meta", "ig_intr_md", "ingress_port", portWidth));
     }
 
     // convert P4-14 metadata to P4-16 tna metadata

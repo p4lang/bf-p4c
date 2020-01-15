@@ -97,7 +97,7 @@ bool Visualization::preorder(const IR::BFN::Pipe *p) {
     pipe->emplace("phv_containers", Device::phvSpec().toJson());
 
     // Output clot info for JBAY
-    if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot)
+    if ((Device::numClots() > 0) && BackendOptions().use_clot)
         pipe->emplace("clots", gen_parsers_json->getClotsJson());
 
     return true;

@@ -176,7 +176,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
     if (delta_clot_bits != 0) {
         // This score is better if it has fewer clot bits.
         return delta_clot_bits < 0; }
-    if (Device::currentDevice() == Device::JBAY)
+    if (Device::currentDevice() != Device::TOFINO)
         if (delta_overlay_bits != 0)
             return delta_overlay_bits > 0;
     if (container_type_score != 0) {
@@ -185,7 +185,7 @@ bool AllocScore::operator>(const AllocScore& other) const {
         else if (delta_inc_containers == 0)
             return container_type_score < 0;
     }
-    if (Device::currentDevice() == Device::JBAY)
+    if (Device::currentDevice() != Device::TOFINO)
         if (delta_pov_bits_wasted != 0)
             return delta_pov_bits_wasted < 0;
     if (delta_inc_tphv_collections != 0) {
@@ -451,7 +451,7 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
         s << "inc_tphv_collections: " << score.n_inc_tphv_collections << ", ";
     if (score.parser_extractor_balance != 0)
         s << "extract balance: " << score.parser_extractor_balance << ", ";
-    if (Device::currentDevice() == Device::JBAY && score.n_pov_bits_wasted != 0)
+    if (Device::currentDevice() != Device::TOFINO && score.n_pov_bits_wasted != 0)
         s << "pov-wastage: " << score.n_pov_bits_wasted << ", ";
     if (score.n_num_bitmasked_set != 0)
         s << "bitmasked-set: " << score.n_num_bitmasked_set;
@@ -461,9 +461,9 @@ std::ostream& operator<<(std::ostream& s, const AllocScore& score) {
             continue;
         any_positive_score = true;
         s << kind << " [";
-        if (Device::currentDevice() == Device::TOFINO)
+        if (Device::phvSpec().hasContainerKind(PHV::Kind::tagalong))
             s << "tphv: " << (kind == PHV::Kind::tagalong) << ", ";
-        else if (Device::currentDevice() == Device::JBAY)
+        if (Device::numClots() > 0)
             s << "clot_bits: " << score.score.at(kind).n_clot_bits << ", ";
         s << "wasted_bits: " << score.score.at(kind).n_wasted_bits << ", ";
         s << "overlay_bits: " << score.score.at(kind).n_overlay_bits << ", ";
@@ -2573,7 +2573,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     const int N_CLUSTER_LIMITATION = 20;
     if (cluster_groups.size() > N_CLUSTER_LIMITATION) {
         return { }; }
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::currentDevice() != Device::TOFINO) {
         return { }; }
 
     std::list<PHV::SuperCluster*> allocated_sc;
@@ -2917,7 +2917,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     }
 
     // calc whether the cluster has container type pragma. Only for JBay.
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::currentDevice() != Device::TOFINO) {
         const ordered_map<const PHV::Field*, cstring> container_type_pragmas =
             core_alloc_i.pragmas().pa_container_type().getFields();
         for (auto* cluster : cluster_groups) {
@@ -3027,13 +3027,13 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
     //     return l->max_width() > r->max_width(); }
 
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
-        if (Device::currentDevice() == Device::JBAY) {
+        if (Device::currentDevice() != Device::TOFINO) {
             if (has_container_type_pragma.count(l) != has_container_type_pragma.count(r)) {
                 return has_container_type_pragma.count(l) > has_container_type_pragma.count(r); }
             if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
                 return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);
         }
-        if (Device::currentDevice() == Device::JBAY)
+        if (Device::currentDevice() != Device::TOFINO)
             if (has_pov.count(l) != has_pov.count(r))
                 return has_pov.count(l) > has_pov.count(r);
         if (has_solitary.count(l) != has_solitary.count(r)) {
@@ -3051,7 +3051,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
             if (l->slice_lists().size() != r->slice_lists().size()) {
                 return l->slice_lists().size() > r->slice_lists().size(); }
         } else {
-            if (Device::currentDevice() == Device::JBAY) {
+            if (Device::currentDevice() != Device::TOFINO) {
                 // for metadata fields, prioritize pa_container size pragmas
                 if (n_container_size_pragma.at(l) != n_container_size_pragma.at(r))
                     return n_container_size_pragma.at(l) > n_container_size_pragma.at(r);

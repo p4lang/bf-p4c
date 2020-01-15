@@ -1,7 +1,11 @@
-#if __TARGET_TOFINO__ >= 2
-#include "t2na.p4"
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
+#include <tna.p4>
 #else
-#include "tna.p4"
+#error Unsupported target
 #endif
 
 struct metadata { }
@@ -22,7 +26,12 @@ control ingress(inout headers hdr, inout metadata meta,
     RegisterAction<pair, _, bit<16>>(accum) ra_load = {
         void apply(inout pair value) {
             value.lo = hdr.data.f2[15:0];
-            value.hi = hdr.data.f2[19:16] ++ 3w0 ++ ig_intr_md.ingress_port; } };
+#if __TARGET_TOFINO__ >= 3
+            value.hi = hdr.data.f2[19:16] ++ 1w0 ++ ig_intr_md.ingress_port;
+#else
+            value.hi = hdr.data.f2[19:16] ++ 3w0 ++ ig_intr_md.ingress_port;
+#endif
+        } };
     RegisterAction<pair, _, bit<16>>(accum) ra1 = {
         void apply(inout pair value, out bit<16> rv) {
             rv = value.hi; } };

@@ -1,4 +1,10 @@
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
+#else
+#error Unsupported target
+#endif
 
 struct metadata { }
 
@@ -22,7 +28,7 @@ control ingress(inout headers hdr, inout metadata meta,
         }
     };
 
-    action push(bit<9> port) {
+    action push(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.b1 = 0xff;
         write.push();
@@ -32,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta,
         key = { hdr.data.f1: ternary; }
     }
 
-    action pop(bit<9> port) {
+    action pop(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.data.b1 = 0xfe;
         hdr.data.h1 = read.pop();

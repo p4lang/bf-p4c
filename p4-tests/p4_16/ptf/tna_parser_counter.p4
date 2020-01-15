@@ -20,10 +20,14 @@
  *
  ******************************************************************************/
 #include <core.p4>
-#if __TARGET_TOFINO__ >= 2
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
 #elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
+#else
+#error Unsupported target
 #endif
 
 header ipv6_srh_segment_t {
@@ -213,11 +217,11 @@ control IngressP(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     action NoAction_0() { }
 
-    action set_egress_port(bit<9> egress_port) {
+    action set_egress_port(PortId_t egress_port) {
         ig_intr_tm_md.ucast_egress_port = egress_port;
     }
 
-    action rewrite_ipv6_and_set_egress_port(bit<9> egress_port) {
+    action rewrite_ipv6_and_set_egress_port(PortId_t egress_port) {
         hdr.ipv6.dstAddr = hdr.active_segment.sid;
         ig_intr_tm_md.ucast_egress_port = egress_port;
     }

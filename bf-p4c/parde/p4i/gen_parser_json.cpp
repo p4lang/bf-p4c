@@ -192,7 +192,7 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
         p->states.push_back(t);
     }
 
-    if ((Device::currentDevice() == Device::JBAY) && BackendOptions().use_clot) {
+    if ((Device::numClots() > 0) && BackendOptions().use_clot) {
         for (const auto* match : state->transitions) {
             generateClotInfo(match, state, parser_ir->gress);
             // A parser state can have multiple extracts, but the clot

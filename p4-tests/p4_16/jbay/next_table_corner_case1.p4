@@ -1,7 +1,12 @@
 // Corresponds to P4C-2405 for tracking
 
-#include <core.p4>
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
+#else
+#error Unsupported target
+#endif
 
 header data_t {
     bit<32> f1;

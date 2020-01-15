@@ -46,7 +46,7 @@ def get_parser():
     parser.add_argument('--name', help='Name of P4 program under test',
                         type=str, action='store', required=True)
     parser.add_argument('--device', help='Target device',
-                        choices=['tofino', 'tofino2'], default='tofino',
+                        choices=['tofino', 'tofino2', 'tofino3'], default='tofino',
                         type=str, action='store', required=True)
     parser.add_argument('--switch-api', help='API to use for switch',
                         choices=['switchapi', 'switchsai'], default=None,
@@ -65,6 +65,8 @@ def main():
     chip = base_conf["chip_list"][0]
     if args.device == 'tofino2':
         chip["chip_family"] = 'Tofino2'
+    elif args.device == 'tofino3':
+        chip["chip_family"] = 'Tofino3'
     else:
         chip["chip_family"] = 'Tofino'
     p4_info = base_conf["p4_program_list"][0]

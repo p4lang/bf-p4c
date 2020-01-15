@@ -127,7 +127,7 @@ class TofinoPardeSpec : public PardeSpec {
 
     unsigned maxClotsPerState() const override { BUG("No CLOTs in Tofino"); }
     unsigned byteMaxClotSize() const override { BUG("No CLOTs in Tofino"); }
-    unsigned numClotsPerGress() const override { BUG("No CLOTs in Tofino"); }
+    unsigned numClotsPerGress() const override { return 0; }
 
     unsigned maxClotsLivePerGress() const override {
         BUG("No CLOTs in Tofino");

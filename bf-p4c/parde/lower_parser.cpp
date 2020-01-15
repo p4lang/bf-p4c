@@ -631,8 +631,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
             // Make sure the 2-byte egress port is included in this offset adjustment.
             egressMetaSize += 2;
 
-            // JBay requires the egress intrinsic metadata to be padded to 4-byte aligned
-            if (Device::currentDevice() == Device::JBAY) {
+            // JBay and later requires the egress intrinsic metadata to be padded to 4-byte aligned
+            if (Device::currentDevice() != Device::TOFINO) {
                 egressMetaSize = ((egressMetaSize + 3) / 4) * 4;
             }
 
@@ -719,7 +719,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             } else if (auto sub = c->to<IR::BFN::ChecksumSubtract>()) {
                 if (auto v = sub->source->to<IR::BFN::PacketRVal>()) {
                     if (mask_for_compare.find(v->range) != mask_for_compare.end()) {
-                        if (Device::currentDevice() == Device::JBAY) {
+                        if (Device::currentDevice() != Device::TOFINO) {
                             mul2 |= rangeToInt(v);
                         }
                     } else {
@@ -1644,7 +1644,7 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 input->swap = containerToSwap[source->container];
                 unitConfig->phvs.push_back(input);
             }
-        } else if (Device::currentDevice() == Device::JBAY) {
+        } else if (Device::currentDevice() != Device::TOFINO) {
             std::vector<const IR::BFN::FieldLVal*> groupPov;
             ordered_map<IR::Vector<IR::BFN::FieldLVal>*, const IR::BFN::FieldLVal*> groups;
             const IR::BFN::FieldLVal* lastPov = nullptr;
@@ -2054,7 +2054,7 @@ class ComputeMultiWriteContainers : public ParserModifier {
             if (has_non_mutex_writes(parser, w.second)) {
                 results.insert(w.first);
                 LOG4("mark " << w.first << " as " << which);
-            } else if (Device::currentDevice() == Device::JBAY) {
+            } else if (Device::currentDevice() != Device::TOFINO) {
                 // In Jbay, even and odd pair of 8-bit containers share extractor in the parser.
                 // So if both are used, we need to mark the extract as a multi write.
                 if (w.first.is(PHV::Size::b8)) {

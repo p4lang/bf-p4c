@@ -17,8 +17,10 @@ elif [ "$1" = "2" ]; then
     CTEST_ARGS="-R $TOFINO_TESTS_2 -E $TOFINO_EXCLUDE_2"
 elif [ "$1" = "3" ]; then
     CTEST_ARGS="-R $JBAY_TESTS -E $JBAY_EXCLUDE"
+elif [ "$1" = "cb" ]; then
+    CTEST_ARGS="-R ^tofino3 -E $JBAY_EXCLUDE"
 else
-    echo >&2 "usage $0 1|2|3";
+    echo >&2 "usage $0 1|2|3|cb";
     exit 1
 fi
 

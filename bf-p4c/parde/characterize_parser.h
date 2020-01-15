@@ -123,7 +123,7 @@ class CharacterizeParser : public Inspector {
             return;
 
         std::string total_extract_label = "Total Extractors";
-        if (Device::currentDevice() == Device::JBAY)
+        if (Device::currentDevice() != Device::TOFINO)
             total_extract_label += " (16-bit)";
 
         TablePrinter tp(std::clog,
@@ -148,7 +148,7 @@ class CharacterizeParser : public Inspector {
 
                     if (Device::currentDevice() == Device::TOFINO)
                         sausage = usage_8b + usage_16b + usage_32b;
-                    else if (Device::currentDevice() == Device::JBAY)
+                    else if (Device::currentDevice() != Device::TOFINO)
                         sausage = usage_8b + usage_16b + 2 * usage_32b;
 
                     if (state_label.empty())

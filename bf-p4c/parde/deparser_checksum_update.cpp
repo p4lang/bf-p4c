@@ -808,7 +808,7 @@ struct CheckNestedChecksumUpdates : public Inspector {
             ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
                           " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
 
-        } else if (Device::currentDevice() == Device::JBAY) {
+        } else if (Device::currentDevice() != Device::TOFINO) {
             P4C_UNIMPLEMENTED("Nested checksum updates is currently "
                               "unsupported by the compiler for Tofino2: %1%, %2%",
                               a->dest->field, b->dest->field);

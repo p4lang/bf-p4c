@@ -681,6 +681,14 @@ set (p4include_HEADERS
   )
 endif (ENABLE_JBAY)
 
+if (ENABLE_CLOUDBREAK)
+set (p4include_HEADERS
+  ${p4include_HEADERS}
+  p4include/tofino3.p4
+  p4include/t3na.p4
+  )
+endif (ENABLE_CLOUDBREAK)
+
 set (p4_14include_HEADERS
   p4_14include/tofino/constants.p4
   p4_14include/tofino/intrinsic_metadata.p4

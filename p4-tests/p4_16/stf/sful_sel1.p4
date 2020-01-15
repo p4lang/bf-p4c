@@ -1,7 +1,11 @@
-#if __TARGET_TOFINO__ >= 2
-#include "t2na.p4"
+#if __TARGET_TOFINO__ == 3
+#include <t3na.p4>
+#elif __TARGET_TOFINO__ == 2
+#include <t2na.p4>
+#elif __TARGET_TOFINO__ == 1
+#include <tna.p4>
 #else
-#include "tna.p4"
+#error Unsupported target
 #endif
 
 #define DATA_T_OVERRIDE
@@ -44,7 +48,7 @@ control ingress(inout headers hdr, inout metadata meta,
             value = 1w1;
         }
     };
-    action set_output(bit<9> port) {
+    action set_output(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
     action set_port_up() {

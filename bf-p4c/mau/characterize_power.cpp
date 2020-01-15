@@ -813,7 +813,7 @@ void CharacterizePower::compute_stage_dependencies(uint16_t pipe) {
                 }
                 prev_st -= 1;
             }
-            if (Device::currentDevice() == Device::JBAY && the_dep == DEP_CONCURRENT) {
+            if (Device::currentDevice() != Device::TOFINO && the_dep == DEP_CONCURRENT) {
                 the_dep = DEP_ACTION;  // JBay has no concurrent dependency
             }
             if (the_dep > stage_dependency_to_previous_.at(cur_stage)) {

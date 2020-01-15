@@ -110,7 +110,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
 
-    auto* allocateClot = Device::currentDevice() == Device::JBAY && options.use_clot ?
+    auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
         new AllocateClot(clot, phv, uses) : nullptr;
 
     addPasses({
@@ -132,7 +132,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
-        Device::currentDevice() == Device::JBAY ? new AddJBayMetadataPOV(phv) : nullptr,
+        Device::currentDevice() != Device::TOFINO ? new AddJBayMetadataPOV(phv) : nullptr,
         Device::currentDevice() == Device::TOFINO ?
             new ResetInvalidatedChecksumHeaders(phv) : nullptr,
         new CollectPhvInfo(phv),
@@ -305,7 +305,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
                               Device::numLongBranchTags() == 0 || options.disable_long_branch),
         // Call this at the end of the backend. This changes the logical stages used for PHV
         // allocation to physical stages based on actual table placement.
-        Device::currentDevice() == Device::JBAY
+        Device::currentDevice() != Device::TOFINO
             ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr
     });
     setName("Barefoot backend");

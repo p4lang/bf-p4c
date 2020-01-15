@@ -186,14 +186,10 @@ class CloudbreakDevice : public Device {
 #endif
 
  public:
-    CloudbreakDevice() : Device("Tofino2"), parde_() {}
-    Device::Device_t device_type() const override {
-        // return Device::CLOUDBREAK;
-        // FIXME -- need to update everyone who called device_type to understand CLOUDBREAK
-        // hack using JBAY for now
-        return Device::JBAY; }
+    CloudbreakDevice() : Device("Tofino3"), parde_() {}
+    Device::Device_t device_type() const override { return Device::CLOUDBREAK; }
     cstring get_name() const override { return "Tofino3"; }
-    int getNumPipes() const override { return 4; }
+    int getNumPipes() const override { return 16; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
@@ -204,7 +200,7 @@ class CloudbreakDevice : public Device {
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
     int getCloneSessionIdWidth() const override { return 8; }
     int getQueueIdWidth() const override { return 7; }
-    int getPortBitWidth() const override { return 9; }
+    int getPortBitWidth() const override { return 11; }
     int getNumMaxChannels() const override {
         return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
 

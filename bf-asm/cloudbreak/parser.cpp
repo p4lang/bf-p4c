@@ -393,8 +393,8 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
 
     regs.merge.lr1.g_start_table.table = Stage::first_table(GHOST) & 0x1ff;
     if (ghost_parser) {
-        // FIXME -- regs have changed
-        // regs.merge.lr1.tm_status_phv.phv = ghost_parser->reg.parser_id();
+        regs.merge.lr0.tm_status_phv.en = 1;
+        regs.merge.lr1.tm_status_phv.phv_pri = ghost_parser->reg.parser_id();
         regs.merge.lr1.tm_status_phv.en = 1; }
 
     if (gress == INGRESS) {

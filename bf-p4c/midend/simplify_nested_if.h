@@ -43,11 +43,9 @@ class DoSimplifyNestedIf : public Transform {
 
  public:
     explicit DoSimplifyNestedIf(SkipControlPolicy *policy) : policy(policy) {
-        int size = 0;
+        int size = 16;
         if (Device::currentDevice() == Device::TOFINO) {
             size = 8;
-        } else if (Device::currentDevice() == Device::JBAY) {
-            size = 16;
         }
         mirrorType = new std::vector<int>(size);
         resubmitType = new std::vector<int> (size);

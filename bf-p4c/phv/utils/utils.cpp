@@ -1536,7 +1536,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
 std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice& slice) {
     out << slice.container() << slice.container_slice() << "<--"
         << PHV::FieldSlice(slice.field(), slice.field_slice());
-    if (Device::currentDevice() == Device::JBAY) {
+    if (Device::currentDevice() != Device::TOFINO) {
         out << " {" << slice.getEarliestLiveness().first << slice.getEarliestLiveness().second;
         out << ", " << slice.getLatestLiveness().first << slice.getLatestLiveness().second << "}";
         if (slice.hasInitPrimitive()) out << " {" << *(slice.getInitPrimitive()) << "}";

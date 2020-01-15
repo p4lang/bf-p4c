@@ -422,13 +422,17 @@ struct ParserChecksumAllocator : public Visitor {
 
         unsigned avail = 0;
 
+        // FIXME -- should be a Device or PardeSpec feature
         if (Device::currentDevice() == Device::TOFINO) avail = 2;
         else if (Device::currentDevice() == Device::JBAY) avail = 5;
+#if HAVE_CLOUDBREAK
+        else if (Device::currentDevice() == Device::CLOUDBREAK) avail = 5;
+#endif /* HAVE_CLOUDBREAK */
 
         msg << "Ran out of checksum units on " << ::toString(gress) << " parser ("
             << avail << " available).";
 
-        if (Device::currentDevice() == Device::JBAY)
+        if (Device::numClots() > 0)
             msg << " CLOT checksums can only use unit 2-4.";
 
         ::fatal_error("%1%", msg.str());
@@ -469,7 +473,7 @@ struct ParserChecksumAllocator : public Visitor {
                 for (auto s : ds) bind(parser, s, id);
                 id++;
             }
-        } else if (Device::currentDevice() == Device::JBAY) {
+        } else if (Device::numClots() > 0) {
             std::set<unsigned> clots;
 
             unsigned id = 2;  // allocate clot checksums first
@@ -824,7 +828,7 @@ AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotI
         &checksum_info,
         collect_dead_checksums,
         elim_dead_checksums,
-        Device::currentDevice() == Device::JBAY ? insert_clot_checksums : nullptr,
+        Device::numClots() > 0 ? insert_clot_checksums : nullptr,
         LOGGING(5) ? new DumpParser("after_insert_clot_csum") : nullptr,
         &parser_info,
         &checksum_info,

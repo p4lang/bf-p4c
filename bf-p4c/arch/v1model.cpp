@@ -48,24 +48,25 @@ class LoadTargetArchitecture : public Inspector {
     }
 
     void setupMetadataRenameMap() {
+        int portWidth = Device::portBitWidth();
         structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "egress_spec", 9},
-                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+                               MetadataField{"standard_metadata", "egress_spec", portWidth},
+                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", portWidth});
 
         structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "egress_spec", 9},
-                               MetadataField{"eg_intr_md", "egress_port", 9});
+                               MetadataField{"standard_metadata", "egress_spec", portWidth},
+                               MetadataField{"eg_intr_md", "egress_port", portWidth});
 
         structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "egress_port", 9},
-                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
+                               MetadataField{"standard_metadata", "egress_port", portWidth},
+                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", portWidth});
 
         structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "egress_port", 9},
-                               MetadataField{"eg_intr_md", "egress_port", 9});
+                               MetadataField{"standard_metadata", "egress_port", portWidth},
+                               MetadataField{"eg_intr_md", "egress_port", portWidth});
 
-        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", 9},
-                               MetadataField{"ig_intr_md", "ingress_port", 9});
+        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", portWidth},
+                               MetadataField{"ig_intr_md", "ingress_port", portWidth});
 
         structure->addMetadata(EGRESS,
                                MetadataField{"standard_metadata", "packet_length", 32},
@@ -198,10 +199,12 @@ class LoadTargetArchitecture : public Inspector {
         structure->addMetadata(EGRESS,
                                MetadataField{"eg_intr_md_for_mb", "mirror_multicast_ctrl", 1},
                                MetadataField{"eg_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});
-        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_egress_port", 9},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_egress_port", 9});
-        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_egress_port", 9},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_egress_port", 9});
+        structure->addMetadata(INGRESS,
+                MetadataField{"ig_intr_md_for_mb", "mirror_egress_port", portWidth},
+                MetadataField{"ig_intr_md_for_dprsr", "mirror_egress_port", portWidth});
+        structure->addMetadata(EGRESS,
+                MetadataField{"eg_intr_md_for_mb", "mirror_egress_port", portWidth},
+                MetadataField{"eg_intr_md_for_dprsr", "mirror_egress_port", portWidth});
         structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_qid", 7},
                                MetadataField{"ig_intr_md_for_dprsr", "mirror_qid", 7});
         structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_qid", 7},
@@ -300,10 +303,16 @@ class LoadTargetArchitecture : public Inspector {
         std::vector<const char *>filenames;
         if (Device::currentDevice() == Device::TOFINO)
             filenames.push_back("tofino.p4");
-#if HAVE_JBAY || HAVE_CLOUDBREAK
-        else
+#if HAVE_JBAY
+        else if (Device::currentDevice() == Device::JBAY)
             filenames.push_back("tofino2.p4");
 #endif  // HAVE_JBAY
+#if HAVE_CLOUDBREAK
+        else if (Device::currentDevice() == Device::CLOUDBREAK)
+            filenames.push_back("tofino3.p4");
+#endif  // HAVE_CLOUDBREAK
+        else
+            BUG("Unsupported device id %s", Device::currentDevice());
         filenames.push_back("tofino/stratum.p4");
         filenames.push_back("tofino/p4_14_prim.p4");
 

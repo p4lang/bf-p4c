@@ -54,7 +54,7 @@ class GenerateParserP4iJson : public ParserInspector {
  public:
     explicit GenerateParserP4iJson(const ClotInfo& clotInfo)
         : clotInfo(clotInfo), clot_usage(2), collected(false) {
-        bool using_clots = Device::currentDevice() == Device::JBAY && BackendOptions().use_clot;
+        bool using_clots = Device::numClots() > 0 && BackendOptions().use_clot;
 
         // Once Multi Parser support is added in T2NA, clot support will have
         // ClotInfo per parser and the code below should change to use a vector
