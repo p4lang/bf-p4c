@@ -170,6 +170,8 @@ class JBayPardeSpec : public PardeSpec {
         static std::vector<MatchRegister> spec;
 
         if (spec.empty()) {
+            matchRegisters();  // make sure the match registers are created first
+
             spec = { MatchRegister("save_byte0"),
                      MatchRegister("save_byte1"),
                      MatchRegister("save_byte2"),
