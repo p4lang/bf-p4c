@@ -305,24 +305,22 @@ struct ParserChecksumAllocator : public Visitor {
                                std::vector<ordered_set<cstring>>& disjoint_sets) {
         for (auto decl : decls) {
             bool found_union = false;
-
             for (auto& ds : disjoint_sets) {
                 BUG_CHECK(!ds.empty(), "empty disjoint set?");
-
-                cstring other = *(ds.begin());
-
-                if (can_share_hw_unit(parser, decl, other)) {
+                for (auto other : ds) {
+                    if (!can_share_hw_unit(parser, decl, other)) {
+                        found_union = false;
+                        LOG3(decl << " cannot share with " << other);
+                        break;
+                     } else {
+                        found_union = true;
+                        LOG3(decl << " can share with " << other);
+                    }
+                }
+                if (found_union) {
                     ds.insert(decl);
-                    found_union = true;
-
-                    LOG3(decl << " can share with " << other);
-
-                    break;
-                } else {
-                    LOG3(decl << " cannot share with " << other);
                 }
             }
-
             if (!found_union) {
                 ordered_set<cstring> newset;
                 newset.insert(decl);
@@ -520,15 +518,12 @@ struct InsertParserClotChecksums : public PassManager {
 
             for (auto emit : deparser->emits) {
                 if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
-                   int idx = 0;
                     for (auto source : csum->sources) {
                         auto field = phv.field(source->field->field);
                         if (auto* clot = clotInfo.fully_allocated(field)) {
                             checksum_field_to_clot[field] = clot;
-                            checksum_field_to_offset[field] =
-                                      csum->source_index_to_offset.at(idx);
+                            checksum_field_to_offset[field] = source->offset;
                         }
-                       idx++;
                     }
                 }
             }

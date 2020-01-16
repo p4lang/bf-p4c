@@ -555,6 +555,9 @@ class ChecksumEntry {
     }
     FieldLVal field;
     FieldLVal povBit;
+
+    /// Corresponds to an offset of the FieldVal in the checksum list.
+    int offset;
 }
 
 /// A deparser computed checksum operation. This instructs the deparser to
@@ -563,9 +566,6 @@ class ChecksumEntry {
 class EmitChecksum : Emit {
     /// The fields from which the checksum will be computed.
     inline Vector<ChecksumEntry> sources;
-    /// source_index is the index to a FieldLVal in the vector sources defined above.
-    /// Each index corresponds to an offset of the FieldVal in the checksum list.
-    optional std::map<int, int> source_index_to_offset;
 
     // Indicate if zeros_as_ones feature is active
     bool zeros_as_ones = false;

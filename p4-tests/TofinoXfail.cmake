@@ -1370,9 +1370,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129/comp_1129.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129b/comp_1129b.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1130/comp_1130b.p4
-  ../glass/testsuite/p4_tests/alibaba/COMPILER-980/comp_980_repaired.p4
   ../glass/testsuite/p4_tests/cisco/COMPILER-393/case2277.p4
-  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
   ../glass/testsuite/p4_tests/parde/test_checksum.p4
 )
 
@@ -1650,6 +1648,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
 p4c_add_xfail_reason("tofino"

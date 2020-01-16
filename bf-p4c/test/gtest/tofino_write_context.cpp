@@ -131,7 +131,8 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
     deparser->emits.push_back(new IR::BFN::EmitChecksum(
           new IR::BFN::FieldLVal(povBit),
         { new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(field),
-                                      new IR::BFN::FieldLVal(povBit))},
+                                     new IR::BFN::FieldLVal(povBit),
+                                     field->type->width_bits())},
           new IR::BFN::ChecksumLVal(csum)));
 
     struct CheckEmitChecksum : public Inspector, TofinoWriteContext {

@@ -38,9 +38,6 @@ struct FieldListInfo {
     // place.
     std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
 
-    // Maps each field's index in the list above to its bit offset in the field list
-    std::map<int, int> fieldsToOffset;
-
     // Information regarding update conditions
     std::vector<UpdateConditionInfo*> updateConditions;
 
@@ -52,9 +49,9 @@ struct FieldListInfo {
     void add_field(const IR::Expression* field,
                    const IR::Member* povBit, int offset) {
         auto checksumEntry = new IR::BFN::ChecksumEntry(new IR::BFN::FieldLVal(field),
-                                                        new IR::BFN::FieldLVal(povBit));
+                                                        new IR::BFN::FieldLVal(povBit),
+                                                        offset);
         fields->push_back(checksumEntry);
-        fieldsToOffset[fields->size() - 1] = offset;
         return;
     }
 };
@@ -566,7 +563,6 @@ struct SubstituteUpdateChecksums : public Transform {
                        new IR::BFN::FieldLVal(listInfo->deparseUpdated),
                        *(listInfo->fields),
                        new IR::BFN::ChecksumLVal(source));
-                emitUpdatedChecksum->source_index_to_offset = listInfo->fieldsToOffset;
                 emitUpdatedChecksum->zeros_as_ones = listInfo->zerosAsOnes;
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
@@ -582,7 +578,6 @@ struct SubstituteUpdateChecksums : public Transform {
                         emit->povBit,
                         *(listInfo->fields),
                         new IR::BFN::ChecksumLVal(source));
-                emitUpdatedChecksum->source_index_to_offset = listInfo->fieldsToOffset;
                 emitUpdatedChecksum->zeros_as_ones = listInfo->zerosAsOnes;
                 emitChecksums.push_back(emitUpdatedChecksum);
             }
@@ -781,41 +776,17 @@ struct CollectFieldToState : public Inspector {
     }
 };
 
-struct CheckNestedChecksumUpdates : public Inspector {
+struct CollectNestedChecksumInfo : public Inspector {
     const IR::BFN::ParserGraph& graph;
     const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state;
     ChecksumUpdateInfoMap checksumsMap;
+    std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
     std::set<const IR::BFN::EmitChecksum*> visited;
 
-    explicit CheckNestedChecksumUpdates(const IR::BFN::ParserGraph& graph,
+    explicit CollectNestedChecksumInfo(const IR::BFN::ParserGraph& graph,
             const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state,
              ChecksumUpdateInfoMap checksumsMap) :
         graph(graph), field_to_state(field_to_state), checksumsMap(checksumsMap) { }
-
-    void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {
-        if (Device::currentDevice() == Device::TOFINO) {
-            std::stringstream hint;
-
-            hint << "Consider using checksum units in both ingress and egress deparsers";
-
-            if (BackendOptions().arch == "v1model") {
-                hint << " (@pragma calculated_field_update_location/";
-                hint << "residual_checksum_parser_update_location)";
-            }
-
-            hint << ".";
-
-            ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
-                          " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
-
-        } else if (Device::currentDevice() != Device::TOFINO) {
-            P4C_UNIMPLEMENTED("Nested checksum updates is currently "
-                              "unsupported by the compiler for Tofino2: %1%, %2%",
-                              a->dest->field, b->dest->field);
-        } else {
-            BUG("Unknown device");
-        }
-    }
 
     const IR::BFN::ParserState* find_state(const IR::Expression* a) {
         for (auto& kv : field_to_state) {
@@ -878,17 +849,18 @@ struct CheckNestedChecksumUpdates : public Inspector {
             // have mutually exclusive conditions
             for (auto s : checksum->sources) {
                 if (c->dest->field->equiv(*s->field->field)) {
-                   // Check if the conditions are mutually exclusive
-                   if (!findIfConditionsMutex(checksum, c))
-                        print_error(checksum, c);
+                    if (!findIfConditionsMutex(checksum, c)) {
+                        dest_to_nested_csum[checksum->dest->toString()].insert(c);
+                    }
                 }
             }
 
             for (auto s : c->sources) {
                 if (checksum->dest->field->equiv(*s->field->field)) {
                    // Check if conditions are mutually exclusive
-                   if (!findIfConditionsMutex(checksum, c))
-                        print_error(checksum, c);
+                    if (!findIfConditionsMutex(checksum, c)) {
+                        dest_to_nested_csum[c->dest->toString()].insert(checksum);
+                    }
                 }
             }
         }
@@ -899,6 +871,92 @@ struct CheckNestedChecksumUpdates : public Inspector {
     }
 };
 
+// In nested checksums, if fieldlist of one checksum update is subset of
+// the other checksum update , then all the fields along with the checksum update destination
+// of the former checksum can be removed from the latter.
+// Consider two checksum updates
+// a.csum.update({ x, y, z})
+// b.csum.update({x, y, z, a.csum, c, d}
+// Note that b.csum contains a nested checksum a.csum.
+// According to the above statements,
+// a.csum = ~(x + y + z) where '~' means complement
+// b.csum = ~(x + y + z + a.csum + c + d)
+// If we substitute a.csum
+// b.csum = ~(x + y + z +  ~(x + y + z) + c + d) = ~(c + d)
+// From the above equation, we see that a.csum, x, y, z has no effect on b.csum
+// This means we can safely remove the fields for a.csum from b.csum fieldlist
+// if fieldlist of a.csum are subset of b.csum fieldlist
+
+struct AbsorbNestedChecksum : public Transform {
+    ChecksumUpdateInfoMap checksumUpdateInfoMap;
+    std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
+    std::map<cstring, std::set<cstring>> dest_to_delete_entries;
+    AbsorbNestedChecksum(ChecksumUpdateInfoMap checksumUpdateInfoMap,
+         std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum) :
+       checksumUpdateInfoMap(checksumUpdateInfoMap), dest_to_nested_csum(dest_to_nested_csum) { }
+
+    void print_error(const IR::BFN::EmitChecksum* a, const IR::BFN::EmitChecksum* b) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            std::stringstream hint;
+
+            hint << "Consider using checksum units in both ingress and egress deparsers";
+
+            if (BackendOptions().arch == "v1model") {
+                hint << " (@pragma calculated_field_update_location/";
+                hint << "residual_checksum_parser_update_location)";
+            }
+
+            hint << ".";
+
+            ::fatal_error("Tofino does not support nested checksum updates in the same deparser:"
+                          " %1%, %2%\n%3%", a->dest->field, b->dest->field, hint.str());
+
+        } else if (Device::currentDevice() != Device::TOFINO) {
+            P4C_UNIMPLEMENTED("Nested checksum updates is currently "
+                              "unsupported by the compiler for Tofino2: %1%, %2%",
+                              a->dest->field, b->dest->field);
+        } else {
+            BUG("Unknown device");
+        }
+    }
+
+    const IR::Node* preorder(IR::BFN::EmitChecksum* emitChecksum) override {
+        auto parentDest = emitChecksum->dest->toString();
+        if (!dest_to_nested_csum.count(parentDest)) return emitChecksum;
+        for (auto& nestedCsum : dest_to_nested_csum.at(parentDest)) {
+            dest_to_delete_entries[parentDest].insert(nestedCsum->dest->toString());
+            for (auto source1 : nestedCsum->sources) {
+                bool match = false;
+                for (auto source2 : emitChecksum->sources) {
+                    if (source1->field->equiv(*source2->field)) {
+                        match = true;
+                        dest_to_delete_entries[parentDest].insert(
+                                               source1->field->toString());
+                        break;
+                    }
+                }
+                if (!match) {
+                    dest_to_delete_entries.erase(emitChecksum->dest->toString());
+                    // Nesting of checksum not supported/implemented
+                    print_error(emitChecksum, nestedCsum);
+                    break;
+                }
+            }
+        }
+        return emitChecksum;
+    }
+
+    const IR::Node* preorder(IR::BFN::ChecksumEntry* entry) override {
+        auto emitChecksum = findContext<IR::BFN::EmitChecksum>();
+        auto fieldString = entry->field->toString();
+        cstring dest = emitChecksum->dest->toString();
+        if (!dest_to_delete_entries.count(dest)) return entry;
+        if (dest_to_delete_entries.at(dest).count(fieldString)) {
+            return nullptr;
+        }
+        return entry;
+    }
+};
 }  // namespace
 
 namespace BFN {
@@ -942,10 +1000,13 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
         parser->apply(cfs);
 
         auto graph = cg.graphs().at(parser->to<IR::BFN::Parser>());
-        CheckNestedChecksumUpdates checkNestedChecksumUpdates(*graph, cfs.field_to_state,
+        CollectNestedChecksumInfo collectNestedChecksumInfo(*graph, cfs.field_to_state,
         checksums);
 
-        pipe->thread[gress].deparser->apply(checkNestedChecksumUpdates);
+        pipe->thread[gress].deparser->apply(collectNestedChecksumInfo);
+        AbsorbNestedChecksum absorbNestedChecksum(checksums,
+                                       collectNestedChecksumInfo.dest_to_nested_csum);
+        pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(absorbNestedChecksum);
     }
 
     return pipe;

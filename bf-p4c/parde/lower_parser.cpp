@@ -1564,12 +1564,12 @@ struct RewriteEmitClot : public DeparserModifier {
 std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
                                                       const IR::BFN::EmitChecksum* emitChecksum) {
     std::map<PHV::Container, unsigned> containerToSwap;
-    for (auto &sourceToOffset : emitChecksum->source_index_to_offset) {
-        auto* phv_field = phv.field(emitChecksum->sources[sourceToOffset.first]->field->field);
+    for (auto source : emitChecksum->sources) {
+        auto* phv_field = phv.field(source->field->field);
         PHV::FieldUse use(PHV::FieldUse::READ);
         std::vector<alloc_slice> slices = phv.get_alloc(phv_field, nullptr,
                 PHV::AllocContext::DEPARSER, &use);
-        int offset = sourceToOffset.second;
+        int offset = source->offset;
         for (auto& slice : boost::adaptors::reverse(slices)) {
             unsigned swap = 0;
             bool isResidualChecksum = false;

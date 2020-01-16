@@ -1374,12 +1374,11 @@ struct ComputeFieldAlignments : public Inspector {
 
         for (auto* emitPrimitive : deparser->emits) {
             if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
-                for (auto &sourceToOffset : checksum->source_index_to_offset) {
-                    auto f = phv.field(
-                            checksum->sources[sourceToOffset.first]->field->field);
+                for (auto source : checksum->sources) {
+                    auto f = phv.field(source->field->field);
                     if (f->metadata && f->size % 8) {
                         const auto alignment = FieldAlignment(le_bitrange(
-                                    StartLen((sourceToOffset.second + f->size), f->size)));
+                                    StartLen((source->offset + f->size), f->size)));
                         LOG3("B. Updating alignment of " << f->name << " to " << alignment);
                         f->updateAlignment(alignment);
                     }
