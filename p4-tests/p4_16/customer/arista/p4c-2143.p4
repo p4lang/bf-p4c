@@ -1,6 +1,6 @@
 #include <core.p4>
 #include <tofino.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_alias("ingress" , "Hoven.Daleville.Bufalo" , "Hoven.Basalt.Bufalo") @pa_alias("ingress" , "Hoven.Sunflower.Ralls" , "Hoven.Sunflower.Whitefish") header Sagerton {
     bit<8> Exell;

@@ -1,6 +1,6 @@
 #include <core.p4>
 #include <tofino.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 struct compiler_generated_metadata_t {
     bit<10> mirror_id;

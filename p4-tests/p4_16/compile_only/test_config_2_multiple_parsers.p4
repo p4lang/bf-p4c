@@ -1,4 +1,4 @@
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 header ethernet_t {
     bit<48> dstAddr;

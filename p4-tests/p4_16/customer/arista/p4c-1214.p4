@@ -8,7 +8,7 @@
 
 #include <core.p4>
 #include <tofino.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 // P4C-923: Issue with handling concatenation operation in instruction adjustment
 @pa_container_size("ingress", "ig_intr_md_for_tm.mcast_grp_a", 16)

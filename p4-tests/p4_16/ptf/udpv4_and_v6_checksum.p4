@@ -1,13 +1,5 @@
 #include <core.p4>
-#if __TARGET_TOFINO__ == 3
-#include <t3na.p4>
-#elif __TARGET_TOFINO__ == 2
-#include <t2na.p4>
-#elif __TARGET_TOFINO__ == 1
 #include <tna.p4>
-#else
-#error Unsupported target
-#endif
 #define ETHERTYPE_IPV4 0x800
 #define ETHERTYPE_IPV6 0x86DD
 #define next_hdr_TCP 0x06

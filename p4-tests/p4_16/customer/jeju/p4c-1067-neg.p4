@@ -1,7 +1,7 @@
 // This is a negative test to make sure there is a sensible error message
 // if a user tries to perform 128-bit arithmetic.
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 #include "util.h"
 
 #define ETHERTYPE_IPV4 0x0800

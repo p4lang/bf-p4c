@@ -1,4 +1,4 @@
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 header data_h {
   bit<32> da;

@@ -1,5 +1,5 @@
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 typedef bit<48> mac_addr_t;
 header ethernet_h {

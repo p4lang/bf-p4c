@@ -240,7 +240,7 @@ IR::BFN::TnaControl* RestoreParams::preorder(IR::BFN::TnaControl* control) {
         add_param(tnaParams, params, "ig_intr_md_for_dprsr", 4);
         add_param(tnaParams, params, "ig_intr_md_for_tm", 5);
         // Check for optional ghost_intrinsic_metadata_t for t2na arch
-        if (options.arch == "t2na") {
+        if (options.arch == "t2na" || options.arch == "t3na") {
             add_param(tnaParams, params, "gh_intr_md", 6);
         }
     } else if (control->thread == EGRESS) {

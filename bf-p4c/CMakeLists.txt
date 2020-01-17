@@ -663,6 +663,7 @@ set (BF_P4C_GRAPHS_SRCS
 
 set (p4include_HEADERS
   p4include/tofino.p4
+  p4include/tofino1arch.p4
   p4include/tna.p4
   p4include/tofino/lpf.p4
   p4include/tofino/meter.p4
@@ -677,6 +678,7 @@ if (ENABLE_JBAY)
 set (p4include_HEADERS
   ${p4include_HEADERS}
   p4include/tofino2.p4
+  p4include/tofino2arch.p4
   p4include/t2na.p4
   )
 endif (ENABLE_JBAY)
@@ -685,6 +687,7 @@ if (ENABLE_CLOUDBREAK)
 set (p4include_HEADERS
   ${p4include_HEADERS}
   p4include/tofino3.p4
+  p4include/tofino3arch.p4
   p4include/t3na.p4
   )
 endif (ENABLE_CLOUDBREAK)
@@ -889,6 +892,12 @@ add_dependencies(p4c_driver p4c-build-logs)
 install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   DESTINATION bin)
 
+if(ENABLE_CLOUDBREAK)
+  set(SED_RELEASE_FILTERS -e '')
+else()
+  set(SED_RELEASE_FILTERS -e '/\\<CLOUDBREAK_ONLY\\>/d')
+endif(ENABLE_CLOUDBREAK)
+
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
 # fix the scripts.
@@ -899,7 +908,7 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
-     ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
+    sed ${SED_RELEASE_FILTERS} ${CMAKE_CURRENT_SOURCE_DIR}/\$$h >${P4C_BINARY_DIR}/\$$h \;
   done
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E copy ${DRIVER_FILES} ${P4C_BINARY_DIR}/p4c_src

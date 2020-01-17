@@ -22,7 +22,7 @@
  ******************************************************************************/
 
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 #define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_IPV6 0x86dd

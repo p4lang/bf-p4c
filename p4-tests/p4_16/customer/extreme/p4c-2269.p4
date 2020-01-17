@@ -25,7 +25,7 @@
  ******************************************************************************/
 # 31 "/home/parallels/Downloads/p4c-2269/npb.p4"
 
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 

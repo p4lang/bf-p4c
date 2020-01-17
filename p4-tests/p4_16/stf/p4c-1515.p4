@@ -1,5 +1,5 @@
 #include <core.p4> 
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 header sample_h{
     bit<16> a;
     bit<16> b;

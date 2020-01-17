@@ -1,4 +1,4 @@
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;

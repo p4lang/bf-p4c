@@ -1,5 +1,5 @@
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 header data_h {
     bit<128>      f1;

@@ -3,7 +3,7 @@
 
 #include <core.p4>
 #include <tofino.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 

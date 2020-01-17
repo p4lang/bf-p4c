@@ -1,6 +1,6 @@
 #include <core.p4>
 #include <tofino.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 header bridged_header_t {
     bit<8>  bridged_metadata_indicator;

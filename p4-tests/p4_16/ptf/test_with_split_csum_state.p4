@@ -1,5 +1,5 @@
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 #define IP_PROTOCOLS_TCP    6
 #define IP_PROTOCOLS_UDP    17

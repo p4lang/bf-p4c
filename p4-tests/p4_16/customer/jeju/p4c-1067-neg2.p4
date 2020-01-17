@@ -2,7 +2,7 @@
 // if a user tries to perform 64-bit arithmetic with conflicting
 // allocation constraints.
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 #include "util.h"
 
 #define ETHERTYPE_IPV4 0x0800

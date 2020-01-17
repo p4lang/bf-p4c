@@ -1,6 +1,6 @@
 
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 
 action nop() {}

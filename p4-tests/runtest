@@ -178,6 +178,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -dbas          run bfas under gdb"
         echo >&2 "   -gdb           run p4c-barefoot under gdb"
         echo >&2 "   -tofino2       target tofino2 -- deprecate"
+        echo >&2 "   -tofino3       target tofino3 -- deprecate"
         echo >&2 "   -nop4info      not generate p4info"
         echo >&2 "   -bfrt          generate the BF-RT JSON"
         echo >&2 "   -profile       switch-16 profile"
@@ -403,18 +404,18 @@ fi
 if $run_ptf || $run_stf2ptf; then
     # --p4runtime-force-std is required for TNA programs for which we run PTF
     # tests
-    if [ $arch = "tna" ] || [ $arch = "t2na" ]; then
+    if [ $arch = "tna" ] || [ $arch = "t2na" ] || [ $arch = "t3na" ]; then
         P4C_ARGS+=(--p4runtime-force-std)
     fi
-    if [ ${device} = "tofino2" ]; then
+    if [ ${device} = "tofino2" ] || [ ${device} = "tofino3" ]; then
         P4C_ARGS+=(-DCPU_PORT=0 -Xassembler='--pipe0')
     else
         P4C_ARGS+=(-DCPU_PORT=320 -Xassembler='--pipe0')
     fi
     BASE_IF_INDEX=0
     NUM_IFACES=8
-    # Default ports for Tofino2 have offset 8
-    if [ ${device} = "tofino2" ]; then
+    # Default ports for Tofino2/3 have offset 8
+    if [ ${device} = "tofino2" ] || [ ${device} = "tofino3" ]; then
         BASE_IF_INDEX=8
     fi
     for ifaceIdx in $(seq $BASE_IF_INDEX $(($BASE_IF_INDEX+$NUM_IFACES-1))); do
@@ -724,6 +725,9 @@ if $run_pd ; then
 
     if [ $name == switch ]; then
         if [ $device == tofino2 ]; then
+            p4builddir="$(dirname $0)/p4_14/switch-jbay"
+        elif [ $device == tofino3 ]; then
+            # will we need a different switch for cloudbreak?  for now use switch-jbay
             p4builddir="$(dirname $0)/p4_14/switch-jbay"
         else
             if [[ "$file" == *8.7* ]]; then

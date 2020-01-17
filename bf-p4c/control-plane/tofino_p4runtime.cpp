@@ -2035,6 +2035,7 @@ void generateP4Runtime(const IR::P4Program* program,
     // both TNA and T2NA.
     p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
     p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t3na", new TofinoArchHandlerBuilder());
 
     auto arch = P4::P4RuntimeSerializer::resolveArch(options);
 
@@ -2042,7 +2043,7 @@ void generateP4Runtime(const IR::P4Program* program,
         std::cout << "Generating P4Runtime output for architecture " << arch << std::endl;
 
 
-    if (options.p4RuntimeForceStdExterns && (arch != "tna" && arch != "t2na")) {
+    if (options.p4RuntimeForceStdExterns && (arch != "tna" && arch != "t2na" && arch != "t3na")) {
         ::error("--p4runtime-force-std-externs can only be used with "
                 "Tofino-specific architectures, such as 'tna'");
         return;

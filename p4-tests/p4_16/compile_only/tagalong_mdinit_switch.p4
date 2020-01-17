@@ -24,7 +24,7 @@
  ******************************************************************************/
 
 #include <core.p4>
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
 
 # 1 "/mnt/p4c/extensions/p4_tests/p4_16/switch_16/p4src/switch-tofino/features.p4" 1
 /*******************************************************************************
