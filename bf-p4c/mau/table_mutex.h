@@ -3,6 +3,7 @@
 
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
+#include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
 
@@ -35,7 +36,9 @@ class IgnoreTableDeps : public MauInspector {
     safe_vector<TablePair> pairwise_deps_to_ignore() const;
 };
 
-/** In order for tables to be considered mutually exclusive, the following premise can be
+/** Provides an analysis for determining whether tables are mutually exclusive.
+ *
+ *  In order for tables to be considered mutually exclusive, the following premise can be
  *  considered as two tables that will never run on the same packet.  This will only
  *  happen if two tables are in separate TableSeqs that can never be accessed together,
  *  such as:
@@ -67,35 +70,54 @@ class IgnoreTableDeps : public MauInspector {
  */
 
 class TablesMutuallyExclusive : public MauInspector {
-    std::map<const IR::MAU::Table *, int>    table_ids;
-    std::map<int, const IR::MAU::Table *>    rev_table_ids;
-    std::map<const IR::MAU::Table *, bitvec> table_succ;
-    SymBitMatrix                        mutex;
-    SymBitMatrix                        action_mutex;
+    ordered_map<const IR::MAU::Table *, int>    table_ids;
+    std::map<int, const IR::MAU::Table *>       rev_table_ids;
+
+ public:
+    // public for gtests
+    std::map<cstring, const IR::MAU::Table *> name_to_tables;
+
+ private:
+    /// This is the reflexive, transitive closure of the relation in which each table T is related
+    /// to all tables appearing in T's next-tables map. Each table is mapped to all of its related
+    /// tables, represented by a bitvec keyed on table IDs.
+    ordered_map<const IR::MAU::Table *, bitvec> table_succ;
+
+    /// The computed non-mutual-exclusion relation. This is a matrix keyed on table IDs. A value of
+    /// 1 indicates that the corresponding tables are not mutually exclusive in the program's
+    /// control flow. A value of 0 indicates mutual exclusion.
+    SymBitMatrix                                non_mutex;
+
+    /// The computed table-action mutual-exclusion relation. This is a matrix keyed on table IDs. A
+    /// value of 1 indicates that at most one of the corresponding tables will execute a non-no-op
+    /// action.
+    SymBitMatrix                                action_mutex;
 
     void postorder(const IR::MAU::Table *tbl) override;
-    void postorder(const IR::BFN::Pipe *pipe) override;
+    void postorder(const IR::MAU::TableSeq *seq) override;
+    bool miss_mutex_action_chain(const IR::MAU::Table *tbl, const IR::MAU::Action *default_act,
+        cstring &name);
+
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         table_ids.clear();
         rev_table_ids.clear();
-        table_succ.clear();
-        mutex.clear();
+        non_mutex.clear();
         action_mutex.clear();
         name_to_tables.clear();
+
+        // Populate auxiliary data structures.
         forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
             assert(!table_ids.count(t));
             rev_table_ids.emplace(table_ids.size(), t);
             table_ids.emplace(t, table_ids.size());
             name_to_tables.emplace(t->externalName(), t); });
-        return rv; }
+        return rv;
+    }
 
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
-
-    // public for gtests
-    std::map<cstring, const IR::MAU::Table *> name_to_tables;
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {

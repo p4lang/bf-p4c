@@ -67,38 +67,52 @@ safe_vector<IgnoreTableDeps::TablePair> IgnoreTableDeps::pairwise_deps_to_ignore
     return rv;
 }
 
-
-void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
-    // FIXME: Doesn't take into account gateways and match tables merging after table placement
-    BUG_CHECK(table_ids.count(tbl), "Table found in postorder not visited in preorder?");
-    table_succ[tbl][table_ids[tbl]] = true;
-    safe_vector<bitvec> sets;
+bool TablesMutuallyExclusive::miss_mutex_action_chain(const IR::MAU::Table *tbl,
+         const IR::MAU::Action *default_act, cstring &name) {
+    ordered_set<cstring> non_def_act_chains;
     for (auto &n : tbl->next) {
-        /* find the tables reachable via each next_table chain */
-        if (!n.second) continue;
-        bitvec succ;
-        for (auto t : n.second->tables) {
+        if (default_act->name.originalName == n.first) {
+            name = n.first;
+            return true;
+        } else if (n.first[0] != '$') {
+            non_def_act_chains.insert(n.first);
+        }
+    }
+
+    if (non_def_act_chains.size() != tbl->actions.size() - 1)
+        return false;
+    if (tbl->has_default_path())
+        name = "$default";
+    return true;
+}
+
+/**
+ * The functionality of this algorithm:
+ *     - All Tables in a TableSeq are not mutually exclusive with each other
+ *     - The successors of these tables are also not mutually exclusive with each other
+ *     - A table is not mutually exclusive with any of its successors
+ *
+ * The reverse of the non-mutex graph is the mutual exclusion
+ */
+void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
+    // Compute the table_succ entry for this table.
+    bitvec succ;
+    for (auto n : Values(tbl->next)) {
+        for (auto t : n->tables) {
             succ |= table_succ[t];
         }
-        table_succ[tbl] |= succ;
-        /* find tables reachable via two or more next chains */
-        sets.push_back(succ);
     }
+    succ.setbit(table_ids.at(tbl));
+    table_succ[tbl] = succ;
 
-    /**
-     * Each table that appears on a next table chain is mutually exclusive from any table
-     * that appears on a different next table chain
-     */
-    for (auto set1 : sets) {
-        for (auto set2 : sets) {
-            auto common = set1 & set2;
-            for (auto t : set1 - common) {
-                mutex[t] |= set2 - common;
-            }
-        }
-    }
+    // Update the non_mutex entry for this table to account for the successors we just computed.
+    non_mutex[table_ids.at(tbl)] |= succ;
 
+    // The rest of this method computes action_mutex, which detects whether two tables that are not
+    // mutually exclusive in total can share an ActionProfile.  Honestly this should be updated in
+    // a different pull request to be for all indirect stateful tables
     bool miss_mutex = false;
+    const IR::MAU::Action *default_act = nullptr;
     if (!tbl->gateway_only()) {
         // Need to ensure that default action is constant
         int allowed_defaults = 0;
@@ -112,6 +126,7 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
             // Ensure that the miss action is a noop
             if (act->action.size() == 0 && allowed_defaults == 1) {
                 miss_mutex = true;
+                default_act = act;
             }
         }
     }
@@ -119,42 +134,57 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     if (!miss_mutex)
         return;
 
+    cstring next_chain_name;
+    if (tbl->action_chain() && !miss_mutex_action_chain(tbl, default_act, next_chain_name))
+        return;
+
     // Specific miss case to be handled here:
+    bitvec tables_not_on_miss;
+    bitvec tables_on_miss;
     for (auto &n : tbl->next) {
-        if (n.first != "$miss") continue;
-        bitvec succ;
-        for (auto t : n.second->tables) {
-            succ |= table_succ[t];
+        if (n.first == "$miss" || n.first == next_chain_name) {
+            for (auto t : n.second->tables)
+                tables_on_miss |= table_succ[t];
+        } else {
+            for (auto t : n.second->tables)
+                tables_not_on_miss |= table_succ[t];
         }
-        action_mutex[table_ids[tbl]] |= succ;
     }
+    action_mutex[table_ids[tbl]] |= tables_on_miss - tables_not_on_miss;
 }
 
-void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
-    /* ingress, ghost and egress are assumed mutually exclusive */
-    safe_vector<bitvec> sets;
-    for (auto th : pipe->thread)
-        if (th.mau) {
-            bitvec set;
-            for (auto t : th.mau->tables)
-                set |= table_succ[t];
-            sets.push_back(set); }
-    if (pipe->ghost_thread) {
-        bitvec set;
-        for (auto t : pipe->ghost_thread->tables)
-            set |= table_succ[t];
-        sets.push_back(set); }
-    for (auto &set : sets)
-        for (auto t : set)
-            for (auto &other : sets)
-                if (&set != &other)
-                    mutex[t] |= other;
+void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
+    // Update non_mutex to account for join points in the control flow. For example,
+    //
+    //   switch (t1.apply().action_run) {
+    //     a1: { t2.apply(); }
+    //     a2: { t3.apply(); }
+    //   }
+    //   t4.apply();
+    //
+    // is represented by
+    //
+    //   [ t1  t4 ]
+    //    /  \
+    // [t2]  [t3]
+    //
+    // Here, we ensure that t4 is marked as not mutually exclusive with all of t1's table_succ
+    // entries.
+    for (size_t i = 0; i < seq->tables.size(); i++) {
+        auto i_tbl = seq->tables.at(i);
+
+        for (size_t j = i+1; j < seq->tables.size(); j++) {
+            auto j_tbl = seq->tables.at(j);
+            for (auto i_id : table_succ[i_tbl])
+                non_mutex[i_id] |= table_succ[j_tbl];
+        }
+    }
 }
 
 bool TablesMutuallyExclusive::operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
     BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
     BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
-    return mutex(table_ids.at(a), table_ids.at(b));
+    return !non_mutex(table_ids.at(a), table_ids.at(b));
 }
 
 bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
@@ -162,6 +192,7 @@ bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Tab
     BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return action_mutex(table_ids.at(a), table_ids.at(b));
 }
+
 
 bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::Action *) {
     return false;

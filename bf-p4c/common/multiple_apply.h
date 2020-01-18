@@ -97,4 +97,31 @@ class MultipleApply : public PassManager {
 
     MultipleApply();
 };
+
+class MultipleApply2 : public PassManager {
+    ordered_map<const IR::P4Table *, const IR::MAU::Table *> conversion_check;
+    ordered_set<const IR::MAU::Table *> replacements;
+
+    class VerifyStaticNextTable : public MauInspector {
+        MultipleApply2 &self;
+        void postorder(const IR::MAU::Table *) override;
+
+     public:
+        explicit VerifyStaticNextTable(MultipleApply2 &s) : self(s) { }
+    };
+
+
+    class ReplaceTable : public MauTransform {
+        MultipleApply2 &self;
+        const IR::Node *preorder(IR::MAU::Table *) override;
+
+     public:
+        explicit ReplaceTable(MultipleApply2 &s) : self(s) { }
+    };
+
+ public:
+    MultipleApply2();
+};
+
+
 #endif /* BF_P4C_COMMON_MULTIPLE_APPLY_H_ */

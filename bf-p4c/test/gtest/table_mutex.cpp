@@ -416,4 +416,378 @@ TEST_F(TableMutexTest, MultiLevelNextTableChain) {
     EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
 }
 
+TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t0 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; a2; a3; }
+    }
+
+    table t1_0 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; a2; a3; }
+    }
+
+    table t1_1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; a2; a3; }
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    table t5 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t6 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    apply {
+        if (t0.apply().hit) {
+            switch(t1_0.apply().action_run) {
+                a1 : { t2.apply(); }
+                a2 : { t3.apply(); }
+                a3 : { t4.apply(); } 
+            }
+        } else {
+            switch(t1_1.apply().action_run) {
+                a1 : { t2.apply(); t3.apply(); }
+                a2 : { t3.apply(); t4.apply(); }
+                a3 : { t4.apply(); t5.apply(); }
+            }
+        }
+        t6.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply2 ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t4")));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t5")));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t5")));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1_0"), names.at("igrs.t2")));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t6")));
+    EXPECT_FALSE(mutex(names.at("igrs.t5"), names.at("igrs.t6")));
+}
+
+TEST_F(TableMutexTest, ActionViaMissTest) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    apply {
+        if (t1.apply().miss) {
+            t2.apply();
+            t3.apply();
+        } 
+        t4.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
+}
+
+TEST_F(TableMutexTest, ActionViaHitTest) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    apply {
+        if (t1.apply().hit) {
+        } else {
+            t2.apply();
+            t3.apply();
+        } 
+        t4.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
+}
+
+TEST_F(TableMutexTest, ActionViaMultiChain) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    apply {
+        if (t1.apply().hit) {
+            t3.apply();
+        } else {
+            t2.apply();
+            t3.apply();
+        }
+        t4.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
+}
+
+TEST_F(TableMutexTest, ActionViaActionChain) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    apply {
+        switch (t1.apply().action_run) {
+            nop : { t2.apply(); t3.apply(); }
+            default : { }
+        } 
+        t4.apply();
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
+}
+
+TEST_F(TableMutexTest, ActionViaActionChainDefault) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { headers.h1.f2 = headers.h1.f1; }
+    action a3() { headers.h1.f3 = headers.h1.f1; }
+
+    table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t3 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t4 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    table t5 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+    table t6 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; a3; }
+        const default_action = nop;
+    }
+
+    table t7 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; }
+    }
+
+    table t8 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a2; }
+    }
+
+    table t9 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a3; }
+    }
+
+
+    apply {
+        switch (t1.apply().action_run) {
+            a1 : { t4.apply(); }
+            a2 : { t4.apply(); }
+            a3 : {}
+            default : { t2.apply(); t3.apply(); }
+        } 
+        t5.apply();
+
+        switch (t6.apply().action_run) {
+            a1 : { t9.apply(); }
+            a2 : { t9.apply(); }
+            default : { t7.apply(); t8.apply(); }
+        } 
+        
+    }
+    )"));
+
+    ASSERT_TRUE(test);
+    MultipleApply ma;
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(ma);
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_TRUE(mutex.action(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t5")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t6"), names.at("igrs.t7")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t6"), names.at("igrs.t8")));
+    EXPECT_FALSE(mutex.action(names.at("igrs.t6"), names.at("igrs.t9")));
+}
 }  // namespace Test

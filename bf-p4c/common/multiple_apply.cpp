@@ -273,3 +273,59 @@ MultipleApply::MultipleApply() {
         new DefaultNext(true),
     });
 }
+
+void MultipleApply2::VerifyStaticNextTable::postorder(const IR::MAU::Table *tbl) {
+    if (self.conversion_check.count(tbl->match_table) == 0) {
+        self.conversion_check[tbl->match_table] = tbl;
+        return;
+    }
+
+    self.replacements.insert(tbl);
+    auto comp_tbl = self.conversion_check.at(tbl->match_table);
+
+    for (auto n : comp_tbl->next) {
+        if (tbl->next.count(n.first) == 0) {
+            ::error("Table %1% next table chains are incompatible for %2% chain",
+                    tbl->externalName(), n.first);
+            return;
+        }
+     }
+
+    for (auto n : tbl->next) {
+        if (comp_tbl->next.count(n.first) == 0) {
+            ::error("Table %1% next table chains are incompatible for %2% chain",
+                    tbl->externalName(), n.first);
+            return;
+        }
+        auto comp_seq = comp_tbl->next.at(n.first);
+        if (comp_seq->size() != n.second->size()) {
+            ::error("Table %1% next table chains are incompatible for %2% chain",
+                    tbl->externalName(), n.first);
+            return;
+        }
+        for (size_t i = 0; i < n.second->size(); i++) {
+            auto i_tbl = n.second->tables.at(i);
+            auto j_tbl = comp_seq->tables.at(i);
+            if (i_tbl->match_table != j_tbl->match_table)
+                ::error("Table %1% next table chains are incompatible for %2% chain, differing "
+                        "at position %3% in tables %4% and %5%", tbl->externalName(), n.first,
+                        i, i_tbl->externalName(), j_tbl->externalName());
+        }
+    }
+}
+
+const IR::Node *MultipleApply2::ReplaceTable::preorder(IR::MAU::Table *tbl) {
+    auto orig_tbl = getOriginal<IR::MAU::Table>();
+    if (self.replacements.count(orig_tbl) == 0)
+        return tbl;
+    auto orig_p4_tbl = orig_tbl->match_table;
+    return self.conversion_check.at(orig_p4_tbl);
+}
+
+MultipleApply2::MultipleApply2() {
+    addPasses({
+        new VerifyStaticNextTable(*this),
+        new ReplaceTable(*this)
+    });
+}
+
