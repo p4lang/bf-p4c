@@ -415,6 +415,14 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-top-level-assignments-bmv2.p4
 )
 
+# unsupported p4c tests
+p4c_add_xfail_reason("tofino"
+  "Invalid select case expression"
+  testdata/p4_16_samples/issue-2123.p4
+  testdata/p4_16_samples/issue-2123-2-bmv2.p4
+  testdata/p4_16_samples/issue-2123-3-bmv2.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
@@ -841,7 +849,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "invalid slice on slice"
+  "PHV allocation was not successful"
   testdata/p4_16_samples/strength3.p4
 )
 
