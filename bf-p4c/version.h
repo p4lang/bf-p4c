@@ -18,6 +18,6 @@ agreement with Barefoot Networks, Inc.
 #ifndef EXTENSIONS_BF_P4C_VERSION_H_
 #define EXTENSIONS_BF_P4C_VERSION_H_
 
-#define BF_P4C_VERSION "9.1.0"
+#define BF_P4C_VERSION "9.2.0"
 
 #endif  // EXTENSIONS_BF_P4C_VERSION_H_
