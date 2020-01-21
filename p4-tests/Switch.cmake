@@ -117,9 +117,9 @@ set_tests_properties("tofino/smoketest_switch_16_compile_x1_profile" PROPERTIES 
 set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 4500)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 4500)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 4500)
 
 # Switch master MSDC_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_msdc" ${SWITCH_P4}

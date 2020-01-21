@@ -248,13 +248,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error occured while the compiler was allocating parser match registers for|Ran out of parser match registers for"
-  switch_generic_int_leaf
-  switch_l3_heavy_int_leaf
-  switch_msdc_leaf_int
-)
-
 # P4C-1400, P4C-1123
 p4c_add_xfail_reason("tofino"
   "error: constant value.*too large for stateful alu"

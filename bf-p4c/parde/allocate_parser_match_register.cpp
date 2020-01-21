@@ -141,6 +141,20 @@ bool equiv(const std::vector<std::pair<MatchRegister, nw_bitrange>>& a,
 
 typedef std::map<const IR::BFN::Transition*, const IR::BFN::ParserState*> DefSet;
 
+struct AllocationResult {
+    // The saves need to be executed on this transition.
+    std::map<const IR::BFN::Transition*,
+             std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
+
+    // Registers to scratches on this transition.
+    std::map<const IR::BFN::Transition*,
+             std::set<MatchRegister>> transition_scratches;
+
+    // The register slices that this select should match against.
+    std::map<const Use*,
+             std::vector<std::pair<MatchRegister, nw_bitrange>>> save_reg_slices;
+};
+
 /// This is the match register allocation. We implements a greedy
 /// graph coloring algorthim where two select's interfere if their
 /// live range overlap.
@@ -154,17 +168,7 @@ class MatcherAllocator : public Visitor {
         parser_info(pi), parser_use_def(parser_use_def) { }
 
  public:
-    // The saves need to be executed on this transition.
-    std::map<const IR::BFN::Transition*,
-             std::vector<const IR::BFN::SaveToRegister*>> transition_saves;
-
-    // Registers to scratches on this transition.
-    std::map<const IR::BFN::Transition*,
-             std::set<MatchRegister>> transition_scratches;
-
-    // The register slices that this select should match against.
-    std::map<const Use*,
-             std::vector<std::pair<MatchRegister, nw_bitrange>>> save_reg_slices;
+    AllocationResult result;
 
  private:
     /// Represents a group of select fields that can be coalesced into
@@ -853,7 +857,7 @@ class MatcherAllocator : public Visitor {
                 auto save = new IR::BFN::SaveToRegister(reg, reg_range);
 
                 bool saved = false;
-                for (auto s : transition_saves[transition]) {
+                for (auto s : result.transition_saves[transition]) {
                     if (save->equiv(*s)) {
                         saved = true;
                         break;
@@ -861,10 +865,10 @@ class MatcherAllocator : public Visitor {
                 }
 
                 if (!saved)
-                    transition_saves[transition].push_back(save);
+                    result.transition_saves[transition].push_back(save);
 
                 if (scratch)
-                    transition_scratches[transition].insert(reg);
+                    result.transition_scratches[transition].insert(reg);
 
                 bytes += reg.size;
             }
@@ -877,13 +881,13 @@ class MatcherAllocator : public Visitor {
         for (auto use : group->members) {
             auto reg_slices = group->calc_reg_slices_for_use(use, alloc_regs);
 
-            if (save_reg_slices.count(use)) {
-                bool eq = equiv(save_reg_slices.at(use), reg_slices);
+            if (result.save_reg_slices.count(use)) {
+                bool eq = equiv(result.save_reg_slices.at(use), reg_slices);
 
                 BUG_CHECK(eq, "select has different allocations based on the use context: %1%",
                           use->print());
             } else {
-                save_reg_slices[use] = reg_slices;
+                result.save_reg_slices[use] = reg_slices;
             }
         }
     }
@@ -907,7 +911,7 @@ class MatcherAllocator : public Visitor {
         }
     }
 
-    void allocate_group(const IR::BFN::Parser* parser, const UseGroup* group,
+    bool allocate_group(const IR::BFN::Parser* parser, const UseGroup* group,
                         Allocation& allocation) {
         bool success = false;
 
@@ -936,8 +940,7 @@ class MatcherAllocator : public Visitor {
 
         LOG3("<<<<<<<<<<<<<<<<");
 
-        if (!success)
-            fail(group);
+        return success;
     }
 
     /// This is the core allocation routine. The basic idea to use two select
@@ -946,6 +949,32 @@ class MatcherAllocator : public Visitor {
     void allocate_all(const IR::BFN::Parser* parser, const UseDef& use_def) {
         auto coalesced_groups = coalesce_uses(parser, use_def);
 
+        auto saved_result = result;  // save result
+
+        LOG3("try allocating top down:");
+        auto top_down_unalloc = try_allocate_all(parser, coalesced_groups);
+
+        if (!top_down_unalloc) {
+            LOG3("top down allocation successful!");
+            return;
+        }
+
+        result = saved_result;  // rollback
+
+        LOG3("try allocating bottom up:");
+        std::reverse(coalesced_groups.begin(), coalesced_groups.end());
+        auto bottom_up_unalloc = try_allocate_all(parser, coalesced_groups);
+
+        if (!bottom_up_unalloc) {
+            LOG3("bottom up allocation successful!");
+            return;
+        }
+
+        fail(top_down_unalloc);
+    }
+
+    const UseGroup* try_allocate_all(const IR::BFN::Parser* parser,
+                                     const std::vector<const UseGroup*>& coalesced_groups) {
         Allocation allocation;
 
         for (auto group : coalesced_groups) {
@@ -953,14 +982,16 @@ class MatcherAllocator : public Visitor {
                 if (allocation.group_to_alloc_regs.count(group))
                     continue;
 
-                allocate_group(parser, group, allocation);
+                if (!allocate_group(parser, group, allocation))
+                    return group;
 
                 if (Device::pardeSpec().scratchRegisters().empty()) {
                     for (auto other : coalesced_groups) {
                         if (!allocation.group_to_alloc_regs.count(other)) {
                             if (group->have_subset_defs(other) ||
                                 other->have_subset_defs(group)) {
-                                allocate_group(parser, other, allocation);
+                                if (!allocate_group(parser, other, allocation))
+                                    return other;
                             }
                         }
                     }
@@ -972,13 +1003,14 @@ class MatcherAllocator : public Visitor {
                 BUG("%1%", ss.str());
             }
         }
+
+        return nullptr;
     }
 };
 
 /// Insert match register read/write instruction in the IR
 struct InsertSaveAndSelect : public ParserModifier {
-    explicit InsertSaveAndSelect(const MatcherAllocator& saves)
-        : rst(saves) { }
+    explicit InsertSaveAndSelect(const AllocationResult& result) : rst(result) { }
 
     void postorder(IR::BFN::Transition* transition) override {
         auto original_transition = getOriginal<IR::BFN::Transition>();
@@ -1011,7 +1043,7 @@ struct InsertSaveAndSelect : public ParserModifier {
         BUG("Parser match register not allocated for %1%", select->p4Source);
     }
 
-    const MatcherAllocator& rst;
+    const AllocationResult& rst;
 };
 
 /// Adjust the match constant according to the select field's
@@ -1293,7 +1325,7 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         parserInfo,
         collectUseDef,
         allocator,
-        new InsertSaveAndSelect(*allocator),
+        new InsertSaveAndSelect(allocator->result),
         new AdjustMatchValue,
         new RemoveEmptyStartState,
         new RemoveEmptyStallState,

@@ -226,6 +226,15 @@ struct CollectParserUseDef : PassManager {
             return ParserInspector::init_apply(root);
         }
 
+        void add_def(ordered_set<Parser::Def*>& rv,
+                     const IR::BFN::ParserState* state,
+                     const IR::BFN::InputBufferRVal* rval) {
+            if (rval->range.lo >= 0) {
+                auto def = new Parser::Def(state, rval);
+                rv.insert(def);
+            }
+        }
+
         // defs have absolute offsets from current state
         ordered_set<Parser::Def*>
         find_defs(const IR::BFN::InputBufferRVal* rval,
@@ -251,8 +260,7 @@ struct CollectParserUseDef : PassManager {
 
                 return rv;
             } else if (rval->range.lo >= 0) {  // def is in this state
-                auto def = new Parser::Def(state, rval);
-                rv.insert(def);
+                add_def(rv, state, rval);
             }
 
             return rv;
@@ -277,8 +285,7 @@ struct CollectParserUseDef : PassManager {
 
                             if (f == s) {
                                 if (s_bits.size() == f_bits.size()) {
-                                    auto def = new Parser::Def(def_state, rval);
-                                    rv.insert(def);
+                                    add_def(rv, def_state, rval);
                                 } else {
                                     auto nw_f_bits = f_bits.toOrder<Endian::Network>(f->size);
                                     auto nw_s_bits = s_bits.toOrder<Endian::Network>(s->size);
@@ -291,8 +298,7 @@ struct CollectParserUseDef : PassManager {
                                     slice_rval->range.lo += nw_s_bits.lo;
                                     slice_rval->range.hi -= s->size - nw_s_bits.hi + 1;
 
-                                    auto def = new Parser::Def(def_state, slice_rval);
-                                    rv.insert(def);
+                                    add_def(rv, def_state, slice_rval);
                                 }
                             }
                         }
