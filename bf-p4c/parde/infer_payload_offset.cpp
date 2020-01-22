@@ -223,87 +223,16 @@ class FindParsingFrontier : public ParserInspector {
         return frontier;
     }
 
-    // See if we can absorb the transitions in cutset to their destination states.
-    // s is a frontier state, if cutset ends at s == all incoming transitions of s.
-    // Otherwise, need to insert frontier state on all cutset ends at s.
-    Frontier
-    compute_frontier_by_push_down(const IR::BFN::ParserGraph& graph, const CutSet& cutset) {
-        Frontier frontier;
-
-        auto cutset_dsts = cutset.get_all_dsts();
-
-        for (auto s : cutset_dsts) {
-            bool is_frontier = false;
-
-            if (cutset.get_srcs_for(s) == graph.predecessors().at(s))
-                is_frontier = true;
-
-            if (is_frontier) {
-                frontier.states.insert(s);
-            } else {
-                if (cutset.transitions.count(s))
-                    frontier.cutset.transitions[s] = cutset.transitions.at(s);
-
-                if (cutset.transitions_to_pipe.count(s))
-                    frontier.cutset.transitions_to_pipe.insert(s);
-            }
-        }
-
-        return frontier;
-    }
-
-    // Given the the frontier solutions computed by "push-up" and "push-down" (see above).
-    // We try to reconcile the two solutions such that if a transition is aborbed into
-    // its originating/destination state, we can eliminate the transition from the final
-    // solution.
-    Frontier
-    reconcile_push_up_and_push_down(const Frontier& push_up, const Frontier& push_down) {
-        Frontier frontier;
-
-        for (auto s : push_up.states)
-            frontier.states.insert(s);
-
-        for (auto s : push_down.states)
-            frontier.states.insert(s);
-
-        for (auto& kv : push_up.cutset.transitions) {
-            for (auto s : kv.second) {
-                if (!frontier.states.count(s))
-                    frontier.cutset.transitions[kv.first].insert(s);
-            }
-        }
-
-        for (auto s : push_up.cutset.transitions_to_pipe) {
-            if (!frontier.states.count(s)) {
-                frontier.cutset.transitions_to_pipe.insert(s);
-            }
-        }
-
-        for (auto& kv : push_down.cutset.transitions) {
-            if (!frontier.cutset.transitions.count(kv.first)) {
-                for (auto s : kv.second)
-                    frontier.cutset.transitions[kv.first].insert(s);
-            }
-        }
-
-        return frontier;
-    }
-
     Frontier
     compute_frontier(const IR::BFN::ParserGraph& graph, const CutSet& cutset) {
         auto push_up = compute_frontier_by_push_up(graph, cutset);
-        auto push_down = compute_frontier_by_push_down(graph, cutset);
 
         if (LOGGING(5)) {
             std::clog << "push up frontier:" << std::endl;
             push_up.print();
-
-            std::clog << "push down frontier:" << std::endl;
-            push_down.print();
         }
 
-        auto frontier = reconcile_push_up_and_push_down(push_up, push_down);
-        return frontier;
+        return push_up;
     }
 
     Frontier
