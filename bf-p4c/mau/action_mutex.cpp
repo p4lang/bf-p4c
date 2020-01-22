@@ -1,26 +1,20 @@
 #include "bf-p4c/mau/action_mutex.h"
 
+/**
+ * The functionality of this algorithm, pretty much the exact same algorithm used right now
+ * in table mutex:
+ *
+ *     - All Tables in a TableSeq are not mutually exclusive with each other, meaning that
+ *       all of their actions are not mutually exclusive with each other.
+ *     - The successors of each of these tables in a TableSeq would also not be mutually
+ *       exclusive with each other either, thus their actions would not be either
+ *     - A table can have multiple branches, and the any actions that run in order to start
+ *       that branch are not mutually exclusive with any tables on that branch.
+ */
 void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
-    // map action name to IR::MAU::Action*
-    std::map<cstring, const IR::MAU::Action*> name_to_actions;
-    // actions inside a same table are mutex with each other.
-    for (const auto* act1 : Values(tbl->actions)) {
-        name_to_actions[act1->name.originalName] = act1;
-        for (const auto* act2 : Values(tbl->actions)) {
-            if (act1 != act2) {
-                mutex(action_ids[act1], action_ids[act2]) = true;
-            } } }
-
-
     bitvec all_actions_in_table;
     for (const auto *act : Values(tbl->actions))
         all_actions_in_table.setbit(action_ids[act]);
-
-    // set actions on different branches to be mutex.
-    safe_vector<bitvec> sets;
-
-    bitvec all_so_far;
-    bitvec actions_seen;
 
     std::map<cstring, bitvec> actions_running_on_branch;
 
@@ -46,62 +40,50 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         }
     }
 
-    for (const auto next_table_seq_kv : tbl->next) {
-        /* find the tables reachable via each next_table chain */
+    bitvec all_succ = all_actions_in_table;
+    for (auto next_table_seq_kv : tbl->next) {
         cstring branch_name = next_table_seq_kv.first;
-        const auto* next_table_seq = next_table_seq_kv.second;
-        bitvec succ;
-        // chained action is included that branch
-        actions_seen |= actions_running_on_branch[branch_name];
-        succ |= actions_running_on_branch[branch_name];
-        for (auto next_table : next_table_seq->tables) {
-            succ |= action_succ[next_table]; }
-        sets.push_back(succ);
-        action_succ[tbl] |= succ;
-
-        /* find actions reachable via two or more next chains */
-        all_so_far |= succ;
+        auto next_table_seq = next_table_seq_kv.second;
+        bitvec local_succ;
+        for (auto next_table : next_table_seq->tables)
+            local_succ |= action_succ[next_table];
+        // All actions that begin a particular branch would not be mutually exclusive with tables
+        // on that branch
+        for (auto i : actions_running_on_branch[branch_name])
+            not_mutex[i] |= local_succ;
+        all_succ |= local_succ;
     }
 
-    // If the $default pathway or only one $hit or $miss pathway is provided, then all actions
-    // not yet included directly in a branch are mutually exclusive with all actions included
-    // in a path, as well as all actions underneath that path.
-    bitvec actions_not_yet_seen = all_actions_in_table - actions_seen;
-    if (!actions_not_yet_seen.empty())
-        sets.push_back(actions_not_yet_seen);
+    action_succ[tbl] = all_succ;
+}
 
-    /**
-     * Exact same as mutex:
-     * Each table that appears on a next table chain is mutually exclusive from any table
-     * that appears on a different next table chain
-     */
-    for (auto set1 : sets) {
-        for (auto set2 : sets) {
-            auto common = set1 & set2;
-            for (auto t : set1 - common) {
-                mutex[t] |= set2 - common;
-            }
+/**
+ * Stolen comments from table_mutex, but it is the same baseline algorithm:
+ *
+ * Update non_mutex to account for join points in the control flow. For example,
+ *
+ *   switch (t1.apply().action_run) {
+ *     a1: { t2.apply(); }
+ *     a2: { t3.apply(); }
+ *   }
+ *   t4.apply();
+ * 
+ * is represented by
+ * 
+ *   [ t1  t4 ]
+ *    /  \
+ * [t2]  [t3]
+ * 
+ * Here, we ensure that t4's actions are marked as not mutually exclusive with all of actions of
+ * each of the entries in t1's table_succ.
+ */
+void ActionMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
+    for (size_t i = 0; i < seq->tables.size(); i++) {
+        auto i_tbl = seq->tables.at(i);
+        for (size_t j = i+1; j < seq->tables.size(); j++) {
+            auto j_tbl = seq->tables.at(j);
+            for (auto i_id : action_succ[i_tbl])
+                not_mutex[i_id] |= action_succ[j_tbl];
         }
     }
-
-    // update action_succ
-    for (const auto* act : Values(tbl->actions)) {
-        action_succ[tbl][action_ids[act]] = true; }
 }
-
-void ActionMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
-    /* ingress and egress are mutually exclusive */
-    safe_vector<bitvec> sets;
-    for (auto th : pipe->thread)
-        if (th.mau) {
-            bitvec set;
-            for (auto t : th.mau->tables)
-                set |= action_succ[t];
-            sets.push_back(set); }
-    for (auto &set : sets)
-        for (auto t : set)
-            for (auto &other : sets)
-                if (&set != &other)
-                    mutex[t] |= other;
-}
-

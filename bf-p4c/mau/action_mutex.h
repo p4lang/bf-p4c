@@ -11,26 +11,27 @@ class ActionMutuallyExclusive : public MauInspector {
     // map table to all actions that will be executed after applying it.
     std::map<const IR::MAU::Table *, bitvec>  action_succ;
     // action mutex matrix
-    SymBitMatrix                              mutex;
+    SymBitMatrix                              not_mutex;
     bool preorder(const IR::MAU::Table *t) override {
         for (const auto* act : Values(t->actions)) {
             assert(!action_ids.count(act));
-            name_actions[t->name + "." + act->name] = act;
+            name_actions[t->externalName() + "." + act->name] = act;
             action_ids.emplace(act, action_ids.size());
         }
         return true; }
     void postorder(const IR::MAU::Table *tbl) override;
-    void postorder(const IR::BFN::Pipe *pipe) override;
+    void postorder(const IR::MAU::TableSeq *seq) override;
+
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         action_ids.clear();
         action_succ.clear();
-        mutex.clear();
+        not_mutex.clear();
         return rv; }
 
  public:
     bool operator()(const IR::MAU::Action *a, const IR::MAU::Action *b) const {
-        return mutex(action_ids.at(a), action_ids.at(b)); }
+        return !not_mutex(action_ids.at(a), action_ids.at(b)); }
 
     // For unit-tests
     const std::map<const IR::MAU::Action *, int>& actions() const {
@@ -38,5 +39,6 @@ class ActionMutuallyExclusive : public MauInspector {
     // Maping action names to pointers
     std::map<cstring, const IR::MAU::Action *> name_actions;
 };
+
 
 #endif /* BF_P4C_MAU_ACTION_MUTEX_H_ */
