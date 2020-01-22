@@ -661,6 +661,8 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
             BUG_CHECK(i >= 2, "typechecking failure");
             if (auto k = mu->arguments->at(i-1)->expression->to<IR::Constant>())
                 math.scale = k->asInt();
+            else
+                error("%s is not a constant", mu->arguments->at(i-1)->expression);
             i = 16 - data->components.size();
             BUG_CHECK(i == 0 || i == 4 || i == 8, "Wrong number of MathUnit values");
             for (auto e : data->components) {
@@ -668,17 +670,28 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                     math.table[i] = k->asInt();
                 ++i; }
         } else if (auto k = mu->arguments->at(i)->expression->to<IR::Constant>()) {
-            BUG_CHECK(i == 1, "typechecking failure");
-            double val = k->asUint64() * fn_max[math.exp_invert][math.exp_shift + 1];
+            double val = k->asUint64();
+            BUG_CHECK(i == 1 || i == 2, "typechecking failure");
+            if (i == 2) {
+                if ((k = mu->arguments->at(i-1)->expression->to<IR::Constant>()))
+                    val = k->asUint64() / val;
+                else
+                    error("%s is not a constant", mu->arguments->at(i-1)->expression); }
+            double max = val * fn_max[math.exp_invert][math.exp_shift + 1];
             // choose the largest possible scale such that all table entries will be < 256
-            math.scale = floor(log2(val)) - 7;
+            math.scale = floor(log2(max)) - 7;
             if (math.scale > 31) {
                 warning("%sMathUnit scale overflow %d, capping at 31", mu->srcInfo, math.scale);
                 math.scale = 31; }
-            val = k->asUint64() * pow(2.0, -math.scale);
+            if (math.scale < -32) {
+                warning("%sMathUnit scale underflow %d, capping at -32", mu->srcInfo, math.scale);
+                math.scale = -32; }
+            val *= pow(2.0, -math.scale);
             for (i = math.exp_shift >= 0 ? 8 : 4; i < 16; ++i) {
                 math.table[i] = rint(fn[math.exp_invert][math.exp_shift + 1](i/8.0) * val);
-                if (math.table[i] > 255)
+                if (math.table[i] < 0)
+                    math.table[i] = 0;
+                else if (math.table[i] > 255)
                     math.table[i] = 255; }
         } else {
             error("%s is not a %s", mu->arguments->at(i)->expression,

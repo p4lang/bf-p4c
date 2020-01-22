@@ -767,12 +767,8 @@ extern MathUnit<T> {
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, int<6> scale,
-             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, bit<64> factor);  // configure as factor * op(x)
+    MathUnit(MathOp_t op, int factor);  // configure as factor * op(x)
+    MathUnit(MathOp_t op, int A, int B);  // configure as (A/B) * op(x)
     T execute(in T x);
 };
 
