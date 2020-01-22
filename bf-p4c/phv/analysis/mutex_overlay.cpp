@@ -269,30 +269,50 @@ Visitor::profile_t MarkMutexPragmaFields::init_apply(const IR::Node* root) {
 }
 
 bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {
+    LOG5("Prim name: " << prim->name);
     // If this is a well-formed field modification...
     if (prim->name == "set" && prim->operands.size() > 1) {
         // that writes a non-zero value to `hdrRef.$valid`...
-        auto* m = prim->operands[0]->to<IR::Member>();
-        auto* c = prim->operands[1]->to<IR::Constant>();
-        if (m && m->member == "$valid") {
-            if (auto* hr = m->expr->to<IR::HeaderRef>()) {
-                // then add all fields of the header (not including $valid) to
-                // the set of fields that are part of added headers
-                if (c && c->asInt() != 0) {
-                    LOG4("Found added header: " << hr);
-                    markFields(hr);
-                    return false;
+        auto *fld = phv.field(prim->operands[0]);
+        if (fld && fld->pov) {
+            auto* m = prim->operands[0]->to<IR::Member>();
+            if (!m) {
+                // Prim's destination not a member operation.
+                // Now check if it's a slice operation
+                auto slc = prim->operands[0]->to<IR::Slice>();
+                if (slc)
+                    m = slc->e0->to<IR::Member>();
+            }
+
+            auto* c = prim->operands[1]->to<IR::Constant>();
+            if (c) {
+                LOG5("\t\t\tconstant:"<< *c);
+            }
+
+            if (!m) {
+                LOG5("\t\t\t\ WARNING: member for primitive writing pov field " << *fld
+                     << " not found!");
+            } else {
+                if (auto *href = m->expr->to<IR::HeaderRef>()) {
+                    // then add all fields of the header (not including $valid) to
+                    // the set of fields that are part of added headers
+                    if (c && c->asInt() != 0) {
+                        LOG4("Found added header: " << href);
+                        markFields(href);
+                        return false;
+                    }
+                    // process copy header primitives
+                    auto* srcM = prim->operands[1]->to<IR::Member>();
+                    if (!srcM) return false;
+                    auto* srcField = phv.field(srcM);
+                    if (!srcField) return false;
+                    LOG4("Found copy header destination: " << href);
+                    markFields(href);
                 }
-                // process copy header primitives
-                auto* srcM = prim->operands[1]->to<IR::Member>();
-                if (!srcM) return false;
-                auto* srcField = phv.field(srcM);
-                if (!srcField) return false;
-                LOG4("Found copy header destination: " << hr);
-                markFields(hr);
             }
         }
     }
+
     return false;
 }
 

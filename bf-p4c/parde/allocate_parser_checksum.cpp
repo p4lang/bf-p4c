@@ -319,12 +319,14 @@ struct ParserChecksumAllocator : public Visitor {
                 }
                 if (found_union) {
                     ds.insert(decl);
+                    break;
                 }
             }
             if (!found_union) {
                 ordered_set<cstring> newset;
                 newset.insert(decl);
                 disjoint_sets.push_back(newset);
+                LOG5("Creating new disjoint set for decl:" << decl);
             }
         }
     }

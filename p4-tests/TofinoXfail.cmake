@@ -1598,13 +1598,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-868/comp_868.p4
 )
 
-# BA-102 Failures
-# P4C-2216
-p4c_add_xfail_reason("tofino"
-  "every write bit does not have a corresponding .* read bits"
-  ba102_simple_l3_mcast_checksum
-)
-
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino"
   "you must introduce padding fields around the above slice"
