@@ -2151,14 +2151,18 @@ void Memories::determine_synth_RAMs(int &RAMs_available, int row,
             // use the overflow address, which is required for the meter address on color mapram
             // write.  (Perhaps requiring multiple stats ram homerows?).  Also if the table could
             // fit in a single row, it'd be fine as well.
-            if ((row % 2) == 0) {
-                extra_synth_RAMs = 0;
-            } else {
-                extra_synth_RAMs = possible_for_synth_RAMs;
-            }
+            //
+            // In order to prevent new synth2port candidates from starting on meter rows, if
+            // they cannot finish in this row, this is always set to 0.  However, some RAMs
+            // could in theory still be available, if the allocation was able to start and
+            // finish in that particular row.  The best_synth_candidates function would
+            // need to change, however, in order for this to work.  Frankly it's so rare
+            // to address a meter by hash, that it's not worth it to do at this point
+            extra_synth_RAMs = 0;
         } else if (curr_oflow->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
             // Anything that is impossible for synth2port RAMs is because a dedicated map RAM
-            // must be on that particular RAM.  This RAM can be used for action data
+            // must be on that particular RAM.  This RAM can be used for action data or for
+            // matching
             int impossible_for_synth_RAMs =
                 std::max(curr_oflow->cm.left_to_place() - match_RAMs_allocated, 0);
             extra_synth_RAMs = std::max(possible_for_synth_RAMs - impossible_for_synth_RAMs, 0);
