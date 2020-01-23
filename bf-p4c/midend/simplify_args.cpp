@@ -140,7 +140,7 @@ void FlattenHeader::postorder(IR::Member* member) {
 
 bool FlattenHeader::preorder(IR::MethodCallExpression* mc) {
     auto method = mc->method->to<IR::Member>();
-    if (!method || method->member != "emit") return false;
+    if (!method || method->member != "emit") return true;
 
     auto dname = method->expr->to<IR::PathExpression>();
     if (!dname) return false;
