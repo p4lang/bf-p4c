@@ -199,11 +199,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new CheckParserMultiWrite(phv),
         new CollectPhvInfo(phv),
         new CollectBridgedExtractedTogetherFields(phv, extracted_together),
-        // DO NOT RUN CollectPhvInfo afterwards, as this will destroy the
-        // external names for bridged metadata PHV::Field objects.
-        new SetExternalNameForBridgedMetadata(phv, bridged_fields),
-        new GatherExternalNames(phv),
-
         new CheckForHeaders(),
         allocateClot,
         &defuse,

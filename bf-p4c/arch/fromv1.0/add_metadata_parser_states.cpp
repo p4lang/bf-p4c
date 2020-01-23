@@ -76,9 +76,9 @@ AddMetadataParserStates::AddMetadataParserStates(P4::ReferenceMap* refMap, P4::T
         new AddIntrinsicMetadata(refMap, typeMap),
         new RemoveSetMetadata(refMap, typeMap),
         new TranslatePhase0(refMap, typeMap),
-        new AddTnaBridgeMetadata(refMap, typeMap),
+        new AddTnaBridgeMetadata(refMap, typeMap, use_bridge_metadata),
         new FixupResubmitMetadata(refMap, typeMap),
-        new FixupMirrorMetadata(refMap, typeMap),
+        new FixupMirrorMetadata(refMap, typeMap, use_bridge_metadata),
         new ElimUnusedMetadataStates
     });
 }

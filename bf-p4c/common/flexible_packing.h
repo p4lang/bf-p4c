@@ -118,6 +118,23 @@ class GatherParserExtracts : public Inspector {
     const FieldToFieldSet& getReverseMap() const { return reverseParserAlignMap; }
 };
 
+// Gather egress bridge metadata map
+class GatherAliasConstraintsInEgress : public Inspector {
+    const PhvInfo& phv;
+    ordered_map<const PHV::Field*,
+        ordered_map<const PHV::Field*,
+        ordered_set<const IR::BFN::ParserState*>>> candidateSourcesInParser;
+
+ public:
+    explicit GatherAliasConstraintsInEgress(const PhvInfo& p) : phv(p) {}
+
+    /// Key: Bridged field name, Value: Original field name.
+    ordered_map<cstring, cstring> bridged_to_orig;
+
+    bool preorder(const IR::BFN::Extract* extract) override;
+    void end_apply() override;
+};
+
 /// This class identifies all parser state that have extracted @flexible metadata, which needs
 /// to be modified after the layout of the flexible header is changed.
 /// This should happen before the ReplaceOriginalFieldWithBridged pass.
@@ -174,6 +191,8 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     const PhvUse& uses;
     /// Reference to mapping of original P4 field to the bridged field.
     const CollectBridgedFields& fields;
+    /// Alias egress bridge metadata to egress metadata
+    const GatherAliasConstraintsInEgress& aliasInEgress;
     /// Reference to object used to query action-related constraints.
     const ActionPhvConstraints& actionConstraints;
     /// doNotPack(x, y) = true implies that a bridged field with id x cannot be packed with another
@@ -369,6 +388,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
             const std::vector<const PHV::Field*>& fieldsToBePacked,
             ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
             ordered_map<const PHV::Field*, std::set<int>>& conflictingAlignmentConstraints,
+            ordered_map<const PHV::Field*, le_bitrange>& nonNegotiableAlignments,
             ordered_set<const PHV::Field*>& mustAlignFields);
 
     /** @returns all the actions in which both @field1 and @field2 are accessed. @returns an empty
@@ -422,6 +442,9 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override;
     const IR::Node* preorder(IR::BFN::Pipe* p) override;
 
+    // constraint pretty printer
+    void print_alignment_constraints();
+
     void resetState();
 
  public:
@@ -429,6 +452,7 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         PhvInfo& p,
         const PhvUse& u,
         const CollectBridgedFields& f,
+        const GatherAliasConstraintsInEgress& g,
         const ActionPhvConstraints& a,
         SymBitMatrix& s,
         const ordered_set<const PHV::Field*>& z,
@@ -437,7 +461,8 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         const MauBacktracker& b,
         RepackedHeaderTypes& rt,
         bool skip_bridge)
-        : phv(p), uses(u), fields(f), actionConstraints(a), doNotPack(s), noPackFields(z),
+        : phv(p), uses(u), fields(f), aliasInEgress(g),
+          actionConstraints(a), doNotPack(s), noPackFields(z),
           deparserParams(d), parserAlignedFields(pa), alloc(b), repackedTypes(rt),
           skip_bridge(skip_bridge) { }
 
@@ -525,6 +550,7 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             PhvInfo& p,
             const PhvUse& u,
             const CollectBridgedFields& f,
+            const GatherAliasConstraintsInEgress& g,
             const ActionPhvConstraints& a,
             SymBitMatrix& s,
             const ordered_set<const PHV::Field*>& z,
@@ -532,7 +558,7 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             const GatherParserExtracts& pa,
             const MauBacktracker& b,
             RepackedHeaderTypes& rt)
-        : RepackFlexHeaders(p, u, f, a, s, z, d, pa, b, rt, true) { }
+        : RepackFlexHeaders(p, u, f, g, a, s, z, d, pa, b, rt, true) { }
 
     profile_t init_apply(const IR::Node* root) override;
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override { return h; }
@@ -703,6 +729,7 @@ class LogFlexiblePacking : public Logging::PassManager {
 class FlexiblePacking : public PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
+    GatherAliasConstraintsInEgress                      aliasInEgress;
     PackConflicts                                       packConflicts;
     MapTablesToActions                                  tableActionsMap;
     ActionPhvConstraints                                actionConstraints;

@@ -109,6 +109,54 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     return true;
 }
 
+bool GatherAliasConstraintsInEgress::preorder(const IR::BFN::Extract* extract) {
+    const IR::BFN::ParserState* state = findContext<IR::BFN::ParserState>();
+    BUG_CHECK(extract->dest, "Extract %1% does not have a destination",
+            cstring::to_cstring(extract));
+    BUG_CHECK(extract->dest->field, "Extract %1% does not have a destination field",
+            cstring::to_cstring(extract));
+    const PHV::Field* destField = phv.field(extract->dest->field);
+    BUG_CHECK(destField, "Could not find destination field for extract %1%",
+            cstring::to_cstring(extract));
+    // if destination field is used in arithmetic operation, do not add alias constraint
+    if (destField->is_solitary())
+        return false;
+    if (auto rval = extract->source->to<IR::BFN::SavedRVal>()) {
+        if (auto mem = rval->source->to<IR::Member>()) {
+            if (mem->expr->is<IR::ConcreteHeaderRef>()) {
+                auto srcField = phv.field(mem);
+                // only aliasing meta = hdr.f where f is a field with flexible annotation
+                if (srcField->is_flexible()) {
+                    LOG3("candidate field " << destField << " " << srcField);
+                    candidateSourcesInParser[destField][srcField].insert(state);
+                }
+            }
+        }
+    }
+    return true;
+}
+
+void GatherAliasConstraintsInEgress::end_apply() {
+    for (auto& f : candidateSourcesInParser) {
+        std::stringstream ss;
+        ss << "\t  " << f.first->name << ", ";
+        const PHV::Field* srcField = nullptr;
+        if (f.second.size() > 1) continue;
+        for (const auto& kv : f.second) {
+            srcField = kv.first;
+            ss << kv.first->name << ", ";
+            for (const auto* state : kv.second)
+                ss << state->name << " ";
+        }
+        if (bridged_to_orig.count(srcField->name))
+            continue;
+        if (srcField != nullptr) {
+            bridged_to_orig[srcField->name] = f.first->name;
+        }
+    }
+    LOG1("Number egress bridge " << bridged_to_orig.size());
+}
+
 /**
  * repackedTypes is shared between RepackDigestFieldList and RepackFlexHeaders.
  * It is cleared here, and maintained when running RepackFlexHeaders.
@@ -133,36 +181,23 @@ void RepackFlexHeaders::resetState() {
     digestFlexFields.clear();
     clusterFields.clear();
 
-    LOG3("\tNumber of bridged fields: " << fields.bridged_to_orig.size());
-    for (auto kv : fields.bridged_to_orig) {
-        cstring origName = getOppositeGressFieldName(kv.second);
-        cstring bridgedName = getOppositeGressFieldName(kv.first);
-        egressBridgedMap[origName] = bridgedName;
-        reverseEgressBridgedMap[bridgedName] = origName;
+    LOG3("\tNumber of bridged fields: " << aliasInEgress.bridged_to_orig.size());
+    for (auto kv : aliasInEgress.bridged_to_orig) {
+        egressBridgedMap[kv.second] = kv.first;
+        reverseEgressBridgedMap[kv.first] = kv.second;
     }
 }
 
 Visitor::profile_t RepackFlexHeaders::init_apply(const IR::Node* root) {
     resetState();
     if (LOGGING(5)) {
-        if (fields.orig_to_bridged.size() > 0) {
-            LOG5("\n\tPrinting orig to bridged");
-            for (auto kv : fields.orig_to_bridged)
-                LOG5("\t  " << kv.first << " : " << kv.second);
-        }
+        LOG5("\n\tPrinting bridged to orig");
         if (fields.bridged_to_orig.size() > 0) {
-            LOG5("\n\tPrinting bridged to orig");
             for (auto kv : fields.bridged_to_orig)
                 LOG5("\t  " << kv.first << " : " << kv.second);
         }
-        if (fields.bridged_to_external_name.size() > 0) {
-            LOG5("\n\tPrinting bridged to external");
-            for (auto kv : fields.bridged_to_external_name)
-                LOG5("\t  " << kv.first << " : " << kv.second);
-        }
-        if (fields.orig_to_bridged_name.size() > 0) {
-            LOG5("\n\tPrinting orig to bridged");
-            for (auto kv : fields.orig_to_bridged_name)
+        if (aliasInEgress.bridged_to_orig.size() > 0) {
+            for (auto kv : aliasInEgress.bridged_to_orig)
                 LOG5("\t  " << kv.first << " : " << kv.second);
         }
     }
@@ -189,10 +224,10 @@ cstring RepackFlexHeaders::getNonBridgedEgressFieldName(cstring fName) const {
         egressBridgedName = fName;
     else
         egressBridgedName = getOppositeGressFieldName(fName);
-    for (auto kv : egressBridgedMap) {
-        if (kv.second == egressBridgedName)
-            return kv.first;
-    }
+
+    if (reverseEgressBridgedMap.count(egressBridgedName))
+        return reverseEgressBridgedMap.at(egressBridgedName);
+    LOG3("unable to find field in egressBridgedMap " << egressBridgedName);
     return egressBridgedName;
 }
 
@@ -307,7 +342,6 @@ SymBitMatrix RepackFlexHeaders::mustPack(
     // Populate set of egress fields.
     ordered_set<const PHV::Field*> egressFields;
     for (const auto* f : fields) {
-        // FIXME
         cstring egressFieldName = getNonBridgedEgressFieldName(f->name);
         BUG_CHECK(egressFieldName, "No egress version of the field %1%", f->name);
         const auto* egressField = phv.field(egressFieldName);
@@ -320,10 +354,14 @@ SymBitMatrix RepackFlexHeaders::mustPack(
     }
 
     // Figure out the actions reading each bridged metadata field.
-    for (const auto* f : fields)
+    for (const auto* f : fields) {
         reads[f] = actionConstraints.actions_reading_fields(f);
-    for (const auto* f : egressFields)
+        LOG3("fields " << f);
+    }
+    for (const auto* f : egressFields) {
         reads[f] = actionConstraints.actions_reading_fields(f);
+        LOG3("egress fields " << f);
+    }
 
     // Figure out must pack for bridged fields that are read in the same action.
     for (const auto* f1 : fields) {
@@ -701,8 +739,8 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         const std::vector<const PHV::Field*>& fieldsToBePacked,
         ordered_map<const PHV::Field*, le_bitrange>& alignmentConstraints,
         ordered_map<const PHV::Field*, std::set<int>>& conflictingAlignmentConstraints,
+        ordered_map<const PHV::Field*, le_bitrange>& nonNegotiableAlignments,
         ordered_set<const PHV::Field*>& mustAlignFields) {
-    ordered_map<const PHV::Field*, le_bitrange> nonNegotiableAlignments;
     for (auto field : fieldsToBePacked) {
         ordered_set<const PHV::Field*> relatedFields;
         std::queue<const PHV::Field*> fieldsNotVisited;
@@ -746,7 +784,6 @@ void RepackFlexHeaders::determineAlignmentConstraints(
         // Also summarize the egress version of this field, as alignment
         // constraints may be induced by uses of the egress version of the
         // bridged field.
-        // FIXME
         cstring egressFieldName = getNonBridgedEgressFieldName(field->name);
         // FIXME
         cstring bridgedFieldName = (field->gress == INGRESS) ?
@@ -833,12 +870,16 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                              alignSource->alignment->align);
                         conflictingAlignmentConstraints[field].insert(f->alignment->align);
                         conflictingAlignmentConstraints[field].insert(
-                                alignSource->alignment->align);
+                               alignSource->alignment->align);
                         continue;
                     }
                 }
-                if (this_non_negotiable_alignment)
+                if (this_non_negotiable_alignment) {
                     nonNegotiableAlignments[field] = StartLen(f->alignment->align, f->size);
+                    LOG3("\t\t Detected non-negotiable alignment constraint " << field
+                            << " " << nonNegotiableAlignments[field]);
+                }
+
                 fieldAlignmentMap[field] = f;
                 le_bitrange alignment = StartLen(f->alignment->align, f->size);
                 alignmentConstraints[field] = alignment; } } }
@@ -855,6 +896,15 @@ void RepackFlexHeaders::determineAlignmentConstraints(
                 ss << "\t  " << kv.first->name << " : ";
                 for (auto pos : kv.second)
                     ss << pos << " ";
+                LOG4(ss.str());
+            }
+        }
+        if (nonNegotiableAlignments.size() > 0) {
+            LOG4("\tPrinting bridged fields with conflicting constraints:");
+            for (auto kv : nonNegotiableAlignments) {
+                std::stringstream ss;
+                ss << "\t " << kv.first->name << " : ";
+                ss << kv.second << " ";
                 LOG4(ss.str());
             }
         }
@@ -979,9 +1029,12 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
     ordered_map<const PHV::Field*, le_bitrange> alignmentConstraints;
     auto sliceListAlignment = bridgedActionAnalysis(nonByteAlignedFields, alignmentConstraints);
     ordered_map<const PHV::Field*, std::set<int>> conflictingAlignmentConstraints;
+    ordered_map<const PHV::Field*, le_bitrange> nonNegotiableAlignments;
     ordered_set<const PHV::Field*> mustAlignFields;
     determineAlignmentConstraints(nonByteAlignedFields, alignmentConstraints,
-                                  conflictingAlignmentConstraints, mustAlignFields);
+                                  conflictingAlignmentConstraints,
+                                  nonNegotiableAlignments,
+                                  mustAlignFields);
     updateNoPackForDigestFields(nonByteAlignedFields, sliceListAlignment);
 
     ordered_set<const PHV::Field*> alreadyPackedFields;
@@ -1014,13 +1067,20 @@ RepackFlexHeaders::packPhvFieldSet(const ordered_set<const PHV::Field*>& fieldsT
 
             // For fields that are alone in their byte aligned boundary, and must not be aligned at
             // a given bit position or have conflicting alignment constraints, we choose to align
-            // them in the bottom bits and add padding afterwards.
+            // them to the non-negotiable alignment, if none exists, to 0.
             if (packingWithPositions.size() == 1) {
                 for (auto kv : packingWithPositions) {
                     if (conflictingAlignmentConstraints.count(kv.first)) {
-                        packingWithPositions[kv.first] = 0;
-                        LOG4("\t\t  Conflicting alignment, pack " << kv.first <<
-                             " in bottom bits");
+                        if (nonNegotiableAlignments.count(kv.first)) {
+                            packingWithPositions[kv.first] =
+                                nonNegotiableAlignments.at(kv.first).lo;
+                            LOG4("\t\t  Non-negotiable alignment, pack " << kv.first <<
+                                    " at " << nonNegotiableAlignments.at(kv.first));
+                        } else {
+                            packingWithPositions[kv.first] = 0;
+                            LOG4("\t\t  Conflicting alignment, pack " << kv.first <<
+                                    " in bottom bits");
+                        }
                     }
                 }
             }
@@ -2208,38 +2268,20 @@ FlexiblePacking::FlexiblePacking(
         const MauBacktracker& alloc,
         bool skip_bridge) :
           bridgedFields(b),
+          aliasInEgress(p),
           packConflicts(p, dg, tMutex, alloc, aMutex),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
           parserAlignedFields(p),
-          packDigestFieldLists(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
-                      parserAlignedFields, alloc, repackedTypes),
-          packHeaders(p, u, b, actionConstraints, doNotPack, noPackFields, deparserParams,
-                      parserAlignedFields, alloc, repackedTypes, skip_bridge),
+          packDigestFieldLists(p, u, b, aliasInEgress, actionConstraints, doNotPack,
+            noPackFields, deparserParams, parserAlignedFields, alloc, repackedTypes),
+          packHeaders(p, u, b, aliasInEgress, actionConstraints, doNotPack,
+            noPackFields, deparserParams, parserAlignedFields, alloc, repackedTypes, skip_bridge),
           parserMappings(p),
           bmUses(p, packHeaders, parserMappings, e, parserStatesToModify) {
               addPasses({
-                      // XXX hack.
-                      // CollectBridgedFields &&
-                      // ReplaceOriginalFieldWithBridged were only used for
-                      // p4-14 and p4-16 v1model programs. They cannot handle
-                      // alias slice and the implementation is not sound when
-                      // multiple bridge header are used. However, they are
-                      // still useful right now to workaround issues in the
-                      // auto-alias pass for p4-14 program.  We will keep them
-                      // for now, and the next step should be fix the issue in
-                      // auto-alias and remove these two passes.
-                      ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14) ||
-                       ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16) &&
-                        (BackendOptions().arch == "v1model"))) ?
-                            &bridgedFields : nullptr,
-                      // XXX(hanw): GatherParserStateToModify must run before
-                      // ReplaceOriginalFieldWithBridged.
+                      &bridgedFields,
+                      &aliasInEgress,
                       new GatherParserStateToModify(p, parserStatesToModify),
-                      // XXX see comments above
-                      ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_14) ||
-                       ((BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16) &&
-                        (BackendOptions().arch == "v1model"))) ?
-                            new ReplaceOriginalFieldWithBridged(p, bridgedFields) : nullptr,
                       new FindDependencyGraph(p, dg),
                       new PHV_Field_Operations(p),
                       new PragmaContainerSize(p),

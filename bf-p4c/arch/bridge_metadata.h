@@ -13,7 +13,8 @@ static const cstring BRIDGED_MD_FIELD = "__bfp4c_fields";
 static const cstring BRIDGED_MD_INDICATOR = "__bfp4c_bridged_metadata_indicator";
 
 struct AddTnaBridgeMetadata : public PassManager {
-    AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
+    AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            bool& program_uses_bridge_metadata);
 };
 
 struct AddPsaBridgeMetadata : public PassManager {

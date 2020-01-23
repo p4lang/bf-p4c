@@ -151,8 +151,9 @@ class AddMirroredFieldListParser : public Transform {
     P4::ClonePathExpressions cloner;
 
  public:
-    explicit AddMirroredFieldListParser(const MirroredFieldLists* fieldLists)
-        : fieldLists(fieldLists) { }
+    explicit AddMirroredFieldListParser(const MirroredFieldLists* fieldLists,
+            bool use_bridge_metadata)
+        : fieldLists(fieldLists), use_bridge_metadata(use_bridge_metadata) { }
 
     const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* parser) override {
         if (parser->thread != EGRESS)
@@ -165,8 +166,9 @@ class AddMirroredFieldListParser : public Transform {
         auto packetInParam = parser->tnaParams.at("pkt");
         auto *skipToPacketState =
             createGeneratedParserState("mirrored", {
-                createAdvanceCall(packetInParam, 8)
-            }, new IR::PathExpression(IR::ID(nextState)));
+                createAdvanceCall(packetInParam, use_bridge_metadata ? 8 : 0)
+            },
+            new IR::PathExpression(IR::ID(nextState)));
         return skipToPacketState;
     }
 
@@ -281,18 +283,20 @@ class AddMirroredFieldListParser : public Transform {
     }
 
  private:
-  const MirroredFieldLists* fieldLists;
+    const MirroredFieldLists* fieldLists;
+    bool use_bridge_metadata;
 };
 
 }  // namespace
 
 FixupMirrorMetadata::FixupMirrorMetadata(
         P4::ReferenceMap *refMap,
-        P4::TypeMap *typeMap) {
+        P4::TypeMap *typeMap,
+        bool use_bridge_metadata) {
     auto findMirror = new FindMirroredFieldLists(refMap, typeMap);
     addPasses({
         findMirror,
-        new AddMirroredFieldListParser(&findMirror->fieldLists)
+        new AddMirroredFieldListParser(&findMirror->fieldLists, use_bridge_metadata)
     });
 }
 

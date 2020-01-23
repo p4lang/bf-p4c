@@ -228,6 +228,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Metadata initialization analysis incorrect.  Live ranges .* overlap"
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
@@ -403,10 +407,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Field .* not supported on Tofino"
-  testdata/p4_16_samples/psa-top-level-assignments-bmv2.p4
-)
 
 # unsupported p4c tests
 p4c_add_xfail_reason("tofino"
@@ -744,8 +744,12 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error:  Field ingress::.*of size 0 not supported"
+  "Maximum width for byte counter ingress.per_prefix_pkt_byte_count is 64 bits"
   testdata/p4_16_samples/psa-example-counters-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   testdata/p4_16_samples/psa-example-digest-bmv2.p4
 )
 
@@ -762,10 +766,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-parser-checksum.p4
 )
 
+# BRIG-934: this issue is not resolved, need fix in ConvertEnums.
+p4c_add_xfail_reason("tofino"
+  "condition expression too complex"
+  testdata/p4_16_samples/issue1325-bmv2.p4
+)
+
 # BRIG-934
 p4c_add_xfail_reason("tofino"
-  "error.*Field.*of size 0 not supported on Tofino"
-  testdata/p4_16_samples/issue1325-bmv2.p4
+  "Found extract ingress::meta.parser_error"
   testdata/p4_16_samples/issue510-bmv2.p4
 )
 
@@ -832,7 +841,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*More than one field written to .* in action"
+  "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 

@@ -19,13 +19,45 @@
 namespace BFN {
 namespace {
 
+struct CollectSpecialPrimitives : public Inspector {
+    ordered_set<const IR::ExitStatement*> exit;
+    ordered_set<const IR::MethodCallStatement*> bypass_egress;
+    ordered_set<const IR::MethodCallStatement*> clone;
+
+ public:
+    CollectSpecialPrimitives() {}
+
+    bool preorder(const IR::BFN::TnaControl* control) override {
+        if (control->thread != INGRESS) return false;
+        return true; }
+
+    void postorder(const IR::ExitStatement* e) override {
+        exit.insert(e);
+    }
+
+    void postorder(const IR::MethodCallStatement* node) override {
+        auto* call = node->methodCall;
+        auto* pa = call->method->to<IR::PathExpression>();
+        if (!pa) return;
+        if (pa->path->name == "bypass_egress")
+            bypass_egress.insert(node);
+        else if (pa->path->name == "clone3" || pa->path->name == "clone")
+            clone.insert(node);
+    }
+
+    bool has_exit() { return !exit.empty(); }
+    bool has_bypass_egress() { return !bypass_egress.empty(); }
+    bool has_clone() { return !clone.empty(); }
+};
+
 struct BridgeIngressToEgress : public Transform {
     BridgeIngressToEgress(const ordered_set<FieldRef>& fieldsToBridge,
                           const ordered_map<FieldRef, BridgedFieldInfo>& fieldInfo,
+                          CollectSpecialPrimitives* prim,
                           P4::ReferenceMap* refMap,
                           P4::TypeMap* typeMap)
       : refMap(refMap), typeMap(typeMap), fieldsToBridge(fieldsToBridge),
-        fieldInfo(fieldInfo) { }
+        fieldInfo(fieldInfo), special_primitives(prim) { }
 
     profile_t init_apply(const IR::Node* root) override {
         // Construct the bridged metadata header type.
@@ -35,11 +67,10 @@ struct BridgeIngressToEgress : public Transform {
         // indicate to the egress parser that it's dealing with bridged metadata
         // rather than mirrored data. (We could pack more information in there,
         // too, but we don't right now.)
-        fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
-                                             IR::Type::Bits::get(8)));
-
-        // TODO(zma) if we have neither bridged nor mirrored metadata on egress
-        // we don't even need this one byte of metadata.
+        if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
+            fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
+                        IR::Type::Bits::get(8)));
+        }
 
         IR::IndexedVector<IR::StructField> structFields;
 
@@ -136,13 +167,10 @@ struct BridgeIngressToEgress : public Transform {
         auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
 
         // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
-        state->components.push_back(
-                createSetMetadata(cgMetadataParam, BRIDGED_MD, BRIDGED_MD_INDICATOR, 8, 0));
-
-        // Add "md.^bridged_metadata.setValid();"
-        state->components.push_back(
-                createSetValid(cgMetadataParam, BRIDGED_MD));
-
+        if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
+            state->components.push_back(
+                    createSetMetadata(cgMetadataParam, BRIDGED_MD, BRIDGED_MD_INDICATOR, 8, 0));
+        }
         return state;
     }
 
@@ -155,8 +183,10 @@ struct BridgeIngressToEgress : public Transform {
         auto packetInParam = tnaContext->tnaParams.at("pkt");
 
         if (fieldsToBridge.empty()) {
-            // Nothing to bridge, simply advance one byte
-            state->components.push_back(createAdvanceCall(packetInParam, 8));
+            // nothing to bridge, but clone is used, advance one byte.
+            // otherwise, do not advance.
+            state->components.push_back(
+                    createAdvanceCall(packetInParam, special_primitives->has_clone() ? 8 : 0));
             return state;
         }
 
@@ -190,20 +220,43 @@ struct BridgeIngressToEgress : public Transform {
     }
 
     IR::BFN::TnaControl*
-    preorder(IR::BFN::TnaControl* control) override {
+    postorder(IR::BFN::TnaControl* control) override {
         if (control->thread != INGRESS)
             return control;
-        return updateIngressControl(control);
-    }
-
-    IR::BFN::TnaControl*
-    updateIngressControl(IR::BFN::TnaControl* control) {
-        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
-
         // Inject code to copy all of the bridged fields into the bridged
         // metadata header. This will run at the very end of the ingress
         // control, so it'll get the final values of the fields.
-        auto* body = control->body->clone();
+        if (special_primitives->has_bypass_egress()) {
+            auto stmt = updateIngressControl(control);
+            auto condExprPath = new IR::Member(
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_tm")), "bypass_egress");
+            auto condExpr = new IR::Equ(condExprPath, new IR::Constant(IR::Type::Bits::get(1), 0));
+            auto cond = new IR::IfStatement(condExpr,
+                    new IR::BlockStatement(*stmt), nullptr);
+
+            auto* body = control->body->clone();
+            body->components.push_back(cond);
+            control->body = body;
+        } else {
+            auto* body = control->body->clone();
+            auto stmt = updateIngressControl(control);
+            body->components.append(*stmt);
+            control->body = body;
+        }
+        return control;
+    }
+
+    IR::IndexedVector<IR::StatOrDecl>*
+    updateIngressControl(const IR::BFN::TnaControl* control) {
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
+
+        // if (ig_intr_md_for_tm.egress == 1) {
+        //    add_bridge_metadata;
+        // }
+        auto stmt = new IR::IndexedVector<IR::StatOrDecl>();
+        if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
+            // Add "md.^bridged_metadata.setValid();"
+            stmt->push_back(createSetValid(control->srcInfo, cgMetadataParam, BRIDGED_MD)); }
 
         for (auto& bridgedField : fieldsToBridge) {
             auto* member = new IR::Member(
@@ -219,12 +272,25 @@ struct BridgeIngressToEgress : public Transform {
                   return new IR::PathExpression(bridgedFieldParam);
             })->to<IR::Expression>();
 
-            auto* assignment = new IR::AssignmentStatement(fieldMember, bridgedMember);
-            body->components.push_back(assignment);
+            auto* assignment =
+                new IR::AssignmentStatement(control->srcInfo, fieldMember, bridgedMember);
+            stmt->push_back(assignment);
         }
 
-        control->body = body;
-        return control;
+        return stmt;
+    }
+
+    // calling 'exit' in ingress terminates ingress processing, which means
+    // that if the bridge metadata header is validated at the end of the
+    // ingress control block, the header will not be validated in the control
+    // flow path that invoked 'exit'.
+    IR::Node* postorder(IR::ExitStatement* exit) override {
+        auto ctxt = findOrigCtxt<IR::BFN::TnaControl>();
+        if (!ctxt) return exit;
+        if (ctxt->thread != INGRESS) return exit;
+        auto stmt = updateIngressControl(ctxt);
+        stmt->push_back(exit);
+        return stmt;
     }
 
     IR::BFN::TnaDeparser*
@@ -273,13 +339,6 @@ struct BridgeIngressToEgress : public Transform {
         auto ftype = IR::Type::Bits::get(1);
         auto assign = new IR::AssignmentStatement(flag, new IR::Constant(ftype, 1));
         stmts->push_back(assign);
-
-        auto* member = new IR::Member(new IR::PathExpression(COMPILER_META),
-                        IR::ID(BRIDGED_MD));
-        auto* method = new IR::Member(member, IR::ID("setInvalid"));
-        auto* args = new IR::Vector<IR::Argument>;
-        auto* callExpr = new IR::MethodCallExpression(method, args);
-        stmts->push_back(new IR::MethodCallStatement(callExpr));
         return stmts;
     }
 
@@ -295,6 +354,8 @@ struct BridgeIngressToEgress : public Transform {
     const ordered_set<FieldRef>& fieldsToBridge;
     const ordered_map<FieldRef, BridgedFieldInfo>& fieldInfo;
 
+    CollectSpecialPrimitives* special_primitives;
+
     ordered_map<FieldRef, cstring> bridgedHeaderFieldNames;
     const IR::Type_Header* bridgedHeaderType = nullptr;
     cstring cgMetadataStructName;
@@ -302,12 +363,17 @@ struct BridgeIngressToEgress : public Transform {
 
 }  // namespace
 
-AddTnaBridgeMetadata::AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+AddTnaBridgeMetadata::AddTnaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+        bool& use_bridge_metadata) {
+    auto* collectSpecialPrimitives = new CollectSpecialPrimitives();
     auto* collectBridgedFields = new CollectBridgedFields(refMap, typeMap);
     auto* bridgeIngressToEgress = new BridgeIngressToEgress(collectBridgedFields->fieldsToBridge,
-            collectBridgedFields->fieldInfo, refMap, typeMap);
+            collectBridgedFields->fieldInfo, collectSpecialPrimitives, refMap, typeMap);
     addPasses({
+        collectSpecialPrimitives,
         collectBridgedFields,
+        new VisitFunctor([&use_bridge_metadata, collectBridgedFields]() mutable {
+            use_bridge_metadata = !collectBridgedFields->fieldsToBridge.empty(); }),
         bridgeIngressToEgress,
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

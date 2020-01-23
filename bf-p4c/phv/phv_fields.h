@@ -365,16 +365,16 @@ class Field : public LiftLess<Field> {
     /// does not split c[0:31]. E.g. c[32:47] is allowed, but c[15:31] is not.
     std::vector<le_bitrange> no_split_ranges_i;
 
-    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.   
-     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored    
-     *  header is being created) to the ingress parser (when the mirrored header is being processed).   
-     *  
-     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they    
-     *  are not emitted on the wire.    
-     *  
-     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same  
-     *  mechanism can be used for learning, recirculation, and bridged metadata.    
-     **/    
+    /** Marshaled fields are metadata fields serialized between a Tofino deparser and parser.
+     *  For example, mirrored field lists can be serialized from ingress deparser (when the mirrored
+     *  header is being created) to the ingress parser (when the mirrored header is being processed).
+     *
+     *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
+     *  are not emitted on the wire.
+     *
+     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
+     *  mechanism can be used for learning, recirculation, and bridged metadata.
+     **/
     bool            is_marshaled_i = false;
 
     /// MAU operations performed on this field.
@@ -1644,26 +1644,6 @@ class AddAliasAllocation : public Inspector {
 
  public:
     explicit AddAliasAllocation(PhvInfo& p) : phv(p) { }
-};
-
-/** For bridged metadata fields, the field's external name is different from the name of the field.
-  * We populate the externalNameMap in PhvInfo for such entries to enable lookup of Field objects
-  * using the external name. This is mandatory for supporting pragmas, as pragmas on bridged fields
-  * are specified on the external name (and not the bridged name internally used in the backend).
-  */
-class GatherExternalNames : public Inspector {
-    PhvInfo& phv_i;
-
-    void end_apply() {
-        for (auto& f : phv_i) {
-            if (!f.hasExternalName()) continue;
-            phv_i.addExternalNameMapEntry(&f, f.externalName());
-            LOG3("Setting externalNameMap for " << f.name << " to " << f.externalName());
-        }
-    }
-
- public:
-    explicit GatherExternalNames(PhvInfo& phv) : phv_i(phv) { }
 };
 
 // Map field to the parser states in which they are extracted

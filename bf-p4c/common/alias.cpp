@@ -13,10 +13,6 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
     LOG5("Header: " << h->name);
     LOG5("Header type: " << h->type);
     cstring hName = h->name;
-    // Ignore compiler generated metadata because the user is not going to apply a pragma on those.
-    if (hName.startsWith("ingress::" + BFN::COMPILER_META) ||
-        hName.startsWith("egress::" + BFN::COMPILER_META))
-        return true;
     for (auto f : h->type->fields) {
         cstring name = h->name + "." + f->name;
         // Ignore compiler generated metadata fields that belong to different headers.
@@ -71,22 +67,22 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     if (sl) {
         if (f->size == replacementField->size) {
             IR::Slice* newSlice = new IR::Slice(newMember, sl->getH(), sl->getL());
-            LOG2("    Replaced: " << expr << " -> " << newSlice);
+            LOG2("    Replaced A: " << expr << " -> " << newSlice);
             return newSlice;
         } else {
             IR::Slice* destSlice = new IR::Slice(replacementMember, sl->getH(), sl->getL());
             auto* newAliasSlice = new IR::BFN::AliasSlice(destSlice, sl);
-            LOG2("    Replaced: " << expr << " -> " << newAliasSlice);
+            LOG2("    Replaced B: " << expr << " -> " << newAliasSlice);
             return newAliasSlice;
         }
     } else {
         if (f->size == replacementField->size) {
-            LOG2("    Replaced: " << expr << " -> " << newMember);
+            LOG2("    Replaced C: " << expr << " -> " << newMember);
             return newMember;
         } else {
             IR::Slice* destSlice = new IR::Slice(replacementMember, f->size - 1, 0);
             auto* newAliasSlice = new IR::BFN::AliasSlice(destSlice, expr);
-            LOG2("    Replaced: " << expr << " -> " << newAliasSlice);
+            LOG2("    Replaced D: " << expr << " -> " << newAliasSlice);
             return newAliasSlice;
         }
     }

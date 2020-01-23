@@ -137,12 +137,12 @@ createSetMetadata(const IR::Expression* dest, cstring header, cstring field) {
 }
 
 /// @return an assignment statement of the form `header.setValid()`.
-const IR::Statement* createSetValid(cstring header, cstring field) {
+const IR::Statement* createSetValid(const Util::SourceInfo &si, cstring header, cstring field) {
     auto* member = new IR::Member(new IR::PathExpression(header), IR::ID(field));
     auto* method = new IR::Member(member, IR::ID("setValid"));
     auto* args = new IR::Vector<IR::Argument>;
     auto* callExpr = new IR::MethodCallExpression(method, args);
-    return new IR::MethodCallStatement(callExpr);
+    return new IR::MethodCallStatement(si, callExpr);
 }
 
 /// @return an `extract()` call that extracts the given header.

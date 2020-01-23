@@ -143,9 +143,10 @@ void PhvInfo::add_struct(
             // Add fields inside nested structs and headers.
             add_struct(f_name, struct_type, gress, meta, bridged, offset);
         }
+        // path-expression may point to an empty header, which require no phv.
+        // path-expression can also point to an error field, which is invalid on Tofino
         if (size == 0)
-            ::error("%1% Field %2% of size %3% not supported on %4%", f->srcInfo, f_name, size,
-                    Device::name());
+            continue;
         // "hidden" annotation indicates padding introduced with bridged metadata fields
         bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr ||
                      f->getAnnotations()->getSingle("padding") != nullptr;

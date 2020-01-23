@@ -34,7 +34,8 @@ class FixupMirrorMetadata : public PassManager {
     MirroredFieldLists fieldLists;
 
  public:
-    FixupMirrorMetadata(P4::ReferenceMap *refMap, P4::TypeMap *typeMap);
+    FixupMirrorMetadata(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+            bool use_bridge_metadata);
 };
 
 }  // namespace BFN

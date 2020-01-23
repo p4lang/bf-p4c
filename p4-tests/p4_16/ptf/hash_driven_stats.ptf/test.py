@@ -46,6 +46,4 @@ class CounterReadTest(P4RuntimeTest):
         # Must check with Sachin to validate this behavior as a check
         # WIP: Working on bytecount adjust to account for additional 16 bytes
         self.assertEqual(ingress_count - ingress_count_0, 74)
-        # FIXME: The egress count includes one byte of bridged metadata generated
-        # internally by the compiler, when it should be subtracted off
-        self.assertEqual(egress_count - egress_count_0, 75)
+        self.assertEqual(egress_count - egress_count_0, 74)

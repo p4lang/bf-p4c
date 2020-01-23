@@ -26,6 +26,7 @@ struct ElimUnusedMetadataStates : Transform {
 /// And then add parser states to parse metadata that is prepended to user packet data.
 /// These are, on ingress, phase0 and resubmit metadata; And on egress, bridged and mirror metadata.
 struct AddMetadataParserStates : PassManager {
+    bool use_bridge_metadata;
     AddMetadataParserStates(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
 

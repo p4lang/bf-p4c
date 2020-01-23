@@ -995,7 +995,8 @@ TnaProgramStructure::convertControl(const IR::V1Control* control, cstring newNam
         if (useBridgeMetadata()) {
             body->components.push_back(BFN::createSetMetadata("meta",
                         "bridged_header", "bridged_metadata_indicator", 8, 0));
-            body->components.push_back(BFN::createSetValid("meta", "bridged_header")); }
+            body->components.push_back(
+                    BFN::createSetValid(control->srcInfo, "meta", "bridged_header")); }
 #endif
 
         for (auto f : bridgedFields) {
@@ -1320,16 +1321,6 @@ TnaProgramStructure::createIngressParserStates() {
     // This state handles the extraction of ingress intrinsic metadata.
     IR::IndexedVector<IR::StatOrDecl> statements;
     statements.push_back(BFN::createExtractCall("pkt", "ig_intr_md"));
-
-#if 0
-    // XXX(hanw): bridged field could be written to in parser, in this
-    // case, the bridged_header should be validated before any of its
-    // fields is modified.
-    if (useBridgeMetadata()) {
-        statements.push_back(BFN::createSetMetadata("meta",
-                    "bridged_header", "bridged_metadata_indicator", 8, 0));
-        statements.push_back(BFN::createSetValid("meta", "bridged_header")); }
-#endif
 
     auto *igMetadataState =
         BFN::createGeneratedParserState("ingress_metadata", std::move(statements),

@@ -34,7 +34,7 @@ const IR::Statement* createSetMetadata(cstring param, cstring header,
         cstring field, int bitWidth, int constant);
 const IR::Statement* createSetMetadata(const IR::Expression* dest,
         cstring header, cstring field);
-const IR::Statement* createSetValid(cstring header, cstring field);
+const IR::Statement* createSetValid(const Util::SourceInfo &, cstring header, cstring field);
 const IR::Statement* createExtractCall(cstring pkt, cstring hdr);
 const IR::Statement* createExtractCall(cstring pkt, IR::Expression* member);
 const IR::Statement* createExtractCall(cstring pkt, cstring typeName, IR::Expression* member);
