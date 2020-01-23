@@ -1,4 +1,7 @@
-#include <tna.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
+
+@pa_auto_init_metadata
+
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<128> ipv6_addr_t;
@@ -661,11 +664,9 @@ const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_VXLAN = 1;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_IPINIP = 2;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_MACINMAC = 3;
 const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_NVGRE = 4;
-const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GTPC = 5;
-const switch_tunnel_type_t SWITCH_TUNNEL_TYPE_GTPU = 6;
 enum switch_tunnel_term_mode_t { P2P, P2MP };
 typedef bit<16> switch_tunnel_index_t;
-typedef bit<32> switch_tunnel_id_t;
+typedef bit<24> switch_tunnel_id_t;
 struct switch_tunnel_metadata_t {
     switch_tunnel_type_t type;
     switch_tunnel_index_t index;
@@ -790,7 +791,6 @@ struct switch_lookup_fields_t {
     bit<8> tcp_flags;
     bit<16> l4_src_port;
     bit<16> l4_dst_port;
-    bit<88> l7_udf;
 }
 @flexible
 struct switch_bridged_metadata_t {
@@ -2637,6 +2637,7 @@ parser NpbIngressParser(
     state parse_vxlan {
         pkt.extract(hdr.vxlan);
         ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_VXLAN;
+        ig_md.tunnel.id = hdr.vxlan.vni;
         transition parse_inner_ethernet;
     }
     state parse_ipinip {
@@ -2667,7 +2668,6 @@ parser NpbIngressParser(
     }
     state parse_nvgre {
      pkt.extract(hdr.nvgre);
-        ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_NVGRE;
      transition parse_inner_ethernet;
     }
     state parse_esp {
@@ -2684,8 +2684,6 @@ parser NpbIngressParser(
     state extract_gtp_c {
         pkt.extract(hdr.gtp_v2_base);
         pkt.extract(hdr.gtp_v1_v2_teid);
-        ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_GTPC;
-        ig_md.tunnel.id = hdr.gtp_v1_v2_teid.teid;
      transition accept;
     }
     state parse_gtp_u {
@@ -2703,8 +2701,6 @@ parser NpbIngressParser(
     state extract_gtp_u {
         pkt.extract(hdr.gtp_v1_base);
         pkt.extract(hdr.gtp_v1_v2_teid);
-        ig_md.tunnel.type = SWITCH_TUNNEL_TYPE_GTPU;
-        ig_md.tunnel.id = hdr.gtp_v1_v2_teid.teid;
         transition select(pkt.lookahead<bit<4>>()) {
             4: parse_inner_ipv4;
             6: parse_inner_ipv6;
@@ -2712,7 +2708,6 @@ parser NpbIngressParser(
         }
     }
     state parse_udf {
-        pkt.extract(hdr.udf);
         transition accept;
     }
     state parse_inner_ethernet {
@@ -2807,7 +2802,6 @@ parser NpbIngressParser(
         transition accept;
     }
     state parse_inner_udf {
-        pkt.extract(hdr.inner_udf);
         transition accept;
     }
 }
@@ -3183,7 +3177,6 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.gtp_v2_base);
         pkt.emit(hdr.gtp_v1_v2_teid);
         pkt.emit(hdr.gtp_v1_optional);
-        pkt.emit(hdr.udf);
         pkt.emit(hdr.inner_ethernet);
         pkt.emit(hdr.inner_vlan_tag);
         pkt.emit(hdr.inner_ipv4);
@@ -3195,7 +3188,6 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.inner_tcp);
         pkt.emit(hdr.inner_icmp);
         pkt.emit(hdr.inner_igmp);
-        pkt.emit(hdr.inner_udf);
     }
 }
 control SwitchEgressDeparser(
@@ -4056,7 +4048,6 @@ control PktValidation(
         }
     }
     action set_udf() {
-        lkp.l7_udf = hdr.udf.opaque;
     }
     table validate_udf {
         key = {
@@ -4085,7 +4076,6 @@ control PktValidation(
                        validate_ipv6.apply();
                    }
                    validate_other.apply();
-                      validate_udf.apply();
                }
      }
     }
@@ -4100,7 +4090,6 @@ control PktValidation(
                        validate_ipv6.apply();
                    }
                    validate_other.apply();
-                      validate_udf.apply();
                }
            }
   }
@@ -4214,7 +4203,6 @@ control InnerPktValidation(
         }
     }
     action set_udf() {
-        lkp.l7_udf = hdr.inner_udf.opaque;
     }
     table validate_udf {
         key = {
@@ -4238,7 +4226,6 @@ control InnerPktValidation(
                 } else if (hdr.inner_ipv6.isValid()) {
                 }
                 validate_other.apply();
-                validate_udf.apply();
             }
         }
     }
@@ -4316,9 +4303,7 @@ control IngressTunnel(in switch_header_t hdr,
     action src_vtep_miss_nsh() {}
     table src_vtep_nsh {
         key = {
-            lkp_nsh.ip_src_addr[31:0] : exact @name("src_addr");
-            ig_md.vrf_nsh : exact;
-            ig_md.tunnel_nsh.type : exact;
+            ig_md.tunnel.type : exact;
         }
         actions = {
             src_vtep_miss_nsh;
@@ -4329,9 +4314,7 @@ control IngressTunnel(in switch_header_t hdr,
     }
     table src_vtepv6_nsh {
         key = {
-            lkp_nsh.ip_src_addr : exact @name("src_addr");
-            ig_md.vrf_nsh : exact;
-            ig_md.tunnel_nsh.type : exact;
+            ig_md.tunnel.type : exact;
         }
         actions = {
             src_vtep_miss_nsh;
@@ -4554,10 +4537,6 @@ control TunnelDecap(inout switch_header_t hdr,
         hdr.vxlan.setInvalid();
         hdr.gre.setInvalid();
         hdr.nvgre.setInvalid();
-  hdr.gtp_v1_base.setInvalid();
-  hdr.gtp_v2_base.setInvalid();
-  hdr.gtp_v1_v2_teid.setInvalid();
-  hdr.gtp_v1_optional.setInvalid();
     }
     action decap_inner_ethernet_ipv4() {
         hdr.ethernet = hdr.inner_ethernet;
@@ -4826,30 +4805,6 @@ control TunnelEncap(inout switch_header_t hdr,
         hdr.nvgre.vsid = vsid;
         hdr.nvgre.flow_id = flow_id;
     }
-    action add_gtpc_header(bit<32> teid) {
-        hdr.gtp_v2_base.setValid();
-  hdr.gtp_v2_base.version = 2;
-     hdr.gtp_v2_base.P = 0;
-     hdr.gtp_v2_base.T = 1;
-     hdr.gtp_v2_base.reserved = 0;
-     hdr.gtp_v2_base.msg_type = 0;
-     hdr.gtp_v2_base.msg_len = 0;
-        hdr.gtp_v1_v2_teid.setValid();
-  hdr.gtp_v1_v2_teid.teid = teid;
- }
-    action add_gtpu_header(bit<32> teid) {
-        hdr.gtp_v1_base.setValid();
-     hdr.gtp_v1_base.version = 1;
-     hdr.gtp_v1_base.PT = 1;
-     hdr.gtp_v1_base.reserved = 0;
-     hdr.gtp_v1_base.E = 0;
-     hdr.gtp_v1_base.S = 0;
-     hdr.gtp_v1_base.PN = 0;
-     hdr.gtp_v1_base.msg_type = 0;
-     hdr.gtp_v1_base.msg_len = 0;
-        hdr.gtp_v1_v2_teid.setValid();
-  hdr.gtp_v1_v2_teid.teid = teid;
- }
     action add_erspan_header(bit<32> timestamp, switch_mirror_session_t session_id) {
     }
     action add_ipv4_header(bit<8> proto) {
@@ -4883,7 +4838,15 @@ control TunnelEncap(inout switch_header_t hdr,
         hdr.ipv4.total_len = payload_len + 16w50;
         add_udp_header(eg_md.tunnel.hash, vxlan_port);
         hdr.udp.length = payload_len + 16w30;
-        add_vxlan_header(eg_md.tunnel.id[23:0]);
+        add_vxlan_header(eg_md.tunnel.id);
+        hdr.ethernet.ether_type = 0x0800;
+    }
+    action rewrite_ipv4_nvgre(bit<16> vxlan_port) {
+        hdr.inner_ethernet = hdr.ethernet;
+        add_ipv4_header(47);
+        hdr.ipv4.total_len = payload_len + 16w42;
+        add_gre_header(0x6558, 1);
+        add_nvgre_header(eg_md.tunnel.id, 0);
         hdr.ethernet.ether_type = 0x0800;
     }
     action rewrite_ipv4_ip() {
@@ -4891,35 +4854,12 @@ control TunnelEncap(inout switch_header_t hdr,
         hdr.ipv4.total_len = payload_len + 16w20;
         hdr.ethernet.ether_type = 0x0800;
     }
-    action rewrite_ipv4_nvgre() {
-        add_ipv4_header(47);
-        hdr.ipv4.total_len = payload_len + 16w28;
-        add_gre_header(0x6558, 1);
-        add_nvgre_header((bit<24>)eg_md.tunnel.id, 0);
-        hdr.ethernet.ether_type = 0x0800;
-    }
-    action rewrite_ipv4_gtpc() {
-        add_ipv4_header(17);
-        hdr.ipv4.total_len = payload_len + 16w28;
-  add_gtpc_header(eg_md.tunnel.id);
-        hdr.ethernet.ether_type = 0x0800;
- }
-    action rewrite_ipv4_gtpu() {
-        add_ipv4_header(17);
-        hdr.ipv4.total_len = payload_len + 16w28;
-  add_gtpu_header(eg_md.tunnel.id);
-        hdr.ethernet.ether_type = 0x0800;
- }
     action rewrite_ipv6_vxlan(bit<16> vxlan_port) {
+    }
+    action rewrite_ipv6_nvgre(bit<16> vxlan_port) {
     }
     action rewrite_ipv6_ip() {
     }
-    action rewrite_ipv6_nvgre() {
-    }
-    action rewrite_ipv6_gtpc() {
- }
-    action rewrite_ipv6_gtpu() {
- }
     action rewrite_mac_in_mac() {
     }
     action rewrite_mac_in_mac_nsh_() {
@@ -4941,10 +4881,6 @@ control TunnelEncap(inout switch_header_t hdr,
    rewrite_mac_in_mac;
             rewrite_ipv4_nvgre;
             rewrite_ipv6_nvgre;
-            rewrite_ipv4_gtpc;
-            rewrite_ipv6_gtpc;
-            rewrite_ipv4_gtpu;
-            rewrite_ipv6_gtpu;
         }
         const default_action = NoAction;
     }
@@ -6302,6 +6238,9 @@ control npb_ing_sfc_top (
    ing_sfc_sfc_class_123.apply();
   }
   ig_md.nsh_extr.extr_tenant_id = (bit<16>)ig_md.bd_nsh;
+  if(hdr.gtp_v1_v2_teid.isValid()) {
+   ig_md.nsh_extr.extr_tenant_id = (bit<16>)hdr.gtp_v1_v2_teid.teid;
+  }
  }
 }
 control npb_ing_sf_npb_basic_adv_top (
@@ -6348,7 +6287,6 @@ control npb_ing_sf_npb_basic_adv_top (
    ig_md.lkp_nsh.ip_dst_addr[31:0] : ternary;
    ig_md.lkp_nsh.l4_src_port : ternary;
    ig_md.lkp_nsh.l4_dst_port : ternary;
-   ig_md.lkp_nsh.l7_udf : ternary;
    ig_md.nsh_extr.extr_tenant_id : exact;
    ig_md.nsh_extr.extr_flow_type : exact;
   }
@@ -6370,7 +6308,6 @@ control npb_ing_sf_npb_basic_adv_top (
    ig_md.lkp_nsh.ip_dst_addr : ternary;
    ig_md.lkp_nsh.l4_src_port : ternary;
    ig_md.lkp_nsh.l4_dst_port : ternary;
-   ig_md.lkp_nsh.l7_udf : ternary;
    ig_md.nsh_extr.extr_tenant_id : exact;
    ig_md.nsh_extr.extr_flow_type : exact;
   }
@@ -6404,7 +6341,6 @@ control npb_ing_sf_npb_basic_adv_top (
    ig_md.lkp_nsh.ip_dst_addr[31:0] : ternary;
    ig_md.lkp_nsh.l4_src_port : ternary;
    ig_md.lkp_nsh.l4_dst_port : ternary;
-   ig_md.lkp_nsh.l7_udf : ternary;
    ig_md.nsh_extr.extr_tenant_id : exact;
    ig_md.nsh_extr.extr_flow_type : exact;
   }
@@ -6423,7 +6359,6 @@ control npb_ing_sf_npb_basic_adv_top (
    ig_md.lkp_nsh.ip_dst_addr : ternary;
    ig_md.lkp_nsh.l4_src_port : ternary;
    ig_md.lkp_nsh.l4_dst_port : ternary;
-   ig_md.lkp_nsh.l7_udf : ternary;
    ig_md.nsh_extr.extr_tenant_id : exact;
    ig_md.nsh_extr.extr_flow_type : exact;
   }
@@ -6438,7 +6373,6 @@ control npb_ing_sf_npb_basic_adv_top (
   key = {
    ig_md.lkp_nsh.l4_src_port : ternary;
    ig_md.lkp_nsh.l4_dst_port : ternary;
-   ig_md.lkp_nsh.l7_udf : ternary;
    ig_md.nsh_extr.extr_tenant_id : exact;
    ig_md.nsh_extr.extr_flow_type : exact;
   }
@@ -7035,7 +6969,6 @@ control SwitchIngress(
         ig_intr_md_for_tm.ucast_egress_port = ig_intr_md.ingress_port;
         pkt_validation.apply(hdr, ig_md.flags, ig_md.lkp, ig_intr_md_for_tm, ig_md.drop_reason);
         ig_md.lkp_nsh = ig_md.lkp;
-  ig_md.tunnel_nsh = ig_md.tunnel;
         ingress_port_mapping.apply(hdr, ig_md, ig_intr_md_for_tm, ig_intr_md_for_dprsr);
         tunnel.apply(hdr, ig_md, ig_md.lkp, ig_md.lkp_nsh);
         mirror_acl.apply(ig_md.lkp, ig_md);

@@ -1,1463 +1,8 @@
-# 1 "npb.p4"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "npb.p4"
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
+#include <t2na.p4>
 
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- ******************************************************************************/
-# 31 "npb.p4"
-# 1 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/core.p4" 1
-/*
-Copyright 2013-present Barefoot Networks, Inc.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-/* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
-
-
-
-
-/// Standard error codes.  New error codes can be declared by users.
-error {
-    NoError, /// No error.
-    PacketTooShort, /// Not enough bits in packet for 'extract'.
-    NoMatch, /// 'select' expression has no matches.
-    StackOutOfBounds, /// Reference to invalid element of a header stack.
-    HeaderTooShort, /// Extracting too many bits into a varbit field.
-    ParserTimeout, /// Parser execution time limit exceeded.
-    ParserInvalidArgument /// Parser operation was called with a value
-                           /// not supported by the implementation.
-}
-
-extern packet_in {
-    /// Read a header from the packet into a fixed-sized header @hdr and advance the cursor.
-    /// May trigger error PacketTooShort or StackOutOfBounds.
-    /// @T must be a fixed-size header type
-    void extract<T>(out T hdr);
-    /// Read bits from the packet into a variable-sized header @variableSizeHeader
-    /// and advance the cursor.
-    /// @T must be a header containing exactly 1 varbit field.
-    /// May trigger errors PacketTooShort, StackOutOfBounds, or HeaderTooShort.
-    void extract<T>(out T variableSizeHeader,
-                    in bit<32> variableFieldSizeInBits);
-    /// Read bits from the packet without advancing the cursor.
-    /// @returns: the bits read from the packet.
-    /// T may be an arbitrary fixed-size type.
-    T lookahead<T>();
-    /// Advance the packet cursor by the specified number of bits.
-    void advance(in bit<32> sizeInBits);
-    /// @return packet length in bytes.  This method may be unavailable on
-    /// some target architectures.
-    bit<32> length();
-}
-
-extern packet_out {
-    /// Write @hdr into the output packet, advancing cursor.
-    /// @T can be a header type, a header stack, a header_union, or a struct
-    /// containing fields with such types.
-    void emit<T>(in T hdr);
-}
-
-// TODO: remove from this file, convert to built-in
-/// Check a predicate @check in the parser; if the predicate is true do nothing,
-/// otherwise set the parser error to @toSignal, and transition to the `reject` state.
-extern void verify(in bool check, in error toSignal);
-
-/// Built-in action that does nothing.
-action NoAction() {}
-
-/// Standard match kinds for table key fields.
-/// Some architectures may not support all these match kinds.
-/// Architectures can declare additional match kinds.
-match_kind {
-    /// Match bits exactly.
-    exact,
-    /// Ternary match, using a mask.
-    ternary,
-    /// Longest-prefix match.
-    lpm
-}
-# 32 "npb.p4" 2
-
-# 1 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/t2na.p4" 1
-/*
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
- *
- * All Rights Reserved.
-
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks, Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law. Dissemination of
- * this information or reproduction of this material is strictly forbidden unless
- * prior written permission is obtained from Barefoot Networks, Inc.
-
- * No warranty, explicit or implicit is provided, unless granted under a written
- * agreement with Barefoot Networks, Inc.
- *
- */
-
-
-
-
-# 1 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/core.p4" 1
-/*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-/* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
-# 23 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/t2na.p4" 2
-# 1 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/tofino2.p4" 1
-/*
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
- *
- * All Rights Reserved.
-
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks, Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law. Dissemination of
- * this information or reproduction of this material is strictly forbidden unless
- * prior written permission is obtained from Barefoot Networks, Inc.
-
- * No warranty, explicit or implicit is provided, unless granted under a written
- * agreement with Barefoot Networks, Inc.
- *
- */
-
-
-
-
-# 1 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/core.p4" 1
-/*
-Copyright 2013-present Barefoot Networks, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-/* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
-# 23 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/tofino2.p4" 2
-
-//XXX Open issues:
-// Meter color
-// Math unit
-// Action selector
-// Digest
-// Coalesce mirroring
-
-// ----------------------------------------------------------------------------
-// COMMON TYPES
-// ----------------------------------------------------------------------------
-typedef bit<9> PortId_t; // Port id -- ingress or egress port
-typedef bit<16> MulticastGroupId_t; // Multicast group id
-typedef bit<7> QueueId_t; // Queue id
-typedef bit<4> CloneId_t; // Clone id
-typedef bit<8> MirrorId_t; // Mirror id
-typedef bit<16> ReplicationId_t; // Replication id
-
-typedef error ParserError_t;
-
-const bit<32> PORT_METADATA_SIZE = 32w192;
-
-const bit<16> PARSER_ERROR_OK = 16w0x0000;
-const bit<16> PARSER_ERROR_NO_TCAM = 16w0x0001;
-const bit<16> PARSER_ERROR_PARTIAL_HDR = 16w0x0002;
-const bit<16> PARSER_ERROR_CTR_RANGE = 16w0x0004;
-const bit<16> PARSER_ERROR_TIMEOUT_USER = 16w0x0008;
-const bit<16> PARSER_ERROR_TIMEOUT_HW = 16w0x0010;
-const bit<16> PARSER_ERROR_SRC_EXT = 16w0x0020;
-const bit<16> PARSER_ERROR_PHV_OWNER = 16w0x0080;
-const bit<16> PARSER_ERROR_MULTIWRITE = 16w0x0100;
-const bit<16> PARSER_ERROR_ARAM_MBE = 16w0x0400;
-const bit<16> PARSER_ERROR_FCS = 16w0x0800;
-const bit<16> PARSER_ERROR_CSUM_MBE = 16w0x1000;
-
-/// Meter
-enum MeterType_t { PACKETS, BYTES }
-
-enum bit<8> MeterColor_t { GREEN = 8w0, YELLOW = 8w1, RED = 8w3 }
-
-/// Counter
-enum CounterType_t {
-    PACKETS,
-    BYTES,
-    PACKETS_AND_BYTES
-}
-
-/// Selector mode
-enum SelectorMode_t { FAIR, RESILIENT }
-
-enum HashAlgorithm_t {
-    IDENTITY,
-    RANDOM,
-    CRC8,
-    CRC16,
-    CRC32,
-    CRC64,
-    CUSTOM
-}
-
-match_kind {
-    // exact,
-    // ternary,
-    // lpm,               // Longest-prefix match.
-    range,
-    selector, // Used for implementing dynamic action selection
-    dleft_hash, // Used for dleft dynamic caching
-    atcam_partition_index // Used for implementing algorithmic tcam
-}
-
-error {
-    // NoError,           // No error.
-    // NoMatch,           // 'select' expression has no matches.
-    // PacketTooShort,    // Not enough bits in packet for 'extract'.
-    // StackOutOfBounds,  // Reference to invalid element of a header stack.
-    // HeaderTooShort,    // Extracting too many bits into a varbit field.
-    // ParserTimeout      // Parser execution time limit exceeded.
-    CounterRange, // Counter initialization error.
-    Timeout,
-    PhvOwner, // Invalid destination container.
-    MultiWrite,
-    IbufOverflow, // Input buffer overflow.
-    IbufUnderflow // Inbut buffer underflow.
-}
-
-// -----------------------------------------------------------------------------
-// INGRESS INTRINSIC METADATA
-// -----------------------------------------------------------------------------
-@__intrinsic_metadata
-header ingress_intrinsic_metadata_t {
-    bit<1> resubmit_flag; // Flag distinguishing original packets
-                                        // from resubmitted packets.
-    @padding bit<1> _pad1;
-
-    bit<2> packet_version; // Read-only Packet version.
-
-    @padding bit<3> _pad2;
-
-    bit<9> ingress_port; // Ingress physical port id.
-                                        // this field is passed to the deparser
-
-    bit<48> ingress_mac_tstamp; // Ingress IEEE 1588 timestamp (in nsec)
-                                        // taken at the ingress MAC.
-}
-
-@__intrinsic_metadata
-struct ingress_intrinsic_metadata_for_tm_t {
-    bit<9> ucast_egress_port; // Egress port for unicast packets. must
-                                        // be presented to TM for unicast.
-
-    bit<1> bypass_egress; // Request flag for the warp mode
-                                        // (egress bypass).
-
-    bit<1> deflect_on_drop; // Request for deflect on drop. must be
-                                        // presented to TM to enable deflection
-                                        // upon drop.
-
-    bit<3> ingress_cos; // Ingress cos (iCoS) for PG mapping,
-                                        // ingress admission control, PFC,
-                                        // etc.
-
-    bit<7> qid; // Egress (logical) queue id into which
-                                        // this packet will be deposited.
-
-    bit<3> icos_for_copy_to_cpu; // Ingress cos for the copy to CPU. must
-                                        // be presented to TM if copy_to_cpu ==
-                                        // 1.
-
-    bit<1> copy_to_cpu; // Request for copy to cpu.
-
-    bit<2> packet_color; // Packet color (G,Y,R) that is
-                                        // typically derived from meters and
-                                        // used for color-based tail dropping.
-
-    bit<1> disable_ucast_cutthru; // Disable cut-through forwarding for
-                                        // unicast.
-
-    bit<1> enable_mcast_cutthru; // Enable cut-through forwarding for
-                                        // multicast.
-
-    MulticastGroupId_t mcast_grp_a; // 1st multicast group (i.e., tree) id;
-                                        // a tree can have two levels. must be
-                                        // presented to TM for multicast.
-
-    MulticastGroupId_t mcast_grp_b; // 2nd multicast group (i.e., tree) id;
-                                        // a tree can have two levels.
-
-    bit<13> level1_mcast_hash; // Source of entropy for multicast
-                                        // replication-tree level1 (i.e., L3
-                                        // replication). must be presented to TM
-                                        // for L3 dynamic member selection
-                                        // (e.g., ECMP) for multicast.
-
-    bit<13> level2_mcast_hash; // Source of entropy for multicast
-                                        // replication-tree level2 (i.e., L2
-                                        // replication). must be presented to TM
-                                        // for L2 dynamic member selection
-                                        // (e.g., LAG) for nested multicast.
-
-    bit<16> level1_exclusion_id; // Exclusion id for multicast
-                                        // replication-tree level1. used for
-                                        // pruning.
-
-    bit<9> level2_exclusion_id; // Exclusion id for multicast
-                                        // replication-tree level2. used for
-                                        // pruning.
-
-    bit<16> rid; // L3 replication id for multicast.
-}
-
-@__intrinsic_metadata
-struct ingress_intrinsic_metadata_from_parser_t {
-    bit<48> global_tstamp; // Global timestamp (ns) taken upon
-                                        // arrival at ingress.
-
-    bit<32> global_ver; // Global version number taken upon
-                                        // arrival at ingress.
-
-    bit<16> parser_err; // Error flags indicating error(s)
-                                        // encountered at ingress parser.
-}
-
-@__intrinsic_metadata
-struct ingress_intrinsic_metadata_for_deparser_t {
-
-    bit<3> drop_ctl; // Disable packet replication:
-                                        //    - bit 0 disables unicast,
-                                        //      multicast, and resubmit
-                                        //    - bit 1 disables copy-to-cpu
-                                        //    - bit 2 disables mirroring
-    bit<3> digest_type;
-
-    bit<3> resubmit_type;
-
-    bit<4> mirror_type; // The user-selected mirror field list
-                                        // index.
-
-    bit<1> mirror_io_select; // Mirror incoming or outgoing packet
-
-    // Setting the following metadata will override the value in mirror table
-    bit<13> mirror_hash; // Mirror hash field.
-    bit<3> mirror_ingress_cos; // Mirror ingress cos for PG mapping.
-    bit<1> mirror_deflect_on_drop; // Mirror enable deflection on drop if true.
-    bit<1> mirror_multicast_ctrl; // Mirror enable multicast if true.
-    bit<9> mirror_egress_port; // Mirror packet egress port.
-    bit<7> mirror_qid; // Mirror packet qid.
-    bit<8> mirror_coalesce_length; // Mirror coalesced packet max sample
-                                        // length. Unit is quad bytes.
-    bit<32> adv_flow_ctl; // Advanced flow control for TM
-    bit<14> mtu_trunc_len; // MTU for truncation check
-    bit<1> mtu_trunc_err_f; // MTU truncation error flag
-
-    bit<3> learn_sel; // Learn quantum table selector
-    bit<1> pktgen; // trigger packet generation
-                                        // This is ONLY valid if resubmit_type
-                                        // is not valid.
-    bit<14> pktgen_address; // Packet generator buffer address.
-    bit<10> pktgen_length; // Length of generated packet.
-
-    // also need an extern for PacketGen
-}
-// -----------------------------------------------------------------------------
-// GHOST INTRINSIC METADATA
-// -----------------------------------------------------------------------------
-@__intrinsic_metadata @__ghost_metadata
-header ghost_intrinsic_metadata_t {
-    bit<1> ping_pong; // ping-pong bit to control which version to update
-    bit<18> qlength;
-    bit<11> qid; // queue id for update
-    bit<2> pipe_id;
-}
-
-// -----------------------------------------------------------------------------
-// EGRESS INTRINSIC METADATA
-// -----------------------------------------------------------------------------
-@__intrinsic_metadata
-header egress_intrinsic_metadata_t {
-    @padding bit<7> _pad0;
-
-    bit<9> egress_port; // Egress port id.
-                                        // this field is passed to the deparser
-
-    @padding bit<5> _pad1;
-
-    bit<19> enq_qdepth; // Queue depth at the packet enqueue
-                                        // time.
-
-    @padding bit<6> _pad2;
-
-    bit<2> enq_congest_stat; // Queue congestion status at the packet
-                                        // enqueue time.
-
-    bit<32> enq_tstamp; // Time snapshot taken when the packet
-                                        // is enqueued (in nsec).
-
-    @padding bit<5> _pad3;
-
-    bit<19> deq_qdepth; // Queue depth at the packet dequeue
-                                        // time.
-
-    @padding bit<6> _pad4;
-
-    bit<2> deq_congest_stat; // Queue congestion status at the packet
-                                        // dequeue time.
-
-    bit<8> app_pool_congest_stat; // Dequeue-time application-pool
-                                        // congestion status. 2bits per
-                                        // pool.
-
-    bit<32> deq_timedelta; // Time delta between the packet's
-                                        // enqueue and dequeue time.
-
-    bit<16> egress_rid; // L3 replication id for multicast
-                                        // packets.
-
-    @padding bit<7> _pad5;
-
-    bit<1> egress_rid_first; // Flag indicating the first replica for
-                                        // the given multicast group.
-
-    @padding bit<1> _pad6;
-
-    bit<7> egress_qid; // Egress (physical) queue id within a MAC via which
-                                        // this packet was served.
-
-    @padding bit<5> _pad7;
-
-    bit<3> egress_cos; // Egress cos (eCoS) value.
-
-    @padding bit<7> _pad8;
-
-    bit<1> deflection_flag; // Flag indicating whether a packet is
-                                        // deflected due to deflect_on_drop.
-
-    bit<16> pkt_length; // Packet length, in bytes
-
-    @padding bit<8> _pad9; // Pad to 4-byte alignment for egress
-                                        // intrinsic metadata (HW constraint)
-}
-
-
-@__intrinsic_metadata
-struct egress_intrinsic_metadata_from_parser_t {
-    bit<48> global_tstamp; // Global timestamp (ns) taken upon
-                                        // arrival at egress.
-
-    bit<32> global_ver; // Global version number taken upon
-                                        // arrival at ingress.
-
-    bit<16> parser_err; // Error flags indicating error(s)
-                                        // encountered at ingress parser.
-}
-
-@__intrinsic_metadata
-struct egress_intrinsic_metadata_for_deparser_t {
-    bit<3> drop_ctl; // Disable packet replication:
-                                        //    - bit 0 disables unicast,
-                                        //      multicast, and resubmit
-                                        //    - bit 1 disables copy-to-cpu
-                                        //    - bit 2 disables mirroring
-
-    bit<4> mirror_type;
-
-    bit<1> coalesce_flush; // Flush the coalesced mirror buffer
-
-    bit<7> coalesce_length; // The number of bytes in the current
-                                        // packet to collect in the mirror
-                                        // buffer
-
-    bit<1> mirror_io_select; // Mirror incoming or outgoing packet
-
-    // Setting the following metadata will override the value in mirror table
-    bit<13> mirror_hash; // Mirror hash field.
-    bit<3> mirror_ingress_cos; // Mirror ingress cos for PG mapping.
-    bit<1> mirror_deflect_on_drop; // Mirror enable deflection on drop if true.
-    bit<1> mirror_multicast_ctrl; // Mirror enable multicast if true.
-    bit<9> mirror_egress_port; // Mirror packet egress port.
-    bit<7> mirror_qid; // Mirror packet qid.
-    bit<8> mirror_coalesce_length; // Mirror coalesced packet max sample
-                                        // length. Unit is quad bytes.
-    bit<32> adv_flow_ctl; // Advanced flow control for TM
-    bit<14> mtu_trunc_len; // MTU for truncation check
-    bit<1> mtu_trunc_err_f; // MTU truncation error flag
-}
-
-@__intrinsic_metadata
-struct egress_intrinsic_metadata_for_output_port_t {
-    bit<1> capture_tstamp_on_tx; // Request for packet departure
-                                        // timestamping at egress MAC for IEEE
-                                        // 1588. consumed by h/w (egress MAC).
-
-    bit<1> update_delay_on_tx; // Request for PTP delay (elapsed time)
-                                        // update at egress MAC for IEEE 1588
-                                        // Transparent Clock. consumed by h/w
-                                        // (egress MAC). when this is enabled,
-                                        // the egress pipeline must prepend a
-                                        // custom header composed of <ingress
-                                        // tstamp (40), byte offset for the
-                                        // elapsed time field (8), byte offset
-                                        // for UDP checksum (8)> in front of the
-                                        // Ethernet header.
-    bit<1> force_tx_error; // force a hardware transmission error
-}
-
-// -----------------------------------------------------------------------------
-// PACKET GENERATION
-// -----------------------------------------------------------------------------
-// Packet generator supports up to 16 applications and a total of 16KB packet
-// payload. Each application is associated with one of the four trigger types:
-// - One-time timer
-// - Periodic timer
-// - Port down
-// - Packet recirculation
-// - MAU packet trigger
-// For recirculated packets, the event fires when the first 32 bits of the
-// recirculated packet matches the application match value and mask.
-// A triggered event may generate programmable number of batches with
-// programmable number of packets per batch.
-
-header pktgen_timer_header_t {
-    @padding bit<2> _pad1;
-    bit<2> pipe_id; // Pipe id
-    bit<4> app_id; // Application id
-    @padding bit<8> _pad2;
-
-    bit<16> batch_id; // Start at 0 and increment to a
-                                        // programmed number
-
-    bit<16> packet_id; // Start at 0 and increment to a
-                                        // programmed number
-}
-
-header pktgen_port_down_header_t {
-    @padding bit<2> _pad1;
-    bit<2> pipe_id; // Pipe id
-    bit<4> app_id; // Application id
-    @padding bit<15> _pad2;
-    bit<9> port_num; // Port number
-
-    bit<16> packet_id; // Start at 0 and increment to a
-                                        // programmed number
-}
-
-header pktgen_recirc_header_t {
-    @padding bit<2> _pad1;
-    bit<2> pipe_id; // Pipe id
-    bit<4> app_id; // Application id
-    @padding bit<8> _pad2;
-    bit<16> batch_id; // Start at 0 and increment to a
-                                        // programmed number
-
-    bit<16> packet_id; // Start at 0 and increment to a
-                                        // programmed number
-}
-
-header pktgen_deparser_header_t {
-    @padding bit<2> _pad1;
-    bit<2> pipe_id; // Pipe id
-    bit<4> app_id; // Application id
-    @padding bit<8> _pad2;
-    bit<16> batch_id; // Start at 0 and increment to a
-                                        // programmed number
-
-    bit<16> packet_id; // Start at 0 and increment to a
-                                        // programmed number
-}
-
-header pktgen_pfc_header_t {
-    @padding bit<2> _pad1;
-    bit<2> pipe_id; // Pipe id
-    bit<4> app_id; // Application id
-    @padding bit<40> _pad2;
-};
-
-// -----------------------------------------------------------------------------
-// TIME SYNCHRONIZATION
-// -----------------------------------------------------------------------------
-
-header ptp_metadata_t {
-    bit<8> udp_cksum_byte_offset; // Byte offset at which the egress MAC
-                                        // needs to update the UDP checksum
-
-
-    bit<8> cf_byte_offset; // Byte offset at which the egress MAC
-                                        // needs to re-insert
-                                        // ptp_sync.correction field
-
-    bit<48> updated_cf; // Updated correction field in ptp sync
-                                        // message
-}
-
-// -----------------------------------------------------------------------------
-// CHECKSUM
-// -----------------------------------------------------------------------------
-// Tofino checksum engine can verify the checksums for header-only checksums
-// and calculate the residual (checksum minus the header field
-// contribution) for checksums that include the payload.
-// Checksum engine only supports 16-bit ones' complement checksums, also known
-// as csum16 or internet checksum.
-
-extern Checksum {
-    /// Constructor.
-    Checksum();
-
-    /// Add data to checksum.
-    /// @param data : List of fields to be added to checksum calculation. The
-    /// data must be byte aligned.
-    void add<T>(in T data);
-
-    /// Subtract data from existing checksum.
-    /// @param data : List of fields to be subtracted from the checksum. The
-    /// data must be byte aligned.
-    void subtract<T>(in T data);
-
-    /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
-    /// @return : Boolean flag indicating whether the checksum is valid or not.
-    bool verify();
-
-    /// Get the calculated checksum value.
-    /// @return : The calculated checksum value for added fields.
-    bit<16> get();
-
-    /// Calculate the checksum for a  given list of fields.
-    /// @param data : List of fields contributing to the checksum value.
-    /// @param zeros_as_ones : encode all-zeros value as all-ones.
-    bit<16> update<T>(in T data, @optional in bool zeros_as_ones);
-}
-
-// ----------------------------------------------------------------------------
-// PARSER COUNTER
-// ----------------------------------------------------------------------------
-// Tofino2 parser counter can be used to extract header stacks or headers with
-// variable length. Tofino2 has a single 8-bit signed counter that can be
-// initialized with an immediate value or a header field.
-//
-// On Tofino2, the parser counter also comes with a shallow stack (with depth of 4).
-// The counter stack is useful when parsing nested TLV headers (e.g. GENEVE-like options
-// where the total option length is variable and each individual option length is
-// also variable).
-
-extern ParserCounter {
-    /// Constructor
-    ParserCounter();
-
-    /// Load the counter with an immediate value or a header field.
-    void set<T>(in T value);
-
-    /// Load the counter with a header field.
-    /// @param max : Maximum permitted value for counter (pre rotate/mask/add).
-    /// @param rotate : Right rotate (circular) the source field by this number of bits.
-    /// @param mask : Mask the rotated source field.
-    /// @param add : Constant to add to the rotated and masked lookup field.
-    void set<T>(in T field,
-                in bit<8> max,
-                in bit<8> rotate,
-                in bit<8> mask,
-                in bit<8> add);
-
-    /// Push the immediate value or a header field onto the stack.
-    /// @param update_with_top : update the pushed value when the top-of-stack value is updated.
-    void push<T>(in T value, @optional bool update_with_top);
-
-    /// Push the header field onto the stack.
-    /// @param update_with_top : update the pushed value when the top-of-stack value is updated.
-    void push<T>(in T field,
-                 in bit<8> max,
-                 in bit<8> rotate,
-                 in bit<8> mask,
-                 in bit<8> add,
-                 @optional bool update_with_top);
-
-    /// Pop the top-of-stack value from the stack.
-    void pop();
-
-    /// @return true if counter value is zero.
-    bool is_zero();
-
-    /// @return true if counter value is negative.
-    bool is_negative();
-
-    /// Add an immediate value to the parser counter.
-    /// @param value : Constant to add to the counter.
-    void increment(in bit<8> value);
-
-    /// Subtract an immediate value from the parser counter.
-    /// @param value : Constant to subtract from the counter.
-    void decrement(in bit<8> value);
-}
-
-// ----------------------------------------------------------------------------
-// PARSER PRIORITY
-// ----------------------------------------------------------------------------
-// Tofino ingress parser compare the priority with a configurable!!! threshold
-// to determine to whether drop the packet if the input buffer is congested.
-// Egress parser does not perform any dropping.
-extern ParserPriority {
-    /// Constructor
-    ParserPriority();
-
-    /// Set a new priority for the packet.
-    void set(in bit<3> prio);
-}
-
-// ----------------------------------------------------------------------------
-// HASH ENGINE
-// ----------------------------------------------------------------------------
-extern CRCPolynomial<T> {
-    CRCPolynomial(T coeff, bool reversed, bool msb, bool extended, T init, T xor);
-}
-
-extern Hash<W> {
-    /// Constructor
-    /// @type_param W : width of the calculated hash.
-    /// @param algo : The default algorithm used for hash calculation.
-    Hash(HashAlgorithm_t algo);
-
-    /// Constructor
-    /// @param poly : The default coefficient used for hash algorithm.
-    Hash(HashAlgorithm_t algo, CRCPolynomial<_> poly);
-
-    /// Compute the hash for the given data.
-    /// @param data : The list of fields contributing to the hash.
-    /// @return The hash value.
-    W get<D>(in D data);
-}
-
-/// Random number generator.
-extern Random<W> {
-    /// Constructor
-    Random();
-
-    /// Return a random number with uniform distribution.
-    /// @return : ranom number between 0 and 2**W - 1
-    W get();
-}
-
-/// Idle timeout
-extern IdleTimeout {
-    IdleTimeout();
-}
-
-
-// -----------------------------------------------------------------------------
-// EXTERN FUNCTIONS
-// -----------------------------------------------------------------------------
-
-extern T max<T>(in T t1, in T t2);
-
-extern T min<T>(in T t1, in T t2);
-
-extern void invalidate<T>(in T field);
-
-/// Phase0
-extern T port_metadata_unpack<T>(packet_in pkt);
-
-extern bit<32> sizeInBits<H>(in H h);
-
-extern bit<32> sizeInBytes<H>(in H h);
-
-/// Counter
-/// Indexed counter with `size’ independent counter values.
-extern Counter<W, I> {
-    /// Constructor
-    /// @type_param W : width of the counter value.
-    /// @type_param I : width of the counter index.
-    /// @param type : counter type. Packet an byte counters are supported.
-    Counter(bit<32> size, CounterType_t type);
-
-    /// Increment the counter value.
-    /// @param index : index of the counter to be incremented.
-    void count(in I index);
-}
-
-/// DirectCounter
-extern DirectCounter<W> {
-    DirectCounter(CounterType_t type);
-    void count();
-}
-
-/// Meter
-extern Meter<I> {
-    Meter(bit<32> size, MeterType_t type);
-    Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in I index, in MeterColor_t color);
-    bit<8> execute(in I index);
-}
-
-/// Direct meter.
-extern DirectMeter {
-    DirectMeter(MeterType_t type);
-    DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in MeterColor_t color);
-    bit<8> execute();
-}
-
-/// LPF
-extern Lpf<T, I> {
-    Lpf(bit<32> size);
-    T execute(in T val, in I index);
-}
-
-/// Direct LPF
-extern DirectLpf<T> {
-    DirectLpf();
-    T execute(in T val);
-}
-
-/// WRED
-extern Wred<T, I> {
-    Wred(bit<32> size, bit<8> drop_value, bit<8> no_drop_value);
-    bit<8> execute(in T val, in I index);
-}
-
-/// Direct WRED
-extern DirectWred<T> {
-    DirectWred(bit<8> drop_value, bit<8> no_drop_value);
-    bit<8> execute(in T val);
-}
-
-/// Register
-extern Register<T, I> {
-    /// Instantiate an array of <size> registers. The initial value is
-    /// undefined.
-    Register(bit<32> size);
-
-    /// Initialize an array of <size> registers and set their value to
-    /// initial_value.
-    Register(bit<32> size, T initial_value);
-
-    /// Return the value of register at specified index.
-    T read(in I index);
-
-    /// Write value to register at specified index.
-    void write(in I index, in T value);
-
-    /// Write a value to every index in the register
-    void clear(in T value, @optional in T busy);
-}
-
-/// DirectRegister
-extern DirectRegister<T> {
-    /// Instantiate an array of direct registers. The initial value is
-    /// undefined.
-    DirectRegister();
-
-    /// Initialize an array of direct registers and set their value to
-    /// initial_value.
-    DirectRegister(T initial_value);
-
-    /// Return the value of the direct register.
-    T read();
-
-    /// Write value to a direct register.
-    void write(in T value);
-
-    /// Write a value to every element of the register
-    void clear(in T value, @optional in T busy);
-}
-
-extern RegisterParam<T> {
-    /// Construct a read-only run-time configurable parameter that can only be
-    /// used by RegisterAction.
-    /// @param initial_value : initial value of the parameter.
-    RegisterParam(T initial_value);
-
-    /// Return the value of the parameter.
-    T read();
-}
-
-enum MathOp_t {
-    MUL, // 2^scale * f(x)         --  false,  0
-    SQR, // 2^scale * f(x^2)       --  false,  1
-    SQRT, // 2^scale * f(sqrt(x))   --  false, -1
-    DIV, // 2^scale * f(1/x)       --  true,   0
-    RSQR, // 2^scale * f(1/x^2)     --  true,   1
-    RSQRT // 2^scale * f(1/sqrt(x)) --  true,  -1
-};
-
-extern MathUnit<T> {
-    /// Configure a math unit for use in a register action
-    MathUnit(bool invert, int<2> shift, int<6> scale,
-             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, int<6> scale,
-             tuple< bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8>,
-                    bit<8>, bit<8>, bit<8>, bit<8> > data);
-    MathUnit(MathOp_t op, bit<64> factor); // configure as factor * op(x)
-    T execute(in T x);
-};
-
-extern DirectRegisterAction<T, U> {
-    DirectRegisterAction(DirectRegister<T> reg);
-    U execute(@optional out U rv2, @optional out U rv3, @optional out U rv4);
-    @synchronous(execute)
-    abstract void apply(inout T value, @optional out U rv, @optional out U rv2,
-                                       @optional out U rv3, @optional out U rv4);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address(@optional bit<1> subword); /* return the match address */
-    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern DirectRegisterAction2<T, U1, U2> {
-    DirectRegisterAction2(DirectRegister<T> reg);
-    U1 execute(out U2 rv2);
-    @synchronous(execute)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern DirectRegisterAction3<T, U1, U2, U3> {
-    DirectRegisterAction3(DirectRegister<T> reg);
-    U1 execute(out U2 rv2, out U3 rv3);
-    @synchronous(execute)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern DirectRegisterAction4<T, U1, U2, U3, U4> {
-    DirectRegisterAction4(DirectRegister<T> reg);
-    U1 execute(out U2 rv2, out U3 rv3, out U4 rv4);
-    @synchronous(execute)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-
-extern RegisterAction<T, H, U> {
-    RegisterAction(Register<T, H> reg);
-    U execute(@optional in H index, @optional out U rv2,
-              @optional out U rv3, @optional out U rv4);
-
-    U execute_log(@optional out U rv2, @optional out U rv3, @optional out U rv4);
-    U enqueue(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* fifo push */
-    U dequeue(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* fifo pop */
-    U push(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* stack push */
-    U pop(@optional out U rv2, @optional out U rv3, @optional out U rv4); /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
-    abstract void apply(inout T value, @optional out U rv1, @optional out U rv2,
-                                       @optional out U rv3, @optional out U rv4);
-
-    @synchronous(enqueue, push)
-    @optional abstract void overflow(@optional inout T value,
-                                     @optional out U rv1, @optional out U rv2,
-                                     @optional out U rv3, @optional out U rv4);
-    @synchronous(dequeue, pop)
-    @optional abstract void underflow(@optional inout T value,
-                                      @optional out U rv1, @optional out U rv2,
-                                      @optional out U rv3, @optional out U rv4);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address(@optional bit<1> subword); /* return the match address */
-    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern RegisterAction2<T, H, U1, U2> {
-    RegisterAction2(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2);
-
-    U1 execute_log(out U2 rv2);
-    U1 enqueue(out U2 rv2); /* fifo push */
-    U1 dequeue(out U2 rv2); /* fifo pop */
-    U1 push(out U2 rv2); /* stack push */
-    U1 pop(out U2 rv2); /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2);
-
-    @synchronous(enqueue, push)
-    @optional abstract void overflow(@optional inout T value, out U1 rv1, out U2 rv2);
-    @synchronous(dequeue, pop)
-    @optional abstract void underflow(@optional inout T value, out U1 rv1, out U2 rv);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern RegisterAction3<T, H, U1, U2, U3> {
-    RegisterAction3(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2, out U3 rv3);
-
-    U1 execute_log(out U2 rv2, out U3 rv3);
-    U1 enqueue(out U2 rv2, out U3 rv3); /* fifo push */
-    U1 dequeue(out U2 rv2, out U3 rv3); /* fifo pop */
-    U1 push(out U2 rv2, out U3 rv3); /* stack push */
-    U1 pop(out U2 rv2, out U3 rv3); /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
-
-    @synchronous(enqueue, push)
-    @optional abstract void overflow(@optional inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
-    @synchronous(dequeue, pop)
-    @optional abstract void underflow(@optional inout T value, out U1 rv1, out U2 rv2, out U3 rv3);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern RegisterAction4<T, H, U1, U2, U3, U4> {
-    RegisterAction4(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    U1 execute_log(out U2 rv2, out U3 rv3, out U4 rv4);
-    U1 enqueue(out U2 rv2, out U3 rv3, out U4 rv4); /* fifo push */
-    U1 dequeue(out U2 rv2, out U3 rv3, out U4 rv4); /* fifo pop */
-    U1 push(out U2 rv2, out U3 rv3, out U4 rv4); /* stack push */
-    U1 pop(out U2 rv2, out U3 rv3, out U4 rv4); /* stack pop */
-    @synchronous(execute, execute_log, enqueue, dequeue, push, pop)
-    abstract void apply(inout T value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    @synchronous(enqueue, push)
-    @optional abstract void overflow(@optional inout T value,
-                                     out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-    @synchronous(dequeue, pop)
-    @optional abstract void underflow(@optional inout T value,
-                                      out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the 16-bit predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-
-extern LearnAction<T, H, D, U> {
-    LearnAction(Register<T, H> reg);
-    U execute(in H index, @optional out U rv2, @optional out U rv3, @optional out U rv4);
-    @synchronous(execute)
-    abstract void apply(inout T value, in D digest, in bool learn,
-                        @optional out U rv1, @optional out U rv2,
-                        @optional out U rv3, @optional out U rv4);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address(@optional bit<1> subword); /* return the match address */
-    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern LearnAction2<T, H, D, U1, U2> {
-    LearnAction2(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2);
-    @synchronous(execute)
-    abstract void apply(inout T value, in D digest, in bool learn, out U1 rv1, out U2 rv2);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern LearnAction3<T, H, D, U1, U2, U3> {
-    LearnAction3(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2, out U3 rv3);
-    @synchronous(execute)
-    abstract void apply(inout T value, in D digest, in bool learn,
-                        out U1 rv1, out U2 rv2, out U3 rv3);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-extern LearnAction4<T, H, D, U1, U2, U3, U4> {
-    LearnAction4(Register<T, H> reg);
-    U1 execute(in H index, out U2 rv2, out U3 rv3, out U4 rv4);
-    @synchronous(execute)
-    abstract void apply(inout T value, in D digest, in bool learn,
-                        out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    /* These routines can be called in apply method to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<8> max8<I>(in I val, in bit<16> mask, @optional out bit<4> index);
-    bit<16> min16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-    bit<16> max16<I>(in I val, in bit<8> mask, @optional out bit<3> index);
-}
-
-extern MinMaxAction<T, H, U> {
-    MinMaxAction(Register<T, _> reg);
-    U execute(@optional in H index, @optional out U rv2,
-              @optional out U rv3, @optional out U rv4);
-    @synchronous(execute)
-    abstract void apply(inout bit<128> value, @optional out U rv1, @optional out U rv2,
-                                       @optional out U rv3, @optional out U rv4);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address(@optional bit<1> subword); /* return the match address */
-    U predicate(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<8> postmod);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<8> postmod);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<8> postmod);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<8> postmod);
-}
-extern MinMaxAction2<T, H, U1, U2> {
-    MinMaxAction2(Register<T, _> reg);
-    U1 execute(@optional in H index, out U2 rv2);
-    @synchronous(execute)
-    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-}
-extern MinMaxAction3<T, H, U1, U2, U3> {
-    MinMaxAction3(Register<T, _> reg);
-    U1 execute(@optional in H index, out U2 rv2, out U3 rv3);
-    @synchronous(execute)
-    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2, out U3 rv3);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-}
-extern MinMaxAction4<T, H, U1, U2, U3, U4> {
-    MinMaxAction4(Register<T, _> reg);
-    U1 execute(@optional in H index, out U2 rv2, out U3 rv3, out U4 rv4);
-    @synchronous(execute)
-    abstract void apply(inout bit<128> value, out U1 rv1, out U2 rv2, out U3 rv3, out U4 rv4);
-
-    /* These routines can be called in apply/overflow/underflow methods to get these values
-     * to assign to a return value, but generally no operations can be applied */
-    U address<U>(@optional bit<1> subword); /* return the match address */
-    U predicate<U>(@optional in bool cmp0, @optional in bool cmp1, @optional in bool cmp2,
-                   @optional in bool cmp3); /* return the predicate value */
-    bit<8> min8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<8> max8(in bit<128> val, in bit<16> mask, @optional out bit<4> index,
-                @optional in int<9> postmod);
-    bit<16> min16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-    bit<16> max16(in bit<128> val, in bit<8> mask, @optional out bit<3> index,
-                  @optional in int<9> postmod);
-}
-
-extern ActionProfile {
-    /// Construct an action profile of 'size' entries.
-    ActionProfile(bit<32> size);
-}
-
-extern ActionSelector {
-    /// Construct a selection table for a given ActionProfile.
-    ActionSelector(ActionProfile action_profile,
-                   Hash<_> hash,
-                   SelectorMode_t mode,
-                   bit<32> max_group_size,
-                   bit<32> num_groups);
-
-    /// Stateful action selector.
-    ActionSelector(ActionProfile action_profile,
-                   Hash<_> hash,
-                   SelectorMode_t mode,
-                   Register<bit<1>, _> reg,
-                   bit<32> max_group_size,
-                   bit<32> num_groups);
-
-    /// Construct a selection table for action profile of 'size' entries.
-    @deprecated("ActionSelector must be specified with an associated ActionProfile")
-    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
-
-    @deprecated("ActionSelector must be specified with an associated ActionProfile")
-    ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
-}
-
-extern SelectorAction {
-    SelectorAction(ActionSelector sel);
-    bit<1> execute(@optional in bit<32> index);
-    @synchronous(execute)
-    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
-}
-
-extern Mirror {
-    Mirror();
-
-    void emit(in MirrorId_t session_id);
-
-    /// Write @hdr into the ingress/egress mirror buffer.
-    /// @param hdr : T can be a header type, a header stack, a header_union,
-    /// or a struct containing fields with such types.
-    void emit<T>(in MirrorId_t session_id, in T hdr);
-}
-
-/// Tofino supports packet resubmission at the end of ingress pipeline. When
-/// a packet is resubmitted, the original packet reference and some limited
-/// amount of metadata (64 bits) are passed back to the packet’s original
-/// ingress buffer, where the packet is enqueued again.
-extern Resubmit {
-    /// Constructor
-    Resubmit();
-
-    /// Resubmit the packet.
-    void emit();
-
-    /// Resubmit the packet and prepend it with @hdr.
-    /// @param hdr : T can be a header type, a header stack, a header_union,
-    /// or a struct containing fields with such types.
-    void emit<T>(in T hdr);
-}
-
-extern Digest<T> {
-    /// define a digest stream to the control plane
-    Digest();
-
-    /// Emit data into the stream.  The p4 program can instantiate multiple
-    /// Digest instances in the same deparser control block, and call the pack
-    /// method once during a single execution of the control block
-    void pack(in T data);
-}
-
-/// Tofino2 supports packet generation at the end of ingress pipeline. Packet
-/// Generation can be triggered by MAU, some limited amount of metadata (128 bits)
-/// can be prepended to the generated packet.
-extern Pktgen {
-    Pktgen();
-
-    /// Define the prefix header for the generated packet.
-    /// @param hdr : T can be a header type, a header stack, a header union,
-    /// or a struct contains fields with such types.
-    void emit<T>(in T hdr);
-}
-
-// Algorithmic TCAM.
-// Specify the implementation of a table to be algorithmic TCAM by providing an
-// instance of the extern to the 'implementation' attribute of the table.  User
-// must also specify one of the table keys with 'atcam_partition_index'
-// match_kind.
-extern Atcam {
-    /// define the parameters for ATCAM table.
-    Atcam(@optional bit<32> number_partitions);
-}
-
-// Algorithmic LPM.
-// Specify the implementation of a table to be algorithmic LPM by providing an
-// instance of the extern to the 'implementation' attribute of the table.
-extern Alpm {
-    /// define the parameters for ALPM table.
-    Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
-}
-# 24 "/home/zma/HEAD/bf-p4c-compilers/build/p4c/p4include/t2na.p4" 2
-
-// The following declarations provide a template for the programmable blocks in
-// Tofino2.
-
-parser IngressParserT<H, M>(
-    packet_in pkt,
-    out H hdr,
-    out M ig_md,
-    out ingress_intrinsic_metadata_t ig_intr_md,
-    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr);
-
-parser EgressParserT<H, M>(
-    packet_in pkt,
-    out H hdr,
-    out M eg_md,
-    out egress_intrinsic_metadata_t eg_intr_md,
-    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
-
-control IngressT<H, M>(
-    inout H hdr,
-    inout M ig_md,
-    in ingress_intrinsic_metadata_t ig_intr_md,
-    in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional in ghost_intrinsic_metadata_t gh_intr_md);
-
-control GhostT(in ghost_intrinsic_metadata_t gh_intr_md);
-
-control EgressT<H, M>(
-    inout H hdr,
-    inout M eg_md,
-    in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-    inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-    inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
-
-control IngressDeparserT<H, M>(
-    packet_out pkt,
-    inout H hdr,
-    in M metadata,
-    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    @optional in ingress_intrinsic_metadata_t ig_intr_md);
-
-control EgressDeparserT<H, M>(
-    packet_out pkt,
-    inout H hdr,
-    in M metadata,
-    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-    @optional in egress_intrinsic_metadata_t eg_intr_md,
-    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
-
-package Pipeline<IH, IM, EH, EM>(
-    IngressParserT<IH, IM> ingress_parser,
-    IngressT<IH, IM> ingress,
-    IngressDeparserT<IH, IM> ingress_deparser,
-    EgressParserT<EH, EM> egress_parser,
-    EgressT<EH, EM> egress,
-    EgressDeparserT<EH, EM> egress_deparser,
-    @optional GhostT ghost);
-
-@pkginfo(arch="T2NA", version="0.6.0")
-package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
-               IH2, IM2, EH2, EM2, IH3, IM3, EH3, EM3>(
-    Pipeline<IH0, IM0, EH0, EM0> pipe0,
-    @optional Pipeline<IH1, IM1, EH1, EM1> pipe1,
-    @optional Pipeline<IH2, IM2, EH2, EM2> pipe2,
-    @optional Pipeline<IH3, IM3, EH3, EM3> pipe3);
-# 34 "npb.p4" 2
-
-
-
-
-# 1 "features.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -1547,7 +92,6 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 // ==========================================================
 // ==========================================================
 // ==========================================================
-# 213 "features.p4"
 // ==========================================================
 // ==========================================================
 // ==========================================================
@@ -1558,7 +102,6 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 
 // #define ACL_REDIRECT_ENABLE
 // #define BRIDGE_PORT_ENABLE
-# 233 "features.p4"
 // #define EGRESS_IP_ACL_ENABLE
 
 
@@ -1622,7 +165,6 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 
 
 // define for simultaneous switch and npb functionality (undefine for npb only)
-# 304 "features.p4"
 // define to include per header-stack counters (for debug - currently used by parser tests)
 
 
@@ -1647,8 +189,6 @@ package Switch<IH0, IM0, EH0, EM0, IH1, IM1, EH1, EM1,
 
 //#undef PARDE_INNER_GRE_ENABLE
 //#undef PARDE_INNER_ESP_ENABLE
-# 39 "npb.p4" 2
-# 1 "headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2483,8 +1023,6 @@ header snoop_gre_tagged_h {
     bit<16> gre_proto; // lookahead<bit<224>>()[15:0]
 
 } // 4B + 20B + 4B = 28B
-# 40 "npb.p4" 2
-# 1 "types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -2513,21 +1051,16 @@ header snoop_gre_tagged_h {
 // ----------------------------------------------------------------------------
 // Common protocols/types
 //-----------------------------------------------------------------------------
-# 37 "types.p4"
 // -------------------------------------
 // Extreme Networks - Added
 // -------------------------------------
-# 50 "types.p4"
 //#define ETHERTYPE_VN   0x892F
-# 63 "types.p4"
 // -------------------------------------
 // Extreme Networks - Added
 // -------------------------------------
-# 74 "types.p4"
 // -------------------------------------
 // Extreme Networks - Added
 // -------------------------------------
-# 87 "types.p4"
 //#define MPLS_DEPTH 3 // extreme modified
 
 
@@ -3154,7 +1687,6 @@ struct switch_bridged_metadata_tunnel_extension_t {
 
     bool terminate_nsh; // extreme added
 }
-# 731 "types.p4"
 typedef bit<8> switch_bridge_type_t;
 
 header switch_bridged_metadata_h {
@@ -3447,7 +1979,6 @@ struct switch_header_t {
 
     switch_header_inner_t inner;
 }
-# 41 "npb.p4" 2
 
 /*
 const bit<32> PORT_TABLE_SIZE = 288 * 2;
@@ -3544,7 +2075,6 @@ const bit<32> DROP_STATS_TABLE_SIZE = 1 << switch_drop_reason_width;
 
 const bit<32> L3_MTU_TABLE_SIZE = 1024;
 */
-# 1 "table_sizes.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3604,7 +2134,6 @@ const bit<32> IPV4_MULTICAST_S_G_TABLE_SIZE = 8192;
 const bit<32> IPV6_MULTICAST_STAR_G_TABLE_SIZE = 1024;
 const bit<32> IPV6_MULTICAST_S_G_TABLE_SIZE = 1024;
 const bit<32> RID_TABLE_SIZE = 32768;
-# 74 "table_sizes.p4"
 // Tunnels - 4K IPv4 + 1K IPv6
 const bit<32> DEST_TUNNEL_TABLE_SIZE = 512;
 const bit<32> IPV4_SRC_TUNNEL_TABLE_SIZE = 4096;
@@ -3641,7 +2170,6 @@ const bit<32> INGRESS_L4_PORT_LOU_TABLE_SIZE = 16 / 2;
 
 const bit<32> IPV4_RACL_TABLE_SIZE = 512;
 const bit<32> IPV6_RACL_TABLE_SIZE = 512;
-# 126 "table_sizes.p4"
 // Egress ACL
 const bit<32> EGRESS_MAC_ACL_TABLE_SIZE = 512;
 const bit<32> EGRESS_IPV4_ACL_TABLE_SIZE = 512;
@@ -3683,7 +2211,6 @@ const bit<32> L3_MTU_TABLE_SIZE = 1024;
 
 
 // --------------------------------------------
-# 205 "table_sizes.p4"
 // net intf
 
 // sfc -- classifies non-nsh packets
@@ -3721,13 +2248,11 @@ const bit<32> NPB_EGR_SF_2_EGRESS_SFP_TRUNC_TABLE_DEPTH = 8;
 // Derek: Missing from switch.p4's table_sizes.p4 file -- open a case???
 const bit<32> OUTER_ECMP_SELECT_TABLE_SIZE = 16384;
 const bit<32> NUM_TUNNELS = 4096;
-# 138 "npb.p4" 2
 
 
 
 
 //#include "../switch-tofino2/util.p4"
-# 1 "util_tofino2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3750,7 +2275,6 @@ const bit<32> NUM_TUNNELS = 4096;
  *
  ******************************************************************************/
 
-# 1 "types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3772,7 +2296,6 @@ const bit<32> NUM_TUNNELS = 4096;
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 24 "util_tofino2.p4" 2
 
 // -----------------------------------------------------------------------------
 
@@ -3838,7 +2361,6 @@ action add_bridged_md(
 
 
     };
-# 98 "util_tofino2.p4"
     bridged_md.tunnel = {ig_md.tunnel.index,
                          ig_md.outer_nexthop,
                          ig_md.hash[15:0],
@@ -3847,7 +2369,6 @@ action add_bridged_md(
 
                          ig_md.tunnel_transport.terminate // extreme added
                         };
-# 114 "util_tofino2.p4"
 }
 
 // -----------------------------------------------------------------------------
@@ -3879,10 +2400,8 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
 
 
 }
-# 144 "npb.p4" 2
 
 
-# 1 "l3.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -3905,7 +2424,6 @@ action set_eg_intr_md(in switch_egress_metadata_t eg_md,
  *
  ******************************************************************************/
 
-# 1 "acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -4005,7 +2523,6 @@ action egress_acl_mirror(inout switch_egress_metadata_t eg_md,
 //-----------------------------------------------------------------------------
 // Common ACL match keys.
 //-----------------------------------------------------------------------------
-# 155 "acl.p4"
 // ============================================================================
 // ============================================================================
 // Ingress ACL ================================================================
@@ -4220,7 +2737,6 @@ control LOU(in bit<16> src_port,
     }
 
     apply {
-# 377 "acl.p4"
     }
 }
 
@@ -4280,7 +2796,6 @@ control IngressAcl(
                 mac_acl.apply(lkp, ig_md, stats_index, nexthop);
             }
         }
-# 444 "acl.p4"
         if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_ACL != 0) && (!mac_packet_class_enable || !ig_md.flags.mac_pkt_class)) {
             if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
                 ipv6_acl.apply(lkp, ig_md, stats_index, nexthop);
@@ -4424,7 +2939,6 @@ control RouterAcl(in switch_lookup_fields_t lkp,
     Ipv6Racl(ipv6_table_size) ipv6_racl;
 
     apply {
-# 608 "acl.p4"
     }
 }
 
@@ -4559,7 +3073,6 @@ control MirrorAcl(
     switch_stats_index_t stats_index;
 
     apply {
-# 762 "acl.p4"
     }
 }
 
@@ -4667,7 +3180,6 @@ control EgressMirrorAcl(
     switch_stats_index_t stats_index;
 
     apply {
-# 883 "acl.p4"
     }
 }
 
@@ -4844,7 +3356,6 @@ control IngressSystemAcl(
 
 
             ig_md.flags.link_local : ternary;
-# 1075 "acl.p4"
             ig_md.ipv4.unicast_enable : ternary;
             ig_md.ipv6.unicast_enable : ternary;
 
@@ -5076,7 +3587,6 @@ control EgressAcl(in switch_header_outer_t hdr,
 
     apply {
         eg_md.flags.acl_deny = false;
-# 1322 "acl.p4"
     }
 }
 
@@ -5131,7 +3641,6 @@ control EgressSystemAcl(
 
 
             eg_md.checks.mtu : ternary;
-# 1386 "acl.p4"
             //TODO add more
         }
 
@@ -5174,8 +3683,6 @@ control EgressSystemAcl(
         drop_stats.apply();
     }
 }
-# 24 "l3.p4" 2
-# 1 "l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -5248,7 +3755,6 @@ control IngressSTP(in switch_ingress_metadata_t ig_md,
     }
 
     apply {
-# 86 "l2.p4"
     }
 }
 
@@ -5272,7 +3778,6 @@ control EgressSTP(in switch_egress_metadata_t eg_md, in switch_port_t port, out 
 
     apply {
         stp_state = false;
-# 118 "l2.p4"
     }
 }
 
@@ -5621,7 +4126,6 @@ control VlanXlate(inout switch_header_transport_t hdr,
     }
 
     action set_double_tagged(vlan_id_t vid0, vlan_id_t vid1) {
-# 479 "l2.p4"
    }
 
     action set_vlan_tagged(vlan_id_t vid) {
@@ -5815,10 +4319,7 @@ control NSHFixer(
  }
 
 }
-# 25 "l3.p4" 2
 
-# 1 "npb_ing_sfc_top.p4" 1
-# 1 "tunnel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -5844,7 +4345,6 @@ control NSHFixer(
 
 
 
-# 1 "validation.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -6324,7 +4824,6 @@ control PktValidation(
     // -------------------------------------
     // Extreme Networks - Added
     // -------------------------------------
-# 518 "validation.p4"
     // -------------------------------------
 
     apply {
@@ -6628,7 +5127,6 @@ control InnerPktValidation(
         }
     }
 }
-# 27 "tunnel.p4" 2
 
 
 
@@ -6832,7 +5330,6 @@ control IngressTunnel(in switch_header_transport_t hdr,
                         }
                     }
                 } else if (lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
-# 245 "tunnel.p4"
                 }
             }
         }
@@ -7445,11 +5942,9 @@ control TunnelEncap(inout switch_header_transport_t hdr,
     }
 
     action rewrite_inner_ipv6_udp() {
-# 865 "tunnel.p4"
     }
 
     action rewrite_inner_ipv6_tcp() {
-# 876 "tunnel.p4"
     }
 
     action rewrite_inner_ipv6_unknown() {
@@ -7587,7 +6082,6 @@ control TunnelEncap(inout switch_header_transport_t hdr,
     // -------------------------------------
 
     action add_ipv6_header(bit<8> proto) {
-# 1029 "tunnel.p4"
     }
 
     //-----------------------------------------------------------------------------
@@ -7688,7 +6182,6 @@ control TunnelEncap(inout switch_header_transport_t hdr,
     // =====================================
 
     action rewrite_ipv6_vxlan(bit<16> vxlan_port) {
-# 1145 "tunnel.p4"
     }
 
     action rewrite_ipv6_ip() {
@@ -7706,15 +6199,12 @@ control TunnelEncap(inout switch_header_transport_t hdr,
     // -------------------------------------
 
     action rewrite_ipv6_gre() {
-# 1181 "tunnel.p4"
     }
 
     action rewrite_ipv6_nvgre() {
-# 1204 "tunnel.p4"
     }
 
  action rewrite_ipv6_erspan(switch_mirror_session_t session_id) {
-# 1223 "tunnel.p4"
  }
 
     // -------------------------------------
@@ -7792,7 +6282,6 @@ control TunnelEncap(inout switch_header_transport_t hdr,
 
     }
 }
-# 2 "npb_ing_sfc_top.p4" 2
 
 control npb_ing_sfc_top (
  inout switch_header_transport_t hdr,
@@ -8136,7 +6625,6 @@ control npb_ing_sfc_top (
 
    // -------------------------
    // -------------------------
-# 353 "npb_ing_sfc_top.p4"
    // multiple tables
    ing_sfc_flowclass_class_2.apply();
    ing_sfc_sfc_class_3.apply();
@@ -8147,9 +6635,6 @@ control npb_ing_sfc_top (
 
  }
 }
-# 27 "l3.p4" 2
-# 1 "npb_ing_sf_npb_basic_adv_top.p4" 1
-# 1 "npb_ing_sf_npb_basic_adv_acl.p4" 1
 
 // =============================================================================
 // =============================================================================
@@ -8659,7 +7144,6 @@ control npb_ing_sf_npb_basic_adv_acl (
   }
 
   // ----- l3/4 -----
-# 520 "npb_ing_sf_npb_basic_adv_acl.p4"
   if (!(ig_md.bypass & SWITCH_INGRESS_BYPASS_ACL != 0) && (!mac_packet_class_enable || !ig_md.flags.mac_pkt_class)) {
 
    if (ig_md.lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
@@ -8841,7 +7325,6 @@ control npb_ing_sf_npb_basic_adv_system_acl (
 
 
             ig_md.flags.link_local : ternary;
-# 717 "npb_ing_sf_npb_basic_adv_acl.p4"
             ig_md.ipv4.unicast_enable : ternary;
             ig_md.ipv6.unicast_enable : ternary;
 
@@ -8901,7 +7384,6 @@ control npb_ing_sf_npb_basic_adv_system_acl (
   drop_stats.apply();
  }
 }
-# 2 "npb_ing_sf_npb_basic_adv_top.p4" 2
 //#include "npb_ing_sf_npb_basic_adv_dedup.p4"
 
 control npb_ing_sf_npb_basic_adv_top (
@@ -9048,7 +7530,6 @@ control npb_ing_sf_npb_basic_adv_top (
     // -------------------------------------
     // Action #0 - Policy
     // -------------------------------------
-# 173 "npb_ing_sf_npb_basic_adv_top.p4"
     // multiple small policy tables....
 
     npb_ing_sf_npb_basic_adv_acl.apply (
@@ -9091,9 +7572,6 @@ control npb_ing_sf_npb_basic_adv_top (
 
  }
 }
-# 28 "l3.p4" 2
-# 1 "npb_ing_sff_top.p4" 1
-# 1 "npb_ing_sff_flow_schd.p4" 1
 
 control npb_ing_sff_flow_schd (
  inout switch_header_transport_t hdr,
@@ -9117,7 +7595,6 @@ control npb_ing_sff_flow_schd (
 
 
  // Use just a plain old table...
-# 54 "npb_ing_sff_flow_schd.p4"
  // ---------------------------------
 
  action ing_schd_hit (
@@ -9177,7 +7654,6 @@ control npb_ing_sff_flow_schd (
  }
 
 }
-# 2 "npb_ing_sff_top.p4" 2
 
 control npb_ing_sff_top (
  inout switch_header_transport_t hdr,
@@ -9549,7 +8025,6 @@ control npb_ing_sff_top (
  }
 
 }
-# 29 "l3.p4" 2
 
 //-----------------------------------------------------------------------------
 // FIB lookup
@@ -9711,7 +8186,6 @@ control Fibv6<T>(in ipv6_addr_t dst_addr,
         const default_action = fib_miss;
         size = lpm_table_size;
     }
-# 211 "l3.p4"
     apply {
         if (!fib.apply().hit) {
 
@@ -9930,8 +8404,6 @@ control IngressUnicast(in switch_lookup_fields_t lkp,
         }
     }
 }
-# 147 "npb.p4" 2
-# 1 "nexthop.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -10123,8 +8595,6 @@ control OuterFib(inout switch_ingress_metadata_t ig_md,
 
     }
 }
-# 148 "npb.p4" 2
-# 1 "parde.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -10145,7 +8615,6 @@ control OuterFib(inout switch_ingress_metadata_t ig_md,
  *
  ******************************************************************************/
 
-# 1 "headers.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -10171,8 +8640,6 @@ control OuterFib(inout switch_ingress_metadata_t ig_md,
 //-----------------------------------------------------------------------------
 // Protocol Header Definitions
 //-----------------------------------------------------------------------------
-# 22 "parde.p4" 2
-# 1 "types.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -10194,13 +8661,10 @@ control OuterFib(inout switch_ingress_metadata_t ig_md,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 23 "parde.p4" 2
-
-# 1 "npb_ing_parser.p4" 1
 
 
 
-# 1 "npb_sub_parsers.p4" 1
+
 
 
 
@@ -10422,7 +8886,6 @@ parser ParserUnderlayL2(
 // #endif  /* GTP_ENABLE */
 // 
 // }
-# 5 "npb_ing_parser.p4" 2
 
 parser NpbIngressParser(
         packet_in pkt,
@@ -10495,7 +8958,6 @@ parser NpbIngressParser(
     ///////////////////////////////////////////////////////////////////////////
     // Tofino1: NSH support only (no ERSPAN or GRE)
     // Tofino2: NSH, ERSPAN, GRE support
-# 130 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tofino2
     ///////////////////////////////////////////////////////////////////////////
@@ -10732,7 +9194,6 @@ parser NpbIngressParser(
   //ig_md.tunnel_transport.id =  (bit<32>)hdr.transport.erspan_type1.vlan;
         transition parse_outer_ethernet;
     }
-# 374 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
     // "Outer" Headers / Stack
@@ -10965,7 +9426,6 @@ parser NpbIngressParser(
     //-------------------------------------------------------------------------
     // Multi-Protocol Label Switching (MPLS) - Outer
     //-------------------------------------------------------------------------
-# 628 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels - Outer
     ///////////////////////////////////////////////////////////////////////////
@@ -11198,7 +9658,6 @@ parser NpbIngressParser(
     ///////////////////////////////////////////////////////////////////////////
     // Layer 2.5 - Inner
     ///////////////////////////////////////////////////////////////////////////
-# 869 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Layer 3 - Inner
     ///////////////////////////////////////////////////////////////////////////
@@ -11285,7 +9744,6 @@ parser NpbIngressParser(
 
 
     }
-# 970 "npb_ing_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 4 - Inner
     ///////////////////////////////////////////////////////////////////////////
@@ -11336,8 +9794,6 @@ parser NpbIngressParser(
     }
 
 }
-# 25 "parde.p4" 2
-# 1 "npb_egr_parser.p4" 1
 
 
 
@@ -11362,7 +9818,6 @@ parser NpbEgressParser(
         eg_md.pkt_length = eg_intr_md.pkt_length;
         eg_md.port = eg_intr_md.egress_port;
         eg_md.qos.qdepth = eg_intr_md.enq_qdepth;
-# 37 "npb_egr_parser.p4"
         transition parse_bridged_pkt;
 
     }
@@ -11469,7 +9924,6 @@ parser NpbEgressParser(
     }
 
     state parse_deflected_pkt {
-# 161 "npb_egr_parser.p4"
     }
 
     state parse_port_mirrored_metadata {
@@ -11499,13 +9953,11 @@ parser NpbEgressParser(
     }
 
     state parse_dtel_drop_metadata {
-# 210 "npb_egr_parser.p4"
         transition reject;
 
     }
 
     state parse_dtel_switch_local_metadata {
-# 236 "npb_egr_parser.p4"
         transition reject;
 
     }
@@ -11715,7 +10167,6 @@ parser NpbEgressParser(
     ///////////////////////////////////////////////////////////////////////////////
     // Layer X
     ///////////////////////////////////////////////////////////////////////////////
-# 468 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Tunnels
     ///////////////////////////////////////////////////////////////////////////
@@ -11849,7 +10300,6 @@ parser NpbEgressParser(
             default: accept;
         }
     }
-# 609 "npb_egr_parser.p4"
     ///////////////////////////////////////////////////////////////////////////
     // Inner Layer 2 (ETH-T)
     ///////////////////////////////////////////////////////////////////////////
@@ -11956,7 +10406,6 @@ parser NpbEgressParser(
     ///////////////////////////////////////////////////////////////////////////
     // Inner Tunnels
     ///////////////////////////////////////////////////////////////////////////
-# 734 "npb_egr_parser.p4"
 // 
 // ///////////////////////////////////////////////////////////////////////////////
 // // Transport Encaps
@@ -11998,7 +10447,6 @@ parser NpbEgressParser(
 
 
 }
-# 26 "parde.p4" 2
 
 //-----------------------------------------------------------------------------
 // Pktgen parser
@@ -12664,7 +11112,6 @@ control IngressMirror(
     Mirror() mirror;
 
     apply {
-# 728 "parde.p4"
     }
 }
 
@@ -12676,7 +11123,6 @@ control EgressMirror(
     Mirror() mirror;
 
     apply {
-# 783 "parde.p4"
     }
 }
 
@@ -12767,7 +11213,6 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.outer.gtp_v2_base);
         pkt.emit(hdr.outer.gtp_v1_v2_teid);
         pkt.emit(hdr.outer.gtp_v1_optional);
-# 884 "parde.p4"
         // ***** INNER *****
         pkt.emit(hdr.inner.ethernet);
         pkt.emit(hdr.inner.vlan_tag);
@@ -12778,7 +11223,6 @@ control SwitchIngressDeparser(
         pkt.emit(hdr.inner.sctp);
         pkt.emit(hdr.inner.gre);
         pkt.emit(hdr.inner.esp);
-# 902 "parde.p4"
     }
 }
 
@@ -12901,7 +11345,6 @@ control SwitchEgressDeparser(
         pkt.emit(hdr.outer.ipv4);
         pkt.emit(hdr.outer.ipv6);
         pkt.emit(hdr.outer.gre); // Egress Only.
-# 1032 "parde.p4"
         pkt.emit(hdr.outer.nvgre);
         pkt.emit(hdr.outer.udp);
         pkt.emit(hdr.outer.sctp);
@@ -12937,32 +11380,6 @@ control SwitchEgressDeparser(
 
     }
 }
-# 149 "npb.p4" 2
-# 1 "port.p4" 1
-/*******************************************************************************
- * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
- *
- * Copyright (c) 2015-2019 Barefoot Networks, Inc.
-
- * All Rights Reserved.
- *
- * NOTICE: All information contained herein is, and remains the property of
- * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
- * technical concepts contained herein are proprietary to Barefoot Networks,
- * Inc.
- * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
- * process, and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material is
- * strictly forbidden unless prior written permission is obtained from
- * Barefoot Networks, Inc.
- *
- * No warranty, explicit or implicit is provided, unless granted under a
- * written agreement with Barefoot Networks, Inc.
- *
- ******************************************************************************/
-
-# 1 "rewrite.p4" 1
-
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -12986,9 +11403,6 @@ control SwitchEgressDeparser(
  ******************************************************************************/
 
 
-
-
-# 1 "l2.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -13010,7 +11424,31 @@ control SwitchEgressDeparser(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 28 "rewrite.p4" 2
+
+
+
+
+/*******************************************************************************
+ * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
+ *
+ * Copyright (c) 2015-2019 Barefoot Networks, Inc.
+
+ * All Rights Reserved.
+ *
+ * NOTICE: All information contained herein is, and remains the property of
+ * Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+ * technical concepts contained herein are proprietary to Barefoot Networks,
+ * Inc.
+ * and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+ * process, and are protected by trade secret or copyright law.
+ * Dissemination of this information or reproduction of this material is
+ * strictly forbidden unless prior written permission is obtained from
+ * Barefoot Networks, Inc.
+ *
+ * No warranty, explicit or implicit is provided, unless granted under a
+ * written agreement with Barefoot Networks, Inc.
+ *
+ ******************************************************************************/
 
 //-----------------------------------------------------------------------------
 // @param hdr : Parsed headers. For mirrored packet only Ethernet header is parsed.
@@ -13124,7 +11562,6 @@ control MirrorRewrite(inout switch_header_outer_t hdr,
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
         //TODO(msharif): Support for GRE sequence number.
-# 158 "rewrite.p4"
     }
 
     action rewrite_erspan_type2_with_vlan(
@@ -13132,14 +11569,12 @@ control MirrorRewrite(inout switch_header_outer_t hdr,
             bit<16> ether_type, mac_addr_t smac, mac_addr_t dmac,
             bit<3> pcp, vlan_id_t vid,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-# 182 "rewrite.p4"
     }
 
     action rewrite_erspan_type3(
             switch_qid_t qid,
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-# 205 "rewrite.p4"
     }
 
     action rewrite_erspan_type3_with_vlan(
@@ -13147,14 +11582,12 @@ control MirrorRewrite(inout switch_header_outer_t hdr,
             bit<16> ether_type, mac_addr_t smac, mac_addr_t dmac,
             bit<3> pcp, vlan_id_t vid,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-# 229 "rewrite.p4"
     }
 
     action rewrite_erspan_type3_platform_specific(
             switch_qid_t qid,
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-# 252 "rewrite.p4"
     }
 
     action rewrite_erspan_type3_platform_specific_with_vlan(
@@ -13162,14 +11595,12 @@ control MirrorRewrite(inout switch_header_outer_t hdr,
             bit<16> ether_type, mac_addr_t smac, mac_addr_t dmac,
             bit<3> pcp, vlan_id_t vid,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl) {
-# 278 "rewrite.p4"
     }
 
     action rewrite_dtel_report(
             mac_addr_t smac, mac_addr_t dmac,
             ipv4_addr_t sip, ipv4_addr_t dip, bit<8> tos, bit<8> ttl,
             bit<16> udp_dst_port) {
-# 303 "rewrite.p4"
     }
 
     action rewrite_dtel_report_with_entropy(
@@ -13235,7 +11666,6 @@ control MirrorRewrite(inout switch_header_outer_t hdr,
     }
 
     apply {
-# 376 "rewrite.p4"
     }
 }
 
@@ -13415,7 +11845,6 @@ control Rewrite(inout switch_header_transport_t hdr,
         }
     }
 }
-# 24 "port.p4" 2
 
 //-----------------------------------------------------------------------------
 // Ingress port mirroring
@@ -13744,14 +12173,12 @@ control IngressPortMapping(
 
    }
         }
-# 364 "port.p4"
         // Check vlan membership
         if (hdr.vlan_tag[0].isValid() && !hdr.vlan_tag[1].isValid() && (bit<1>) ig_md.flags.port_vlan_miss == 0) {
             bit<32> pv_hash_ = hash.get({ig_md.port[6:0], hdr.vlan_tag[0].vid});
             ig_md.flags.port_vlan_miss =
                 (bool)check_vlan_membership.execute(pv_hash_);
         }
-# 378 "port.p4"
     }
 }
 
@@ -13893,8 +12320,6 @@ control EgressPortMapping(
 
     }
 }
-# 150 "npb.p4" 2
-# 1 "validation.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -13916,8 +12341,6 @@ control EgressPortMapping(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 151 "npb.p4" 2
-# 1 "rewrite.p4" 1
 
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
@@ -13940,8 +12363,6 @@ control EgressPortMapping(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 152 "npb.p4" 2
-# 1 "tunnel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -13963,8 +12384,6 @@ control EgressPortMapping(
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 153 "npb.p4" 2
-# 1 "multicast.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -14501,8 +12920,6 @@ control MulticastReplication(in switch_rid_t replication_id,
 
     }
 }
-# 154 "npb.p4" 2
-# 1 "qos.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -14528,7 +12945,6 @@ control MulticastReplication(in switch_rid_t replication_id,
 
 
 
-# 1 "acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -14550,8 +12966,6 @@ control MulticastReplication(in switch_rid_t replication_id,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 27 "qos.p4" 2
-# 1 "meter.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -14577,7 +12991,6 @@ control MulticastReplication(in switch_rid_t replication_id,
 
 
 
-# 1 "acl.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -14599,7 +13012,6 @@ control MulticastReplication(in switch_rid_t replication_id,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 27 "meter.p4" 2
 
 //-------------------------------------------------------------------------------------------------
 // Ingress Policer
@@ -14666,7 +13078,6 @@ control IngressPolicer(in switch_ingress_metadata_t ig_md,
     }
 
     apply {
-# 102 "meter.p4"
     }
 }
 
@@ -14739,7 +13150,6 @@ control StormControl(inout switch_ingress_metadata_t ig_md,
 
     apply {
         ig_md.qos.storm_control_color = 0;
-# 183 "meter.p4"
     }
 }
 
@@ -14869,7 +13279,6 @@ control PortPolicer2(in switch_port_t port,
             meter_action.apply();
     }
 }
-# 28 "qos.p4" 2
 
 //-----------------------------------------------------------------------------
 // Common QoS related actions used by QoS ACL slices or QoS dscp/pcp mappings.
@@ -15209,7 +13618,6 @@ control IngressQoS(
     }
 
     apply {
-# 415 "qos.p4"
     }
 }
 
@@ -15296,11 +13704,8 @@ control EgressQoS(inout switch_header_outer_t hdr,
     }
 
     apply {
-# 512 "qos.p4"
     }
 }
-# 155 "npb.p4" 2
-# 1 "meter.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -15322,8 +13727,6 @@ control EgressQoS(inout switch_header_outer_t hdr,
  * written agreement with Barefoot Networks, Inc.
  *
  ******************************************************************************/
-# 156 "npb.p4" 2
-# 1 "wred.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -15448,11 +13851,8 @@ control WRED(inout switch_header_outer_t hdr,
     }
 
     apply {
-# 140 "wred.p4"
     }
 }
-# 157 "npb.p4" 2
-# 1 "dtel.p4" 1
 /*******************************************************************************
  * BAREFOOT NETWORKS CONFIDENTIAL & PROPRIETARY
  *
@@ -15871,7 +14271,6 @@ control FlowReport(inout switch_egress_metadata_t eg_md, out bit<2> flag) {
     };
 
     apply {
-# 428 "dtel.p4"
     }
 }
 
@@ -15905,7 +14304,6 @@ control IngressDtel(in switch_header_outer_t hdr,
     }
 
     apply {
-# 486 "dtel.p4"
     }
 }
 
@@ -16044,16 +14442,13 @@ control EgressDtel(inout switch_header_outer_t hdr,
     }
 
     apply {
-# 649 "dtel.p4"
     }
 }
-# 158 "npb.p4" 2
 
 // -------------------------------------
 // Extreme Networks - Added
 // -------------------------------------
 
-# 1 "npb_egr_sff_top.p4" 1
 control npb_egr_sff_top_part1 (
  inout switch_header_transport_t hdr,
  inout switch_egress_metadata_t eg_md,
@@ -16331,8 +14726,6 @@ control npb_egr_sff_top_part2 (
  }
 
 }
-# 164 "npb.p4" 2
-# 1 "npb_egr_sf_multicast_top.p4" 1
 control npb_egr_sf_multicast_top (
  inout switch_header_transport_t hdr,
  inout switch_egress_metadata_t eg_md,
@@ -16379,8 +14772,6 @@ control npb_egr_sf_multicast_top (
   }
  }
 }
-# 165 "npb.p4" 2
-# 1 "npb_egr_sf_proxy_top.p4" 1
 //#include "npb_egr_sf_proxy_hdr_strip.p4"
 //#include "npb_egr_sf_proxy_hdr_edit.p4"
 //#include "npb_egr_sf_proxy_truncate.p4"
@@ -16569,7 +14960,6 @@ control npb_egr_sf_proxy_top_part1 (
 // =============================================================================
 // =============================================================================
 
-# 1 "npb_egr_sf_proxy_meter.p4" 1
 
 control npb_egr_sf_proxy_meter (
  inout switch_header_transport_t hdr,
@@ -16620,8 +15010,6 @@ control npb_egr_sf_proxy_meter (
  }
 
 }
-# 190 "npb_egr_sf_proxy_top.p4" 2
-# 1 "npb_ing_sf_npb_basic_adv_dedup.p4" 1
 /* -*- P4_16 -*- */
 
 //#define DEPTH      32w65536
@@ -16787,7 +15175,6 @@ control npb_ing_sf_npb_basic_adv_dedup (
 
  }
 }
-# 191 "npb_egr_sf_proxy_top.p4" 2
 
 control npb_egr_sf_proxy_top_part2 (
 
@@ -16872,7 +15259,6 @@ control npb_egr_sf_proxy_top_part2 (
     // ----------------------------------
     // Action #3 - Meter
     // ----------------------------------
-# 285 "npb_egr_sf_proxy_top.p4"
    }
 
    if(eg_md.action_bitmask[4:4] == 1) {
@@ -16880,15 +15266,12 @@ control npb_egr_sf_proxy_top_part2 (
     // ----------------------------------
     // Action #4 - Deduplication
     // ----------------------------------
-# 302 "npb_egr_sf_proxy_top.p4"
    }
   }
  }
 }
-# 166 "npb.p4" 2
 
 
-# 1 "npb_ing_hdr_stack_counters.p4" 1
 
 
 control IngressHdrStackCounters(
@@ -17179,7 +15562,6 @@ control IngressHdrStackCounters(
         else if(hdr_inner.sctp.isValid()) {
             cntrs_inner_addr_l4 = 3;
         }
-# 309 "npb_ing_hdr_stack_counters.p4"
         else {
             cntrs_inner_addr_l4 = 0;
         }
@@ -17192,7 +15574,6 @@ control IngressHdrStackCounters(
     }
 
 }
-# 169 "npb.p4" 2
 
 
 // -----------------------------------------------------------------------------
@@ -17288,7 +15669,6 @@ control SwitchIngress(
         ig_md.flags.racl_deny = false;
 
         ig_md.flags.flood_to_multicast_routers = false;
-# 341 "npb.p4"
         // Only add bridged metadata if we are NOT bypassing egress pipeline.
         if (ig_intr_md_for_tm.bypass_egress == 1w0) {
             add_bridged_md(hdr.bridged_md, ig_md);
@@ -17345,7 +15725,6 @@ control SwitchEgress(
         eg_intr_md_for_dprsr.drop_ctl = 0;
         eg_md.timestamp = eg_intr_md_from_prsr.global_tstamp[31:0];
         egress_port_mapping.apply(hdr.outer, eg_md, eg_intr_md_for_dprsr, eg_intr_md.egress_port);
-# 500 "npb.p4"
     }
 }
 
