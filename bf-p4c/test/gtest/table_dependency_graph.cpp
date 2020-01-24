@@ -70,7 +70,7 @@ parser parse(packet_in packet, out Headers headers, inout Metadata meta,
 
 control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
 
-control mau(inout Headers headers, inout Metadata meta,
+control igrs(inout Headers headers, inout Metadata meta,
     inout standard_metadata_t sm) {
 %MAU%
 }
@@ -84,7 +84,7 @@ control deparse(packet_out packet, in Headers headers) {
 control my_egress(inout Headers headers, inout Metadata meta,
     inout standard_metadata_t sm) { apply {} }
 
-V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
+V1Switch(parse(), verifyChecksum(), igrs(), my_egress(),
     computeChecksum(), deparse()) main;
     )");
 
@@ -98,11 +98,12 @@ V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
-                                   PhvInfo& phv, FieldDefUse& defuse) {
+const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, FieldDefUse& defuse,
+        bool new_multi_apply = false) {
     auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
-        new MultipleApply,
+        new_multi_apply ? new MultipleApply2 : nullptr,
+        !new_multi_apply ? new MultipleApply : nullptr,
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new InstructionSelection(*options, phv),
@@ -190,19 +191,10 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     test->pipe = runMockPasses(test->pipe, phv, defuse);
     test->pipe->apply(*find_dg);
 
-    const IR::MAU::Table *t1, *t2, *t3, *t4;
-    t1 = t2 = t3 = t4 = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
-            t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
-            t2 = kv.first;
-        } else if (kv.first->name == "t3_0") {
-            t3 = kv.first;
-        } else if (kv.first->name == "t4_0") {
-            t4 = kv.first;
-        }
-    }
+    const IR::MAU::Table *t1 = dg.name_to_table.at("igrs.t1");
+    const IR::MAU::Table *t2 = dg.name_to_table.at("igrs.t2");
+    const IR::MAU::Table *t3 = dg.name_to_table.at("igrs.t3");
+    const IR::MAU::Table *t4 = dg.name_to_table.at("igrs.t4");
 
     EXPECT_NE(t1, nullptr);
     EXPECT_NE(t2, nullptr);
@@ -347,19 +339,10 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     test->pipe = runMockPasses(test->pipe, phv, defuse);
     test->pipe->apply(*find_dg);
 
-    const IR::MAU::Table *t1, *t2, *t11, *t12;
-    t1 = t2 = t11 = t12 = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
-            t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
-            t2 = kv.first;
-        } else if (kv.first->name == "t11_0") {
-            t11 = kv.first;
-        } else if (kv.first->name == "t12_0") {
-            t12 = kv.first;
-        }
-    }
+    const IR::MAU::Table *t1 = dg.name_to_table.at("igrs.t1");
+    const IR::MAU::Table *t2 = dg.name_to_table.at("igrs.t2");
+    const IR::MAU::Table *t11 = dg.name_to_table.at("igrs.t11");
+    const IR::MAU::Table *t12 = dg.name_to_table.at("igrs.t12");
 
     EXPECT_NE(t1, nullptr);
     EXPECT_NE(t2, nullptr);
@@ -409,17 +392,17 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             down_names.insert(action->externalName());
         if (field->name == "ingress::headers.h2.f12") {
             if (dep_type == DependencyGraph::IXBAR_READ) {
-                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_NE(up_names.count("igrs.setf12"), UINT32_C(0));
                 EXPECT_EQ(down_names.size(), UINT32_C(0));
                 EXPECT_EQ(up_names.size(), UINT32_C(1));
             } else if (dep_type == DependencyGraph::ACTION_READ) {
-                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
-                EXPECT_NE(down_names.count("mau.usef12"), UINT32_C(0));
+                EXPECT_NE(up_names.count("igrs.setf12"), UINT32_C(0));
+                EXPECT_NE(down_names.count("igrs.usef12"), UINT32_C(0));
                 EXPECT_EQ(up_names.size(), UINT32_C(1));
                 EXPECT_EQ(down_names.size(), UINT32_C(1));
             } else if (dep_type == DependencyGraph::OUTPUT) {
-                EXPECT_NE(up_names.count("mau.setf12"), UINT32_C(0));
-                EXPECT_NE(down_names.count("mau.setf12"), UINT32_C(0));
+                EXPECT_NE(up_names.count("igrs.setf12"), UINT32_C(0));
+                EXPECT_NE(down_names.count("igrs.setf12"), UINT32_C(0));
                 EXPECT_EQ(up_names.size(), UINT32_C(1));
                 EXPECT_EQ(down_names.size(), UINT32_C(1));
             } else {
@@ -427,10 +410,10 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             }
         } else if (field->name == "ingress::headers.h2.f1") {
             if (dep_type == DependencyGraph::OUTPUT) {
-                EXPECT_NE(up_names.count("mau.setf1"), UINT32_C(0));
-                EXPECT_NE(down_names.count("mau.setf1"), UINT32_C(0));
-                EXPECT_NE(up_names.count("mau.altsetf1"), UINT32_C(0));
-                EXPECT_NE(down_names.count("mau.altsetf1"), UINT32_C(0));
+                EXPECT_NE(up_names.count("igrs.setf1"), UINT32_C(0));
+                EXPECT_NE(down_names.count("igrs.setf1"), UINT32_C(0));
+                EXPECT_NE(up_names.count("igrs.altsetf1"), UINT32_C(0));
+                EXPECT_NE(down_names.count("igrs.altsetf1"), UINT32_C(0));
                 EXPECT_EQ(up_names.size(), UINT32_C(2));
                 EXPECT_EQ(down_names.size(), UINT32_C(2));
             } else {
@@ -627,48 +610,18 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     test->pipe = runMockPasses(test->pipe, phv, defuse);
     test->pipe->apply(*find_dg);
 
-    const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *t7, *t8, *t9, *t10, *t11, *t12;
-    t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = t11 = t12 = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "t1_0") {
-            t1 = kv.first;
-        } else if (kv.first->name == "t2_0") {
-            t2 = kv.first;
-        } else if (kv.first->name == "t3_0") {
-            t3 = kv.first;
-        } else if (kv.first->name == "t4_0") {
-            t4 = kv.first;
-        } else if (kv.first->name == "t5_0") {
-            t5 = kv.first;
-        } else if (kv.first->name == "t6_0") {
-            t6 = kv.first;
-        } else if (kv.first->name == "t7_0") {
-            t7 = kv.first;
-        } else if (kv.first->name == "t8_0") {
-            t8 = kv.first;
-        } else if (kv.first->name == "t9_0") {
-            t9 = kv.first;
-        } else if (kv.first->name == "t10_0") {
-            t10 = kv.first;
-        } else if (kv.first->name == "t11_0") {
-            t11 = kv.first;
-        } else if (kv.first->name == "t12_0") {
-            t12 = kv.first;
-        }
-    }
-
-    EXPECT_NE(t1, nullptr);
-    EXPECT_NE(t2, nullptr);
-    EXPECT_NE(t3, nullptr);
-    EXPECT_NE(t4, nullptr);
-    EXPECT_NE(t5, nullptr);
-    EXPECT_NE(t6, nullptr);
-    EXPECT_NE(t7, nullptr);
-    EXPECT_NE(t8, nullptr);
-    EXPECT_NE(t9, nullptr);
-    EXPECT_NE(t10, nullptr);
-    EXPECT_NE(t11, nullptr);
-    EXPECT_NE(t12, nullptr);
+    const IR::MAU::Table *t1 = dg.name_to_table.at("igrs.t1");
+    const IR::MAU::Table *t2 = dg.name_to_table.at("igrs.t2");
+    const IR::MAU::Table *t3 = dg.name_to_table.at("igrs.t3");
+    const IR::MAU::Table *t4 = dg.name_to_table.at("igrs.t4");
+    const IR::MAU::Table *t5 = dg.name_to_table.at("igrs.t5");
+    const IR::MAU::Table *t6 = dg.name_to_table.at("igrs.t6");
+    const IR::MAU::Table *t7 = dg.name_to_table.at("igrs.t7");
+    const IR::MAU::Table *t8 = dg.name_to_table.at("igrs.t8");
+    const IR::MAU::Table *t9 = dg.name_to_table.at("igrs.t9");
+    const IR::MAU::Table *t10 = dg.name_to_table.at("igrs.t10");
+    const IR::MAU::Table *t11 = dg.name_to_table.at("igrs.t11");
+    const IR::MAU::Table *t12 = dg.name_to_table.at("igrs.t12");
 
     EXPECT_EQ(dg.dependence_tail_size_control(t1), 4);
     EXPECT_EQ(dg.dependence_tail_size_control(t2), 4);
@@ -831,54 +784,20 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *x, *y, *x2, *y2, *z1, *z2, *z3, *alpha, *beta, *gamma, *t2;
-    a = b = c = x = y = x2 = y2 = z1 = z2 = z3 = alpha = beta = gamma = t2 = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "A_0") {
-            a = kv.first;
-        } else if (kv.first->name == "B_0") {
-            b = kv.first;
-        } else if (kv.first->name == "C_0") {
-            c = kv.first;
-        } else if (kv.first->name == "X_0") {
-            x = kv.first;
-        } else if (kv.first->name == "Y_0") {
-            y = kv.first;
-        } else if (kv.first->name == "X2_0") {
-            x2 = kv.first;
-        } else if (kv.first->name == "Y2_0") {
-            y2 = kv.first;
-        } else if (kv.first->name == "Z1_0") {
-            z1 = kv.first;
-        } else if (kv.first->name == "Z2_0") {
-            z2 = kv.first;
-        } else if (kv.first->name == "Z3_0") {
-            z3 = kv.first;
-        } else if (kv.first->name == "alpha_0") {
-            alpha = kv.first;
-        } else if (kv.first->name == "beta_0") {
-            beta = kv.first;
-        } else if (kv.first->name == "gamma_0") {
-            gamma = kv.first;
-        } else if (kv.first->name == "t2_0") {
-            t2 = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(x, nullptr);
-    EXPECT_NE(y, nullptr);
-    EXPECT_NE(x2, nullptr);
-    EXPECT_NE(y2, nullptr);
-    EXPECT_NE(z1, nullptr);
-    EXPECT_NE(z2, nullptr);
-    EXPECT_NE(z3, nullptr);
-    EXPECT_NE(alpha, nullptr);
-    EXPECT_NE(beta, nullptr);
-    EXPECT_NE(gamma, nullptr);
-    EXPECT_NE(t2, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.A");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.B");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.C");
+    const IR::MAU::Table *x = dg.name_to_table.at("igrs.X");
+    const IR::MAU::Table *y = dg.name_to_table.at("igrs.Y");
+    const IR::MAU::Table *x2 = dg.name_to_table.at("igrs.X2");
+    const IR::MAU::Table *y2 = dg.name_to_table.at("igrs.Y2");
+    const IR::MAU::Table *z1 = dg.name_to_table.at("igrs.Z1");
+    const IR::MAU::Table *z2 = dg.name_to_table.at("igrs.Z2");
+    const IR::MAU::Table *z3 = dg.name_to_table.at("igrs.Z3");
+    const IR::MAU::Table *alpha = dg.name_to_table.at("igrs.alpha");
+    const IR::MAU::Table *beta = dg.name_to_table.at("igrs.beta");
+    const IR::MAU::Table *t2 = dg.name_to_table.at("igrs.t2");
+    const IR::MAU::Table *gamma = dg.name_to_table.at("igrs.gamma");
 
     EXPECT_EQ(dg.stage_info[a].min_stage, 0);
     EXPECT_EQ(dg.stage_info[b].min_stage, 0);
@@ -973,24 +892,10 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1075,24 +980,10 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1178,24 +1069,10 @@ TEST_F(TableDependencyGraphTest, DomFrontier2) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1273,24 +1150,10 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 0);
@@ -1383,25 +1246,10 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1491,25 +1339,10 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1602,27 +1435,11 @@ TEST_F(TableDependencyGraphTest, GraphA) {
 
 
     // the  suffix means it's ingress
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        } else if (kv.first->name == "node_e_0") {
-            e = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-    EXPECT_NE(e, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1718,21 +1535,9 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
 
 
     // the  suffix means it's ingress
-    const IR::MAU::Table *a, *b, *c;
-    a = b = c = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 1);
@@ -1800,24 +1605,10 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
 
 
     // the  suffix means it's ingress
-    const IR::MAU::Table *a, *b, *c, *d;
-    a = b = c = d = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     EXPECT_EQ(dg.min_stage(a), 0);
     EXPECT_EQ(dg.min_stage(b), 0);
@@ -1903,35 +1694,14 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
 
-    const IR::MAU::Table *a, *b, *c, *d, *e, *f, *g, *h;
-    a = b = c = d = e = f = g = h = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0")
-            a = kv.first;
-        else if (kv.first->name == "node_b_0")
-            b = kv.first;
-        else if (kv.first->name == "node_c_0")
-            c = kv.first;
-        else if (kv.first->name == "node_d_0")
-            d = kv.first;
-        else if (kv.first->name == "node_e_0")
-            e = kv.first;
-        else if (kv.first->name == "node_f_0")
-            f = kv.first;
-        else if (kv.first->name == "node_g_0")
-            g = kv.first;
-        else if (kv.first->name == "node_h_0")
-            h = kv.first;
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-    EXPECT_NE(e, nullptr);
-    EXPECT_NE(f, nullptr);
-    EXPECT_NE(g, nullptr);
-    EXPECT_NE(h, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = dg.name_to_table.at("igrs.node_f");
+    const IR::MAU::Table *g = dg.name_to_table.at("igrs.node_g");
+    const IR::MAU::Table *h = dg.name_to_table.at("igrs.node_h");
 
     auto hpam = dg.happens_phys_after_map;
     auto hlam = dg.happens_logi_after_map;
@@ -2228,24 +1998,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d;
-    a = b = c = d = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     // Chain the dependence through the ANTI dependence
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
@@ -2322,24 +2078,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d;
-    a = b = c = d = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     // Chain the dependence through the ANTI dependence
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
@@ -2425,27 +2167,11 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e;
-    a = b = c = d = e = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        } else if (kv.first->name == "node_e_0") {
-            e = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-    EXPECT_NE(e, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
 
     // Chain the dependence through the ANTI dependence
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
@@ -2524,24 +2250,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d;
-    a = b = c = d = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
 
     // Chain the dependence through the ANTI dependence
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
@@ -2646,33 +2358,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
 
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
-    const IR::MAU::Table *a, *b, *c, *d, *e, *f, *g;
-    a = b = c = d = e = f = g = nullptr;
-    for (const auto& kv : dg.stage_info) {
-        if (kv.first->name == "node_a_0") {
-            a = kv.first;
-        } else if (kv.first->name == "node_b_0") {
-            b = kv.first;
-        } else if (kv.first->name == "node_c_0") {
-            c = kv.first;
-        } else if (kv.first->name == "node_d_0") {
-            d = kv.first;
-        } else if (kv.first->name == "node_e_0") {
-            e = kv.first;
-        } else if (kv.first->name == "node_f_0") {
-            f = kv.first;
-        } else if (kv.first->name == "node_g_0") {
-            g = kv.first;
-        }
-    }
-
-    EXPECT_NE(a, nullptr);
-    EXPECT_NE(b, nullptr);
-    EXPECT_NE(c, nullptr);
-    EXPECT_NE(d, nullptr);
-    EXPECT_NE(e, nullptr);
-    EXPECT_NE(f, nullptr);
-    EXPECT_NE(g, nullptr);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = dg.name_to_table.at("igrs.node_f");
+    const IR::MAU::Table *g = dg.name_to_table.at("igrs.node_g");
 
     // Chain the dependence through the ANTI dependence
     EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 1);
@@ -2682,6 +2374,123 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
     EXPECT_EQ(dg.dependence_tail_size_control_anti(e), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(f), 1);
     EXPECT_EQ(dg.dependence_tail_size_control_anti(g), 0);
+}
+
+
+TEST_F(TableDependencyGraphTest, Tofino2GraphTest) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action a(bit<8> v) {
+                    headers.h1.f1 = v;
+                }
+
+                action b() {
+                    headers.h1.f1 = 0;
+                }
+
+                action c() {
+                    headers.h1.f1 = 1;
+                }
+
+                table node_a {
+                    actions = { a; b; c; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+                action noop() {} 
+                action setf2(bit<8> v) { headers.h1.f2 = v; }
+                action setf3(bit<8> v) { headers.h1.f3 = v; }
+                action setf4(bit<8> v) { headers.h1.f4 = v; }
+                action setf5(bit<8> v) { headers.h1.f5 = v; }
+                action setf6(bit<8> v) { headers.h1.f6 = v; }
+
+                table multi {
+                    key = { headers.h1.f3 : exact; }
+                    actions = { setf4; noop; }
+                }
+
+                table node_b {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { setf3; noop; }
+                }
+
+                table node_c {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { setf5; noop; }
+                }
+
+                table node_d {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { setf6; noop; }
+                }
+
+                table node_e {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { setf3; noop; }
+                }
+
+                table node_f {
+                    key = { headers.h1.f5 : exact; }
+                    actions = { noop; setf5; }
+                }
+
+                table node_g {
+                    key = { headers.h1.f6 : exact; }
+                    actions = { noop; setf6; }
+                }
+
+                apply {
+                    switch (node_a.apply().action_run) {
+                        a : { node_b.apply(); multi.apply(); node_c.apply(); }
+                        b : { node_d.apply(); multi.apply(); node_e.apply(); }
+                        c : { node_f.apply(); multi.apply(); node_g.apply(); }
+                    }
+                }
+            )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    find_dg->set_add_logical_deps(false);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = dg.name_to_table.at("igrs.node_f");
+    const IR::MAU::Table *g = dg.name_to_table.at("igrs.node_g");
+    const IR::MAU::Table *multi = dg.name_to_table.at("igrs.multi");
+
+    EXPECT_EQ(dg.min_stage(a), 0);
+    EXPECT_EQ(dg.min_stage(b), 0);
+    EXPECT_EQ(dg.min_stage(c), 2);
+    EXPECT_EQ(dg.min_stage(d), 0);
+    EXPECT_EQ(dg.min_stage(e), 1);
+    EXPECT_EQ(dg.min_stage(f), 0);
+    EXPECT_EQ(dg.min_stage(g), 0);
+    EXPECT_EQ(dg.min_stage(multi), 1);
+
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(a), 2);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(b), 2);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(c), 0);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(d), 1);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(e), 0);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(f), 0);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(g), 0);
+    EXPECT_EQ(dg.dependence_tail_size_control_anti(multi), 1);
+
+    EXPECT_TRUE(dg.happens_phys_before(b, c));
+    EXPECT_TRUE(dg.happens_phys_before(b, multi));
+    EXPECT_FALSE(dg.happens_phys_before(b, d));
+    EXPECT_TRUE(dg.happens_logi_before(multi, e));
+    EXPECT_TRUE(dg.happens_phys_before(b, e));
+    EXPECT_FALSE(dg.happens_phys_before(b, g));
 }
 
 }  // namespace Test

@@ -125,6 +125,10 @@ struct DependencyGraph {
     // True once the graph has been fully constructed.
     bool finalized;
 
+    // For GTests Only
+ public:
+    std::map<cstring, const IR::MAU::Table *> name_to_table;
+
     // NOTE: These maps are reverse named -- happens_after_map[t] is the set of tables that that are
     // before t, while happens_before_map[t] is the set of tables that are after t... This naming
     // comes from the idea that t must happen after anything in the set given by
@@ -219,6 +223,7 @@ struct DependencyGraph {
         g.clear();
         finalized = false;
         max_min_stage = -1;
+        name_to_table.clear();
         happens_after_work_map.clear();
         happens_before_work_map.clear();
         happens_phys_after_map.clear();
@@ -789,6 +794,15 @@ class TableGraphNode {
         nodeJson->emplace("metadata", create_node_md_json());
         return nodeJson;
     }
+};
+
+
+class NameToTableMapBuilder : public MauInspector {
+    DependencyGraph &dg;
+    bool preorder(const IR::MAU::Table *tbl) override;
+
+ public:
+    explicit NameToTableMapBuilder(DependencyGraph &d) : dg(d) {}
 };
 
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {

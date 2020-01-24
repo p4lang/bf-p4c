@@ -20,6 +20,12 @@
 #include "lib/cstring.h"
 #include "lib/log.h"
 
+
+bool NameToTableMapBuilder::preorder(const IR::MAU::Table *tbl) {
+    dg.name_to_table[tbl->externalName()] = tbl;
+    return true;
+}
+
 // Static Map Init
 std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_types = {
     { DependencyGraph::IXBAR_READ,                  "match"},
@@ -960,9 +966,24 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
     return true;
 }
 
+/**
+ * Due to an IR::MAU::Table object appearing in multiple TableSeq objects, it is now
+ * important to include a visitAgain function call in all Table objects.
+ *
+ * Examine the following program:
+ *
+ *     switch(t1.apply().action_run) {
+ *         a1 : { t2.apply(); t3.apply(); t4.apply(); }
+ *         a2 : { t5.apply(); t3.apply(); t4.apply(); }
+ *     }
+ *
+ * Two TableSeq objects [ t2, t3, t4 ] and [ t5, t3, t4 ] are created.  When the algorithm
+ * runs, t3 and its associated effects needs to be run on both of these sequences, and not
+ * visited in only one of the sequence.  Thus visitAgain is now necessary
+ */
 bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
+    visitAgain();
     LOG5("\tFindDep table " << t->name);
-
 
     // Add this table as a vertex in the dependency graph if it's not
     // already there.
@@ -992,12 +1013,14 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
 }
 
 bool FindDataDependencyGraph::preorder(const IR::MAU::TableKey *read) {
+    visitAgain();
     auto tbl = findContext<IR::MAU::Table>();
     read->apply(UpdateAccess(*this, tbl));
     return false;
 }
 
 bool FindDataDependencyGraph::preorder(const IR::MAU::Action *act) {
+    visitAgain();
     auto tbl = findContext<IR::MAU::Table>();
     act->apply(UpdateAccess(*this, tbl));
     return false;
@@ -1708,6 +1731,25 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     for (auto kv : dg.happens_after_work_map)
         dg.happens_phys_after_map[kv.first].insert(kv.second.begin(), kv.second.end());
 
+    // If A happens logically before B, and B happens physically before C, then A happens
+    // physically before C.  The original maps created from these happens_work_maps did not
+    // have this physical relation
+    for (auto kv : dg.happens_after_work_map) {
+        for (auto after_tbl : kv.second) {
+            dg.happens_phys_after_map[kv.first].insert(
+                dg.happens_logi_after_map[after_tbl].begin(),
+                dg.happens_logi_after_map[after_tbl].end());
+        }
+    }
+
+    for (auto kv : dg.happens_before_work_map) {
+        for (auto before_tbl : kv.second) {
+            dg.happens_phys_before_map[kv.first].insert(
+                dg.happens_logi_before_map[before_tbl].begin(),
+                dg.happens_logi_before_map[before_tbl].end());
+        }
+    }
+
     verify_dependence_graph();
     if (LOGGING(4))
         DependencyGraph::dump_viz(std::cout, dg);
@@ -1759,6 +1801,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         Logging::PassManager("table_dependency_graph", Logging::Mode::AUTO),
         dg(out), dotFile(dotFileName), passContext(passCont) {
     addPasses({
+        new NameToTableMapBuilder(dg),
         &mutex,
         &ntp,
         &con_paths,
