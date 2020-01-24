@@ -15,6 +15,7 @@
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/utils/live_range_report.h"
 
 class FieldDefUse;
 class FlexiblePacking;
@@ -53,6 +54,7 @@ class Backend : public PassManager {
     LogFlexiblePacking *flexibleLogging;
     CollectPhvLoggingInfo *phvLoggingInfo;
     NextTable *nextTblProp;
+    LiveRangeReport *liveRangeReport;
 
  public:
     explicit Backend(const BFN_Options& options, int pipe_id, ExtractedTogether&);
@@ -61,6 +63,8 @@ class Backend : public PassManager {
     const ClotInfo      &get_clot()    const { return clot; }
     const FieldDefUse   &get_defuse()  const { return defuse; }
     const NextTable *get_nxt_tbl() const { return nextTblProp; }
+    const TableSummary &get_tbl_summary() const { return table_summary; }
+    const LiveRangeReport *get_live_range_report() const { return liveRangeReport; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_json_graph() const { return jsonGraph; }
     const FlexiblePacking  *get_flexible_packing() const { return flexiblePacking; }

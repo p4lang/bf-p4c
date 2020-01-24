@@ -130,12 +130,7 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
         if (!CHECKTYPE(kv.key, tSTR)) continue;
         if (kv.key == "context_json") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
-            for (auto& cjkv : kv.value.map) {
-                if (!CHECKTYPE(cjkv.key, tSTR)) continue;
-                if (!CHECKTYPE(cjkv.value, tMAP)) continue;
-                std::string name = cjkv.key.s;
-                for (auto& prop : cjkv.value.map)
-                    field_context_json[name][prop.key.s] = toJson(prop.value); }
+            field_context_json.merge(*toJson(kv.value.map));
         } else {
             if (get(gress, INT_MAX, kv.key.s) ||
                 (!args.size && get(EGRESS, INT_MAX, kv.key.s)) ||
@@ -334,12 +329,6 @@ void Phv::output(json::map &ctxt_json) {
                 phv_record["field_name"] = field_name;
                 phv_record["field_msb"] = field_lo + field_size - 1;
                 phv_record["field_lsb"] = field_lo;
-                // Pass through per-field context_json information from the compiler.
-                if (field_context_json.count(slot.first->name)) {
-                    auto &container_json = field_context_json.at(slot.first->name);
-                    if (container_json.count(field_name))
-                        phv_record.merge(container_json[field_name]);
-                }
                 auto field_width_bytes = (field_width + 7)/8U;
                 phv_record["field_width"] = field_width_bytes;
                 phv_record["phv_msb"] = phv_msb;
@@ -368,15 +357,69 @@ void Phv::output(json::map &ctxt_json) {
                     pov_header["header_name"] = field_name;
                     // FIXME: Checks for reserved POV bits, not supported?
                     pov_header["hidden"] = false;;
-                    pov_headers.push_back(std::move(pov_header)); }
-                phv_records.push_back(std::move(phv_record)); }
+                    pov_headers.push_back(std::move(pov_header));
+                }
+                // Pass through per-field context_json information from the compiler.
+                if (field_context_json.count(slot.first->name)) {
+                    auto add_phv_record_items = [&] (int live_stage, std::string live_string) {
+                        if (live_stage == -1) {
+                            phv_record[live_string] = "parser"; return; }
+                        if (live_stage == Target::NUM_MAU_STAGES()) {
+                            phv_record[live_string] = "deparser"; return; }
+                        phv_record[live_string] = live_stage; };
+                    auto container_json = field_context_json[slot.first->name];
+                    bool field_added = false;
+                    for (auto &field_json : *container_json->as_vector()) {
+                        auto live_start = -1, live_end = Target::NUM_MAU_STAGES();
+                        auto container_field_json = field_json->as_map();
+                        if (container_field_json->count("name")) {
+                            if ((*container_field_json)["name"] != field_name) continue;
+                        } else { 
+                            continue; 
+                        }
+                        if (container_field_json->count("live_start")) {
+                            auto live_start_json  = (*container_field_json)["live_start"];
+                            if (auto n = live_start_json->as_number())
+                                live_start = n->val;
+                        }
+                        if (container_field_json->count("live_end")) {
+                            auto live_end_json = (*container_field_json)["live_end"];
+                            if (auto n = live_end_json->as_number())
+                                live_end = n->val;
+                        }
+                        if (i >= live_start && i <= live_end) {
+                            add_phv_record_items(live_start, "live_start");
+                            add_phv_record_items(live_end, "live_end");
+                            phv_record["mutually_exclusive_with"] = json::vector();
+                            if (container_field_json->count("mutually_exclusive_with")) {
+                                auto mutex_json = (*container_field_json)["mutually_exclusive_with"];
+                                if(json::vector *mutex_json_vec = mutex_json->as_vector())
+                                    phv_record["mutually_exclusive_with"] = std::move(*mutex_json_vec);
+                            }
+                            field_added = true;
+                            phv_records.push_back(phv_record.clone());
+                        }
+                    }
+                    if (!field_added) {
+                        auto live_start = -1, live_end = Target::NUM_MAU_STAGES();
+                        add_phv_record_items(live_start, "live_start");
+                        add_phv_record_items(live_end, "live_end");
+                        phv_record["mutually_exclusive_with"] = json::vector();
+                        phv_records.push_back(phv_record.clone());
+                    }
+                } else {
+                    phv_records.push_back(std::move(phv_record));
+                }
+            }
             phv_container["word_bit_width"] = phv_container_size;
             // Ghost phv's are considered as ingress phv's
-            if ((gress == INGRESS) || (gress == GHOST)) {
-                phv_alloc_stage_ingress.push_back(std::move(phv_container));
-            } else if (gress == EGRESS) {
-                phv_alloc_stage_egress.push_back(std::move(phv_container));
-            } 
+            if (phv_records.size() > 0) {
+                if ((gress == INGRESS) || (gress == GHOST)) {
+                    phv_alloc_stage_ingress.push_back(std::move(phv_container));
+                } else if (gress == EGRESS) {
+                    phv_alloc_stage_egress.push_back(std::move(phv_container));
+                }
+            }
         }
         phv_alloc_stage["stage_number"] = i;
         phv_alloc.push_back(std::move(phv_alloc_stage)); }

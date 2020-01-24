@@ -18,6 +18,7 @@
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/utils/live_range_report.h"
 #include "common/run_id.h"
 #include "bf-p4c-options.h"
 
@@ -32,6 +33,8 @@ class AsmOutput : public Inspector {
     const FieldDefUse &defuse;
     const LogRepackedHeaders *flex;
     const NextTable *nxt_tbl;
+    const TableSummary &tbl_summary;
+    const LiveRangeReport *live_range_report;
     const BFN_Options &options;
     /// Tell this pass whether it is called after a succesful compilation
     bool               _successfulCompile = true;
@@ -47,9 +50,12 @@ class AsmOutput : public Inspector {
               const FieldDefUse& defuse,
               const LogRepackedHeaders *flex,
               const NextTable* nxts,
+              const TableSummary& tbl_summary,
+              const LiveRangeReport* live_range_report,
               const BFN_Options &opts,
               bool success)
         : phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
+          tbl_summary(tbl_summary), live_range_report(live_range_report),
           options(opts), _successfulCompile(success) {}
 
     bool preorder(const IR::BFN::Pipe* pipe) override {
@@ -69,7 +75,8 @@ class AsmOutput : public Inspector {
                 << "  run_id: \"" << RunId::getId() << "\"" << std::endl
                 << "  target: " << Device::name() << std::endl;
             if (::errorCount() == 0) {
-                out << PhvAsmOutput(phv, defuse, pipe->ghost_thread != nullptr)
+                out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
+                                    pipe->ghost_thread != nullptr)
                     << ParserAsmOutput(pipe, INGRESS)
                     << DeparserAsmOutput(pipe, phv, clot, INGRESS);
                 if (pipe->ghost_thread != nullptr)

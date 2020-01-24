@@ -133,4 +133,8 @@ std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u) {
     return out << u.toString();
 }
 
+std::ostream& operator<<(std::ostream& out, const StageAndAccess s) {
+    return out << " [ " << s.first << ", " << s.second << "] ";
+}
+
 }  // namespace PHV

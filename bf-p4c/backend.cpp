@@ -50,7 +50,6 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
-#include "bf-p4c/phv/utils/live_range_report.h"
 
 namespace BFN {
 
@@ -113,6 +112,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
         new AllocateClot(clot, phv, uses) : nullptr;
 
+    liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
     addPasses({
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
@@ -267,7 +267,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
-        new LiveRangeReport(phv, table_summary, defuse),
+        liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
         new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),

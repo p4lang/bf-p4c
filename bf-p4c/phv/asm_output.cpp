@@ -8,31 +8,75 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 
-PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse, bool have_ghost)
-: phv(p), defuse(defuse), have_ghost(have_ghost) {
-    liveRanges.clear();
-    getLiveRanges();
+PhvAsmOutput::PhvAsmOutput(const PhvInfo &p, const FieldDefUse& defuse,
+                           const TableSummary& tbl_summary,
+                           const LiveRangeReport* live_range_report, bool have_ghost)
+    : phv(p), defuse(defuse), tbl_summary(tbl_summary),
+      live_range_report(live_range_report), have_ghost(have_ghost) {
 }
 
-PhvAsmOutput::LiveRange PhvAsmOutput::LiveRange::operator|=(const PhvAsmOutput::LiveRange& other) {
-    if (first && other.first)
-        first = first->stage() < other.first->stage() ? first : other.first;
-    else if (!first)
-        first = other.first;
+void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
+    const auto &livemap = live_range_report->get_livemap();
+    for (const auto &kv : livemap) {
+        auto f = kv.first;
+        int min = live_range_report->get_max_stages(), max = -1;
+        for (const auto &stg : kv.second) {
+            if (stg.first < min) min = stg.first;
+            if (stg.first > max) max = stg.first;
+        }
+        f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            auto c = alloc.container;
+            cstring fname = cstring::to_cstring(canon_name(f->externalName()));
+            std::set<cstring> mutex_fields;
+            for (const auto* f2 : phv.fields_in_container(c)) {
+                if (phv.isFieldMutex(f, f2)) {
+                    cstring mfname = cstring::to_cstring(canon_name(f2->externalName()));
+                    mutex_fields.insert(mfname);
+                }
+            }
+            int last_stage = PhvInfo::getDeparserStage();
 
-    if (last && other.last)
-        last = last->stage() < other.last->stage() ? other.last : last;
-    else if (!last)
-        last = other.last;
+            int alloc_min = (alloc.min_stage.second.isWrite()) ?
+                        alloc.min_stage.first + 1 : alloc.min_stage.first;
+            int alloc_max = (alloc.max_stage.second.isWrite()) ?
+                        alloc.max_stage.first + 1 : alloc.max_stage.first;
 
-    return *this;
-}
+            int newMin = min, newMax = max;
+            // Skip POV bits as they are always used in deparser
+            if (!f->pov) {
+                // FIXME: Skip Tofino field slices, since slice information does
+                // not reflect the correct deparser stage. The deparser stage
+                // value is set through the table dependency graph based on min
+                // stage calculation. After table placement, no. of stages can
+                // be >= min stage. However the slices created for phv
+                // allocation already have the min stage info which is
+                // incorrect. This needs to be updated after table placement.
+                // This needs revisiting if/when stage based phv allocation is
+                // implemented for Tofino Ideally this check should go away once
+                // slices have updated info on max stage.
+                if (Device::currentDevice() != Device::TOFINO) {
+                    // Defuse information coming through livemap does not
+                    // account for stage based allocation in TOFINO2+
+                    // architectures. This information is provided through
+                    // min/max stage values in field slices. Here, we adjust the
+                    // live range based on slice info
+                    if (alloc_min > min) newMin = alloc_min;
+                    if (alloc_max < max && alloc_max != last_stage) newMax = alloc_max;
+                }
+            }
 
-void PhvAsmOutput::getLiveRanges() {
-    for (auto& f : phv)
-        for (auto& def : defuse.getAllDefs(f.id))
-            for (auto& use : defuse.getUses(def))
-                liveRanges[&f] |= { .first = def.first, .last = use.first };
+            FieldUse fuse = { fname, f->gress, newMin, newMax, mutex_fields };
+            auto &fieldsInContainer = lr[f->gress][c];
+            fieldsInContainer[fname].push_back(fuse);
+            LOG5(" Slice : " << alloc
+                      << ", Slice min stage : " << alloc.min_stage
+                      << ", Slice max stage : " << alloc.max_stage
+                      << ", Parsed : " << f->parsed()
+                      << ", Deparsed : " << f->deparsed()
+                      << ", New min stage : " << newMin
+                      << ", New max stage : " << newMax);
+        });
+    }
 }
 
 void emit_alloc(
@@ -169,40 +213,6 @@ void emit_phv_field(
     }
 }
 
-void PhvAsmOutput::emit_phv_field_info(
-        std::ostream& out,
-        const PHV::Field* f,
-        const PHV::Container& c) const {
-    out << "      " << canon_name(f->externalName()) << ":" << std::endl;
-
-    // Print live range info.
-    auto PrintStage = [](const IR::BFN::Unit* u) {
-        if (u->is<IR::BFN::AbstractParser>() || u->is<IR::BFN::ParserState>())
-            return std::string("parser");
-        else if (auto* t = u->to<IR::MAU::Table>())
-            return std::to_string(int(t->logical_id/16));
-        else if (u->is<IR::BFN::AbstractDeparser>())
-            return std::string("deparser");
-        BUG("Unit is not parser, table, or deparser: %1%", cstring::to_cstring(u));
-    };
-
-    if (liveRanges.count(f)) {
-        auto& range = liveRanges.at(f);
-        auto live_start = c.is(PHV::Kind::tagalong) ? "parser"   : PrintStage(range.first);
-        auto live_end   = c.is(PHV::Kind::tagalong) ? "deparser" : PrintStage(range.last);
-        out << "          " << "live_start: " << live_start << std::endl;
-        out << "          " << "live_end: "   << live_end   << std::endl; }
-
-    // Print mutual exclusion information.
-    out << "          " << "mutually_exclusive_with: [ ";
-    std::string sep = "";
-    for (const auto* f2 : phv.fields_in_container(c)) {
-        if (phv.isFieldMutex(f, f2)) {
-            out << sep << canon_name(f2->externalName());
-            if (sep == "") sep = ", "; } }
-    out << " ]" << std::endl;
-}
-
 void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     out << "phv " << gress << ":\n";
     // FIXME -- for now, all ghost PHV are allocated as ingress, so we just
@@ -211,22 +221,41 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     for (auto &f : phv) {
         if (f.gress == gress) {
             emit_phv_field(out, &f); } }
+
     if (BackendOptions().debugInfo) {
         out << "  " << "context_json:\n";
-        // Collect set of all containers that are allocated to a particular gress.
-        std::set<PHV::Container> allocatedContainers;
-        for (const auto& f : phv) {
-            if (f.gress != gress) continue;
-            f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-                allocatedContainers.insert(slice.container);
-            });
+        // // Collect all fields used on a per container basis with required live
+        // // range info for assembly. This info is used by P4i hence only output
+        // // when debug flag is set.
+        if (live_range_report) {
+            LiveRangePerContainer lr;
+            int maxStages = live_range_report->get_max_stages();
+            getLiveRanges(lr);
+            for (auto cf : lr[gress]) {
+                out << "    " << cf.first << ":\n";
+                for (auto f : cf.second) {
+                    auto fuses = f.second;
+                    auto fname = f.first;
+                    for (auto fuse : fuses) {
+                        auto live_start = fuse.get_live_start(maxStages);
+                        auto live_end = fuse.get_live_end(maxStages);
+                        out << "    - { name : " << fname      << ", ";
+                        out << "live_start : " << live_start << ", ";
+                        out << "live_end : "   << live_end   << ", ";
+                        out << "mutually_exclusive_with: [ ";
+                        std::string sep = "";
+                        for (auto mf : fuse.mutex_fields) {
+                            out << sep << mf;
+                           if (sep == "") sep = ", ";
+                        }
+                        out << " ] }" << std::endl;
+                    }
+                }
+            }
+        } else {
+            ::warning("Live range information not generated in assembly/context.json");
         }
-        for (const auto& c : allocatedContainers) {
-            out << "    " << c << ":\n";
-            const auto& fieldsInContainer = phv.fields_in_container(c);
-            for (const auto* f : fieldsInContainer) {
-                if (f->gress == gress && !f->is_unallocated()) {
-                    emit_phv_field_info(out, f, c); } } } }
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput& phvasm) {

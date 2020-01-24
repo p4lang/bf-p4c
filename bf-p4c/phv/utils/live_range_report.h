@@ -25,24 +25,27 @@ class LiveRangeReport : public Inspector {
 
     int maxStages = -1;
 
+    typedef ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>> LiveMap;
+    LiveMap livemap;
+
+    std::map<const PHV::Field*, const PHV::Field*> aliases;
+
     profile_t init_apply(const IR::Node* root) override;
 
     std::map<int, PHV::FieldUse> processUseDefSet(
             const FieldDefUse::LocPairSet& defuseSet,
             PHV::FieldUse useDef) const;
 
-    void setFieldLiveMap(
-            const PHV::Field* f,
-            ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) const;
+    void setFieldLiveMap(const PHV::Field* f);
 
-    cstring printFieldLiveness(
-            const ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap);
 
     std::vector<std::string> createStatRow(
             std::string title,
             const std::map<int, int>& data) const;
 
+    cstring printFieldLiveness();
     cstring printBitStats() const;
+    cstring printAliases() const;
 
  public:
     explicit LiveRangeReport(
@@ -50,6 +53,9 @@ class LiveRangeReport : public Inspector {
             const TableSummary& t,
             const FieldDefUse& d)
         : phv(p), alloc(t), defuse(d) { }
+
+    const LiveMap& get_livemap() const { return livemap; }
+    const int get_max_stages() const { return maxStages; }
 };
 
 #endif  /*  BF_P4C_PHV_UTILS_LIVE_RANGE_REPORT_H_  */

@@ -42,30 +42,59 @@ std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
     return fieldMap;
 }
 
-void LiveRangeReport::setFieldLiveMap(
-        const PHV::Field* f,
-        ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) const {
+void LiveRangeReport::setFieldLiveMap(const PHV::Field* f) {
     auto usemap = processUseDefSet(defuse.getAllUses(f->id), PHV::FieldUse(READ));
     auto defmap = processUseDefSet(defuse.getAllDefs(f->id), PHV::FieldUse(WRITE));
+
+    auto update_usemap = [&]() {
+        int min = maxStages + 1;
+        int max = -2;
+        for (auto kv : usemap) {
+            min = std::min(kv.first, min);
+            max = std::max(kv.first, max);
+        }
+        if (min != maxStages + 1 && max != -2) {
+            LOG4("Min-max for " << f->name << " : [" << min << ", " << max << "]");
+            for (int i = min; i <= max; i++)
+                usemap[i] |= PHV::FieldUse(LIVE);
+        }
+    };
+
+    auto update_livemap = [&](const PHV::Field *a) {
+        if (!f) return;
+        if (livemap.count(a)) {
+            auto &fuse = livemap[a];
+            usemap.insert(fuse.begin(), fuse.end());
+        }
+        update_usemap();
+        livemap[a] = usemap;
+    };
+
     // Combine the maps into a single map.
     for (auto kv : defmap)
         usemap[kv.first] |= kv.second;
-    int min = maxStages + 1;
-    int max = -2;
-    for (auto kv : usemap) {
-        min = kv.first < min ? kv.first : min;
-        max = kv.first > max ? kv.first : max;
+
+    // If alias present, update usemap and alias field in livemap
+    if (f->aliasSource) {
+        auto a = f->aliasSource;
+        update_livemap(a);
+        aliases[a] = f;
     }
-    LOG4("Min-max for " << f->name << " : [" << min << ", " << max << "]");
-    if (min != maxStages + 1 && max != -2) {
-        for (int i = min; i <= max; i++)
-            usemap[i] |= PHV::FieldUse(LIVE);
+    // If field present in alias map, update usemap and the field in livemap
+    // This is to ensure field is always updated and is agnostic to the
+    // traversal order
+    if (aliases.count(f)) {
+        update_livemap(aliases[f]);
     }
+
+    // For no alias just update the usemap
+    if (!f->aliasSource && aliases.count(f) == 0)
+        update_usemap();
+
     livemap[f] = usemap;
 }
 
-cstring LiveRangeReport::printFieldLiveness(
-        const ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>>& livemap) {
+cstring LiveRangeReport::printFieldLiveness() {
     std::stringstream ss;
     ss << std::endl << "Live Ranges for PHV Fields:" << std::endl;
     std::vector<std::string> headers;
@@ -85,6 +114,8 @@ cstring LiveRangeReport::printFieldLiveness(
             if (kv.second.count(i)) {
                 PHV::FieldUse use_type(kv.second.at(i));
                 row.push_back(std::string(use_type.toString()));
+                // Skip aliased fields for bit calculation
+                if (aliases.count(kv.first)) continue;
                 if (kv.second.at(i).isRead())
                     stageToReadBits[i] += kv.first->size;
                 if (kv.second.at(i).isWrite())
@@ -132,6 +163,23 @@ cstring LiveRangeReport::printBitStats() const {
     return ss.str();
 }
 
+cstring LiveRangeReport::printAliases() const {
+    std::stringstream ss;
+    ss << std::endl << "Field Aliases:" << std::endl;
+    std::vector<std::string> headers;
+    headers.push_back("Field");
+    headers.push_back("Alias");
+    TablePrinter tp(ss, headers, TablePrinter::Align::LEFT);
+    for (auto a : aliases) {
+        std::vector<std::string> row;
+        row.push_back(a.first->name.c_str());
+        row.push_back(a.second->name.c_str());
+        tp.addRow(row);
+    }
+    tp.print();
+    return ss.str();
+}
+
 Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     stageToReadBits.clear();
     stageToWriteBits.clear();
@@ -141,7 +189,6 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     int maxStagesInAlloc = alloc.maxStages();
     int maxDeviceStages = Device::numStages();
     maxStages = (maxStagesInAlloc > maxDeviceStages) ? maxStagesInAlloc : maxDeviceStages;
-    ordered_map<const PHV::Field*, std::map<int, PHV::FieldUse>> livemap;
     for (const PHV::Field& f : phv) {
         bool only_tphv_allocation = true;
         f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
@@ -149,9 +196,10 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
                 only_tphv_allocation = false;
         });
         if (only_tphv_allocation) continue;
-        setFieldLiveMap(&f, livemap);
+        setFieldLiveMap(&f);
     }
-    LOG1(printFieldLiveness(livemap));
+    LOG1(printFieldLiveness());
     LOG1(printBitStats());
+    LOG1(printAliases());
     return Inspector::init_apply(root);
 }

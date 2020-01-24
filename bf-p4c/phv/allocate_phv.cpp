@@ -1849,7 +1849,6 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
             auto maxLive = slice.getLatestLiveness();
             allocated_slice->min_stage = std::make_pair(minLive.first, minLive.second);
             allocated_slice->max_stage = std::make_pair(maxLive.first, maxLive.second);
-
             if (init_points) {
                 allocated_slice->has_meta_init = true;
                 LOG5("\tAdding " << init_points->size() << " initialization points for field "

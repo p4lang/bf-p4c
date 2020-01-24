@@ -290,6 +290,7 @@ std::ostream& operator<<(std::ostream& out, const PHV::Type t);
 std::ostream& operator<<(std::ostream& out, const PHV::Container c);
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set);
 std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u);
+std::ostream& operator<<(std::ostream& out, const StageAndAccess s);
 
 JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
 }  // namespace PHV
