@@ -588,10 +588,3 @@ void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) co
         for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
 
-void MatchTable::merge_context_json(json::map &tbl, json::map&stage_tbl) const {
-    tbl["static_entries"] = json::vector();
-    if (context_json) {
-        add_json_node_to_table(tbl, "static_entries");
-        stage_tbl.merge(*context_json);
-    }
-}

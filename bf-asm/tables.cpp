@@ -2736,6 +2736,7 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             if (p.type == "range")
                 tbl["uses_range"] = true; } }
     tbl["ap_bind_indirect_res_to_match"] = json::vector();
+    tbl["static_entries"] = json::vector();
     if (context_json) {
         add_json_node_to_table(tbl, "ap_bind_indirect_res_to_match");
     }
@@ -2747,5 +2748,13 @@ void Table::add_result_physical_buses(json::map &stage_tbl) const {
         if (!l.result_bus_used())
             continue;
         result_physical_buses.push_back(l.row * 2 + l.result_bus);
+    }
+}
+
+void Table::merge_context_json(json::map &tbl, json::map&stage_tbl) const {
+    tbl["static_entries"] = json::vector();
+    if (context_json) {
+        add_json_node_to_table(tbl, "static_entries");
+        stage_tbl.merge(*context_json);
     }
 }

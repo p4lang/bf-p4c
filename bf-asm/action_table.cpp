@@ -716,6 +716,5 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     if (hr.empty())
         hr = indirect ? "indirect" : "direct";
     tbl["how_referenced"] = hr;
-    if (context_json)
-        stage_tbl.merge(*context_json);
+    merge_context_json(tbl, stage_tbl);
 }

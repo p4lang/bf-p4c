@@ -704,6 +704,7 @@ public:
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     virtual void add_result_physical_buses(json::map &stage_tbl) const;
+    virtual void merge_context_json(json::map &tbl, json::map&stage_tbl) const; 
     void canon_field_list(json::vector &field_list) const;
     void for_all_next(std::function<void(const Ref &)> fn);
     void check_next(const Ref &next);
@@ -849,7 +850,6 @@ public:
     METER_ACCESS_TYPE default_meter_access_type(bool for_stateful);
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
-    void merge_context_json(json::map &tbl, json::map&stage_tbl) const;
     bitvec compute_reachable_tables() override;
 )
 

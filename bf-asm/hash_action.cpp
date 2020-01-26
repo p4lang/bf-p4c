@@ -232,6 +232,5 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) const {
         stage_tbl["stage_idletime_table"] = nullptr;
     add_all_reference_tables(tbl);
     gen_idletime_tbl_cfg(stage_tbl);
-    if (context_json)
-        stage_tbl.merge(*context_json);
+    merge_context_json(tbl, stage_tbl);
 }
