@@ -1,13 +1,6 @@
 #include <boost/graph/graphviz.hpp>
 #include "bf-p4c/mau/table_flow_graph.h"
 
-static const char* dep_types(FlowGraph::dependencies_t dep) {
-    switch (dep) {
-        case FlowGraph::CONTROL: return "CONTROL";
-        default: return "UNKNOWN";
-    }
-}
-
 std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
     auto all_vertices = boost::vertices(fg.g);
     if (++all_vertices.first == all_vertices.second) {
@@ -22,9 +15,9 @@ std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
         const IR::MAU::Table* source = fg.get_vertex(src);
         auto dst = boost::target(*edges, fg.g);
         const IR::MAU::Table* target = fg.get_vertex(dst);
+        auto desc = fg.get_ctrl_dependency_info(*edges);
         out << "    " << (source ? source->name : "SINK") <<
-            (src == fg.v_source ? " (SOURCE)" : "") << " -- " <<
-            dep_types(fg.g[*edges]) << " --> " <<
+            (src == fg.v_source ? " (SOURCE)" : "") << " -- " << desc << " --> " <<
             (target ? target->name : "SINK") << std::endl;
     }
     return out;
@@ -60,78 +53,122 @@ Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
     auto rv = Inspector::init_apply(node);
     fg.clear();
     fg.add_sink_vertex();
-    // Currently already running the default next pass before
-    def_next = new DefaultNext(false);
-    node->apply(*def_next);
     return rv;
+}
+
+bool FindFlowGraph::preorder(const IR::MAU::TableSeq* table_seq) {
+    if (table_seq->tables.size() < 2) {
+        return Inspector::preorder(table_seq);
+    }
+
+    // Override the behaviour for visiting table sequences so that we accurately track next_table.
+
+    const auto* saved_next_table = next_table;
+
+    bool first_iter = true;
+    const IR::MAU::Table* cur_table = nullptr;
+    for (const auto* next_table : table_seq->tables) {
+        if (!first_iter) {
+            // Visit cur_table with the new next_table.
+            this->next_table = next_table;
+            apply_visitor(cur_table);
+        }
+
+        first_iter = false;
+        cur_table = next_table;
+    }
+
+    // Restore the saved next_table and visit the last table in the sequence.
+    this->next_table = saved_next_table;
+    apply_visitor(cur_table);
+
+    return false;
 }
 
 std::pair<bool, cstring> FindFlowGraph::next_incomplete(const IR::MAU::Table *t) {
     // TODO: Handle $try_next_stage
     if (t->next.count("$hit") && t->next.count("$miss"))
         return std::make_pair(false, "");
-    if (t->next.count("$hit") || t->next.count("$miss")) {
-        if (t->next.count("$hit")) {
-            return std::make_pair(true, "$miss");
-        }
+
+    if (t->next.count("$hit"))
+        // Miss falls through to next_table.
+        return std::make_pair(true, "$miss");
+
+    if (t->next.count("$miss"))
+        // Hit falls through to next_table.
         return std::make_pair(true, "$hit");
-    }
+
     if (t->next.count("$true") && t->next.count("$false"))
         return std::make_pair(false, "");
-    if (t->next.count("$true") || t->next.count("$false")) {
-        // BUG("Gateway has one of true or false but not both");
-        if (t->next.count("$true")) {
-            return std::make_pair(true, "$false");
-        }
+
+    if (t->next.count("$true"))
+        // "false" case falls through to next_table.
+        return std::make_pair(true, "$false");
+
+    if (t->next.count("$false"))
+        // "true" case falls through to next_table.
         return std::make_pair(true, "$true");
-    }
+
     if (t->next.count("$default"))
         return std::make_pair(false, "");
+
     if (t->next.size() == 0)
         return std::make_pair(true, "$default");
+
+    // See if we have a next-table entry for every action. If not, next_table can be executed after
+    // the given table.
     for (auto kv : t->actions) {
         if (!t->next.count(kv.first)) {
             return std::make_pair(true, "$hit");
         }
     }
+
     return std::make_pair(false, "");
 }
 
 bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
-    for (auto options : t->next) {
+    // Add edges for next-table entries.
+    for (auto& next_entry : t->next) {
+        auto& action_name = next_entry.first;
+        auto& next_table_seq = next_entry.second;
+
         const IR::MAU::Table *dst;
-        if (options.second->tables.size() > 0) {
-            dst = options.second->tables[0];
+        if (next_table_seq->tables.size() > 0) {
+            dst = next_table_seq->tables[0];
         } else {
             // This will sometimes be null, which will cause an edge to be added to v_sink
-            dst = def_next->next(t);
+            dst = next_table;
         }
         auto dst_name = dst ? dst->name : "SINK";
-        LOG1("Parent : " << t->name << " --> " << options.first << " --> " << dst_name);
-        auto edge_pair = fg.add_edge(t, dst, FlowGraph::CONTROL);
-        fg.ctrl_annotations[edge_pair.first] = options.first;
+        LOG1("Parent : " << t->name << " --> " << action_name << " --> " << dst_name);
+        fg.add_edge(t, dst, action_name);
     }
+
+    // Add edge for t -> next_table, if needed.
     LOG3("Table: " << t->name << " Next: " <<
-        (def_next->next(t) ? def_next->next(t)->name : "<null>"));
+        (next_table ? next_table->name : "<null>"));
     auto n = next_incomplete(t);
     LOG3("next - " << n.first << ":" << n.second);
     if (n.first) {
-        const IR::MAU::Table *default_next = def_next->next(t);
-        auto dst_name = default_next ? default_next->name : "SINK";
+        auto dst_name = next_table ? next_table->name : "SINK";
         LOG1("Parent : " << t->name << " --> " << n.second << " --> " << dst_name);
         // This will sometimes be null, which will cause an edge to be added to v_sink
-        auto edge_pair = fg.add_edge(t, default_next, FlowGraph::CONTROL);
-        fg.ctrl_annotations[edge_pair.first] = n.second;
+        fg.add_edge(t, next_table, n.second);
     }
     return true;
 }
 
 void FindFlowGraph::end_apply() {
+    // Find the source node (i.e., the node with no incoming edges), and make sure there is only
+    // one. As we do this, also populate tableToVertexIndex.
     typename FlowGraph::Graph::vertex_iterator v, v_end;
     bool source_found = false;
     for (boost::tie(v, v_end) = boost::vertices(fg.g); v != v_end; ++v) {
         if (*v == fg.v_sink)
             continue;
+
+        fg.tableToVertexIndex[fg.get_vertex(*v)] = *v;
+
         auto in_edge_pair = boost::in_edges(*v, fg.g);
         if (in_edge_pair.first == in_edge_pair.second) {
             if (source_found) {
@@ -143,16 +180,42 @@ void FindFlowGraph::end_apply() {
             }
         }
     }
+
     LOG4(fg);
     if (LOGGING(4))
         FlowGraph::dump_viz(std::cout, fg);
 
-    for (boost::tie(v, v_end) = boost::vertices(fg.g); v != v_end; ++v) {
-        if (*v != fg.v_sink)
-            fg.tableToVertexIndex[fg.get_vertex(*v)] = *v;
-        bitvec visited_vertices;
-        BFSVisitor vis(visited_vertices);
-        boost::breadth_first_search(fg.g, *v, boost::visitor(vis));
-        fg.reachableNodes[*v] = visited_vertices;
+    // Compute reachability with Floyd-Warshall. Absent cycles, do not consider nodes to be
+    // self-reachable.
+    FlowGraph::Graph::edge_iterator edges, edges_end;
+    for (boost::tie(edges, edges_end) = boost::edges(fg.g); edges != edges_end; ++edges) {
+        auto src = boost::source(*edges, fg.g);
+        auto dst = boost::target(*edges, fg.g);
+
+        fg.reachableNodes[src].setbit(dst);
+    }
+    typename FlowGraph::Graph::vertex_iterator mid, mid_end;
+    for (boost::tie(mid, mid_end) = boost::vertices(fg.g); mid != mid_end; ++mid) {
+        // Ignore the sink node.
+        if (*mid == fg.v_sink) continue;
+
+        typename FlowGraph::Graph::vertex_iterator src, src_end;
+        for (boost::tie(src, src_end) = boost::vertices(fg.g); src != src_end; ++src) {
+            // Ignore the sink node.
+            if (*src == fg.v_sink) continue;
+
+            // If we can't reach mid from src, don't bother going through dsts.
+            if (!fg.reachableNodes[*src].getbit(*mid)) continue;
+
+            // This is a vectorized form of an inner loop that goes through all dsts and sets
+            //
+            //   fg.reachableNodes[src][dst] |=
+            //     fg.reachableNodes[src][mid] & fg.reachableNodes[mid][dst]
+            //
+            // while taking advantage of the fact that we know that
+            //
+            //   fg.reachableNodes[src][mid] = 1
+            fg.reachableNodes[*src] |= fg.reachableNodes[*mid];
+        }
     }
 }

@@ -7,11 +7,6 @@
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
-
-
-
-
-
 class MultipleApply : public PassManager {
     // gtest requirements
     std::set<cstring> mutex_errors;
@@ -98,29 +93,77 @@ class MultipleApply : public PassManager {
     MultipleApply();
 };
 
+/// The purpose of this set of passes is three-fold:
+///
+///   * The extract_maupipe code creates a separate Table object for each table call. This set of
+///     passes de-duplicates these Table objects so that each table in the program is represented
+///     by a single object.
+///
+///   * It checks the invariant that the conditional control flow that follows each table is the
+///     same across all calls of that table. This rules out the following program, in which the
+///     conditional behaviour on t2 depends on whether t1 hit or missed.
+///
+///       if (t1.apply().hit) {
+///         switch (t2.apply().action_run) {
+///           a1: { t3.apply(); }
+///         }
+///       } else {
+///         switch (t2.apply().action_run) {
+///           a1: { t4.apply(); }
+///         }
+///       }
+///
+///   * It checks the invariant that the tables have a topological order, as they appear in the
+///     program text. This rules out the following program, in which t2 and t3 are applied in the
+///     opposite order in two branches of the program.
+///
+///       switch (t1.apply().action_run) {
+///         a1: { t2.apply(); t3.apply(); }
+///         a2: { t3.apply(); t2.apply(); }
+///       }
+///
+///     In principle, this invariant can be relaxed to say that the tables must form a DAG in the
+///     program dependence graph; i.e., the above program would be admissible if there are no data
+///     dependences between t2 and t3. This would require normalizing the order of tables, which we
+///     don't currently do. For now, we do the simpler, more restrictive thing, and can do the more
+///     relaxed thing in the future.
 class MultipleApply2 : public PassManager {
-    ordered_map<const IR::P4Table *, const IR::MAU::Table *> conversion_check;
-    ordered_set<const IR::MAU::Table *> replacements;
+    /// Gives the canonical Table object for each P4Table.
+    ordered_map<const IR::P4Table *, const IR::MAU::Table *> canon_table;
 
-    class VerifyStaticNextTable : public MauInspector {
+    /// The set of tables that need to be de-duplicated.
+    ordered_set<const IR::MAU::Table *> to_replace;
+
+    /// Checks the invariant that the conditional control flow that follows each table is the same
+    /// across all calls of that table. It also populates @canon_table for DeduplicateTables.
+    class CheckStaticNextTable : public MauInspector {
         MultipleApply2 &self;
         void postorder(const IR::MAU::Table *) override;
 
      public:
-        explicit VerifyStaticNextTable(MultipleApply2 &s) : self(s) { }
+        explicit CheckStaticNextTable(MultipleApply2 &s) : self(s) { }
     };
 
-
-    class ReplaceTable : public MauTransform {
+    /// De-duplicates Table objects using @canon_table.
+    class DeduplicateTables : public MauTransform {
         MultipleApply2 &self;
         const IR::Node *preorder(IR::MAU::Table *) override;
 
      public:
-        explicit ReplaceTable(MultipleApply2 &s) : self(s) { }
+        explicit DeduplicateTables(MultipleApply2 &s) : self(s) { }
+    };
+
+    /// Checks the invariant that tables have a topological order. This is done by using
+    /// FindFlowGraph to build a control-flow graph for tables and checking that there are no
+    /// cycles.
+    ///
+    /// This pass assumes that Table objects have been de-duplicated.
+    class CheckTopologicalTables : public MauInspector {
     };
 
  public:
-    MultipleApply2();
+    // Allow disabling of topology checking for gtests.
+    explicit MultipleApply2(bool check_topology = true);
 };
 
 

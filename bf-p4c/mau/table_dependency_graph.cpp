@@ -627,13 +627,11 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
 
             auto edge_data = fg.get_ctrl_dependency_info(*fedges);
             LOG5(src_name << (fsource == fg.v_source ? "_SOURCE" : "")
-                << " --- " << fg.g[*fedges] << " (" << edge_data << ") --> " << tgt_name);
+                << " --- " << " (" << edge_data << ") --> " << tgt_name);
 
-            if (edge_data != boost::none) {
-                edge.label = get_control_edge_type(edge_data.get());
-                if (edge.label == DependencyGraph::CONTROL_ACTION) {
-                   edge.action_name = edge_data.get();
-                }
+            edge.label = get_control_edge_type(edge_data);
+            if (edge.label == DependencyGraph::CONTROL_ACTION) {
+               edge.action_name = edge_data;
             }
 
             auto e = boost::lookup_edge(edge.source, edge.target, g);

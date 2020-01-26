@@ -274,58 +274,80 @@ MultipleApply::MultipleApply() {
     });
 }
 
-void MultipleApply2::VerifyStaticNextTable::postorder(const IR::MAU::Table *tbl) {
-    if (self.conversion_check.count(tbl->match_table) == 0) {
-        self.conversion_check[tbl->match_table] = tbl;
+void MultipleApply2::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
+    if (self.canon_table.count(tbl->match_table) == 0) {
+        // This is the first time we are encountering an application of this table. Nothing to
+        // check, but record this as the canonical table.
+        self.canon_table[tbl->match_table] = tbl;
         return;
     }
 
-    self.replacements.insert(tbl);
-    auto comp_tbl = self.conversion_check.at(tbl->match_table);
+    // Mark the table as needing de-duplication.
+    self.to_replace.insert(tbl);
 
-    for (auto n : comp_tbl->next) {
-        if (tbl->next.count(n.first) == 0) {
-            ::error("Table %1% next table chains are incompatible for %2% chain",
-                    tbl->externalName(), n.first);
-            return;
-        }
-     }
+    // Check that the conditional control flow following this table application is the same as that
+    // for the canonical Table object.
+    //
+    // Check that the next-table entries for the table being visited also appear as next-table
+    // entries for the canonical table.
+    auto canon_tbl = self.canon_table.at(tbl->match_table);
+    for (auto& entry : tbl->next) {
+        auto& key = entry.first;
+        auto& cur_seq = entry.second;
 
-    for (auto n : tbl->next) {
-        if (comp_tbl->next.count(n.first) == 0) {
-            ::error("Table %1% next table chains are incompatible for %2% chain",
-                    tbl->externalName(), n.first);
+        if (canon_tbl->next.count(key) == 0) {
+            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+                    "table have a next-table chain for %2%.",
+                    tbl->externalName(), key);
             return;
         }
-        auto comp_seq = comp_tbl->next.at(n.first);
-        if (comp_seq->size() != n.second->size()) {
-            ::error("Table %1% next table chains are incompatible for %2% chain",
-                    tbl->externalName(), n.first);
+
+        auto canon_seq = canon_tbl->next.at(key);
+        if (canon_seq->size() != cur_seq->size()) {
+            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+                    "table have the same chain length for %2%.",
+                    tbl->externalName(), key);
             return;
         }
-        for (size_t i = 0; i < n.second->size(); i++) {
-            auto i_tbl = n.second->tables.at(i);
-            auto j_tbl = comp_seq->tables.at(i);
-            if (i_tbl->match_table != j_tbl->match_table)
-                ::error("Table %1% next table chains are incompatible for %2% chain, differing "
-                        "at position %3% in tables %4% and %5%", tbl->externalName(), n.first,
-                        i, i_tbl->externalName(), j_tbl->externalName());
+
+        for (size_t i = 0; i < cur_seq->size(); i++) {
+            auto cur_seq_tbl = cur_seq->tables.at(i);
+            auto canon_seq_tbl = canon_seq->tables.at(i);
+            if (cur_seq_tbl->match_table != canon_seq_tbl->match_table)
+                ::error("Table %1% has incompatible next-table chains for %2%, differing at "
+                        "position %3%, with tables %4% and %5%", tbl->externalName(), key,
+                        i, cur_seq_tbl->externalName(), canon_seq_tbl->externalName());
+        }
+    }
+
+    // Also check the reverse: the next-table entries for the canonical table also appear as
+    // next-table entries for the table being visited.
+    for (auto& entry : canon_tbl->next) {
+        auto& key = entry.first;
+
+        if (tbl->next.count(key) == 0) {
+            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+                    "table have a next-table chain for %2%.",
+                    tbl->externalName(), key);
+            return;
         }
     }
 }
 
-const IR::Node *MultipleApply2::ReplaceTable::preorder(IR::MAU::Table *tbl) {
+const IR::Node *MultipleApply2::DeduplicateTables::preorder(IR::MAU::Table *tbl) {
     auto orig_tbl = getOriginal<IR::MAU::Table>();
-    if (self.replacements.count(orig_tbl) == 0)
+    if (self.to_replace.count(orig_tbl) == 0)
         return tbl;
+
     auto orig_p4_tbl = orig_tbl->match_table;
-    return self.conversion_check.at(orig_p4_tbl);
+    return self.canon_table.at(orig_p4_tbl);
 }
 
-MultipleApply2::MultipleApply2() {
+MultipleApply2::MultipleApply2(bool check_topology) {
     addPasses({
-        new VerifyStaticNextTable(*this),
-        new ReplaceTable(*this)
+        new CheckStaticNextTable(*this),
+        new DeduplicateTables(*this),
+        check_topology ? new CheckTopologicalTables() : nullptr
     });
 }
 
