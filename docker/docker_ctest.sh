@@ -64,9 +64,11 @@ fi
 
 echo "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
        -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
+       -e HUGE_PAGE_SETUP=true \
        barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
        $ctest_with_opts"
 docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c \
        -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE=true -e MAKEFLAGS \
+       -e TRAVIS \
        barefootnetworks/bf-p4c-compilers:$DOCKER_TAG \
        $ctest_with_opts
