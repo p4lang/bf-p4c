@@ -22,7 +22,6 @@ class PostMidEnd : public PassManager {
     ApplyEvaluator *evaluator;
     BackendConverter *conv;
     RepackedHeaderTypes *map;
-    ExtractedTogetherFields *extractedTogether;
 
  public:
     P4::ReferenceMap refMap;
@@ -30,7 +29,6 @@ class PostMidEnd : public PassManager {
 
  public:
     PostMidEnd(BFN_Options& options, RepackedHeaderTypes* repackMap,
-               ExtractedTogetherFields* extractedTogether,
                bool with_bridge_packing = false);
 
     IR::Vector<IR::BFN::Pipe> pipe;

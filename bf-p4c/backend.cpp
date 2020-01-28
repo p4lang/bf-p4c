@@ -88,7 +88,7 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
              *n << unindent << endl); }
 }
 
-Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& extracted_together) :
+Backend::Backend(const BFN_Options& options, int pipe_id) :
     clot(uses),
     phv(mutually_exclusive_field_ids),
     uses(phv),
@@ -97,10 +97,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
     bridged_fields(phv),
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
-    // extracted_together info comes from midend, not the flexible packing in backend
-    auto _unused = new ordered_map<cstring, ordered_set<cstring>>;
-    flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields,
-                                          *_unused, table_alloc, true);
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
@@ -163,7 +159,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new DumpPipe("After Alias"),
         // Repacking of flexible headers (including bridged metadata) in the backend.
         // Needs to be run after InstructionSelection but before deadcode elimination.
-        flexiblePacking,
         flexibleLogging,
         new DumpPipe("After packing"),
         // This is the backtracking point from table placement to PHV allocation. Based on a
@@ -198,7 +193,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id, ExtractedTogether& ext
         new CollectPhvInfo(phv),
         new CheckParserMultiWrite(phv),
         new CollectPhvInfo(phv),
-        new CollectBridgedExtractedTogetherFields(phv, extracted_together),
         new CheckForHeaders(),
         allocateClot,
         &defuse,

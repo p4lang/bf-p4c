@@ -4,6 +4,7 @@
 #include <string>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/table_summary.h"
@@ -1958,13 +1959,6 @@ class MarkFieldAsBridged : public Inspector {
                     continue;
                 f.bridged = true;
                 LOG3("   marking field " << f << " as bridged");
-                // Set the egress version of bridged fields to metadata
-                // XXX(hanw): explain why
-                auto otherGress = getOppositeGressFieldName(f.name);
-                auto field = phv_i.field(otherGress);
-                if (!field) continue;
-                field->metadata = true;
-                LOG3("   marking field " << field << " as metadata");
             }
         }
     }
@@ -1973,26 +1967,49 @@ class MarkFieldAsBridged : public Inspector {
     explicit MarkFieldAsBridged(PhvInfo& phv) : phv_i(phv) { }
 };
 
-Visitor::profile_t CollectBridgedExtractedTogetherFields::init_apply(const IR::Node* root) {
-    auto& matrix = phv_i.getBridgedExtractedTogether();
-    matrix.clear();
+bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state) {
+    /* map a byte in ibuf to the corresponding set of metadata fields sourced from the byte. */
+    ordered_map<int /* ibuf byte offset */, ordered_set<const PHV::Field*>> ibuf_to_fields[3];
 
-    for (auto kv : extractedTogether) {
-        const auto* f1 = phv_i.field(kv.first);
-        // Fields may be eliminated by dead code elimination. So, no need for these bug checks.
-        if (!f1) continue;
-        for (auto fName : kv.second) {
-            const auto* f2 = phv_i.field(fName);
-            if (!f2) continue;
-            // Ignore extracted together for padding fields.
-            if (f1->padding || f2->padding) continue;
-
-            LOG3("extract together " << kv.first << " and " << fName << " together");
-            matrix(f1->id, f2->id) = true;
+    for (auto& statement : state->statements) {
+        if (!statement->is<IR::BFN::Extract>())
+            continue;
+        auto extract = statement->to<IR::BFN::Extract>();
+        BUG_CHECK(extract->dest, "Extract %1% does not have a destination",
+                cstring::to_cstring(extract));
+        BUG_CHECK(extract->dest->field, "Extract %1% does not have a destination field",
+                cstring::to_cstring(extract));
+        const PHV::Field* destField = phv_i.field(extract->dest->field);
+        BUG_CHECK(destField, "Could not find destination field for extract %1%",
+                cstring::to_cstring(extract));
+        if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
+            auto offset = rval->range.lo / 8;
+            if (auto mem = extract->dest->to<IR::BFN::FieldLVal>()) {
+                auto destField = phv_i.field(mem->field);
+                if (destField->metadata) {
+                    ibuf_to_fields[destField->gress][offset].insert(destField);
+                    LOG1("extracted " << destField << " from byte " << offset);
+                }
+            }
         }
     }
 
-    return Inspector::init_apply(root);
+    // only generate extract_together constraint for egress metadata for now.
+    auto& matrix = phv_i.getBridgedExtractedTogether();
+
+    for (const auto& kv : ibuf_to_fields[EGRESS]) {
+        for (const auto& f1 : kv.second) {
+            for (const auto& f2 : kv.second) {
+                if (!f1 || !f2) continue;
+                if (f1->id == f2->id) continue;
+                if (f1->padding || f2->padding) continue;
+                LOG1("extract " << f1->name << " and " << f2->name << " together");
+                matrix(f1->id, f2->id) = true;
+            }
+        }
+    }
+
+    return true;
 }
 
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
@@ -2007,6 +2024,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
         new AddIntrinsicConstraints(phv),
         new MarkTimestampAndVersion(phv),
         new MarkPaddingAsDeparsed(phv),
+        new CollectExtractedTogetherFields(phv),
     });
 }
 //

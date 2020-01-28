@@ -193,10 +193,11 @@ class AddResubmitParser : public Transform {
          * T tmp;
          * pkt.extract(tmp);
          */
-        auto tmp = "__resubmit_tmp_" + std::to_string(idx);
+        cstring tmp = "__resubmit_tmp_" + std::to_string(idx);
         auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
         statements->push_back(decl);
-        statements->push_back(createExtractCall(parser->tnaParams.at("pkt"), tmp));
+        statements->push_back(createExtractCall(parser->tnaParams.at("pkt"), header,
+                    new IR::PathExpression(tmp)));
 
         /**
          * copy extract tmp header to metadata;

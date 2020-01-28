@@ -14,11 +14,6 @@
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 
 using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
-/**
- * Map from a egress field to other egress fields in a pipe.
- */
-using ExtractedTogetherFields = ordered_map<cstring /* pipe */,
-    ordered_map<cstring /* field */, ordered_set<cstring> /* fields */>>;
 
 bool findFlexibleAnnotation(const IR::Type_StructLike*);
 
@@ -135,22 +130,6 @@ class GatherAliasConstraintsInEgress : public Inspector {
     void end_apply() override;
 };
 
-/// This class identifies all parser state that have extracted @flexible metadata, which needs
-/// to be modified after the layout of the flexible header is changed.
-/// This should happen before the ReplaceOriginalFieldWithBridged pass.
-class GatherParserStateToModify : public Inspector {
- private:
-    const PhvInfo& phv;
-    ordered_set<cstring>& parserStatesToModify;
-
- public:
-    profile_t init_apply(const IR::Node* root) override;
-    bool processExtract(const IR::BFN::Extract* e);
-    bool preorder(const IR::BFN::ParserState* ps) override;
-    GatherParserStateToModify(const PhvInfo& p, ordered_set<cstring>& ps) :
-        phv(p), parserStatesToModify(ps) {}
-};
-
 /** This class analyzes all bridged metadata headers, which until this point, insert padding to byte
   * alignment after every nonbyte aligned bridged metadata field. This pass takes into account
   * action-related as well as some alignment related constraints (such as deparser_bottom_bits() set
@@ -204,13 +183,6 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
     const ordered_set<const PHV::Field*>& deparserParams;
     /// Set of all fields with alignment constraints induced by the parser.
     const GatherParserExtracts& parserAlignedFields;
-    /// No pack constraints reported by MAU backtracker.
-    const MauBacktracker& alloc;
-
-    /** Map from an egress field to all other egress fields which are packed with the key field, and
-      * therefore, must be extracted together.
-      */
-    ordered_map<cstring, ordered_set<cstring>> extractedTogether;
 
     /** Map of original egress field name to the field name in the egress bridged metadata header.
       * E.g. egress::ingress_metadata.ingress_port is the original backenrepackedHeadersd name for a field, and
@@ -266,9 +238,6 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
      * RepackFlexHeaders read and modifies the map next.
      */
     RepackedHeaderTypes& repackedTypes;
-
-    /// XXX(hanw): do_not_repack_bridge
-    bool skip_bridge;
 
     /**
      * Map of header name ot the old header type before repacking.
@@ -458,13 +427,10 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         const ordered_set<const PHV::Field*>& z,
         const ordered_set<const PHV::Field*>& d,
         const GatherParserExtracts& pa,
-        const MauBacktracker& b,
-        RepackedHeaderTypes& rt,
-        bool skip_bridge)
+        RepackedHeaderTypes& rt)
         : phv(p), uses(u), fields(f), aliasInEgress(g),
           actionConstraints(a), doNotPack(s), noPackFields(z),
-          deparserParams(d), parserAlignedFields(pa), alloc(b), repackedTypes(rt),
-          skip_bridge(skip_bridge) { }
+          deparserParams(d), parserAlignedFields(pa), repackedTypes(rt) {}
 
     /// @returns the set of all repacked headers.
     const ordered_map<cstring, const IR::HeaderOrMetadata*> getRepackedHeaders() const {
@@ -514,10 +480,6 @@ class RepackFlexHeaders : public Transform, public TofinoWriteContext {
         return headerToFlexibleStructsMap;
     }
 
-    const ordered_map<cstring, ordered_set<cstring>>& getExtractedTogether() const {
-        return extractedTogether;
-    }
-
     const ordered_set<cstring>& getPaddingFieldNames() const {
         return paddingFieldNames;
     }
@@ -556,9 +518,8 @@ class RepackDigestFieldList : public RepackFlexHeaders {
             const ordered_set<const PHV::Field*>& z,
             const ordered_set<const PHV::Field*>& d,
             const GatherParserExtracts& pa,
-            const MauBacktracker& b,
             RepackedHeaderTypes& rt)
-        : RepackFlexHeaders(p, u, f, g, a, s, z, d, pa, b, rt, true) { }
+        : RepackFlexHeaders(p, u, f, g, a, s, z, d, pa, rt) { }
 
     profile_t init_apply(const IR::Node* root) override;
     const IR::Node* preorder(IR::HeaderOrMetadata* h) override { return h; }
@@ -566,117 +527,9 @@ class RepackDigestFieldList : public RepackFlexHeaders {
     const IR::Node* preorder(IR::BFN::DigestFieldList* d) override;
 };
 
-class ProduceParserMappings : public Inspector {
- private:
-    const PhvInfo& phv;
-
-    ordered_map<cstring, std::vector<cstring>> parserStateToHeadersMap;
-    ordered_map<cstring, const IR::HeaderOrMetadata*> headerNameToRefMap;
-    ordered_map<cstring, IR::Member*> bridgedToExpressionsMap;
-
-    profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::BFN::ParserState* p) override;
-    bool preorder(const IR::HeaderOrMetadata* h) override;
-
- public:
-    explicit ProduceParserMappings(const PhvInfo& p) : phv(p) { }
-
-    const std::vector<cstring> getExtractedHeaders(const IR::BFN::ParserState* p) const {
-        static std::vector<cstring> empty;
-        if (!parserStateToHeadersMap.count(p->name)) return empty;
-        return parserStateToHeadersMap.at(p->name);
-    }
-
-    const IR::HeaderOrMetadata* getHeaderRefForName(cstring headerName) const {
-        if (headerNameToRefMap.count(headerName)) return headerNameToRefMap.at(headerName);
-        return nullptr;
-    }
-
-    const ordered_map<cstring, IR::Member*> getBridgedToExpressionsMap() const {
-        return bridgedToExpressionsMap;
-    }
-};
-
 // A map from the original field index to the repacked field index,
 // This is used to reorder the flattened field list in emit calls.
 using RepackedFieldIndexMap = std::map<int, int>;
-
-/** This class takes the results of RepackFlexHeaders and for all flexible fields, changes all Emits
-  * in the ingress deparser and all Extracts in the egress parser to use the newly generate flexible
-  * header type.
-  */
-class ReplaceFlexFieldUses : public Transform {
- private:
-    const PhvInfo& phv;
-    const RepackFlexHeaders& pack;
-    const ProduceParserMappings& info;
-    ordered_map<cstring, ordered_set<cstring>>& extractedTogether;
-
-    /// Map: Bridged field name to IR::Type*.
-    ordered_map<cstring, const IR::Type*> bridgedFields;
-
-    /// Set of parser states to be modified to reflect the repacking of headers.
-    /// Collected before ReplaceOriginalFieldWithBridged pass is executed to
-    /// avoid counting ingress states as state that parses bridge metadata due
-    /// to the backward 'copy-propagation'.
-    const ordered_set<cstring>& parserStatesToModify;
-
-    /// Set of header names whose emits must be replaced.
-    ordered_set<cstring> emitsToBeReplaced;
-
-    /// Set of fields used as SavedRVal references, which now need to be replaced to reflect the
-    /// new type of those fields post repacking.
-    ordered_set<cstring> fieldsToReplace;
-
-    ordered_map<cstring, cstring> egressBridgedMap;
-    ordered_map<cstring, cstring> reverseEgressBridgedMap;
-
-    profile_t init_apply(const IR::Node* root) override;
-    IR::Node* preorder(IR::BFN::Pipe* pipe) override;
-    IR::Node* preorder(IR::BFN::EmitField* e) override;
-    IR::Node* preorder(IR::BFN::Extract* e) override;
-    IR::Node* preorder(IR::ConcreteHeaderRef* ref) override;
-    void end_apply() override;
-
-    bool processExtract(const IR::BFN::Extract* e);
-    IR::BFN::Extract* getNewSavedVal(const IR::BFN::Extract* e) const;
-    boost::optional<const std::vector<IR::BFN::Extract*>>
-        getNewExtracts(cstring h, unsigned& packetOffset) const;
-    const std::vector<IR::BFN::EmitField*> getNewEmits(
-            const IR::HeaderOrMetadata* h,
-            const IR::BFN::FieldLVal* e) const;
-
-    RepackedFieldIndexMap mkFieldIndexMap(const IR::HeaderOrMetadata* repackedHeader,
-                                          const IR::HeaderOrMetadata* originalHeader) const;
-    /// Add emits for the revised bridged metadata packing to the deparser.
-    IR::Node* postorder(IR::BFN::Deparser* d) override;
-
-    /// Adjusts the shift of each transition out of the egress bridged metadata header, after taking
-    /// into account the new structure of the bridged metadata header.
-    IR::Node* postorder(IR::BFN::ParserState* p) override;
-
-    /// Builds up a list of all bridged metadata fields, with separate entries for ingress and
-    /// egress versions. Note that this list is created by walking through the fields in the
-    /// bridged_metadata headers.
-    void addBridgedFields(const IR::HeaderOrMetadata* header);
-
- public:
-    explicit ReplaceFlexFieldUses(
-            const PhvInfo& p,
-            const RepackFlexHeaders& pbm,
-            const ProduceParserMappings& pm,
-            ordered_map<cstring, ordered_set<cstring>>& e,
-            ordered_set<cstring>& ps)
-            : phv(p), pack(pbm), info(pm), extractedTogether(e),
-            parserStatesToModify(ps) { }
-
-    ordered_set<cstring> getBridgedFields() const {
-        ordered_set<cstring> rv;
-        for (auto kv : bridgedFields)
-            rv.insert(kv.first);
-        return rv;
-    }
-};
 
 using RepackedHeaders = std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>>;
 
@@ -730,20 +583,18 @@ class FlexiblePacking : public PassManager {
  private:
     CollectBridgedFields&                               bridgedFields;
     GatherAliasConstraintsInEgress                      aliasInEgress;
+    MauBacktracker                                      table_alloc;
     PackConflicts                                       packConflicts;
     MapTablesToActions                                  tableActionsMap;
     ActionPhvConstraints                                actionConstraints;
     GatherParserExtracts                                parserAlignedFields;
     RepackDigestFieldList                               packDigestFieldLists;
     RepackFlexHeaders                                   packHeaders;
-    ProduceParserMappings                               parserMappings;
-    ReplaceFlexFieldUses                                bmUses;
     SymBitMatrix                                        doNotPack;
     TablesMutuallyExclusive                             tMutex;
     ActionMutuallyExclusive                             aMutex;
     ordered_set<const PHV::Field*>                      noPackFields;
     ordered_set<const PHV::Field*>                      deparserParams;
-    ordered_set<cstring>                                parserStatesToModify;
     RepackedHeaderTypes                                 repackedTypes;
 
  public:
@@ -751,10 +602,7 @@ class FlexiblePacking : public PassManager {
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,
-            CollectBridgedFields& b,
-            ordered_map<cstring, ordered_set<cstring>>& e,
-            const MauBacktracker& alloc,
-            bool skip_bridge = false);
+            CollectBridgedFields& b);
 
     // Return a Json representation of flexible headers to be saved in .bfa/context.json
     // must be called after the pass is applied
@@ -775,15 +623,12 @@ class PackFlexibleHeaders : public PassManager {
     FieldDefUse defuse;
     DependencyGraph deps;
     CollectBridgedFields bridged_fields;
-    ExtractedTogether extracted_together;
-    MauBacktracker table_alloc;
     FlexiblePacking *flexiblePacking;
 
  public:
     explicit PackFlexibleHeaders(const BFN_Options& options);
 
     RepackedHeaderTypes getPackedHeaders() { return flexiblePacking->getRepackedTypes(); }
-    ExtractedTogether* getExtractedTogether() { return &extracted_together; }
 };
 
 

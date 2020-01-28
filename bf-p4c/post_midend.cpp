@@ -101,12 +101,10 @@ class PostMidEndLast : public PassManager {
 class OptimizeBridgeMetadataPacking : public Inspector {
     const BFN_Options& options;
     RepackedHeaderTypes* map;
-    ExtractedTogetherFields* extractedTogether;
 
  public:
-    explicit OptimizeBridgeMetadataPacking(const BFN_Options& options, RepackedHeaderTypes* map,
-            ExtractedTogetherFields* et) :
-        options(options), map(map), extractedTogether(et) {}
+    explicit OptimizeBridgeMetadataPacking(const BFN_Options& options, RepackedHeaderTypes* map) :
+        options(options), map(map) {}
 
     bool preorder(const IR::BFN::Toplevel* tl) override {
         visit(tl->bridge_pipes);
@@ -119,16 +117,6 @@ class OptimizeBridgeMetadataPacking : public Inspector {
         pipe->apply(*pack);
         for (auto h : pack->getPackedHeaders()) {
             map->emplace(h.first, h.second);
-        }
-
-        // merge extractedTogether from multiple BFN::BridgePipe
-        for (auto e : *pack->getExtractedTogether()) {
-            auto egress = pipe->pipe[EGRESS];
-            auto field = e.first;
-            for (auto f : e.second) {
-                LOG3("extract together " << field << " " << f);
-                (*extractedTogether)[egress][field].insert(f);
-            }
         }
         return false;
     }
@@ -145,8 +133,7 @@ class OptimizeBridgeMetadataPacking : public Inspector {
 // backend IR representation, as a result, the transformed
 // P4Program no longer type-check.
 PostMidEnd::PostMidEnd(BFN_Options& options, RepackedHeaderTypes *map,
-        ExtractedTogetherFields* extractedTogether,
-        bool with_bridge_packing) : map(map), extractedTogether(extractedTogether) {
+        bool with_bridge_packing) : map(map) {
     refMap.setIsV1(true);
     bindings = new ParamBinding(&typeMap,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
@@ -164,8 +151,8 @@ PostMidEnd::PostMidEnd(BFN_Options& options, RepackedHeaderTypes *map,
         bindings,
         conv,
         // reserved for bridge packing passes
-        with_bridge_packing ? new VisitFunctor([this, options, map, extractedTogether]() {
-            conv->getTop()->apply(OptimizeBridgeMetadataPacking(options, map, extractedTogether));
+        with_bridge_packing ? new VisitFunctor([this, options, map]() {
+            conv->getTop()->apply(OptimizeBridgeMetadataPacking(options, map));
         }) : nullptr,
         // debug print
         (!with_bridge_packing) ? new PostMidEndLast : nullptr,

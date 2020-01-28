@@ -9,14 +9,6 @@
 
 namespace BFN {
 
-// Process the serializer externs in the program.
-// - find out the vector of pipelines that share the same bridge header.
-// - convert serializer extern to packet_out extern.
-class ProcessSerializerExtern : public PassManager {
- public:
-    ProcessSerializerExtern() {}
-};
-
 // A Tna program specifies the packet processing logic on individual pipe in
 // Tofino. In a 32q program, a packet may be processed by multiple pipes, which
 // forms a 'logical' pipeline that spans multiple 'physical' pipe in Tofino.

@@ -11,12 +11,14 @@ bool CollectBridgedFieldsUse::preorder(const IR::MethodCallExpression* expr) {
     if (auto em = mi->to<P4::ExternMethod>()) {
         auto type_name = em->originalExternType->name;
 
-        if (type_name != "packet_in" && type_name != "packet_out")
+        LOG1("method " << expr);
+        if (type_name != "packet_in" && type_name != "packet_out" && type_name != "Resubmit")
             return false;
 
         auto hdr = em->getActualParameters()->getParameter("hdr");
         if (!hdr)
             return false;
+        LOG1("param " << hdr);
 
         boost::optional<gress_t> thread = boost::none;
         auto parser = findContext<IR::BFN::TnaParser>();
@@ -39,8 +41,21 @@ bool CollectBridgedFieldsUse::preorder(const IR::MethodCallExpression* expr) {
                     else if (em->method->name == "extract")
                         u->access = WRITE;
                     u->thread = thread;
+                    LOG1("u " << thread << " access " << u->access);
                     bridge_use_single_pipe.push_back(*u);
                 }
+            } else if (auto type = param->type->to<IR::BFN::Type_FixedSizeHeader>()) {
+                auto u = new Use();
+                u->object = em->object;
+                u->bridgedType = hdr->type;
+                u->method = em->method->name;
+                if (em->method->name == "emit")
+                    u->access = READ;
+                else if (em->method->name == "extract")
+                    u->access = WRITE;
+                u->thread = thread;
+                LOG1("u " << thread << " access " << u->access);
+                bridge_use_single_pipe.push_back(*u);
             }
         }
     }
@@ -67,10 +82,11 @@ CollectBridgedFieldsUse::getPipes() {
     auto pipes = new IR::Vector<IR::BFN::BridgePipe>();
     for (auto use : bridge_use_all) {
         cstring name = use.bridgedType->to<IR::Type_StructLike>()->name;
-        if (use.access == READ)
+        if (use.access == READ) {
             read_set[name].push_back(use);
-        else if (use.access == WRITE)
+        } else if (use.access == WRITE) {
             write_set[name].push_back(use);
+        }
     }
 
     ordered_set<PipeAndGress> pipe_and_gress;
@@ -80,9 +96,6 @@ CollectBridgedFieldsUse::getPipes() {
             continue;
         for (auto pr : use.second) {
             for (auto pw : write_set.at(use.first)) {
-                // cannot bridge from ingress->ingress or egress->egress
-                if (pr.thread == pw.thread)
-                    continue;
                 if (pipe_and_gress.count(toPipeAndGress(pw.pipe, *pw.thread, pr.pipe, *pr.thread)))
                     continue;
                 pipe_and_gress.insert(toPipeAndGress(pw.pipe, *pw.thread, pr.pipe, *pr.thread));

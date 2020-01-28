@@ -18,7 +18,6 @@
 #include "bf-p4c/phv/utils/live_range_report.h"
 
 class FieldDefUse;
-class FlexiblePacking;
 struct CollectPhvLoggingInfo;
 
 namespace BFN {
@@ -33,8 +32,6 @@ class Backend : public PassManager {
     TablesMutuallyExclusive mutex;
     DeparserCopyOpt decaf;
     CollectBridgedFields bridged_fields;
-    /// Bridged fields that must be extracted together (result of bridged metadata packing).
-    ordered_map<cstring, ordered_set<cstring>> extracted_together;
     /// Class that represents the backtracking point from table placement to PHV allocation.
     MauBacktracker table_alloc;
     TableSummary table_summary;
@@ -50,14 +47,13 @@ class Backend : public PassManager {
     // generated once before and once after table placement.
     Util::JsonObject jsonGraph;
 
-    FlexiblePacking *flexiblePacking;
     LogFlexiblePacking *flexibleLogging;
     CollectPhvLoggingInfo *phvLoggingInfo;
     NextTable *nextTblProp;
     LiveRangeReport *liveRangeReport;
 
  public:
-    explicit Backend(const BFN_Options& options, int pipe_id, ExtractedTogether&);
+    explicit Backend(const BFN_Options& options, int pipe_id);
 
     const PhvInfo       &get_phv()     const { return phv; }
     const ClotInfo      &get_clot()    const { return clot; }
@@ -67,7 +63,6 @@ class Backend : public PassManager {
     const LiveRangeReport *get_live_range_report() const { return liveRangeReport; }
     const Util::JsonObject &get_prim_json() const { return primNode; }
     const Util::JsonObject &get_json_graph() const { return jsonGraph; }
-    const FlexiblePacking  *get_flexible_packing() const { return flexiblePacking; }
     const LogRepackedHeaders *get_flexible_logging() const {
         return flexibleLogging->get_flexible_logging(); }
     const CollectPhvLoggingInfo *get_phv_logging() const { return phvLoggingInfo; }

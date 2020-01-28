@@ -213,8 +213,7 @@ class GenerateOutputs : public PassManager {
 };
 
 /// use pipe.n to generate output directory.
-void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options,
-        ExtractedTogether& et) {
+void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     if (::errorCount() > 0)
         return;
     if (!maupipe)
@@ -224,7 +223,7 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options,
         std::cout << "Compiling " << maupipe->name << std::endl;
 
     auto pipeName = maupipe->name;
-    BFN::Backend backend(options, maupipe->id, et);
+    BFN::Backend backend(options, maupipe->id);
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
@@ -329,15 +328,14 @@ int main(int ac, char **av) {
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
     auto map = new RepackedHeaderTypes;
-    auto extractedTogether = new ExtractedTogetherFields;
-    BFN::PostMidEnd bridgePacking(options, map, extractedTogether, true);
+    BFN::PostMidEnd bridgePacking(options, map, true);
     bridgePacking.addDebugHook(hook, true);
 
     program->apply(bridgePacking);
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
 
-    BFN::PostMidEnd postmid(options, map, extractedTogether, false);
+    BFN::PostMidEnd postmid(options, map, false);
     postmid.addDebugHook(hook, true);
 
     program = program->apply(postmid);
@@ -392,14 +390,11 @@ int main(int ac, char **av) {
             LOG2("Generating parser graphs");
             program->apply(manifest);  // generate graph entries for parsers in manifest
         }
-        ordered_map<cstring, ordered_set<cstring>> et;
-        if (extractedTogether->count(pipe->name))
-            et = extractedTogether->at(pipe->name);
 #if BAREFOOT_INTERNAL
         if (!options.skipped_pipes.count(pipe->name))
-            execute_backend(pipe, options, et);
+            execute_backend(pipe, options);
 #else
-            execute_backend(pipe, options, et);
+            execute_backend(pipe, options);
 #endif
     }
 

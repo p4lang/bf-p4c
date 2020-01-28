@@ -1602,23 +1602,19 @@ struct CollectPhvInfo : public PassManager {
     explicit CollectPhvInfo(PhvInfo& phv);
 };
 
-/** Marks bridged metadata fields that are extracted in the same byte in the egress parser (because
-  * of bridged metadata packing) as being extracted-together. This will naturally aid packing those
-  * fields in the same container, as the restriction on not packing multiple extracted slices
-  * together in the same container can be relaxed for these fields.
+/** Marks bridged metadata fields that are extracted in the same byte in the
+ * egress parser (because of bridged metadata packing) as being
+ * extracted-together. This will naturally aid packing those fields in the same
+ * container, as the restriction on not packing multiple extracted slices
+ * together in the same container can be relaxed for these fields.
   */
-class CollectBridgedExtractedTogetherFields : public Inspector {
+class CollectExtractedTogetherFields : public Inspector {
  private:
     PhvInfo& phv_i;
-    const ordered_map<cstring, ordered_set<cstring>>& extractedTogether;
-
-    profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::BFN::ParserState* state) override;
 
  public:
-    explicit CollectBridgedExtractedTogetherFields(
-            PhvInfo &p,
-            const ordered_map<cstring, ordered_set<cstring>>& e)
-        : phv_i(p), extractedTogether(e) { }
+    explicit CollectExtractedTogetherFields(PhvInfo &p) : phv_i(p) { }
 };
 
 /**
