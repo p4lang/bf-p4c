@@ -215,7 +215,7 @@ action makarios() {
 action clorets() {
   remove_header(tininesss);
   copy_header(tininesss, tininesss);
-  register_write(teetotalisms, 184, restitches.littles);
+  //register_write(teetotalisms, 184, restitches.littles);
   remove_header(tininesss);
   add_to_field(restitches.livestocks, restitches.aryans);
 }

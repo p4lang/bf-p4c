@@ -133,7 +133,7 @@ TEST_F(MultipleApplyTest, NonMatchingSequences) {
         }
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_TRUE(ma.distinct_error("ingress.t2"));
     EXPECT_TRUE(ma.distinct_error("ingress.t3"));
@@ -164,7 +164,7 @@ TEST_F(MultipleApplyTest, ChainedApplications) {
         }
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_FALSE(ma.mutex_error("ingress.t1"));
     EXPECT_FALSE(ma.mutex_error("ingress.t2"));
@@ -195,7 +195,7 @@ TEST_F(MultipleApplyTest, DirectAction) {
         t3.apply();
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_TRUE(ma.distinct_error("ingress.t2"));
 }
@@ -215,7 +215,7 @@ TEST_F(MultipleApplyTest, NonMutuallyExclusive) {
         t3.apply();
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_TRUE(ma.mutex_error("ingress.t2"));
 }
@@ -237,7 +237,7 @@ TEST_F(MultipleApplyTest, LogicallyMutuallyExclusive) {
         t3.apply();
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_TRUE(ma.mutex_error("ingress.t2"));
 }
@@ -256,7 +256,7 @@ TEST_F(MultipleApplyTest, CommonTail) {
         t3.apply();
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_FALSE(ma.distinct_error("ingress.t2"));
 }
@@ -275,7 +275,7 @@ TEST_F(MultipleApplyTest, CommonTail2) {
         }
     )"));
 
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
     EXPECT_FALSE(ma.distinct_error("ingress.t3"));
 }

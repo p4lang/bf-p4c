@@ -157,7 +157,7 @@ TEST_F(TableMutexTest, TwoActionsSameNextTable) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -214,7 +214,7 @@ TEST_F(TableMutexTest, SharedNextTable) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -283,7 +283,7 @@ TEST_F(TableMutexTest, DifferingNextTableChains) {
 
     )"));
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -349,7 +349,7 @@ TEST_F(TableMutexTest, OneChainFromTwoActions) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -405,7 +405,7 @@ TEST_F(TableMutexTest, MultiLevelNextTableChain) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -537,7 +537,7 @@ TEST_F(TableMutexTest, ActionViaMissTest) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -588,7 +588,7 @@ TEST_F(TableMutexTest, ActionViaHitTest) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -640,7 +640,7 @@ TEST_F(TableMutexTest, ActionViaMultiChain) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -690,7 +690,7 @@ TEST_F(TableMutexTest, ActionViaActionChain) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);
@@ -776,7 +776,7 @@ TEST_F(TableMutexTest, ActionViaActionChainDefault) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);

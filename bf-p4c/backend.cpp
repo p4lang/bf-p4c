@@ -115,7 +115,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
-        new MultipleApply,
+        new MultipleApply(options),
         new AddSelectorSalu,
         new FixupStatefulAlu,
         // CanonGatewayExpr checks gateway rows in table and tries to optimize

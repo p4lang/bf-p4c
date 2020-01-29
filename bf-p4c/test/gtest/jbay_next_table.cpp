@@ -213,7 +213,7 @@ V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
 
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, NextTable* nt ) {
     PassManager quick_backend = {
-        new MultipleApply,
+        new MultipleApply(BackendOptions()),
         new GTestTablePlacement,
         nt
     };

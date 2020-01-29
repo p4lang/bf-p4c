@@ -103,7 +103,7 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, Fiel
     auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
         new_multi_apply ? new MultipleApply2 : nullptr,
-        !new_multi_apply ? new MultipleApply : nullptr,
+        !new_multi_apply ? new MultipleApply(BackendOptions()) : nullptr,
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new InstructionSelection(*options, phv),

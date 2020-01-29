@@ -7,6 +7,8 @@
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 
+class BFN_Options;
+
 class MultipleApply : public PassManager {
     // gtest requirements
     std::set<cstring> mutex_errors;
@@ -90,7 +92,7 @@ class MultipleApply : public PassManager {
         return gateway_chain_errors.find(name) != gateway_chain_errors.end();
     }
 
-    MultipleApply();
+    explicit MultipleApply(const BFN_Options &options);
 };
 
 /// The purpose of this set of passes is three-fold:

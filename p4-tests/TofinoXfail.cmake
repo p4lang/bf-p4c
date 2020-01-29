@@ -519,7 +519,7 @@ p4c_add_xfail_reason("tofino"
 # BEGIN: XFAILS that match glass XFAILS
 
 p4c_add_xfail_reason("tofino"
-  "Table .* is applied multiple times, and the next table information cannot correctly propagate"
+  "[Tt]able .* is applied multiple times, and the next table information cannot correctly propagate"
   testdata/p4_16_samples/issue986-bmv2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_fail_next_ptr.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_multiple_actions.p4
@@ -597,7 +597,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "The method call of read and write on a Register is currently not supported in p4c"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/cooperated_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
   testdata/p4_14_samples/register.p4
@@ -612,6 +611,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register2.p4
   testdata/p4_16_samples/psa-register3.p4
   testdata/p4_16_samples/slice-def-use1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unsupported on target table .* is applied multiple times"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/cooperated_0.p4
 )
 
 p4c_add_xfail_reason("tofino"

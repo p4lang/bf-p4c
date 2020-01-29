@@ -1,5 +1,6 @@
 #include "multiple_apply.h"
 #include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 /** The whole point of the MultipleApply PassManager is to both convert all multiple applies of
  *  an individual match table to one IR::MAU::Table node in the backend.  The extract_maupipe
@@ -259,7 +260,7 @@ bool MultipleApply::DistinctTables::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-MultipleApply::MultipleApply() {
+MultipleApply::MultipleApply(const BFN_Options &options) {
     addPasses({
         &mutex,
         new MutuallyExclusiveApplies(mutex, mutex_errors),
@@ -268,9 +269,8 @@ MultipleApply::MultipleApply() {
             new MergeTails(equiv_tails)
         }, [this]()->bool { return equiv_tails.empty(); }),
         new DistinctTables(distinct_errors),
-        // Still currently guaranteeing this data for both Tofino and JBay, until we change the
-        // IR rules
-        new DefaultNext(true),
+        new DefaultNext(Device::numLongBranchTags() == 0 || options.disable_long_branch,
+                        &distinct_errors),
     });
 }
 

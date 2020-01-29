@@ -1958,7 +1958,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options) :
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
-        new MultipleApply,
+        new MultipleApply(options),
         new AddSelectorSalu,
         new FixupStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.

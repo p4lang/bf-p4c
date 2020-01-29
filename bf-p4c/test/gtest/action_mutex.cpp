@@ -312,7 +312,7 @@ TEST_F(ActionMutexTest, NextTableProperties) {
         )"));
 
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     ActionMutuallyExclusive act_mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe->apply(act_mutex);
@@ -340,7 +340,7 @@ TEST_F(ActionMutexTest, TwoActionsSameChain) {
             }
         )"));
     ASSERT_TRUE(test);
-    MultipleApply ma;
+    MultipleApply ma(BackendOptions());
     ActionMutuallyExclusive act_mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe->apply(act_mutex);
