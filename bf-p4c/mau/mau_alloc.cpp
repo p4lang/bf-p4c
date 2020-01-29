@@ -16,7 +16,7 @@ int TableAllocPass::table_placement_round = 1;
 
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
                                TableSummary &summary, Util::JsonObject* jsonGraph)
-    : Logging::PassManager("table_placement_"), siaa(mutex, ignore) {
+    : Logging::PassManager("table_placement_"), siaa(mutex, ignore, action_mutex) {
         addPasses({
             new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
             new TableLayout(phv, lc, att_info),  // catches IXBar::realign backtracks
@@ -33,6 +33,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
             &ignore,
             &mutex,
+            &action_mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),
             new TablePlacement(options, &deps, mutex, phv, lc, siaa, att_info, summary),

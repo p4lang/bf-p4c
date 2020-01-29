@@ -19,6 +19,7 @@ class TableAllocPass : public Logging::PassManager {
     SharedIndirectAttachedAnalysis      siaa;
     SplitAttachedInfo                   att_info;
     TablesMutuallyExclusive             mutex;
+    ActionMutuallyExclusive             action_mutex;
 
  public:
     static int table_placement_round;

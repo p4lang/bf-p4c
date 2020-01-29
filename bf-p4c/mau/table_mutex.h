@@ -3,6 +3,7 @@
 
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/action_mutex.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
@@ -124,19 +125,19 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     ordered_map<const IR::MAU::AttachedMemory *,
                 safe_vector<const IR::MAU::Table *>> backend_users;
     ordered_map<const IR::MAU::Table *,
-                ordered_set<const IR::MAU::Table *>> act_data_shared_tables;
+          ordered_set<const IR::MAU::Table *>> table_sharing_attached;
     const TablesMutuallyExclusive &mutex;
     const IgnoreTableDeps &ignore;
+    const ActionMutuallyExclusive &action_mutex;
+    SymBitMatrix _mutex_through_ignore;
 
     std::map<const IR::MAU::Table *, int>    table_ids;
     std::map<int, const IR::MAU::Table *>    rev_table_ids;
-    SymBitMatrix _mutex_through_ignore;
 
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         backend_users.clear();
-        act_data_shared_tables.clear();
-
+        table_sharing_attached.clear();
         table_ids.clear();
         rev_table_ids.clear();
         _mutex_through_ignore.clear();
@@ -146,33 +147,16 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
             table_ids.emplace(t, table_ids.size()); });
         return rv;
     }
-
-    bool preorder(const IR::MAU::AttachedMemory *ba) override;
-    bool preorder(const IR::MAU::Action *) override;
-
-    void end_apply() override;
-
+    bool preorder(const IR::MAU::AttachedMemory *) override;
+    bool check_attach_action_mutex(const IR::MAU::Table *a, const IR::MAU::Table *b,
+                                   const IR::MAU::AttachedMemory *am);
 
  public:
-    safe_vector<const IR::MAU::Table *>
-    all_shared_tables(const IR::MAU::AttachedMemory *am) const {
-        safe_vector<const IR::MAU::Table *> empty;
-        if (am == nullptr || backend_users.count(am) == 0)
-            return empty;
-        return backend_users.at(am);
-    }
-    const ordered_set<const IR::MAU::Table *>&
-    action_data_shared_tables(const IR::MAU::Table* tbl) const {
-        static ordered_set<const IR::MAU::Table *> empty;
-        if (act_data_shared_tables.count(tbl)) {
-            return act_data_shared_tables.at(tbl);
-        } else {
-            return empty;
-        }
-    }
-
     bool mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    // for gtest
+    bool if_table_share_attach(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m,
-         const IgnoreTableDeps &i) : mutex(m), ignore(i) {}
+         const IgnoreTableDeps &i, const ActionMutuallyExclusive &a) : mutex(m), ignore(i),
+         action_mutex(a) {}
 };
 #endif /* BF_P4C_MAU_TABLE_MUTEX_H_ */

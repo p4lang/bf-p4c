@@ -10,7 +10,10 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-
+#include "lib/symbitmatrix.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/common/header_stack.h"
 namespace Test {
 
 class TableMutexTest : public TofinoBackendTest {};
@@ -20,6 +23,7 @@ namespace {
 boost::optional<TofinoPipeTestCase>
 createTableMutexTestCase(const std::string &ingress_source) {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+
 header H1
 {
     bit<8> f1;
@@ -701,6 +705,106 @@ TEST_F(TableMutexTest, ActionViaActionChain) {
     EXPECT_FALSE(mutex.action(names.at("igrs.t1"), names.at("igrs.t4")));
 }
 
+const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe,
+                                           const BFN_Options& option,
+                                           PhvInfo *phv) {
+    PassManager quick_backend = {
+        new CollectHeaderStackInfo,
+        new CollectPhvInfo(*phv),
+        new InstructionSelection(option, *phv)
+    };
+
+    return pipe->apply(quick_backend);
+}
+
+TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
+    auto test = createTableMutexTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    counter(32, CounterType.packets_and_bytes) tcount;
+    counter(32, CounterType.packets_and_bytes) scount;
+    action nop() {}
+    action a1() { headers.h1.f1 = headers.h1.f2; }
+    action a2() { tcount.count(1); }
+    action a3() {tcount.count(2); }
+    action a4() {scount.count(2); }
+   table t1 {
+        key = { headers.h1.f1 : exact; }
+        actions = { @defaultonly nop; a1; a2; }
+        const default_action = nop;
+    }
+    table t2 {
+        key = { headers.h1.f3 : exact; }
+        actions = { a1; a2; a3;}
+    }
+
+    table t3 {
+        key = { headers.h1.f4 : exact; }
+        actions = { a1; a2;a4;}
+    }
+
+    table t4 {
+        key = { headers.h1.f2 : exact; }
+        actions = { a1; a4;}
+    }
+
+    table t5 {
+        key = { headers.h1.f5 : exact; }
+        actions = { a1;}
+    }
+ 
+   table t6 {
+        key = { headers.h1.f1 : exact; }
+        actions = { a3; a4;}
+    }
+
+    table t7 {
+        key = { headers.h1.f5 : exact; }
+        actions = { a4;}
+    }
+
+    table t8 {
+        key = { headers.h1.f1 : exact; }
+        actions = { a1;}
+    }
+    apply {
+        if (t5.apply().hit) {
+            switch (t1.apply().action_run) {
+                a1: { t2.apply();}
+                default : {}
+           }
+        } else if (t8.apply().hit){
+           switch (t3.apply().action_run) {
+               a4 : {t4.apply();}
+               default : {}
+           }
+       } else {
+           switch (t6.apply().action_run) {
+              a3: {t7.apply();}
+              default : {}
+           }
+       }
+    }
+    )"));
+    ASSERT_TRUE(test);
+    IgnoreTableDeps ignore;
+    TablesMutuallyExclusive mutex;
+    ActionMutuallyExclusive action_mutex;
+    SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex);
+    SymBitMatrix s_mutex;
+    PhvInfo phv(s_mutex);
+    auto options = new BFN_Options();
+    auto *post_pm_pipe = runInitialPassManager(test->pipe, *options, &phv);
+    post_pm_pipe = post_pm_pipe->apply(mutex);
+    post_pm_pipe = post_pm_pipe->apply(action_mutex);
+    post_pm_pipe = post_pm_pipe->apply(ignore);
+    post_pm_pipe = post_pm_pipe->apply(sia);
+    auto &names = mutex.name_to_tables;
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"), names.at("igrs.t2")));
+    EXPECT_FALSE(sia.if_table_share_attach(names.at("igrs.t3"), names.at("igrs.t4")));
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"), names.at("igrs.t3")));
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t6"), names.at("igrs.t7")));
+}
+
 TEST_F(TableMutexTest, ActionViaActionChainDefault) {
     auto test = createTableMutexTestCase(
         P4_SOURCE(P4Headers::NONE, R"(
@@ -770,8 +874,7 @@ TEST_F(TableMutexTest, ActionViaActionChainDefault) {
             a1 : { t9.apply(); }
             a2 : { t9.apply(); }
             default : { t7.apply(); t8.apply(); }
-        } 
-        
+        }
     }
     )"));
 

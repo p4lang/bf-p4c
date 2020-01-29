@@ -289,7 +289,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
 # Fail on purpose due to indirect tables not being mutually exclusive
-  "table .* and table .* are not mutually exclusive"
+  "table .* and table .* cannot share .*"
   extensions/p4_tests/p4_14/compile_only/action_profile_next_stage.p4
   extensions/p4_tests/p4_14/compile_only/action_profile_not_shared.p4
   testdata/p4_14_samples/12-Counters.p4
@@ -351,7 +351,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: table .* and table .* are not mutually exclusive, yet share"
+  "error: table .* and table .* cannot share .*"
   testdata/p4_16_samples/issue1566.p4
   testdata/p4_16_samples/issue1566-bmv2.p4
   )

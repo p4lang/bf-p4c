@@ -193,31 +193,67 @@ bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Tab
     return action_mutex(table_ids.at(a), table_ids.at(b));
 }
 
-
-bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::Action *) {
-    return false;
+bool SharedIndirectAttachedAnalysis::check_attach_action_mutex(const IR::MAU::Table *a,
+                                                              const IR::MAU::Table *b,
+                                                              const IR::MAU::AttachedMemory *am) {
+    if (am->is<IR::MAU::ActionData>() || am->is<IR::MAU::Selector>()) {
+        return (mutex.action(a, b));
+    }
+    const IR::MAU::Action* action_a = nullptr;
+    const IR::MAU::Action* action_b = nullptr;
+    for (auto act : Values(a->actions)) {
+        if (act->stateful_call(am->name)) {
+            action_a = act;
+            for (auto act : Values(b->actions)) {
+                if (act->stateful_call(am->name)) {
+                    action_b = act;
+                    if (!action_mutex(action_a, action_b)) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
 }
 
 bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am) {
     visitAgain();
-    if (am->direct)
-        return false;
+    if (am->direct) return false;
     auto *tbl = findContext<IR::MAU::Table>();
-    for (auto *check_tbl : backend_users[am]) {
-        if (mutex(tbl, check_tbl))
+    for (auto am_tbl : backend_users[am]) {
+        if (tbl == am_tbl)  {
             continue;
-        if (mutex.action(tbl, check_tbl))
+        } else if (mutex(tbl, am_tbl)) {
+            table_sharing_attached[tbl].insert(am_tbl);
             continue;
-        if (ignore.ignore_deps(tbl, check_tbl)) {
-            bitvec check_tbl_bv;
-            check_tbl_bv.setbit(table_ids.at(check_tbl));
-            _mutex_through_ignore[table_ids.at(tbl)] |= check_tbl_bv;
+        } else if (ignore.ignore_deps(tbl, am_tbl)) {
+            bitvec am_tbl_bv;
+            am_tbl_bv.setbit(table_ids.at(am_tbl));
+            _mutex_through_ignore[table_ids.at(tbl)] |= am_tbl_bv;
+            table_sharing_attached[tbl].insert(am_tbl);
             continue;
+        } else if (check_attach_action_mutex(tbl, am_tbl, am)) {
+           table_sharing_attached[tbl].insert(am_tbl);
+           continue;
+        } else {
+            ::error("table %1% and table %2% cannot share %3% because use of the %3% is not "
+                    "mutually exclusive", tbl->externalName(), am_tbl->externalName(), am);
         }
-        ::error("table %1% and table %2% are not mutually exclusive, yet share %3%",
-                tbl->externalName(), check_tbl->externalName(), am);
     }
     backend_users[am].push_back(tbl);
+    return false;
+}
+
+// for gtest
+bool SharedIndirectAttachedAnalysis::if_table_share_attach(const IR::MAU::Table *a,
+                                                           const IR::MAU::Table *b) const {
+    if (table_sharing_attached.count(a)) {
+        if (table_sharing_attached.at(a).count(b)) return true;
+    }
+    if (table_sharing_attached.count(b)) {
+        if (table_sharing_attached.at(b).count(a)) return true;
+    }
     return false;
 }
 
@@ -226,19 +262,4 @@ bool SharedIndirectAttachedAnalysis
     BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
     BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return _mutex_through_ignore(table_ids.at(a), table_ids.at(b));
-}
-
-void SharedIndirectAttachedAnalysis::end_apply() {
-    for (const auto& kv : backend_users) {
-        if (kv.first->is<IR::MAU::ActionData>()) {
-            for (const auto* tbl_i : kv.second) {
-                for (const auto* tbl_j : kv.second) {
-                    if (tbl_i != tbl_j) {
-                        act_data_shared_tables[tbl_i].insert(tbl_j);
-                        act_data_shared_tables[tbl_j].insert(tbl_i);
-                    }
-                }
-            }
-        }
-    }
 }
