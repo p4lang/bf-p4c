@@ -2000,28 +2000,24 @@ class ComputeMultiWriteContainers : public ParserModifier {
         : phv(ph), parser_info(pi) { }
 
  private:
-    bool preorder(IR::BFN::LoweredExtractPhv* extract) override {
-        auto match = findOrigCtxt<IR::BFN::LoweredParserMatch>();
+    bool preorder(IR::BFN::LoweredParserMatch* match) override {
+        auto orig = getOriginal<IR::BFN::LoweredParserMatch>();
 
-        if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
-            clear_on_write[extract->dest->container].insert(match);
-        else
-            bitwise_or[extract->dest->container].insert(match);
+        for (auto e : match->extracts) {
+            if (auto extract = e->to<IR::BFN::LoweredExtractPhv>()) {
+                if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+                    clear_on_write[extract->dest->container].insert(orig);
+                else
+                    bitwise_or[extract->dest->container].insert(orig);
+            }
+        }
 
-        revisit_visited();
+        for (auto csum : match->checksums) {
+            if (csum->csum_err)
+                bitwise_or[csum->csum_err->container->container].insert(orig);
+        }
 
-        return false;
-    }
-
-    bool preorder(IR::BFN::LoweredParserChecksum* csum) override {
-        auto match = findOrigCtxt<IR::BFN::LoweredParserMatch>();
-
-        if (csum->csum_err)
-            bitwise_or[csum->csum_err->container->container].insert(match);
-
-        revisit_visited();
-
-        return false;
+        return true;
     }
 
     bool preorder(IR::BFN::LoweredParser*) override {

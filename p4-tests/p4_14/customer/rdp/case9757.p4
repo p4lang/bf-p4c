@@ -958,6 +958,8 @@ header_type vlan_t
   }
 }
 
+#define CASE_FIX  // P4C-2168
+
 header_type eth_type_t
 {
   fields
