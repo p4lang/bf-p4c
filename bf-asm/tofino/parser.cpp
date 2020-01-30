@@ -454,13 +454,13 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
 
         // mark the dummy write dest as multi-write
 
-        if (*map[used_idx].dst < 224) {
+        if (*map[used_idx].dst >= 0 && *map[used_idx].dst < 224) {
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
 
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-        } else if (*map[used_idx].dst >= 256) {
+        } else if (*map[used_idx].dst >= 256 && *map[used_idx].dst < 368) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
 
@@ -510,13 +510,13 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
 
         // mark the dummy write dest as multi-write
 
-        if (*map[used_idx].dst < 224) {
+        if (*map[used_idx].dst >= 0 && *map[used_idx].dst < 224) {
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst].rewrite();
 
             regs.ingress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
             regs.egress.prsr_reg.no_multi_wr.nmw[*map[used_idx].dst] = 0;
-        } else if (*map[used_idx].dst >= 256) {
+        } else if (*map[used_idx].dst >= 256 && *map[used_idx].dst < 368) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256].rewrite();
 
