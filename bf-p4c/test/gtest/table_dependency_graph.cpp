@@ -1886,50 +1886,50 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
     auto a_ntl = ntp.next_table_leaves.at(a);
     auto a_cds = ntp.control_dom_set.at(a);
 
-    EXPECT_EQ(a_ntl.size(), 3);
-    EXPECT_EQ(a_ntl.count(b), 1);
-    EXPECT_EQ(a_ntl.count(c), 1);
-    EXPECT_EQ(a_ntl.count(d), 1);
-    EXPECT_EQ(a_cds.size(), 4);
-    EXPECT_EQ(a_cds.count(a), 1);
-    EXPECT_EQ(a_cds.count(b), 1);
-    EXPECT_EQ(a_cds.count(c), 1);
-    EXPECT_EQ(a_cds.count(d), 1);
+    EXPECT_EQ(a_ntl.size(), 3U);
+    EXPECT_EQ(a_ntl.count(b), 1U);
+    EXPECT_EQ(a_ntl.count(c), 1U);
+    EXPECT_EQ(a_ntl.count(d), 1U);
+    EXPECT_EQ(a_cds.size(), 4U);
+    EXPECT_EQ(a_cds.count(a), 1U);
+    EXPECT_EQ(a_cds.count(b), 1U);
+    EXPECT_EQ(a_cds.count(c), 1U);
+    EXPECT_EQ(a_cds.count(d), 1U);
 
     auto e_ntl = ntp.next_table_leaves.at(e);
     auto e_cds = ntp.control_dom_set.at(e);
 
-    EXPECT_EQ(e_ntl.size(), 3);
-    EXPECT_EQ(e_ntl.count(g), 1);
-    EXPECT_EQ(e_ntl.count(i), 1);
-    EXPECT_EQ(e_ntl.count(j), 1);
-    EXPECT_EQ(e_cds.size(), 6);
-    EXPECT_EQ(e_cds.count(e), 1);
-    EXPECT_EQ(e_cds.count(f), 1);
-    EXPECT_EQ(e_cds.count(g), 1);
-    EXPECT_EQ(e_cds.count(h), 1);
-    EXPECT_EQ(e_cds.count(i), 1);
-    EXPECT_EQ(e_cds.count(j), 1);
+    EXPECT_EQ(e_ntl.size(), 3U);
+    EXPECT_EQ(e_ntl.count(g), 1U);
+    EXPECT_EQ(e_ntl.count(i), 1U);
+    EXPECT_EQ(e_ntl.count(j), 1U);
+    EXPECT_EQ(e_cds.size(), 6U);
+    EXPECT_EQ(e_cds.count(e), 1U);
+    EXPECT_EQ(e_cds.count(f), 1U);
+    EXPECT_EQ(e_cds.count(g), 1U);
+    EXPECT_EQ(e_cds.count(h), 1U);
+    EXPECT_EQ(e_cds.count(i), 1U);
+    EXPECT_EQ(e_cds.count(j), 1U);
 
     auto inj_1 = ctrl_paths.get_inject_points(c, g);
-    EXPECT_EQ(inj_1.size(), 1);
+    EXPECT_EQ(inj_1.size(), 1U);
     EXPECT_EQ(inj_1.at(0).first, a);
     EXPECT_EQ(inj_1.at(0).second, e);
 
     auto inj_2 = ctrl_paths.get_inject_points(g, j);
-    EXPECT_EQ(inj_2.size(), 1);
+    EXPECT_EQ(inj_2.size(), 1U);
     EXPECT_EQ(inj_2.at(0).first, f);
     EXPECT_EQ(inj_2.at(0).second, j);
 
     auto inj_3 = ctrl_paths.get_inject_points(d, k);
-    EXPECT_EQ(inj_3.size(), 1);
+    EXPECT_EQ(inj_3.size(), 1U);
     EXPECT_EQ(inj_3.at(0).first, a);
     EXPECT_EQ(inj_3.at(0).second, k);
 
     auto inj_4 = ctrl_paths.get_inject_points(f, i);
-    EXPECT_EQ(inj_4.size(), 0);
+    EXPECT_EQ(inj_4.size(), 0U);
     auto inj_5 = ctrl_paths.get_inject_points(g, i);
-    EXPECT_EQ(inj_5.size(), 0);
+    EXPECT_EQ(inj_5.size(), 0U);
 }
 
 /**

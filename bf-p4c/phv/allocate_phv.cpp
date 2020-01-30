@@ -1342,7 +1342,7 @@ CoreAllocation::tryAllocSliceList(
                     int offset = 0;
                     bool absolute = false;
                     int size = 0;
-                    boost::optional<PHV::Container> requiredContainer;
+                    auto requiredContainer = boost::make_optional(false, PHV::Container());
                     std::map<PHV::FieldSlice, int> bitPositions;
                     for (auto& slice : **slice_list) {
                         size += slice.range().size();

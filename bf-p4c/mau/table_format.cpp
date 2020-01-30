@@ -2602,12 +2602,10 @@ bool TableFormat::interleave_match_and_overhead() {
 
     // Only makes sense to interleave bytes that share RAMs with overhead
     int search_bus_with_overhead = -1;
-    int width_sect = -1;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         if (overhead_groups_per_RAM[i] == 0) continue;
         if (search_bus_with_overhead == -1) {
             search_bus_with_overhead = search_bus_per_width[i];
-            width_sect = i;
         } else if (search_bus_with_overhead != search_bus_per_width[i]) {
             return false;
         }

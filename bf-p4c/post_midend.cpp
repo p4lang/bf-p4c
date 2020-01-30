@@ -80,7 +80,7 @@ class ReplaceFlexHeaderTypes : public Transform {
     }
 };
 
-bool flattenFlexibleHeader(const Visitor::Context *ctxt, const IR::Type_StructLike* e) {
+bool flattenFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) {
     if (e->getAnnotation("flexible"))
         return true;
     for (auto f : e->fields) {
@@ -139,7 +139,6 @@ PostMidEnd::PostMidEnd(BFN_Options& options, RepackedHeaderTypes *map,
         options.langVersion == CompilerOptions::FrontendVersion::P4_14);
     conv = new BackendConverter(&refMap, &typeMap, bindings, pipe);
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
-    auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
 
     addPasses({
         (!with_bridge_packing && map != nullptr) ? new ReplaceFlexHeaderTypes(map) : nullptr,

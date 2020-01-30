@@ -290,7 +290,7 @@ bool FindAddedHeaderFields::preorder(const IR::Primitive* prim) {
             }
 
             if (!m) {
-                LOG5("\t\t\t\ WARNING: member for primitive writing pov field " << *fld
+                LOG5("\t\t\tWARNING: member for primitive writing pov field " << *fld
                      << " not found!");
             } else {
                 if (auto *href = m->expr->to<IR::HeaderRef>()) {

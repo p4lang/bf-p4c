@@ -154,22 +154,22 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
 }
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
-    // Update non_mutex to account for join points in the control flow. For example,
-    //
-    //   switch (t1.apply().action_run) {
-    //     a1: { t2.apply(); }
-    //     a2: { t3.apply(); }
-    //   }
-    //   t4.apply();
-    //
-    // is represented by
-    //
-    //   [ t1  t4 ]
-    //    /  \
-    // [t2]  [t3]
-    //
-    // Here, we ensure that t4 is marked as not mutually exclusive with all of t1's table_succ
-    // entries.
+    /* Update non_mutex to account for join points in the control flow. For example,
+     *
+     *   switch (t1.apply().action_run) {
+     *     a1: { t2.apply(); }
+     *     a2: { t3.apply(); }
+     *   }
+     *   t4.apply();
+     *
+     * is represented by
+     *
+     *   [ t1  t4 ]
+     *    /  \
+     * [t2]  [t3]
+     *
+     * Here, we ensure that t4 is marked as not mutually exclusive with all of t1's table_succ
+     * entries. */
     for (size_t i = 0; i < seq->tables.size(); i++) {
         auto i_tbl = seq->tables.at(i);
 

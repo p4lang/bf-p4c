@@ -698,7 +698,7 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
             match_to_action_param[match | i] = action_param;
         }
     }
-    for (unsigned match = 1 << (keys.size() - 1); match < (1 << keys.size()); match ++) {
+    for (unsigned match = 1U << (keys.size() - 1); match < (1U << keys.size()); match ++) {
         if (!match_to_action_param.count(match))
             match_to_action_param[match] = 1;
     }

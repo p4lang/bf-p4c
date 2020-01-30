@@ -299,7 +299,7 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
     return true;
 }
 
-bool skipFlexibleHeader(const Visitor::Context *ctxt, const IR::Type_StructLike* e) {
+bool skipFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) {
     if (e->getAnnotation("flexible"))
         return false;
     return true;

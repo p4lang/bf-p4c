@@ -101,8 +101,8 @@ cstring PhvSpec::containerSetToString(const bitvec& set) const {
     };
 
     for (auto& kv : containersByType) {
-        boost::optional<unsigned> curRangeStart;
-        boost::optional<unsigned> curRangeEnd;
+        auto curRangeStart = boost::make_optional(false, unsigned());
+        auto curRangeEnd = boost::make_optional(false, unsigned());
         for (auto idx : kv.second) {
             if (!curRangeStart) {
                 curRangeStart = idx;

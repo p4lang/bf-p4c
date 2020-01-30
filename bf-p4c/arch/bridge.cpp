@@ -44,7 +44,7 @@ bool CollectBridgedFieldsUse::preorder(const IR::MethodCallExpression* expr) {
                     LOG1("u " << thread << " access " << u->access);
                     bridge_use_single_pipe.push_back(*u);
                 }
-            } else if (auto type = param->type->to<IR::BFN::Type_FixedSizeHeader>()) {
+            } else if (param->type->is<IR::BFN::Type_FixedSizeHeader>()) {
                 auto u = new Use();
                 u->object = em->object;
                 u->bridgedType = hdr->type;

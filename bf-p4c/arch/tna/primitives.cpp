@@ -137,7 +137,7 @@ static IR::Expression* flatten(const IR::ListExpression* args) {
 
 static const IR::Statement *
 convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_t gress,
-             bool reserve_entry_zero = false) {
+             bool /* reserve_entry_zero */ = false) {
     BUG_CHECK(primitive->operands.size() == 1 || primitive->operands.size() == 2,
               "Expected 1 or 2 operands for %1%", primitive);
     ExpressionConverter conv(structure);

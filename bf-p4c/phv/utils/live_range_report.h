@@ -55,7 +55,7 @@ class LiveRangeReport : public Inspector {
         : phv(p), alloc(t), defuse(d) { }
 
     const LiveMap& get_livemap() const { return livemap; }
-    const int get_max_stages() const { return maxStages; }
+    int get_max_stages() const { return maxStages; }
 };
 
 #endif  /*  BF_P4C_PHV_UTILS_LIVE_RANGE_REPORT_H_  */

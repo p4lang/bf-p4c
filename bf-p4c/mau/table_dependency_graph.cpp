@@ -447,6 +447,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
     std::vector<Util::JsonObject *> dgJson, mdJson;
     std::vector<Util::JsonArray *> nodesJson, edgesJson;
     for (auto g : graphTypes) {
+        (void)g;
         dgJson.push_back(new Util::JsonObject());
         mdJson.push_back(new Util::JsonObject());
         nodesJson.push_back(new Util::JsonArray());
@@ -1459,8 +1460,8 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
     }
 
     for (auto pair : edges_to_add) {
-        auto src_v = dg.add_vertex(pair.first.first);
-        auto dst_v = dg.add_vertex(pair.first.second);
+        /* auto src_v = */ dg.add_vertex(pair.first.first);
+        /* auto dst_v = */ dg.add_vertex(pair.first.second);
         // auto e = boost::lookup_edge(src_v, dst_v, dg.g);
         // auto dep = e.second ? DependencyGraph::ANTI : DependencyGraph::ANTI_NEXT_TABLE_DATA;
         auto dep = DependencyGraph::ANTI_NEXT_TABLE_DATA;

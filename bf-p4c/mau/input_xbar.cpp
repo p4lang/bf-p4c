@@ -3815,6 +3815,8 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
             dest = IXBar::HD_METER_ADR;
             shift = 7;
             color_mapram_shift = 3;
+        } else {
+            BUG("BackendAttached %s is not a Counter, Meter or StatefulAlu", ba);
         }
     } else {
         BUG("Hash Dist object is not in a valid position");

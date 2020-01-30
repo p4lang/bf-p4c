@@ -12,7 +12,6 @@ Visitor::profile_t FindExpressionsForFields::init_apply(const IR::Node* root) {
 bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
     LOG5("Header: " << h->name);
     LOG5("Header type: " << h->type);
-    cstring hName = h->name;
     for (auto f : h->type->fields) {
         cstring name = h->name + "." + f->name;
         // Ignore compiler generated metadata fields that belong to different headers.
