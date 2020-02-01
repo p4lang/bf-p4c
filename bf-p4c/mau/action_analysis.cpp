@@ -783,6 +783,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
         param = new ActionData::Constant(constant_value, read.size());
     }
     ActionData::UniqueLocationKey key(action_name, param, container, write_bits);
+
     const ActionData::ALUPosition *alu_pos = nullptr;
     const ActionData::ALUParameter *alu_param = action_format.find_param_alloc(key, &alu_pos);
     if (alu_param == nullptr)
@@ -1206,9 +1207,9 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
             ///> lo is the bit of the read bits that needs to be aligned with bit 0
             ///> hi is the bit that needs to be aligned with container.size() - 1.
             if (lo)
-                *lo = (container.size() - right_shift);
+                *lo = right_shift;
             if (hi)
-                *hi = (container.size() - right_shift) - 1;
+                *hi = right_shift - 1;
             return true;
         }
     } else {

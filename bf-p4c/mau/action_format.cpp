@@ -906,6 +906,25 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
 /**
  * The bits used by this parameter in the action bus slot.  Due to wrapped rotations
  * in deposit-field, at most 2 ranges could be provided
+ *
+ * The return value is supposed to be the low to high range of the read bits of the action
+ * data source.  This leads to the following scenarios:
+ *
+ * 
+ *
+ *     1. If the number of read bits < container.size()
+ *         a. If the read bits are contiguous, a single bitrange [read_bit_lo..read_bit_hi]. 
+ *         b. If the read bits are discontiguous, as it could be in a deposit-field where the
+ *            action data is rotated around the boundary, then the following.  Let's say the write
+ *            bits are from M..N, and the read bits are then discontiguous.  The read bits
+ *            will be two ranges, A = [M + (container_size - right_shift), container size] and
+ *            B = [0, N - right_shift - 1].  The vector will be { B, A }
+ *    2. If the number of read bits == container.size()
+ *        a. If the right_shift = 0, then it is a simple [0..container_size]
+ *        b. If the right_shift != 0, then bits will be rotated, similar to scenario 1b.
+ *           The vector needs to be in the same format { B , A } where
+ *           A = [ M + (container_size - right_shift), container_size] and
+ *           B = [0, N - right_shift - 1)], where M = 0 and N = container_size;
  */
 safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const {
     safe_vector<le_bitrange> rv;
@@ -914,8 +933,9 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
         if (right_shift == 0) {
             rv.push_back({0, cont_size - 1});
         } else {
-            rv.push_back({0, right_shift - 1});
-            rv.push_back({right_shift, cont_size - 1});
+            int boundary = (cont_size - 1) - (right_shift - 1);
+            rv.push_back({0, boundary});
+            rv.push_back({boundary + 1, cont_size - 1});
         }
     } else {
         bitvec slot_bits = bitvec(phv_bits.lo, phv_bits.size());
@@ -1032,7 +1052,7 @@ const ALUOperation *ALUOperation::add_right_shift(int right_shift, int *rot_alia
     LOG6("\tadd_right_shift: params size = " << rv->_params.size());
     for (auto &param : rv->_params) {
         LOG6("\t\tadd_right_shift: param (" << std::hex << param.param << ","
-             << param.phv_bits << "," << param.right_shift << ")");
+             << param.phv_bits << "," << right_shift << ")");
         param.right_shift = right_shift;
         if (param.is_wrapped(_container))
             rotational_alias = true;
@@ -1063,6 +1083,11 @@ const ALUParameter *ALUOperation::find_param_alloc(UniqueLocationKey &key) const
 ParameterPositions ALUOperation::parameter_positions() const {
     auto ram_section = create_RamSection(false);
     return ram_section->parameter_positions(true);
+}
+
+std::string ALUOperation::parameter_positions_to_string() const {
+    auto ram_section = create_RamSection(false);
+    return ram_section->parameter_positions_to_string(true);
 }
 
 cstring ALUOperation::wrapped_constant() const {
@@ -1266,6 +1291,20 @@ ParameterPositions RamSection::parameter_positions(bool from_p4_program) const {
     if (next_entry)
         rv.emplace(bit_pos, next_entry);
     return rv;
+}
+
+std::string RamSection::parameter_positions_to_string(bool from_p4_program) const {
+    ParameterPositions pp = parameter_positions(from_p4_program);
+    std::stringstream sstr;
+    std::string sep = "";
+    sstr << "[ ";
+    for (auto &entry : pp) {
+        le_bitrange cont_bits = { entry.first, entry.first + entry.second->size() - 1 };
+        sstr << sep << entry.second << " : " << cont_bits;
+        sep = ", ";
+    }
+    sstr << " ]";
+    return sstr.str();
 }
 
 /**
@@ -2146,6 +2185,7 @@ void Format::create_argument(ALUOperation &alu,
     if (cond_arg)
         arg->set_cond(VALUE, cond_arg->orig_arg->name);
     ALUParameter ap(arg, container_bits);
+    LOG6("\t\tCreating Argument " << arg << " at container bits " << container_bits);
     alu.add_param(ap);
 }
 
@@ -2171,6 +2211,7 @@ void Format::create_constant(ALUOperation &alu, ActionAnalysis::ActionParam &rea
         con->set_cond(VALUE, cond_arg->orig_arg->name);
     con->set_alias("$constant" + std::to_string(constant_alias_index++));
     ALUParameter ap(con, container_bits);
+    LOG6("\t\tCreating Constant " << con << " at container bits " << container_bits);
     alu.add_param(ap);
 }
 
@@ -2337,7 +2378,7 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
     for (auto &container_action_info : ca_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-
+        LOG5("\t    Analyzing action data for " << container.toString() << " " << cont_action);
         ALUOPConstraint_t alu_cons = DEPOSIT_FIELD;
         if (cont_action.convert_instr_to_byte_rotate_merge)
             alu_cons = BYTE_ROTATE_MERGE;
@@ -2459,12 +2500,13 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
         }
 
         if (contains_action_data) {
-            LOG4("\tCreated Action Data Packing for following action in the container "
-                 << container << " : " << cont_action);
+            LOG5("\t    Created Action Data Packing for container action");
             if (contains_speciality)
                 locked_in_all_actions_sects.push_back(alu->create_RamSection(true));
             else
                 ram_sec_vec.push_back(alu->create_RamSection(true));
+        } else {
+            LOG5("\t    No Action Data Packing necessary");
         }
     }
 }
@@ -2580,10 +2622,10 @@ void Format::shrink_possible_condenses(PossibleCondenses &pc, RamSec_vec_t &ram_
     size_t smaller_pos = larger_pos == i_pos ? j_pos : i_pos;
 
     if (ram_sects.at(i_pos)->size() < ad->size())
-        LOG4("       Expanding a RAM Section from " << ram_sects.at(i_pos)->size() << " to "
+        LOG7("       Expanding a RAM Section from " << ram_sects.at(i_pos)->size() << " to "
              << ad->size());
     if (ram_sects.at(j_pos)->size() < ad->size())
-        LOG4("       Expanding a RAM Section from " << ram_sects.at(j_pos)->size() << " to "
+        LOG7("       Expanding a RAM Section from " << ram_sects.at(j_pos)->size() << " to "
              << ad->size());
 
     for (auto &pc_vec : pc) {
@@ -2624,6 +2666,7 @@ void Format::condense_action(cstring action_name, RamSec_vec_t &ram_sects) {
     // Condense of ram_sects[i] and ram_sects[j] where i < j is contained at condenses[i][j]
     PossibleCondenses condenses(ram_sects.size(), RamSec_vec_t(ram_sects.size(), nullptr));
     size_t init_ram_sects_size = ram_sects.size();
+
     LOG2("  Condensing action " << action_name << " with " << init_ram_sects_size);
 
     bool initial = true;

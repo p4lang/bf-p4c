@@ -542,6 +542,7 @@ class ALUOperation {
     PHV::Container container() const { return _container; }
     const ALUParameter *find_param_alloc(UniqueLocationKey &key) const;
     ParameterPositions parameter_positions() const;
+    std::string parameter_positions_to_string() const;
     cstring wrapped_constant() const;
 
     ///> @seealso comments on create_meter_color_RamSection
@@ -735,6 +736,7 @@ class RamSection {
     size_t index() const { return ceil_log2(size()) - 3; }
     size_t byte_sz() const { return size() / 8; }
     ParameterPositions parameter_positions(bool same_alias = false) const;
+    std::string parameter_positions_to_string(bool from_p4_program) const;
     explicit RamSection(int s) : action_data_bits(s, nullptr) {}
     RamSection(int s, PackingConstraint &pc) : action_data_bits(s, nullptr), pack_info(pc) {}
     void add_param(int bit, const Parameter *);
