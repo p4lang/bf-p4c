@@ -63,4 +63,4 @@ function install_boost() {
     fi
 }
 
-install_boost "1.58.0"
+install_boost "1.67.0"
