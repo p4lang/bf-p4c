@@ -902,8 +902,8 @@ class CalculateNextTableProp : public MauInspector {
 
 class ControlPathwaysToTable : public MauInspector {
  public:
-    using TablePathways = ordered_map<const IR::MAU::Table *,
-                                       safe_vector<safe_vector<const IR::Node *>>>;
+    using Path = safe_vector<const IR::Node *>;
+    using TablePathways = ordered_map<const IR::MAU::Table *, safe_vector<Path>>;
     using InjectPoints = safe_vector<std::pair<const IR::Node *, const IR::Node *>>;
 
     /// Maps each table T to a list of possible control paths from T out to the top-level of the
@@ -917,11 +917,17 @@ class ControlPathwaysToTable : public MauInspector {
         return rv;
     }
 
+    bool equiv(const Path &a, const Path &b) const;
+    bool equiv_seqs(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b) const;
     bool preorder(const IR::MAU::Table *) override;
+    Path common_reverse_path(const Path &a, const Path &b, bool check_diff_if_seq = false) const;
 
  public:
+    void print_paths(safe_vector<Path> &paths) const;
+    const IR::MAU::Table *find_dominator(const IR::MAU::Table *init) const;
     InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b,
         bool tbls_only = true) const;
+    ControlPathwaysToTable() { visitDagOnce = false; }
 };
 
 class FindDependencyGraph;
@@ -954,18 +960,16 @@ class FindCtrlDependencyGraph : public MauInspector {
 };
 
 class FindDependencyGraph : public Logging::PassManager {
-    bool _add_logical_deps = true;
-
     /** Check that no ingress table ever depends on an egress table happening
      * first. */
     void verify_dependence_graph(void);
-    void add_logical_deps_from_control_deps(void);
     void finalize_dependence_graph(void);
     void calc_max_min_stage();
 
     Visitor::profile_t init_apply(const IR::Node *node) override;
     TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
+    const BFN_Options *options;
     FlowGraph fg;
     ReductionOrInfo red_info;
     ControlPathwaysToTable con_paths;
@@ -975,13 +979,13 @@ class FindDependencyGraph : public Logging::PassManager {
     cstring passContext;
 
     void end_apply(const IR::Node *root) override;
+    void add_logical_deps_from_control_deps();
 
  public:
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
-    void set_add_logical_deps(bool add) { _add_logical_deps = add; }
-    FindDependencyGraph(const PhvInfo &, DependencyGraph &out, cstring dotFileName = "",
-        cstring passContext = "", bool run_flow_graph = true);
+    FindDependencyGraph(const PhvInfo &, DependencyGraph &out, const BFN_Options *o = nullptr,
+        cstring dotFileName = "", cstring passContext = "");
 };
 
 #endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

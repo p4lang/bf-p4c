@@ -28,8 +28,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),
             new CheckTableNameDuplicate,
-            new FindDependencyGraph(phv, deps, "",
-                    "Before Table Placement", /* run_flow_graph */ true),
+            new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement"),
             new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
             &ignore,
             &mutex,
@@ -43,7 +42,9 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             new AssignCounterLRTValues(),
             new CheckTableNameDuplicate,
             new AdjustIXBarExpression,
-            new RemoveNoopGateway
+            // RemoveNoopGateway can be removed after MultipleApply2 is in
+            (!Device::hasLongBranches() || options.disable_long_branch)
+            ? new RemoveNoopGateway : nullptr
         });
 
     setName("Table Alloc");

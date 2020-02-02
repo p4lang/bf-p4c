@@ -14,38 +14,46 @@
 
 
 class InjectControlDependencies : public MauInspector {
-    void postorder(const IR::MAU::TableSeq *seq) override;
     bool preorder(const IR::MAU::TableSeq *seq) override;
-    void end_apply() override;
+
  private:
     DependencyGraph& dg;
-    // Duplicates to dominators
-    ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*>& dominators;
+
  public:
-    explicit InjectControlDependencies(DependencyGraph& out,
-                   ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*>& dom_in)
-    : dg(out), dominators(dom_in) {
+    explicit InjectControlDependencies(DependencyGraph& out) : dg(out) {
         visitDagOnce = false;
     }
 };
 
-class DominatorAnalysis : public MauInspector {
-    Visitor::profile_t init_apply(const IR::Node *node) override;
-    void postorder(const IR::MAU::TableSeq *seq) override;
-    void end_apply() override;
- private:
-    DependencyGraph& dg;
-    // Duplicates to possible dominators
-    ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*>& candidate_imm_doms;
-    // For each node, the number of paths for each node up through it
-    ordered_map<const IR::MAU::Table*, ordered_map<const IR::MAU::TableSeq*, int>> paths_seen;
+
+class PredicationBasedControlEdges : public MauInspector {
+    DependencyGraph *dg;
+    const ControlPathwaysToTable &ctrl_paths;
+    ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> edges_to_add;
+
  public:
-    explicit DominatorAnalysis(DependencyGraph& out,
-                ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*>& dom_out)
-    : dg(out), candidate_imm_doms(dom_out) {
-        visitDagOnce = false;
+    std::map<cstring, const IR::MAU::Table *> name_to_table;
+
+ private:
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = MauInspector::init_apply(node);
+        edges_to_add.clear();
+        return rv;
     }
+
+    void postorder(const IR::MAU::Table *) override;
+    void end_apply() override;
+
+ public:
+    bool edge(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+        if (edges_to_add.count(a) == 0) return false;
+        return edges_to_add.at(a).count(b);
+    }
+
+    PredicationBasedControlEdges(DependencyGraph *d, const ControlPathwaysToTable &cp)
+        : dg(d), ctrl_paths(cp) {}
 };
+
 
 /// Common functionality for injecting dependencies into a DependencyGraph.
 class AbstractDependencyInjector : public MauInspector {
@@ -78,7 +86,6 @@ class AbstractDependencyInjector : public MauInspector {
 class InjectMetadataControlDependencies : public AbstractDependencyInjector {
     const PhvInfo &phv;
     const FlowGraph &fg;
-    bool run_flow_graph;
     std::map<cstring, const IR::MAU::Table *> name_to_table;
 
     Visitor::profile_t init_apply(const IR::Node *node) override {
@@ -97,8 +104,8 @@ class InjectMetadataControlDependencies : public AbstractDependencyInjector {
 
  public:
     InjectMetadataControlDependencies(const PhvInfo &p, DependencyGraph &g, const FlowGraph &f,
-            const ControlPathwaysToTable &cp, bool rgf )
-        : AbstractDependencyInjector(g, cp), phv(p), fg(f), run_flow_graph(rgf) { }
+            const ControlPathwaysToTable &cp)
+        : AbstractDependencyInjector(g, cp), phv(p), fg(f) { }
 };
 
 class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
@@ -127,7 +134,7 @@ class TableFindInjectedDependencies : public PassManager {
 
  public:
     explicit TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& dg,
-                                           FlowGraph& fg, bool run_flow_graph);
+        FlowGraph& fg, const BFN_Options *options = nullptr);
  private:
     // Duplicates to dominators
     ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;

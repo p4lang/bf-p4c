@@ -1663,6 +1663,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Dominator pathway is incorrect"
+  extensions/p4_tests/p4_16/stf/serializer.p4
+)
+
 # power.p4 PTF failure
 # hw team uses it to do some manual testing
 # to measure the SRAM and TCAM power draw

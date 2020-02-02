@@ -356,7 +356,7 @@ std::pair<typename DependencyGraph::Graph::edge_descriptor, bool> DependencyGrap
     g[maybe_new_e.first] = edge_label;
     auto p = std::make_pair(dst, src);
     dependency_map.emplace(p, edge_label);
-    LOG3("DST " << dst->name << " has dep " << dep_types(edge_label) << " to SRC " << src->name);
+    LOG7("DST " << dst->name << " has dep " << dep_types(edge_label) << " to SRC " << src->name);
     return {maybe_new_e.first, true};
 }
 
@@ -435,11 +435,11 @@ TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *
 void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
                               cstring passContext, bool placed) {
     if (!dgsJson) return;
-    LOG3("Generating dependency graph json");
+    LOG7("Generating dependency graph json");
 
     auto all_vertices = boost::vertices(g);
     if (all_vertices.first + 1 == all_vertices.second) {
-        LOG3("digraph empty {\n}");
+        LOG7("digraph empty {\n}");
         return;
     }
 
@@ -758,7 +758,6 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
     }
 
     bool preorder(const IR::Expression *e) override {
-        LOG3("Expression : " << e);
         le_bitrange range;
         auto* originalField = self.phv.field(e, &range);
         if (!originalField) return true;
@@ -1209,14 +1208,64 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
+bool ControlPathwaysToTable::equiv_seqs(const IR::MAU::TableSeq *a,
+        const IR::MAU::TableSeq *b) const {
+    if (a == b) return true;
+    return a->tables == b->tables;
+}
+
+ControlPathwaysToTable::Path ControlPathwaysToTable::common_reverse_path(const Path &a,
+        const Path &b, bool check_diff_is_seq) const {
+    Path rv;
+    auto a_it = a.rbegin();
+    auto b_it = b.rbegin();
+    int iterator = 0;
+    while (a_it != a.rend() && b_it != b.rend()) {
+        const IR::Node *a_node = *a_it;
+        const IR::Node *b_node = *b_it;
+        auto a_seq = a_node->to<IR::MAU::TableSeq>();
+        auto b_seq = b_node->to<IR::MAU::TableSeq>();
+        if (a_seq && b_seq && equiv_seqs(a_seq, b_seq)) {
+            rv.push_back(a_node);
+        } else if (a_node == b_node) {
+            rv.push_back(a_node);
+        } else {
+            if (check_diff_is_seq)
+                BUG_CHECK(a_seq && b_seq, "The dominator pass is broken as these node should be "
+                    "sequences");
+            break;
+        }
+        a_it++;
+        b_it++;
+    }
+
+    if ((a_it == a.rend() || b_it == b.rend()) && check_diff_is_seq)
+        BUG("The dominator pass is broken as the iteration should not end");
+
+    std::reverse(rv.begin(), rv.end());
+    return rv;
+}
+
+// Eventually check for TableSeqs that aren't the same pointer but equivalent in their tables
+bool ControlPathwaysToTable::equiv(const Path &a, const Path &b) const {
+    auto path = common_reverse_path(a, b);
+    return path.size() == a.size() && path.size() == b.size();
+}
+
 bool ControlPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
     const Context *ctxt = getContext();
-    safe_vector<const IR::Node *> pathway;
+    Path pathway;
     pathway.emplace_back(tbl);
     while (ctxt) {
         pathway.push_back(ctxt->node);
         ctxt = ctxt->parent;
     }
+
+    for (auto &path : table_pathways[tbl]) {
+        if (equiv(path, pathway))
+            return true;
+    }
+
     table_pathways[tbl].emplace_back(pathway);
     return true;
 }
@@ -1301,6 +1350,99 @@ ControlPathwaysToTable::InjectPoints
     }
     return rv;
 }
+
+void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
+    for (auto path : paths) {
+        LOG1("    Printing path in reverse:");
+        for (auto it = path.rbegin(); it != path.rend(); it++) {
+            if (auto tbl = (*it)->to<IR::MAU::Table>()) {
+                if (tbl->is_placed())
+                    LOG1("\tTable " << tbl->unique_id().build_name());
+                else
+                    LOG1("\tTable " << tbl->externalName());
+            } else if (auto seq = (*it)->to<IR::MAU::TableSeq>()) {
+                std::string print = "[ ";
+                std::string sep = "";
+                for (auto tbl : seq->tables) {
+                    print += sep;
+                    print += tbl->externalName();
+                    sep = ", ";
+                }
+                print += " ]";
+                LOG1("\tSeq " << print);
+            } else if (auto pipe = (*it)->to<IR::BFN::Pipe>()) {
+                LOG1("\tPipe");
+            } else {
+                LOG1("\tIDK?");
+            }
+        }
+    }
+}
+
+/**
+ * The purpose of this pass is to determine the dominator of a IR::MAU::Table object within
+ * the IR graph.  If a table is applied multiple times, in accordance with the rules of the
+ * IR, due to the mutually exclusion rules of the tables, a table is only applied once per
+ * packet.  This means something like the following:
+ *
+ *     if (condition) {
+ *         ...
+ *         match_table.apply();
+ *         ...
+ *     } else {
+ *         ...
+ *         match_table.apply();
+ *         ...
+ *     }
+ *
+ * In this case, the condition is the dominator.  The same can be done for applications
+ * of tables in either hitting or missing, or an action_chain:
+ *
+ *     if (t1.apply().hit) || if (t1.apply().miss) || switch(t1.apply().action_run)
+ *
+ * Currently, the use of a table will only be able to know if each apply of a Table
+ * is mutually exclusive because it is entirely under some dominating table application, i.e.
+ *
+ *     switch (t1.apply().action_run) {
+ *         a1 : { t2.apply(); t3.apply();
+ *         default { t3.apply(); }
+ *     }
+ *
+ * Table t3's applies are mutually exclusive, and always has a Table dominator, table t1.  The
+ * following apply statement for example, is not supported.
+ *
+ *     if (x == 0)
+ *         t1.apply();
+ *     ... (no change to x)
+ *     if (x != 0)
+ *         t1.apply();
+ *
+ * In this technical mutual exclusion, the find_dominator would not be able to return a
+ * table.  At that point, this function might have to change in order to capture this
+ * kind of dominator
+ */
+const IR::MAU::Table *ControlPathwaysToTable::find_dominator(const IR::MAU::Table *init) const {
+    auto paths = table_pathways.at(init);
+
+    BUG_CHECK(paths.size() >= 1, "Path calculation is incorrect");
+    if (paths.size() == 1)
+        return init;
+
+    Path common_path;
+    for (uint32_t i = 0; i < paths.size(); i++) {
+        if (i == 0)
+            common_path = paths.at(i);
+        else
+            common_path = common_reverse_path(common_path, paths.at(i));
+    }
+
+    BUG_CHECK(common_path.size() > 0, "Dominator pathway is incorrect");
+
+    auto dom = common_path[0]->to<IR::MAU::Table>();
+    BUG_CHECK(dom, "Dominator pathway is incorrect");
+    return dom;
+}
+
 
 
 void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
@@ -1476,9 +1618,8 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
 }
 
 void FindDependencyGraph::finalize_dependence_graph(void) {
-    if (Device::currentDevice() == Device::TOFINO && _add_logical_deps == true) {
+    if (!Device::hasLongBranches() || (options && options->disable_long_branch))
         add_logical_deps_from_control_deps();
-    }
 
     // Topological sort
     std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
@@ -1794,11 +1935,11 @@ bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
 
 FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
                                          DependencyGraph &out,
+                                         const BFN_Options *o,
                                          cstring dotFileName,
-                                         cstring passCont,
-                                         bool run_flow_graph) :
+                                         cstring passCont) :
         Logging::PassManager("table_dependency_graph", Logging::Mode::AUTO),
-        dg(out), dotFile(dotFileName), passContext(passCont) {
+        dg(out), options(o), dotFile(dotFileName), passContext(passCont) {
     addPasses({
         new NameToTableMapBuilder(dg),
         &mutex,
@@ -1806,10 +1947,10 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         &con_paths,
         &ignore,
         new GatherReductionOrReqs(red_info),
-        new TableFindInjectedDependencies(phv, dg, fg, run_flow_graph),
+        new PrintPipe,
+        new TableFindInjectedDependencies(phv, dg, fg, options),
         new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
-        new DepStagesThruDomFrontier(ntp, dg, *this),
-        new PrintPipe
+        new DepStagesThruDomFrontier(ntp, dg, *this)
     });
 }
 

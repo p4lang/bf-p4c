@@ -1514,12 +1514,33 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl); }
     GroupPlace *gw_match_grp = nullptr;
+    /**
+     * A gateway cannot be linked with a table that is applied multiple times in different way.
+     * Take for instance the following program:
+     *
+     *     if (t1.apply().hit) {
+     *         if (f1 == 0) {   // cond-0
+     *             t2.apply();
+     *         }
+     *     } else {
+     *         if (f1 == 1) {
+     *             t2.apply();   // cond-1
+     *         }
+     *     }
+     *
+     * In this case, table t2 cannot be linked to either of the gateway tables, as by linking
+     * a gateway to one would lose the value from others.  This code verifies that a table
+     * linked to a gateway is not breaking this constraint.
+     */
     if (pl->gw)  {
         bool found_match = false;
         for (auto n : Values(pl->gw->next)) {
             if (!n || n->tables.size() == 0) continue;
             if (GroupPlace::in_work(work, n)) continue;
             bool ready = true;
+            // Vector of all control parents of a TableSeq.  In our example, if placing cond-0,
+            // the sequence would be [ t2 ], and the parent of that sequence would be
+            // [ cond-0, cond-1 ]
             ordered_set<const GroupPlace *> parents;
             for (auto tbl : seqInfo.at(n).refs) {
                 if (pl->is_placed(tbl)) {
@@ -1529,13 +1550,16 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                     break; } }
             if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
                 BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
+                // Guaranteeing at most only one parent for linking a gateway
                 BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                           "multi-referenced table");
                 found_match = true;
                 if (pl->need_more)
                     new GroupPlace(*this, work, parents, n);
                 continue; }
+            // If both cond-1 and cond-0 are placed, then the sequence for t2 can be placed
             GroupPlace *g = ready ? new GroupPlace(*this, work, parents, n) : nullptr;
+            // This is based on the assumption that a table appears in a single table sequence
             for (auto t : n->tables) {
                 if (t == pl->table) {
                     BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
@@ -1549,6 +1573,20 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
             if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n)) {
                 bool ready = true;
                 ordered_set<const GroupPlace *> parents;
+               /**
+                * Examine the following example:
+                *
+                *     if (condition) {
+                *         switch(t1.apply().action_run) {
+                *             a1 : { t3.apply(); }
+                *             a2 : { if (t2.apply().hit) { t3.apply(); } }
+                *         }
+                *     }
+                *
+                * The algorithm wants to merge the condition with t1.  The tables that become
+                * available to place would be t2 and t3.  However, we do not want to add the
+                * t3 sequence yet to the algorithm, as it has to wait 
+                */
                 for (auto tbl : seqInfo.at(n).refs) {
                     if (tbl == pl->table) {
                         parents.insert(gw_match_grp ? gw_match_grp : pl->group);
@@ -1556,7 +1594,8 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                         BUG_CHECK(!gw_match_grp, "Failure attaching gateway to table");
                         parents.insert(pl->find_group(tbl));
                     } else {
-                        BUG_CHECK(!gw_match_grp, "Failure attaching gateway with multi-ref table");
+                        // Basically when placing t1, which is a parent of t3, do not begin
+                        // to make t3 an available sequence, as it has to wait.
                         ready = false;
                         break ; } }
                 if (ready && pl->need_more) {

@@ -1872,7 +1872,9 @@ FlexiblePacking::FlexiblePacking(
         PhvInfo& p,
         const PhvUse& u,
         DependencyGraph& dg,
+        const BFN_Options &o,
         CollectBridgedFields& b) :
+          options(o),
           bridgedFields(b),
           aliasInEgress(p),
           table_alloc(p.field_mutex()),
@@ -1886,7 +1888,7 @@ FlexiblePacking::FlexiblePacking(
               addPasses({
                       &bridgedFields,
                       &aliasInEgress,
-                      new FindDependencyGraph(p, dg),
+                      new FindDependencyGraph(p, dg, &options),
                       new PHV_Field_Operations(p),
                       new PragmaContainerSize(p),
                       new PragmaAtomic(p),
@@ -1952,7 +1954,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options) :
     uses(phv),
     defuse(phv),
     bridged_fields(phv) {
-    flexiblePacking = new FlexiblePacking(phv, uses, deps, bridged_fields);
+    flexiblePacking = new FlexiblePacking(phv, uses, deps, options, bridged_fields);
     flexiblePacking->addDebugHook(options.getDebugHook(), true);
     addPasses({
         new CreateThreadLocalInstances,
@@ -1976,7 +1978,7 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options) :
         new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
         new InstructionSelection(options, phv),
-        new FindDependencyGraph(phv, deps, "program_graph", "After Instruction Selection"),
+        new FindDependencyGraph(phv, deps, &options, "program_graph", "Pack Flexible Headers"),
         new CollectPhvInfo(phv),
         new Alias(phv),
         new CollectPhvInfo(phv),

@@ -6,12 +6,14 @@
 
 #include "gtest/gtest.h"
 
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/multiple_apply.h"
+#include "bf-p4c/ir/table_tree.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_injected_deps.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
@@ -23,11 +25,13 @@
 namespace Test {
 
 class TableDependencyGraphTest : public TofinoBackendTest {};
+class TableDependencyGraphTestForTofino2 : public JBayBackendTest {};
 
 namespace {
 
 boost::optional<TofinoPipeTestCase>
-createTableDependencyGraphTestCase(const std::string& parserSource) {
+createTableDependencyGraphTestCase(const std::string& parserSource,
+        const std::string target = "tofino") {
     auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
 header H1
 {
@@ -92,7 +96,7 @@ V1Switch(parse(), verifyChecksum(), igrs(), my_egress(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
+    options.target = target;
     options.arch = "v1model";
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -2377,7 +2381,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
 }
 
 
-TEST_F(TableDependencyGraphTest, Tofino2GraphTest) {
+TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
     auto test = createTableDependencyGraphTestCase(
         P4_SOURCE(P4Headers::NONE, R"(
                 action a(bit<8> v) {
@@ -2446,7 +2450,7 @@ TEST_F(TableDependencyGraphTest, Tofino2GraphTest) {
                         c : { node_f.apply(); multi.apply(); node_g.apply(); }
                     }
                 }
-            )"));
+            )"), "tofino2");
 
     ASSERT_TRUE(test);
     SymBitMatrix mutex;
@@ -2456,7 +2460,6 @@ TEST_F(TableDependencyGraphTest, Tofino2GraphTest) {
 
     test->pipe = runMockPasses(test->pipe, phv, defuse, true);
     auto *find_dg = new FindDependencyGraph(phv, dg);
-    find_dg->set_add_logical_deps(false);
     test->pipe->apply(*find_dg);
     const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
     const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
@@ -2491,6 +2494,346 @@ TEST_F(TableDependencyGraphTest, Tofino2GraphTest) {
     EXPECT_TRUE(dg.happens_logi_before(multi, e));
     EXPECT_TRUE(dg.happens_phys_before(b, e));
     EXPECT_FALSE(dg.happens_phys_before(b, g));
+}
+
+/**
+ * The goal of any PredicationBasedEdges tests was to test the PredicationBasedControlEdges 
+ * pass in order to guarantee that the dependencies necessary for Tofino1 are captured.
+ * These dependencies are explained in the comments in that pass.
+ */
+TEST_F(TableDependencyGraphTest, PredicationBasedEdges1) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action a(bit<8> v) {
+                    headers.h1.f1 = v;
+                }
+
+                action b() {
+                    headers.h1.f1 = 0;
+                }
+
+                action c() {
+                    headers.h1.f1 = 1;
+                }
+
+                action noop() { }
+
+                table node_a {
+                    actions = { a; b; c; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+
+                table node_b {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_c {
+                    key = { headers.h1.f3 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_d {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { noop; }
+                }
+
+                apply {
+                    switch (node_a.apply().action_run) {
+                        a : {
+                            node_b.apply();
+                            if (node_c.apply().miss) {
+                                node_d.apply();
+                            }
+                        }
+                        b : { node_d.apply(); }
+                    }
+                }
+            )"));
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+
+    ControlPathwaysToTable ctrl_paths;
+    test->pipe = test->pipe->apply(ctrl_paths);
+    PredicationBasedControlEdges pbce(nullptr, ctrl_paths);
+    test->pipe = test->pipe->apply(pbce);
+
+    const IR::MAU::Table *a = pbce.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = pbce.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = pbce.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = pbce.name_to_table.at("igrs.node_d");
+
+    EXPECT_EQ(ctrl_paths.find_dominator(a), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(b), b);
+    EXPECT_EQ(ctrl_paths.find_dominator(c), c);
+    EXPECT_EQ(ctrl_paths.find_dominator(d), a);
+
+    EXPECT_FALSE(pbce.edge(a, b));
+    EXPECT_FALSE(pbce.edge(a, c));
+    EXPECT_FALSE(pbce.edge(a, d));
+    EXPECT_TRUE(pbce.edge(b, c));
+    EXPECT_FALSE(pbce.edge(b, d));
+    EXPECT_FALSE(pbce.edge(c, d));
+}
+
+TEST_F(TableDependencyGraphTest, PredicationBasedEdges2) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action a(bit<8> v) {
+                    headers.h1.f1 = v;
+                }
+
+                action b() {
+                    headers.h1.f1 = 0;
+                }
+
+                action c() {
+                    headers.h1.f1 = 1;
+                }
+
+                action noop() { }
+
+                table node_a {
+                    actions = { a; b; c; noop; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+
+                table node_b {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_c {
+                    key = { headers.h1.f3 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_d {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_e {
+                    key = { headers.h1.f5 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_f {
+                    key = { headers.h1.f6 : exact; }
+                    actions = { noop; }
+                }
+
+                apply {
+                    switch (node_a.apply().action_run) {
+                        a : {
+                            node_b.apply();
+                            node_c.apply();
+                            node_d.apply();
+                            node_e.apply();
+                            node_f.apply();
+                        }
+                        b : {
+                            node_c.apply();
+                            node_d.apply();
+                            node_e.apply();
+                            node_f.apply();
+                        }
+                        c : {
+                            node_e.apply();
+                            node_f.apply();
+                        }
+                    }
+                }
+
+            )"));
+
+    // In this example, there is some allowed reordering.  node_e and node_f could in theory
+    // be reordered, as well as node_c and node_d.  However, all other tables could not be
+    // reordered.
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+
+    ControlPathwaysToTable ctrl_paths;
+    test->pipe = test->pipe->apply(ctrl_paths);
+    PredicationBasedControlEdges pbce(nullptr, ctrl_paths);
+    test->pipe = test->pipe->apply(pbce);
+
+    const IR::MAU::Table *a = pbce.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = pbce.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = pbce.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = pbce.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = pbce.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = pbce.name_to_table.at("igrs.node_f");
+
+    EXPECT_EQ(ctrl_paths.find_dominator(a), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(b), b);
+    EXPECT_EQ(ctrl_paths.find_dominator(c), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(d), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(e), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(f), a);
+
+    EXPECT_FALSE(pbce.edge(a, b));
+    EXPECT_FALSE(pbce.edge(a, c));
+    EXPECT_FALSE(pbce.edge(a, d));
+    EXPECT_FALSE(pbce.edge(a, e));
+    EXPECT_FALSE(pbce.edge(a, f));
+
+    EXPECT_TRUE(pbce.edge(b, c));
+    EXPECT_TRUE(pbce.edge(b, d));
+    EXPECT_TRUE(pbce.edge(b, e));
+    EXPECT_TRUE(pbce.edge(b, f));
+
+    EXPECT_FALSE(pbce.edge(c, d));
+    EXPECT_TRUE(pbce.edge(c, e));
+    EXPECT_TRUE(pbce.edge(c, f));
+
+    EXPECT_TRUE(pbce.edge(d, e));
+    EXPECT_TRUE(pbce.edge(d, f));
+
+    EXPECT_FALSE(pbce.edge(e, f));
+}
+
+TEST_F(TableDependencyGraphTest, PredicationBasedEdges3) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action a(bit<8> v) {
+                    headers.h1.f1 = v;
+                }
+
+                action b() {
+                    headers.h1.f1 = 0;
+                }
+
+                action c() {
+                    headers.h1.f1 = 1;
+                }
+
+                action noop() { }
+
+                table node_a {
+                    actions = { a; b; c; noop; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+
+                table node_b {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_c {
+                    key = { headers.h1.f3 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_d {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_e {
+                    key = { headers.h1.f5 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_f {
+                    key = { headers.h1.f6 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_g {
+                    key = { headers.h1.f6 : exact; }
+                    actions = { noop; }
+                }
+
+                apply {
+                    switch (node_a.apply().action_run) {
+                        a : {
+                            node_b.apply();
+                            if (node_c.apply().hit) {
+                                node_e.apply();
+                                node_f.apply();
+                            }
+                            node_g.apply();
+                        }
+                        b : {
+                            if (node_d.apply().hit) {
+                                node_f.apply();
+                                node_g.apply();
+                            }
+                        }
+                    }
+                }
+
+            )"));
+
+    // A generally more complex version of multiple apply to see if the paths are right
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+
+    ControlPathwaysToTable ctrl_paths;
+    test->pipe = test->pipe->apply(ctrl_paths);
+    PredicationBasedControlEdges pbce(nullptr, ctrl_paths);
+    test->pipe = test->pipe->apply(pbce);
+
+    const IR::MAU::Table *a = pbce.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = pbce.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = pbce.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = pbce.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = pbce.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = pbce.name_to_table.at("igrs.node_f");
+    const IR::MAU::Table *g = pbce.name_to_table.at("igrs.node_g");
+
+    EXPECT_EQ(ctrl_paths.find_dominator(a), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(b), b);
+    EXPECT_EQ(ctrl_paths.find_dominator(c), c);
+    EXPECT_EQ(ctrl_paths.find_dominator(d), d);
+    EXPECT_EQ(ctrl_paths.find_dominator(e), e);
+    EXPECT_EQ(ctrl_paths.find_dominator(f), a);
+    EXPECT_EQ(ctrl_paths.find_dominator(g), a);
+
+    EXPECT_FALSE(pbce.edge(a, b));
+    EXPECT_FALSE(pbce.edge(a, c));
+    EXPECT_FALSE(pbce.edge(a, d));
+    EXPECT_FALSE(pbce.edge(a, e));
+    EXPECT_FALSE(pbce.edge(a, f));
+    EXPECT_FALSE(pbce.edge(a, g));
+
+    EXPECT_TRUE(pbce.edge(b, c));
+    EXPECT_FALSE(pbce.edge(b, d));
+    EXPECT_FALSE(pbce.edge(b, e));
+    EXPECT_FALSE(pbce.edge(b, f));
+    EXPECT_TRUE(pbce.edge(b, g));
+
+    EXPECT_FALSE(pbce.edge(c, d));
+    EXPECT_FALSE(pbce.edge(c, e));
+    EXPECT_FALSE(pbce.edge(c, f));
+    EXPECT_TRUE(pbce.edge(c, g));
+
+    EXPECT_FALSE(pbce.edge(d, e));
+    EXPECT_FALSE(pbce.edge(d, f));
+    EXPECT_FALSE(pbce.edge(d, g));
+
+    EXPECT_TRUE(pbce.edge(e, f));
+    EXPECT_FALSE(pbce.edge(e, g));
+
+    EXPECT_TRUE(pbce.edge(f, g));
 }
 
 }  // namespace Test

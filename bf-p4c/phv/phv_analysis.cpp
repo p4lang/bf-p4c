@@ -70,7 +70,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // calculate ingress/egress parser's critical path
             &parser_critical_path,
             // Refresh dependency graph for live range analysis
-            new FindDependencyGraph(phv, deps, "", "Just Before PHV allocation"),
+            new FindDependencyGraph(phv, deps, &options, "", "Just Before PHV allocation"),
             new MemoizeMinStage(phv, deps),
             // Refresh defuse
             &defuse,

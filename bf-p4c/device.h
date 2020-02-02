@@ -37,6 +37,7 @@ class Device {
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
     static int numStages() { return Device::get().getNumStages(); }
     static int numLongBranchTags() { return Device::get().getLongBranchTags(); }
+    static bool hasLongBranches() { return numLongBranchTags() > 0; }
     static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }

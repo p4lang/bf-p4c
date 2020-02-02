@@ -4,126 +4,6 @@
 #include "lib/log.h"
 #include "lib/ltbitmatrix.h"
 
-
-static std::string printSeq(const IR::MAU::TableSeq* seq) {
-    std::stringstream ss;
-    for (auto& t : seq->tables) {
-        ss << t->name << ", ";
-    }
-    return ss.str();
-}
-
-Visitor::profile_t DominatorAnalysis::init_apply(const IR::Node *node) {
-    auto rv = MauInspector::init_apply(node);
-    candidate_imm_doms.clear();
-    paths_seen.clear();
-    return rv;
-}
-
-void DominatorAnalysis::end_apply() {
-    std::stringstream ss;
-    ss << "Dominators are ";
-    for (auto& kv : candidate_imm_doms) {
-        ss << "(" << printSeq(kv.first) << " for " << kv.second->name << "), ";
-    }
-    LOG2(ss.str());
-    LOG2(dg);
-}
-
-void DominatorAnalysis::postorder(const IR::MAU::TableSeq *seq) {
-    const Context *ctxt = getContext();
-    const IR::MAU::Table *parent = nullptr;
-    while (ctxt && !parent) {
-            parent = ctxt->node->to<IR::MAU::Table>();
-            ctxt = ctxt->parent;
-    }
-
-    // Walk up the IR from each TableSeq. The number of paths from any given
-    // TableSeq back up to the root of the IR is tracked by paths_seen. Every
-    // time two possible paths to the same table join, the join node becomes
-    // a possible immediate dominator. The map of candidate immediate dominators
-    // stores all immediate dominators after the pass is complete. (Candidates
-    // are necessary in case a table is applied 3 or more times.)
-    while (ctxt) {
-        LOG3("Seq: " << printSeq(seq));
-        LOG3("Parent: " << parent->name);
-        // Store this sequence in the parent's after getting the old parent value.
-        // If the parent already had a non-zero value, update the candidate to the sum
-        int old_paths = paths_seen[parent][seq];
-        paths_seen[parent][seq]++;
-        if (old_paths) {
-            candidate_imm_doms[seq] = parent;
-        }
-        parent = nullptr;
-        while (ctxt && !parent) {
-            parent = ctxt->node->to<IR::MAU::Table>();
-            ctxt = ctxt->parent;
-        }
-    }
-}
-
-//     apply {
-//         switch (t1.apply().action_run) {
-//             default : {
-//                 if (hdr.data.f2 == hdr.data.f1) {
-//                     t2.apply();
-//                     switch (t3.apply().action_run) {
-//                         noop : {
-//                             t4.apply();
-//                         }
-//                     }
-//                 }
-//             }
-//             a1 : {
-//                 t4.apply();
-//             }
-//         }
-//     }
-
-// In this example, InjectControlDependencies walks up the IR starting at t4
-// and inserts a control dependence within t4's parent table sequence [t2, t3]
-// between t2 and t4's parent, t3. The walk up the IR stop's at t1, t4's dominator.
-
-void InjectControlDependencies::postorder(const IR::MAU::TableSeq *seq) {
-    if (!dominators.count(seq))
-        return;
-    const IR::MAU::Table *dom = dominators.at(seq);
-    const Context *ctxt = getContext();
-    const IR::MAU::Table *tbl_parent = nullptr;
-    const IR::MAU::TableSeq *seq_parent = nullptr;
-    while (ctxt && !tbl_parent) {
-        tbl_parent = ctxt->node->to<IR::MAU::Table>();
-        ctxt = ctxt->parent;
-    }
-    while (ctxt) {
-        seq_parent = ctxt->node->to<IR::MAU::TableSeq>();
-        // Walk up the IR from each duplicated TableSeq, tracking
-        // the parent TableSeq and parent Table that the current TableSeq
-        // is nested under. Dependencies are inserted between tables in the parent
-        // TableSeq and the parent Table
-        LOG2("Inject seq: " << printSeq(seq));
-        LOG2("Inject parent seq: " << printSeq(seq_parent));
-        LOG2("Inject parent table: " << tbl_parent->name);
-        if (tbl_parent == dom) {
-            LOG2("Halted at dominator " << dom->name);
-            break;
-        }
-        for (auto& t : seq_parent->tables) {
-            if (t == tbl_parent) {
-                break;
-            }
-            LOG5("Connecting table " << t->name << " to " << tbl_parent->name);
-            dg.add_edge(t, tbl_parent, DependencyGraph::ANTI_NEXT_TABLE_CONTROL);
-        }
-
-        tbl_parent = nullptr;
-        while (ctxt && !tbl_parent) {
-            tbl_parent = ctxt->node->to<IR::MAU::Table>();
-            ctxt = ctxt->parent;
-        }
-    }
-}
-
 bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
     if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
@@ -157,8 +37,138 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     return true;
 }
 
-void InjectControlDependencies::end_apply() {
-    // LOG2(dg);
+//     apply {
+//         switch (t1.apply().action_run) {
+//             default : {
+//                 if (hdr.data.f2 == hdr.data.f1) {
+//                     t2.apply();
+//                     switch (t3.apply().action_run) {
+//                         noop : {
+//                             t4.apply();
+//                         }
+//                     }
+//                 }
+//             }
+//             a1 : {
+//                 t4.apply();
+//             }
+//         }
+//     }
+
+// In this example, InjectControlDependencies walks up the IR starting at t4
+// and inserts a control dependence within t4's parent table sequence [t2, t3]
+// between t2 and t4's parent, t3. The walk up the IR stop's at t1, t4's dominator.
+
+
+/**
+ * In Tofino, extra ordering is occasionally required due to the requirements of each table
+ * having a single next table.  Examine the following program:
+ * 
+ *     apply {
+ *         switch (t1.apply().action_run) {
+ *             a1 : {
+ *                 t2.apply();
+ *                 switch (t3.apply().action_run) {
+ *                     noop : { t4.apply(); }
+ *                 }
+ *             }
+ *             default : { t4.apply(); }
+ *         }
+ *     }
+ *     t5.apply();
+ *
+ * In this example, for Tofino only, the table t4 must have the same default next table out of
+ * every single execution.  This means on all branches under t1, t4 must be the last table that is
+ * applied.  Now examine the sequence under branch a1, where both t2 and t3 can be applied.
+ * If t2 and t3 have no dependencies, (and their children have no dependencies), they can be
+ * reordered.  However, next table dictates that when a table is placed, all of it's control
+ * dependent tables must be placed as well.  Means that if t3 is to be placed before t2, t4 would
+ * also be placed.  This, however, would break the constraint that t4 has a single next table.
+ *
+ * Thus, in order to map this constraint to table placement, an ordering dependency is placed
+ * between t2 and t3 to correctly propagate next table data.
+ *
+ * This pass now works on the new IR rules for Tables and TableSeqs.  Tests verifying this pass
+ * are contained in the table_dependency gtest under PredicationEdges Tests
+ */
+void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
+    name_to_table[tbl->externalName()] = tbl;
+    auto dom = ctrl_paths.find_dominator(tbl);
+    if (dom == tbl)
+        return;
+    auto paths = ctrl_paths.table_pathways.at(tbl);
+
+    std::set<const IR::MAU::Table *> ignore_tables;
+    bool first_seq = true;
+    /**
+     * In the previous example, the table t4, due to next table propagation, required table
+     * t2 and t3 to have an order.  But some examples don't require an order.  Examine the
+     * following example:
+     *
+     *     switch (t1.apply().action_run) {
+     *         a1 : { t2.apply(); t3.apply(); t4.apply(); }
+     *         a2 : { t3.apply(); t4.apply(); }
+     *     }
+     *     t5.apply();
+     *
+     * Now if there were no dependencies between these tables, it would seem that table t4
+     * would have to appear last for next table propagation to table t5.  However, t3 always
+     * precedes t4 in every single application, and thus could in theory be reordered.
+     *
+     * Thus in the analysis for t4, the ignore tables will determine that t3 always precedes it
+     * in all applications, and thus is safe not to add a dependency.
+     */
+    for (auto path : paths) {
+        auto seq = path[1]->to<IR::MAU::TableSeq>();
+        std::set<const IR::MAU::Table *> local_set;
+        for (auto seq_table : seq->tables) {
+            if (seq_table == tbl) break;
+            local_set.insert(seq_table);
+        }
+        if (first_seq) {
+            ignore_tables.insert(local_set.begin(), local_set.end());
+            first_seq = false;
+        } else {
+            std::set<const IR::MAU::Table *> intersection;
+            std::set_intersection(ignore_tables.begin(), ignore_tables.end(),
+                                  local_set.begin(), local_set.end(),
+                                  std::inserter(intersection, intersection.begin()));
+            ignore_tables = intersection;
+        }
+    }
+
+    // Walk up the table pathways for any table that precedes this table, and add a dependency
+    // between these tables and the current table, as long as its not in the ignore_tables set
+    for (auto path : paths) {
+        auto it = path.begin();
+        const IR::MAU::Table *local_check = (*it)->to<IR::MAU::Table>();
+        BUG_CHECK(local_check == tbl, "Table Pathways not correct");
+        while (true) {
+            it++;
+            auto higher_seq = (*it)->to<IR::MAU::TableSeq>();
+            BUG_CHECK(it != path.end() && higher_seq != nullptr, "Table Pathways not correct");
+            for (auto seq_table : higher_seq->tables) {
+                if (local_check == seq_table) break;
+                if (ignore_tables.count(seq_table)) continue;
+                edges_to_add[seq_table].insert(local_check);
+            }
+
+            it++;
+            auto higher_tbl = (*it)->to<IR::MAU::Table>();
+            BUG_CHECK(it != path.end() && higher_tbl != nullptr, "Table Pathways not correct");
+            if (higher_tbl == dom) break;
+            local_check = higher_tbl;
+        }
+    }
+}
+
+void PredicationBasedControlEdges::end_apply() {
+    if (dg == nullptr) return;
+    for (auto &kv : edges_to_add) {
+        for (auto dst : kv.second) {
+            dg->add_edge(kv.first, dst, DependencyGraph::ANTI_NEXT_TABLE_CONTROL);
+        }
+    }
 }
 
 /**
@@ -206,8 +216,7 @@ void InjectMetadataControlDependencies::end_apply() {
                       "doesn't appear in the TableGraph?", second_table);
             auto inject_points = ctrl_paths.get_inject_points(name_to_table.at(first_table),
                                                              name_to_table.at(second_table));
-            BUG_CHECK(!run_flow_graph ||
-                fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
+            BUG_CHECK(fg.can_reach(name_to_table.at(first_table), name_to_table.at(second_table)),
                 "Metadata initialization analysis incorrect.  Live ranges between %s and %s "
                 "overlap", first_table, second_table);
             auto edge_pair = dg.add_edge(name_to_table.at(first_table),
@@ -225,8 +234,7 @@ void InjectMetadataControlDependencies::end_apply() {
                 auto inj2 = inject_point.second->to<IR::MAU::Table>();
                 LOG3("  Metadata inject points " << inj1->name << " " << inj2->name
                      << " from tables " << first_table << " " << second_table);
-                BUG_CHECK(!run_flow_graph || fg.can_reach(inj1, inj2),
-                     "Metadata initialization analysis incorrect.  "
+                BUG_CHECK(fg.can_reach(inj1, inj2), "Metadata initialization analysis incorrect.  "
                      "Cannot inject dependency between %s and %s", inj1, inj2);
                 // Instead of adding injection points at the control point, just going to
                 // rely on the metadata check in table placement, as this could eventually be
@@ -304,17 +312,20 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
 
 TableFindInjectedDependencies
         ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d,
-                                        FlowGraph& f, bool run_flow_graph)
+                                        FlowGraph& f, const BFN_Options *options)
         : phv(p), dg(d), fg(f) {
     addPasses({
-        new DominatorAnalysis(dg, dominators),
-        new InjectControlDependencies(dg, dominators),
+        // new DominatorAnalysis(dg, dominators),
+        // new InjectControlDependencies(dg, dominators),
         // After Table Placement for JBay, it is unsafe to run DefaultNext, which is run for
         // flow graph at the moment.  This is only used for a validation check for metadata
         // dependencies, nothing else.  Has never failed after table placement
-        run_flow_graph ? new FindFlowGraph(fg) : nullptr,
+        new InjectControlDependencies(dg),
+        new FindFlowGraph(fg),
         &ctrl_paths,
-        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths, run_flow_graph),
+        ((options && options->disable_long_branch) || !Device::hasLongBranches())
+             ? new PredicationBasedControlEdges(&dg, ctrl_paths) : nullptr,
+        new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
         &cntp,
         new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths)
     });

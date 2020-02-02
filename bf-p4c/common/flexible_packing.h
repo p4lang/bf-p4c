@@ -581,6 +581,7 @@ class LogFlexiblePacking : public Logging::PassManager {
 
 class FlexiblePacking : public PassManager {
  private:
+    const BFN_Options&                                  options;
     CollectBridgedFields&                               bridgedFields;
     GatherAliasConstraintsInEgress                      aliasInEgress;
     MauBacktracker                                      table_alloc;
@@ -602,6 +603,7 @@ class FlexiblePacking : public PassManager {
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,
+            const BFN_Options &o,
             CollectBridgedFields& b);
 
     // Return a Json representation of flexible headers to be saved in .bfa/context.json
