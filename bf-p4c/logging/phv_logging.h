@@ -150,6 +150,8 @@ class PhvLogging : public MauInspector {
     void addVLIWReads(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWWrites(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
 
+    PHV::Field::AllocState getAllocatedState(const PHV::Field* f);
+
     /** An ordered map of field names and the fields that can be used
      * by various logging functions for specific purposes, headerFiels,
      * digestFields, etc.

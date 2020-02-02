@@ -197,6 +197,17 @@ class Field : public LiftLess<Field> {
     /// True if this field is emitted by the deparser onto the wire.
     bool            emitted_i = false;
 
+    // Define field allocation status.
+    enum alloc_code_t {
+        EMPTY = 0,
+        REFERENCED = 1 << 0,           // Field is referenced
+        HAS_PHV_ALLOCATION = 1 << 1,   // Field is at least partially PHV-allocated
+        FULLY_PHV_ALLOCATED = 1 << 2,  // Field is fully PHV-allocated
+        HAS_CLOT_ALLOCATION = 1 << 3,  // Field is at least partially CLOT-allocated
+    };
+
+    typedef unsigned AllocState;
+
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
         Field *member_field;
@@ -825,6 +836,19 @@ class Field : public LiftLess<Field> {
         int right_limit = 8 * ROUNDUP(offset + size - 1, 8);
         return StartLen(left_limit, right_limit - left_limit);
     }
+
+    /// Utility functions to get field allocation status
+    bool hasPhvAllocation(AllocState s) const { return (s & HAS_PHV_ALLOCATION) ||
+                                                      (s & FULLY_PHV_ALLOCATED); }
+    bool hasClotAllocation(AllocState s) const { return s & HAS_CLOT_ALLOCATION; }
+
+    /// Determines whether @s has a PHV allocation or a CLOT allocation.
+    bool hasAllocation(AllocState s) const { return hasPhvAllocation(s) || hasClotAllocation(s); }
+
+    bool fullyPhvAllocated(AllocState s) const { return s & FULLY_PHV_ALLOCATED; }
+    bool partiallyPhvAllocated(AllocState s) const { return hasPhvAllocation(s) &&
+                                                            !fullyPhvAllocated(s); }
+    bool isReferenced(AllocState s) const { return (s & REFERENCED) || hasAllocation(s); }
 
  private:
     /// Marks the valid starting bit positions (little Endian) for this field.

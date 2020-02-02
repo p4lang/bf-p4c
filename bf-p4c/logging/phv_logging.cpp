@@ -75,49 +75,43 @@ void PhvLogging::end_apply(const IR::Node *root) {
     Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");
 }
 
+PHV::Field::AllocState PhvLogging::getAllocatedState(
+    const PHV::Field* f) {
+    bitvec allocatedBits;
+    bitvec phvAllocatedBits;
+    bitvec clotAllocatedBits;
+    f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+        bitvec sliceBits(alloc.field_bit, alloc.width);
+        phvAllocatedBits |= sliceBits;
+    });
+
+    // Include bits that are CLOT-allocated.
+    if (auto slice_clots = clot.slice_clots(f)) {
+        for (auto entry : *slice_clots) {
+            auto range = entry.first->range();
+            bitvec sliceBits(range.lo, range.size());
+            clotAllocatedBits |= sliceBits;
+        }
+    }
+
+    allocatedBits = phvAllocatedBits | clotAllocatedBits;
+    PHV::Field::AllocState rv = PHV::Field::EMPTY;
+    if (!info.uses.is_referenced(f)) return rv;
+    if (clotAllocatedBits.popcount() != 0) rv |= PHV::Field::HAS_CLOT_ALLOCATION;
+    if (phvAllocatedBits.popcount() < f->size) rv |= PHV::Field::HAS_PHV_ALLOCATION;
+    if (phvAllocatedBits.popcount() == f->size) rv |= PHV::Field::FULLY_PHV_ALLOCATED;
+    return (rv | PHV::Field::REFERENCED);
+}
+
 ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields;
 
     /* Determine set of all allocated fields and the headers to which they belong */
-    for (const auto& f : phv) {
-        bitvec allocatedBits;
+    for (const auto& f : phv)
         f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+            (void)alloc;
             fields[f.header()].insert(&f);
-            bitvec sliceBits(alloc.field_bit, alloc.width);
-            allocatedBits |= sliceBits;
         });
-
-        // Ignore unallocated fields if they are unreferenced.
-        if (!info.uses.is_referenced(&f)) continue;
-
-        // Include bits that are CLOT-allocated.
-        if (auto allocated_slices = clot.allocated_slices(&f)) {
-            for (auto entry : *allocated_slices) {
-                auto range = entry.first->range();
-                bitvec sliceBits(range.lo, range.size());
-                allocatedBits |= sliceBits;
-            }
-        }
-
-        bitvec allBitsInField(0, f.size);
-        if (allocatedBits != allBitsInField) {
-            int unallocated = 0;
-            for (auto b : allocatedBits) {
-                if (b > unallocated) {
-                    le_bitrange unallocatedRange = StartLen(unallocated, b - unallocated);
-                    PHV::FieldSlice unallocatedSlice(&f, unallocatedRange);
-                    unallocatedSlices.insert(unallocatedSlice);
-                }
-                unallocated = b + 1;
-            }
-            if (unallocated < f.size) {
-                le_bitrange unallocatedRange = StartLen(unallocated, f.size - unallocated);
-                PHV::FieldSlice unallocatedSlice(&f, unallocatedRange);
-                unallocatedSlices.insert(unallocatedSlice);
-            }
-        }
-    }
-
     return fields;
 }
 
@@ -180,13 +174,17 @@ void PhvLogging::logFields() {
         for (const auto* f : kv.second) {
             std::string fieldName(f->name);
 
-            // TODO: Get different states ("allocated", "unallocated", "partially allocated",
-            // "unreferenced", "eliminated")
-            auto state = "unallocated";
-            if (!info.uses.is_referenced(f))
-                state = "unreferenced";
-            if (sizeof(f->get_alloc()) > 0)
+            auto state = "";
+            PHV::Field::AllocState allocState = getAllocatedState(f);
+            if (!f->isReferenced(allocState)) state = "unreferenced";
+            else if (!f->hasAllocation(allocState)) state = "unallocated";
+            else if (f->partiallyPhvAllocated(allocState))
+                state = "partially allocated";
+            else if (f->fullyPhvAllocated(allocState))
                 state = "allocated";
+
+            LOG3("Field: " << f->name << ", allocState: " <<
+                allocState << ", state: " << state);
 
             auto fi = new FieldInfo(f->size, getFieldType(f), fieldName, getGress(f), "");
             auto field = new Field(fi, state, headerName);
