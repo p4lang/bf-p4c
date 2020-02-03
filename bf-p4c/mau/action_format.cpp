@@ -933,7 +933,7 @@ safe_vector<le_bitrange> ALUParameter::slot_bits_brs(PHV::Container cont) const 
         if (right_shift == 0) {
             rv.push_back({0, cont_size - 1});
         } else {
-            int boundary = (cont_size - 1) - (right_shift - 1);
+            int boundary = (cont_size - 1) - (right_shift);
             rv.push_back({0, boundary});
             rv.push_back({boundary + 1, cont_size - 1});
         }
