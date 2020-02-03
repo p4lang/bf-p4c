@@ -303,6 +303,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/08-MacAddrCheck1.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/kindlings_0.p4
   testdata/p4_16_samples/issue1544-bmv2.p4
+  testdata/p4_16_samples/issue2148.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-588/comp588dce.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-818/case4954_new_fail.p4
   )
@@ -1412,6 +1413,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-basic-counter-bmv2.p4
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
+)
+
+# no support for runtime-variable indexing
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: No PhvInfo::header for header"
+  testdata/p4_16_samples/runtime-index-bmv2.p4
+  testdata/p4_16_samples/runtime-index-2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
