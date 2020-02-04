@@ -43,8 +43,8 @@ class Parser {
         template<class REGS>
         void write_output_config(REGS &, Parser *, void *, unsigned &) const;
       private:
+        template <typename ROW> void write_tofino_row_config(ROW &row);
         template <typename ROW> void write_row_config(ROW &row);
-        template <typename ROW> void write_jbay_row_config(ROW &row);
     };
     struct CounterInit {
         gress_t         gress;

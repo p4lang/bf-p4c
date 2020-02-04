@@ -36,6 +36,9 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino3"
     ".* expected packet.* on port .* not seen|shorter than expected"
     extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+    extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+    extensions/p4_tests/p4_16/stf/parser_loop_3.p4
+    extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
 
   p4c_add_xfail_reason("tofino3"
@@ -358,41 +361,8 @@ p4c_add_xfail_reason("tofino3"
 #P4C-2429
 p4c_add_xfail_reason("tofino3"
   "mismatch from expected.* at byte "
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_1.p4
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_2.p4
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_3.p4
-  extensions/p4_tests/p4_14/stf/cond_checksum_update_5.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_1.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_2.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_3.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_4.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_5.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_6.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_9.p4
-  extensions/p4_tests/p4_14/stf/update_checksum_10.p4
-  extensions/p4_tests/p4_14/stf/zeros_as_ones.p4
-  extensions/p4_tests/p4_16/stf/cond_checksum_update_4.p4
-  extensions/p4_tests/p4_16/stf/header_stack_checksum.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_stack_1.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_1.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_2.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_3.p4
-  extensions/p4_tests/p4_16/stf/update_checksum_4.p4
-  extensions/p4_tests/p4_16/stf/zeros_as_ones.p4
   testdata/p4_14_samples/basic_routing.p4
   extensions/p4_tests/p4_14/bf_p4c_samples/parser_dc_full.p4
-)
-p4c_add_xfail_reason("tofino3"
-  "expected packet on port .* not seen|unexpected packet output on port"
-  extensions/p4_tests/p4_14/stf/parser_counter_1.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_2.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_3.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_4.p4
-  extensions/p4_tests/p4_14/stf/parser_counter_5.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_6.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_7.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_9.p4
-  extensions/p4_tests/p4_16/stf/parser_counter_10.p4
 )
 
 #driver does not yet work

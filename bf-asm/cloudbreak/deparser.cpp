@@ -412,7 +412,7 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
 }
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Cloudbreak>() {
-    return 232 + unit;
+    return 240 + unit;
 }
 
 template<> unsigned Deparser::FDEntry::Constant::encode<Target::Cloudbreak>() {

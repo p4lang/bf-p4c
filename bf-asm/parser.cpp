@@ -546,7 +546,7 @@ void Parser::Checksum::pass2(Parser *parser) {
 }
 
 template<class ROW>
-void Parser::Checksum::write_row_config(ROW &row) {
+void Parser::Checksum::write_tofino_row_config(ROW &row) {
     row.add = add;
     if (dest) row.dst = dest->reg.parser_id();
     else if (tag >= 0) row.dst = tag;
@@ -597,7 +597,7 @@ Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.l
                     else if (kv.value == "byte0")   src = 2;
                     else if (kv.value == "byte1")   src = 3;
                     else error(lineno, "Unexpected counter load source");
-                } else if (options.target == JBAY) {
+                } else if (options.target != TOFINO) {
                          if (kv.value == "byte0") src = 0;
                     else if (kv.value == "byte1") src = 1;
                     else if (kv.value == "byte2") src = 2;
@@ -1606,10 +1606,11 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
-    if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop)
+    if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop || options.target == CLOUDBREAK) {
         write_counter_config(ea_row);
-    else if (def)
+    } else if (def) {
         def->write_counter_config(ea_row);
+    }
     if (shift)
         max_off = std::max(max_off, int(ea_row.shift_amt = shift) - 1);
     else if (def)

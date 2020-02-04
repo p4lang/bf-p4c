@@ -1,19 +1,19 @@
 /* parser template specializations for jbay -- #included directly in top-level parser.cpp */
 
 template<class ROW>
-void Parser::Checksum::write_jbay_row_config(ROW &row) {
-    write_row_config(row);
+void Parser::Checksum::write_row_config(ROW &row) {
+    write_tofino_row_config(row);
     int rsh = 0;
     for (auto &el : row.mul_2)
         el = (mul_2 >> rsh++) & 1;
 }
 
 template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs, Parser *parser) {
-         if (unit == 0) write_jbay_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
-    else if (unit == 1) write_jbay_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
-    else if (unit == 2) write_jbay_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
-    else if (unit == 3) write_jbay_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
-    else if (unit == 4) write_jbay_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
+         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
+    else if (unit == 2) write_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
+    else if (unit == 3) write_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
+    else if (unit == 4) write_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
     else error(lineno, "invalid unit for parser checksum");
 }
 
@@ -367,13 +367,12 @@ template<> void Parser::State::Match::Clot::write_config(
 
 template<> void Parser::State::Match::write_counter_config(
     Target::JBay::parser_regs::_memory::_ml_ea_row &ea_row) const {
-
     if (ctr_load) {
         switch (ctr_ld_src) {
             case 0: ea_row.ctr_op = 2; break;
             case 1: ea_row.ctr_op = 3; break;
             default: error(lineno, "Unsupported parser counter load instruction (JBay)");
-        } 
+        }
     } else if (ctr_stack_pop) {
         ea_row.ctr_op = 1;
     } else { // add

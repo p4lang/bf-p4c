@@ -1,5 +1,4 @@
 /* parser template specializations for cloudbreak -- #included directly in top-level parser.cpp */
-
 template <> void Parser::Checksum::write_config(Target::Cloudbreak::parser_regs &regs, Parser *parser) {
          if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
     else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
@@ -280,23 +279,22 @@ template<> void Parser::State::Match::Clot::write_config(
 
 template<> void Parser::State::Match::write_counter_config(
     Target::Cloudbreak::parser_regs::_memory::_ml_ea_row &ea_row) const {
-
     if (ctr_load) {
-        switch (ctr_ld_src) {
-            case 0: ea_row.ctr_op = 2; break;
-            case 1: ea_row.ctr_op = 3; break;
-            default: error(lineno, "Unsupported parser counter load instruction (Cloudbreak)");
-        } 
-    } else {  // add
-        ea_row.ctr_op = 0;
+        if (ctr_ld_src == 1) {
+            ea_row.ctr_op = ctr_stack_push ? 6 : 4;
+        } else if (ctr_ld_src == 0) {
+            ea_row.ctr_op = ctr_stack_push ? 2 : 0;
+        } else {
+            error(lineno, "Unsupported parser counter load instruction (Cloudbreak)");
+        }
+    } else if (ctr_stack_pop) {
+        ea_row.ctr_op = 7;
+    } else { // add
+        ea_row.ctr_op = 3;
     }
 
     ea_row.ctr_amt_idx = ctr_instr ? ctr_instr->addr : ctr_imm_amt;
-
-    // TODO -- counter stack config
-    // ea_row.ctr_op = 1; (load ctr from stack top and add imm)
-    // ea_row.ctr_stack_push = ?
-    // ea_row.ctr_stack_upd_w_top = ?
+    ea_row.ctr_stack_upd_w_top = ctr_stack_upd_w_top;
 }
 
 template<> void Parser::State::Match::write_row_config(Target::Cloudbreak::parser_regs  &regs,

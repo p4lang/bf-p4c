@@ -3,8 +3,8 @@
 #include "misc.h"
 
 template <> void Parser::Checksum::write_config(Target::Tofino::parser_regs &regs, Parser *parser) {
-         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
-    else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
+         if (unit == 0) write_tofino_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1) write_tofino_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
     else error(lineno, "invalid unit for parser checksum");
 }
 
