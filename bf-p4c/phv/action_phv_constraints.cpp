@@ -300,6 +300,84 @@ ordered_set<int> ActionPhvConstraints::ConstraintTracker::source_alignment(
     return rv;
 }
 
+boost::optional<int> ActionPhvConstraints::ConstraintTracker::can_be_both_sources(
+        std::vector<PHV::AllocSlice> &slices, ordered_set<PHV::FieldSlice> &packing_slices,
+        PHV::FieldSlice src) const {
+    ordered_set<const IR::MAU::Action *> two_aligned_actions;
+    bitvec alignment;
+
+    int single_alignment_point = -1;
+    struct LocalAlignmentInfo {
+        bitvec alignment;
+        bool has_ad = false;
+    };
+
+
+    ordered_map<const IR::MAU::Action *, LocalAlignmentInfo> act_to_alignment;
+
+    for (auto dst : slices) {
+        for (auto* act : written_in(dst)) {
+            auto local_alignment = act_to_alignment[act];
+            for (auto& opInfo : sources(dst, act)) {
+                if (!opInfo.phv_used)
+                    local_alignment.has_ad = true;
+                else if (*opInfo.phv_used == src)
+                    local_alignment.alignment.setbit(dst.container_slice().lo);
+            }
+            alignment |= local_alignment.alignment;
+        }
+    }
+
+    for (auto entry : act_to_alignment) {
+        auto loc_align = entry.second;
+        if (loc_align.alignment.popcount() == 2) {
+            if (loc_align.has_ad)
+                return boost::none;
+            two_aligned_actions.insert(entry.first);
+        } else if (loc_align.alignment.popcount() == 1) {
+            if (single_alignment_point >= 0 &&
+                loc_align.alignment.min().index() != single_alignment_point)
+                return boost::none;
+            single_alignment_point = loc_align.alignment.min().index();
+        }
+    }
+
+    for (auto *act : two_aligned_actions) {
+        std::map<PHV::FieldSlice, std::vector<le_bitrange>> src_to_dst_bits;
+        bitvec written_bits;
+        PHV::Container container;
+        for (auto dst : slices) {
+            for (auto &opInfo : sources(dst, act)) {
+                if (!opInfo.phv_used) continue;
+                auto it = std::find(packing_slices.begin(), packing_slices.end(), *opInfo.phv_used);
+                if (it == packing_slices.end()) continue;
+                le_bitrange container_bits = dst.container_slice();
+                src_to_dst_bits[*it].push_back(container_bits);
+                written_bits.setrange(container_bits.lo, container_bits.size());
+            }
+            container = dst.container();
+            if (dst.field()->is_padding())
+                written_bits.setrange(dst.container_slice().lo, dst.width());
+        }
+
+        if (written_bits.popcount() != container.size())
+            return boost::none;
+
+        for (auto entry : src_to_dst_bits) {
+            if (entry.second.size() == 1) {
+                continue;
+            } else if (entry.second.size() > 2) {
+                return boost::none;
+            } else {
+                // This is an extremely conservative check but will get us past P4C-2350
+                if (entry.first != src)
+                    return boost::none;
+            }
+        }
+    }
+    return single_alignment_point >= 0 ? single_alignment_point : alignment.min().index();
+}
+
 void ActionPhvConstraints::ConstraintTracker::print_field_ordering(
         std::vector<PHV::AllocSlice>& slices) const {
     ordered_map<PHV::AllocSlice, size_t> field_slices_to_writes;
@@ -1589,7 +1667,6 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
         if (operationType[action] == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
             if (!are_adjacent_field_slices(container_state)) {
-                LOG1("Found non adjacent field slices");
                 return boost::none;
             } else {
                 LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent");
@@ -1897,18 +1974,24 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             // different positions.
             // XXX(Deep): Possible optimization could be that allocating some other field
             // differently would resolve the multiple requirements for this field's alignment.
+            int bitPosition = -1;
             if (req_alignment.size() > 1) {
-                LOG5("\t\t\tPacking failed because " << packing_slice <<
-                        " would (conservatively) need to be aligned at more than one position: "
-                        << cstring::to_cstring(req_alignment));
-                return boost::none; }
-
-            // Alignment requirements could be empty in case the source slices are also unallocated
-            // or due to action data/constant writes.
-            if (req_alignment.size() == 0)
+                auto boost_bitpos
+                    = constraint_tracker.can_be_both_sources(slices, kv_unallocated.second,
+                                                             packing_slice);
+                if (boost_bitpos == boost::none) {
+                    LOG5("\t\t\tPacking failed because " << packing_slice <<
+                            " would (conservatively) need to be aligned at more than one position: "
+                            << cstring::to_cstring(req_alignment));
+                    return boost::none; }
+                bitPosition = *boost_bitpos;
+            } else if (req_alignment.size() == 1) {
+                bitPosition = *(req_alignment.begin());
+            } else {
+                // Alignment requirements could be empty in case the source slices are also
+                // unallocated or due to action data/constant writes.
                 continue;
-
-            int bitPosition = *(req_alignment.begin());
+            }
 
             // Check that no other slices are also required to be at this bit
             // position, unless they're mutually exclusive and can be overlaid.

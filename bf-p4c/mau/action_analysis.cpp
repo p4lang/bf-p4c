@@ -1897,8 +1897,9 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_CLOUDBREAK */
 
-    if (cont_action.convert_instr_to_bitmasked_set) {
-        // Bitmasked-set must be converted to action data
+    if (cont_action.convert_instr_to_bitmasked_set ||
+        cont_action.convert_instr_to_byte_rotate_merge) {
+        // Bitmasked-set or Byte-rotate-merge must be converted to action data
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         return;
     } else if (container.is(PHV::Kind::mocha)) {

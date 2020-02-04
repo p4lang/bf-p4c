@@ -255,6 +255,9 @@ class ActionPhvConstraints : public Inspector {
          */
         ordered_set<int> source_alignment(PHV::AllocSlice dst, PHV::FieldSlice src) const;
 
+        boost::optional<int> can_be_both_sources(std::vector<PHV::AllocSlice> &slices,
+            ordered_set<PHV::FieldSlice> &packing_slices, PHV::FieldSlice src) const;
+
         /** Print the state of the maps */
         void printMapStates() const;
 
