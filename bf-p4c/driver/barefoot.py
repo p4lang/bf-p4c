@@ -609,8 +609,17 @@ class BarefootBackend(BackendDriver):
         # output dir
         self.add_command_option('assembler', "-o {}".format(dirname))
         # input file
-        self.add_command_option('assembler',
-                                "{}/{}.bfa".format(dirname, self._source_basename))
+        asm_file = "{}/{}.bfa".format(dirname, self._source_basename)
+        asm_file_path = os.path.join(os.getcwd(), asm_file)
+        if not os.path.isfile(asm_file_path):
+            print("Skipping assembler, no assembly file generated", file=sys.stderr)
+            return 1
+
+        if os.path.getsize(asm_file) == 0:
+            print("Skipping assembler, assembly file is empty", file=sys.stderr)
+            return 1
+
+        self.add_command_option('assembler', asm_file) 
         # run
         return self.checkAndRunCmd('assembler')
 
