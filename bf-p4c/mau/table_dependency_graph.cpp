@@ -958,7 +958,6 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();
-        cont_write.clear();
     }
 
     return true;
