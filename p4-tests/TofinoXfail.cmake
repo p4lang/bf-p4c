@@ -615,11 +615,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Unsupported on target table .* is applied multiple times"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/cooperated_0.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Unsupported Register element type"
   testdata/p4_16_samples/psa-register1.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4

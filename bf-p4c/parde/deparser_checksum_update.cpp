@@ -736,9 +736,11 @@ void add_entry_duplication_tables(IR::MAU::TableSeq* tableSeq,
                 action->action.push_back(setdup);
             }
             table->actions[action->name] = action;
-            tableSeq->tables.push_back(table);
-            LOG3("Created table " << tableName << " to handle checksum entry duplication");
         }
+    }
+    if (table->actions.size()) {
+        tableSeq->tables.push_back(table);
+        LOG3("Created table " << tableName << " to handle checksum entry duplication");
     }
     return;
 }
