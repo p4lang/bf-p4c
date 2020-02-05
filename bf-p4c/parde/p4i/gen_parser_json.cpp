@@ -38,15 +38,23 @@ GenerateParserP4iJson::generateMatches(const IR::BFN::LoweredParserState* prev_s
     std::vector<P4iParserMatchOn> rst;
     if (!prev_state) return rst;
 
-    for (const auto& reg : prev_state->select->regs) {
+    int shift = 0;
+    auto &regs = prev_state->select->regs;
+    for (auto rItr = regs.rbegin(); rItr != regs.rend(); rItr++) {
+        auto reg = *rItr;
         P4iParserMatchOn match_on;
         match_on.hardware_id   = reg.id;
         match_on.bit_width     = reg.size * 8;
 
         if (auto* const_val = match->value->to<IR::BFN::ParserConstMatchValue>()) {
             std::stringstream v;
-            v << const_val->value;
+            auto w0 = const_val->value.word0 >> shift;
+            auto w1 = const_val->value.word1 >> shift;
+            auto mask = (1U << match_on.bit_width) - 1;
+            match_t m = { w0 & mask, w1 & mask };
+            v << m;
             match_on.value = v.str();
+            shift += match_on.bit_width;
         } else if (auto* pvs = match->value->to<IR::BFN::ParserPvsMatchValue>()) {
             match_on.value_set = pvs->name;
         } else {
