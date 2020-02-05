@@ -4,7 +4,7 @@
 
 IR::InstanceRef::InstanceRef(cstring prefix, IR::ID n, const IR::Type *t,
                              const IR::Annotations *ann)
-: HeaderRef(t), name(n) {
+: HeaderRef(t), name(n), nested() {
     if (n.srcInfo.isValid()) srcInfo = n.srcInfo;
     if (prefix)
         name.name = prefix + "." + n.name;

@@ -54,7 +54,8 @@ bool operator>>(cstring s, IR::MAU::MeterType &m) {
 }
 
 static const char *stateful_use_to_str[] = {
-    "NO_USE", "DIRECT", "INDIRECT", "LOG", "STACK_PUSH", "STACK_POP", "FIFO_PUSH", "FIFO_POP"
+    "NO_USE", "DIRECT", "INDIRECT", "LOG", "STACK_PUSH", "STACK_POP", "FIFO_PUSH", "FIFO_POP",
+    "FAST_CLEAR", "STFUL_TYPES"
 };
 
 
