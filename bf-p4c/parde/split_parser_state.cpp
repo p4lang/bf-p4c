@@ -152,7 +152,8 @@ struct SliceExtracts : public ParserModifier {
         }
 
         // Slice according to the field's CLOT allocation.
-        auto field = phv.field(extract->dest->field);
+        le_bitrange range;
+        auto field = phv.field(extract->dest->field, &range);
         for (auto kv : *clot.slice_clots(field)) {
             auto slice = kv.first;
             auto lo = slice->range().lo;
@@ -165,8 +166,7 @@ struct SliceExtracts : public ParserModifier {
 
             bits_allocated.setrange(lo, size);
         }
-
-        BUG_CHECK(bits_allocated == bitvec(0, field->size),
+        BUG_CHECK(bits_allocated == bitvec(range.lo, range.hi - range.lo + 1),
                   "Extracted field %s received an incomplete allocation",
                   field->name);
 

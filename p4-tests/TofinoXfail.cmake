@@ -699,12 +699,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/kaust/COMPILER-1077/countmin.p4
 )
 
-# BRIG-584
-p4c_add_xfail_reason("tofino"
-  "Extracted field ingress::local_metadata.f received an incomplete allocation"
-  extensions/p4_tests/p4_16/stf/extract_slice.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "p4c TIMEOUT"
   ../glass/testsuite/p4_tests/kaloom/COMPILER-839/leaf.p4
@@ -1272,6 +1266,8 @@ p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
+
+  extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
 
 p4c_add_xfail_reason("tofino"
