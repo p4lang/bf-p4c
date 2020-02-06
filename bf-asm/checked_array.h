@@ -1,7 +1,6 @@
 #ifndef _checked_array_
 #define _checked_array_
 
-#include <assert.h>
 #include <stdlib.h>
 #include "log.h"
 #include "bfas.h"  // to get at the options
@@ -42,10 +41,14 @@ public:
             if (it == v.end()) break;
             new(&e) T(*it++); } }
     T& operator[](size_t idx) {
-        if (idx >= S) ERROR("array index " << idx << " out of bounds " << this);
+        if (idx >= S) {
+            ERROR("array index " << idx << " out of bounds " << this);
+            BUG(); }
         return data[idx]; }
     const T& operator[](size_t idx) const {
-        assert(idx < S);
+        if (idx >= S) {
+            ERROR("array index " << idx << " out of bounds " << this);
+            BUG(); }
         return data[idx]; }
     size_t size() const { return S; }
     T *begin() { return data; }
