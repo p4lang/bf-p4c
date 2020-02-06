@@ -10,6 +10,7 @@ ENV P4C_DEPS autoconf \
              automake \
              bison \
              build-essential \
+	     curl \
              flex \
              g++-6 \
              libboost1.67-dev \
@@ -20,7 +21,8 @@ ENV P4C_DEPS autoconf \
              libtool \
              python-dev \
              python-pip \
-             python3-pip
+             python3-pip \
+	     unzip
 
 
 ENV P4C_RUNTIME_DEPS cpp \
@@ -111,6 +113,16 @@ RUN (test "$BUILD_FOR" = "release" && \
     (test "$BUILD_FOR" = "jarvis" && echo "Building for jarvis") || \
     (test "$BUILD_FOR" = "glass" && echo "Building for glass")
 
+WORKDIR /tmp
+RUN (curl -L https://artifacts.barefootnetworks.com/repository/generic/third-party/z3-4.8.7-x64-ubuntu-16.04.zip -o z3-4.8.7-x64-ubuntu-16.04.zip && \
+     unzip z3-4.8.7-x64-ubuntu-16.04.zip && \
+     cd z3-4.8.7-x64-ubuntu-16.04 && \
+     cp bin/libz3.a /usr/local/lib/ && \
+     cp bin/libz3.so /usr/local/lib/ && \
+     cp bin/z3 /usr/local/bin/ && \
+     cp include/*.h /usr/local/include/ && \
+     cd /tmp && rm -rf z3-*)
+
 # Use 'release' if you don't wish to keep the build artifacts
 ARG IMAGE_TYPE=test
 # Use 'true' if you wish to build glass for p4v or p4i
@@ -137,7 +149,7 @@ COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY docker/docker_entry_point.sh /bfn/docker_entry_point.sh
 COPY p4-tests/p4testutils/veth_setup.sh /bfn/veth_setup.sh
 
-# Workaround as conditional COPY not supported in Dockerfile 
+# Workaround as conditional COPY not supported in Dockerfile
 COPY . /bfn/bf-p4c-compilers/
 RUN (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
     (test "$BUILD_FOR" = "jarvis" && rm -rf /bfn/bf-p4c-compilers/) || \
