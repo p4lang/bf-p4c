@@ -293,7 +293,7 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     for (auto& slice : slices) {
         LOG1("\t\t\tChecking slice " << slice);
         bool mutex = PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field());
-        bool liverange_mutex = slice.isLiveRangeDisjoint(slice);
+        bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         LOG1("\t\t\t  mutex: " << mutex << ", live range mutex: " << liverange_mutex);
         if (!mutex && !liverange_mutex) rs.insert(slice); }
     return rs;
