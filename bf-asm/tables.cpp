@@ -1826,37 +1826,46 @@ bool Table::Actions::Action::is_color_aware() const {
     return false;
 }
 
-void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) const {
-    for (auto &att : attached) {
-        auto addr_arg = att.args.back();
-        json::map indirect_resource;
-        if (addr_arg.type == Table::Call::Arg::Name) {
-            auto *p = has_param(addr_arg.name());
-            if (p) {
-                indirect_resource["access_mode"] = "index";
-                indirect_resource["parameter_name"] = p->name;
-                indirect_resource["parameter_index"] = p->position;
-            } else { continue; }
-        } else if (addr_arg.type == Table::Call::Arg::Const) {
-            indirect_resource["access_mode"] = "constant";
-            indirect_resource["value"] = addr_arg.value();
-        } else { continue; }
-        indirect_resource["resource_name"] = att->p4_name();
-
-        // Check if indirect resource already exists. For tables spanning
-        // multiple stages, the same resource gets added as an attached resource
-        // for every stage. To avoid duplication only add when not present in
-        // the indirect resource array
+void Table::Actions::Action::check_and_add_resource(json::vector &resources, json::map &resource) const {
+        // Check if resource already exists in the json::vector. For tables
+        // spanning multiple stages, the same resource gets added as an attached
+        // resource for every stage. To avoid duplication only add when not
+        // present in the resource array
         bool found = false;
-        for (auto &ind_res_json : indirect_resources) {
-            if (indirect_resource == ind_res_json->to<json::map>()) {
+        for (auto &r: resources) {
+            if (resource == r->to<json::map>()) {
                 found = true;
                 break;
             }
         }
         if (!found)
-            indirect_resources.push_back(std::move(indirect_resource));
-    }
+            resources.push_back(std::move(resource));
+}
+
+void Table::Actions::Action::add_direct_resources(json::vector &direct_resources, const Call &att) const {
+    json::map direct_resource;
+    direct_resource["resource_name"] = att->p4_name();
+    direct_resource["handle"] = att->handle();
+    check_and_add_resource(direct_resources, direct_resource);
+}
+
+void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources, const Call &att) const {
+    auto addr_arg = att.args.back();
+    json::map indirect_resource;
+    if (addr_arg.type == Table::Call::Arg::Name) {
+        auto *p = has_param(addr_arg.name());
+        if (p) {
+            indirect_resource["access_mode"] = "index";
+            indirect_resource["parameter_name"] = p->name;
+            indirect_resource["parameter_index"] = p->position;
+        } else { return; }
+    } else if (addr_arg.type == Table::Call::Arg::Const) {
+        indirect_resource["access_mode"] = "constant";
+        indirect_resource["value"] = addr_arg.value();
+    } else { return; }
+    indirect_resource["resource_name"] = att->p4_name();
+    indirect_resource["handle"] = att->handle();
+    check_and_add_resource(indirect_resources, indirect_resource);
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
@@ -1878,7 +1887,12 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         action_cfg["handle"] = act.handle; //FIXME-JSON
         if (act.instr.empty() || action_cfg.count("primitives") == 0)
             action_cfg["primitives"] = json::vector();
-        act.add_indirect_resources(action_cfg["indirect_resources"]);
+        auto &direct_resources = action_cfg["direct_resources"] = json::vector();
+        auto &indirect_resources = action_cfg["indirect_resources"] = json::vector();
+        for (auto &att : act.attached) {
+            if (att.is_direct_call()) act.add_direct_resources(direct_resources, att);
+            else act.add_indirect_resources(indirect_resources, att);
+        }
         if (!act.hit_allowed && !act.default_allowed)
           error(act.lineno, "Action %s must be allowed to be hit and/or default action.", act.name.c_str());
         action_cfg["allowed_as_hit_action"] = act.hit_allowed;

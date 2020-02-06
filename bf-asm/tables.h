@@ -374,10 +374,9 @@ public:
         bool operator==(const Call &a) const { return Ref::operator==(a) && args == a.args; }
         bool operator!=(const Call &a) const { return !(*this == a); }
         bool is_direct_call() const {
-            if (args.size() == 0)
-                return false;
-            if (args[0] == "$DIRECT")
-                return true;
+            if (args.size() == 0) return false;
+            for (auto &a : args)
+                if (a == "$DIRECT") return true;
             return false;
         }
     };
@@ -462,7 +461,9 @@ public:
             void pass1(Table *tbl);
             void check_next(Table *tbl);
             void check_next_ref(Table *tbl, const Table::Ref &ref) const;
-            void add_indirect_resources(json::vector &indirect_resources) const;
+            void add_direct_resources(json::vector &direct_resources, const Call &att) const;
+            void add_indirect_resources(json::vector &indirect_resources, const Call &att) const;
+            void check_and_add_resource(json::vector &resources, json::map &resource) const;
             bool is_color_aware() const;
             void gen_simple_tbl_cfg(json::vector &) const;
             void add_p4_params(json::vector &, bool include_default = true) const;
