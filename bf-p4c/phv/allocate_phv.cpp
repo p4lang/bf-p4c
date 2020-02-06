@@ -1315,16 +1315,6 @@ CoreAllocation::tryAllocSliceList(
                         break;
                     }
 
-                    // If another slice in these action constraints is in a
-                    // different slice list, abort.
-                    // XXX(cole): This is also overly constrained.
-                    if (slice_list && *slice_list != *slice_lists.begin()) {
-                        LOG5("    ...but two conditional placements are in two different slice "
-                             "lists");
-                        can_place = false;
-                        break;
-                    }
-
                     slice_list = *slice_lists.begin(); }
                 // Try the next container.
                 if (!can_place) break;

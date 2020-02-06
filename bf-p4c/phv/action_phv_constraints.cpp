@@ -1840,7 +1840,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 if (!source) continue;
                 int offset = getOffset(slice.container_slice(), source->container_slice(),
                         slice.container());
-                LOG6("\t\t\t\t\tOffset found: " << offset);
+                LOG5("\t\t\t\t\tOffset found: " << offset);
                 if (firstSlice) {
                     firstOffset = offset;
                     firstSlice = false;
@@ -2694,8 +2694,6 @@ boost::optional<const PHV::Field*> ActionPhvConstraints::field_destination(
         for (auto slice : destinations)
             rs.insert(slice.field());
     }
-    BUG_CHECK(rs.size() <= 1, "More than one field written to by field %1% in action %2%", f->name,
-            action->name);
     if (rs.size() == 0) return boost::none;
     return (*(rs.begin()));
 }

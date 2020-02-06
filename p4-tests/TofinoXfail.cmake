@@ -1657,6 +1657,12 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
+# P4C-2350
+p4c_add_xfail_reason("tofino"
+  "PHV allocation creates an invalid container action within a Tofino ALU"
+  extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
