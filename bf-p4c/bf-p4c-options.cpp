@@ -180,6 +180,9 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-longbranch", nullptr,
         [this](const char *) { disable_long_branch = true; return true; },
         "Disable use of long branches");
+    registerOption("--disable-gfm-parity", nullptr,
+        [this](const char *) { disable_gfm_parity = true; return true; },
+         "Disable parity checking on the galois field matrix.");
     registerOption("--enable-longbranch", nullptr,
                    [this](const char *) {
                        if (Device::numLongBranchTags() > 0) {

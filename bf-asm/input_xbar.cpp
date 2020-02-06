@@ -22,7 +22,15 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             hash_table[lo].data.setraw(what.bigi.data, what.bigi.size);
             if (hash_table[lo].data.max().index() >= 64)
                 error(what.lineno, "Hash column value out of range");
-            return; }
+            return;
+        } else if ((what.type == tSTR) && (what == "parity")) {
+            if (options.disable_gfm_parity) {
+                warning(what.lineno, "assembly generated with gfm parity enabled, but assembler run with --disable-gfm-parity");
+                return;
+            }
+            hash_table_parity[id] = lo;
+            return;
+        }
     } else if (what.type == tINT && what.i == 0) {
         for (int i = lo; i <= hi; ++i) {
             hash_table[i].data.setraw(what.i); }
@@ -555,11 +563,27 @@ void InputXbar::pass2() {
             }
         }
     }
-    for (auto &hash : hash_tables)
-        for (auto &col : hash.second)
+    for (auto &hash : hash_tables) {
+        for (auto &col : hash.second) {
             if (!col.second.data && col.second.fn) {
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
             }
+        }
+        // If hash parity bit is set on the hash table, calculate the hash
+        // parity column data by xor'ing the remaining columns
+        if (hash_table_parity.count(hash.first)) {
+            bitvec hashparitycol(0);
+            auto hash_parity_col_no = hash_table_parity[hash.first];
+            for (auto &col : hash.second) {
+                auto &c = col.first;
+                auto &h = col.second;
+                if (c != hash_parity_col_no)
+                    hashparitycol ^= h.data;
+            }
+
+            hash.second[hash_parity_col_no].data = hashparitycol;
+        }
+    }
 }
 
 #include <tofino/input_xbar.cpp>        // tofino template specializations
@@ -577,7 +601,7 @@ void InputXbar::write_regs(REGS &regs) {
     auto gress = timing_thread(table->gress);
     for (auto &group : groups) {
         if (group.second.empty()) continue;
-        LOG1("  # Input xbar group " << group.first); 
+        LOG1("  # Input xbar group " << group.first);
         unsigned group_base = 0;
         unsigned half_byte = 0;
         unsigned bytes_used = 0;
@@ -671,7 +695,8 @@ void InputXbar::write_regs(REGS &regs) {
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
         LOG1("  # Input xbar hash table " << ht.first);
-        write_galois_matrix(regs, ht.first, ht.second); }
+        write_galois_matrix(regs, ht.first, ht.second);
+    }
     for (auto &hg : hash_groups) {
         LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
@@ -688,6 +713,11 @@ void InputXbar::write_regs(REGS &regs) {
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else
             regs.dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;
+        // Set hash parity check if enabled. The hash parity column data is set
+        // in pass2
+        if (hg.second.tables && !options.disable_gfm_parity) {
+            regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
+        }
     }
 }
 

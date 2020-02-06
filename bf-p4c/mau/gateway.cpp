@@ -645,7 +645,7 @@ bool CollectGatewayFields::compute_offsets() {
                     ++bytes; } }); } }
     LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
     if (bytes > 4) return false;
-    return bits <= 12;
+    return bits <= IXBar::get_hash_single_bits();
 }
 
 class GatewayRangeMatch::SetupRanges : public Transform {
@@ -736,8 +736,8 @@ bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (!collect.compute_offsets())
-        error("%s: condition too complex, limit of 4 bytes + 12 bits of PHV input exceeded",
-              tbl->srcInfo);
+        error("%s: condition too complex, limit of 4 bytes + %d  bits of PHV input exceeded",
+              tbl->srcInfo, IXBar::get_hash_single_bits());
     return true;
 }
 

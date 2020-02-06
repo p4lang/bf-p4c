@@ -176,7 +176,11 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--placement",
                                     action="store", type=str, default=None, choices=["pragma"],
                                     help=argparse.SUPPRESS)  # Ignore all dependencies placement
-
+        self._argGroup.add_argument("--disable-gfm-parity",
+                                    action="store_true", default=False,
+                                    help="Disable parity checking on the galois"
+                                    "field matrix. This will not reserve a parity"
+                                    "bit in the GFM.");
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--gdb", action="store_true", default=False,
                                         help="run the backend compiler under gdb")
@@ -257,6 +261,7 @@ class BarefootBackend(BackendDriver):
         # local options
         if opts.run_post_compiler or src_extension == '.bfa':
             self.enable_commands(['assembler'])
+
         if opts.skip_linker:
             self._no_link = True
 
@@ -299,6 +304,10 @@ class BarefootBackend(BackendDriver):
 
         if opts.egress_intrinsic_metadata_opt:
             self.add_command_option('compiler', '--egress-intrinsic-metadata-opt')
+
+        if opts.disable_gfm_parity:
+            self.add_command_option('compiler', '--disable-gfm-parity')
+            self.add_command_option('assembler', '--disable-gfm-parity')
 
         self.skip_compilation = []
         if opts.skip_compilation:

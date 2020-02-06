@@ -24,23 +24,21 @@ option_t options = {
     .condense_json = true,
     .debug_info = false,
     .disable_egress_latency_padding = false,
+    .disable_gfm_parity = false,
     .disable_long_branch = false,
     .disable_power_gating = false,
     .gen_json = false,
-    //FIXME-P4C: Compiler currently does not reserve 51st bit for hash parity.
-    //Flip 'hash_parity_enabled' to true when 51st bit is reserved.
-    .hash_parity_enabled = false,
     .high_availability_enabled = true,
     .match_compiler = false,
+    .multi_parsers = true, // TODO:Remove option after testing
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     .singlewrite = true,
 #else
     .singlewrite = false,
 #endif
-    .multi_parsers = true, // TODO:Remove option after testing
-    .tof2lab44_workaround = true,
     .stage_dependency_pattern = "",
     .target = NO_TARGET,
+    .tof2lab44_workaround = true,
     .version = CONFIG_OLD,
     .werror = false,
     .nowarn = false,
@@ -109,7 +107,7 @@ void output_all() {
     TopLevel::output_all(ctxtJson);
 
     json::map driver_options;
-    driver_options["hash_parity_enabled"] = options.hash_parity_enabled;
+    driver_options["hash_parity_enabled"] = !options.disable_gfm_parity;
     driver_options["high_availability_enabled"] = options.high_availability_enabled;
     ctxtJson["driver_options"] = std::move(driver_options);
 
@@ -161,8 +159,8 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;
-        } else if (!strcmp(av[i], "--hash_parity_disabled")) {
-            options.hash_parity_enabled = false;
+        } else if (!strcmp(av[i], "--disable-gfm-parity")) {
+            options.disable_gfm_parity = true;
         } else if (!strcmp(av[i], "--high_availability_disabled")) {
             options.high_availability_enabled = false;
         } else if (!strcmp(av[i], "--no-condense")) {

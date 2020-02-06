@@ -105,9 +105,10 @@ table folklorist {
 }
 
 control ingress {
-  if ((not((3819 >= polygamists.tannin)) and not(((3084 > tracker.medicos) and 
-                                                 (tracker.medicos >= 
-                                                 0))))) {
+  // Fails with hash parity enabled. 
+  // if ((not((3819 >= polygamists.tannin)) and not(((3084 > tracker.medicos) and 
+  //                                                (tracker.medicos >= 
+  if (not((3819 >= polygamists.tannin))) {
     apply(vendors);
   }
   apply(folklorist);

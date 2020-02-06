@@ -217,6 +217,9 @@ stage <constant> <thread>:
                     stripe(<expression>, ...)
                         # stripe other expressions across the width required,
                         # repeating as necessary
+                <int>: parity
+                    # Keyword parity indicates this bit is reserved for parity
+                    # calculation
                 valid <int>: <int>
                     # specifies the 16-bit valid hash for one column of the table
             hash group <constant>:

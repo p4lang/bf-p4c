@@ -346,8 +346,9 @@ bool IXBar::hash_matrix_reqs::fit_requirements(bitvec hash_matrix_in_use) const 
         if (free_indexes < index_groups)
             return false;
 
-        bitvec select_use = hash_matrix_in_use.getslice(RAM_SELECT_BIT_START, HASH_SINGLE_BITS);
-        if (HASH_SINGLE_BITS - select_use.popcount() < select_bits)
+        bitvec select_use = hash_matrix_in_use.getslice(RAM_SELECT_BIT_START,
+                                                        IXBar::get_hash_single_bits());
+        if (IXBar::get_hash_single_bits() - select_use.popcount() < select_bits)
             return false;
         return true;
     }
@@ -515,7 +516,7 @@ void IXBar::calculate_available_groups(safe_vector<grp_use> &order,
                      if (!(hash_index_inuse[hg] & (1 << (2 * grp.group + i))))
                          ways_available++;
                 }
-                for (int sb = 0; sb < HASH_SINGLE_BITS; sb++) {
+                for (int sb = 0; sb < IXBar::get_hash_single_bits(); sb++) {
                     if (!(hash_single_bit_inuse[sb] & (1 << (2 * grp.group + i))))
                         select_bits_available++;
                 }
@@ -1435,7 +1436,7 @@ unsigned IXBar::index_groups_used(bitvec bv) const {
 
 unsigned IXBar::select_bits_used(bitvec bv) const {
     unsigned rv = 0;
-    for (int i = RAM_SELECT_BIT_START; i < HASH_MATRIX_SIZE; i++) {
+    for (int i = RAM_SELECT_BIT_START; i < get_hash_matrix_size(); i++) {
         if (bv.getbit(i))
             rv |= (1 << (i - RAM_SELECT_BIT_START));
     }
@@ -1454,7 +1455,7 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
     for (size_t index = start; index < last; index++) {
         bits_required += ceil_log2(lo->way_sizes[index]);
     }
-    bits_required = std::min(bits_required, HASH_SINGLE_BITS);
+    bits_required = std::min(bits_required, IXBar::get_hash_single_bits());
     int groups_required = std::min(last - start, static_cast<size_t>(IXBar::HASH_INDEX_GROUPS));
     return hash_matrix_reqs(groups_required, bits_required, false);
 }
@@ -1758,13 +1759,30 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
     return rv;
 }
 
-static int way_groups_allocated(const IXBar::Use &alloc) {
-    for (unsigned i = 1; i < alloc.way_use.size(); ++i)
-        if (alloc.way_use[i].slice == alloc.way_use[0].slice)
-            return i;
-    return alloc.way_use.size();
+unsigned IXBar::find_balanced_group(Use &alloc, int way_size) {
+    std::map<int, int> sliceDepths;
+    for (unsigned i = 0; i < alloc.way_use.size(); ++i) {
+        int slice_group = alloc.way_use[i].slice;
+        int slice_ways  = (1U << bitvec(alloc.way_use[i].mask).popcount());
+        sliceDepths[slice_group] += slice_ways;
+    }
+    unsigned minWayDepth = -1;
+    int sel_group = -1;
+    int way_bits = ceil_log2(way_size);
+    for (unsigned i = 0; i < alloc.way_use.size(); ++i) {
+        bitvec slice_way_mask(alloc.way_use[i].mask);
+        int slice_way_bits = slice_way_mask.popcount();
+        if (way_bits > slice_way_bits) continue;
+        int slice_group = alloc.way_use[i].slice;
+        int sliceDepth = way_size + sliceDepths[slice_group];
+        if (sliceDepth < minWayDepth) {
+            minWayDepth = sliceDepth;
+            sel_group = slice_group;
+        }
+    }
+    BUG_CHECK(sel_group > -1, "Cannot find a 'way' to reuse hash bits");
+    return sel_group;
 }
-
 /**
  * This is to determine which hash group, of any of the 8 hash functions, are available.
  * A hash function is a set any of the 16 hash tables that will be XORed together.  The hash
@@ -1804,7 +1822,7 @@ int IXBar::getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_re
                 ht_usage.setrange(idx * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS);
         }
 
-        for (auto single_bit : Range(0, HASH_SINGLE_BITS - 1)) {
+        for (auto single_bit : Range(0, IXBar::get_hash_single_bits() - 1)) {
              if ((hash_single_bit_inuse[single_bit] & hash_table_input) != 0)
                  ht_usage.setbit(single_bit + RAM_SELECT_BIT_START);
         }
@@ -1820,7 +1838,7 @@ int IXBar::getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_re
         for (int i = 0; i < HASH_GROUPS; i++) {
             bool is_hash_dist_group = hash_dist_groups[0] == i || hash_dist_groups[1] == i;
             if (is_hash_dist_group) continue;
-            bitvec max_usage(0, HASH_MATRIX_SIZE);
+            bitvec max_usage(0, get_hash_matrix_size());
             bitvec curr_usage_hf;
             bitvec curr_usage_collision;
 
@@ -1836,7 +1854,7 @@ int IXBar::getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_re
                 if ((hash_index_inuse[idx] & collision_ht) != 0)
                     curr_usage_collision.setrange(idx * RAM_LINE_SELECT_BITS, RAM_LINE_SELECT_BITS);
             }
-            for (auto single_bit : Range(0, HASH_SINGLE_BITS - 1)) {
+            for (auto single_bit : Range(0, IXBar::get_hash_single_bits() - 1)) {
                 if ((hash_single_bit_inuse[single_bit] & hf_ht) != 0)
                     curr_usage_hf.setbit(single_bit + RAM_SELECT_BIT_START);
                 if ((hash_single_bit_inuse[single_bit] & collision_ht) != 0)
@@ -2014,7 +2032,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
             }
         }
     }
-    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+    for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
         for (auto ht : bitvec(hash_table_input)) {
             if ((1 << ht) & hash_index_inuse[bit]) {
                 unavailable_bits.setbit(bit + RAM_SELECT_BIT_START);
@@ -2022,7 +2040,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
         }
     }
 
-    bitvec available_bits = bitvec(0, HASH_MATRIX_SIZE) - unavailable_bits;
+    bitvec available_bits = bitvec(0, get_hash_matrix_size()) - unavailable_bits;
     if (available_bits.popcount() < lo->layout.match_width_bits) {
         alloc.clear();
         return false;
@@ -2031,7 +2049,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
     // Breaking up the possible available bits into bytes, which will be the bytes
     // compared in the match format
     safe_vector<std::pair<int, bitvec>> hash_bytes_used;
-    for (int i = 0; i < HASH_MATRIX_SIZE; i+= 8) {
+    for (int i = 0; i < get_hash_matrix_size(); i+= 8) {
         bitvec value = available_bits.getslice(i, 8);
         if (value.empty())
             continue;
@@ -2192,7 +2210,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         way_bits_needed += ceil_log2(way.entries/1024U/way.match_groups);
     }
     int way_bits = 0;
-    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+    for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
         if (!(hash_single_bit_inuse[bit] & hf_hash_table_input)) {
             way_bits++;
         }
@@ -2261,7 +2279,8 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
         size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
         unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group) {
-    int way_bits = ceil_log2(layout_option->way_sizes[index]);
+    int way_size = layout_option->way_sizes[index];
+    int way_bits = ceil_log2(way_size);
     int group;
     unsigned way_mask = 0;
     bool shared = false;
@@ -2275,14 +2294,14 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
             group = 0;  // share with another table?
             BUG("Group was allocated with no available space to push hash ways");
         } else {
-            group = alloc.way_use[alloc.way_use.size() % way_groups_allocated(alloc)].slice;
+            group = find_balanced_group(alloc, way_size);
             shared = true;
         }
         LOG3("all hash slices in use, reusing " << group); }
     // Calculation of the separate select bits among many stages
     unsigned free_bits = 0; unsigned used_bits = 0;
 
-    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+    for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
         if (!(hash_single_bit_inuse[bit] & hf_hash_table_input)) {
             free_bits |= 1U << bit;
         }
@@ -2294,14 +2313,16 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
     if (way_bits == 0) {
         way_mask = 0;
     } else if (shared) {
-        BUG_CHECK(slice_to_select_bits.count(group) > 0, "Slice has been allocated before");
+        BUG_CHECK(slice_to_select_bits.count(group) > 0,
+                "Slice must be allocated before to be shared");
         bitvec prev_mask = slice_to_select_bits.at(group);
         if (prev_mask.popcount() < way_bits) {
-            BUG("Allocated bigger way before smaller way");
+            BUG("Slice to be shared is bigger than previous allocation");
         }
-        way_mask = bitvec(prev_mask.min().index(), way_bits).getrange(0, HASH_SINGLE_BITS);
-        BUG_CHECK(static_cast<int>(bitcount(way_mask)) == way_bits, "Previous allocation "
-                  "was not contiguous");
+        way_mask = bitvec(prev_mask.min().index(),
+                          way_bits).getrange(0, IXBar::get_hash_single_bits());
+        BUG_CHECK(bitvec(way_mask).is_contiguous(), "Previous slice allocation "
+                 "was not contiguous");
     } else if (static_cast<int>(bitcount(free_bits)) < way_bits) {
         LOG3("\tFree bits available is too small");
         return false;
@@ -2416,7 +2437,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     int bits_needed = std::max(tbl->layout.partition_bits - 10, 0);
     int bits_found = 0;
     unsigned way_mask = 0;
-    for (int i = 0; i < HASH_SINGLE_BITS; i++) {
+    for (int i = 0; i < IXBar::get_hash_single_bits(); i++) {
         if (bits_found >= bits_needed)
             break;
         if ((hash_single_bit_inuse[i] & hf_hash_table_input) == 0) {
@@ -2497,7 +2518,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 
     hash_matrix_reqs hm_reqs;
     if (second_try) {
-        hm_reqs.select_bits = HASH_SINGLE_BITS;
+        hm_reqs.select_bits = IXBar::get_hash_single_bits();
     } else {
         hm_reqs.select_bits = hash_bus_bits;
     }
@@ -2541,7 +2562,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
          * tables for bytes we want to put through the hash table to get into the upper gw bits */
         unsigned avail = 0;
         unsigned need = (1U << collect.bits) - 1;
-        for (auto j : Range(0, HASH_SINGLE_BITS-1)) {
+        for (auto j : Range(0, IXBar::get_hash_single_bits() - 1)) {
             if ((hash_single_bit_inuse[j] & hf_hash_table_input) == 0) {
                 avail |= (1U << j);
             }
@@ -2573,7 +2594,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         hash_group_use[hash_group] |= local_hash_table_input;
     }
     fill_out_use(xbar_alloced, false);
-    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+    for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
         LOG3("\tHash bit at bit " << bit << " is " << hex(hash_single_bit_inuse[bit]));
     }
     return true;
@@ -2598,8 +2619,8 @@ int IXBar::max_index_group(int max_bit) {
 int IXBar::max_index_single_bit(int max_bit) {
     int max_single_bit = max_bit - TableFormat::RAM_GHOST_BITS * HASH_INDEX_GROUPS;
     max_single_bit = std::max(max_single_bit, 0);
-    BUG_CHECK(max_single_bit <= HASH_SINGLE_BITS, "Requesting a bit beyond the size of the "
-              "Galois matrix");
+    BUG_CHECK(max_single_bit <= IXBar::get_hash_single_bits(),
+              "Requesting a bit beyond the size of the Galois matrix");
     return max_single_bit;
 }
 
@@ -3045,7 +3066,8 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         for (auto source : sources.hash_sources) {
             int alu_slot_index = phv_src_inuse.ffz();
             if (salu->source_width() >= 32 && alu_slot_index == 0 &&
-                source->expr->type->width_bits() <= METER_ALU_HASH_BITS - salu->source_width())
+                source->expr->type->width_bits() <= METER_ALU_HASH_BITS
+                                                    - salu->source_width())
                 alu_slot_index++;
             int start_bit = alu_slot_index * salu->source_width();
             if (start_bit + source->expr->type->width_bits() > METER_ALU_HASH_BITS)
@@ -4305,7 +4327,7 @@ void IXBar::add_collisions() {
             }
         }
 
-        for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
             if ((hash_group_use[hg] & hash_single_bit_inuse[bit]) != 0) {
                 for (auto ht : bitvec(hash_group_use[hg])) {
                     if (hash_single_bit_use[ht][bit].isNull())
@@ -4344,11 +4366,11 @@ void IXBar::verify_hash_matrix() const {
         }
 
 
-        std::vector<cstring> single_bits(HASH_SINGLE_BITS, cstring());
-        for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        std::vector<cstring> single_bits(IXBar::get_hash_single_bits(), cstring());
+        for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
             if (!hash_used_per_function[hg].getbit(bit + RAM_SELECT_BIT_START)) continue;
             unsigned relevant_hash_tables = hash_group_use[hg] & hash_single_bit_inuse[bit];
-            BUG_CHECK(bit < HASH_SINGLE_BITS, "Illegal bit %1%", bit);
+            BUG_CHECK(bit < IXBar::get_hash_single_bits(), "Illegal bit %1%", bit);
             for (auto ht : bitvec(relevant_hash_tables)) {
                 BUG_CHECK(ht < HASH_TABLES, "Illegal hash table %1%", ht);
                 if (single_bits[bit].isNull())

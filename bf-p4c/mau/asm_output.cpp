@@ -89,6 +89,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     if (mauasm.by_stage.empty() && !phase0OutputAsm) {
         // minimal pipe config for empty program
         out << "stage 0 ingress: {}" << std::endl; }
+
     return out;
 }
 
@@ -743,9 +744,8 @@ void MauAsmOutput::ixbar_hash_exact_info(int &min_way_size, int &min_way_slice,
         min_way_size = std::min(min_way_size, curr_way_size);
         min_way_slice = std::min(way.slice, min_way_slice);
 
-
-        // Guarantee that way object that have the same slice bits also use a similar pattern
-        // of select bits
+        // Guarantee that way object that have the same slice bits also use a
+        // similar pattern of select bits
         auto mask_p = slice_to_select_bits.find(way.slice);
         if (mask_p != slice_to_select_bits.end()) {
             bitvec curr_mask = mask_p->second;
@@ -1214,6 +1214,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 //  whole function needs to be replaced
                 emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
                                 ident_bits_prev_alloc);
+                if (!options.disable_gfm_parity)
+                    out << indent << IXBar::HASH_PARITY_BIT << ": parity" << std::endl;
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
@@ -3152,7 +3154,7 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &out,
  *     }
  *
  * This means that when an entry is written with a particular action, the entry also saves a
- * next table pointer (or a pointer into this 8-entry table). 
+ * next table pointer (or a pointer into this 8-entry table).
  *
  * There are multiple levels to this optimization.  If t1 for instance had less than 8 hit
  * actions, then (as instructions have the same type of indirection table), the instruction
@@ -3885,10 +3887,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     /**
      * This is the parameter that programs the following two registers:
      *     rams.match.map_alu.meter_group.selector.selector_alu_ctl.resilient_hash_enable
-     *     rams.match.map_alu.meter_group.selector.selector_alu_ctl.selector_fair_hash_select 
+     *     rams.match.map_alu.meter_group.selector.selector_alu_ctl.selector_fair_hash_select
      *
      * The fair hash has 3 bit locations to choose from, galois bits 0-13, 14-27, and 28-41
-     *     The location is the selector_fair_hash_select 
+     *     The location is the selector_fair_hash_select
      *
      * The resilient hash can take up to 3 inputs.  This is currently not P4 programmatic, so
      * currently the algorithm takes all 3 inputs, or 0x7.

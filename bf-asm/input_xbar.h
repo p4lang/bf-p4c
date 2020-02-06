@@ -23,6 +23,10 @@ struct HashCol {
     }
 };
 
+inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
+    col.dbprint(out);
+}
+
 class InputXbar {
  public:
     struct Group {
@@ -63,6 +67,7 @@ class InputXbar {
     std::map<int, HashCol>                              empty_hash_table;
     ordered_map<Group, std::vector<Input>>              groups;
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
+    std::map<unsigned, unsigned>                        hash_table_parity;
     std::map<unsigned, HashGrp>                         hash_groups;
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
     static bool conflict(const std::map<int, HashCol> &, const std::map<int, HashCol> &, int * = 0);
@@ -99,7 +104,6 @@ public:
     template<class REGS> void write_regs(REGS &regs);
     template<class REGS> void write_galois_matrix(REGS &regs,
             int id, const std::map<int, HashCol> &mat);
-
     bool have_exact() const {
         for (auto &grp : groups) if (grp.first.type == Group::EXACT) return true;
         return false; }
@@ -146,6 +150,14 @@ public:
             return ((hash_groups.at(group).seed >> bit) & 0x1);
         return 0; }
     HashGrp* get_hash_group(unsigned group = -1){ return ::getref(hash_groups, group); }
+    HashGrp* get_hash_group_from_hash_table(int hash_table) {
+        if (hash_table < 0 || hash_table >= HASH_TABLES) return nullptr;
+        for (auto &hg : hash_groups) {
+            if (hg.second.tables & (1U << hash_table))
+                return &hg.second;
+        }
+        return nullptr;
+    }
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;

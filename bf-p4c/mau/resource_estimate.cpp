@@ -304,6 +304,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
         lo->way_sizes.push_back(log2_way_size);
     }
 
+    int avail_hash_bits = IXBar::get_hash_single_bits();
     if (independent_hash) {
         int select_upper_bits_required = 0;
         int index = 0;
@@ -313,7 +314,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
                 break;
             }
             int select_bits = floor_log2(way_size);
-            if (select_bits + select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
+            if (select_bits + select_upper_bits_required > avail_hash_bits) {
                 lo->select_bus_split = index;
                 break;
             }
@@ -327,7 +328,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
             if (way_index == IXBar::HASH_INDEX_GROUPS)
                 break;
             select_upper_bits_required += floor_log2(way_size);
-            if (select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
+            if (select_upper_bits_required > avail_hash_bits) {
                 lo->select_bus_split = way_index;
                 break;
             }
@@ -449,20 +450,50 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         }
     // Anything larger than 8 for depth.
     } else {
-        // Limit the size to 80, as anyhing above 80 would not fit within an SRAM
         int test_depth = calculated_depth > 64 ? 64 : calculated_depth;
         int max_group_size = (1 << floor_log2(test_depth)) / 4;
         int depth = calculated_depth > 80 ? 80 : calculated_depth;
-        if (depth >= 64)
-            lo->select_bus_split = 3;
+        int select_bits_added = 0;
+        int ways_added = 0;
+        int select_ways = 0;
+        int avail_hash_bits = IXBar::get_hash_single_bits();
         while (depth > 0) {
-            if (max_group_size <= depth) {
+            int max_group_size_bits_reqd = ceil_log2(max_group_size);
+            int hash_single_bits_left = avail_hash_bits -
+                                        (select_bits_added % avail_hash_bits);
+            // std::cout << " Max Group Size : " << max_group_size
+            //           << "          Depth : " << depth
+            //           << " Avail Hash Bits: " << avail_hash_bits
+            //           << " Select Bits Add: " << select_bits_added
+            //           << " Hash Bits Left : " << hash_single_bits_left
+            //           << " Sel Bus Split  : " << lo->select_bus_split << std::endl;
+            if ((max_group_size <= depth)
+                    && (max_group_size_bits_reqd <= hash_single_bits_left)) {
                 lo->way_sizes.push_back(max_group_size);
                 depth -= max_group_size;
+                select_bits_added += ceil_log2(max_group_size);
+                // New hash function if independent ways is < 4
+                if ((select_bits_added > avail_hash_bits)
+                    && (ways_added < 4)
+                    && (lo->select_bus_split < 0)) {
+                    lo->select_bus_split = ways_added;
+                    select_ways = 0;
+                }
+                ways_added++;
+                select_ways++;
             } else {
                 max_group_size /= 2;
             }
+
+            // Recalculate group size on reaching hash bit boundary based on
+            // remaining depth. This spreads the rams across ways more evenly
+            if (select_ways >= 4) {
+                select_ways = 0;
+                max_group_size = depth >= lo->way_sizes[0] ? lo->way_sizes[0]
+                                : (1 << floor_log2(depth));
+            }
         }
+        LOG5(" Determined Way Sizes : " << lo->way_sizes);
     }
 }
 

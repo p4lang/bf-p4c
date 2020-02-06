@@ -2,11 +2,20 @@
 #define BF_P4C_MAU_IXBAR_EXPR_H_
 
 #include "ir/ir.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 class CanBeIXBarExpr : public Inspector {
     static constexpr int MAX_HASH_BITS = 52;
+
+    static int get_max_hash_bits() {
+        // If hash parity is enabled reserve a bit for parity
+        if (!BackendOptions().disable_gfm_parity)
+            return MAX_HASH_BITS - 1;
+        return MAX_HASH_BITS;
+    }
+
     bool        rv = true;
     // FIXME -- if we want to run this *before* SimplifyReferences has converted all
     // PathExpressions into the referred to object, we need some way of resolving what the
@@ -32,13 +41,13 @@ class CanBeIXBarExpr : public Inspector {
         return Inspector::init_apply(n); }
     bool preorder(const IR::Node *) { return false; }  // ignore non-expressions
     bool preorder(const IR::PathExpression *pe) {
-        if (pe->type->width_bits() > MAX_HASH_BITS || !checkPath(pe)) rv = false;
+        if (pe->type->width_bits() > get_max_hash_bits() || !checkPath(pe)) rv = false;
         return false; }
     bool preorder(const IR::Constant *c) {
-        if (c->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
         return false; }
     bool preorder(const IR::Member *m) {
-        if (m->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (m->type->width_bits() > get_max_hash_bits()) rv = false;
         auto *base = m->expr;
         while ((m = base->to<IR::Member>())) base = m->expr;
         if (auto *pe = base->to<IR::PathExpression>()) {
@@ -49,38 +58,38 @@ class CanBeIXBarExpr : public Inspector {
             rv = false; }
         return false; }
     bool preorder(const IR::TempVar *tv) {
-        if (tv->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (tv->type->width_bits() > get_max_hash_bits()) rv = false;
         return false; }
     bool preorder(const IR::Slice *sl) {
-        if (sl->type->width_bits() > MAX_HASH_BITS) {
+        if (sl->type->width_bits() > get_max_hash_bits()) {
             rv = false;
         } else if (sl->e0->is<IR::Member>() || sl->e0->is<IR::TempVar>()) {
             // can do a small slice of a field even when whole field would be too big
             return false; }
         return rv; }
     bool preorder(const IR::Concat *c) {
-        if (c->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
         return rv; }
     bool preorder(const IR::Cast *c) {
-        if (c->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
         return rv; }
     bool preorder(const IR::BFN::SignExtend *e) {
-        if (e->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
         return rv; }
     bool preorder(const IR::BFN::ReinterpretCast *e) {
-        if (e->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
         return rv; }
     bool preorder(const IR::BXor *e) {
-        if (e->type->width_bits() > MAX_HASH_BITS) rv = false;
+        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
         return rv; }
     bool preorder(const IR::BAnd *e) {
-        if (e->type->width_bits() > MAX_HASH_BITS) {
+        if (e->type->width_bits() > get_max_hash_bits()) {
             rv = false;
         } else if (!e->left->is<IR::Constant>() && e->right->is<IR::Constant>()) {
             rv = false; }
         return rv; }
     bool preorder(const IR::BOr *e) {
-        if (e->type->width_bits() > MAX_HASH_BITS) {
+        if (e->type->width_bits() > get_max_hash_bits()) {
             rv = false;
         } else if (!e->left->is<IR::Constant>() && e->right->is<IR::Constant>()) {
             rv = false; }

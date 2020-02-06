@@ -5,6 +5,7 @@
 #include <map>
 #include <random>
 #include <unordered_set>
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -40,6 +41,7 @@ struct IXBar {
     static constexpr int HASH_GROUPS = 8;
     static constexpr int HASH_INDEX_GROUPS = 4;  /* groups of 10 bits for indexing */
     static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
+    static constexpr int HASH_PARITY_BIT = 51;  /* If enabled reserved parity bit position */
     static constexpr int RAM_SELECT_BIT_START = 40;
     static constexpr int RAM_LINE_SELECT_BITS = 10;
     static constexpr int HASH_MATRIX_SIZE = RAM_SELECT_BIT_START + HASH_SINGLE_BITS;
@@ -59,8 +61,26 @@ struct IXBar {
     static constexpr int FAIR_MODE_HASH_BITS = 14;
     static constexpr int METER_ALU_HASH_BITS = 51;
     static constexpr int METER_PRECOLOR_SIZE = 2;
-    static constexpr int MAX_HASH_BITS = 51;
     static constexpr int REPEATING_CONSTRAINT_SECT = 4;
+    static constexpr int MAX_HASH_BITS = 52;
+
+    static int get_hash_single_bits() {
+        // If hash parity is enabled reserve a bit for parity
+        if (!BackendOptions().disable_gfm_parity)
+            return HASH_SINGLE_BITS - 1;
+        return HASH_SINGLE_BITS;
+    }
+
+    static int get_hash_matrix_size() {
+        return RAM_SELECT_BIT_START + get_hash_single_bits();
+    }
+
+    static int get_max_hash_bits() {
+        // If hash parity is enabled reserve a bit for parity
+        if (!BackendOptions().disable_gfm_parity)
+            return MAX_HASH_BITS - 1;
+        return MAX_HASH_BITS;
+    }
 
     struct Loc {
         int group = -1, byte = -1;
@@ -650,7 +670,7 @@ struct IXBar {
                 rv.index_groups = HASH_DIST_SLICES;
             } else {
                 rv.index_groups = HASH_INDEX_GROUPS;
-                rv.select_bits = HASH_SINGLE_BITS;
+                rv.select_bits = IXBar::get_hash_single_bits();
             }
             return rv;
         }
@@ -768,6 +788,7 @@ struct IXBar {
                 return &p;
         /* FIXME -- what if it's in more than one place? */
         return nullptr; }
+    unsigned find_balanced_group(Use &alloc, int way_size);
 
  private:
     bitvec can_use_from_flags(int flags) const;
