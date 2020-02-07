@@ -1687,3 +1687,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-1858_neg.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1867.p4
 )
+
+p4c_add_xfail_reason("tofino"
+  "tofino supports up to 12 stages, using 13"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-PNNC9-fixed.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-5PQ2c.p4
+)

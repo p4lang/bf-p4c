@@ -163,6 +163,7 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic" ${SWITCH_P4}
         "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic"
         "all ^aclfrag ^queue-stats ^dynhash32
+        ^switch_scale.L2VlanScaleTest
         ^switch_tests.MalformedPacketsTest
         ^switch_tests.MalformedPacketsTest_ipv6
         ^switch_tests.MalformedPacketsTest_tunnel
@@ -313,6 +314,10 @@ p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_MalformedPacke
         "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
 bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_MalformedPacketsTest_tunnel"
         "switch_tests.MalformedPacketsTest_tunnel")
+p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_dc_basic_L2VlanScaleTest" ${SWITCH_P4}
+        "${testExtraArgs} -arch v1model -DDC_BASIC_PROFILE -pd -to 3600" "${SWITCH_PTF_DIR}")
+bfn_set_ptf_test_spec("tofino" "smoketest_switch_dc_basic_L2VlanScaleTest"
+        "switch_scale.L2VlanScaleTest")
 
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/smoketest_switch_dc_basic" PROPERTIES TIMEOUT 3600)
@@ -332,6 +337,7 @@ set_tests_properties("tofino/smoketest_switch_dc_basic_sai_hostif_BGPTest" PROPE
 set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest_ipv6" PROPERTIES TIMEOUT 3600)
 set_tests_properties("tofino/smoketest_switch_dc_basic_MalformedPacketsTest_tunnel" PROPERTIES TIMEOUT 3600)
+set_tests_properties("tofino/smoketest_switch_dc_basic_L2VlanScaleTest" PROPERTIES TIMEOUT 3600)
 
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_set_1")
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_l2")
@@ -346,6 +352,7 @@ p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_hostif_SSH
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_hostif_IP2METest")
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_hostif_TTLErrorTest")
 p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_sai_hostif_BGPTest")
+p4c_add_test_label("tofino" "UNSTABLE" "smoketest_switch_dc_basic_L2VlanScaleTest")
 
 # Switch master ENT_DC_GENERAL_PROFILE tests
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_ent_dc_general" ${SWITCH_P4}
