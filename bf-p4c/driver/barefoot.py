@@ -334,9 +334,9 @@ class BarefootBackend(BackendDriver):
         self.pragmas_help = opts.help_pragmas
         if opts.help_pragmas:
             self.add_command_option('compiler', '--help-pragmas')
-            # remove any other commands -- just run the compiler to print the help
-            self.enable_commands(['compiler'])
-            self.runVerifiers = False
+            self.checkAndRunCmd('compiler')
+            # no need for anything else, we printed the pragmas and we need to exit
+            sys.exit(0)
 
         if opts.verbose > 0:
             ta_logging = "table_placement:3,table_summary:1,table_dependency_graph:3"
@@ -362,7 +362,7 @@ class BarefootBackend(BackendDriver):
            not (self._arch == 'v1model' or self._arch == 'psa' or opts.no_bf_rt_schema):
             opts.bf_rt_schema = "{}/bfrt.json".format(self._output_directory)
 
-        if opts.bf_rt_schema is not None:
+        if opts.bf_rt_schema is not None and self.runVerifiers:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
             self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
@@ -628,7 +628,7 @@ class BarefootBackend(BackendDriver):
             print("Skipping assembler, assembly file is empty", file=sys.stderr)
             return 1
 
-        self.add_command_option('assembler', asm_file) 
+        self.add_command_option('assembler', asm_file)
         # run
         return self.checkAndRunCmd('assembler')
 
