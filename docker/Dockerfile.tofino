@@ -139,7 +139,7 @@ RUN pip install ply==3.9
 # Install jsonschema 2.6 for compatibility with pyinstaller
 RUN pip install jsonschema==2.6
 # Install python3 packages
-RUN pip3 install $PYTHON3_DEPS
+RUN pip3 install --upgrade pip && pip3 install $PYTHON3_DEPS
 # Force /usr/bin to be before /usr/local/bin because bf-driver
 # installs a version of python3 in /usr/local and that version is not
 # picking up modules installed with pip3
