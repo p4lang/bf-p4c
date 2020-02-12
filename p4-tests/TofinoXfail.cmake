@@ -1412,6 +1412,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
 )
 
+# optional match type not supported
+p4c_add_xfail_reason("tofino"
+  "error: optional: Not found declaration"
+  testdata/p4_16_samples/table-entries-optional-bmv2.p4
+)
+
+# select ranges not supported
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Invalid select case expression"
+  testdata/p4_16_samples/pvs-struct-3-bmv2.p4
+)
+
 p4c_add_xfail_reason("tofino"
   "Null e"
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
