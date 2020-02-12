@@ -114,7 +114,7 @@ RUN (test "$BUILD_FOR" = "release" && \
     (test "$BUILD_FOR" = "glass" && echo "Building for glass")
 
 WORKDIR /tmp
-RUN (curl -L https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/z3-4.8.7-x64-ubuntu-16.04.zip -o z3-4.8.7-x64-ubuntu-16.04.zip && \
+RUN (curl -L --noproxy "*" https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/z3-4.8.7-x64-ubuntu-16.04.zip -o z3-4.8.7-x64-ubuntu-16.04.zip && \
      unzip z3-4.8.7-x64-ubuntu-16.04.zip && \
      cd z3-4.8.7-x64-ubuntu-16.04 && \
      cp bin/libz3.a /usr/local/lib/ && \
