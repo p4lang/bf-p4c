@@ -1442,15 +1442,16 @@ struct ComputeFieldAlignments : public Inspector {
 class AddIntrinsicConstraints : public Inspector {
     PhvInfo& phv;
 
-    std::vector<std::pair<cstring, cstring>> invalidate_fields_from_arch() {
-        static std::vector<std::pair<cstring, cstring>> rv =
-           {{ "ig_intr_md_for_tm", "mcast_grp_a" },
-            { "ig_intr_md_for_tm", "mcast_grp_b" },
-            { "eg_intr_md", "egress_port" },
-            { "ig_intr_md_for_tm", "ucast_egress_port" },
-            { "ig_intr_md_for_dprsr", "resubmit_type" },
-            { "ig_intr_md_for_dprsr", "digest_type" },
-            { "g_intr_md_for_dprsr", "mirror_type"}
+    std::vector<cstring> invalidate_fields_from_arch() {
+        static std::vector<cstring> rv = {
+            "ig_intr_md_for_tm.mcast_grp_a",
+            "ig_intr_md_for_tm.mcast_grp_b",
+            "eg_intr_md.egress_port",
+            "ig_intr_md_for_tm.ucast_egress_port",
+            "ig_intr_md_for_dprsr.resubmit_type",
+            "ig_intr_md_for_dprsr.digest_type",
+            "ig_intr_md_for_dprsr.mirror_type",
+            "eg_intr_md_for_dprsr.mirror_type"
            };
 
         return rv;
@@ -1469,10 +1470,9 @@ class AddIntrinsicConstraints : public Inspector {
             }
 
             if (Device::currentDevice() == Device::TOFINO) {
-                for (auto& kv : invalidate_fields_from_arch()) {
+                for (auto& meta : invalidate_fields_from_arch()) {
                     std::string f_name(f.name.c_str());
-                    if (f_name.find(kv.first) != std::string::npos
-                        && f_name.find(kv.second) != std::string::npos) {
+                    if (f_name.find(meta) != std::string::npos) {
                         f.set_solitary(PHV::SolitaryReason::ARCH);
                         f.set_invalidate_from_arch(true);
                         LOG3("\tMarking field " << f.name << " as invalidate from arch");
@@ -1644,23 +1644,21 @@ class CollectPardeConstraints : public Inspector {
         phv_field->set_privatizable(true);
     }
 
-    static std::vector<std::pair<cstring, cstring>> bottom_bit_aligned_deparser_params() {
-        static std::vector<std::pair<cstring, cstring>> rv;
+    static std::vector<cstring> bottom_bit_aligned_deparser_params() {
+        static std::vector<cstring> rv;
 
         if (rv.empty()) {
-            rv = {
-                { "eg_intr_md", "egress_port" },
-                { "ig_intr_md_for_tm", "mcast_grp_a" },
-                { "ig_intr_md_for_tm", "mcast_grp_b" },
-                { "ig_intr_md_for_tm", "ucast_egress_port" }};
+            rv = { "eg_intr_md.egress_port",
+                   "ig_intr_md_for_tm.mcast_grp_a",
+                   "ig_intr_md_for_tm.mcast_grp_b",
+                   "ig_intr_md_for_tm.ucast_egress_port"};
 
             if (Device::currentDevice() == Device::TOFINO) {
-                rv.insert(rv.end(), {
-                    { "ig_intr_md_for_tm", "level1_mcast_hash" },
-                    { "ig_intr_md_for_tm", "level2_mcast_hash" },
-                    { "ig_intr_md_for_tm", "level1_exclusion_id" },
-                    { "ig_intr_md_for_tm", "level2_exclusion_id" },
-                    { "ig_intr_md_for_tm", "rid"}});
+                rv.insert(rv.end(), { "ig_intr_md_for_tm.level1_mcast_hash",
+                                      "ig_intr_md_for_tm.level2_mcast_hash",
+                                      "ig_intr_md_for_tm.level1_exclusion_id",
+                                      "ig_intr_md_for_tm.level2_exclusion_id",
+                                      "ig_intr_md_for_tm.rid"});
             }
         }
 
@@ -1676,10 +1674,9 @@ class CollectPardeConstraints : public Inspector {
         f->set_deparsed_to_tm(true);
         f->set_no_split(true);
 
-        for (auto& kv : bottom_bit_aligned_deparser_params()) {
+        for (auto& meta : bottom_bit_aligned_deparser_params()) {
             std::string f_name(f->name.c_str());
-            if (f_name.find(kv.first) != std::string::npos
-                && f_name.find(kv.second) != std::string::npos) {
+            if (f_name.find(meta) != std::string::npos) {
                 LOG3("D. Updating alignment of " << f->name << " to " <<
                         FieldAlignment(le_bitrange(StartLen(0, f->size))));
                 f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));

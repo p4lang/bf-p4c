@@ -1128,9 +1128,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 
-# P4C-1395
 p4c_add_xfail_reason("tofino"
-  "Inferred incompatible container alignments for field .*"
+  "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
   )
 
