@@ -22,6 +22,15 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
         fieldNameToExpressionsMap[name] = mem;
         LOG5("  Added field: " << name << ", " << mem);
     }
+    if (h->type->is<IR::Type_Header>()) {
+        cstring name = h->name + ".$valid";
+        IR::Member* mem = new IR::Member(IR::Type_Bits::get(1),
+                new IR::ConcreteHeaderRef(h), "$valid");
+        if (mem) {
+            fieldNameToExpressionsMap[name] = mem;
+            LOG5("  Added field: " << name << ", " << mem);
+        }
+    }
     return true;
 }
 
