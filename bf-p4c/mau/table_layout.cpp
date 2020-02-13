@@ -814,6 +814,15 @@ void DoTableLayout::add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::
     if (!possible && format_type != ActionData::POST_SPLIT_ATTACHED)
         return;
 
+    if (possible) {
+        GetActionRequirements gar;
+        BUG_CHECK(tbl->actions.size() == 1, "Only one action allowed in hash action table");
+        for (auto act : Values(tbl->actions))
+            act->apply(gar);
+        if (gar.is_hash_dist_needed() || gar.is_rng_needed())
+            hash_action_only = true;
+    }
+
     auto uses = lc.get_action_formats(tbl, format_type);
     if (uses.empty()) return;
     auto &use = uses[0];
@@ -912,7 +921,13 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
     if (!ghdr.is_hash_dist_needed() && !ghdr.is_rng_needed())
         return false;
 
-    ERROR_CHECK(!act->init_default || tbl->layout.no_match_hit_path(),
+    bool all_options_hash_action = true;
+    auto layout_options = lc.get_layout_options(tbl, ActionData::NORMAL);
+    for (auto lo : layout_options) {
+        all_options_hash_action &= lo.layout.hash_action;
+    }
+
+    ERROR_CHECK(!act->init_default || tbl->layout.no_match_hit_path() || all_options_hash_action,
                 ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "Cannot specify %2% as the default action, as it requires %3%", act, act->name,
                 ghdr.is_hash_dist_needed() ?  "the hash distribution unit." : "a random number.");
