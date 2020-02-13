@@ -1865,6 +1865,85 @@ bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
     return true;
 }
 
+/**
+ * The purpose of this function is to delay the beginning of placing gateway tables in
+ * Tofino2 long before any other their control dependent match tables are placeable.
+ * The goal of this is to reduce the number of live long branches at the same time.
+ *
+ * This is a decent holdover until the algorithm can track long branch usage during table
+ * placement and guarantee that no constraints are broken from this angle.
+ *
+ * Basic algorithm:
+ *
+ * Let's say I have the following program snippet:
+ *
+ *     dep_table_1.apply();
+ *     dep_table_2.apply();
+ *
+ *     if (cond-0) {
+ *         if (cond-1) {
+ *             match_table.apply();
+ *         }
+ *     }
+ *
+ * Now cond-0 may be placeable very early due to dependences, but the match_table might be
+ * in a much later stage.  The goal is to not start placing cond-0 until all of the logical
+ * match dependences are not broken.  The tables that must be placed for match_table to be
+ * placed ared dep_table_1, dep_table_2, cond-0 and cond-1.  The checks are if a table is
+ * already placed (Check #1) or if a table is control dependent on cond-0 (Check #2). 
+ *
+ * However, I found that this wasn't enough. Examine the following example:
+ *
+ *     if (cond-0) {
+ *         if (cond-1) {
+ *             match_table.apply();
+ *         }
+ *     } else {
+ *         if (cond-2) {
+ *             match_table.apply();
+ *         }
+ *     }
+ *
+ * Now in this example, when trying to place cond-1, the dependencies will notice cond-2 is
+ * not placed, and will not start cond-1.  However, when trying to place cond-2, the dependencies
+ * will notice cond-1 is not placed either and will not start placing cond-2.  This deadlock
+ * is only currently stoppable by Check #3.
+ *
+ * The eventual goal is to get rid of this check and just verify that the compiler is not
+ * running out of long branches.
+ */
+bool TablePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const Placed *placed) {
+    if (!Device::hasLongBranches() || options.disable_long_branch)
+        return true;
+    if (!tbl->uses_gateway())
+        return true;
+    // The gateway merge constraints are checked in an early function.  This is for unmergeable
+    // gateways.
+    auto gmc = gateway_merge_choices(tbl);
+    if (gmc.size() > 0)
+        return true;
+
+    std::set<const IR::MAU::Table *> placeable_cd_gws;
+    int non_cd_gw_tbls = 0;
+    bool placeable_table_found = false;
+    for (auto cd_tbl : ntp.control_dom_set.at(tbl)) {
+        if (cd_tbl == tbl) continue;
+        if (cd_tbl->uses_gateway()) continue;
+        non_cd_gw_tbls++;
+        bool any_prev_unaccounted = false;
+        for (auto prev : deps->happens_logi_after_map.at(cd_tbl)) {
+            if (prev->uses_gateway()) continue;   // Check #3 from comments
+            if (placed && placed->is_placed(prev)) continue;   // Check #1 from comments
+            if (ntp.control_dom_set.at(tbl).count(prev)) continue;   // Check #2 from comments
+            any_prev_unaccounted = true;
+            break;
+        }
+        if (any_prev_unaccounted) continue;
+        placeable_table_found = true;
+        break;
+    }
+    return placeable_table_found || non_cd_gw_tbls == 0;
+}
 
 IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     LOG_FEATURE("stage_advance", 2, "Stage advance " <<
@@ -2019,6 +2098,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 // Finally, erase these choices from gmc
                 for (auto mc_unready : to_erase)
                     gmc.erase(mc_unready);
+
+                if (!gateway_thread_can_start(t, placed)) {
+                    LOG2("    - skipping gateway " << t->name <<
+                         " until any of the control dominating tables can be placed");
+                    should_skip = true;
+                    done = false;
+                }
 
                 // Now skip attempting to place this table if this flag was set at all
                 if (should_skip) continue;
