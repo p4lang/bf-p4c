@@ -149,6 +149,8 @@ class PhvLogging : public MauInspector {
     void addTableKeys(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWReads(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWWrites(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
+    void addMutexFields(const PHV::Field::alloc_slice& sl,
+                           Phv_Schema_Logger::ContainerSlice *cs) const;
 
     PHV::Field::AllocState getAllocatedState(const PHV::Field* f);
 

@@ -162,6 +162,11 @@ PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl) {
     addTableKeys(slice, cs);
     addVLIWReads(slice, cs);
     addVLIWWrites(slice, cs);
+
+    // Add the list of fields in the same container which are mutually exclusive
+    // with this field
+    addMutexFields(sl, cs);
+
     return cs;
 }
 
@@ -434,6 +439,17 @@ PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, Phv_Schema_Logger::Containe
                                                          "mau",
                                                          actionName,
                                                          tableName)));
+        }
+    }
+}
+
+void PhvLogging::addMutexFields(const PHV::Field::alloc_slice& sl,
+                           Phv_Schema_Logger::ContainerSlice *cs) const {
+    LOG4("Adding mutually exclusive fields for slice: " << sl);
+    for (const auto* f2 : phv.fields_in_container(sl.container)) {
+        if (phv.isFieldMutex(sl.field, f2)) {
+            std::string fieldName(f2->name);
+            cs->append_mutually_exclusive_with(fieldName);
         }
     }
 }
