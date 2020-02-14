@@ -48,6 +48,7 @@ class BFN_Options : public CompilerOptions {
     std::set<cstring> skipped_pipes;
     bool no_power_check = false;
     bool stage_allocation = false;
+    bool skip_seo = true;   // still skipping by default currently
 #endif
     bool verbose = false;
 

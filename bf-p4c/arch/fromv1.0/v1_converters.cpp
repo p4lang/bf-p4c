@@ -480,21 +480,23 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* node) {
-    auto typeName = node->typeName->to<IR::Type_Name>();
-    auto path = typeName->path->to<IR::Path>();
-    auto mapped = enumsToTranslate.find(path->name);
-    if (mapped != enumsToTranslate.end()) {
-        auto newName = mapped->second;
-        if (!newName)
-            return node;
-        auto newType = structure->enums.find(newName);
-        if (newType == structure->enums.end()) {
+const IR::Node* TypeNameExpressionConverter::postorder(IR::Type_Name* node) {
+    auto path = node->path->to<IR::Path>();
+    if (auto newName = ::get(enumsToTranslate, path->name)) {
+        if (!structure->enums.count(newName)) {
             BUG("Cannot translation for type ", node);
             return node;
         }
-        return new IR::TypeNameExpression(node->srcInfo, newType->second,
-                                          new IR::Type_Name(newName));
+        return new IR::Type_Name(IR::ID(node->srcInfo, newName));
+    }
+    return node;
+}
+
+const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* node) {
+    auto typeName = node->typeName->to<IR::Type_Name>();
+    auto path = typeName->path->to<IR::Path>();
+    if (auto newType = ::get(structure->enums, path->name)) {
+        node->type = newType;
     }
     return node;
 }
@@ -503,11 +505,8 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::Member *node) {
     if (!node->expr->is<IR::TypeNameExpression>())
         return node;
     auto name = node->member;
-    auto mapped = fieldsToTranslate.find(name);
-    if (mapped != fieldsToTranslate.end()) {
-        auto newName = mapped->second;
+    if (auto newName = ::get(fieldsToTranslate, name))
         return new IR::Member(node->srcInfo, node->expr, newName);
-    }
     return node;
 }
 

@@ -299,7 +299,7 @@ int main(int ac, char **av) {
     BFNOptionPragmaParser optionsPragmaParser;
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
-    program = P4::FrontEnd(BFN::ParseAnnotations(), hook).run(options, program, true);
+    program = P4::FrontEnd(BFN::ParseAnnotations(), hook).run(options, program, options.skip_seo);
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.

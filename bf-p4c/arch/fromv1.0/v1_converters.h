@@ -222,6 +222,7 @@ class TypeNameExpressionConverter : public ExpressionConverter {
  public:
     explicit TypeNameExpressionConverter(ProgramStructure* structure)
     : ExpressionConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Type_Name* node) override;
     const IR::Node* postorder(IR::TypeNameExpression* node) override;
     const IR::Node* postorder(IR::Member* node) override;
 };

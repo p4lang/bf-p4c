@@ -72,6 +72,14 @@ BFN_Options::BFN_Options() {
         [this](const char *) { stage_allocation = true; return true; },
         "Write out PHV allocation based on stage based allocation",
         OptionFlags::Hide);
+    registerOption("--seo", nullptr,
+        [this](const char *) { skip_seo = false; return true; },
+        "do frontend side-effect ordering",
+        OptionFlags::Hide);
+    registerOption("--no-seo", nullptr,
+        [this](const char *) { skip_seo = true; return true; },
+        "skip frontend side-effect ordering",
+        OptionFlags::Hide);
 #endif
     registerOption("-g", nullptr,
         [this](const char *) { debugInfo = true; return true; },

@@ -60,24 +60,26 @@ if (ENABLE_TESTING)
   # Test code generation (check assembler output)
   include (CodeGenTests.cmake)
 
-  # test STF lexing and parsing by running the stf2ptf_pd generator on
-  # all existing STF files in the tree
-  set (STF2PD_CMD "${CMAKE_CURRENT_SOURCE_DIR}/tools/stf/stf2ptf_pd")
-  file (GLOB_RECURSE __stftestfiles FOLLOW_SYMLINKS
-    RELATIVE ${CMAKE_CURRENT_BINARY_DIR}
-    "${BFN_P4C_SOURCE_DIR}/*.stf")
-  foreach (__t ${__stftestfiles})
-    set (__testname "stf2pd_${__t}")
-    add_test (NAME ${__testname} COMMAND ${STF2PD_CMD} ${__t}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_tests_properties (${__testname} PROPERTIES LABELS "TEST_STF2PTF_GEN")
-    # and make sure we cleanup the generated files
-    string (REGEX REPLACE ".stf$" "_ptf.py" __ptffile ${__testname})
-    set_source_files_properties(${__ptffile} PROPERTIES GENERATED TRUE)
-  endforeach()
+  if (ENABLE_STF2PTF)
+    # test STF lexing and parsing by running the stf2ptf_pd generator on
+    # all existing STF files in the tree
+    set (STF2PD_CMD "${CMAKE_CURRENT_SOURCE_DIR}/tools/stf/stf2ptf_pd")
+    file (GLOB_RECURSE __stftestfiles FOLLOW_SYMLINKS
+      RELATIVE ${CMAKE_CURRENT_BINARY_DIR}
+      "${BFN_P4C_SOURCE_DIR}/*.stf")
+    foreach (__t ${__stftestfiles})
+      set (__testname "stf2pd_${__t}")
+      add_test (NAME ${__testname} COMMAND ${STF2PD_CMD} ${__t}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+      set_tests_properties (${__testname} PROPERTIES LABELS "TEST_STF2PTF_GEN")
+      # and make sure we cleanup the generated files
+      string (REGEX REPLACE ".stf$" "_ptf.py" __ptffile ${__testname})
+      set_source_files_properties(${__ptffile} PROPERTIES GENERATED TRUE)
+    endforeach()
 
-  add_custom_target(check-stf2ptf-gen
-    COMMAND ${CMAKE_CTEST_COMMAND} -L TEST_STF2PTF
-    COMMENT "Running tests for STF2PTF generation"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    add_custom_target(check-stf2ptf-gen
+      COMMAND ${CMAKE_CTEST_COMMAND} -L TEST_STF2PTF
+      COMMENT "Running tests for STF2PTF generation"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  endif(ENABLE_STF2PTF)
 endif(ENABLE_TESTING)

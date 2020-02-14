@@ -1225,7 +1225,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
     auto vt = v->type->to<IR::Type::Bits>();
-    if (vt && vt->size == salu->width) {
+    if (vt && vt->size == salu->source_width()) {
         locals.emplace(v->name, LocalVar(v->name, false));
     } else if (v->type == regtype) {
         locals.emplace(v->name, LocalVar(v->name, true));

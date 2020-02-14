@@ -142,7 +142,7 @@ P4C_pd=""
 testdir=tofino
 filter_P4C_ARGS=()
 keep_PTF_LOGS=""
-for p4c_arg in $P4C_ARGS[@]; do
+for p4c_arg in ${P4C_ARGS[@]}; do
     if [ "$p4c_arg" = "-norun" ]; then
         run_stf=false
     elif [ "$p4c_arg" = "-ptf" ]; then
@@ -619,6 +619,9 @@ clean_process() {
 }
 
 if ${SKIP_PTFPD:=false}; then
+    if ${P4TEST_CLEAN_PASSING:-false}; then
+        rm -rf $testdir/${name}${out_ext}.out
+    fi
     exit
 fi
 
@@ -779,6 +782,9 @@ if $run_pd ; then
         run $PTF_CMD
         ptf_test_status=$?
         clean_env
+        if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
+            rm -rf $testdir/${name}${out_ext}.out
+        fi
         exit $ptf_test_status
     fi
 fi
@@ -822,6 +828,9 @@ if $run_ptf && ! $run_bfrt ; then
         run $PTF_CMD
         ptf_test_status=$?
         clean_env
+        if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
+            rm -rf $testdir/${name}${out_ext}.out
+        fi
         exit $ptf_test_status
     fi
 fi
@@ -882,8 +891,15 @@ if $run_bfrt ; then
         run $PTF_CMD
         ptf_test_status=$?
         clean_env
+        if ${P4TEST_CLEAN_PASSING:-false} && [ $ptf_test_status -eq 0 ]; then
+            rm -rf $testdir/${name}${out_ext}.out
+        fi
         exit $ptf_test_status
     fi
+fi
+
+if ${P4TEST_CLEAN_PASSING:-false}; then
+    rm -rf $testdir/${name}${out_ext}.out
 fi
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then

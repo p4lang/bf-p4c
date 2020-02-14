@@ -24,8 +24,10 @@ else
     exit 1
 fi
 
+export P4TEST_CLEAN_PASSING=true
+
 if ctest -j6 $CTEST_ARGS; then
-    rm Travis${1}fail.log
+    rm -f Travis${1}fail.log
 else
     cp Testing/Temporary/LastTestsFailed.log Travis${1}fail.log
     rv=1
