@@ -10,6 +10,15 @@
 
 int TableSummary::numInvoked[] = {0};
 bool TableSummary::firstRoundFit = false;
+const char *state_name[] = { "INITIAL", "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2", "REDO_PHV2",
+    "FINAL_PLACEMENT", "FAILURE", "SUCCESS" };
+
+TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg) : pipe_id(pipe_id), deps(dg) {
+    static std::set<int>        ids_seen;
+
+    BUG_CHECK(ids_seen.count(pipe_id) == 0, "Duplicate pipe id %d", pipe_id);
+    ids_seen.insert(pipe_id);
+}
 
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     if (BackendOptions().verbose > 0) {
@@ -32,13 +41,9 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     no_errors_before_summary = placementErrorCount() == 0;
     ++numInvoked[pipe_id];
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
-    LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s)");
+    LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s), state = " <<
+         state_name[state]);
     return rv;
-}
-
-void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
-    LOG7(pipe);
-    throwBacktrackException();
 }
 
 void TableSummary::end_apply() {
@@ -88,7 +93,8 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
         return tbl->name; }
 }
 
-void TableSummary::throwBacktrackException() {
+void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
+    LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
     bool placementFailure = (tablePlacementErrors.size() > 0);
@@ -121,31 +127,24 @@ void TableSummary::throwBacktrackException() {
         } else {
             ::warning("Source of merged gateway does not have stage allocated"); } }
 
-    // Do not perform more than 5 rounds of table placement; this maximum would entail 3 rounds of
-    // PHVs, 3 rounds of table placement with container conflicts, and 2 rounds of table placement
-    // without container conflicts.
-    if (final_placement || numInvoked[pipe_id] >= 5) {
-        for (auto &msg : tablePlacementErrors)
-            if (msg.second)
-                error(msg.first);
-            else
-                warning(msg.first);
-        return; }
-
-    // First round.
-    if (numInvoked[pipe_id] == 1) {
+    switch (state) {
+    case INITIAL:
         // If there was a placement failure, then rerun table placements without container
         // conflicts.
-        if (placementFailure) throw NoContainerConflictTrigger::failure(true);
+        if (placementFailure) {
+            state = NOCC_TRY1;
+            throw NoContainerConflictTrigger::failure(true); }
         // If maxStage <= criticalPathLength + CRITICAL_PATH_THRESHOLD, then OK. No backtracking.
-        if (maxStage <= deviceStages && maxStage <= criticalPathLength + CRITICAL_PATH_THRESHOLD)
-            return;
+        if (maxStage <= deviceStages && maxStage <= criticalPathLength + CRITICAL_PATH_THRESHOLD) {
+            state = SUCCESS;
+            return; }
         // If criticalPathLength + CRITICAL_PATH_THRESHOLD < maxStages <= deviceStages, note that
         // the first round of table placement fit.
         // For this case and for the case where maxStages > deviceStages, then rerun table placement
         // without container conflicts, and rerun PHV allocation based on the generated placement.
         // This will invoke a second round of PHV allocation, which will be more table placement
         // friendly because of the introduced pack conflicts.
+        state = NOCC_TRY1;
         if (maxStage <= deviceStages) {
             LOG1("Invoking table placement without container conflicts to generate a more "
                  "compact placement.");
@@ -155,15 +154,15 @@ void TableSummary::throwBacktrackException() {
         LOG1("Invoking table placement without container conflicts because first round of table "
              "placement required " << maxStage << " stages.");
         throw NoContainerConflictTrigger::failure(true);
-    }
 
-    // Even rounds of table placement, all without container conflicts.
-    if (numInvoked[pipe_id] % 2 == 0) {
+    case NOCC_TRY1:
+    case NOCC_TRY2:
         // If there is no table placement failure, and if the number of stages are less than the
         // available physical stages, redo PHV allocation, while taking into account all the pack
         // conflicts produced by this table placement round, and also keeping metadata
         // initialization enabled.
         if (maxStage <= deviceStages) {
+            state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
             throw PHVTrigger::failure(tableAlloc, firstRoundFit);
         } else {
             // If there is not table placement failure and the number of stages without container
@@ -173,24 +172,40 @@ void TableSummary::throwBacktrackException() {
             // been found to increase the dependency chain length occasionally.
             LOG1("Invoking table placement without metadata initialization because container "
                  "conflict-free table placement required " << maxStage << " stages.");
+            state = state == NOCC_TRY1 ? REDO_PHV1 : REDO_PHV2;
             throw PHVTrigger::failure(tableAlloc, firstRoundFit, false /* ignorePackConflicts */,
                     true /* metaInitDisable */);
         }
-    }
 
-    // Third round of table placement.
-    if (numInvoked[pipe_id] == 3) {
+    case REDO_PHV1:
         // If there is no placement failure and we fit within deviceStages, then table placement is
         // successful. No further backtracking required.
-        if (!placementFailure && maxStage <= deviceStages) return;
+        if (!placementFailure && maxStage <= deviceStages) {
+            state = SUCCESS;
+            return; }
         // If there is table placement failure or if this round of table placement requires more
         // than deviceStages, then redo table placement without container conflicts.
         LOG1("Invoking table placement without container conflicts because previous round of "
              "table placement took " << maxStage << " stages.");
+        state = NOCC_TRY2;
         throw NoContainerConflictTrigger::failure(true);
-    }
 
-    BUG("TableSummary pass %d not handled", numInvoked[pipe_id]);
+    case FINAL_PLACEMENT:
+    case REDO_PHV2:
+        if (!placementFailure && maxStage <= deviceStages)
+            state = SUCCESS;
+        else
+            state = FAILURE;
+        for (auto &msg : tablePlacementErrors)
+            if (msg.second)
+                error(msg.first);
+            else
+                warning(msg.first);
+        return;
+
+    default:
+        BUG("TableSummary state %s (pass %d) not handled", state_name[state], numInvoked[pipe_id]);
+    }
 }
 
 const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl) const {

@@ -35,6 +35,33 @@ struct NoContainerConflictTrigger {
     };
 };
 
+/************************
+ * Table Placement/PHV allocation backtracktracking and retries
+ *
+ * There are various possible reasons that PHV allocation and/or Table Placement can fail
+ * in a way that requires backtracking to redo things and try alternatives to get a working
+ * allocation and placement.  We track this with a 'state' in the TableSummary object which
+ * tracks what we've tried so far, and will throw an appropriate Backtrack::trigger exception
+ * to try something else.
+ *
+ * If the first attempt at PHV allocation and table placement succeeds, great! we're done.
+ * If not, we redo table placement ignoring container conflicts.  After that, we'll redo
+ * PHV allocation with flags based on whether the first round fit, the redo fit, and possibly
+ * without metadata init.
+ *
+ * If that redo worked, we're good; otherwise we redo table placement ignoring container
+ * conflicts (again) and then redo PHA allocation a third time.
+ *
+ * Final Placement is a special state we get into after table placement succeeded but needed
+ * to allocate more PHV, which requires rerunning PHV then rerunning table placement.
+ *
+ *  INITIAL ---> NOCC_TRY1 ---> REDO_PHV1 ---> NOCC_TRY2 ---> REDO_PHV2 --> FAILURE
+ *    |                             /                             |            ^
+ *    \-----------> SUCCESS <------+------------------------------/            |
+ *                                  \                                          |
+ *                                   FINAL_PLACEMENT---------------------------+
+ ************************/
+
 class TableSummary: public MauInspector {
  public:
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
@@ -45,6 +72,16 @@ class TableSummary: public MauInspector {
     /// true if the first round of table placement resulted in less than Device::numStages() stages.
     static bool firstRoundFit;
     Logging::FileLog *tsLog = nullptr;
+    enum state_t {
+        INITIAL,
+        NOCC_TRY1,
+        REDO_PHV1,
+        NOCC_TRY2,
+        REDO_PHV2,
+        FINAL_PLACEMENT,
+        FAILURE,
+        SUCCESS,
+    } state = INITIAL;
 
     /// The total number of stages allocated by Table Placement
     int maxStage;
@@ -58,7 +95,6 @@ class TableSummary: public MauInspector {
     // should just be a warning
     ordered_map<cstring, bool> tablePlacementErrors;
     /// flag to prevent any further backtracking after a final RedoTablePlacment.
-    bool final_placement = false;
     bool no_errors_before_summary = true;
 
     int pipe_id;
@@ -85,12 +121,9 @@ class TableSummary: public MauInspector {
 
     /// Prints the stage wise table placement.
     void printTablePlacement();
-    /// Throws the appropriate backtracking exception if table placement is not successful.
-    void throwBacktrackException();
 
  public:
-    explicit TableSummary(int pipe_id, const DependencyGraph& dg)
-        : pipe_id(pipe_id), deps(dg) {}
+    explicit TableSummary(int pipe_id, const DependencyGraph& dg);
 
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
@@ -110,7 +143,7 @@ class TableSummary: public MauInspector {
     void addPlacementWarnError(cstring msg) { tablePlacementErrors[msg] |= false; }
     void clearPlacementErrors() { tablePlacementErrors.clear(); }
     int placementErrorCount() { return tablePlacementErrors.size(); }
-    void FinalizePlacement() { final_placement = true; }
+    void FinalizePlacement() { state = FINAL_PLACEMENT; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };
