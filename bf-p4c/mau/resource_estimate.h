@@ -18,7 +18,7 @@ struct StageUseEstimate {
     static constexpr int MAX_POOL_RAMLINES = MAX_MOD << MAX_MOD_SHIFT;
     static constexpr int MOD_INPUT_BITS = 10;
 
-    typedef std::map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
+    typedef ordered_map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;

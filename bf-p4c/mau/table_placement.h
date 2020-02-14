@@ -26,7 +26,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct GroupPlace;
     struct Placed;
     class Backfill;
-    typedef std::map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
+    typedef ordered_map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
 
     struct RedoTablePlacement : public Backtrack::trigger {
         RedoTablePlacement() : Backtrack::trigger(OK) {}

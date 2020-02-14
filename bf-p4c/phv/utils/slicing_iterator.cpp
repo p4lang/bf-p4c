@@ -23,7 +23,7 @@ void PHV::SlicingIterator::print_slicing_state(
 
 PHV::SlicingIterator::SlicingIterator(
         const SuperCluster* sc,
-        const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+        const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pa,
         bool e,
         bool f)
         : sc_i(sc), enforcePragmas(e), done_i(false) {
@@ -256,7 +256,7 @@ int PHV::SlicingIterator::populate_initial_maps(
         ordered_set<FieldSlice>& paddingFields,
         ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
         ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
-        const std::map<const PHV::Field*, std::vector<PHV::Size>>& pr_size) {
+        const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pr_size) {
     ordered_set<const PHV::Field*> allFields;
     sc_i->forall_fieldslices([&](const PHV::FieldSlice& fs) {
             allFields.insert(fs.field());

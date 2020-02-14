@@ -117,8 +117,8 @@ struct DependencyGraph {
      *  as t2 does not affect any of the values that t1 is working on.  Instead it just affects
      *  the containers
      */
-    std::map<const IR::MAU::Table*,
-             std::set<const IR::MAU::Table*>> container_conflicts;
+    ordered_map<const IR::MAU::Table*,
+             ordered_set<const IR::MAU::Table*>> container_conflicts;
 
     Graph g;                // Dependency graph.
 
@@ -127,7 +127,7 @@ struct DependencyGraph {
 
     // For GTests Only
  public:
-    std::map<cstring, const IR::MAU::Table *> name_to_table;
+    ordered_map<cstring, const IR::MAU::Table *> name_to_table;
 
     // NOTE: These maps are reverse named -- happens_after_map[t] is the set of tables that that are
     // before t, while happens_before_map[t] is the set of tables that are after t... This naming
@@ -141,51 +141,53 @@ struct DependencyGraph {
     // happens_phys_after/before_map, although this could change.
 
     // Work happens after map
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_after_work_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_after_work_map;
 
     // Work happens before map
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_work_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_before_work_map;
 
     // For a given table t, happens_phys_after_map[t] is the set of tables that must be placed in an
     // earlier stage than t---i.e. there is a data dependence between t and any table in the
     // set. This is the default result of the calc_topological_stage function.
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_phys_after_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_phys_after_map;
 
     // Analagous to above, but for the tables that must be placed in a later stage than t
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_phys_before_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_phys_before_map;
 
     // Same as happens_phys_before_map, with the additional inclusion of control dependences when
     // calculating the happens_before relationship.
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_before_control_map;
+    ordered_map<const IR::MAU::Table*,
+             ordered_set<const IR::MAU::Table*>> happens_before_control_map;
 
     // Same as happens_phys_after_map, with the additional inclusion of control and anti dependences
     // when calculating the happens_after relationship, which corresponds to an ordering on logical
     // IDs.
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_logi_after_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_logi_after_map;
 
     // Analagous to above, but for tables that must be placed into a later logical ID than t. New
     // name for happens_before_control_anti_map
-    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> happens_logi_before_map;
+    ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Table*>> happens_logi_before_map;
 
-    std::map<const IR::MAU::Table*, std::map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
+    ordered_map<const IR::MAU::Table*,
+             ordered_map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
 
-    std::map<const IR::MAU::Table*,
+    ordered_map<const IR::MAU::Table*,
              typename Graph::vertex_descriptor> labelToVertex;
 
     // Map from <t1, t2> to its dependency type
     // e.g.  <tbl1, tbl2> = MATCH means that tbl1 has a match dependency on tbl2
-    std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
+    ordered_map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
              DependencyGraph::dependencies_t> dependency_map;
 
-    std::map<typename Graph::edge_descriptor, std::map<const PHV::Field*,
+    ordered_map<typename Graph::edge_descriptor, ordered_map<const PHV::Field*,
              std::pair<ordered_set<const IR::MAU::Action*>,
              ordered_set<const IR::MAU::Action*>>>> data_annotations;
 
-    std::map<typename Graph::edge_descriptor, const std::vector<const IR::MAU::Action*>>
+    ordered_map<typename Graph::edge_descriptor, const std::vector<const IR::MAU::Action*>>
                                                                     data_annotations_exit;
-    std::map<typename Graph::edge_descriptor, const PHV::Container> data_annotations_conflicts;
-    std::map<typename Graph::edge_descriptor, const PHV::FieldSlice*> data_annotations_metadata;
-    std::map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
+    ordered_map<typename Graph::edge_descriptor, const PHV::Container> data_annotations_conflicts;
+    ordered_map<typename Graph::edge_descriptor, const PHV::FieldSlice*> data_annotations_metadata;
+    ordered_map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
 
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
@@ -200,7 +202,7 @@ struct DependencyGraph {
 
     using MinEdgeInfo = std::pair<const IR::MAU::Table *, dependencies_t>;
     bool display_min_edges = false;
-    std::map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
+    ordered_map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
 
     /// The largest value of min_stage encountered when determining min_stage values for table,
     /// across all tables in the program. The minimum number of stages required by the program is
@@ -208,7 +210,7 @@ struct DependencyGraph {
     int max_min_stage_per_gress[3] = {-1, -1, -1};
     int max_min_stage = -1;
 
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> vertex_rst;
 
     // Json variables
     cstring passContext;
@@ -376,7 +378,7 @@ struct DependencyGraph {
             return false;
     }
 
-    boost::optional<std::map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
+    boost::optional<ordered_map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
                                                           ordered_set<const IR::MAU::Action*>>>>
     get_data_dependency_info(typename Graph::edge_descriptor edge) const {
         if (!data_annotations.count(edge)) {
@@ -406,7 +408,7 @@ struct DependencyGraph {
                 element is not accessed in any actions (i.e. an input crossbar read),
                 that particular ActionSet will be empty.
     */
-    boost::optional<std::map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
+    boost::optional<ordered_map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
                              std::pair<ordered_set<const IR::MAU::Action*>,
                                        ordered_set<const IR::MAU::Action*>>>>
              get_data_dependency_info(const IR::MAU::Table* upstream,
@@ -421,7 +423,7 @@ struct DependencyGraph {
         }
         auto upstream_v = labelToVertex.at(upstream);
         typename Graph::out_edge_iterator out, end;
-        std::map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
+        ordered_map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
                  std::pair<ordered_set<const IR::MAU::Action*>,
                  ordered_set<const IR::MAU::Action*>>> gathered_data;
         bool found_downstream = false;
@@ -488,7 +490,7 @@ struct DependencyGraph {
         return stage_info.at(t).min_stage;
     }
 
-    std::set<const IR::MAU::Table*>
+    ordered_set<const IR::MAU::Table*>
     happens_before_dependences(const IR::MAU::Table* t) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
@@ -566,10 +568,10 @@ class TableGraphEdge {
     DependencyGraph::dependencies_t label;
 
     // Static maps
-    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_types;
-    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_sub_types;
-    static std::map<DependencyGraph::dependencies_t, cstring> labels_to_anti_types;
-    static std::map<DependencyGraph::dependencies_t, bool> labels_to_conds;
+    static ordered_map<DependencyGraph::dependencies_t, cstring> labels_to_types;
+    static ordered_map<DependencyGraph::dependencies_t, cstring> labels_to_sub_types;
+    static ordered_map<DependencyGraph::dependencies_t, cstring> labels_to_anti_types;
+    static ordered_map<DependencyGraph::dependencies_t, bool> labels_to_conds;
 
     bool add_dep_field(const PHV::Field *s) {
         if (!s) return false;
@@ -823,9 +825,9 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     const ReductionOrInfo&                                red_info;
     const TablesMutuallyExclusive&                        mutex;
     const IgnoreTableDeps&                                ignore;
-    std::map<cstring, access_t>                           access;
-    std::map<cstring, cstring>                            red_or_use;
-    std::map<PHV::Container, cont_write_t>                cont_write;
+    ordered_map<cstring, access_t>                           access;
+    ordered_map<cstring, cstring>                            red_or_use;
+    ordered_map<PHV::Container, cont_write_t>                cont_write;
 
 
     bool preorder(const IR::MAU::TableSeq *) override;
@@ -869,7 +871,7 @@ class CalculateNextTableProp : public MauInspector {
     using NextTableLeaves =
         ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>>;
     using ControlDominatingSet = NextTableLeaves;
-    std::map<cstring, const IR::MAU::Table *> name_to_table;
+    ordered_map<cstring, const IR::MAU::Table *> name_to_table;
 
  public:
     /// Maps each table T to its set of next-table leaves, defined inductively. If T has no
@@ -982,7 +984,7 @@ class FindDependencyGraph : public Logging::PassManager {
     void add_logical_deps_from_control_deps();
 
  public:
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, const BFN_Options *o = nullptr,
         cstring dotFileName = "", cstring passContext = "");

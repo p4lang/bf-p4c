@@ -78,7 +78,7 @@ class SlicingIterator {
     const SuperCluster* sc_i;
 
     /// pa_container_size pragmas associated with this supercluster.
-    std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
+    ordered_map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
 
     /// true when the pa_container_size pragmas have to be enforced for this SlicingIterator.
     bool enforcePragmas;
@@ -145,7 +145,7 @@ class SlicingIterator {
             ordered_set<FieldSlice>& paddingFields,
             ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
             ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
-            const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa);
+            const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pa);
 
     /// Slice according to the MAU constraints.
     void impose_MAU_constraints(
@@ -224,7 +224,7 @@ class SlicingIterator {
  public:
     explicit SlicingIterator(
             const SuperCluster* sc,
-            const std::map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+            const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pa,
             bool enforce_pragmas = true,
             bool error_on_slicing_fail = true);
 

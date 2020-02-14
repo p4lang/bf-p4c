@@ -89,7 +89,7 @@ class InputXbar {
         Group           group;
         const std::vector<InputXbar *> &use;
         GroupSet(const std::vector<InputXbar *> &u, Group g) : group(g), use(u) {}
-        GroupSet(std::map<Group, std::vector<InputXbar *>> &u, Group g) : group(g), use(u[g]) {}
+        GroupSet(ordered_map<Group, std::vector<InputXbar *>> &u, Group g) : group(g), use(u[g]) {}
         void dbprint(std::ostream &) const;
         Input *find(Phv::Slice sl) const;
         std::vector<Input *> find_all(Phv::Slice sl) const;

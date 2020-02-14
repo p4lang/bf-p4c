@@ -63,7 +63,7 @@ private :
     struct Slot {
         std::string                 name;
         unsigned                    byte, size;  // size in bits
-        std::map<ActionBusSource, unsigned>  data;
+        ordered_map<ActionBusSource, unsigned>  data;
         // offset in the specified source is in this slot -- corresponding bytes for different
         // action data formats will go into the same slot.
         Slot(std::string n, unsigned b, unsigned s) : name(n), byte(b), size(s) {}
@@ -80,8 +80,8 @@ private :
     friend std::ostream &operator<<(std::ostream &, const ActionBusSource &);
     friend std::ostream &operator<<(std::ostream &, const Slot &);
     friend std::ostream &operator<<(std::ostream &, const ActionBus &);
-    std::map<unsigned, Slot>                        by_byte;
-    std::map<ActionBusSource, std::map<unsigned, unsigned>>  need_place;
+    ordered_map<unsigned, Slot>                        by_byte;
+    ordered_map<ActionBusSource, ordered_map<unsigned, unsigned>>  need_place;
     // bytes from the given sources are needed on the action bus -- the pairs in the map
     // are (offset,use) where offset is offset in bits, and use is a bitset of the needed
     // uses (bit index == log2 of the access size in bytes)

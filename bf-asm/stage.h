@@ -25,7 +25,7 @@ public:
     Alloc2D<GatewayTable *, SRAM_ROWS, 2>               gw_payload_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
-    std::map<InputXbar::Group, std::vector<InputXbar *>>     ixbar_use;
+    ordered_map<InputXbar::Group, std::vector<InputXbar *>>     ixbar_use;
     Alloc1D<Table *, TCAM_XBAR_INPUT_BYTES>             tcam_ixbar_input;
     Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
     Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;

@@ -22,8 +22,8 @@
 class PragmaContainerSize : public Inspector {
     PhvInfo& phv_i;
 
-    std::map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
-    std::map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
+    ordered_map<const PHV::Field*, std::vector<PHV::Size>> pa_container_sizes_i;
+    ordered_map<PHV::FieldSlice, PHV::Size> field_slice_req_i;
     // Set of all slices that become no-pack because of pa_container_size pragmas.
     std::map<const PHV::Field*, std::set<PHV::FieldSlice>> no_pack_slices_i;
 
@@ -64,7 +64,7 @@ class PragmaContainerSize : public Inspector {
     static const char *description;
     static const char *help;
 
-    const std::map<const PHV::Field*, std::vector<PHV::Size>>&
+    const ordered_map<const PHV::Field*, std::vector<PHV::Size>>&
     field_to_sizes() const { return pa_container_sizes_i; }
 
     bool is_specified(const PHV::Field* field) const {
@@ -74,7 +74,7 @@ class PragmaContainerSize : public Inspector {
     bool is_single_parameter(const PHV::Field* field) const {
         return pa_container_sizes_i.at(field).size() == 1; }
 
-    const std::map<PHV::FieldSlice, PHV::Size>& field_slice_reqs() const {
+    const ordered_map<PHV::FieldSlice, PHV::Size>& field_slice_reqs() const {
         return field_slice_req_i; }
 
     /** Returns the requirement for this FieldSlice.

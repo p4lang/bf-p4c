@@ -41,7 +41,7 @@ struct Memories {
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
-    typedef std::map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
+    typedef ordered_map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
 
     /**
      * For an SRAM based tables, specifically there are 3 buses, and a 4th output potentially

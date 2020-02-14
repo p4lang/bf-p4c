@@ -56,10 +56,7 @@ class Table : BFN::Unit {
     // ordered_map is used because assembly assumes the order of actions
     // matches to the next table name in the hit list.
     inline ordered_map<cstring, Action>         actions;
-    // std::map is used because using ordered_map fails stful.p4 by generating
-    // stful alu that are supposed to be in the same stage to different stages.
-    // XXX(hanw): we should get to the bottom of this issue.
-    inline std::map<cstring, TableSeq>          next;
+    inline ordered_map<cstring, TableSeq>       next;
     inline Vector<TableKey>                     match_key;
     // Symmetric key information here, as the selector key is on the match table
     LTBitMatrix                                 sel_symmetric_keys = {};        // ignored for ==?

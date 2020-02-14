@@ -27,7 +27,7 @@ bool NameToTableMapBuilder::preorder(const IR::MAU::Table *tbl) {
 }
 
 // Static Map Init
-std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_types = {
+ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_types = {
     { DependencyGraph::IXBAR_READ,                  "match"},
     { DependencyGraph::ACTION_READ,                 "action"},
     { DependencyGraph::OUTPUT,                      "action"},
@@ -48,7 +48,7 @@ std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_typ
     { DependencyGraph::CONTROL_TABLE_MISS,          "control"},
     { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "control"}
 };
-std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_sub_types = {
+ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_sub_types = {
     { DependencyGraph::IXBAR_READ,                  "ixbar_read"},
     { DependencyGraph::ACTION_READ,                 "action_read"},
     { DependencyGraph::OUTPUT,                      "output"},
@@ -69,14 +69,14 @@ std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_sub
     { DependencyGraph::CONTROL_TABLE_MISS,          "table_miss"},
     { DependencyGraph::CONTROL_DEFAULT_NEXT_TABLE,  "default_next_table"}
 };
-std::map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_anti_types = {
+ordered_map<DependencyGraph::dependencies_t, cstring> TableGraphEdge::labels_to_anti_types = {
     { DependencyGraph::ANTI_TABLE_READ,             "table_read"},
     { DependencyGraph::ANTI_ACTION_READ,            "action_read"},
     { DependencyGraph::ANTI_NEXT_TABLE_DATA,        "next_table_data"},
     { DependencyGraph::ANTI_NEXT_TABLE_CONTROL,     "next_table_control"},
     { DependencyGraph::ANTI_NEXT_TABLE_METADATA,    "table_metadata"}
 };
-std::map<DependencyGraph::dependencies_t, bool> TableGraphEdge::labels_to_conds = {
+ordered_map<DependencyGraph::dependencies_t, bool> TableGraphEdge::labels_to_conds = {
     { DependencyGraph::CONTROL_COND_TRUE,  true},
     { DependencyGraph::CONTROL_COND_FALSE, false}
 };
@@ -123,7 +123,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "MIN STAGE INFO" << std::endl;
     out << "    Each table also indicates its dependency chain length" << std::endl;
 
-    std::map<int, safe_vector<std::pair<const IR::MAU::Table *, int>>> min_stage_info;
+    ordered_map<int, safe_vector<std::pair<const IR::MAU::Table *, int>>> min_stage_info;
     for (auto &kv : dg.stage_info) {
         min_stage_info[kv.second.min_stage].emplace_back(kv.first,
                                                          kv.second.dep_stages_control_anti);
@@ -148,7 +148,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
 }
 
 void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
-    static std::map<DependencyGraph::dependencies_t, std::pair<cstring, cstring>> dep_color = {
+    static ordered_map<DependencyGraph::dependencies_t, std::pair<cstring, cstring>> dep_color = {
         { DependencyGraph::IXBAR_READ,
             std::make_pair("ixbar_read",                 "gold")},
         { DependencyGraph::ACTION_READ,
@@ -215,7 +215,7 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
         return;
     }
     ordered_map<std::pair<cstring, cstring>, ordered_set<cstring>> name_pairs;
-    ordered_map<int, std::set<cstring>> tables_per_stage;
+    ordered_map<int, ordered_set<cstring>> tables_per_stage;
     // order the tables by stage
     for (auto ts : dg.stage_info)
         tables_per_stage[ts.second.min_stage].insert(tableName(ts.first));
@@ -691,7 +691,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
 class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDataDependencyGraph             &self;
     const IR::MAU::Table                *table;
-    std::map<PHV::Container, bitvec>    cont_writes;
+    ordered_map<PHV::Container, bitvec>    cont_writes;
 
  public:
     AddDependencies(FindDataDependencyGraph &self,
@@ -865,7 +865,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
 class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
     FindDataDependencyGraph                &self;
     const IR::MAU::Table               *table;
-    std::map<PHV::Container, bitvec>    cont_writes;
+    ordered_map<PHV::Container, bitvec>    cont_writes;
 
  public:
     UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
@@ -1024,7 +1024,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Action *act) {
 }
 
 template<class T>
-inline std::set<T> &operator |=(std::set<T> &s, const std::set<T> &a) {
+inline ordered_set<T> &operator |=(ordered_set<T> &s, const ordered_set<T> &a) {
     s.insert(a.begin(), a.end());
     return s; }
 
@@ -1081,7 +1081,7 @@ bool DependencyGraph::is_ctrl_edge(DependencyGraph::dependencies_t dep) const {
  * indexes appear to be the depth of the table in the table dependency graph.  The
  * resulting vector is generally used to do a breadth-first traversal of the tables
  */
-std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
 FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
         DependencyGraph *local_dg) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
@@ -1091,7 +1091,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     bool include_anti = dep_flags & DependencyGraph::ANTI;
 
     // Current in-degree of vertices
-    std::map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
+    ordered_map<DependencyGraph::Graph::vertex_descriptor, int> n_depending_on;
 
     // Build initial n_depending_on, and happens_after_work_map
     const auto& dep_graph = local_dg ? local_dg->g : dg.g;
@@ -1125,10 +1125,10 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
             auto dst = boost::target(*out, dep_graph);
             n_depending_on[dst]++; } }
 
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>> rst;
-    std::set<DependencyGraph::Graph::vertex_descriptor> processed;
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>> rst;
+    ordered_set<DependencyGraph::Graph::vertex_descriptor> processed;
     while (processed.size() < num_vertices(dep_graph)) {
-        std::set<DependencyGraph::Graph::vertex_descriptor> this_generation;
+        ordered_set<DependencyGraph::Graph::vertex_descriptor> this_generation;
         // Select vertices of those current in-degree is 0 as members of this_generation.
         // as long as they have not been processed yet.
         for (auto& kv : n_depending_on) {
@@ -1452,7 +1452,8 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
     }
 
     DependencyGraph local_dg;
-    std::map<const IR::MAU::Table *, DependencyGraph::Graph::vertex_descriptor> local_labelToVertex;
+    ordered_map<const IR::MAU::Table *,
+        DependencyGraph::Graph::vertex_descriptor> local_labelToVertex;
     for (auto cd_tbl : dom_frontier) {
         local_dg.add_vertex(cd_tbl);
     }
@@ -1561,11 +1562,11 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
  *       t_b that are not mutually exclusive with t_b.
  */
 void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage(DependencyGraph::ANTI);
 
     typedef std::pair<const IR::MAU::Table*, const IR::MAU::Table*> tpair;
-    std::map<tpair, DependencyGraph::Graph::edge_descriptor> edges_to_add;
+    ordered_map<tpair, DependencyGraph::Graph::edge_descriptor> edges_to_add;
 
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
         for (auto& v : topo_rst[i]) {
@@ -1621,7 +1622,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         add_logical_deps_from_control_deps();
 
     // Topological sort
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage();
 
 
@@ -1662,7 +1663,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     }
 
     // Build dep_stages_control
-    std::vector<std::set<DependencyGraph::Graph::vertex_descriptor>>
+    std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst_control = calc_topological_stage(DependencyGraph::CONTROL);
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst_control[i]) {
@@ -1824,7 +1825,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
             int true_min_stage = 0;
             auto in_edges = boost::in_edges(vertex, dg.g);
 
-            std::map<int, safe_vector<DependencyGraph::MinEdgeInfo>> min_edges_of_table;
+            ordered_map<int, safe_vector<DependencyGraph::MinEdgeInfo>> min_edges_of_table;
 
             for (auto edge = in_edges.first; edge != in_edges.second; edge++) {
                 auto src_vertex = boost::source(*edge, dg.g);
