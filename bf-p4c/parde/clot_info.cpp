@@ -21,6 +21,7 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
  private:
     /// Information relating to the extracts of the candidate's field slices, ordered by position
     /// in the packet.
+    // Invariant: field slices are extracted in the same set of parser states.
     const std::vector<const FieldSliceExtractInfo*> extract_infos;
 
     /// The indices into @ref extract_infos that correspond to field slices that can start a CLOT,
@@ -63,11 +64,17 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
                   const Pseudoheader* pseudoheader,
                   const std::vector<const FieldSliceExtractInfo*>& extract_infos);
 
-    /// The parser state associated with this candidate's extracts.
-    const IR::BFN::ParserState* state() const;
+    /// The parser states containing this candidate's extracts.
+    ordered_set<const IR::BFN::ParserState*> states() const;
 
-    /// The state-relative offset, in bits, of the first extract in the candidate.
-    unsigned state_bit_offset() const;
+    /// The pipe thread for the extracts in this candidate.
+    gress_t thread() const;
+
+    /// The state-relative offsets, in bits, of the first extract in the candidate.
+    const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets() const;
+
+    /// The bit-in-byte offset of the first extract in the candidate.
+    unsigned bit_in_byte_offset() const;
 
     const std::vector<const FieldSliceExtractInfo*>& extracts() const;
 
@@ -89,41 +96,100 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
 class FieldSliceExtractInfo {
     friend class GreedyClotAllocator;
 
-    /// The parser state in which the field slice is extracted.
-    const IR::BFN::ParserState* state_;
+    /// The parser states in which the field slice is extracted, mapped to the field slice's offset
+    /// (in bits) from the start of the packet.
+    // Invariant: all offsets here are congruent, modulo 8.
+    ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets_;
 
     /// The field slice's maximum offset, in bits, from the start of the packet.
-    const unsigned max_packet_bit_offset_;
-
-    /// The field slice's offset, in bits, from the start of the parser state.
-    const unsigned state_bit_offset_;
+    unsigned max_packet_bit_offset_;
 
     /// The field slice itself.
     const PHV::FieldSlice* slice_;
 
  public:
-    FieldSliceExtractInfo(const IR::BFN::ParserState* state,
-                          unsigned max_packet_bit_offset,
-                          unsigned state_bit_offset,
-                          const PHV::Field* field)
-        : FieldSliceExtractInfo(state, max_packet_bit_offset, state_bit_offset,
-                                new PHV::FieldSlice(field)) { }
+    FieldSliceExtractInfo(
+        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
+        unsigned max_packet_bit_offset,
+        const PHV::Field* field) :
+    FieldSliceExtractInfo(state_bit_offsets,
+                          max_packet_bit_offset,
+                          new PHV::FieldSlice(field)) {
+    }
 
-    FieldSliceExtractInfo(const IR::BFN::ParserState* state,
-                          unsigned max_packet_bit_offset,
-                          unsigned state_bit_offset,
-                          const PHV::FieldSlice* slice)
-        : state_(state), max_packet_bit_offset_(max_packet_bit_offset),
-          state_bit_offset_(state_bit_offset), slice_(slice) { }
+    FieldSliceExtractInfo(
+        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets,
+        unsigned max_packet_bit_offset,
+        const PHV::FieldSlice* slice) :
+    state_bit_offsets_(state_bit_offsets),
+    max_packet_bit_offset_(max_packet_bit_offset),
+    slice_(slice) {
+    }
 
-    /// @return the parser state in which the field slice is extracted.
-    const IR::BFN::ParserState* state() const { return state_; }
+    /// Updates this object for this field being extracted in a newly discovered parser state.
+    ///
+    /// @param state
+    ///             the new parser state
+    /// @param state_bit_offset
+    ///             the field's bit offset from the beginning of @state
+    /// @param max_packet_bit_offset
+    ///             the maximum bit offset from the beginning of the packet of the field in the
+    ///             given state
+    void update(
+        const IR::BFN::ParserState* state,
+        unsigned state_bit_offset,
+        unsigned max_packet_bit_offset
+    ) {
+        BUG_CHECK(!state_bit_offsets_.count(state),
+                  "Field %s is unexpectedly extracted multiple times in %2%",
+                  slice_->field()->name, state->name);
+
+        auto& entry = *state_bit_offsets_.begin();
+        BUG_CHECK(entry.second % 8 == state_bit_offset % 8,
+                  "Field %s determined to be CLOT-eligible, but has inconsistent bit-in-byte "
+                  "offsets in states %s and %s",
+                  slice_->field()->name,
+                  entry.first->name,
+                  state->name);
+
+        BUG_CHECK(entry.first->thread() == state->thread(),
+                  "A FieldSliceExtractInfo for an %s extract of field %s is being updated with an "
+                  "extract in parser state %s, which comes from %s",
+                  toString(entry.first->thread()),
+                  slice_->field()->name,
+                  state->name,
+                  toString(state->thread()));
+
+        state_bit_offsets_[state] = state_bit_offset;
+        max_packet_bit_offset_ = std::max(max_packet_bit_offset_, max_packet_bit_offset);
+    }
+
+    /// @return the parser states in which the field slice is extracted.
+    ordered_set<const IR::BFN::ParserState*> states() const {
+        ordered_set<const IR::BFN::ParserState*> result;
+        for (auto state : Keys(state_bit_offsets_)) result.insert(state);
+        return result;
+    }
 
     /// @return the field slice's maximum offset, in bits, from the start of the packet.
     unsigned max_packet_bit_offset() const { return max_packet_bit_offset_; }
 
-    /// @return the field slice's offset, in bits, from the start of the parser state.
-    unsigned state_bit_offset() const { return state_bit_offset_; }
+    /// @return the field slice's offset, in bits, from the start of each parser state in which the
+    /// field is extracted.
+    const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets() const {
+        return state_bit_offsets_;
+    }
+
+    /// @return the bit offset of the field slice, relative to the given parser @state.
+    unsigned state_bit_offset(const IR::BFN::ParserState* state) const {
+        return state_bit_offsets_.at(state);
+    }
+
+    /// @return the field slice's bit-in-byte offset in the packet.
+    unsigned bit_in_byte_offset() const {
+        auto offset = *Values(state_bit_offsets_).begin();
+        return offset % 8;
+    }
 
     /// @return the field slice itself.
     const PHV::FieldSlice* slice() const { return slice_; }
@@ -154,7 +220,7 @@ class FieldSliceExtractInfo {
     remove_conflicts(const CollectParserInfo& parserInfo, const ClotCandidate* candidate) const;
 };
 
-std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* phvInfo) const {
+std::string ClotInfo::print(const PhvInfo* phvInfo) const {
     std::stringstream out;
 
     unsigned total_unused_fields_in_clots = 0;
@@ -169,11 +235,11 @@ std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* 
         TablePrinter tp(out, {"CLOT", "Fields", "Bits", "Property"},
                               TablePrinter::Align::CENTER);
 
-        for (auto entry : clot_to_parser_state()) {
-            auto c = entry.first;
-            auto pair = entry.second;
+        for (auto entry : clot_to_parser_states()) {
+            auto* c = entry.first;
+            auto& pair = entry.second;
             if (gress != pair.first) continue;
-            auto state = pair.second;
+            auto& states = pair.second;
 
             std::vector<std::vector<std::string>> rows;
             unsigned bits_in_clot = 0;
@@ -211,10 +277,14 @@ std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* 
             if (bits_in_clot % 8 != 0) unaligned_clots.insert(c->tag);
             unsigned bytes = bits_in_clot / 8;
 
-            tp.addRow({std::to_string(c->tag),
-                       "state " + std::string(state),
-                       std::to_string(bytes) + " bytes",
-                       ""});
+            bool first_state = true;
+            for (auto& state : states) {
+                tp.addRow({first_state ? std::to_string(c->tag) : "",
+                           "state " + std::string(state),
+                           first_state ? (std::to_string(bytes) + " bytes") : "",
+                           ""});
+                first_state = false;
+            }
             tp.addBlank();
 
             for (const auto& row : rows)
@@ -255,34 +325,41 @@ std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* 
 
     TablePrinter field_tp(out, {"Field", "Bits", "CLOTs", "Property"},
                                TablePrinter::Align::CENTER);
-    for (auto kv : parser_state_to_fields_) {
-        for (auto f : kv.second) {
-            // Ignore extracts that aren't sourced from the packet.
-            if (!field_range(kv.first, f)) continue;
+    for (auto kv : field_to_parser_states_) {
+        auto& field = kv.first;
+        auto& states_to_extracts = kv.second;
 
-            std::string attr;
-            if (is_checksum(f)) {
-                attr = "checksum";
-            } else if (is_modified(f)) {
-                attr = "modified";
-            } else if (is_readonly(f)) {
-                attr = "read-only";
-            } else {
-                attr = "unused";
-                total_unused_fields++;
-                total_unused_bits += f->size;
-            }
-
-            std::stringstream tags;
-            bool first_clot = true;
-            for (auto entry : *slice_clots(f)) {
-                if (!first_clot) tags << ", ";
-                tags << entry.second->tag;
-                first_clot = false;
-            }
-
-            field_tp.addRow({std::string(f->name), std::to_string(f->size), tags.str(), attr});
+        // Ignore extracts that aren't always sourced from the packet.
+        bool pkt_src = true;
+        for (auto& kv2 : states_to_extracts) {
+            auto& state = kv2.first;
+            pkt_src = field_range(state, field) != boost::none;
+            if (!pkt_src) break;
         }
+        if (!pkt_src) continue;
+
+        std::string attr;
+        if (is_checksum(field)) {
+            attr = "checksum";
+        } else if (is_modified(field)) {
+            attr = "modified";
+        } else if (is_readonly(field)) {
+            attr = "read-only";
+        } else {
+            attr = "unused";
+            total_unused_fields++;
+            total_unused_bits += field->size;
+        }
+
+        std::stringstream tags;
+        bool first_clot = true;
+        for (auto entry : *slice_clots(field)) {
+            if (!first_clot) tags << ", ";
+            tags << entry.second->tag;
+            first_clot = false;
+        }
+
+        field_tp.addRow({std::string(field->name), std::to_string(field->size), tags.str(), attr});
     }
 
     field_tp.addSep();
@@ -314,30 +391,36 @@ std::string ClotInfo::print(const CollectParserInfo& parserInfo, const PhvInfo* 
 
 bool ClotInfo::can_be_in_clot(const PHV::Field* field) const {
     if (is_added_by_mau(field->header())) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: its header might be added by MAU");
+        LOG5("  Field " << field->name << " can't be in a CLOT: its header might be added by MAU");
         return false;
     }
 
     if (!field->emitted() && !is_checksum(field)) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: not emitted and not a checksum");
+        LOG5("  Field " << field->name << " can't be in a CLOT: not emitted and not a checksum");
         return false;
     }
 
     if (is_used_in_multiple_checksum_update_sets(field)) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: it's involved in multiple "
-             << "checksum-update field lists");
+        LOG5("  Field " << field->name << " can't be in a CLOT: it's involved in multiple "
+             "checksum-update field lists");
         return false;
     }
 
-    if (is_extracted_in_multiple_states(field)) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: it's extracted in multiple parser "
-             << "states");
+    if (is_extracted_in_multiple_non_mutex_states(field)) {
+        LOG5("  Field " << field->name << " can't be in a CLOT: it's extracted in multiple parser "
+             "states");
         return false;
     }
 
     if (!extracts_full_width(field)) {
-        LOG6("  Field " << field->name << " can't be in a CLOT: its full width is not extracted "
-             << "from the packet by the parser");
+        LOG5("  Field " << field->name << " can't be in a CLOT: its full width is not extracted "
+             "from the packet by the parser");
+        return false;
+    }
+
+    if (!has_consistent_bit_in_byte_offset(field)) {
+        LOG5("  Field " << field->name << " can't be in a CLOT: it has different bit-in-byte "
+             "offsets in different parser states");
         return false;
     }
 
@@ -348,7 +431,7 @@ bool ClotInfo::can_start_clot(const FieldSliceExtractInfo* extract_info) const {
     auto slice = extract_info->slice();
 
     // Either the start of the slice is byte-aligned, or the slice contains a byte boundary.
-    int offset_from_byte = extract_info->state_bit_offset() % 8;
+    int offset_from_byte = extract_info->bit_in_byte_offset();
     if (offset_from_byte != 0 && slice->size() < 9 - offset_from_byte) {
         LOG6("  Can't start CLOT with " << slice->shortString() << ": not byte-aligned, and "
              "doesn't contain byte boundary");
@@ -374,7 +457,7 @@ bool ClotInfo::can_end_clot(const FieldSliceExtractInfo* extract_info) const {
     auto slice = extract_info->slice();
 
     // Either the end of the slice is byte-aligned, or the slice contains a byte boundary.
-    int offset_from_byte = (extract_info->state_bit_offset() + slice->size()) % 8;
+    int offset_from_byte = (extract_info->bit_in_byte_offset() + slice->size()) % 8;
     if (offset_from_byte != 0 && slice->size() < offset_from_byte + 1) {
         LOG6("  Can't end CLOT with " << slice->shortString() << ": not byte-aligned, and "
              "doesn't contain byte boundary");
@@ -399,6 +482,26 @@ bool ClotInfo::can_end_clot(const FieldSliceExtractInfo* extract_info) const {
             << extract_info->max_packet_bit_offset() << " not less than "
             << Device::pardeSpec().bitMaxClotPos());
         return false;
+    }
+
+    return true;
+}
+
+bool ClotInfo::has_consistent_bit_in_byte_offset(const PHV::Field* field) const {
+    if (!field_to_parser_states_.count(field))
+        // Field not extracted, so vacuously true.
+        return true;
+
+    unsigned bit_in_byte_offset = 0;
+    bool have_offset = false;
+    for (auto& state : Keys(field_to_parser_states_.at(field))) {
+        auto cur_bit_in_byte_offset = *offset(state, field) % 8;
+        if (!have_offset) {
+            bit_in_byte_offset = cur_bit_in_byte_offset;
+            have_offset = true;
+        }
+
+        if (cur_bit_in_byte_offset != bit_in_byte_offset) return false;
     }
 
     return true;
@@ -628,15 +731,17 @@ void ClotInfo::adjust_clots(const PhvInfo& phv) {
             clots.push_back(clot);
         } else {
             // Adjustment resulted in an empty CLOT, so remove it.
-            auto pair = clot_to_parser_state_.at(clot);
+            auto& pair = clot_to_parser_states_.at(clot);
             auto gress = pair.first;
-            auto state_name = pair.second;
-            clot_to_parser_state_.erase(clot);
+            auto state_names = pair.second;
+            clot_to_parser_states_.erase(clot);
 
             auto& parser_state_to_clots = this->parser_state_to_clots(gress);
-            auto& state_clots = parser_state_to_clots.at(state_name);
-            state_clots.erase(clot);
-            if (state_clots.empty()) parser_state_to_clots.erase(state_name);
+            for (auto state_name : state_names) {
+                auto& state_clots = parser_state_to_clots.at(state_name);
+                state_clots.erase(clot);
+                if (state_clots.empty()) parser_state_to_clots.erase(state_name);
+            }
         }
     }
 
@@ -844,7 +949,7 @@ void ClotInfo::clear() {
     checksum_dests_.clear();
     field_to_checksum_updates_.clear();
     clots_.clear();
-    clot_to_parser_state_.clear();
+    clot_to_parser_states_.clear();
     parser_state_to_clots_[INGRESS].clear();
     parser_state_to_clots_[EGRESS].clear();
     field_range_.clear();
@@ -859,7 +964,7 @@ void ClotInfo::clear() {
 int Pseudoheader::nextId = 0;
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_head_to_byte() const {
-    auto trim_amt = (8 - state_bit_offset_ % 8) % 8;
+    auto trim_amt = (8 - bit_in_byte_offset()) % 8;
     auto size = slice_->size() - trim_amt;
     BUG_CHECK(size > 0, "Trimmed extract %1% to %2% bits", slice()->shortString(), size);
     return trim(0, size);
@@ -873,7 +978,7 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_bits(int trim_amt)
 }
 
 const FieldSliceExtractInfo* FieldSliceExtractInfo::trim_tail_to_byte() const {
-    auto trim_amt = (state_bit_offset_ + slice_->size()) % 8;
+    auto trim_amt = (bit_in_byte_offset() + slice_->size()) % 8;
     return trim_tail_bits(trim_amt);
 }
 
@@ -903,10 +1008,17 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int start_idx, int size
     if (start_idx == 0 && cur_size == size) return this;
 
     auto max_packet_bit_offset = max_packet_bit_offset_ + (cur_size - start_idx - size);
-    auto state_bit_offset = state_bit_offset_ + (cur_size - start_idx - size);
+    ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
+    for (auto& entry : state_bit_offsets_) {
+        auto& state = entry.first;
+        auto state_bit_offset = entry.second;
+
+        state_bit_offsets[state] = state_bit_offset + (cur_size - start_idx - size);
+    }
+
     auto range = slice_->range().shiftedByBits(start_idx).resizedToBits(size);
     auto slice = new PHV::FieldSlice(slice_->field(), range);
-    return new FieldSliceExtractInfo(state_, max_packet_bit_offset, state_bit_offset, slice);
+    return new FieldSliceExtractInfo(state_bit_offsets, max_packet_bit_offset, slice);
 }
 
 std::vector<const FieldSliceExtractInfo*>*
@@ -914,18 +1026,14 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
                                         const ClotCandidate* candidate) const {
     const int GAP_SIZE = 8 * Device::pardeSpec().byteInterClotGap();
 
-    int candidate_offset = candidate->state_bit_offset();
     int candidate_size = candidate->size_bits;
-
-    int extract_offset = state_bit_offset();
     int extract_size = slice()->size();
 
-    auto shift_amounts = parserInfo.get_all_shift_amounts(state(), candidate->state());
-
-    // Each path through the parser yields a possibly different shift amount to get from the parser
-    // state of the extract to that of the candidate, so the candidate can appear in a few
-    // different positions relative to the extract. Go through the various shift amounts
-    // and figure out which bits conflict.
+    // For each parser state in which this field slice is extracted, and each parser state
+    // corresponding to the candidate, each path through the parser yields a possibly different
+    // shift amount to get from the parser state of the extract to that of the candidate, so the
+    // candidate can appear in a few different positions relative to the extract. Go through the
+    // various parser states and shift amounts and figure out which bits conflict.
     //
     // Using coordinates relative to the start of the extract, for each shift amount, the candidate
     // starts at bit (shift + candidate_offset - extract_offset). So, each shift amount results in
@@ -943,31 +1051,40 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
     // which is the opposite of packet order.
     bitvec conflicting_bits;
 
-    int lower_bound = extract_offset - candidate_offset - candidate_size - GAP_SIZE + 1;
-    int upper_bound = extract_offset + extract_size - candidate_offset + GAP_SIZE - 1;
+    for (auto& extract_entry : state_bit_offsets()) {
+        auto& extract_state = extract_entry.first;
+        int extract_offset = extract_entry.second;
 
-    bool have_conflict = false;
+        for (auto& candidate_entry : candidate->state_bit_offsets()) {
+            auto& candidate_state = candidate_entry.first;
+            int candidate_offset = candidate_entry.second;
 
-    for (auto it = shift_amounts->lower_bound(lower_bound);
-         it != shift_amounts->end() && *it <= upper_bound;
-         ++it) {
-        auto shift = *it;
+            auto shift_amounts = parserInfo.get_all_shift_amounts(extract_state, candidate_state);
 
-        auto conflict_start =
-            std::max(0,
-                     shift + candidate_offset - extract_offset - GAP_SIZE);
-        auto conflict_end =
-            std::min(extract_size - 1,
-                     shift + candidate_offset - extract_offset + candidate_size + GAP_SIZE - 1);
-        auto conflict_size = conflict_end - conflict_start + 1;
+            int lower_bound = extract_offset - candidate_offset - candidate_size - GAP_SIZE + 1;
+            int upper_bound = extract_offset + extract_size - candidate_offset + GAP_SIZE - 1;
 
-        // NB: conflict_start and conflict_end are in packet coordinates, but conflicting_bits uses
-        // field coordinates, so we do the conversion here.
-        conflicting_bits.setrange(extract_size - conflict_end - 1, conflict_size);
-        have_conflict = true;
+            for (auto it = shift_amounts->lower_bound(lower_bound);
+                 it != shift_amounts->end() && *it <= upper_bound;
+                 ++it) {
+                auto shift = *it;
+
+                auto conflict_start =
+                    std::max(0, shift + candidate_offset - extract_offset - GAP_SIZE);
+                auto conflict_end =
+                    std::min(extract_size - 1,
+                             shift + candidate_offset - extract_offset
+                                 + candidate_size + GAP_SIZE - 1);
+                auto conflict_size = conflict_end - conflict_start + 1;
+
+                // NB: conflict_start and conflict_end are in packet coordinates, but
+                // conflicting_bits uses field coordinates, so we do the conversion here.
+                conflicting_bits.setrange(extract_size - conflict_end - 1, conflict_size);
+            }
+        }
     }
 
-    if (!have_conflict) return new std::vector<const FieldSliceExtractInfo*>({this});
+    if (!conflicting_bits.popcount()) return new std::vector<const FieldSliceExtractInfo*>({this});
 
     auto result = new std::vector<const FieldSliceExtractInfo*>();
 
@@ -1030,12 +1147,21 @@ ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
     std::reverse(can_end_indices_.begin(), can_end_indices_.end());
 }
 
-const IR::BFN::ParserState* ClotCandidate::state() const {
-    return (*(extract_infos.begin()))->state();
+ordered_set<const IR::BFN::ParserState*> ClotCandidate::states() const {
+    return (*(extract_infos.begin()))->states();
 }
 
-unsigned ClotCandidate::state_bit_offset() const {
-    return (*(extract_infos.begin()))->state_bit_offset();
+gress_t ClotCandidate::thread() const {
+    return (*Keys(state_bit_offsets()).begin())->thread();
+}
+
+const ordered_map<const IR::BFN::ParserState*, unsigned>&
+ClotCandidate::state_bit_offsets() const {
+    return (*(extract_infos.begin()))->state_bit_offsets();
+}
+
+unsigned ClotCandidate::bit_in_byte_offset() const {
+    return (*(extract_infos.begin()))->bit_in_byte_offset();
 }
 
 const std::vector<const FieldSliceExtractInfo*>& ClotCandidate::extracts() const {
@@ -1063,7 +1189,18 @@ bool ClotCandidate::operator<(const ClotCandidate& other) const {
 std::string ClotCandidate::print() const {
     std::stringstream out;
 
-    out << "CLOT candidate " << id << " (state " << state()->name << "):" << std::endl;
+    out << "CLOT candidate " << id << ":" << std::endl;
+
+    bool first_state = true;
+    for (auto* state : states()) {
+        if (first_state)
+            out << "  states: ";
+        else
+            out << "          ";
+
+        first_state = false;
+        out << state->name << std::endl;
+    }
 
     TablePrinter tp(out, {"Fields", "Bits", "Property"}, TablePrinter::Align::CENTER);
 
@@ -1110,10 +1247,9 @@ class GreedyClotAllocator : public Visitor {
     Logging::FileLog* log = nullptr;
 
  public:
-    explicit GreedyClotAllocator(ClotInfo& clotInfo,
-                                 const CollectParserInfo& parserInfo) :
+    explicit GreedyClotAllocator(ClotInfo& clotInfo) :
         clotInfo(clotInfo),
-        parserInfo(parserInfo) { }
+        parserInfo(clotInfo.parserInfo) { }
 
  private:
     typedef std::map<const Pseudoheader*,
@@ -1121,8 +1257,9 @@ class GreedyClotAllocator : public Visitor {
                      Pseudoheader::Less> FieldSliceExtractInfoMap;
     typedef std::set<const ClotCandidate*, ClotCandidate::Greater> ClotCandidateSet;
 
-    /// Generates a FieldSliceExtractInfo object for each field that is extracted in the subgraph
-    /// rooted at the given state, and can be part of a clot (@see ClotInfo::can_be_in_clot).
+    /// Generates a FieldSliceExtractInfo object for each field that is (1) extracted in the
+    /// subgraph rooted at the given state and (2) can be part of a clot (@see
+    /// ClotInfo::can_be_in_clot).
     ///
     /// Returns @arg result, a map from pseudoheaders to fields to their FieldSliceExtractInfo
     /// instances.
@@ -1157,17 +1294,22 @@ class GreedyClotAllocator : public Visitor {
                           field->name);
 
                 auto max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
-                auto fei = new FieldSliceExtractInfo(state,
-                                                     static_cast<unsigned>(max_packet_offset),
-                                                     static_cast<unsigned>(bitrange.lo),
-                                                     field);
                 for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
-                    BUG_CHECK(!result->count(pseudoheader) ||
-                              !result->at(pseudoheader).count(field),
-                              "Field %s determined to be CLOT-eligible, but is extracted twice",
-                              field->name);
+                    if (result->count(pseudoheader) && result->at(pseudoheader).count(field)) {
+                        auto* fei = result->at(pseudoheader).at(field);
+                        fei->update(state,
+                                    static_cast<unsigned>(bitrange.lo),
+                                    static_cast<unsigned>(max_packet_offset));
+                    } else {
+                        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
+                        state_bit_offsets[state] = static_cast<unsigned>(bitrange.lo);
+                        auto fei =
+                            new FieldSliceExtractInfo(state_bit_offsets,
+                                                      static_cast<unsigned>(max_packet_offset),
+                                                      field);
 
-                    (*result)[pseudoheader][field] = fei;
+                        (*result)[pseudoheader][field] = fei;
+                    }
                 }
             }
         }
@@ -1223,12 +1365,11 @@ class GreedyClotAllocator : public Visitor {
             const std::map<const PHV::Field*,
                            std::vector<const FieldSliceExtractInfo*>>& extract_map) const {
         // Invariant: `extracts` forms a valid prefix for a potential CLOT candidate. When
-        // `extracts` is non-empty, `state` is the parser state for the potential CLOT
-        // candidate, and `next_offset` is the expected state-relative offset for the next
-        // field slice.
+        // `extracts` is non-empty, `next_offset_by_state` maps each parser state for the potential
+        // CLOT candidate to the expected state-relative offset for the next field slice. When
+        // `extracts` is empty, then so is `next_offset_by_state`.
         std::vector<const FieldSliceExtractInfo*> extracts;
-        const IR::BFN::ParserState* state = nullptr;
-        unsigned next_offset = 0;
+        ordered_map<const IR::BFN::ParserState*, unsigned> next_offset_by_state;
 
         LOG6("Finding CLOT candidates for pseudoheader " << pseudoheader->id);
         for (auto field : pseudoheader->fields) {
@@ -1243,34 +1384,58 @@ class GreedyClotAllocator : public Visitor {
                     LOG6("  Contiguity break");
                     try_add_clot_candidate(result, pseudoheader, extracts);
                     extracts.clear();
+                    next_offset_by_state.clear();
                 }
 
                 continue;
             }
 
             for (auto extract_info : extract_map.at(field)) {
-                if (!extracts.empty()
-                        && (extract_info->state() != state
-                            || extract_info->state_bit_offset() != next_offset)) {
-                    // We have a break in contiguity. Create a new CLOT candidate, if possible, and
-                    // set things up for the next candidate.
-                    LOG6("  Contiguity break");
-                    try_add_clot_candidate(result, pseudoheader, extracts);
-                    extracts.clear();
-                }
-
                 if (extracts.empty()) {
                     // Starting a new candidate.
                     if (!clotInfo.can_start_clot(extract_info)) continue;
 
-                    state = extract_info->state();
-                    next_offset = extract_info->state_bit_offset();
+                    auto& state_bit_offsets = extract_info->state_bit_offsets();
+                    next_offset_by_state.insert(state_bit_offsets.begin(),
+                                                state_bit_offsets.end());
+                } else {
+                    // We have a break in contiguity if the current extract_info is extracted in a
+                    // different set of states than the current candidate or if the current
+                    // extract_info has any state-relative bit offsets that are different from what
+                    // we are expecting.
+                    auto& extract_state_bit_offsets = extract_info->state_bit_offsets();
+
+                    bool have_contiguity_break =
+                        extract_state_bit_offsets.size() != next_offset_by_state.size();
+                    if (!have_contiguity_break) {
+                        for (auto& entry : next_offset_by_state) {
+                            auto& state = entry.first;
+                            auto next_offset = entry.second;
+
+                            have_contiguity_break =
+                                !extract_state_bit_offsets.count(state)
+                                || extract_state_bit_offsets.at(state) != next_offset;
+
+                            if (have_contiguity_break) break;
+                        }
+                    }
+
+                    if (have_contiguity_break) {
+                        // We have a break in contiguity. Create a new CLOT candidate, if possible,
+                        // and set things up for the next candidate.
+                        LOG6("  Contiguity break");
+                        try_add_clot_candidate(result, pseudoheader, extracts);
+                        extracts.clear();
+                        next_offset_by_state.clear();
+                    }
                 }
 
                 // Add to the existing prefix.
                 extracts.push_back(extract_info);
                 auto slice = extract_info->slice();
-                next_offset += slice->size();
+                for (auto& next_offset : Values(next_offset_by_state)) {
+                    next_offset += slice->size();
+                }
 
                 LOG6("  Added " << slice->shortString() << " to CLOT candidate prefix");
             }
@@ -1289,7 +1454,7 @@ class GreedyClotAllocator : public Visitor {
     //   - All extracted field slices are contiguous.
     //   - No pair of extracted field slices have a deparserNoPack constraint.
     //   - Neither the first nor last field in the candidate is modified or is a checksum.
-    //   - The extracts all come from the same parser state.
+    //   - The fields in the candidate are all extracted in the same set of parser states.
     ClotCandidateSet* find_clot_candidates(FieldSliceExtractInfoMap* extract_info_map) {
         auto result = new ClotCandidateSet();
 
@@ -1309,15 +1474,27 @@ class GreedyClotAllocator : public Visitor {
     /// candidate.
     ClotCandidateSet* adjust_for_allocation(const ClotCandidate* to_adjust,
                                             const ClotCandidate* allocated) const {
-        LOG6("Adjusting candidate " << to_adjust->id
-             << " (state " << to_adjust->state()->name << ")");
+        LOG5("");
+        LOG5("  Adjusting candidate " << to_adjust->id << " for allocated CLOT");
 
         ClotCandidateSet* result = new ClotCandidateSet();
 
-        // If the states are mutually exclusive, then no need to adjust.
-        const auto& graph = parserInfo.graph(parserInfo.parser(allocated->state()));
-        if (graph.is_mutex(to_adjust->state(), allocated->state())) {
-            LOG6("  No need to adjust: states are mutually exclusive");
+        // If the states from one candidate are mutually exclusive with the states from another,
+        // then no need to adjust.
+        const auto to_adjust_states = to_adjust->states();
+        const auto allocated_states = allocated->states();
+        const auto& graph = parserInfo.graph(parserInfo.parser(*allocated_states.begin()));
+        bool mutually_exclusive = true;
+        for (auto& to_adjust_state : to_adjust_states) {
+            for (auto& allocated_state : allocated_states) {
+                mutually_exclusive = graph.is_mutex(to_adjust_state, allocated_state);
+                if (!mutually_exclusive) break;
+            }
+            if (!mutually_exclusive) break;
+        }
+
+        if (mutually_exclusive) {
+            LOG5("    No need to adjust: states are mutually exclusive");
             result->insert(to_adjust);
             return result;
         }
@@ -1325,21 +1502,42 @@ class GreedyClotAllocator : public Visitor {
         // Slow path: if the candidates conflict, delegate to add_clot_candidates.
         // Fast path: if the candidates do not conflict, then we just return a singleton containing
         //            the candidate that we are adjusting.
-        bool conflict = false;
+        bool have_conflict = false;
         std::map<const PHV::Field*, std::vector<const FieldSliceExtractInfo*>> extract_map;
         for (auto extract : to_adjust->extracts()) {
+            bool extract_conflicts = false;
             auto non_conflicts = extract->remove_conflicts(parserInfo, allocated);
-            conflict |= non_conflicts->empty();
+            if (non_conflicts->empty()) {
+                extract_conflicts = true;
+
+                LOG5("    Removed " << extract->slice()->shortString());
+            }
 
             for (auto adjusted : *non_conflicts) {
-                conflict |= extract != adjusted;
+                extract_conflicts |= extract != adjusted;
                 extract_map[extract->slice()->field()].push_back(adjusted);
+            }
+
+            have_conflict |= extract_conflicts;
+            if (LOGGING(5) && extract_conflicts && !non_conflicts->empty()) {
+                LOG5("    Replaced " << extract->slice()->shortString());
+
+                bool first_replacement = true;
+                for (auto adjusted : *non_conflicts) {
+                    LOG5("       "
+                        << (first_replacement ? "with: " : "      ")
+                        << adjusted->slice()->shortString());
+                    first_replacement = false;
+                }
             }
         }
 
-        if (!conflict) result->insert(to_adjust);
-        else if (!extract_map.empty())
+        if (!have_conflict) {
+            LOG5("    No need to adjust: candidate does not conflict with allocated CLOT");
+            result->insert(to_adjust);
+        } else if (!extract_map.empty()) {
             add_clot_candidates(result, to_adjust->pseudoheader, extract_map);
+        }
 
         return result;
     }
@@ -1357,6 +1555,11 @@ class GreedyClotAllocator : public Visitor {
         int best_size = 0;
         bool need_resize = false;
 
+        // Since the CLOT candidate looks the same (has the same contiguous sequence of field
+        // slices) in all parser states that it appears in, we can just work within a single such
+        // parser state.
+        const auto* state = *Keys(candidate->state_bit_offsets()).begin();
+
         const auto& extracts = candidate->extracts();
         for (auto start_idx : candidate->can_start_indices()) {
             auto start = extracts.at(start_idx)->trim_head_to_byte();
@@ -1368,16 +1571,17 @@ class GreedyClotAllocator : public Visitor {
             // minimum CLOT size of start_bit_offset.
 
             int start_bit_offset =
-                (start->state_bit_offset() + start->slice()->size() - 1) / 8 * 8;
+                (start->state_bit_offset(state) + start->slice()->size() - 1) / 8 * 8;
 
             for (auto end_idx : candidate->can_end_indices()) {
                 if (start_idx > end_idx) break;
 
                 auto end = extracts.at(end_idx)->trim_tail_to_byte();
-                int end_bit_offset = end->state_bit_offset();
+                int end_bit_offset = end->state_bit_offset(state);
                 if (end_bit_offset - start_bit_offset >= MAX_SIZE) continue;
 
-                int full_size = end_bit_offset + end->slice()->size() - start->state_bit_offset();
+                int full_size =
+                    end_bit_offset + end->slice()->size() - start->state_bit_offset(state);
 
                 int cur_size = std::min(MAX_SIZE, full_size);
 
@@ -1408,7 +1612,8 @@ class GreedyClotAllocator : public Visitor {
         auto end = resized->back() = resized->back()->trim_tail_to_byte();
 
         // Trim last extract if we exceed the maximum CLOT length.
-        int size = end->state_bit_offset() + end->slice()->size() - start->state_bit_offset();
+        int size =
+            end->state_bit_offset(state) + end->slice()->size() - start->state_bit_offset(state);
         if (size > MAX_SIZE) {
             int trim_amount = size - MAX_SIZE;
 
@@ -1462,16 +1667,22 @@ class GreedyClotAllocator : public Visitor {
             candidate = resized;
 
             // Allocate the candidate.
-            auto state = candidate->state();
-            auto state_bit_offset = candidate->state_bit_offset();
-            BUG_CHECK(state_bit_offset % 8 == 0,
+            BUG_CHECK(candidate->bit_in_byte_offset() == 0,
                       "CLOT candidate is not byte-aligned\n%s", candidate->print());
-            auto gress = state->thread();
+            auto states = candidate->states();
+            auto gress = candidate->thread();
 
             auto clot = new Clot(gress);
-            LOG3("Allocating CLOT " << clot->tag << " to candidate " << candidate->id
-                 << " (state " << state->name << ")");
-            clotInfo.add_clot(clot, state);
+            if (LOGGING(3)) {
+                LOG3("Allocating CLOT " << clot->tag << " to candidate " << candidate->id);
+
+                bool first_state = true;
+                for (auto* state : states) {
+                    LOG3("  " << (first_state ? "states: " : "        ") << state->name);
+                    first_state = false;
+                }
+            }
+            clotInfo.add_clot(clot, states);
 
             // Add field slices.
             int offset = 0;
@@ -1523,11 +1734,11 @@ class GreedyClotAllocator : public Visitor {
                 // We've allocated the last CLOT available in the gress. Remove all other
                 // candidates for the gress.
                 for (auto candidate : *candidates) {
-                    if (candidate->state()->thread() != gress)
+                    if (candidate->thread() != gress)
                         new_candidates->insert(candidate);
                 }
             } else {
-                auto graph = parserInfo.graphs().at(parserInfo.parser(state));
+                auto graph = parserInfo.graphs().at(parserInfo.parser(*states.begin()));
                 auto full_states = clotInfo.find_full_states(graph);
                 if (!full_states->empty()) {
                     if (LOGGING(6)) {
@@ -1546,11 +1757,13 @@ class GreedyClotAllocator : public Visitor {
                 ClotCandidateSet removed_candidates;
 
                 for (auto other_candidate : *candidates) {
-                    if (full_states->count(other_candidate->state())) {
-                        // Candidate's state is full. Remove from candidacy.
+                    if (intersects(*full_states, other_candidate->states())) {
+                        // Candidate has a full state. Remove from candidacy.
                         if (LOGGING(3)) removed_candidates.insert(other_candidate);
                         continue;
                     }
+
+                    if (candidate == other_candidate) continue;
 
                     auto adjusted = adjust_for_allocation(other_candidate, candidate);
                     new_candidates->insert(adjusted->begin(), adjusted->end());
@@ -1559,9 +1772,15 @@ class GreedyClotAllocator : public Visitor {
                 if (LOGGING(3) && !removed_candidates.empty()) {
                     LOG3("Removed the following from candidacy to satisfy the "
                          "max-CLOTs-per-packet constraint:");
-                    for (auto candidate : removed_candidates)
-                        LOG3("  Candidate " << candidate->id
-                             << " (state " << candidate->state()->name << ")");
+                    for (auto candidate : removed_candidates) {
+                        LOG3("  Candidate " << candidate->id);
+
+                        bool first_state = true;
+                        for (auto* state : candidate->states()) {
+                             LOG3("  " << (first_state ? "states: " : "        ") << state->name);
+                             first_state = false;
+                        }
+                    }
                     LOG3("");
                 }
             }
@@ -1569,6 +1788,7 @@ class GreedyClotAllocator : public Visitor {
             candidates = new_candidates;
 
             if (LOGGING(3)) {
+                LOG3("");
                 if (candidates->empty()) {
                     LOG3("CLOT allocation complete: no remaining CLOT candidates.");
                 } else {
@@ -1628,7 +1848,7 @@ class GreedyClotAllocator : public Visitor {
         if (auto *pipe = root->to<IR::BFN::Pipe>())
             Logging::FileLog parserLog(pipe->id, "parser.log");
 
-        LOG2(clotInfo.print(parserInfo));
+        LOG2(clotInfo.print());
 
         return root;
     }
@@ -1643,13 +1863,14 @@ class GreedyClotAllocator : public Visitor {
     }
 };
 
-AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses) {
+AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses) :
+clotInfo(clotInfo) {
     addPasses({
         &uses,
-        &parserInfo,
+        &clotInfo.parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new GreedyClotAllocator(clotInfo, parserInfo)
+        new GreedyClotAllocator(clotInfo)
     });
 }
 
@@ -1671,7 +1892,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
     if (pipe)
         Logging::FileLog parserLog(pipe->id, "parser.log");
-    LOG1(clotInfo.print(clotAllocator->getParserInfo(), &phv));
+    LOG1(clotInfo.print(&phv));
 
     return root;
 }

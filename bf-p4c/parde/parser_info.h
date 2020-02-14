@@ -166,6 +166,19 @@ class ParserGraphImpl : public DirectedGraph {
                !is_loop_reachable(b, a);
     }
 
+    /// Determines whether the states in the given set are all mutually exclusive on all paths
+    /// through the parser graph.
+    bool is_mutex(const std::set<const State*>& states) const {
+        for (auto it1 = states.begin(); it1 != states.end(); ++it1) {
+            for (auto it2 = it1; it2 != states.end(); ++it2) {
+                if (it1 == it2) continue;
+                if (!is_mutex(*it1, *it2)) return false;
+            }
+        }
+
+        return true;
+    }
+
     bool is_mutex(const Transition* a, const Transition* b) const {
         if (a == b)
             return false;
@@ -352,6 +365,7 @@ class CollectParserInfoImpl : public PardeInspector {
  public:
     const ordered_map<const Parser*, GraphType*>& graphs() const { return _graphs; }
     const GraphType& graph(const Parser* p) const { return *(_graphs.at(p)); }
+    const GraphType& graph(const State* s) const { return graph(parser(s)); }
 
     const Parser* parser(const State* state) const {
         return _state_to_parser.at(state);
@@ -403,7 +417,7 @@ class CollectParserInfoImpl : public PardeInspector {
     //
     // DANGER: This method assumes the parser graph is a DAG.
     const std::set<int>* get_all_shift_amounts(const State* dst) const {
-        return get_all_shift_amounts(graph(parser(dst)).root, dst);
+        return get_all_shift_amounts(graph(dst).root, dst);
     }
 
     /// @return the maximum possible shift amount, in bits, of all paths from the start state to

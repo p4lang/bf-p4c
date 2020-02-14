@@ -67,11 +67,13 @@ class Pseudoheader : public LiftLess<Pseudoheader> {
 };
 
 class ClotInfo {
+    friend class AllocateClot;
     friend class CollectClotInfo;
     friend class ClotCandidate;
     friend class GreedyClotAllocator;
 
     PhvUse &uses;
+    CollectParserInfo parserInfo;
 
     /// Maps parser states to all fields extracted in that state, regardless of source.
     ordered_map<const IR::BFN::ParserState*,
@@ -98,7 +100,9 @@ class ClotInfo {
               std::vector<const IR::BFN::EmitChecksum*>> field_to_checksum_updates_;
 
     std::vector<Clot*> clots_;
-    std::map<const Clot*, std::pair<gress_t, cstring>, Clot::Less> clot_to_parser_state_;
+    std::map<const Clot*,
+             std::pair<gress_t, std::set<cstring>>,
+             Clot::Less> clot_to_parser_states_;
     std::map<gress_t, std::map<cstring, std::set<const Clot*>>> parser_state_to_clots_;
 
     std::map<const IR::BFN::ParserState*,
@@ -147,9 +151,9 @@ class ClotInfo {
     }
 
  public:
-    const std::map<const Clot*, std::pair<gress_t, cstring>, Clot::Less>&
-    clot_to_parser_state() const {
-        return clot_to_parser_state_;
+    const std::map<const Clot*, std::pair<gress_t, std::set<cstring>>, Clot::Less>&
+    clot_to_parser_states() const {
+        return clot_to_parser_states_;
     }
 
     std::map<cstring, std::set<const Clot*>>& parser_state_to_clots(gress_t gress) {
@@ -285,10 +289,16 @@ class ClotInfo {
         }
     }
 
-    void add_clot(Clot* cl, const IR::BFN::ParserState* state) {
-        clots_.push_back(cl);
-        clot_to_parser_state_[cl] = {state->thread(), state->name};
-        parser_state_to_clots_[state->thread()][state->name].insert(cl);
+    void add_clot(Clot* clot, ordered_set<const IR::BFN::ParserState*> states) {
+        clots_.push_back(clot);
+
+        std::set<cstring> state_names;
+        for (auto* state : states) {
+            state_names.insert(state->name);
+            parser_state_to_clots_[clot->gress][state->name].insert(clot);
+        }
+
+        clot_to_parser_states_[clot] = {clot->gress, state_names};
     }
 
     /// @return a set of parser states to which no more CLOTs may be allocated,
@@ -312,15 +322,39 @@ class ClotInfo {
          // one's source list is a subset of the update?
     }
 
-    // Fields extracted in multiple mutex states can be allocated to CLOT
-    // though it complicates things. We can allocate them to their own
-    // CLOT or combine them with other fields in their states and create
-    // synthetic POV bits so that we don't deparse them multiple times at
-    // deparser. TODO(zma)
-    bool is_extracted_in_multiple_states(const PHV::Field* f) const {
-        return field_to_parser_states_.count(f) &&
-            field_to_parser_states_.at(f).size() > 1;
+    /// Determines whether a field is extracted in multiple states that are not mutually exclusive.
+    bool is_extracted_in_multiple_non_mutex_states(const PHV::Field* f) const {
+        // If we have no extracts for the field (or no states that extract the field), then it's
+        // vacuously true that all extracts are in mutually exclusive states.
+        if (!field_to_parser_states_.count(f)) return false;
+
+        auto& states_to_sources = field_to_parser_states_.at(f);
+        if (states_to_sources.size() == 0) return false;
+
+        // Collect the states in a set and check that they all come from the same parser.
+        const IR::BFN::Parser* parser = nullptr;
+        std::set<const IR::BFN::ParserState*> states;
+        for (auto state : Keys(states_to_sources)) {
+            states.insert(state);
+
+            auto* cur_parser = parserInfo.parser(state);
+            if (parser == nullptr) {
+                parser = cur_parser;
+                BUG_CHECK(parser, "An extract of %1% was associated with a null parser", f);
+            }
+
+            BUG_CHECK(parser == cur_parser,
+                      "Extracts of %1% don't all come from the same parser",
+                      f);
+        }
+
+        // See if these states are mutually exclusive.
+        return !parserInfo.graph(parser).is_mutex(states);
     }
+
+    /// Determines whether a field has the same bit-in-byte offset (i.e., the same bit offset,
+    /// modulo 8) in all parser states that extract the field.
+    bool has_consistent_bit_in_byte_offset(const PHV::Field* field) const;
 
     /// Determines whether a field can be part of a CLOT. This can include
     /// fields that are PHV-allocated.
@@ -479,7 +513,7 @@ class ClotInfo {
     /// @return true if the given @arg slice is covered by the given @arg clot.
     bool clot_covers_slice(const Clot* clot, const PHV::FieldSlice* slice) const;
 
-    std::string print(const CollectParserInfo& parserInfo, const PhvInfo* phvInfo = nullptr) const;
+    std::string print(const PhvInfo* phvInfo = nullptr) const;
 
  private:
     void add_alias(const PHV::Field* f1, const PHV::Field* f2);
@@ -718,12 +752,10 @@ class CollectClotInfo : public Inspector {
 };
 
 class AllocateClot : public PassManager {
-    CollectParserInfo parserInfo;
+    ClotInfo clotInfo;
 
  public:
-    const CollectParserInfo& getParserInfo() const { return parserInfo; }
-
-    explicit AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses);
+    explicit AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses);
 };
 
 /**
@@ -731,14 +763,12 @@ class AllocateClot : public PassManager {
  * https://docs.google.com/document/d/1dWLuXoxrdk6ddQDczyDMksO8L_IToOm21QgIjHaDWXU/edit#bookmark=id.42g1j75kjqs5
  */
 class ClotAdjuster : public Visitor {
-    const AllocateClot* clotAllocator;
     ClotInfo& clotInfo;
     const PhvInfo& phv;
     Logging::FileLog* log = nullptr;
 
  public:
-    ClotAdjuster(const AllocateClot* clotAllocator, ClotInfo& clotInfo, const PhvInfo& phv)
-        : clotAllocator(clotAllocator), clotInfo(clotInfo), phv(phv) { }
+    ClotAdjuster(ClotInfo& clotInfo, const PhvInfo& phv) : clotInfo(clotInfo), phv(phv) { }
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     const IR::Node *apply_visitor(const IR::Node* root, const char*) override;
