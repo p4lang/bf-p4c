@@ -19,6 +19,7 @@ usage() {
     echo "   --build-dir <builddir>"
     echo "   --install-prefix <install_prefix>"
     echo "   --barefoot-internal"
+    echo "   -j <numjobs>"
 }
 
 
@@ -44,6 +45,10 @@ while [ $# -gt 0 ]; do
             ;;
         --barefoot-internal)
             barefoot_internal="-DENABLE_BAREFOOT_INTERNAL=ON"
+            ;;
+	-j)
+            parallel_make="$2"
+            shift;
             ;;
         -h|--help)
             usage ""
