@@ -1054,8 +1054,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         } else if (p->stage == rv->stage) {
             if (options.forced_placement)
                 continue;
-            if (deps->happens_phys_before(p->table, rv->table)
-                && !mutex.action(p->table, rv->table)) {
+            if (deps->happens_phys_before(p->table, rv->table)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and table advances stage");
                 rv->stage_advance_log = "dependency on table " + p->table->name;
@@ -1075,8 +1074,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 for (auto ctbl : tables_with_shared) {
                     // FIXME -- once we can put shared attached tables in different stages, we
                     // probably don't want to do this any more...
-                    if (deps->happens_phys_before(p->table, ctbl)
-                        && !mutex.action(p->table, ctbl)) {
+                    if (deps->happens_phys_before(p->table, ctbl)) {
                         rv->stage++;
                         LOG2("  - dependency between " << p->table->name << " and " <<
                              ctbl->name << " advances stage");

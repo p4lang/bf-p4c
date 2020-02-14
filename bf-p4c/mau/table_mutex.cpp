@@ -107,50 +107,6 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
 
     // Update the non_mutex entry for this table to account for the successors we just computed.
     non_mutex[table_ids.at(tbl)] |= succ;
-
-    // The rest of this method computes action_mutex, which detects whether two tables that are not
-    // mutually exclusive in total can share an ActionProfile.  Honestly this should be updated in
-    // a different pull request to be for all indirect stateful tables
-    bool miss_mutex = false;
-    const IR::MAU::Action *default_act = nullptr;
-    if (!tbl->gateway_only()) {
-        // Need to ensure that default action is constant
-        int allowed_defaults = 0;
-        for (auto act : Values(tbl->actions)) {
-            if (act->default_allowed)
-                allowed_defaults++;
-        }
-
-        for (auto act : Values(tbl->actions)) {
-            if (!act->init_default) continue;
-            // Ensure that the miss action is a noop
-            if (act->action.size() == 0 && allowed_defaults == 1) {
-                miss_mutex = true;
-                default_act = act;
-            }
-        }
-    }
-
-    if (!miss_mutex)
-        return;
-
-    cstring next_chain_name;
-    if (tbl->action_chain() && !miss_mutex_action_chain(tbl, default_act, next_chain_name))
-        return;
-
-    // Specific miss case to be handled here:
-    bitvec tables_not_on_miss;
-    bitvec tables_on_miss;
-    for (auto &n : tbl->next) {
-        if (n.first == "$miss" || n.first == next_chain_name) {
-            for (auto t : n.second->tables)
-                tables_on_miss |= table_succ[t];
-        } else {
-            for (auto t : n.second->tables)
-                tables_not_on_miss |= table_succ[t];
-        }
-    }
-    action_mutex[table_ids[tbl]] |= tables_on_miss - tables_not_on_miss;
 }
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
@@ -187,30 +143,51 @@ bool TablesMutuallyExclusive::operator()(const IR::MAU::Table *a, const IR::MAU:
     return !non_mutex(table_ids.at(a), table_ids.at(b));
 }
 
-bool TablesMutuallyExclusive::action(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-    BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
-    BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
-    return action_mutex(table_ids.at(a), table_ids.at(b));
+std::vector<const IR::MAU::Action*>
+SharedIndirectAttachedAnalysis::get_indirect_actions(const IR::MAU::Table *a,
+                                                     const IR::MAU::AttachedMemory *am) {
+    std::vector<const IR::MAU::Action*> attached_actions;
+    if (am->is<IR::MAU::ActionData>() || am->is<IR::MAU::Selector>()) {
+        safe_vector<ActionData::Format::Use> action_format_vec;
+        if (auto res = a->resources) {
+            action_format_vec.push_back(res->action_format);
+        } else {
+            auto action_format_map = lc.total_action_formats.at(a->name);
+            if (action_format_map.count(ActionData::NORMAL)) {
+                action_format_vec = action_format_map.at(ActionData::NORMAL);
+            }
+        }
+        for (auto action_format : action_format_vec) {
+            for (auto act : Values(a->actions)) {
+                if (action_format.if_action_has_action_data(act->name)) {
+                    attached_actions.push_back(act);
+                 }
+            }
+        }
+    } else if (am->is<IR::MAU::Counter>() || am->is<IR::MAU::Meter>() ||
+               am->is<IR::MAU::StatefulAlu>()) {
+        for (auto act : Values(a->actions)) {
+            if (act->stateful_call(am->name)) {
+                attached_actions.push_back(act);
+            }
+        }
+    }
+    return attached_actions;
 }
 
-bool SharedIndirectAttachedAnalysis::check_attach_action_mutex(const IR::MAU::Table *a,
-                                                              const IR::MAU::Table *b,
-                                                              const IR::MAU::AttachedMemory *am) {
-    if (am->is<IR::MAU::ActionData>() || am->is<IR::MAU::Selector>()) {
-        return (mutex.action(a, b));
-    }
-    const IR::MAU::Action* action_a = nullptr;
-    const IR::MAU::Action* action_b = nullptr;
-    for (auto act : Values(a->actions)) {
-        if (act->stateful_call(am->name)) {
-            action_a = act;
-            for (auto act : Values(b->actions)) {
-                if (act->stateful_call(am->name)) {
-                    action_b = act;
-                    if (!action_mutex(action_a, action_b)) {
-                        return false;
-                    }
-                }
+bool SharedIndirectAttachedAnalysis::check_if_can_share(const IR::MAU::Table *a,
+                                                        const IR::MAU::Table *b,
+                                                        const IR::MAU::AttachedMemory *am) {
+    if (mutex(a, b)) {
+        return true;
+    } else if (ignore.ignore_deps(a, b)) {
+        bitvec am_tbl_bv;
+        am_tbl_bv.setbit(table_ids.at(b));
+        _mutex_through_ignore[table_ids.at(a)] |= am_tbl_bv;
+    } else {
+        for (auto act_a : get_indirect_actions(a, am)) {
+            for (auto act_b : get_indirect_actions(b, am)) {
+                if (!action_mutex(act_a, act_b)) return false;
             }
         }
     }
@@ -222,22 +199,13 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
     if (am->direct) return false;
     auto *tbl = findContext<IR::MAU::Table>();
     for (auto am_tbl : backend_users[am]) {
-        if (tbl == am_tbl)  {
+        if (tbl == am_tbl)
             continue;
-        } else if (mutex(tbl, am_tbl)) {
+        if (check_if_can_share(tbl, am_tbl, am)) {
             table_sharing_attached[tbl].insert(am_tbl);
             continue;
-        } else if (ignore.ignore_deps(tbl, am_tbl)) {
-            bitvec am_tbl_bv;
-            am_tbl_bv.setbit(table_ids.at(am_tbl));
-            _mutex_through_ignore[table_ids.at(tbl)] |= am_tbl_bv;
-            table_sharing_attached[tbl].insert(am_tbl);
-            continue;
-        } else if (check_attach_action_mutex(tbl, am_tbl, am)) {
-           table_sharing_attached[tbl].insert(am_tbl);
-           continue;
         } else {
-            ::error("table %1% and table %2% cannot share %3% because use of the %3% is not "
+           ::error("table %1% and table %2% cannot share %3% because use of the %3% is not "
                     "mutually exclusive", tbl->externalName(), am_tbl->externalName(), am);
         }
     }

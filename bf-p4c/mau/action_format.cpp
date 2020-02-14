@@ -2150,6 +2150,11 @@ cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int b
     return rv;
 }
 
+bool Format::Use::if_action_has_action_data(cstring action_name) const {
+    if (alu_positions.at(action_name).size()) return true;
+    return false;
+}
+
 const RamSection *Format::Use::build_locked_in_sect() const {
     const RamSection *rv = new RamSection(IMMEDIATE_BITS);
     for (auto &alu_pos : locked_in_all_actions_alu_positions) {

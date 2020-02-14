@@ -906,6 +906,7 @@ class Format {
             locked_in_all_actions_alu_positions.clear();
             locked_in_all_actions_bus_inputs = {{ bitvec(), bitvec(), bitvec() }};
         }
+        bool if_action_has_action_data(cstring action_name) const;
 
         // For templated methods, the declaration has to be in the same location as the
         // implementation?  C++ is weird

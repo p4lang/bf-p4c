@@ -4,6 +4,8 @@
 #include <map>
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/action_mutex.h"
+#include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/mau/resource.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
@@ -89,11 +91,6 @@ class TablesMutuallyExclusive : public MauInspector {
     /// control flow. A value of 0 indicates mutual exclusion.
     SymBitMatrix                                non_mutex;
 
-    /// The computed table-action mutual-exclusion relation. This is a matrix keyed on table IDs. A
-    /// value of 1 indicates that at most one of the corresponding tables will execute a non-no-op
-    /// action.
-    SymBitMatrix                                action_mutex;
-
     void postorder(const IR::MAU::Table *tbl) override;
     void postorder(const IR::MAU::TableSeq *seq) override;
     bool miss_mutex_action_chain(const IR::MAU::Table *tbl, const IR::MAU::Action *default_act,
@@ -104,7 +101,6 @@ class TablesMutuallyExclusive : public MauInspector {
         table_ids.clear();
         rev_table_ids.clear();
         non_mutex.clear();
-        action_mutex.clear();
         name_to_tables.clear();
 
         // Populate auxiliary data structures.
@@ -118,7 +114,6 @@ class TablesMutuallyExclusive : public MauInspector {
 
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
-    bool action(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {
@@ -129,6 +124,7 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     const TablesMutuallyExclusive &mutex;
     const IgnoreTableDeps &ignore;
     const ActionMutuallyExclusive &action_mutex;
+    const LayoutChoices &lc;
     SymBitMatrix _mutex_through_ignore;
 
     std::map<const IR::MAU::Table *, int>    table_ids;
@@ -148,15 +144,17 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
         return rv;
     }
     bool preorder(const IR::MAU::AttachedMemory *) override;
-    bool check_attach_action_mutex(const IR::MAU::Table *a, const IR::MAU::Table *b,
+    bool check_if_can_share(const IR::MAU::Table *a, const IR::MAU::Table *b,
                                    const IR::MAU::AttachedMemory *am);
+    std::vector<const IR::MAU::Action*> get_indirect_actions(const IR::MAU::Table *a,
+                                                             const IR::MAU::AttachedMemory *am);
 
  public:
     bool mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     // for gtest
     bool if_table_share_attach(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m,
-         const IgnoreTableDeps &i, const ActionMutuallyExclusive &a) : mutex(m), ignore(i),
-         action_mutex(a) {}
+         const IgnoreTableDeps &i, const ActionMutuallyExclusive &a, const LayoutChoices  &lc) :
+         mutex(m), ignore(i), action_mutex(a), lc(lc) {}
 };
 #endif /* BF_P4C_MAU_TABLE_MUTEX_H_ */
