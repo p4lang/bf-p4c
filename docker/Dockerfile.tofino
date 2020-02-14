@@ -157,7 +157,8 @@ RUN (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
     (test "$BUILD_FOR" = "glass" && echo "Building for glass")
 
 WORKDIR /bfn/bf-p4c-compilers
-ENV LDFLAGS="-Wl,-s"
+ENV ((test "$BUILD_FOR" = "tofino" || test "$BUILD_FOR" = "release" || \
+      test "$BUILD_FOR" = "glass") && LDFLAGS="-Wl,-s")
 RUN (test "$BUILD_FOR" = "tofino" && /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                                  -DINSTALL_LIBDYNHASH=OFF \

@@ -1443,6 +1443,7 @@ p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
   ba101_07-simple_l3_ind_cntr
   extensions/p4_tests/p4_14/compile_only/p4c-2271.p4
+  ../glass/testsuite/p4_tests/mau/adb_issue_from_faster.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1464,7 +1465,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1862
 p4c_add_xfail_reason("tofino"
-  "AttributeError.*'Client' object has no attribute"
+  "AttributeError: Client instance has no attribute"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )
 
