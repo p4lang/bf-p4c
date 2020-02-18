@@ -110,6 +110,13 @@ class UnionFind {
         return *internal->begin();
     }
 
+    /// @returns the size of the set containing @x.
+    /// @exception if @x is not present.
+    size_t sizeOf(const T x) {
+        const Set* internal = internalFind(x);
+        return internal->size();
+    }
+
     /// @returns a copy of the set containing @x.
     /// @exception if @x is not present.
     Set* setOf(const T x) {

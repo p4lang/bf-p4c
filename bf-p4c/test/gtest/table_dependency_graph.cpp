@@ -102,12 +102,10 @@ V1Switch(parse(), verifyChecksum(), igrs(), my_egress(),
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, FieldDefUse& defuse,
-        bool new_multi_apply = false) {
+const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, FieldDefUse& defuse) {
     auto options = new BFN_Options();  // dummy options used in Pass
     PassManager quick_backend = {
-        new_multi_apply ? new MultipleApply2 : nullptr,
-        !new_multi_apply ? new MultipleApply(BackendOptions()) : nullptr,
+        new MultipleApply(BackendOptions()),
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         new InstructionSelection(*options, phv),
@@ -2458,7 +2456,7 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
-    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
     auto *find_dg = new FindDependencyGraph(phv, dg);
     test->pipe->apply(*find_dg);
     const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
@@ -2557,7 +2555,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges1) {
     PhvInfo phv(mutex);
     FieldDefUse defuse(phv);
 
-    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
 
     ControlPathwaysToTable ctrl_paths;
     test->pipe = test->pipe->apply(ctrl_paths);
@@ -2663,7 +2661,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges2) {
     PhvInfo phv(mutex);
     FieldDefUse defuse(phv);
 
-    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
 
     ControlPathwaysToTable ctrl_paths;
     test->pipe = test->pipe->apply(ctrl_paths);
@@ -2785,7 +2783,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges3) {
     PhvInfo phv(mutex);
     FieldDefUse defuse(phv);
 
-    test->pipe = runMockPasses(test->pipe, phv, defuse, true);
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
 
     ControlPathwaysToTable ctrl_paths;
     test->pipe = test->pipe->apply(ctrl_paths);

@@ -88,6 +88,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     profile_t init_apply(const IR::Node *root) override;
     void end_apply() override { placement_round++; };
     bool backtrack(trigger &) override;
+    void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *postorder(IR::MAU::TableSeq *) override;

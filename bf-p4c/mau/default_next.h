@@ -25,9 +25,9 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
                 // Disabling for JBay, really only used for the characterize power, and necessary
                 // to run until that pass is converted to a ControlFlowVisitor
                 if (!possible_nexts.at(prev).count(tbl) && long_branch_disabled) {
-                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied multiple times, "
-                            "and the next table information cannot correctly propagate through "
-                            "this multiple application", prev);
+                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
+                            "places, and the next-table information cannot correctly propagate "
+                            "through this multiple application", prev);
                     if (errors) errors->insert(prev->externalName()); } }
             possible_nexts[prev].insert(tbl); }
         prev_tbls.clear();
@@ -61,9 +61,9 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
         if (long_branch_disabled) {
             for (auto prev : prev_tbls) {
                 if (possible_nexts.count(prev)) {
-                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied multiple times, "
-                            "and the next table information cannot correctly propagate through "
-                            "this multiple application", prev);
+                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
+                            "places, and the next-table information cannot correctly propagate "
+                            "through this multiple application", prev);
                     if (errors) errors->insert(prev->externalName()); } } } }
 
  public:

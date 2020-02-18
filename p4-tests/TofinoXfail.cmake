@@ -520,9 +520,13 @@ p4c_add_xfail_reason("tofino"
 # BEGIN: XFAILS that match glass XFAILS
 
 p4c_add_xfail_reason("tofino"
-  "[Tt]able .* is applied multiple times, and the next table information cannot correctly propagate"
+  "[Tt]able .* is applied in multiple places, and the next-table information cannot correctly propagate"
   testdata/p4_16_samples/issue986-bmv2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_fail_next_ptr.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Table .* has incompatible next-table chains"
   ../glass/testsuite/p4_tests/arista/COMPILER-100/exclusive_cf_multiple_actions.p4
   )
 
@@ -1680,11 +1684,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Dominator pathway is incorrect"
-  extensions/p4_tests/p4_16/stf/serializer.p4
-)
-
 # power.p4 PTF failure
 # hw team uses it to do some manual testing
 # to measure the SRAM and TCAM power draw
@@ -1704,4 +1703,9 @@ p4c_add_xfail_reason("tofino"
   "tofino supports up to 12 stages, using 13"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-PNNC9-fixed.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-5PQ2c.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )

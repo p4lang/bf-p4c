@@ -487,7 +487,7 @@ TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
     )"));
 
     ASSERT_TRUE(test);
-    MultipleApply2 ma;
+    MultipleApply ma(BackendOptions());
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe = test->pipe->apply(mutex);

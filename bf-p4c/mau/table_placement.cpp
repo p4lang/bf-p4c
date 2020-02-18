@@ -119,14 +119,16 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
 
 struct TablePlacement::TableInfo {
     int uid = -1;
-    const IR::MAU::Table        *table;
-    const IR::MAU::TableSeq     *parent;
-    bitvec                      tables;  // this table and all tables control dependent on it
+    const IR::MAU::Table                        *table;
+    ordered_set<const IR::MAU::TableSeq *>      refs;
+    bitvec      parents;        // Tables that invoke seqs containing this table
+    bitvec      tables;         // this table and all tables control dependent on it
 };
 struct TablePlacement::TableSeqInfo {
     bool        root = false;
     int         uid = -1;
-    bitvec      tables;  // the tables in the seqence and their control dependent children
+    bitvec      parents;        // same as 'refs', as a bitvec
+    bitvec      tables;         // the tables in the seqence and their control dependent children
     ordered_set<const IR::MAU::Table *> refs;  // parent tables of this seq
 };
 
@@ -137,14 +139,17 @@ class TablePlacement::SetupInfo : public Inspector {
         auto &info = self.tblInfo[tbl];
         info.uid = self.tblInfo.size() - 1;
         info.table = tbl;
-        info.parent = getParent<IR::MAU::TableSeq>();
-        BUG_CHECK(info.parent, "parent of Table is not TableSeq");
+        auto *seq = getParent<IR::MAU::TableSeq>();
+        BUG_CHECK(seq, "parent of Table is not TableSeq");
+        info.refs.insert(seq);
         BUG_CHECK(!self.tblByName.count(tbl->name), "Duplicate tables named %s: %s and %s",
                   tbl->name, tbl, self.tblByName.at(tbl->name)->table);
         self.tblByName[tbl->name] = &info;
         return true; }
-    void revisit(const IR::MAU::Table *) override {
-        BUG("Table appears twice"); }
+    void revisit(const IR::MAU::Table *tbl) override {
+        auto *seq = getParent<IR::MAU::TableSeq>();
+        BUG_CHECK(seq, "parent of Table is not TableSeq");
+        self.tblInfo.at(tbl).refs.insert(seq); }
     void postorder(const IR::MAU::Table *tbl) override {
         auto &info = self.tblInfo.at(tbl);
         info.tables[info.uid] = 1;
@@ -524,6 +529,9 @@ TablePlacement::GatewayMergeChoices
         for (auto t : it->second->tables) {
             bool should_skip = false;
             ++idx;
+
+            // table in more than one seq -- can't merge with gateway controling (only) one.
+            if (tblInfo.at(t).refs.size() > 1) continue;
 
             if (it->second->deps[idx]) continue;
 
@@ -1547,7 +1555,8 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                     ready = false;
                     break; } }
             if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
-                BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
+                BUG_CHECK(!found_match && !gw_match_grp,
+                          "Table appears twice: %s", pl->table->name);
                 // Guaranteeing at most only one parent for linking a gateway
                 BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                           "multi-referenced table");
@@ -1560,7 +1569,8 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
             // This is based on the assumption that a table appears in a single table sequence
             for (auto t : n->tables) {
                 if (t == pl->table) {
-                    BUG_CHECK(!found_match && !gw_match_grp, "Table appears twice");
+                    BUG_CHECK(!found_match && !gw_match_grp,
+                              "Table appears twice: %s", t->name);
                     BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
                               "multi-referenced table");
                     found_match = true;
@@ -1943,23 +1953,11 @@ bool TablePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const P
     return placeable_table_found || non_cd_gw_tbls == 0;
 }
 
-IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
-    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
-        (ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
-    LOG1("table placement starting " << pipe->name);
-    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread) );
+void TablePlacement::initForPipe(const IR::BFN::Pipe *pipe, ordered_set<const GroupPlace *> &work) {
     tblInfo.clear();
     tblByName.clear();
     seqInfo.clear();
     attached_to.clear();
-    ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
-    const Placed *placed = nullptr;
-    /* all the state for a partial table placement is stored in the work
-     * set and placed list, which are const pointers, so we can backtrack
-     * by just saving a snapshot of a work set and corresponding placed
-     * list and restoring that point */
     size_t gress_index = 0;
     for (auto th : pipe->thread) {
         if (th.mau && th.mau->tables.size() > 0) {
@@ -1976,6 +1974,28 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         if (att.second.size() == 1) continue;
         if (att.first->direct)
             error("direct %s attached to multiple match tables", att.first); }
+    for (auto &seq : Values(seqInfo))
+        for (auto *tbl : seq.refs)
+            seq.parents.setbit(tblInfo.at(tbl).uid);
+    for (auto &tbl : Values(tblInfo))
+        for (auto *seq : tbl.refs)
+            tbl.parents |= seqInfo.at(seq).parents;
+}
+
+IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
+    LOG_FEATURE("stage_advance", 2, "Stage advance " <<
+        (ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
+    LOG1("table placement starting " << pipe->name);
+    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
+         TableTree("egress", pipe->thread[EGRESS].mau) <<
+         TableTree("ghost", pipe->ghost_thread) );
+    ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
+    const Placed *placed = nullptr;
+    /* all the state for a partial table placement is stored in the work
+     * set and placed list, which are const pointers, so we can backtrack
+     * by just saving a snapshot of a work set and corresponding placed
+     * list and restoring that point */
+    initForPipe(pipe, work);
 
     ordered_set<const IR::MAU::Table *> partly_placed;
     Backfill backfill(*this);
@@ -1990,6 +2010,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         if (!partly_placed.empty())
             LOG5("    partly_placed: " << partly_placed);
         safe_vector<const Placed *> trial;
+        bitvec  trial_tables;
         for (auto it = work.begin(); it != work.end();) {
             // DANGER -- we iterate over the work queue while possibly removing and
             // appending groups.  So care is required to not invalidate the iterator
@@ -2025,6 +2046,12 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 if (placed && placed->is_placed(t)) {
                     seq_placed[idx] = true;
                     LOG3("    - skipping " << t->name << " as its already done");
+                    continue; }
+                auto &info = tblInfo.at(t);
+                if (trial_tables[info.uid])
+                    continue;
+                if (info.parents && (!placed || (info.parents - placed->match_placed))) {
+                    LOG3("    - skipping " << t->name << " as a parent is not yet placed");
                     continue; }
 
                 if (options.table_placement_in_order) {
@@ -2114,6 +2141,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 for (auto pl : pl_vec) {
                     pl->group = grp;
                     trial.push_back(pl);
+                    trial_tables.setbit(tblInfo.at(pl->table).uid);
                 }
             }
             if (done) {

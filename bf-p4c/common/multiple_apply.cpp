@@ -1,296 +1,64 @@
 #include "multiple_apply.h"
-#include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/table_flow_graph.h"
+#include "bf-p4c/common/utils.h"
 
-/** The whole point of the MultipleApply PassManager is to both convert all multiple applies of
- *  an individual match table to one IR::MAU::Table node in the backend.  The extract_maupipe
- *  code creates an IR::MAU::Table object for each table apply, even if multiple apply calls
- *  refer to an individual match table.
- *
- *  It is possible for an individual Tofino table to share multiple applies for the following
- *  reasons:
- *    - the applies are called on mutually exclusive paths, i.e. the table can only be applied
- *      once per packet
- *    - the next table path from each of the applies is the exact same
- *
- *  Fortunately, the backend IR structure gives us some easy ability to quickly manipulate and
- *  determine if the applies have been called correctly.  The IR tree is made up of
- *  IR::MAU::TableSeq objects.  If these Table Sequences are mutually exclusive and equivalent,
- *  then one can be replaced with another
- *
- *  There is a final constraint that the compiler is currently enforcing.  The gateways for
- *  all table applies must be equivalent.  If they are not equivalent, then the gateways must
- *  be placed separately from these match tables, as the pathways into a particular table might
- *  be different.  This is enforced by UniqueGatewayChain.
- *
- *  Examples of what is possible and what is not possible are displayed within the gtest
- *  multiple_apply.cpp
- */
+void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table* tbl) {
+    // Ensure the table being visited was derived from an actual table in the P4 source.
+    if (tbl->match_table == nullptr) return;
 
-void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table *tbl) {
-    if (tbl->match_table == nullptr)
-        return;
-    if (mutex_apply.find(tbl->match_table) != mutex_apply.end()) {
-        for (auto paired_table : mutex_apply.at(tbl->match_table)) {
-            if (!mutex(tbl, paired_table)) {
+    if (mutex_apply.count(tbl->match_table)) {
+        // We've previously encountered other applications of this table. Check that this
+        // application is mutually exclusive with all those other applications.
+        for (auto other_table : mutex_apply.at(tbl->match_table)) {
+            if (!mutex(tbl, other_table)) {
                 ::error("%s: Not all applies of table %s are mutually exclusive",
-                        tbl->srcInfo, tbl->name);
+                        tbl->srcInfo, tbl->externalName());
                 errors.emplace(tbl->match_table->externalName());
             }
         }
     }
+
+    // Add this application to the set.
     mutex_apply[tbl->match_table].emplace(tbl);
 }
 
-Visitor::profile_t MultipleApply::EquivalentTableSequence::init_apply(const IR::Node *node) {
-    equiv_tails.clear();
-    unique_seqs.clear();
-    return MauInspector::init_apply(node);
+Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Node *root) {
+    auto result = MauInspector::init_apply(root);
+    self.duplicate_tables.clear();
+    return result;
 }
 
-/** Tries to find sequences that are equivalent. Saves them so that they can be replaced later
- */
-void MultipleApply::EquivalentTableSequence::postorder(const IR::MAU::TableSeq *seq) {
-    BUG_CHECK(unique_seqs.count(seq) == 0, "Inspector calling same seq more than once");
-    for (auto unique_seq : unique_seqs) {
-        if (auto len = tail_equiv(seq, unique_seq)) {
-            if (equiv_tails[seq].len < len) {
-                equiv_tails[seq].len = len;
-                equiv_tails[seq].other = unique_seq; }
-            if (equiv_tails[unique_seq].len < len) {
-                equiv_tails[unique_seq].len = len;
-                equiv_tails[unique_seq].other = seq; }
-        }
-    }
-    unique_seqs.emplace(seq);
-}
+void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
+    // Mark duplicate tables and check that tables that are supposed to be duplicates really are
+    // equivalent.
 
-/** Equivalence checks. If all match table in sequence A corresponds with all match table in
- *  sequence B, all gateways in sequence A correspond with all gateways in sequence B, and
- *  lastly, all next tables of each table in sequence A correspond with sequence B, then the
- *  the sequences are equivalent
- */
-bool MultipleApply::EquivalentTableSequence::equiv(const IR::MAU::Table *a,
-                                                   const IR::MAU::Table *b) {
-    if (a->match_table != b->match_table)
-        return false;
-    if (a->gateway_only() != b->gateway_only())
-        return false;
-    if (a->gateway_only()) {
-        if (a->name.startsWith("$tstail"))
-            // created by previous iteration of MergeTails, so don't do it again
-            return false;
-        if (a->gateway_rows.size() != b->gateway_rows.size())
-             return false;
-        for (size_t j = 0; j < a->gateway_rows.size(); j++) {
-            auto a_gw_row = a->gateway_rows[j];
-            auto b_gw_row = b->gateway_rows[j];
-            if (!equiv_gateway(a_gw_row.first, b_gw_row.first) ||
-                a_gw_row.second != b_gw_row.second)
-                return false;
-        }
-    }
+    // Add current table to the union-find data structure.
+    self.duplicate_tables.insert(tbl);
 
-    if (a->next.size() != b->next.size())
-        return false;
+    // Only proceed if the current table corresponds to an actual table at the P4 source level.
+    if (tbl->match_table == nullptr) return;
 
-    for (auto next_table : a->next) {
-        auto a_next = next_table.second;
-        auto a_next_name = next_table.first;
-        if (b->next.find(a_next_name) == b->next.end())
-            return false;
-        auto b_next = b->next.at(a_next_name);
-        if (!equiv(a_next, b_next))
-            return false;
-    }
+    BUG_CHECK(!tbl->gateway_only(),
+              "A Table object corresponding to a table at the P4 source level is unexpectedly "
+              "gateway-only: %1%",
+              tbl->externalName());
 
-    return true;
-}
-
-bool MultipleApply::EquivalentTableSequence::equiv(const IR::MAU::TableSeq *a,
-        const IR::MAU::TableSeq *b) {
-    if (a->tables.size() != b->tables.size())
-        return false;
-    for (size_t i = 0; i < a->tables.size(); i++) {
-        if (!equiv(a->tables[i], b->tables[i])) return false;
-    }
-    return true;
-}
-
-/** return the number of trailing identical tables for two sequences. */
-size_t MultipleApply::EquivalentTableSequence::tail_equiv(const IR::MAU::TableSeq *a,
-        const IR::MAU::TableSeq *b) {
-    size_t rv = 0;
-    auto atail = a->tables.end(), btail = b->tables.end();
-    while (rv < a->tables.size() && rv < b->tables.size() && equiv(*--atail, *--btail))
-        ++rv;
-    return rv;
-}
-
-/** This is a rather dumb check of equivalent gateways.  Instead of comparing the symbolic value
- *  of the gateway, this just directly compares that the gateway expression are identical
- */
-bool MultipleApply::EquivalentTableSequence::equiv_gateway(const IR::Expression *a,
-        const IR::Expression *b) {
-    if (a == nullptr && b == nullptr) return true;
-    if (a == nullptr || b == nullptr) return false;
-    if (*a == *b) return true;
-    if (typeid(*a) != typeid(*b)) return false;
-    if (auto a_bin = a->to<IR::Operation_Binary>()) {
-        auto b_bin = b->to<IR::Operation_Binary>();
-        return equiv_gateway(a_bin->left, b_bin->left)
-            && equiv_gateway(a_bin->right, b_bin->right);
-    }
-
-    if (auto a_rel = a->to<IR::Operation_Relation>()) {
-        auto b_rel = b->to<IR::Operation_Relation>();
-        return equiv_gateway(a_rel->left, b_rel->left)
-            && equiv_gateway(a_rel->right, b_rel->right);
-    }
-    return false;
-}
-
-const IR::BFN::Pipe *MultipleApply::MergeTails::preorder(IR::BFN::Pipe *pipe) {
-    if (equiv_tails.empty()) {
-        // if equiv_tails is empty, there's nothing to be done, so return immediately
-        prune();
-    } else {
-        LOG5("MergeTails size=" << equiv_tails.size() << ":\n" << pipe->thread[INGRESS].mau);
-        for (auto &el : equiv_tails)
-            LOG5("  [" << el.first->id << "] matches [" << el.second.other->id << "] "
-                 "len=" << el.second.len); }
-    return pipe;
-}
-
-const IR::BFN::Pipe *MultipleApply::MergeTails::postorder(IR::BFN::Pipe *pipe) {
-    LOG5("MergeTails after:\n" << pipe->thread[INGRESS].mau);
-    return pipe;
-}
-
-/** If the tail-end of this TableSeq is identical to the tail another TableSeq, then remove
- *  it and replace it with a trivial table that just runs the tail directly.  If (one of)
- *  the sequences IS the entire tail, then that sequence can be used directly in both places
- *  and an noop gateway is not needed when it is the entire sequence.  If both sequences
- *  are the whole tail (identical sequences), then they are just replaced by one.
- *  If when looking at another table with a common tail, that table has a longer tail with
- *  3rd table, then we do nothing, letting the pass merge (just) the longest tails.  We
- *  run this pass repeatedly until all tails are merged.
- *
- *  This may introduce a noop gateway to set the next table, wasting a logical
- *  table and a gateway.  Unfortunately we currently have no other way of representing this
- *  in the Table/TableSeq DAG.  The later RemoveNoopGateways pass will probably remove it,
- *  but there are corner cases where it is unable to remove it.
- *
- *  The code in EquivalentTableSequence identifies TableSeq that have matching tails, and this
- *  method splits those matched seqs into a prefix and the tail.  As an example, with
- *
- *      if (test) {
- *          t1.apply();
- *          t2.apply();
- *          t3.apply();
- *          t4.apply();
- *      } else {
- *          t3.apply();
- *          t4.apply();
- *      }
- *
- *  EquivalentTableSequence will mark the t3/t4 sequence as matching the tail of the t1/t2/t3/t4
- *  sequence, so the latter will have its tail split off, rewriting this as
- *
- *      if (test) {
- *          t1.apply();
- *          t2.apply();
- *          if (1) {
- *              t3.apply();
- *              t4.apply(); }
- *      } else {
- *          t3.apply();
- *          t4.apply();
- *      }
- *
- * with a common t3/t4 sequence.  This allows table placement to place those tables once.
- */
-const IR::MAU::TableSeq *MultipleApply::MergeTails::postorder(IR::MAU::TableSeq *seq) {
-    auto *orig = getOriginal<IR::MAU::TableSeq>();
-    if (!equiv_tails.count(orig)) return seq;
-    auto &info = equiv_tails.at(orig);
-    if (!info.tail) {
-        auto &rinfo = equiv_tails.at(info.other);
-        if (rinfo.len > info.len) {
-            // the other seq has longer common tail with a 3rd seq, so we need
-            // to defer dealing with this seq until they've been merged.
-            return seq; }
-        BUG_CHECK(rinfo.len == info.len, "MergeTails invalid data");
-        if (!(info.tail = rinfo.tail)) {
-            if (info.len == seq->size()) {
-                info.tail = rinfo.tail = *seq == *orig ? orig : seq;
-                return seq;
-            } else if (info.len == rinfo.other->size()) {
-                info.tail = rinfo.tail = rinfo.other;
-            } else {
-                auto *split = new IR::MAU::TableSeq();
-                split->tables.insert(split->tables.begin(),
-                    seq->tables.begin() + (seq->size() - info.len), seq->tables.end());
-                info.tail = rinfo.tail = split; } } }
-    if (info.len == seq->size())
-        return info.tail;
-    seq->tables.erase(seq->tables.begin() + (seq->size() - info.len), seq->tables.end());
-    auto *tbl = new IR::MAU::Table(cstring::make_unique(names, "$tstail", '.'),
-                                   seq->tables.front()->gress);
-    names.insert(tbl->name);
-    tbl->gateway_rows.emplace_back(nullptr, "$jmp");
-    tbl->next["$jmp"] = info.tail;
-    seq->tables.push_back(tbl);
-    return seq;
-}
-
-/** This pass ensures that after our Transform, only one copy of the match table exists
- */
-bool MultipleApply::DistinctTables::preorder(const IR::MAU::Table *tbl) {
-    if (tbl->match_table == nullptr)
-        return true;
-    if (distinct_tables.find(tbl->match_table) != distinct_tables.end()) {
-        ::error("%s: Table %s is applied multiple times, and the next table information cannot "
-                "correctly propagate through this multiple application", tbl->srcInfo,
-                tbl->match_table->name);
-        errors.emplace(tbl->match_table->externalName());
-    } else {
-        distinct_tables.emplace(tbl->match_table);
-    }
-    return true;
-}
-
-MultipleApply::MultipleApply(const BFN_Options &options) {
-    addPasses({
-        &mutex,
-        new MutuallyExclusiveApplies(mutex, mutex_errors),
-        new PassRepeatUntil({
-            new EquivalentTableSequence(equiv_tails),
-            new MergeTails(equiv_tails)
-        }, [this]()->bool { return equiv_tails.empty(); }),
-        new DistinctTables(distinct_errors),
-        new DefaultNext(Device::numLongBranchTags() == 0 || options.disable_long_branch,
-                        &distinct_errors),
-    });
-}
-
-void MultipleApply2::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
-    if (self.canon_table.count(tbl->match_table) == 0) {
+    if (canon_table.count(tbl->match_table) == 0) {
         // This is the first time we are encountering an application of this table. Nothing to
         // check, but record this as the canonical table.
-        self.canon_table[tbl->match_table] = tbl;
+        canon_table[tbl->match_table] = tbl;
         return;
     }
 
-    // Mark the table as needing de-duplication.
-    self.to_replace.insert(tbl);
-
     // Check that the conditional control flow following this table application is the same as that
-    // for the canonical Table object.
+    // for the canonical Table object, and mark corresponding components of the IR subtrees rooted
+    // at the two Tables as being duplicated.
     //
-    // Check that the next-table entries for the table being visited also appear as next-table
-    // entries for the canonical table.
-    auto canon_tbl = self.canon_table.at(tbl->match_table);
+    // First, check that the next-table entries for the table being visited also appear as
+    // next-table entries for the canonical table.
+    auto canon_tbl = canon_table.at(tbl->match_table);
     for (auto& entry : tbl->next) {
         auto& key = entry.first;
         auto& cur_seq = entry.second;
@@ -313,10 +81,11 @@ void MultipleApply2::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) 
         for (size_t i = 0; i < cur_seq->size(); i++) {
             auto cur_seq_tbl = cur_seq->tables.at(i);
             auto canon_seq_tbl = canon_seq->tables.at(i);
-            if (cur_seq_tbl->match_table != canon_seq_tbl->match_table)
+            if (!check_equiv(cur_seq_tbl, canon_seq_tbl)) {
                 ::error("Table %1% has incompatible next-table chains for %2%, differing at "
                         "position %3%, with tables %4% and %5%", tbl->externalName(), key,
                         i, cur_seq_tbl->externalName(), canon_seq_tbl->externalName());
+            }
         }
     }
 
@@ -332,22 +101,203 @@ void MultipleApply2::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) 
             return;
         }
     }
+
+    // Mark the current table as being duplicated with the canonical table.
+    self.duplicate_tables.makeUnion(tbl, canon_tbl);
 }
 
-const IR::Node *MultipleApply2::DeduplicateTables::preorder(IR::MAU::Table *tbl) {
+bool MultipleApply::CheckStaticNextTable::check_equiv(
+    const IR::MAU::Table* table1, const IR::MAU::Table* table2
+) {
+    if (table1 == table2) return true;
+    if (!table1 || !table2) return false;
+
+    // Add the tables to the union-find data structure.
+    self.duplicate_tables.insert(table1);
+    self.duplicate_tables.insert(table2);
+
+    // If the two tables have been marked as duplicates, then we have already checked their
+    // equivalence.
+    if (self.duplicate_tables.find(table1) == self.duplicate_tables.find(table2)) return true;
+
+    if (table1->match_table != table2->match_table) return false;
+    if (table1->gateway_only() != table2->gateway_only()) return false;
+
+    if (table1->gateway_only()) {
+        // Check gateway rows for equivalence.
+        if (table1->gateway_rows.size() != table2->gateway_rows.size()) return false;
+
+        for (size_t idx = 0; idx < table1->gateway_rows.size(); ++idx) {
+            auto row1 = table1->gateway_rows.at(idx);
+            auto row2 = table2->gateway_rows.at(idx);
+
+            if (row1.second != row2.second) return false;
+            if (!equiv_gateway(row1.first, row2.first)) return false;
+        }
+    }
+
+    // Check next-table map.
+    if (table1->next.size() != table2->next.size()) return false;
+    for (auto entry1 : table1->next) {
+        auto next_name = entry1.first;
+        auto next_table1 = entry1.second;
+
+        if (!table2->next.count(next_name)) return false;
+        auto next_table2 = table2->next.at(next_name);
+
+        if (!check_equiv(next_table1, next_table2)) return false;
+    }
+
+    // Mark the tables as duplicates.
+    self.duplicate_tables.makeUnion(table1, table2);
+
+    return true;
+}
+
+bool MultipleApply::CheckStaticNextTable::check_equiv(
+    const IR::MAU::TableSeq* seq1, const IR::MAU::TableSeq* seq2
+) {
+    if (seq1 == seq2) return true;
+    if (!seq1 || !seq2) return false;
+
+    if (seq1->tables.size() != seq2->tables.size()) return false;
+    for (size_t idx = 0; idx < seq1->tables.size(); ++idx) {
+        auto table1 = seq1->tables.at(idx);
+        auto table2 = seq2->tables.at(idx);
+        if (!check_equiv(table1, table2)) return false;
+    }
+
+    return true;
+}
+
+bool MultipleApply::CheckStaticNextTable::equiv_gateway(
+    const IR::Expression* expr1, const IR::Expression* expr2
+) {
+    // This implements a simple check, which just determines whether the two expressions are
+    // structurally equivalent, without considering semantic equivalence.
+    if (expr1 == expr2) return true;
+    if (!expr1 || !expr2) return false;
+    if (*expr1 == *expr2) return true;
+
+    // Consider expressions with different types as being inequivalent.
+    if (typeid(*expr1) != typeid(*expr2)) return false;
+
+    if (auto unary1 = expr1->to<IR::Operation_Unary>()) {
+        auto unary2 = expr2->to<IR::Operation_Unary>();
+        return equiv_gateway(unary1->expr, unary2->expr);
+    }
+
+    if (auto binary1 = expr1->to<IR::Operation_Binary>()) {
+        auto binary2 = expr2->to<IR::Operation_Binary>();
+        return equiv_gateway(binary1->left, binary2->left)
+            && equiv_gateway(binary1->right, binary2->right);
+    }
+
+    if (auto ternary1 = expr1->to<IR::Operation_Ternary>()) {
+        auto ternary2 = expr2->to<IR::Operation_Ternary>();
+        return equiv_gateway(ternary1->e0, ternary2->e0)
+            && equiv_gateway(ternary1->e1, ternary2->e1)
+            && equiv_gateway(ternary1->e2, ternary2->e2);
+    }
+
+    return false;
+}
+
+Visitor::profile_t MultipleApply::DeduplicateTables::init_apply(const IR::Node* root) {
+    auto result = MauTransform::init_apply(root);
+    replacements.clear();
+    table_seqs_seen.clear();
+    return result;
+}
+
+const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::Table* tbl) {
     auto orig_tbl = getOriginal<IR::MAU::Table>();
-    if (self.to_replace.count(orig_tbl) == 0)
-        return tbl;
+    auto canon_tbl = self.duplicate_tables.find(orig_tbl);
 
-    auto orig_p4_tbl = orig_tbl->match_table;
-    return self.canon_table.at(orig_p4_tbl);
+    auto& replacements = this->replacements[getGress()];
+    if (replacements.count(canon_tbl)) return replacements.at(canon_tbl);
+
+    // This is the first time we are encountering this table. No replacement to make here, but if
+    // tbl hasn't been changed, then return orig_tbl to make sure the visitor framework doesn't
+    // throw away our result.
+    const IR::MAU::Table* result = *tbl == *orig_tbl ? orig_tbl : tbl;
+    replacements[canon_tbl] = result;
+    return result;
 }
 
-MultipleApply2::MultipleApply2(bool check_topology) {
+const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::TableSeq* seq) {
+    auto& table_seqs_seen = this->table_seqs_seen[getGress()];
+    for (auto seq_seen : table_seqs_seen) {
+        if (*seq == *seq_seen) return seq_seen;
+    }
+
+    // This is the first time we are encountering this table sequence. No replacement to make here,
+    // but if seq hasn't been changed, then return orig_seq to make sure the visitor framework
+    // doesn't throw away our result.
+    auto orig_seq = getOriginal<IR::MAU::TableSeq>();
+    const IR::MAU::TableSeq* result = *seq == *orig_seq ? orig_seq : seq;
+    table_seqs_seen.push_back(result);
+    return result;
+}
+
+bool MultipleApply::CheckTopologicalTables::preorder(const IR::MAU::TableSeq* thread) {
+    // Each top-level TableSeq should represent the whole MAU pipeline for a single gress. Build
+    // the control-flow graph for that.
+    FlowGraph graph;
+    thread->apply(FindFlowGraph(graph));
+
+    // Check for cycles in the control-flow graph.
+    std::set<const IR::MAU::Table*> tables_reported;
+    for (const auto& entry : graph.tableToVertex) {
+        const auto* table = entry.first;
+
+        // Ignore graph's sink node.
+        if (table == nullptr) continue;
+
+        // Don't check current table if we've already reported it as being involved in a cycle.
+        if (tables_reported.count(table)) continue;
+
+        if (!graph.can_reach(table, table)) continue;
+        auto cycle = graph.find_path(table, table);
+
+        // Build a string representation of the tables involved in the cycle. Lop off the last
+        // element of the cycle, since it will be the same as the first.
+        cycle.pop_back();
+        std::stringstream out;
+        bool first = true;
+        for (auto tbl : cycle) {
+            if (!first) out << ", ";
+
+            auto name = tbl->externalName();
+            out << name;
+            errors.insert(name);
+
+            first = false;
+        }
+        ::error("%s: The following tables are applied in an inconsistent order on different "
+                "branches: %s", table->srcInfo, out.str());
+
+        // Update tables_reported with the cycle.
+        tables_reported.insert(cycle.begin(), cycle.end());
+    }
+
+    // Prune the visitor.
+    return false;
+}
+
+MultipleApply::MultipleApply(
+    const BFN_Options& options,
+    boost::optional<gress_t> gress,
+    bool dedup_only
+) {
+    auto longBranchDisabled = Device::numLongBranchTags() == 0 || options.disable_long_branch;
     addPasses({
+        &mutex,
+        dedup_only ? nullptr : new MutuallyExclusiveApplies(mutex, mutex_errors),
         new CheckStaticNextTable(*this),
-        new DeduplicateTables(*this),
-        check_topology ? new CheckTopologicalTables() : nullptr
+        new DeduplicateTables(*this, gress),
+        dedup_only ? nullptr : new CheckTopologicalTables(topological_errors),
+        dedup_only ? nullptr : new DefaultNext(longBranchDisabled, &default_next_errors),
     });
 }
 

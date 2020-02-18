@@ -501,8 +501,11 @@ apply {
     FlowGraph fg;
     auto *find_fg_ingress = new FindFlowGraph(fg);
 
-    // Apply MultipleApply2 to de-duplicate table nodes.
-    auto mau = test->pipe->thread[INGRESS].mau->apply(*new MultipleApply2(false));
+    // Apply MultipleApply to de-duplicate table nodes.
+    auto mau =
+        test->pipe->thread[INGRESS].mau->apply(*new MultipleApply(BackendOptions(),
+                                                                  INGRESS,
+                                                                  true));
     mau->apply(*find_fg_ingress);
 
     const IR::MAU::Table *t1, *t2, *t3, *t4;
@@ -632,8 +635,11 @@ apply {
     FlowGraph fg;
     auto *find_fg_ingress = new FindFlowGraph(fg);
 
-    // Apply MultipleApply2 to de-duplicate table nodes.
-    auto mau = test->pipe->thread[INGRESS].mau->apply(*new MultipleApply2(false));
+    // Apply MultipleApply to de-duplicate table nodes.
+    auto mau =
+        test->pipe->thread[INGRESS].mau->apply(*new MultipleApply(BackendOptions(),
+                                                                  INGRESS,
+                                                                  true));
     mau->apply(*find_fg_ingress);
 
     const IR::MAU::Table *t1, *t2, *t3;
@@ -914,8 +920,11 @@ apply {
     FlowGraph fg;
     auto *find_fg_ingress = new FindFlowGraph(fg);
 
-    // Apply MultipleApply2 to de-duplicate table nodes.
-    auto mau = test->pipe->thread[INGRESS].mau->apply(*new MultipleApply2(false));
+    // Apply MultipleApply to de-duplicate table nodes.
+    auto mau =
+        test->pipe->thread[INGRESS].mau->apply(*new MultipleApply(BackendOptions(),
+                                                                  INGRESS,
+                                                                  true));
     mau->apply(*find_fg_ingress);
 
     const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *t7, *t8, *t9, *t10, *t11, *t12;

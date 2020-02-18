@@ -135,9 +135,9 @@ TEST_F(MultipleApplyTest, NonMatchingSequences) {
 
     MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.distinct_error("ingress.t2"));
-    EXPECT_TRUE(ma.distinct_error("ingress.t3"));
-    EXPECT_FALSE(ma.distinct_error("ingress.t1"));
+    EXPECT_TRUE(ma.topological_error("ingress.t2"));
+    EXPECT_TRUE(ma.topological_error("ingress.t3"));
+    EXPECT_FALSE(ma.topological_error("ingress.t1"));
 }
 
 /** This is just an example that should completely work */
@@ -169,12 +169,12 @@ TEST_F(MultipleApplyTest, ChainedApplications) {
     EXPECT_FALSE(ma.mutex_error("ingress.t1"));
     EXPECT_FALSE(ma.mutex_error("ingress.t2"));
     EXPECT_FALSE(ma.mutex_error("ingress.t3"));
-    EXPECT_FALSE(ma.distinct_error("ingress.t1"));
-    EXPECT_FALSE(ma.distinct_error("ingress.t2"));
-    EXPECT_FALSE(ma.distinct_error("ingress.t3"));
-    EXPECT_FALSE(ma.gateway_chain_error("ingress.t1"));
-    EXPECT_FALSE(ma.gateway_chain_error("ingress.t2"));
-    EXPECT_FALSE(ma.gateway_chain_error("ingress.t3"));
+    EXPECT_FALSE(ma.topological_error("ingress.t1"));
+    EXPECT_FALSE(ma.topological_error("ingress.t2"));
+    EXPECT_FALSE(ma.topological_error("ingress.t3"));
+    EXPECT_FALSE(ma.default_next_error("ingress.t1"));
+    EXPECT_FALSE(ma.default_next_error("ingress.t2"));
+    EXPECT_FALSE(ma.default_next_error("ingress.t3"));
 }
 
 /** Currently direct action calls are created as separate tables, and some equivalence check
@@ -197,7 +197,8 @@ TEST_F(MultipleApplyTest, DirectAction) {
 
     MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
-    EXPECT_TRUE(ma.distinct_error("ingress.t2"));
+    EXPECT_FALSE(ma.topological_error("ingress.t2"));
+    EXPECT_TRUE(ma.default_next_error("ingress.t2"));
 }
 
 /** All applies of a table must be mutually exclusive */
@@ -258,7 +259,7 @@ TEST_F(MultipleApplyTest, CommonTail) {
 
     MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
-    EXPECT_FALSE(ma.distinct_error("ingress.t2"));
+    EXPECT_FALSE(ma.topological_error("ingress.t2"));
 }
 
 /** The tail of the TableSeqs match up, so we can split off the common tail giviing a
@@ -277,7 +278,7 @@ TEST_F(MultipleApplyTest, CommonTail2) {
 
     MultipleApply ma(BackendOptions());
     test->pipe->apply(ma);
-    EXPECT_FALSE(ma.distinct_error("ingress.t3"));
+    EXPECT_FALSE(ma.topological_error("ingress.t3"));
 }
 
 }  // namespace Test

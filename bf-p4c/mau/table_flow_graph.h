@@ -30,6 +30,65 @@ struct FlowGraph {
         boost::property<boost::edge_annotation_t, cstring>
     > Graph;
 
+    /// Custom BFS visitor for finding a shortest path between two nodes.
+    class BFSPathFinder : public boost::default_bfs_visitor {
+        /// Maps each visited node to its parent when the node is first discovered as the
+        /// destination of an edge.
+        std::map<typename Graph::vertex_descriptor, typename Graph::vertex_descriptor>* parent;
+
+        /// Used as an exception to finish the BFS early when we find our target.
+        struct done{};
+
+        /// The graph being searched.
+        const Graph& graph;
+
+        /// The node that we are looking for.
+        typename Graph::vertex_descriptor dst;
+
+     public:
+        void examine_edge(typename Graph::edge_descriptor e, const Graph& g) {
+            auto src = boost::source(e, g);
+            auto dst = boost::target(e, g);
+
+            if (!parent->count(dst)) (*parent)[dst] = src;
+            if (dst == this->dst) throw done{};
+        }
+
+        explicit BFSPathFinder(const Graph& g) : graph(g) {}
+
+        std::vector<typename Graph::vertex_descriptor>
+        find_path(typename Graph::vertex_descriptor src, typename Graph::vertex_descriptor dst) {
+            std::map<typename Graph::vertex_descriptor, typename Graph::vertex_descriptor> parent;
+            this->parent = &parent;
+
+            this->dst = dst;
+            try {
+                boost::breadth_first_search(graph, src, boost::visitor(*this));
+            } catch (done const&) {}
+
+            std::vector<typename Graph::vertex_descriptor> result;
+            if (parent.count(dst)) {
+                // Search succeeded. Build the path in reverse.
+                auto cur = dst;
+                result.emplace_back(cur);
+                do {
+                    cur = parent.at(cur);
+                    result.emplace_back(cur);
+                } while (cur != src);
+
+                // Reverse the result so we get a forward path.
+                for (unsigned i = 0; i < result.size() / 2; ++i) {
+                    std::swap(result[i], result[result.size() - i - 1]);
+                }
+            }
+
+            // Clean up for the next call.
+            this->parent = nullptr;
+
+            return result;
+        }
+    };
+
     /// The underlying Boost graph backing this FlowGraph.
     Graph g;
 
@@ -59,7 +118,7 @@ struct FlowGraph {
         return boost::get(boost::edge_annotation, g)[edge];
     }
 
-    FlowGraph(void) {
+    FlowGraph(void) : path_finder(this->g) {
         gress = boost::none;
     }
 
@@ -67,7 +126,6 @@ struct FlowGraph {
     std::map<const IR::MAU::Table*, typename Graph::vertex_descriptor> tableToVertex;
 
     /// Determines whether this graph is empty.
-    // XXX Why not use emptyFlowGraph?
     bool is_empty() const {
         auto all_vertices = boost::vertices(g);
         if (++all_vertices.first == all_vertices.second) {
@@ -96,17 +154,39 @@ struct FlowGraph {
     bool can_reach(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (t2 == nullptr) return true;
         if (t1 == nullptr) return false;
-        BUG_CHECK(tableToVertexIndex.count(t1), "Table object not found for %1%", t1->name);
-        BUG_CHECK(tableToVertexIndex.count(t2), "Table object not found for %1%", t2->name);
-        const auto v1 = tableToVertexIndex.at(t1);
-        const auto v2 = tableToVertexIndex.at(t2);
+        const auto v1 = get_vertex(t1);
+        const auto v2 = get_vertex(t2);
         BUG_CHECK(reachableNodes.count(v1), "No reachable nodes entry for %1%", t1->name);
         return reachableNodes.at(v1).getbit(v2);
+    }
+
+    /// Helper for find_path.
+    BFSPathFinder path_finder;
+
+    /// @returns a path from one table to another. If no path is found, an empty path is returned.
+    /// If non-empty, the returned path will always contain at least two elements: the src and the
+    /// dst.
+    std::vector<const IR::MAU::Table*> find_path(const IR::MAU::Table* src,
+                                                 const IR::MAU::Table* dst) {
+        auto path = path_finder.find_path(get_vertex(src), get_vertex(dst));
+        std::vector<const IR::MAU::Table*> result;
+        for (auto node : path) {
+            result.emplace_back(get_vertex(node));
+        }
+
+        return result;
     }
 
     /// @returns the table pointer corresponding to a vertex in the flow graph
     const IR::MAU::Table* get_vertex(typename Graph::vertex_descriptor v) const {
         return boost::get(boost::vertex_table, g)[v];
+    }
+
+    /// @returns the vertex in the flow graph corresponding to a Table object.
+    typename Graph::vertex_descriptor get_vertex(const IR::MAU::Table* tbl) const {
+        BUG_CHECK(tableToVertexIndex.count(tbl), "Table object not found for %1%",
+                                                 tbl->externalName());
+        return tableToVertexIndex.at(tbl);
     }
 
     /// @return the vertex associated with the given table, creating the vertex if one does not

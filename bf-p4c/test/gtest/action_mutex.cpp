@@ -432,7 +432,7 @@ TEST_F(ActionMutexTest, Tofino2NextTableTest) {
         )"), &tables);
 
     ASSERT_TRUE(test);
-    MultipleApply2 ma;
+    MultipleApply ma(BackendOptions());
     ActionMutuallyExclusive act_mutex;
     test->pipe = test->pipe->apply(ma);
     test->pipe->apply(act_mutex);
