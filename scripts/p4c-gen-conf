@@ -95,6 +95,9 @@ def get_parser():
     parser.add_argument('--switch-api', help='API to use for switch',
                         choices=['switchapi', 'switchsai'], default=None,
                         type=str, action='store', required=False)
+    parser.add_argument('--p4-version', help='P4 language version',
+                        choices=['p4-14', 'p4-16'], default='p4-16',
+                        type=str, action='store', required=True)
     parser.add_argument('--pipe', help='Pipeline Names',
                         default='', nargs="+",
                         type=str, required=True)
@@ -134,22 +137,22 @@ def gen_pd_conf(args):
     chip["chip_family"] = args.device
     p4_info = base_conf["p4_program_list"][0]
     p4_info["program-name"] = args.name
-    libpath = os.path.join(args.outputdir, 'lib', args.device+'pd', args.name)
+    # libpath = os.path.join(args.outputdir, 'lib', args.device+'pd', args.name)
+    libpath = os.path.join('lib', args.device+'pd', args.name)
     p4_info["path"] = os.path.join(args.outputdir, 'lib')
 
     p4_info["pd"] = os.path.join(libpath, 'libpd.so')
     p4_info["pd-thrift"] = os.path.join(libpath, 'libpdthrift.so')
 
-    if len(args.pipe) > 0:
-        share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name, args.pipe[0])
-    else:
-        share_path = os.path.join(args.outputdir, 'share', args.device+'pd', args.name)
+    share_path = os.path.join('share', args.device+'pd', args.name)
+    if args.p4_version == 'p4-16':
+        share_path = os.path.join(share_path, args.pipe[0])
 
     p4_info["table-config"] = os.path.join(share_path, 'context.json')
     p4_info["tofino-bin"] = os.path.join(share_path, args.device + '.bin')
     p4_info["with_pi"] = False if args.conf_type == 'PD' else True
     p4_info["id"] = args.outputdir + ':' + args.name + '-0'
-    p4_info["cpu_port"] = "veth251"
+    p4_info["cpu_port"] = "veth251" # this depends on the target!!
 
     if args.switch_api == "switchapi":
         # bf-switch has a different so name for switchapi

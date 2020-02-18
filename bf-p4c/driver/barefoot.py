@@ -385,6 +385,7 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('p4c-gen-conf', '--name {}'.format(self._source_basename))
         self.add_command_option('p4c-gen-conf', '--device {}'.format(self._target))
         self.add_command_option('p4c-gen-conf', '--outputdir {}'.format(output_dir))
+        self.add_command_option('p4c-gen-conf', '--p4-version {}'.format(opts.language))
         self.conf_file = self._source_basename + ".conf"
 
         if opts.verbose > 0:
