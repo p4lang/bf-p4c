@@ -1,5 +1,6 @@
 #include <config.h>
 #include <time.h>
+#include <fstream>
 
 #include "sections.h"
 #include "stage.h"
@@ -277,6 +278,17 @@ void AsmStage::output(json::map &ctxt_json) {
 
     for (unsigned i = 0; i < stage.size(); i++)
         SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
+
+    if (options.log_hashes) {
+        std::ofstream hash_out;
+        std::string fname = options.output_dir + "/logs/mau.hashes.log";
+        hash_out.open(fname.c_str());
+        if (hash_out) {
+            for (unsigned i = 0; i < stage.size(); i++) {
+                stage[i].log_hashes(hash_out); }
+            hash_out.close();
+        }
+    }
 }
 
 unsigned AsmStage::compute_latency(gress_t gress) {
@@ -363,7 +375,7 @@ int Stage::cycles_contribute_to_latency(gress_t gress) {
     else if (stage_dep[gress] == CONCURRENT && options.target == TOFINO)
         return 1;
     else
-        return 2;  // action dependency 
+        return 2;  // action dependency
 }
 
 int Stage::pipelength(gress_t gress) {
@@ -485,6 +497,25 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
                 salu = no_stats; }
 }
 
+void Stage::log_hashes(std::ofstream& out) const {
+  out << "+-----------------------------------------------------------+" << std::endl;
+  out << "   Stage " << stageno << std::endl;
+  out << "+-----------------------------------------------------------+" << std::endl;
+  bool logged = false;
+  for (auto xbar : ixbar_use) {
+    if (xbar.first.type == InputXbar::Group::EXACT) {
+      for (auto use : xbar.second) {
+        if (use)
+          logged |= use->log_hashes(out);
+  } } }
+  if (!logged) {
+    out << "  Unused" << std::endl;
+  }
+  // Need to use other variables?
+  out << std::endl;
+}
+
+
 template<class TARGET>
 void Stage::output(json::map &ctxt_json) {
     auto *regs = new typename TARGET::mau_regs();
@@ -496,7 +527,7 @@ void Stage::output(json::map &ctxt_json) {
     for (auto table : tables) {
         table->write_regs(*regs);
         table->gen_tbl_cfg(ctxt_tables);
-        if (auto gw = table->get_gateway()) 
+        if (auto gw = table->get_gateway())
             gw->gen_tbl_cfg(ctxt_tables);
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }

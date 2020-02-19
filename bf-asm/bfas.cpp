@@ -42,12 +42,13 @@ option_t options = {
     .version = CONFIG_OLD,
     .werror = false,
     .nowarn = false,
+    .log_hashes = false,
+    .output_dir = "."
 };
 
 std::string asmfile_name;
 
 int log_error = 0;
-static std::string output_dir;
 extern char *program_name;
 
 // or-ed with table_handle[31:30] to generate unique table handle
@@ -56,8 +57,8 @@ unsigned unique_table_offset = 0;
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     char namebuf[1024], *p = namebuf, *end = namebuf + sizeof(namebuf);
     va_list args;
-    if (!output_dir.empty())
-        p += sprintf(p, "%s/", output_dir.c_str());
+    if (!options.output_dir.empty())
+        p += sprintf(p, "%s/", options.output_dir.c_str());
     va_start(args, name);
     if (p < end)
         p += vsnprintf(p, end-p, name, args);
@@ -148,6 +149,8 @@ int main(int ac, char **av) {
             options.binary = FOUR_PIPE;
         } else if (!strcmp(av[i], "--disable-egress-latency-padding")) {
             options.disable_egress_latency_padding = true;
+        } else if (!strcmp(av[i], "--log-hashes")) {
+            options.log_hashes = true;
         } else if (!strcmp(av[i], "--disable-longbranch")) {
             options.disable_long_branch = true;
         } else if (!strcmp(av[i], "--enable-longbranch")) {
@@ -269,7 +272,7 @@ int main(int ac, char **av) {
                     } else if (!S_ISDIR(st.st_mode)) {
                         std::cerr << av[i] << " exists and is not a directory" << std::endl;
                         error_count++; }
-                    output_dir = av[i];
+                    options.output_dir = av[i];
                     break;
                 case 'p':
                     options.disable_power_gating = true;
@@ -347,20 +350,21 @@ int main(int ac, char **av) {
         Section::process_all();
     }
     if (error_count == 0) {
-        if (srcfiles == 1 && output_dir.empty()) {
+        if (srcfiles == 1 && options.output_dir.empty()) {
             if (const char *p = strrchr(firstsrc, '/'))
-                output_dir = p+1;
+                options.output_dir = p+1;
             else if (const char *p = strrchr(firstsrc, '\\'))
-                output_dir = p+1;
+                options.output_dir = p+1;
             else
-                output_dir = firstsrc;
-            if (const char *e = strrchr(&output_dir[0], '.'))
-                output_dir.resize(e - &output_dir[0]);
-            output_dir += ".out";
-            if (stat(output_dir.c_str(), &st) ? mkdir(output_dir.c_str(), 0777)
+                options.output_dir = firstsrc;
+            if (const char *e = strrchr(&options.output_dir[0], '.'))
+                options.output_dir.resize(e - &options.output_dir[0]);
+            options.output_dir += ".out";
+            if (stat(options.output_dir.c_str(), &st) ? mkdir(options.output_dir.c_str(), 0777)
                                               : !S_ISDIR(st.st_mode))
-                output_dir.clear(); }
-        output_all(); }
+                options.output_dir.clear(); }
+        output_all();
+    }
     if (log_error > 0)
         warning(0, "%d config errors in log file", log_error);
     return error_count > 0 || (options.werror && warn_count > 0) ? 1 : 0;

@@ -1,6 +1,8 @@
 #ifndef _stage_h_
 #define _stage_h_
 
+#include <fstream>
+
 #include "tables.h"
 #include <vector>
 #include "alloc.h"
@@ -91,6 +93,7 @@ public:
     static int first_table(gress_t gress);
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
     static Stage *stage(int stageno);
+    void log_hashes(std::ofstream& out) const;
 };
 
 #endif /* _stage_h_ */

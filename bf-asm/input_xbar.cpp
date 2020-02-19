@@ -1,8 +1,10 @@
 #include <config.h>
+#include <fstream>
 
 #include "hashexpr.h"
 #include "input_xbar.h"
 #include "log.h"
+#include "misc.h"
 #include "power_ctl.h"
 #include "stage.h"
 #include "range.h"
@@ -793,4 +795,28 @@ std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
         if (const HashCol *c = getref(tbl.second, col))
             rv.push_back(c); }
     return rv;
+}
+
+bool InputXbar::log_hashes(std::ofstream& out) const {
+  bool logged = false;
+  for (auto &ht : hash_tables) {
+    // ht.first is hash ID
+    // ht.second is std::map<int, HashCol>, key is col
+    if (ht.second.empty()) continue;
+    out << std::endl << "Hash " << ht.first << std::endl;
+    logged = true;
+    for (auto &col: ht.second) {
+      // col.first is hash result bit
+      // col.second is bits XOR'd in
+      out << "result[" << col.first << "] = ";
+      out << get_seed_bit(ht.first, col.first);
+      for (const auto &bit: col.second.data) {
+        if (auto ref = get_hashtable_bit(ht.first, bit)) {
+          std::string field_name = ref.name();
+          auto field_bit = remove_name_tail_range(field_name) + ref.lobit();
+          out << " ^ " << field_name << "[" << field_bit << "]";
+      } }
+      out << std::endl;
+  } }
+  return logged;
 }

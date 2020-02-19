@@ -181,6 +181,9 @@ class BarefootBackend(BackendDriver):
                                     help="Disable parity checking on the galois"
                                     "field matrix. This will not reserve a parity"
                                     "bit in the GFM.");
+        self._argGroup.add_argument("--log-hashes",
+                                    action="store_true", default=False,
+                                    help="Log hash functions in use to mau.hashes.log.");
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--gdb", action="store_true", default=False,
                                         help="run the backend compiler under gdb")
@@ -308,6 +311,9 @@ class BarefootBackend(BackendDriver):
         if opts.disable_gfm_parity:
             self.add_command_option('compiler', '--disable-gfm-parity')
             self.add_command_option('assembler', '--disable-gfm-parity')
+ 
+        if opts.log_hashes:
+            self.add_command_option('assembler', '--log-hashes')
 
         self.skip_compilation = []
         if opts.skip_compilation:

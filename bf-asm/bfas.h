@@ -39,6 +39,8 @@ extern struct option_t {
     config_version_t    version;
     bool                werror;
     bool                nowarn;
+    bool                log_hashes;
+    std::string         output_dir;
 } options;
 
 extern unsigned unique_action_handle;

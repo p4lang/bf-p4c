@@ -1,6 +1,8 @@
 #ifndef _input_xbar_h_
 #define _input_xbar_h_
 
+#include <fstream>
+
 #include "constants.h"
 #include "tables.h"
 #include "phv.h"
@@ -131,9 +133,9 @@ public:
             if (ht.first == id) return ht.second;
         warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
         return empty_hash_table; }
-    Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) {
+    Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) const {
         return get_group_bit(Group(Group::EXACT, id/2), bit + 64*(id & 0x1)); }
-    Phv::Ref get_group_bit(Group grp, unsigned bit) {
+    Phv::Ref get_group_bit(Group grp, unsigned bit) const {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
                 if (bit >= unsigned(in.lo) && bit <= unsigned(in.hi))
@@ -158,6 +160,7 @@ public:
         }
         return nullptr;
     }
+    bool log_hashes(std::ofstream& out) const;
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;
