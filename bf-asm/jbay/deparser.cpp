@@ -219,14 +219,24 @@ JBAY_SIMPLE_DIGEST(INGRESS, pktgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_pgen_len, disable_) \
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_resub_sel, disable_)
 
+bool check_chunk(int lineno, unsigned chunk) {
+    const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
+    if (chunk >= TOTAL_CHUNKS) {
+        error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
+        return false;
+    };
+    return true; 
+}
+
 // Compiler workaround for TOF2LAB-44, skip certain chunk indices
-void tof2lab44_workaround(unsigned& chunk_index) {
+void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
     if (options.tof2lab44_workaround) {
         static std::set<unsigned> skipped_chunks = {
             24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
         };
     
         while (skipped_chunks.count(chunk_index)) chunk_index++;
+        check_chunk(lineno, chunk_index);
     }
 }
 
@@ -246,16 +256,13 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
     const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
     const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
     const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
     unsigned ch = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     byte = 0;
     Phv::Slice prev_pov;
     int prev = -1;
 
     for (auto &ent : dict) {
-        if (ch >= TOTAL_CHUNKS) {
-            error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
-            break; }
+        if (!check_chunk(lineno, ch)) break;
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         // FIXME -- why does the following give an error from gcc?
         // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
@@ -268,20 +275,21 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             regs.chunk_info[ch].seg_slice = byte & 7;
             regs.chunk_info[ch].seg_sel = byte >> 3;
             ++ch;
-            tof2lab44_workaround(ch);
+            if (!check_chunk(lineno, ch)) break;
+            tof2lab44_workaround(lineno, ch);
             byte = 0; }
         if (clot) {
             if (clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP) {
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
-                tof2lab44_workaround(ch);
+                if (!check_chunk(lineno, ch)) break;
+                tof2lab44_workaround(lineno, ch);
             }
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
             regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;
             for (int i = 0; i < clot->length; i += 8, ++ch) {
-                tof2lab44_workaround(ch);
-                if (ch >= TOTAL_CHUNKS)
-                    break;
+                if (!check_chunk(lineno, ch)) break;
+                tof2lab44_workaround(lineno, ch);
                 if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
                     seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
                     regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
@@ -289,10 +297,9 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                 regs.chunk_info[ch].pov = pov.at(&ent.pov->reg) + ent.pov->lo;
                 regs.chunk_info[ch].seg_vld = 1;
                 regs.chunk_info[ch].seg_sel = seg_tag;
-                regs.chunk_info[ch].seg_slice = i/8U; }
-            if (ch >= TOTAL_CHUNKS) {
-                error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
-                break; }
+                regs.chunk_info[ch].seg_slice = i/8U; 
+            }
+            if (!check_chunk(lineno, ch)) break;
             prev = -1;
         } else {
             // Phv, Constant, or Checksum
@@ -303,7 +310,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             prev = ent.what->encode(); }
         prev_pov = *ent.pov; }
     if (byte > 0) {
-        tof2lab44_workaround(ch);
+        tof2lab44_workaround(lineno, ch);
         regs.chunk_info[ch].chunk_vld = 1;
         regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
         regs.chunk_info[ch].seg_vld = 0;  // no CLOTs yet
@@ -312,17 +319,16 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
 }
 
 template<class CHUNKS, class CLOTS, class POV, class DICT>
-void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, DICT &dict) {
+void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov, DICT &dict) {
     // DANGER -- this code and output_jbay_field_dictionary above must match exactly
     const unsigned CHUNK_SIZE = Target::JBay::DEPARSER_CHUNK_SIZE;
     const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
     const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
     const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
     unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     Phv::Slice prev_pov;
     for (auto &ent : dict) {
-        if (ch >= TOTAL_CHUNKS) break;
+        if (!check_chunk(lineno, ch)) break;
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         unsigned size = ent.what->size();
         if (byte && (clot || byte + size > CHUNK_SIZE ||
@@ -331,12 +337,14 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
             chunk[ch].cfg.seg_slice = byte & 7;
             chunk[ch].cfg.seg_sel = byte >> 3;
             ++ch;
-            tof2lab44_workaround(ch);
+            if (!check_chunk(lineno, ch)) break;
+            tof2lab44_workaround(lineno, ch);
             byte = 0; }
         if (clot) {
             if (clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP) {
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
-                tof2lab44_workaround(ch);
+                if (!check_chunk(lineno, ch)) break;
+                tof2lab44_workaround(lineno, ch);
             }
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
@@ -344,8 +352,8 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
             auto phv_repl = clot->phv_replace.begin();
             auto csum_repl = clot->csum_replace.begin();
             for (int i = 0; i < clot->length; i += 8, ++ch) {
-                tof2lab44_workaround(ch);
-                if (ch >= TOTAL_CHUNKS) break;
+                if (!check_chunk(lineno, ch)) break;
+                tof2lab44_workaround(lineno, ch);
                 if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
                     seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
                     clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
@@ -365,7 +373,7 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
                             ++csum_repl;
                     } else {
                         chunk[ch].byte_off.phv_offset[j] = i + j; } } }
-            if (ch >= TOTAL_CHUNKS) break;
+            if (!check_chunk(lineno, ch)) break;
         } else {
             // Phv, Constant, or Checksum
             while (size--) {
@@ -373,7 +381,7 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
                 chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); } }
         prev_pov = *ent.pov; }
     if (byte > 0) {
-        tof2lab44_workaround(ch);
+        tof2lab44_workaround(lineno, ch);
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
         chunk[ch].cfg.seg_sel = byte >> 3; }
@@ -581,13 +589,13 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_i)
-        output_jbay_field_dictionary_slice(rslice.him.fd_compress.chunk,
+        output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
             rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS]);
 
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_e)
-        output_jbay_field_dictionary_slice(rslice.hem.fd_compress.chunk,
+        output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
             rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS]);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
