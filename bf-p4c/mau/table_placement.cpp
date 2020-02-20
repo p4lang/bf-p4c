@@ -889,7 +889,8 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
     }
 
     bool gw_linked = next->gw != nullptr;
-    if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked)) {
+    if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
+                            next->use.format_type, att_info)) {
         error_message = "The table " + next->table->name + " could not fit within the "
                         "instruction memory";
         LOG3("    " << error_message);

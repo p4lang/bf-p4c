@@ -6,7 +6,9 @@
 #include "lib/alloc.h"
 
 class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
-    const PhvInfo &phv;
+    PhvInfo &phv;
+    ActionData::FormatType_t format_type;
+    SplitAttachedInfo &split_attached;
     bool preorder(const IR::MAU::TableSeq *) override { return false; }
     bool preorder(const IR::MAU::BackendAttached *) override { return false; }
     bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
@@ -16,7 +18,6 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     bool preorder(const IR::MAU::StatefulCall *) override { return false; }
     bool preorder(const IR::MAU::Instruction *) override { return true; }
     bool preorder(const IR::Expression *) override;
-    void postorder(const IR::MAU::Action *) override;
     bitvec current_vliw;
     ordered_map<const IR::MAU::Action *, bitvec> table_instrs;
 
@@ -24,7 +25,9 @@ class GenerateVLIWInstructions : public MauInspector, TofinoWriteContext {
     bitvec get_instr(const IR::MAU::Action *act) {
         return table_instrs[act];
     }
-    explicit GenerateVLIWInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
+            SplitAttachedInfo &sai)
+       : phv(p), format_type(ft), split_attached(sai) { visitDagOnce = false; }
 };
 
 /** Algorithms for the allocation of the Instruction Memory.  The Instruction Memory is defined
@@ -127,7 +130,8 @@ struct InstructionMemory {
                                 int &row, int &color, bool &first_noop);
 
  public:
-    bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, const PhvInfo &phv, bool gw_linked);
+    bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv, bool gw_linked,
+        ActionData::FormatType_t format_type, SplitAttachedInfo &sai);
     bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
     void update(cstring name, const Use &alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);

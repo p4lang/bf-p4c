@@ -4,9 +4,26 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/device.h"
 
-bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *) {
+bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
+    const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
+    LOG1("    Help me " << act->name << " " << tbl->name << " " << format_type);
     current_vliw.clear();
-    return true;
+    const IR::MAU::Action *act_to_visit = act;
+    // Need to capture the instructions that will be created during the splitting of the tables
+    if (format_type == ActionData::PRE_SPLIT_ATTACHED)
+        act_to_visit = split_attached.create_pre_split_action(act, tbl, &phv);
+    else if (format_type == ActionData::POST_SPLIT_ATTACHED)
+        act_to_visit = split_attached.create_post_split_action(act, tbl);
+
+    if (act_to_visit == nullptr)
+        return false;
+    BUG_CHECK(act_to_visit, "Somehow have a nullptr action for %1%", format_type);
+
+
+    for (auto instr : act_to_visit->action)
+        visit(instr);
+    table_instrs[act] = current_vliw;
+    return false;
 }
 
 bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
@@ -18,15 +35,12 @@ bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
                              [&](const PHV::Field::alloc_slice &alloc) {
+            if (!alloc.container) return;
             current_vliw.setbit(Device::phvSpec().containerToId(alloc.container));
         });
         return false;
     }
     return true;
-}
-
-void GenerateVLIWInstructions::postorder(const IR::MAU::Action *act) {
-    table_instrs[act] = current_vliw;
 }
 
 bool InstructionMemory::is_noop_slot(int row, int color) {
@@ -140,16 +154,17 @@ bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool
     return true;
 }
 
-bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, const PhvInfo &phv,
-        bool gw_linked) {
+bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
+        bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
     // Action Profiles always have the same instructions for every table
-    LOG1("Allocating action data bus for " << tbl->name);
+    LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
 
     if (shared_instr(tbl, alloc, gw_linked)) {
         return true;
     }
+    gw_linked |= format_type == ActionData::POST_SPLIT_ATTACHED;
 
-    GenerateVLIWInstructions gen_vliw(phv);
+    GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
     tbl->apply(gen_vliw);
     auto &use = imem_use(tbl->gress);
     auto &slot_in_use = imem_slot_inuse(tbl->gress);
@@ -165,6 +180,14 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, con
     bool first_noop = true;
     for (auto action : Values(tbl->actions)) {
         LOG2("Allocating action " << action->name);
+
+        if (format_type == ActionData::POST_SPLIT_ATTACHED &&
+            sai.create_post_split_action(action, tbl) == nullptr) {
+            LOG2("    Not generating instruction for " << action->name << " as it is not necessary "
+                 "post attached split");
+            continue;
+        }
+
         auto current_bv = gen_vliw.get_instr(action);
         int row = -1;
         int color = -1;
