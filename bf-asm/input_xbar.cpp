@@ -582,7 +582,6 @@ void InputXbar::pass2() {
                 if (c != hash_parity_col_no)
                     hashparitycol ^= h.data;
             }
-
             hash.second[hash_parity_col_no].data = hashparitycol;
         }
     }
@@ -718,7 +717,14 @@ void InputXbar::write_regs(REGS &regs) {
         // Set hash parity check if enabled. The hash parity column data is set
         // in pass2
         if (hg.second.tables && !options.disable_gfm_parity) {
-            regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
+            // Enable check if parity bit is set on all tables in hash group
+            int hash_group_parity = true;
+            for (int index : bitvec(hg.second.tables)) {
+                if (!hash_table_parity.count(index)) {
+                    hash_group_parity = false;
+                    break; } }
+            if (hash_group_parity)
+                regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
         }
     }
 }
@@ -761,8 +767,16 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
             rv |= g.second.seed; } }
     for (auto &tbl : hash_tables) {
         if (!((tables >> tbl.first) & 1)) continue;
-        for (auto &col : tbl.second)
-            rv[col.first] = 1; }
+        // Skip parity bit if set on hash table
+        auto hash_parity_bit = -1;
+        if (hash_table_parity.count(tbl.first)) {
+            hash_parity_bit = hash_table_parity.at(tbl.first);
+        }
+        for (auto &col : tbl.second) {
+            if (col.first == hash_parity_bit) continue;
+            rv[col.first] = 1; 
+        }
+    }
     return rv;
 }
 

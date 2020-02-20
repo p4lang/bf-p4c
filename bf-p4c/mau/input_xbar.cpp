@@ -47,9 +47,31 @@ void IXBar::clear() {
     memset(hash_index_inuse, 0, sizeof(hash_index_inuse));
     memset(hash_single_bit_inuse, 0, sizeof(hash_single_bit_inuse));
     memset(hash_group_use, 0, sizeof(hash_group_use));
+    memset(hash_group_parity_use, 0, sizeof(hash_group_parity_use));
     memset(hash_dist_inuse, 0, sizeof(hash_dist_inuse));
     memset(hash_dist_bit_inuse, 0, sizeof(hash_dist_bit_inuse));
     memset(hash_dist_groups, -1, sizeof(hash_dist_groups));
+}
+
+IXBar::parity_status_t IXBar::update_hash_parity(int hash_group) {
+    if (hash_group < 0) return PARITY_NONE;
+
+    auto parity_status = hash_group_parity_use[hash_group];
+    parity_status_t parity_update = PARITY_DISABLED;
+    if (parity_status == IXBar::PARITY_NONE) {
+        auto enable_parity = (!BackendOptions().disable_gfm_parity);
+        parity_update = enable_parity ? IXBar::PARITY_ENABLED : IXBar::PARITY_DISABLED;
+    } else {
+        parity_update = parity_status;
+    }
+    hash_group_parity_use[hash_group] = parity_update;
+    return parity_update;
+}
+
+void IXBar::update_hash_parity(IXBar::Use &use, int hash_group) {
+    if (hash_group < 0) return;
+    const auto u = use;
+    use.parity = update_hash_parity(hash_group);
 }
 
 IXBar::HashDistDest_t IXBar::dest_location(const IR::Node *node, bool precolor) {
@@ -275,6 +297,7 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     gw_hash_group = alloc.gw_hash_group;
     type = alloc.type;
     used_by = alloc.used_by;
+    parity = alloc.parity;
 
     for (auto old_byte : use) {
         for (auto new_byte : alloc.use) {
@@ -1760,7 +1783,7 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
 }
 
 unsigned IXBar::find_balanced_group(Use &alloc, int way_size) {
-    std::map<int, int> sliceDepths;
+    std::map<unsigned, unsigned> sliceDepths;
     for (unsigned i = 0; i < alloc.way_use.size(); ++i) {
         int slice_group = alloc.way_use[i].slice;
         int slice_ways  = (1U << bitvec(alloc.way_use[i].mask).popcount());
@@ -1774,7 +1797,7 @@ unsigned IXBar::find_balanced_group(Use &alloc, int way_size) {
         int slice_way_bits = slice_way_mask.popcount();
         if (way_bits > slice_way_bits) continue;
         int slice_group = alloc.way_use[i].slice;
-        int sliceDepth = way_size + sliceDepths[slice_group];
+        unsigned sliceDepth = way_size + sliceDepths[slice_group];
         if (sliceDepth < minWayDepth) {
             minWayDepth = sliceDepth;
             sel_group = slice_group;
@@ -2102,6 +2125,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
         hash_single_bit_inuse[bit] = hash_table_input;
     }
     hash_group_use[hash_group] |= hash_table_input;
+    update_hash_parity(alloc, hash_group);
 
     fill_out_use(alloced, false);
     alloc.hash_table_inputs[hash_group] = hash_table_input;
@@ -2234,6 +2258,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
        table requires multiple hash groups */
     alloc.hash_table_inputs[hash_group] = local_hash_table_input;
     hash_group_use[hash_group] |= local_hash_table_input;
+    update_hash_parity(alloc, hash_group);
 
     // If a random_seed is specified via pragma, do not generate the random seed here.
     if (tbl->random_seed >= 0)
@@ -2456,6 +2481,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     match_alloc.atcam = true;
     match_alloc.hash_table_inputs[hash_group] = local_hash_table_input;
     hash_group_use[hash_group] |= local_hash_table_input;
+    update_hash_parity(match_alloc, hash_group);
     match_alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask});
     hash_index_inuse[group] |= hf_hash_table_input;
     for (auto bit : bitvec(way_mask)) {
@@ -2592,6 +2618,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             hash_single_bit_inuse[shift + i] |= hf_hash_table_input;
         alloc.hash_table_inputs[hash_group] = local_hash_table_input;
         hash_group_use[hash_group] |= local_hash_table_input;
+        update_hash_parity(alloc, hash_group);
     }
     fill_out_use(xbar_alloced, false);
     for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
@@ -2607,7 +2634,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 int IXBar::max_bit_to_byte(bitvec bit_mask) {
     int max_bit = bit_mask.max().index();
     int rv = ((max_bit + 8) / 8) * 8 - 1;
-    rv = std::min(rv, METER_ALU_HASH_BITS);
+    rv = std::min(rv, get_meter_alu_hash_bits());
     return rv;
 }
 
@@ -2778,6 +2805,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     fill_out_use(alloced, false);
     hash_group_print_use[hash_group] = name;
     hash_group_use[hash_group] |= local_hash_table_input;
+    update_hash_parity(alloc, hash_group);
     return rv;
 }
 
@@ -2915,6 +2943,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         alloc.hash_table_inputs[mah.group] = local_hash_table_input;
         hash_group_print_use[hash_group] = alloc.used_by;
         hash_group_use[hash_group] |= local_hash_table_input;
+        update_hash_parity(alloc, hash_group);
     }
 
     fill_out_use(alloced, false);
@@ -3028,13 +3057,14 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         alloc.clear();
         return false;
     }
+
     unsigned hf_hash_table_input = local_hash_table_input | hash_group_use[hash_group];
 
     mah.allocated = true;
     mah.group = hash_group;
     if (sources.dleft) {
         mah.algorithm = IR::MAU::HashFunction::random();
-        mah.bit_mask.setrange(1, METER_ALU_HASH_BITS);
+        mah.bit_mask.setrange(1, get_meter_alu_hash_bits());
         // For dleft digest, we need a fixed 1 bit to ensure the digest is nonzero
         // as the valid bit is not contiguous with the digest in the sram field, so
         // trying to match it would waste more hash bits.
@@ -3042,35 +3072,100 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
     } else {
         mah.algorithm = IR::MAU::HashFunction::identity();
         bitvec phv_src_inuse;
+        // Collate all slices from phv sources into a slice list and sort it
+        // based on slice width
+        std::vector<const IR::Expression*> slices;
         for (auto &field : Values(sources.phv_sources)) {
             for (auto &slice : Values(field)) {
-                int alu_slot_index = 0;
-                // If the SALU width is >= 32 and this source is less than
-                // 51 (Size of Hash Matrix Output) - 32 (Size of Input) = 19 bits
-                // we do NOT want to put it in slot 0, as it will fit in slot 1 and the other
-                // thing to be placed might not
-                if (salu->source_width() >= 32 &&
-                    slice->type->width_bits() <= METER_ALU_HASH_BITS - salu->source_width())
-                    alu_slot_index++;
-                alu_slot_index = phv_src_inuse.ffz(alu_slot_index);
-                if (alu_slot_index > 1)
-                    return false;
-                int start_bit = alu_slot_index * salu->source_width();
-                if (start_bit + slice->type->width_bits() > METER_ALU_HASH_BITS)
-                    return false;
-                phv_src_inuse[alu_slot_index] = true;
-                mah.computed_expressions[start_bit] = slice;
-                mah.bit_mask.setrange(start_bit, slice->type->width_bits());
+                slices.push_back(slice);
             }
+        }
+        std::sort(slices.begin(), slices.end(),
+                [](const IR::Expression* a, const IR::Expression*b) {
+                return a->type->width_bits() > b->type->width_bits(); });
+
+        // Since the sorting is done by width, while looping the greater value
+        // always gets selected first and is placed in the lowermost slot which
+        // is 32 bits. This ensures we always attempt a best case fitting
+        // scenario.
+        //
+        // In the unsorted case it is possible we end up putting a lower width
+        // into the lower slot and then not having enough bits to fit in the
+        // upper slot
+        //
+        // Case A :
+        // Slice 1 : 19 bits, Slice 2 : 32 bits
+        // Unsorted Case :
+        //  Slot A (32 bit) : 19 bits, Slot B (19 bits) : 32 bit (cannot fit)
+        // Sorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (19 bits) : 19 bit (fits)
+        //
+        // Case B :
+        // Slice 1 : 16 bits, Slice 2 : 32 bits, Hash Bit : 51
+        // Unsorted Case :
+        //  Slot A (32 bit) : 16 bits, Slot B (16 bits) : 32 bit (cannot fit)
+        // Sorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (16 bits) : 16 bit (fits)
+        //
+        //  NOTE: Since 51st bit is reserved for parity, we cannot use the
+        //  entire byte with bit 51 i.e. bits[53..48]. However, we only have 52
+        //  bits in hash so the unused bits are bits[51..48]
+        //
+        // Case C :
+        // Slice 1 : 32 bits, Slice 2 : 16 bits, Hash Bit : 51
+        // Unsorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (16 bits) : 16 bit (fit)
+        // Sorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (16 bits) : 16 bit (fits)
+        //
+        //  NOTE: In case the slices are always ordered we will always fit, but
+        //  this ordering is not guaranteed
+        //
+        // Case D :
+        // Slice 1 : 32 bits, Slice 2 : 19 bits, Hash Bit : 51
+        // Unsorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (16 bits) : 19 bit (cannot fit)
+        // Sorted Case :
+        //  Slot A (32 bit) : 32 bits, Slot B (16 bits) : 19 bit (cannot fits)
+        //
+        //  NOTE: In this scenario the slices can never fit in either sorted or unsorted cases
+        for (auto &slice : slices) {
+            int alu_slot_index = phv_src_inuse.ffz();
+            if (alu_slot_index > 1)
+                return false;
+            int start_bit = alu_slot_index * salu->source_width();
+            int end_bit = start_bit + slice->type->width_bits();
+            // If parity is enabled on the hash group stateful hash cannot use
+            // any bit in the same byte as the parity bit
+            // Parity None/Disabled  - Bits Avail [51..0]
+            // Parity Enabled        - Bits Avail [47..0]
+            auto parity_status = hash_group_parity_use[hash_group];
+            if (parity_status == PARITY_NONE) {
+                if (end_bit >= METER_ALU_HASH_BITS) return false;
+                if (end_bit >= METER_ALU_HASH_PARITY_BYTE_START) {
+                    // Explicitly disable parity on the hash group as we do not
+                    // want any other shared resource to enable it
+                    hash_group_parity_use[hash_group] = PARITY_DISABLED;
+                }
+            } else if (parity_status == PARITY_ENABLED) {
+                if (end_bit >= METER_ALU_HASH_PARITY_BYTE_START) {
+                    return false;
+                }
+            } else if (parity_status == PARITY_DISABLED) {
+                if (end_bit >= METER_ALU_HASH_BITS) return false;
+            }
+            phv_src_inuse[alu_slot_index] = true;
+            mah.computed_expressions[start_bit] = slice;
+            mah.bit_mask.setrange(start_bit, slice->type->width_bits());
         }
         for (auto source : sources.hash_sources) {
             int alu_slot_index = phv_src_inuse.ffz();
             if (salu->source_width() >= 32 && alu_slot_index == 0 &&
-                source->expr->type->width_bits() <= METER_ALU_HASH_BITS
+                source->expr->type->width_bits() <= get_meter_alu_hash_bits()
                                                     - salu->source_width())
                 alu_slot_index++;
             int start_bit = alu_slot_index * salu->source_width();
-            if (start_bit + source->expr->type->width_bits() > METER_ALU_HASH_BITS)
+            if (start_bit + source->expr->type->width_bits() > get_meter_alu_hash_bits())
                 return false;
             phv_src_inuse[alu_slot_index] = true;
             mah.computed_expressions[start_bit] = source->expr;
@@ -3090,6 +3185,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
     alloc.hash_table_inputs[mah.group] = local_hash_table_input;
     hash_group_print_use[hash_group] = alloc.used_by;
     hash_group_use[hash_group] |= local_hash_table_input;
+    update_hash_parity(alloc, hash_group);
     return true;
 }
 
@@ -3168,9 +3264,9 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
                 total_bits += range.size();
         for (auto source : sources.hash_sources)
             total_bits += source->expr->type->width_bits();
-        if (total_bits > METER_ALU_HASH_BITS) {
+        if (total_bits > get_meter_alu_hash_bits()) {
             LOG4("  total_bits(" << total_bits << ") > METER_ALU_HASH_BITS(" <<
-                 METER_ALU_HASH_BITS << ")");
+                 get_meter_alu_hash_bits() << ")");
             return false; }
         hm_reqs = hash_matrix_reqs::max(false);
     }
@@ -3489,6 +3585,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
     }
     hash_dist_groups[asm_unit / HASH_DIST_SLICES] = hash_group;
     hash_group_use[hash_group] |= hash_table_input;
+
     hash_used_per_function[hash_group] |= hash_bits_used;
 }
 
@@ -4151,11 +4248,13 @@ void IXBar::update(cstring name, const Use &alloc) {
         }
 
         hash_group_use[bits.group] |= alloc.hash_table_inputs[bits.group];
+        update_hash_parity(bits.group);
         hash_group_print_use[bits.group] = name;
         hash_used_per_function[bits.group].setrange(bits.bit + RAM_SELECT_BIT_START, bits.width);
     }
     for (auto &way : alloc.way_use) {
         hash_group_use[way.group] |= alloc.hash_table_inputs[way.group];
+        update_hash_parity(way.group);
         hash_group_print_use[way.group] = name;
         hash_used_per_function[way.group].setrange(way.slice * RAM_LINE_SELECT_BITS,
                                                    RAM_LINE_SELECT_BITS);
@@ -4177,6 +4276,7 @@ void IXBar::update(cstring name, const Use &alloc) {
         int max_index_bit = max_index_single_bit(max_bit);
         unsigned hash_table_input = alloc.hash_table_inputs[mah.group];
         hash_group_use[mah.group] |= alloc.hash_table_inputs[mah.group];
+        update_hash_parity(mah.group);
         hash_group_print_use[mah.group] = name;
         hash_used_per_function[mah.group] |= mah.bit_mask;
 
@@ -4202,6 +4302,7 @@ void IXBar::update(cstring name, const Use &alloc) {
         hash_used_per_function[hdh.group] |= hdh.galois_matrix_bits;
         hash_group_print_use[hdh.group] = name;
         hash_group_use[hdh.group] |= alloc.hash_table_inputs[hdh.group];
+        update_hash_parity(hdh.group);
     }
 
     if (alloc.proxy_hash_key_use.allocated) {
@@ -4229,6 +4330,7 @@ void IXBar::update(cstring name, const Use &alloc) {
         }
         hash_group_print_use[ph.group] = name;
         hash_group_use[ph.group] |= alloc.hash_table_inputs[ph.group];
+        update_hash_parity(ph.group);
         hash_used_per_function[ph.group] |= ph.hash_bits;
     }
 }

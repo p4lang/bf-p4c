@@ -69,6 +69,7 @@ class InputXbar {
     std::map<int, HashCol>                              empty_hash_table;
     ordered_map<Group, std::vector<Input>>              groups;
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
+    // Map of hash table index to parity bit set on the table
     std::map<unsigned, unsigned>                        hash_table_parity;
     std::map<unsigned, HashGrp>                         hash_groups;
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);

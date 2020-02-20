@@ -1214,7 +1214,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 //  whole function needs to be replaced
                 emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
                                 ident_bits_prev_alloc);
-                if (!options.disable_gfm_parity)
+                if (use->is_parity_enabled())
                     out << indent << IXBar::HASH_PARITY_BIT << ": parity" << std::endl;
                 --indent;
             }

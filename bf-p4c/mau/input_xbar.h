@@ -59,10 +59,18 @@ struct IXBar {
     static constexpr int GATEWAY_SEARCH_BYTES = 4;
     static constexpr int RESILIENT_MODE_HASH_BITS = 51;
     static constexpr int FAIR_MODE_HASH_BITS = 14;
-    static constexpr int METER_ALU_HASH_BITS = 51;
+    static constexpr int METER_ALU_HASH_BITS = 52;
+    static constexpr int METER_ALU_HASH_PARITY_BYTE_START = 48;
     static constexpr int METER_PRECOLOR_SIZE = 2;
     static constexpr int REPEATING_CONSTRAINT_SECT = 4;
     static constexpr int MAX_HASH_BITS = 52;
+
+    static int get_meter_alu_hash_bits() {
+        // If hash parity is enabled reserve a bit for parity
+        if (!BackendOptions().disable_gfm_parity)
+            return METER_ALU_HASH_BITS - 1;
+        return METER_ALU_HASH_BITS;
+    }
 
     static int get_hash_single_bits() {
         // If hash parity is enabled reserve a bit for parity
@@ -219,6 +227,8 @@ struct IXBar {
     bitvec                                      hash_dist_inuse[HASH_TABLES] = { bitvec() };
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
     bitvec                                      hash_dist_bit_inuse[HASH_TABLES] = { bitvec() };
+    enum parity_status_t { PARITY_NONE, PARITY_ENABLED, PARITY_DISABLED };
+    parity_status_t  hash_group_parity_use[HASH_GROUPS] = { PARITY_NONE };
 
     // Added on update to be verified
     bitvec hash_used_per_function[HASH_GROUPS] = { bitvec() };
@@ -248,8 +258,10 @@ struct IXBar {
         bool            gw_search_bus = false;
         int             gw_search_bus_bytes = 0;
         bool            gw_hash_group = false;
+        parity_status_t parity = PARITY_NONE;
 
         bool search_data() const { return gw_search_bus || gw_hash_group; }
+        bool is_parity_enabled() const { return parity == PARITY_ENABLED; }
 
         // FIXME: Could be better created initialized through a constructor
         enum type_t { MATCH, GATEWAY, PROXY_HASH, SELECTOR, METER, STATEFUL_ALU, HASH_DIST, TYPES }
@@ -900,6 +912,8 @@ struct IXBar {
         const PhvInfo &phv, cstring name, const IR::MAU::Table* tbl, bool second_try);
     void createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chained_hd_alloc,
         cstring name);
+    void update_hash_parity(IXBar::Use &use, int hash_group);
+    parity_status_t update_hash_parity(int hash_group);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
