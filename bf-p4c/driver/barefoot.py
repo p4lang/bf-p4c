@@ -368,7 +368,7 @@ class BarefootBackend(BackendDriver):
            not (self._arch == 'v1model' or self._arch == 'psa' or opts.no_bf_rt_schema):
             opts.bf_rt_schema = "{}/bfrt.json".format(self._output_directory)
 
-        if opts.bf_rt_schema is not None and self.runVerifiers:
+        if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
             self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
