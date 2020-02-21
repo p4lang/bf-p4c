@@ -7,6 +7,24 @@
 #include "bf-p4c/parde/dump_parser.h"
 #include "device.h"
 
+static std::set<const IR::BFN::ParserState*>
+compute_end_states(const IR::BFN::Parser* parser, const CollectParserInfo& parser_info,
+                   const ordered_set<const IR::BFN::ParserState*>& calc_states) {
+    std::set<const IR::BFN::ParserState*> end_states;
+    for (auto a : calc_states) {
+        bool is_end = true;
+        for (auto b : calc_states) {
+            if (parser_info.graph(parser).is_ancestor(a, b)) {
+                is_end = false;
+                break;
+            }
+        }
+        if (is_end)
+            end_states.insert(a);
+    }
+    return end_states;
+}
+
 // Eliminate adds that do not have a terminal verify()
 // Eliminate subtracts that do not have a terminal get()
 class ComputeDeadParserChecksums : public ParserInspector {
@@ -383,20 +401,7 @@ struct ParserChecksumAllocator : public Visitor {
         std::set<const IR::BFN::ParserState*> end_states;
 
         auto& calc_states = checksum_info.decl_name_to_states.at(parser).at(decl);
-
-        for (auto a : calc_states) {
-            bool is_end = true;
-            for (auto b : calc_states) {
-                if (parser_info.graph(parser).is_ancestor(a, b)) {
-                    is_end = false;
-                    break;
-                }
-            }
-            if (is_end)
-                end_states.insert(a);
-        }
-
-        return end_states;
+        return compute_end_states(parser, parser_info, calc_states);
     }
 
     bool contains_clot_checksum(const IR::BFN::Parser* parser,
@@ -541,18 +546,20 @@ struct InsertParserClotChecksums : public PassManager {
 
     struct CreateParserPrimitives : ParserInspector {
         const PhvInfo& phv;
+        const CollectParserInfo& parser_info;
         const ClotInfo& clotInfo;
         const CollectClotChecksumFields& clot_checksum_fields;
         std::map<const IR::BFN::ParserState*,
                  std::map<const Clot*,
                           std::vector<const IR::BFN::ParserChecksumPrimitive*>>>
                                  state_to_clot_primitives;
+        std::map<const IR::BFN::Parser*, std::map<const Clot*,
+                          ordered_set<const IR::BFN::ParserState*>>> clot_to_states;
 
-        std::map<const Clot*, ordered_set<const IR::BFN::ParserState*>> clot_to_states;
-
-        CreateParserPrimitives(const PhvInfo& phv, const ClotInfo& clotInfo,
+        CreateParserPrimitives(const PhvInfo& phv, const CollectParserInfo& parser_info,
+                               const ClotInfo& clotInfo,
                                const CollectClotChecksumFields& clot_checksum_fields) :
-            phv(phv), clotInfo(clotInfo),
+            phv(phv), parser_info(parser_info), clotInfo(clotInfo),
             clot_checksum_fields(clot_checksum_fields) { }
 
         IR::BFN::ChecksumAdd*
@@ -572,6 +579,7 @@ struct InsertParserClotChecksums : public PassManager {
         }
 
         bool preorder(const IR::BFN::ParserState* state) override {
+             auto parser = findContext<IR::BFN::Parser>();
             auto& checksum_field_to_clot = clot_checksum_fields.checksum_field_to_clot;
             auto& checksum_field_to_offset = clot_checksum_fields.checksum_field_to_offset;
             for (auto stmt : state->statements) {
@@ -590,7 +598,7 @@ struct InsertParserClotChecksums : public PassManager {
                         auto add = create_checksum_add(clot, rval, swap);
 
                         state_to_clot_primitives[state][clot].push_back(add);
-                        clot_to_states[clot].insert(state);
+                        clot_to_states[parser][clot].insert(state);
                     }
                 }
             }
@@ -600,12 +608,16 @@ struct InsertParserClotChecksums : public PassManager {
 
         void end_apply() override {
             // insert terminal call at last state
-            for (auto& cs : clot_to_states) {
-                auto clot = cs.first;
-                auto last = *(cs.second.rbegin());
-
-                auto deposit = create_checksum_deposit(clot);
-                state_to_clot_primitives[last][clot].push_back(deposit);
+            for (auto& parser_cs : clot_to_states) {
+                for (auto& cs : parser_cs.second) {
+                    auto clot = cs.first;
+                    auto end_states = compute_end_states(parser_cs.first,
+                                                         parser_info, cs.second);
+                    for (auto end : end_states) {
+                        auto deposit = create_checksum_deposit(clot);
+                        state_to_clot_primitives[end][clot].push_back(deposit);
+                    }
+                }
             }
         }
     };
@@ -632,9 +644,11 @@ struct InsertParserClotChecksums : public PassManager {
         }
     };
 
-    InsertParserClotChecksums(const PhvInfo& phv, const ClotInfo& clot) {
+    InsertParserClotChecksums(const PhvInfo& phv, const CollectParserInfo& parser_info,
+                              const ClotInfo& clot) {
         auto clot_checksum_fields = new CollectClotChecksumFields(phv, clot);
-        auto create_checksum_prims = new CreateParserPrimitives(phv, clot, *clot_checksum_fields);
+        auto create_checksum_prims = new CreateParserPrimitives(phv, parser_info, clot,
+                                                                *clot_checksum_fields);
         auto insert_checksum_prims = new InsertParserPrimitives(*create_checksum_prims);
 
         addPasses({
@@ -816,7 +830,7 @@ AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotI
           checksum_info(parser_info) {
     auto collect_dead_checksums = new ComputeDeadParserChecksums(parser_info, checksum_info);
     auto elim_dead_checksums = new ElimDeadParserChecksums(collect_dead_checksums->to_elim);
-    auto insert_clot_checksums = new InsertParserClotChecksums(phv, clot);
+    auto insert_clot_checksums = new InsertParserClotChecksums(phv, parser_info, clot);
     auto allocator = new ParserChecksumAllocator(*this, parser_info, checksum_info);
 
     addPasses({
@@ -825,6 +839,7 @@ AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotI
         &checksum_info,
         collect_dead_checksums,
         elim_dead_checksums,
+        &parser_info,
         Device::numClots() > 0 ? insert_clot_checksums : nullptr,
         LOGGING(5) ? new DumpParser("after_insert_clot_csum") : nullptr,
         &parser_info,
