@@ -208,6 +208,19 @@ BFN_Options::BFN_Options() {
                        exit(0);
                        return false; },
                    "Print the documentation about supported pragmas and exit.");
+    registerOption("--relax-phv-init", "arg",
+        [this](const char* arg) {
+            int temp = std::atoi(arg);
+            if ((!temp && (*arg != '0')) || (temp < 0) || (temp > 2)) {
+                ::error("Invalid PHV initialization relaxation value %s. Valid arguments: {0|1|2}",
+                        arg);
+                return false;
+            }
+            relax_phv_init = temp;
+            return true; },
+            "Relax PHV initialization. Default:0 "
+            "Values 1 and 2 incrementally relax PHV initialization in later MAU stages in order "
+            "to relax PHV Allocation in earlier MAU stages; this may affect table placement");
 }
 
 using Target = std::pair<cstring, cstring>;

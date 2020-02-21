@@ -41,7 +41,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       dark_live_range(phv, clot, deps, defuse, pragmas, uses, action_constraints, domTree,
               tableActionsMap, alloc),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
-              domTree, alloc),
+                domTree, alloc),
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), action_constraints),
       strided_headers(phv) {
     if (options.trivial_phvalloc) {

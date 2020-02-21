@@ -206,10 +206,22 @@ bool FindInitializationNode::increasesDependenceCriticalPath(
             use_prev_round_stages.end());
     auto last_stage_init = std::max_element(init_prev_round_stages.begin(),
             init_prev_round_stages.end());
-    new_init_stage = std::max(*last_stage_use + 1, *last_stage_init);
+
+    // Check option relax_phv_init value to further relax phv initialization
+    // The lower the phv initialization relaxation the more we avoid
+    // initializing fields closer to the end of the MAU pipeline in order
+    // to make it easier for table placement to fit tables into the device's
+    // MAU stages. However, this may increase the pressure on PHV allocation
+    // in the earlier stages of the MAU pipeline. If this is observed we should
+    // increase the relaxation factor to help PHV allocation.
+    new_init_stage = *last_stage_use + 1;
+    if (BackendOptions().relax_phv_init == 1) {
+        new_init_stage = std::max(new_init_stage, *last_stage_init - 1);
+    } else if (BackendOptions().relax_phv_init == 0) {
+        new_init_stage = std::max(new_init_stage, *last_stage_init);}
     LOG7("\t\t\t  last_stage_use: " << *last_stage_use << ", new_init_stage: " << new_init_stage <<
          ", init_dep_tail: " << init_dep_tail);
-    if (new_init_stage + init_dep_tail >= Device::numStages() - 1) {
+    if ((new_init_stage + init_dep_tail) >= (Device::numStages() - 1)) {
         LOG5("\t\t\t  Disallowing this metadata init because it would cause use to exceed "
              "number of stages based on previous round");
         return true;

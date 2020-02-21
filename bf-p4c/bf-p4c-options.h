@@ -38,6 +38,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_table_placement_backfill = false;
     bool table_placement_in_order = false;
     bool disable_gfm_parity = false;
+    int relax_phv_init = 0;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in
