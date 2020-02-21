@@ -216,8 +216,8 @@ void PackConflicts::addPackConflict(const PHV::Field* f1, const PHV::Field* f2) 
 }
 
 bool PackConflicts::hasPackConflict(const PHV::Field* f1, const PHV::Field* f2) const {
-    LOG6(this << " " << phv.isFieldNoPack(f1, f2) << " Checking for " << f1->name << " (" <<
-            f1->id << ") and " << f2->name << " (" << f2->id << ")");
+    LOG6(this << " PackConflict:" << phv.isFieldNoPack(f1, f2) << " - Checking for " <<
+         f1->name << " (" << f1->id << ") and " << f2->name << " (" << f2->id << ")");
     return phv.isFieldNoPack(f1, f2);
 }
 

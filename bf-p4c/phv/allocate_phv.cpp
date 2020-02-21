@@ -10,6 +10,8 @@
 #include "bf-p4c/phv/parser_extract_balance_score.h"
 #include "lib/log.h"
 
+#define GREATER(comparison)  (comparison ? " (BETTER)" : " (WORSE)")
+
 std::vector<const PHV::Field*>
 FieldPackingOpportunity::fieldsInOrder(
         const std::list<PHV::SuperCluster*>& sorted_clusters) const {
@@ -171,58 +173,98 @@ bool AllocScore::operator>(const AllocScore& other) const {
     // Operator> return true if this score is better.
 
     if (delta_parser_extractor_balance != 0) {
+        LOG6("SCORE: delta_parser_extractor_balance = " << delta_parser_extractor_balance)  <<
+            GREATER(delta_parser_extractor_balance);
         return delta_parser_extractor_balance > 0; }
 
     if (delta_clot_bits != 0) {
         // This score is better if it has fewer clot bits.
+        LOG6("SCORE: delta_clot_bits=" << delta_clot_bits << GREATER(-delta_clot_bits));
         return delta_clot_bits < 0; }
-    if (Device::currentDevice() != Device::TOFINO)
-        if (delta_overlay_bits != 0)
+    if (Device::currentDevice() != Device::TOFINO) {
+        if (delta_overlay_bits != 0) {
+            LOG6("SCORE: delta_overlay_bits=" << delta_overlay_bits <<
+                 GREATER(delta_overlay_bits));
             return delta_overlay_bits > 0;
-    if (container_type_score != 0) {
-        if (Device::currentDevice() == Device::TOFINO)
-            return container_type_score < 0;
-        else if (delta_inc_containers == 0)
-            return container_type_score < 0;
+        }
     }
-    if (Device::currentDevice() != Device::TOFINO)
-        if (delta_pov_bits_wasted != 0)
+
+    if (container_type_score != 0) {
+        if (Device::currentDevice() == Device::TOFINO) {
+            LOG6("SCORE (TOF): container_type_score=" << container_type_score <<
+                 GREATER(-container_type_score));
+            return container_type_score < 0;
+        } else if (delta_inc_containers == 0) {
+            LOG6("SCORE: container_type_score=" << container_type_score <<
+                 GREATER(-container_type_score));
+            return container_type_score < 0;
+        }
+    }
+    if (Device::currentDevice() != Device::TOFINO) {
+        if (delta_pov_bits_wasted != 0) {
+            LOG6("SCORE: delta_pov_bits_wasted=" << delta_pov_bits_wasted <<
+                 GREATER(-delta_pov_bits_wasted));
             return delta_pov_bits_wasted < 0;
+        }
+    }
+
     if (delta_inc_tphv_collections != 0) {
+        LOG6("SCORE: delta_inc_tphv_collections=" << delta_inc_tphv_collections <<
+             GREATER(-delta_inc_tphv_collections));
         return delta_inc_tphv_collections < 0; }
     // Opt for the AllocScore, which minimizes the number of bitmasked-set instructions. This helps
     // with action data packing and gives table placement a better shot at fitting within the number
     // of stages available on the device.
-    if (n_num_bitmasked_set != other.n_num_bitmasked_set)
+    if (n_num_bitmasked_set != other.n_num_bitmasked_set) {
+        LOG6("SCORE: delta_n_num_bitmasked_set=" <<
+             (n_num_bitmasked_set - other.n_num_bitmasked_set) <<
+             GREATER(other.n_num_bitmasked_set - n_num_bitmasked_set));
         return n_num_bitmasked_set < other.n_num_bitmasked_set;
+    }
     if (delta_inc_containers != 0) {
         // This score requires more new containers.
+        LOG6("SCORE: delta_inc_containers=" << delta_inc_containers <<
+             GREATER(-delta_inc_containers));
         return delta_inc_containers < 0; }
-    if (Device::currentDevice() == Device::TOFINO)
+    if (Device::currentDevice() == Device::TOFINO) {
         if (delta_overlay_bits != 0) {
             // This score has more overlay bits.
+            LOG6("SCORE: delta_overlay_bits=" << delta_overlay_bits << GREATER(delta_overlay_bits));
             return delta_overlay_bits > 0; }
+    }
     if (delta_wasted_bits != 0) {
         // This score has fewer wasted bits.
+        LOG6("SCORE: delta_wasted_bits=" << delta_wasted_bits << GREATER(-delta_wasted_bits));
         return delta_wasted_bits < 0; }
     if (delta_packing_bits != 0) {
         // This score has more packing bits.
+        LOG6("SCORE: delta_packing_bits=" << delta_packing_bits <<
+             GREATER(delta_packing_bits));
         return delta_packing_bits > 0; }
     if (delta_packing_priority != 0) {
         // This score is better if it make a more prioritized packing.
+        LOG6("SCORE: delta_packing_priority=" << delta_packing_priority <<
+             GREATER(-delta_packing_priority));
         return delta_packing_priority < 0; }
     if (delta_set_gress != 0) {
         // This score pins fewer containers to a new gress.
+        LOG6("SCORE: delta_set_gress=" << delta_set_gress << GREATER(-delta_set_gress));
         return delta_set_gress < 0; }
     if (delta_set_deparser_group_gress != 0) {
         // This score pins less containers to a new deparser group gress.
+        LOG6("SCORE: delta_set_deparser_group_gress=" << delta_set_deparser_group_gress <<
+             GREATER(-delta_set_deparser_group_gress));
         return delta_set_deparser_group_gress < 0; }
     if (delta_set_parser_group_gress != 0) {
         // This score pins fewer containers to a new parser group gress.
+        LOG6("SCORE: delta_set_parser_group_gress=" << delta_set_parser_group_gress <<
+             GREATER(-delta_set_parser_group_gress));
         return delta_set_parser_group_gress < 0; }
     if (delta_mismatched_gress != 0) {
         // This score allocates more non-deparsed fields to deparser groups of
         // a different gress.
+        LOG6("SCORE: delta_mismatched_gress=" << delta_mismatched_gress <<
+             GREATER(delta_mismatched_gress));
         return delta_mismatched_gress > 0; }
 
     return false;
@@ -3451,18 +3493,20 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
 
         // If any allocation was found, commit it.
         if (best_alloc) {
+            cstring mod_containers = rst.commit(*best_alloc);
+            allocated.push_back(cluster_group);
+            alloc_history << "SUCCESSFULLY" << std::endl;
+            alloc_history << "Modified containers: " << mod_containers << std::endl;
+            alloc_history << rst.getTransactionSummary() << std::endl;
+
             if (LOGGING(4)) {
                 LOG4("SUCCESSFULLY allocated " << cluster_group);
+                LOG4("... into containers:" << mod_containers);
                 LOG4("by slicing it into the following superclusters:");
                 for (auto* sc : *best_slicing)
                     LOG5(sc);
                 LOG4("SCORE: " << best_score);
             }
-
-            rst.commit(*best_alloc);
-            allocated.push_back(cluster_group);
-            alloc_history << "SUCCESSFULLY" << std::endl;
-            alloc_history << rst.getTransactionSummary() << std::endl;
         } else {
             LOG4("FAILED to allocate " << cluster_group);
             LOG4("when the things are like: ");

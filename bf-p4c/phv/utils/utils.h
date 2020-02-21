@@ -360,7 +360,7 @@ class Allocation {
  private:
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
-    virtual void addStatus(PHV::Container c, const ContainerStatus& status);
+    virtual bool addStatus(PHV::Container c, const ContainerStatus& status);
 
     /// Add the actions in @actions to the metadata initialization points for @slice.
     virtual void addMetaInitPoints(
@@ -577,7 +577,7 @@ class Allocation {
 
     /// Update this allocation with any new allocation in @view.  Note that
     /// this may add new slices but does not remove or overwrite existing slices.
-    void commit(Transaction& view);
+    cstring commit(Transaction& view);
 
     /// Utility function.
     /// @returns true if @f1 and @f2 are mutually exclusive.

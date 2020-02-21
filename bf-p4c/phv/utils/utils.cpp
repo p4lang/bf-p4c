@@ -131,7 +131,10 @@ bool PHV::AllocSlice::hasInitPrimitive() const {
     return true;
 }
 
-void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status) {
+bool PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status) {
+    bool new_slice = !(container_status_i.count(c) &&
+                       container_status_i[c].slices.size() == status.slices.size());
+
     // Update container status.
     container_status_i[c] = status;
 
@@ -150,6 +153,7 @@ void PHV::Allocation::addStatus(PHV::Container c, const ContainerStatus& status)
         }
         field_status_i[slice.field()].insert(slice);
     }
+    return new_slice;
 }
 
 void PHV::Allocation::addMetaInitPoints(
@@ -482,15 +486,20 @@ void PHV::Allocation::removeAllocatedSlice(const ordered_set<PHV::AllocSlice>& s
     }
 }
 
-void PHV::Allocation::commit(Transaction& view) {
+cstring PHV::Allocation::commit(Transaction& view) {
     BUG_CHECK(view.getParent() == this, "Trying to commit PHV allocation transaction to an "
               "allocation that is not its parent");
 
+    std::stringstream ss;
     state_to_containers_i.clear();
 
     // Merge the status from the view.
-    for (auto kv : view.getTransactionStatus())
-        this->addStatus(kv.first, kv.second);
+    for (auto kv : view.getTransactionStatus()) {
+        bool c_status_chng = this->addStatus(kv.first, kv.second);
+        if (c_status_chng) {
+            ss << "   " << kv.first;
+        }
+    }
 
     // Merge the metadata initialization points from the view.
     for (auto kv : view.getMetaInitPoints())
@@ -503,6 +512,7 @@ void PHV::Allocation::commit(Transaction& view) {
 
     // Clear the view.
     view.clearTransactionStatus();
+    return cstring::to_cstring(ss.str());
 }
 
 PHV::Transaction PHV::Allocation::makeTransaction() const {
