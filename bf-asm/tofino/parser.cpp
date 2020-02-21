@@ -423,7 +423,7 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
         if (map[i].dst->value != 511) {
             used++;
             if (used_idx == -1) used_idx = i;
-        } else {
+        } else if (unused_idx == -1) {
             unused_idx = i;
         }
     }
@@ -431,17 +431,34 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
     // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
     // see MODEL-210 for discussion.
 
+    bool has_csum_verify = false;
+
     for (auto& c : match->csum) {
         if (c.type == 0 && c.dest && c.dest->reg.size == 16 && used != 4) {
             used++;
+            has_csum_verify = true;
             break;
         }
     }
 
-    if (used == 1)
+    if (used == 1) {
         unused_idx = used_idx ^ 1;
-    else if (used == 3)
-        used_idx = unused_idx ^ 1;
+    } else if (used == 3) {
+        if (has_csum_verify) {
+            if (!map[unused_idx].src_type && map[unused_idx ^ 1].dst->value == 511) {
+            // If both used extractors are using slots that can source from packet or constant,
+            // it's impossible to pad to 2N alignment in the assembler. Compiler needs to account
+            // for this when splitting state.
+                error(match->lineno,
+                      "Unsatisfiable 2N alignment constraint for narrow-to-wide extract in %s",
+                      match->state->name.c_str());
+            } else if (map[unused_idx].src_type && map[unused_idx ^ 1].dst->value == 511) {
+                used_idx = phv_16b_2;
+            }
+        } else {
+            used_idx = unused_idx ^ 1;
+        }
+    }
 
     if (used % 2) {
         map[unused_idx].dst->rewrite();
@@ -449,7 +466,7 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
         *map[unused_idx].dst = *map[used_idx].dst;
         *map[unused_idx].src = *map[used_idx].src;
 
-        if (map[used_idx].src_type)
+        if (map[used_idx].src_type && map[unused_idx].src_type)
             *map[unused_idx].src_type = *map[used_idx].src_type;
 
         // mark the dummy write dest as multi-write
