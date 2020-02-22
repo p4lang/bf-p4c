@@ -6,7 +6,7 @@
 
 from __future__ import print_function
 
-import argparse, os, sys
+import argparse, os, sys, re
 import json, jsonschema
 
 debug = 0
@@ -38,6 +38,25 @@ def getTitle(name):
         return name[0].capitalize() + name[1:]
     else:
         return name.title()
+
+# To convert the constraint name from Title form to underscore separated lowercase form
+# Eg: 'SolitaryBeforeStageConstraint' to 'solitary_before_stage'
+def getReasonType(name):
+    if 'Constraint' in name:
+        name = name.split('Constraint')[0]
+    reason_parts = re.findall('[A-Z][^A-Z]*', name)
+    reason_type = ''
+    for i, part in enumerate(reason_parts):
+        # To handle constraints like MAUGroup which split to ['M', 'A', 'U', 'Group']
+        if len(part) < 2:
+            if (i + 1) < len(reason_parts) and len(reason_parts[i + 1]) > 1:
+                reason_type = reason_type + part.lower() + '_'
+            else:
+                reason_type = reason_type + part.lower()
+        else:
+            reason_type = reason_type + part.lower() + '_'
+    return reason_type[:-1]
+
 
 class DataMember(object):
     def __init__(self, name, typeName = None, body = None, isOptional = False):
@@ -509,8 +528,11 @@ def getDataMembers(classBody, className):
             isOptional = p not in classBody['required']
             m = getDataMember(p, classBody['properties'][p], isOptional = isOptional)
             if debug > 2: print(m)
-            if isOptional: optionalMembers.append(m)
-            else:          dataMembers.append(m)
+            if isOptional:
+                # Exclude StringDataMembers which are custom format types
+                if not classBody['properties'][p].get('format', False):
+                    optionalMembers.append(m)
+            else: dataMembers.append(m)
     dataMembers.extend(optionalMembers)
     if debug > 3:
         names = [ (m.name, m.isOptional) for m in dataMembers ]
@@ -709,7 +731,7 @@ class ClassGenerator:
             for d in self.dataMembers:
                 d.genSerializer(self.generator)
             if len(self.superClasses) > 0:
-                self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
+                self.serializeSuperClass()
             self.generator.decrIndent()
             self.write('}\n')
             internalSerializerGenerated = True
@@ -727,7 +749,7 @@ class ClassGenerator:
             for d in self.dataMembers:
                 d.genSerializer(self.generator)
             if len(self.superClasses) > 0:
-                self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
+                self.serializeSuperClass()
         self.write('writer.EndObject();\n')
         self.generator.decrIndent()
         self.write('}\n')
@@ -806,6 +828,10 @@ class ClassGenerator:
         self.generator.decrIndent()
         self.write('}\n')
 
+    def serializeSuperClass(self):
+        self.write('writer.Key("reason_type");\n')
+        self.write('writer.String("' + getReasonType(self.cppClassName) + '");\n')
+        self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
 
 class Generator:
     def __init__(self, schema, schema_version, file_name, output_dir):
