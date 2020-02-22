@@ -711,6 +711,13 @@ set (hack_p4_14include_HEADERS
   )
 endif (ENABLE_JBAY)
 
+if (ENABLE_CLOUDBREAK)
+set (p4_14include_HEADERS
+  ${p4_14include_HEADERS}
+  p4_14include/tofino3/intrinsic_metadata.p4
+  )
+endif (ENABLE_CLOUDBREAK)
+
 set (BF_P4C_SOURCES
   ${BF_P4C_MIDEND_SRCS}
   ${BF_P4C_BACKEND_COMMON_SRCS}
@@ -903,11 +910,8 @@ endif(ENABLE_CLOUDBREAK)
 # fix the scripts.
 add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/p4c-barefoot ${P4C_BINARY_DIR}/p4c-barefoot
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/tofino
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
+    ${CMAKE_COMMAND} -E make_directory `dirname ${P4C_BINARY_DIR}/\$$h` \;
     sed ${SED_RELEASE_FILTERS} ${CMAKE_CURRENT_SOURCE_DIR}/\$$h >${P4C_BINARY_DIR}/\$$h \;
   done
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
@@ -922,7 +926,6 @@ add_custom_target(linkp4cbarefoot
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
 add_dependencies(linkp4cbarefoot remove_psa_for_tofino)
-
 
 # Set default target and architecture to tofino-tna
 add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
