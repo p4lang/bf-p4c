@@ -262,13 +262,13 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_i)
-        output_jbay_field_dictionary_slice(rslice.him.fd_compress.chunk,
+        output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
             rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS]);
 
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
     for (auto &rslice : regs.dprsrreg.ho_e)
-        output_jbay_field_dictionary_slice(rslice.hem.fd_compress.chunk,
+        output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
             rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS]);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
