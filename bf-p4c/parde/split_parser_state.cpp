@@ -358,6 +358,13 @@ struct AllocateParserState : public ParserTransform {
                 return merged;
             }
 
+            bool extract_out_of_buffer(const IR::BFN::ExtractPhv* e) {
+                GetExtractBufferPos get_buf_pos(sa.phv);
+                e->apply(get_buf_pos);
+
+                return get_buf_pos.max > Device::pardeSpec().byteInputBufferSize() * 8;
+            }
+
             void allocate() override {
                 std::map<size_t, unsigned> extractors_by_size;
 
@@ -483,7 +490,7 @@ struct AllocateParserState : public ParserTransform {
 
                     if (extractor_avail && constant_avail) {
                         for (auto e : extracts) {
-                            if (out_of_buffer(e) || straddles_buffer(e)) {
+                            if (extract_out_of_buffer(e)) {
                                 oob = true;
                                 break;
                             }
@@ -947,16 +954,17 @@ struct AllocateParserState : public ParserTransform {
             }
         }
 
-        struct GetMinExtractBufferPos : Inspector {
+        struct GetExtractBufferPos : Inspector {
             const PhvInfo& phv;
 
-            int rv = Device::pardeSpec().byteInputBufferSize() * 8;
+            int min = Device::pardeSpec().byteInputBufferSize() * 8;
+            int max = -1;
 
-            explicit GetMinExtractBufferPos(const PhvInfo& phv) : phv(phv) { }
+            explicit GetExtractBufferPos(const PhvInfo& phv) : phv(phv) { }
 
             bool preorder(const IR::BFN::ExtractPhv* extract) override {
                 PHV::FieldUse use(PHV::FieldUse::WRITE);
-                if (auto rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
                     auto alloc_slices = phv.get_alloc(extract->dest->field,
                             PHV::AllocContext::PARSER, &use);
 
@@ -973,7 +981,8 @@ struct AllocateParserState : public ParserTransform {
                           rval->range.shiftedByBits(-container_range.lo)
                                      .resizedToBits(slice.container.size());
 
-                        rv = std::min(rv, buffer_range.lo);
+                        min = std::min(min, buffer_range.lo);
+                        max = std::max(max, buffer_range.hi);
                     }
                 }
 
@@ -988,10 +997,10 @@ struct AllocateParserState : public ParserTransform {
 
             auto shift = min_statements.rv;
 
-            GetMinExtractBufferPos min_extracts(phv);
+            GetExtractBufferPos min_extracts(phv);
             spilled_statements.apply(min_extracts);
 
-            shift = std::min(shift, min_extracts.rv);
+            shift = std::min(shift, min_extracts.min);
 
             auto state_shift = get_state_shift(state);
             shift = std::min(shift, static_cast<int>(state_shift * 8));

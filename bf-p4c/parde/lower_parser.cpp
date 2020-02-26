@@ -2278,12 +2278,13 @@ class ComputeBufferRequirements : public ParserModifier {
         // plan to shift.
         match->bufferRequired = std::max(unsigned(bytesRead.hi), match->shift);
 
+        auto state = findContext<IR::BFN::LoweredParserState>();
+
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
         BUG_CHECK(*match->bufferRequired <= inputBufferSize,
                   "Parser state %1% requires %2% bytes to be buffered which "
                   "is greater than the size of the input buffer (%3% byte)",
-                  findContext<IR::BFN::LoweredParserState>()->name,
-                  *match->bufferRequired, inputBufferSize);
+                  state->name, *match->bufferRequired, inputBufferSize);
     }
 };
 
