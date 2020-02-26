@@ -2742,7 +2742,7 @@ BruteForceAllocationStrategy::slice_clusters(
             }
         } catch (const Util::CompilerBug& e) {
             BUG("The compiler failed in slicing the following group of fields related by "
-                "parser alignment and MAU constraints\n%1%", sc);
+                "parser alignment and MAU constraints\n%1%, %2%\n", sc, e.what());
         }
     }
     return rst;

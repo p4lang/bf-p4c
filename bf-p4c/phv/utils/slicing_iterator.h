@@ -188,7 +188,7 @@ class SlicingIterator {
     void updateSliceLists(
             std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
             ordered_map<FieldSlice, int>& exactSliceListSize,
-            const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) const;
+            const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap);
 
     void updateSliceListInformation(
             PHV::FieldSlice& candidate,

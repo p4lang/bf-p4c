@@ -729,7 +729,8 @@ struct AllocateParserState : public ParserTransform {
                             } else {
                                 current.push_back(c);
                             }
-                        } else if (out_of_buffer(c)) {
+                        } else if (out_of_buffer(c) ||
+                                (c->is<IR::BFN::ChecksumGet>() && straddles_buffer(c))) {
                             spilled.push_back(c);
                             LOG3("spill " << c << " (out of buffer)");
                             oob = true;

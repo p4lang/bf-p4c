@@ -266,6 +266,8 @@ int PHV::SlicingIterator::populate_initial_maps(
             for (auto& rot_slice : rot_cluster.slices())
             noSplitSlices.insert(rot_slice);
     });
+    // collecting info for pa_container_size progma.
+    // set no split for those progma fields.
     for (const auto* field : allFields) {
         if (!pr_size.count(field)) continue;
         LOG5("\t  Found field with pa_container_size pragma: " << field->name);
@@ -312,16 +314,6 @@ int PHV::SlicingIterator::populate_initial_maps(
     for (auto* list : sc_i->slice_lists()) {
         LOG5("Determining initial co-ordinates for slice list");
         LOG5("\t" << *list);
-        int sliceOffsetWithinSliceList = 0;
-        // set to true, if any slice in the slice list has an exact containers requirement.
-        bool has_exact_containers = false;
-
-        // Set, if a slice is a padding field, to the size of the padding field.
-        int paddingFieldSize = -1;
-        // Used to track the last field in a slice list; the last field's right coordinate is
-        // always -1 to indicate that no slicing is required there (there is implicit slicing at
-        // each slice list boundary).
-        FieldSlice* lastSliceInSliceList = nullptr;
 
         // Calculate the size of the slice list up front.
         int sliceListSize = 0;
@@ -376,6 +368,16 @@ int PHV::SlicingIterator::populate_initial_maps(
             allSlicesNoSplitSameField = false;
         }
 
+        int sliceOffsetWithinSliceList = 0;
+        // set to true, if any slice in the slice list has an exact containers requirement.
+        bool has_exact_containers = false;
+
+        // Set, if a slice is a padding field, to the size of the padding field.
+        int paddingFieldSize = -1;
+        // Used to track the last field in a slice list; the last field's right coordinate is
+        // always -1 to indicate that no slicing is required there (there is implicit slicing at
+        // each slice list boundary).
+        FieldSlice* lastSliceInSliceList = nullptr;
         const FieldSlice* prevSlice = nullptr;
         for (auto& slice : *list) {
             originalSliceOffset[slice].first = sliceOffsetWithinSliceList;
@@ -1160,11 +1162,16 @@ void PHV::SlicingIterator::impose_MAU_constraints(
 void PHV::SlicingIterator::updateSliceLists(
         std::list<PHV::SuperCluster::SliceList*>& candidateSliceLists,
         ordered_map<FieldSlice, int>& exactSliceListSize,
-        const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) const {
+        const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) {
     for (const auto& kv : replaceSlicesMap) {
         LOG5("\t\t\tReplacing: " << kv.first << " with");
         LOG5("\t\t\t  - " << kv.second[0]);
         LOG5("\t\t\t  - " << kv.second[1]);
+
+        initialOffset[kv.second[0]] = initialOffset[kv.first];
+        initialOffset[kv.second[1]] = initialOffset[kv.first] + (kv.second[0].range().size() / 8);
+        LOG5("Update InitOffset " << kv.second[0] << " to " << initialOffset[kv.second[0]]);
+        LOG5("Update InitOffset " << kv.second[1] << " to " << initialOffset[kv.second[1]]);
     }
     std::vector<PHV::SuperCluster::SliceList*> toDelete;
     std::vector<PHV::SuperCluster::SliceList*> toAdd;
