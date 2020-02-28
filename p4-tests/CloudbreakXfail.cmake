@@ -86,11 +86,6 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   testdata/p4_14_samples/source_routing.p4
 )
 
@@ -107,7 +102,7 @@ p4c_add_xfail_reason("tofino3"
 
 p4c_add_xfail_reason("tofino3"
 # Fail on purpose due to indirect tables not being mutually exclusive
-  "table .* and table .* are not mutually exclusive"
+  "table .* and table .* cannot share Counter .* because use of the Counter .* is not mutually exclusive"
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
 )
@@ -133,7 +128,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "error: .*: no such field in standard_metadata"
+  "error: .*: Not found no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
 )
 
@@ -182,7 +177,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "Compiler Bug.*More than one field written to .* in action"
+  "error: This program violates action constraints imposed by Tofino3"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
 )
 
@@ -211,9 +206,8 @@ p4c_add_xfail_reason("tofino3"
   testdata/p4_14_samples/counter5.p4
 )
 
-# BRIG-584
 p4c_add_xfail_reason("tofino3"
-  "ingress::local_metadata.f received an incomplete allocation"
+  "unexpected packet output on port 0"
   extensions/p4_tests/p4_16/stf/extract_slice.p4
 )
 
@@ -248,12 +242,6 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "standard_metadata.mcast_grp is not accessible in the egress pipe"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
-)
-
-# p4lang/p4c #1724
-p4c_add_xfail_reason("tofino3"
-  "error: The following operation is not yet supported:"
-  testdata/p4_14_samples/issue-1559.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -292,24 +280,8 @@ p4c_add_xfail_reason("tofino3"
 #)
 
 p4c_add_xfail_reason("tofino3"
-  "This program violates action constraints imposed by Tofino2"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "Slicing the following supercluster is taking too long"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "Field .* is not a member of structure header .*"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1802.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "Use of uninitialized parser value"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
 )
 
 #p4c_add_xfail_reason("tofino3"
@@ -358,13 +330,6 @@ p4c_add_xfail_reason("tofino3"
 
 ## new cloudbreak failures (different from JBay)
 
-#P4C-2429
-p4c_add_xfail_reason("tofino3"
-  "mismatch from expected.* at byte "
-  testdata/p4_14_samples/basic_routing.p4
-  extensions/p4_tests/p4_14/bf_p4c_samples/parser_dc_full.p4
-)
-
 #driver does not yet work
 p4c_add_xfail_reason("tofino3"
   "ERROR:PTF runner:Error when starting model & switchd"
@@ -388,9 +353,64 @@ p4c_add_xfail_reason("tofino3"
 
 # port type mismatch between v1model and cloudbreak
 p4c_add_xfail_reason("tofino3"
-  "Cannot unify bit<9> to bit<11>|Cannot unify bit<11> to bit<9>|bit<11> and bit<9>"
+  "Cannot unify bit<9> to bit<11>|Cannot unify bit<11> to bit<9>|bit<11> and bit<9>|bit<34> to bit<32>"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
   extensions/p4_tests/p4_16/compile_only/parser_match_14.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match_wide1.p4
+  extensions/p4_tests/p4_16/compile_only/all_dep_edges.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2284.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match5.p4
+  extensions/p4_tests/p4_16/compile_only/multiple_apply3.p4
+  extensions/p4_tests/p4_16/compile_only/tcam_no_versioning.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match1.p4
+  extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2350.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2479.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match4.p4
+  extensions/p4_tests/p4_16/compile_only/empty_header_stack.p4
+  extensions/p4_tests/p4_16/compile_only/static_entries2.p4
+  extensions/p4_tests/p4_16/compile_only/match_key_slices.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2274.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match2.p4
+  extensions/p4_tests/p4_16/compile_only/default_actions.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match_extern.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match3.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  extensions/p4_tests/p4_16/customer/keysight/p4c-2314.p4
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-1641.p4
+  extensions/p4_tests/p4_16/customer/microsoft/p4c-2387.p4
+  extensions/p4_tests/p4_16/stf/byte-rotate-merge.p4
+  extensions/p4_tests/p4_16/stf/metadata_extract.p4
+  extensions/p4_tests/p4_16/stf/p4c-1426.p4
+  extensions/p4_tests/p4_16/compile_only/all_ctrl_edges.p4
+  extensions/p4_tests/p4_16/compile_only/inline_subparser.p4
+  extensions/p4_tests/p4_16/compile_only/register.p4
   extensions/p4_tests/p4_16/ptf/digest.p4
   extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
@@ -403,4 +423,31 @@ p4c_add_xfail_reason("tofino3"
   "error This program is intended to compile for Tofino P4 architecture only"
   extensions/p4_tests/p4_14/ptf/sful_split1.p4
   extensions/p4_tests/p4_14/ptf/p4c_1962.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "counter cnt bytes value is .*, expected .*"
+  testdata/p4_14_samples/counter3.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "error: .*: Duplicates declaration .*"
+  extensions/p4_tests/p4_16/compile_only/p4c-2495.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "error: .*: not defined on bit<9> and bit<11>"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1314.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "cb_test_harness CRASH with signal 6"
+  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "error: The following operation is not yet supported"
+  testdata/p4_14_samples/issue-1559.p4
 )

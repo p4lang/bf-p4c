@@ -1,7 +1,7 @@
 set (tofino3_timeout 600)
 
 # check for PTF requirements
-#packet_test_setup_check("cb")
+packet_test_setup_check("cb")
 
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
 set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)

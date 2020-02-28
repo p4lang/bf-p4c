@@ -30,7 +30,7 @@ p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_y2_profil
 
 # Running switch-16 PTF tests on default profile
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y1" ${SWITCH_P4_16_Y1}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y1_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y1_tofino2 -to 4400" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         "all
@@ -39,7 +39,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         ^switch_l3.L3ECMPTest
         ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y2" ${SWITCH_P4_16_Y2}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2 -to 4400" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         "all
@@ -48,7 +48,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         ^switch_l3.L3ECMPTest
         ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y0" ${SWITCH_P4_16}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y0_tofino2 -to 3600" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y0_tofino2 -to 4400" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y0"
         "all

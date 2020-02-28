@@ -143,7 +143,7 @@ node ('compiler-travis') {
                 }
             }
         },
-        switch_msdc_and_switch_dc_basic_tests_cust2: {
+        switch_msdc_and_switch_dc_basic_tests_cust2_and_stful_meters_hash_driven: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running switch PD tests for MSDC_PROFILE_BRIG'"
@@ -151,20 +151,20 @@ node ('compiler-travis') {
 
                     sh "echo 'Running switch PD tests for DC_BASIC_PROFILE_BRIG'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_dc_basic' -LE 'UNSTABLE'"
+                    sh "echo 'Running stful, meters and hash_driven tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_stful|smoketest_programs_meters|smoketest_programs_hash_driven'"
                     sh "echo 'Running remaining customer must passes that are excluded in Travis jobs'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/' -L 'CUST_MUST_PASS' -E 'arista'"
                 }
             }
         },
-        switch_16_tofino_tests_and_stful_meters_hash_driven: {
+        switch_16_tofino_tests: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16_Tests_x1'"
                     sh "echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16_Tests_x2'"
-                    sh "echo 'Running stful, meters and hash_driven tests'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_stful|smoketest_programs_meters|smoketest_programs_hash_driven'"
                 }
             }
         },
@@ -203,6 +203,14 @@ node ('compiler-travis') {
                 timestamps {
                     sh "echo 'Running tofino2 tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2|cpplint|gtest|test_p4c_driver' -E 'smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*'"
+                }
+            }
+        },
+        travis_tofino3: {
+            ansiColor('xterm') {
+                timestamps {
+                    sh "echo 'Running tofino3 tests'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino3' -LE 'ptf'"
                 }
             }
         }
