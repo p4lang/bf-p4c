@@ -309,7 +309,7 @@ p4c_add_xfail_reason("tofino3"
 
 # stateful table too big to fit in one half of jbay stage -- needs two home rows (top and bottom)
 p4c_add_xfail_reason("tofino3"
-  "error: .*: Could not place table .* could not fit in stage .* with .* entries"
+  "error: Could not place table .* could not fit in stage .* with .* entries"
   extensions/p4_tests/p4_14/stf/stateful4.p4
 )
 

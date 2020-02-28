@@ -74,13 +74,6 @@
 
 int TablePlacement::placement_round = 1;
 
-TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
-                               const TablesMutuallyExclusive &m, PhvInfo &p,
-                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
-                               SplitAttachedInfo &sia, TableSummary &summary_)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d), att_info(sia),
-  summary(summary_) {}
-
 bool TablePlacement::backtrack(trigger &trig) {
     // If a table does not fit in the available stages, then TableSummary throws an exception.
     // TablePlacement catches that exception and re-runs table placement without considering
@@ -99,10 +92,9 @@ bool TablePlacement::backtrack(trigger &trig) {
 }
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
+    auto rv = PassManager::init_apply(root);
     alloc_done = phv.alloc_done();
     summary.clearPlacementErrors();
-    root->apply(ntp);
-    root->apply(con_paths);
     LOG1("Table Placement ignores container conflicts? " << ignoreContainerConflicts);
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
@@ -114,23 +106,8 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
         Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
                                                   INGRESS);  // this should be both really!
     }
-    return MauTransform::init_apply(root);
+    return rv;
 }
-
-struct TablePlacement::TableInfo {
-    int uid = -1;
-    const IR::MAU::Table                        *table;
-    ordered_set<const IR::MAU::TableSeq *>      refs;
-    bitvec      parents;        // Tables that invoke seqs containing this table
-    bitvec      tables;         // this table and all tables control dependent on it
-};
-struct TablePlacement::TableSeqInfo {
-    bool        root = false;
-    int         uid = -1;
-    bitvec      parents;        // same as 'refs', as a bitvec
-    bitvec      tables;         // the tables in the seqence and their control dependent children
-    ordered_set<const IR::MAU::Table *> refs;  // parent tables of this seq
-};
 
 class TablePlacement::SetupInfo : public Inspector {
     TablePlacement &self;
@@ -164,12 +141,13 @@ class TablePlacement::SetupInfo : public Inspector {
         BUG_CHECK(!self.seqInfo.count(seq), "TableSeq in both ingress and egress?");
         auto &info = self.seqInfo[seq];
         info.uid = self.seqInfo.size() - 1;
-        if (getContext()) {
-            auto tbl = getParent<IR::MAU::Table>();
-            BUG_CHECK(tbl, "parent of TableSeq is not a table");
+        if (auto tbl = getParent<IR::MAU::Table>()) {
             info.refs.insert(tbl);
+        } else if (getParent<IR::BFN::Pipe>()) {
+            info.root = true;
         } else {
-            info.root = true; }
+            BUG("parent of TableSeq is not a table or pipe");
+        }
         return true; }
     void revisit(const IR::MAU::TableSeq *seq) override {
         BUG_CHECK(self.seqInfo.count(seq), "TableSeq not present");
@@ -185,32 +163,54 @@ class TablePlacement::SetupInfo : public Inspector {
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::V1Table *) override { return false; }
 
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = Inspector::init_apply(node);
+        self.tblInfo.clear();
+        self.tblByName.clear();
+        self.seqInfo.clear();
+        self.attached_to.clear();
+        return rv;
+    }
+
+    void end_apply() override {
+        for (auto &att : self.attached_to) {
+            if (att.second.size() == 1) continue;
+            if (att.first->direct)
+                error("direct %s attached to multiple match tables", att.first); }
+        for (auto &seq : Values(self.seqInfo))
+            for (auto *tbl : seq.refs)
+                seq.parents.setbit(self.tblInfo.at(tbl).uid);
+        for (auto &tbl : Values(self.tblInfo))
+            for (auto *seq : tbl.refs)
+                tbl.parents |= self.seqInfo.at(seq).parents;
+    }
+
  public:
     explicit SetupInfo(TablePlacement &self_) : self(self_) {}
 };
 
 
-struct TablePlacement::GroupPlace {
+struct DecidePlacement::GroupPlace {
     /* tracking the placement of a group of tables from an IR::MAU::TableSeq
      *   parents    groups that must wait until this group is fully placed before any more
      *              tables from them may be placed (so next_table setup works)
      *   ancestors  union of parents and all parent's ancestors
      *   seq        the TableSeq being placed for this group */
-    const TablePlacement                &self;
+    const DecidePlacement                &self;
     ordered_set<const GroupPlace *>     parents, ancestors;
     const IR::MAU::TableSeq             *seq;
     const TablePlacement::TableSeqInfo  &info;
     int                                 depth;  // just for debugging?
-    GroupPlace(const TablePlacement &self_, ordered_set<const GroupPlace*> &work,
+    GroupPlace(const DecidePlacement &self_, ordered_set<const GroupPlace*> &work,
                const ordered_set<const GroupPlace *> &par, const IR::MAU::TableSeq *s)
-    : self(self_), parents(par), ancestors(par), seq(s), info(self.seqInfo.at(s)), depth(1) {
+    : self(self_), parents(par), ancestors(par), seq(s), info(self.self.seqInfo.at(s)), depth(1) {
         for (auto p : parents) {
             if (depth <= p->depth)
                 depth = p->depth+1;
             ancestors |= p->ancestors; }
         LOG4("    new seq " << seq->id << " depth=" << depth << " anc=" << ancestors);
         work.insert(this);
-        if (Device::numLongBranchTags() == 0 || self.options.disable_long_branch) {
+        if (Device::numLongBranchTags() == 0 || self.self.options.disable_long_branch) {
             // Table run only with next_table, so can't continue placing ancestors until
             // this group is finished
             if (LOGGING(5)) {
@@ -238,13 +238,13 @@ struct TablePlacement::GroupPlace {
             auto t = work.insert(p);
             if (rv == work.end()) rv = t.first; }
         return rv; }
-    void finish_if_placed(ordered_set<const GroupPlace*> &, const Placed *) const;
+    void finish_if_placed(ordered_set<const GroupPlace*> &, const TablePlacement::Placed *) const;
     static bool in_work(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) {
         for (auto pl : work)
             if (pl->seq == s) return true;
         return false; }
     friend std::ostream &operator<<(std::ostream &out,
-        const ordered_set<const TablePlacement::GroupPlace *> &set) {
+        const ordered_set<const DecidePlacement::GroupPlace *> &set) {
         out << "[";
         const char *sep = " ";
         for (auto grp : set) {
@@ -260,7 +260,7 @@ struct TablePlacement::Placed {
     TablePlacement              &self;
     const int                   id;
     const Placed                *prev = 0;
-    const GroupPlace            *group = 0;  // work group chosen from
+    const DecidePlacement::GroupPlace *group = 0;  // work group chosen from
     cstring                     name;
     int                         entries = 0;
     int                         requested_stage_entries = -1;  // pragma stage requested entries
@@ -311,7 +311,7 @@ struct TablePlacement::Placed {
         return placed.contains(self.tblInfo.at(tbl).tables); }
     bool is_fully_placed(const IR::MAU::TableSeq *seq) const {
         return placed.contains(self.seqInfo.at(seq).tables); }
-    const GroupPlace *find_group(const IR::MAU::Table *tbl) const {
+    const DecidePlacement::GroupPlace *find_group(const IR::MAU::Table *tbl) const {
         for (auto p = this; p; p = p->prev) {
             if (p->table == tbl || p->gw == tbl)
                 return p->group; }
@@ -439,7 +439,7 @@ class StageSummary {
 };
 }  // end anonymous namespace
 
-class TablePlacement::Backfill {
+class DecidePlacement::Backfill {
     /** Used to track tables that could be backfilled into a stage if we run out of other
      *  things to put in that stage.  Whenever we choose to place table such that another
      * table is no longer (immediately) placeable due to next table limits (so only applies
@@ -459,20 +459,20 @@ class TablePlacement::Backfill {
     std::vector<table_t>        avail;
 
  public:
-    explicit Backfill(TablePlacement &) {}
+    explicit Backfill(DecidePlacement &) {}
     explicit operator bool() const { return !avail.empty(); }
     std::vector<table_t>::iterator begin() { return avail.begin(); }
     std::vector<table_t>::iterator end() { return avail.end(); }
     void set_stage(int st) {
         if (stage != st) avail.clear();
         stage = st; }
-    void add(const Placed *tbl, const Placed *before) {
+    void add(const TablePlacement::Placed *tbl, const TablePlacement::Placed *before) {
         set_stage(before->stage);
         avail.push_back({ tbl->table, before->name }); }
 };
 
-void TablePlacement::GroupPlace::finish_if_placed(
-    ordered_set<const GroupPlace*> &work, const Placed *pl
+void DecidePlacement::GroupPlace::finish_if_placed(
+    ordered_set<const GroupPlace*> &work, const TablePlacement::Placed *pl
 ) const {
     if (pl->is_fully_placed(seq)) {
         LOG4("    Finished a sequence (" << seq->id << ")");
@@ -605,7 +605,7 @@ void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring 
  * Thus, some layouts may not actually be possible that were precalculated.  This will adjust
  * potential layouts if the allocation can not fit within the pack format.
  */
-bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estimate_set) {
+bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
     bool table_format = true;
 
     int initial_entries = next->entries;
@@ -634,8 +634,8 @@ bool TablePlacement::pick_layout_option(TablePlacement::Placed *next, bool estim
     return true;
 }
 
-bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
-                                     int &tcams_left, int min_entries) {
+bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_left,
+        int min_entries) {
     if (next->table->gateway_only() || next->table->match_key.empty())
         return false;
 
@@ -681,8 +681,9 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left,
 
 struct TablePlacement::RewriteForSplitAttached : public Transform {
     TablePlacement &self;
-    const Placed *pl;
-    RewriteForSplitAttached(TablePlacement &self, const Placed *p) : self(self), pl(p) {}
+    const TablePlacement::Placed *pl;
+    RewriteForSplitAttached(TablePlacement &self, const Placed *p)
+        : self(self), pl(p) {}
     const IR::MAU::Table *preorder(IR::MAU::Table *tbl) {
         self.setup_detached_gateway(tbl, pl);
         // don't visit most of the children
@@ -705,7 +706,7 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
         return ba; }
 };
 
-bool TablePlacement::try_alloc_ixbar(TablePlacement::Placed *next) {
+bool TablePlacement::try_alloc_ixbar(Placed *next) {
     next->resources.clear_ixbar();
     IXBar current_ixbar;
     for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
@@ -815,7 +816,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     return true;
 }
 
-bool TablePlacement::try_alloc_format(TablePlacement::Placed *next, bool gw_linked) {
+bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
@@ -877,7 +878,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
     return true;
 }
 
-bool TablePlacement::try_alloc_imem(Placed *next) {
+bool TablePlacement::try_alloc_imem(TablePlacement::Placed *next) {
     if (next->table->gateway_only())
         return true;
 
@@ -908,7 +909,7 @@ bool TablePlacement::try_alloc_imem(Placed *next) {
 }
 
 bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
-                                   const char *what, bool no_memory) {
+        const char *what, bool no_memory) {
     // FIXME -- for some reason, if we reallocate the format/ixbar/adb for other tables in
     // stage 0 when trying to place a starter pistol (even though that alocation ends up
     // unchanged), placement of memory for the starter pistol may then fail.  So we hack
@@ -1146,11 +1147,10 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
  *  return a vector of these possible choices to the is_better function to choose
  */
 safe_vector<TablePlacement::Placed *>
-    TablePlacement::try_place_table(const IR::MAU::Table *t,
-                                    const Placed *done, const StageUseEstimate &current,
-                                    GatewayMergeChoices& gmc) {
+    TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
+        const StageUseEstimate &current, GatewayMergeChoices& gmc) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    safe_vector<TablePlacement::Placed *> rv_vec;
+    safe_vector<Placed *> rv_vec;
     // Place and save a placement, as a lambda
     auto try_place = [&](Placed* rv) {
                          if ((rv = try_place_table(rv, current)))
@@ -1397,17 +1397,17 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
  * Try to backfill a table in the current stage just before another table, bumping up the
  * logical ids of the later tables, but keeping all in the same stage.
  */
-TablePlacement::Placed *TablePlacement::try_backfill_table(
-        const Placed *done, const IR::MAU::Table *tbl, cstring before) {
+TablePlacement::Placed *DecidePlacement::try_backfill_table(
+        const TablePlacement::Placed *done, const IR::MAU::Table *tbl, cstring before) {
     LOG2("try to backfill " << tbl->name << " before " << before);
-    std::vector<Placed *> whole_stage;
-    Placed *place_before = nullptr;
-    for (const Placed **p = &done; *p && (*p)->stage == done->stage; ) {
-        if (!(*p)->table->created_during_tp && !mutex(tbl, (*p)->table) &&
-            deps->container_conflict(tbl, (*p)->table)) {
+    std::vector<TablePlacement::Placed *> whole_stage;
+    TablePlacement::Placed *place_before = nullptr;
+    for (const TablePlacement::Placed **p = &done; *p && (*p)->stage == done->stage; ) {
+        if (!(*p)->table->created_during_tp && !self.mutex(tbl, (*p)->table) &&
+            self.deps->container_conflict(tbl, (*p)->table)) {
             LOG4("  can't backfill due to container conflict with " << (*p)->name);
             return nullptr; }
-        auto clone = new Placed(**p);
+        auto clone = new TablePlacement::Placed(**p);
         whole_stage.push_back(clone);
         if (clone->name == before) {
             BUG_CHECK(!place_before, "%s placed multiple times in stage %d", before, done->stage);
@@ -1417,14 +1417,14 @@ TablePlacement::Placed *TablePlacement::try_backfill_table(
     if (!place_before) {
         BUG("Couldn't find %s in stage %d", before, done->stage);
         return nullptr; }
-    Placed *pl = new Placed(*this, tbl, place_before->prev);
+    TablePlacement::Placed *pl = new TablePlacement::Placed(self, tbl, place_before->prev);
     int furthest_stage = done->stage;
-    if (!initial_stage_and_entries(pl, furthest_stage))
+    if (!self.initial_stage_and_entries(pl, furthest_stage))
         return nullptr;
     if (pl->stage != place_before->stage)
         return nullptr;
     place_before->prev = pl;
-    if (!try_alloc_all(pl, whole_stage, "Backfill"))
+    if (!self.try_alloc_all(pl, whole_stage, "Backfill"))
         return nullptr;
     for (auto &ae : pl->attached_entries)
         if (!ae.second)
@@ -1434,16 +1434,16 @@ TablePlacement::Placed *TablePlacement::try_backfill_table(
         return nullptr;
     for (auto *p : whole_stage) {
         p->logical_id += lts;
-        p->placed[tblInfo.at(tbl).uid] = 1;
-        p->match_placed[tblInfo.at(tbl).uid] = 1;
+        p->placed[self.tblInfo.at(tbl).uid] = 1;
+        p->match_placed[self.tblInfo.at(tbl).uid] = 1;
         if (p == place_before)
             break; }
     pl->update_formats();
     for (auto *p : whole_stage)
         p->update_formats();
     pl->setup_logical_id();
-    pl->placed[tblInfo.at(tbl).uid] = 1;
-    pl->match_placed[tblInfo.at(tbl).uid] = 1;
+    pl->placed[self.tblInfo.at(tbl).uid] = 1;
+    pl->match_placed[self.tblInfo.at(tbl).uid] = 1;
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " << pl->stage << "(" <<
          hex(pl->logical_id) << ")" << " (backfilled)");
@@ -1459,10 +1459,8 @@ TablePlacement::Placed *TablePlacement::try_backfill_table(
  * particular gress has not yet been placed, the create a starting table for that pipe in
  * stage 0.
  */
-const TablePlacement::Placed *
-         TablePlacement::add_starter_pistols(const Placed *done,
-                                             safe_vector<const Placed *> &trial,
-                                             const StageUseEstimate &current) {
+const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *done,
+        safe_vector<const Placed *> &trial, const StageUseEstimate &current) {
     if (Device::currentDevice() != Device::TOFINO)
         return done;
     if (done != nullptr && done->stage > 0)
@@ -1508,7 +1506,8 @@ const TablePlacement::Placed *
 
 
 const TablePlacement::Placed *
-TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *pl) {
+DecidePlacement::place_table(ordered_set<const GroupPlace *>&work,
+        const TablePlacement::Placed *pl) {
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " << pl->stage << "(" <<
          hex(pl->logical_id) << ")" <<
@@ -1549,7 +1548,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
             // the sequence would be [ t2 ], and the parent of that sequence would be
             // [ cond-0, cond-1 ]
             ordered_set<const GroupPlace *> parents;
-            for (auto tbl : seqInfo.at(n).refs) {
+            for (auto tbl : self.seqInfo.at(n).refs) {
                 if (pl->is_placed(tbl)) {
                     parents.insert(pl->find_group(tbl));
                 } else {
@@ -1596,7 +1595,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                 * available to place would be t2 and t3.  However, we do not want to add the
                 * t3 sequence yet to the algorithm, as it has to wait 
                 */
-                for (auto tbl : seqInfo.at(n).refs) {
+                for (auto tbl : self.seqInfo.at(n).refs) {
                     if (tbl == pl->table) {
                         parents.insert(gw_match_grp ? gw_match_grp : pl->group);
                     } else if (pl->is_placed(tbl)) {
@@ -1617,11 +1616,11 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     return pl;
 }
 
-bool TablePlacement::are_metadata_deps_satisfied(const Placed *placed,
+bool DecidePlacement::are_metadata_deps_satisfied(const TablePlacement::Placed *placed,
                                                  const IR::MAU::Table* t) const {
     // If there are no reverse metadata deps for this table, return true.
     LOG4("Checking table " << t->name << " for metadata dependencies");
-    const ordered_set<cstring> set_of_tables = phv.getReverseMetadataDeps(t);
+    const ordered_set<cstring> set_of_tables = self.phv.getReverseMetadataDeps(t);
     for (auto tbl : set_of_tables) {
         if (!placed || !placed->is_placed(tbl)) {
             LOG4("    Table " << tbl << " needs to be placed before table " << t->name);
@@ -1647,7 +1646,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     // before committing, but in the future...
     BUG_CHECK(a->prev == b->prev || a->prev->match_placed == b->prev->match_placed,
               "Inconsistent previously placed state in is_better");
-    const Placed *done = a->prev;
+    const TablePlacement::Placed *done = a->prev;
     ddm.update_placed_tables([done](const IR::MAU::Table *tbl)->bool {
         return done ? done->is_match_placed(tbl) : false; });
     const auto down_score = ddm.get_downward_prop_score(a_table_to_use, b_table_to_use);
@@ -1857,15 +1856,16 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Tab
  * This does not matter when long branches are turned on, as the next table is no longer the
  * limiting factor.
  */
-bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        const ordered_set<const IR::MAU::Table *> &partly_placed, const Placed *placed) {
-     if (!(Device::numLongBranchTags() == 0 || options.disable_long_branch))
+bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
+        const ordered_set<const IR::MAU::Table *> &partly_placed,
+        const TablePlacement::Placed *placed) {
+     if (!(Device::numLongBranchTags() == 0 || self.options.disable_long_branch))
          return true;
 
     for (auto pp : partly_placed) {
         if (pp == tbl || placed->is_match_placed(tbl) || placed->is_match_placed(pp))
             continue;
-        if (!mutex(pp, tbl) && !siaa.mutex_through_ignore(pp, tbl)) {
+        if (!self.mutex(pp, tbl) && !self.siaa.mutex_through_ignore(pp, tbl)) {
             LOG3("  - skipping " << tbl->name << " as it is not mutually "
                  "exclusive with partly placed " << pp->name);
             return false;
@@ -1921,29 +1921,30 @@ bool TablePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
  * The eventual goal is to get rid of this check and just verify that the compiler is not
  * running out of long branches.
  */
-bool TablePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const Placed *placed) {
-    if (!Device::hasLongBranches() || options.disable_long_branch)
+bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl,
+        const TablePlacement::Placed *placed) {
+    if (!Device::hasLongBranches() || self.options.disable_long_branch)
         return true;
     if (!tbl->uses_gateway())
         return true;
     // The gateway merge constraints are checked in an early function.  This is for unmergeable
     // gateways.
-    auto gmc = gateway_merge_choices(tbl);
+    auto gmc = self.gateway_merge_choices(tbl);
     if (gmc.size() > 0)
         return true;
 
     std::set<const IR::MAU::Table *> placeable_cd_gws;
     int non_cd_gw_tbls = 0;
     bool placeable_table_found = false;
-    for (auto cd_tbl : ntp.control_dom_set.at(tbl)) {
+    for (auto cd_tbl : self.ntp.control_dom_set.at(tbl)) {
         if (cd_tbl == tbl) continue;
         if (cd_tbl->uses_gateway()) continue;
         non_cd_gw_tbls++;
         bool any_prev_unaccounted = false;
-        for (auto prev : deps->happens_logi_after_map.at(cd_tbl)) {
+        for (auto prev : self.deps->happens_logi_after_map.at(cd_tbl)) {
             if (prev->uses_gateway()) continue;   // Check #3 from comments
             if (placed && placed->is_placed(prev)) continue;   // Check #1 from comments
-            if (ntp.control_dom_set.at(tbl).count(prev)) continue;   // Check #2 from comments
+            if (self.ntp.control_dom_set.at(tbl).count(prev)) continue;   // Check #2 from comments
             any_prev_unaccounted = true;
             break;
         }
@@ -1954,44 +1955,29 @@ bool TablePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const P
     return placeable_table_found || non_cd_gw_tbls == 0;
 }
 
-void TablePlacement::initForPipe(const IR::BFN::Pipe *pipe, ordered_set<const GroupPlace *> &work) {
-    tblInfo.clear();
-    tblByName.clear();
-    seqInfo.clear();
-    attached_to.clear();
+void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
+        ordered_set<const GroupPlace *> &work) {
     size_t gress_index = 0;
     for (auto th : pipe->thread) {
         if (th.mau && th.mau->tables.size() > 0) {
-            th.mau->apply(SetupInfo(*this));
             new GroupPlace(*this, work, {}, th.mau);
-            table_in_gress[gress_index] = true;
+            self.table_in_gress[gress_index] = true;
         }
         gress_index++;
     }
     if (pipe->ghost_thread && pipe->ghost_thread->tables.size() > 0) {
-        pipe->ghost_thread->apply(SetupInfo(*this));
         new GroupPlace(*this, work, {}, pipe->ghost_thread); }
-    for (auto &att : attached_to) {
-        if (att.second.size() == 1) continue;
-        if (att.first->direct)
-            error("direct %s attached to multiple match tables", att.first); }
-    for (auto &seq : Values(seqInfo))
-        for (auto *tbl : seq.refs)
-            seq.parents.setbit(tblInfo.at(tbl).uid);
-    for (auto &tbl : Values(tblInfo))
-        for (auto *seq : tbl.refs)
-            tbl.parents |= seqInfo.at(seq).parents;
 }
 
-IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
+bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     LOG_FEATURE("stage_advance", 2, "Stage advance " <<
-        (ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
+        (self.ignoreContainerConflicts ? "" : "not ") << "ignoring container conflicts");
     LOG1("table placement starting " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread) );
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
-    const Placed *placed = nullptr;
+    const TablePlacement::Placed *placed = nullptr;
     /* all the state for a partial table placement is stored in the work
      * set and placed list, which are const pointers, so we can backtrack
      * by just saving a snapshot of a work set and corresponding placed
@@ -2010,7 +1996,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
              Log::endl << "    " << current);
         if (!partly_placed.empty())
             LOG5("    partly_placed: " << partly_placed);
-        safe_vector<const Placed *> trial;
+        safe_vector<const TablePlacement::Placed *> trial;
         bitvec  trial_tables;
         for (auto it = work.begin(); it != work.end();) {
             // DANGER -- we iterate over the work queue while possibly removing and
@@ -2026,7 +2012,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 if (it == work.end()) it = add;
                 continue; }
             BUG_CHECK(grp->ancestors.count(grp) == 0, "group is its own ancestor!");
-            if (Device::numLongBranchTags() == 0 || options.disable_long_branch) {
+            if (Device::numLongBranchTags() == 0 || self.options.disable_long_branch) {
                 // Table run only with next_table, so can't continue placing ancestors until
                 // this group is finished
                 if (LOGGING(5)) {
@@ -2048,14 +2034,14 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     seq_placed[idx] = true;
                     LOG3("    - skipping " << t->name << " as its already done");
                     continue; }
-                auto &info = tblInfo.at(t);
+                auto &info = self.tblInfo.at(t);
                 if (trial_tables[info.uid])
                     continue;
                 if (info.parents && (!placed || (info.parents - placed->match_placed))) {
                     LOG3("    - skipping " << t->name << " as a parent is not yet placed");
                     continue; }
 
-                if (options.table_placement_in_order) {
+                if (self.options.table_placement_in_order) {
                     if (first_not_yet_placed)
                         first_not_yet_placed = false;
                     else
@@ -2063,7 +2049,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
 
                 bool should_skip = false;  // flag to continue; outer loop;
                 for (auto& grp_tbl : grp->seq->tables) {
-                    if (deps->happens_before_control(t, grp_tbl) &&
+                    if (self.deps->happens_before_control(t, grp_tbl) &&
                         (!placed || !(placed->is_placed(grp_tbl)))) {
                         LOG3("  - skipping " << t->name << " due to in-sequence control" <<
                             " dependence on " << grp_tbl->name);
@@ -2079,7 +2065,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     done = false;
                     continue;
                 }
-                for (auto *prev : deps->happens_logi_after_map.at(t)) {
+                for (auto *prev : self.deps->happens_logi_after_map.at(t)) {
                     if (!placed || !placed->is_placed(prev)) {
                         LOG3("  - skipping " << t->name << " because it depends on " << prev->name);
                         done = false;
@@ -2092,13 +2078,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                      continue;
                 }
 
-                auto gmc = TablePlacement::gateway_merge_choices(t);
+                auto gmc = self.gateway_merge_choices(t);
                 // Prune these choices according to happens after
                 std::vector<const IR::MAU::Table*> to_erase;
                 for (auto mc : gmc) {
                     // Iterate through all of this merge choice's happens afters and make sure
                     // they're placed
-                    for (auto* prev : deps->happens_logi_after_map.at(mc.first)) {
+                    for (auto* prev : self.deps->happens_logi_after_map.at(mc.first)) {
                         if (prev == t)
                             continue;
                         if (!placed || !placed->is_placed(prev)) {
@@ -2136,13 +2122,13 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                 if (should_skip) continue;
 
                 // Attempt to actually place the table
-                auto pl_vec = try_place_table(t, placed, current, gmc);
+                auto pl_vec = self.try_place_table(t, placed, current, gmc);
                 LOG3("    Pl vector: " << pl_vec);
                 done = false;
                 for (auto pl : pl_vec) {
                     pl->group = grp;
                     trial.push_back(pl);
-                    trial_tables.setbit(tblInfo.at(pl->table).uid);
+                    trial_tables.setbit(self.tblInfo.at(pl->table).uid);
                 }
             }
             if (done) {
@@ -2163,22 +2149,20 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                     error("partly placed: %s", tbl); }
             break; }
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
-        const Placed *best = 0;
-        placed = add_starter_pistols(placed, trial, current);
+        const TablePlacement::Placed *best = 0;
+        placed = self.add_starter_pistols(placed, trial, current);
 
-        choice_t choice = DEFAULT;
+        TablePlacement::choice_t choice = TablePlacement::DEFAULT;
         for (auto t : trial) {
-            if (t->prev) {
-                LOG3("  Check point now " << t->prev << " " << (t->prev->prev == nullptr));
-            }
-            if (!best || is_better(t, best, choice)) {
-                log_choice(t, best, choice);
+            if (!best || self.is_better(t, best, choice)) {
+                self.log_choice(t, best, choice);
                 best = t;
             } else if (best) {
-                log_choice(nullptr, best, choice); } }
+                self.log_choice(nullptr, best, choice); } }
 
-        if (placed && best->stage > placed->stage && !options.disable_table_placement_backfill) {
-            const Placed *backfilled = nullptr;
+        if (placed && best->stage > placed->stage &&
+            !self.options.disable_table_placement_backfill) {
+            const TablePlacement::Placed *backfilled = nullptr;
             /* look for a table that could be backfilled */
             for (auto &bf : backfill) {
                 if (placed->is_placed(bf.table)) continue;
@@ -2209,7 +2193,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
                                 (t->stage-1) << " : " << t->stage_advance_log); } }
         placed = place_table(work, best);
 
-        if (!options.disable_table_placement_backfill) {
+        if (!self.options.disable_table_placement_backfill) {
             for (auto p : trial) {
                 /* Look for tables that are were placeable in this stage and are now not placeable
                  * and remember them for future backfilling.  Currently restricted to tables with
@@ -2225,22 +2209,22 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
             partly_placed.erase(placed->table); }
     LOG1("Table placement placed " << count(placed) << " tables in " <<
          (placed ? placed->stage+1 : 0) << " stages");
-    placement = placed;
-    table_placed.clear();
-    for (auto p = placement; p; p = p->prev) {
+    self.placement = placed;
+    self.table_placed.clear();
+    for (auto p = self.placement; p; p = p->prev) {
         LOG2("  Table " << p->name << " logical id 0x" << hex(p->logical_id) <<
              " entries=" << p->entries);
         for (auto &att : p->attached_entries)
             LOG3("    attached table " << att.first->name << " entries=" << att.second);
         assert(p->name == p->table->name);
-        assert(p->need_more || table_placed.count(p->name) == 0);
-        table_placed.emplace_hint(table_placed.find(p->name), p->name, p);
+        assert(p->need_more || self.table_placed.count(p->name) == 0);
+        self.table_placed.emplace_hint(self.table_placed.find(p->name), p->name, p);
         if (p->gw) {
             LOG2("  Gateway " << p->gw->name << " is also logical id 0x" << hex(p->logical_id));
-            assert(p->need_more || table_placed.count(p->gw->name) == 0);
-            table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
+            assert(p->need_more || self.table_placed.count(p->gw->name) == 0);
+            self.table_placed.emplace_hint(self.table_placed.find(p->gw->name), p->gw->name, p); } }
     LOG1("Finished table placement decisions " << pipe->name);
-    return pipe;
+    return false;
 }
 
 /* Human-readable strings for the choice_t enum used to return
@@ -2288,11 +2272,11 @@ void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t ch
     }
 }
 
-IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
-    tblInfo.clear();
-    tblByName.clear();
-    seqInfo.clear();
-    table_placed.clear();
+IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
+    self.tblInfo.clear();
+    self.tblByName.clear();
+    self.seqInfo.clear();
+    self.table_placed.clear();
     LOG3("table placement completed " << pipe->name);
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
@@ -2300,7 +2284,7 @@ IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     return pipe;
 }
 
-void TablePlacement::table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
+void TransformTables::table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
     tbl->resources = resources;
     tbl->layout.entries = entries;
@@ -2367,7 +2351,8 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
  *  in the last pointer to chain the last table in the current stage to the first table in
  *  the next stage
  */
-IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed *placed,
+IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
+        const TablePlacement::Placed *placed,
     int stage_table, IR::MAU::Table **last) {
     IR::MAU::Table *rv = nullptr;
     IR::MAU::Table *prev = nullptr;
@@ -2406,8 +2391,8 @@ IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed
  *  learn/match method is used to determine which table to run.  Thus, the algorithm differs
  *  from the hit miss chaining
  */
-IR::Vector<IR::MAU::Table> *TablePlacement::break_up_dleft(IR::MAU::Table *tbl,
-    const Placed *placed, int stage_table) {
+IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
+    const TablePlacement::Placed *placed, int stage_table) {
     auto dleft_vector = new IR::Vector<IR::MAU::Table>();
     int logical_tables = placed->use.preferred()->logical_tables();
     BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
@@ -2502,9 +2487,9 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *  $hit or $miss.
  */
 
-IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
-    auto it = table_placed.find(tbl->name);
-    if (it == table_placed.end()) {
+IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
+    auto it = self.table_placed.find(tbl->name);
+    if (it == self.table_placed.end()) {
         BUG_CHECK(errorCount() > 0, "Trying to place a table %s that was never placed", tbl->name);
         return tbl; }
     if (tbl->is_placed())
@@ -2574,7 +2559,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     }
 
 
-    if (table_placed.count(tbl->name) == 1) {
+    if (self.table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
             select_layout_option(tbl, it->second->use.preferred());
             add_attached_tables(tbl, it->second->use.preferred(), &it->second->resources);
@@ -2594,11 +2579,12 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     IR::MAU::Table *prev = 0;
     IR::MAU::Table *atcam_last = nullptr;
     /* split the table into multiple parts per the placement */
-    LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
+    LOG1("splitting " << tbl->name << " across " << self.table_placed.count(tbl->name)
+         << " stages");
     int deferred_attached = 0;
     for (auto *att : tbl->attached) {
         if (att->attached->direct) continue;
-        if (can_duplicate(att->attached)) continue;
+        if (TablePlacement::can_duplicate(att->attached)) continue;
         // splitting a table with an un-duplicatable indirect attached table
         // allocate TempVar to propagate index from match to attachment stage
         ++deferred_attached;
@@ -2609,7 +2595,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (deferred_attached > 1)
         P4C_UNIMPLEMENTED("Splitting %s with multiple indirect attachements not supported",
                           tbl->match_table->name);
-    for (const Placed *pl : ValuesForKey(table_placed, tbl->name)) {
+    for (const TablePlacement::Placed *pl : ValuesForKey(self.table_placed, tbl->name)) {
         auto *table_part = tbl->clone();
         // When a gateway is merged against a split table, only the first table created from the
         // split has the merged gateway
@@ -2633,8 +2619,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                     error("Couldn't find a usable split format for %1% and couldn't place it "
                           "without splitting", tbl);
                 for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
-                    if ((act->second = att_info.create_pre_split_action(act->second,
-                                                                        table_part, &phv)))
+                    if ((act->second = self.att_info.create_pre_split_action(act->second,
+                                                                        table_part, &self.phv)))
                         ++act;
                     else
                         act = table_part->actions.erase(act); }
@@ -2653,7 +2639,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                       "without splitting", tbl);
             BUG_CHECK(deferred_attached, "Split match from attached with no attached?");
             for (auto act = table_part->actions.begin(); act != table_part->actions.end();) {
-                if ((act->second = att_info.create_post_split_action(act->second, table_part)))
+                if ((act->second = self.att_info.create_post_split_action(act->second, table_part)))
                     ++act;
                 else
                     act = table_part->actions.erase(act); }
@@ -2662,7 +2648,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             table_part->match_key.clear();
             table_part->next.clear();
             table_part->suppress_context_json = true;
-            setup_detached_gateway(table_part, pl);
+            self.setup_detached_gateway(table_part, pl);
             if (table_part->actions.size() != 1)
                 P4C_UNIMPLEMENTED("split attached table with multiple actions");
             erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
@@ -2692,7 +2678,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     return rv;
 }
 
-IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
+IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
     visitAgain();  // clone these for any table that has been cloned
     auto tbl = findContext<IR::MAU::Table>();
     if (!tbl || !tbl->resources) {
@@ -2755,20 +2741,20 @@ IR::Node *TablePlacement::preorder(IR::MAU::BackendAttached *ba) {
     return ba;
 }
 
-IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
+IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
     // Inserting the starter pistol tables
     if (findContext<IR::MAU::Table>() == nullptr && seq->tables.size() > 0) {
         if (Device::currentDevice() == Device::TOFINO) {
             auto gress = seq->front()->gress;
-            if (starter_pistol[gress] != nullptr) {
-                seq->tables.push_back(starter_pistol[gress]);
+            if (self.starter_pistol[gress] != nullptr) {
+                seq->tables.push_back(self.starter_pistol[gress]);
             }
         }
     }
     return seq;
 }
 
-IR::Node *TablePlacement::postorder(IR::MAU::TableSeq *seq) {
+IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
@@ -2791,5 +2777,20 @@ TablePlacement::find_placed(cstring name) const {
     return rv;
 }
 
-void dump(const ordered_set<const TablePlacement::GroupPlace *> &work) {
+void dump(const ordered_set<const DecidePlacement::GroupPlace *> &work) {
     std::cout << work << std::endl; }
+
+TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
+                               const TablesMutuallyExclusive &m, PhvInfo &p,
+                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
+                               SplitAttachedInfo &sia, TableSummary &summary_)
+: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d), att_info(sia),
+  summary(summary_) {
+     addPasses({
+         &ntp,
+         &con_paths,
+         new SetupInfo(*this),
+         new DecidePlacement(*this),
+         new TransformTables(*this)
+     });
+}
