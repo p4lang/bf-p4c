@@ -457,10 +457,10 @@ void PhvLogging::addMutexFields(const PHV::Field::alloc_slice& sl,
 void PhvLogging::logContainers() {
     const auto& phvSpec = Device::phvSpec();
     // Populate container structures.
-    ordered_map<const PHV::Container, std::vector<PHV::Field::alloc_slice>> allocation;
+    ordered_map<const PHV::Container, ordered_set<PHV::Field::alloc_slice>> allocation;
     for (auto& field : phv) {
         for (auto& slice : field.get_alloc())
-            allocation[slice.container].emplace_back(slice); }
+            allocation[slice.container].insert(slice); }
 
     for (auto kv : allocation) {
         auto c = kv.first;

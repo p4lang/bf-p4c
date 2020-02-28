@@ -286,6 +286,10 @@ class Field : public LiftLess<Field> {
         }
         bool isUsedDeparser() const;
         bool isUsedParser() const;
+        /// Orders by name.
+        bool operator<(const alloc_slice& other) const {
+            return field->name < other.field->name;
+        }
     };
 
     /// Sets the valid starting bit positions (little Endian) for this field.
