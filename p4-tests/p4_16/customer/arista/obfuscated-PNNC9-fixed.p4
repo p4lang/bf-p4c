@@ -2285,6 +2285,7 @@ control Cheyenne(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intr
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = Micro;
     }
     @disable_atomic_modify(1) @name(".Chewalla") table Chewalla {
         actions = {

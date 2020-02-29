@@ -4062,6 +4062,7 @@ control OnetMappingAndLearning(
         }
         const default_action = kvtep_onets_miss;
         size = kvtep_onets_table_size;
+        counters = kvtep_onets_cntr;
     }
 
     action remote_vtep_v4_hit(kvtep_id_t remote_vtep_id) {

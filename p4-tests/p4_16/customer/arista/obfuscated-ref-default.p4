@@ -2271,6 +2271,7 @@ control Mattapex(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = Aguila;
     }
     @disable_atomic_modify(1) @name(".Cadwell") table Cadwell {
         actions = {

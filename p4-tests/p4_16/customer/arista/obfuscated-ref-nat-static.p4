@@ -3123,6 +3123,7 @@ control Barnsboro(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_i
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = Oregon; 
     }
     @disable_atomic_modify(1) @name(".Ravenwood") table Ravenwood {
         actions = {
@@ -5255,6 +5256,7 @@ control Fittstown(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_in
         }
         size = 2048;
         default_action = NoAction();
+        counters = English;
     }
     apply {
         Newcomb.apply();
@@ -5283,6 +5285,7 @@ control Macungie(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_int
         }
         size = 1024;
         default_action = NoAction();
+        counters = Kiron;
     }
     apply {
         DewyRose.apply();

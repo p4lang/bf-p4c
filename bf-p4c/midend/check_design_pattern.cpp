@@ -1,5 +1,4 @@
 #include "check_design_pattern.h"
-#include "frontends/p4/methodInstance.h"
 #include "lib/error.h"
 
 bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
@@ -65,6 +64,86 @@ bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
                     "not a %3%. You may need to specify the type parameter T on %2%", param,
                     expr, cannoType);
             return false; }
+    }
+    return false;
+}
+
+Visitor::profile_t BFN::FindDirectExterns::init_apply(const IR::Node* root) {
+    directExterns.clear();
+    return Inspector::init_apply(root);
+}
+
+typedef BFN::CheckDirectResourceInvocation BFN_CheckDiResIn;
+const std::map<cstring, cstring>  BFN_CheckDiResIn::externsToProperties = {
+     { "DirectCounter"  , "counters"  },
+     { "DirectMeter"    , "meters"    },
+     { "DirectRegister" , "registers" },
+     { "DirectLpf"      , "filters"   },
+     { "DirectWred"     , "filters"   }
+};
+
+bool BFN::FindDirectExterns::preorder(const IR::MethodCallExpression* expr) {
+    auto* mi = P4::MethodInstance::resolve(expr, refMap, typeMap, true);
+    if (auto *em = mi->to<P4::ExternMethod>()) {
+        auto externName = em->actualExternType->name;
+        // skip if wrong extern
+        if (!BFN_CheckDiResIn::externsToProperties.count(externName))
+            return false;
+
+        auto act = findContext<IR::P4Action>();
+        if (!act) return false;
+
+        directExterns[act].push_back(em);
+    }
+    return false;
+}
+
+bool BFN::CheckDirectExternsOnTables::preorder(IR::P4Table* table) {
+    auto actionList = table->getActionList();
+    for (auto act : actionList->actionList) {
+        auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>();
+        if (directExterns.count(action)) {
+            auto externMethods = directExterns[action];
+            for (auto em : externMethods) {
+                auto externName = em->actualExternType->name;
+                auto externObjName = em->object->getName();
+                auto propToCheck = BFN_CheckDiResIn::externsToProperties.at(externName);
+                bool missingExtern = false;
+                if (auto prop = table->properties->getProperty(propToCheck)) {
+                    if (auto propValue = prop->value->to<IR::ExpressionValue>()) {
+                        if (auto propPath = propValue->expression->to<IR::PathExpression>())
+                            if (externObjName != propPath->path->name)
+                                missingExtern = true;
+                    }
+                } else {
+                    // If a property is missing on the table but defined in
+                    // the tables actions, we add it here.
+                    // However, BF Runtime generation happens before midend and
+                    // to ensure this direct resource api is generated in bf-rt
+                    // json we have to either run this pass before or flag an
+                    // error. For now we error out and ask user to correct P4 to
+                    // generate API
+                    auto newPath = new IR::PathExpression(externObjName);
+                    auto newPropValue = new IR::ExpressionValue(newPath);
+                    auto newProp = new IR::Property(propToCheck,
+                        IR::Annotations::empty, newPropValue, false);
+                    auto properties = table->properties->clone();
+                    properties->push_back(newProp);
+                    table->properties = properties;
+                    missingExtern = true;
+                }
+
+                if (missingExtern) {
+                    ::error(ErrorType::ERR_TYPE_ERROR,
+                        "Direct Extern - '%2%' of type '%1%' is used in action "
+                        "'%3%' but not specified as a '%4%' property on the "
+                        "actions table '%5%'. Please add it to the table to "
+                        "generate the runtime API for this extern",
+                        externName, em->object->externalName(), action->externalName(),
+                        propToCheck, table->externalName());
+                }
+            }
+        }
     }
     return false;
 }

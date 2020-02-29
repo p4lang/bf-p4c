@@ -742,19 +742,26 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-meter3.p4
 )
 
+# p4c_add_xfail_reason("tofino"
+#   "Maximum width for byte counter ingress.per_prefix_pkt_byte_count is 64 bits"
+#   testdata/p4_16_samples/psa-example-counters-bmv2.p4
+# )
+
+# p4c_add_xfail_reason("tofino"
+#   "direct attached objects must be enabled in all hit actions"
+#   testdata/p4_16_samples/psa-meter6.p4
+# )
+
+# P4C-1499
 p4c_add_xfail_reason("tofino"
-  "Maximum width for byte counter ingress.per_prefix_pkt_byte_count is 64 bits"
+  "Direct Extern .* of type .* is used in action .*"
   testdata/p4_16_samples/psa-example-counters-bmv2.p4
+  testdata/p4_16_samples/psa-meter6.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   testdata/p4_16_samples/psa-example-digest-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "direct attached objects must be enabled in all hit actions"
-  testdata/p4_16_samples/psa-meter6.p4
 )
 
 # This test attempts to match on a field of `error` type.

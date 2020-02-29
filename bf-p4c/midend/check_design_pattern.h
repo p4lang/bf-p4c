@@ -25,8 +25,10 @@
 #ifndef EXTENSIONS_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
 #define EXTENSIONS_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
 
+#include "bf-p4c-options.h"
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 
 namespace BFN {
@@ -51,10 +53,56 @@ class CheckExternValidity : public Inspector {
      bool preorder(const IR::MethodCallExpression*) override;
 };
 
+typedef std::map<const IR::P4Action*, std::vector<const P4::ExternMethod*>> ActionExterns;
+class FindDirectExterns : public Inspector {
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+    ActionExterns &directExterns;
+
+ public:
+     FindDirectExterns(P4::ReferenceMap *refMap, P4::TypeMap* typeMap,
+                        ActionExterns &directExterns) :
+        refMap(refMap), typeMap(typeMap), directExterns(directExterns) {}
+     bool preorder(const IR::MethodCallExpression*) override;
+    profile_t init_apply(const IR::Node* root) override;
+};
+
+class CheckDirectExternsOnTables: public Modifier {
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+    ActionExterns &directExterns;
+
+ public:
+     CheckDirectExternsOnTables(P4::ReferenceMap *refMap, P4::TypeMap* typeMap,
+                        ActionExterns &directExterns) :
+        refMap(refMap), typeMap(typeMap), directExterns(directExterns) {}
+     bool preorder(IR::P4Table*) override;
+};
+
+/**
+ * Direct resources declared in the program and used in an action need to be
+ * also specified on the table. Throw a compile time error if resources are
+ * missing on the table. As otherwise, the appropriate control plane api's do
+ * not get generated for that resource.
+ * P4C-1994
+ */
+class CheckDirectResourceInvocation: public PassManager {
+    ActionExterns directExterns;
+
+ public:
+    static const std::map<cstring, cstring> externsToProperties;
+    CheckDirectResourceInvocation(P4::ReferenceMap *refMap, P4::TypeMap* typeMap) {
+         passes.push_back(new FindDirectExterns(refMap, typeMap, directExterns));
+         passes.push_back(new CheckDirectExternsOnTables(refMap, typeMap, directExterns));
+    }
+};
+
 class CheckDesignPattern : public PassManager {
  public:
      CheckDesignPattern(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
          passes.push_back(new CheckExternValidity(refMap, typeMap));
+         if (BackendOptions().arch != "v1model")
+            passes.push_back(new CheckDirectResourceInvocation(refMap, typeMap));
      }
 };
 

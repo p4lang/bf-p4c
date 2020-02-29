@@ -1928,6 +1928,7 @@ control Leland(inout Belview Aynor, inout Beaverdam McIntyre, inout ingress_intr
         }
         size = 512;
         default_action = NoAction();
+        meters = Earlham;
     }
     apply {
         switch (Newtonia.apply().action_run) {

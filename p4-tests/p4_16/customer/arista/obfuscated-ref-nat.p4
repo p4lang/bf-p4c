@@ -2832,6 +2832,7 @@ control Horatio(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_int
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = LaPlant;
     }
     @disable_atomic_modify(1) @name(".WestPark") table WestPark {
         actions = {
@@ -4937,6 +4938,7 @@ control Maupin(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intri
         }
         size = 2048;
         default_action = NoAction();
+        counters = Claypool;
     }
     apply {
         Manville.apply();
@@ -4965,6 +4967,7 @@ control Bodcaw(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intri
         }
         size = 1024;
         default_action = NoAction();
+        counters = Weimar;
     }
     apply {
         BigPark.apply();

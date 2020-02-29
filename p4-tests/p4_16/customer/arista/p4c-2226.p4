@@ -2802,6 +2802,7 @@ control Newtonia(inout Plains Cassa, inout Darien Pawtucket, in ingress_intrinsi
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = Pioche; 
     }
     @disable_atomic_modify(1) @name(".Weathers") table Weathers {
         actions = {
@@ -4900,6 +4901,7 @@ control Fosston(inout Plains Cassa, inout Darien Pawtucket, in egress_intrinsic_
         }
         size = 2048;
         default_action = NoAction();
+        counters = Newsoms;
     }
     apply {
         Nashwauk.apply();
@@ -4928,6 +4930,7 @@ control Harrison(inout Plains Cassa, inout Darien Pawtucket, in egress_intrinsic
         }
         size = 1024;
         default_action = NoAction();
+        counters = Cidra;
     }
     apply {
         GlenDean.apply();

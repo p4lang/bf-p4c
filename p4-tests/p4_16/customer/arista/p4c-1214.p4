@@ -1811,6 +1811,7 @@ control Hettinger(inout Wamesit Goodrich, inout Almedia BigRiver, inout ingress_
             BigRiver.Levittown.Reydon : ternary;
         }
         size = 512;
+        meters = Aguila;
     }
     apply {
         switch (Nuevo.apply().action_run) {

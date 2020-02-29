@@ -2663,6 +2663,7 @@ control Millikin(inout Minturn Bergton, inout Candle Cassa, in ingress_intrinsic
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
+        meters = Aynor;
     }
     @disable_atomic_modify(1) @name(".Camargo") table Camargo {
         actions = {
@@ -5248,6 +5249,7 @@ control Burgdorf(inout Minturn Bergton, inout Candle Cassa, in ingress_intrinsic
         }
         size = 3072;
         default_action = NoAction();
+        counters = Idylside;
     }
     apply {
         if (Cassa.Mausdale.Tornillo != 8w0 && Cassa.Knoke.Level & 3w0x1 == 3w0) {
