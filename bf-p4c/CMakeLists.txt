@@ -909,7 +909,7 @@ endif(ENABLE_CLOUDBREAK)
 # binary to be in the top level directory. This should go away when we
 # fix the scripts.
 add_custom_target(linkp4cbarefoot
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/p4c-barefoot ${P4C_BINARY_DIR}/p4c-barefoot
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${P4C_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/p4c-barefoot` ${P4C_BINARY_DIR}/p4c-barefoot
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
     ${CMAKE_COMMAND} -E make_directory `dirname ${P4C_BINARY_DIR}/\$$h` \;
     sed ${SED_RELEASE_FILTERS} ${CMAKE_CURRENT_SOURCE_DIR}/\$$h >${P4C_BINARY_DIR}/\$$h \;
@@ -917,12 +917,12 @@ add_custom_target(linkp4cbarefoot
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E copy ${DRIVER_FILES} ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E copy ${P4C_DRIVER_MACROS} ${P4C_BINARY_DIR}/p4c_src
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${MANIFEST_CONFIG} ${P4C_BINARY_DIR}/p4c-manifest-config
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_BFRT_CONF} ${P4C_BINARY_DIR}/p4c-gen-bfrt-conf
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_DRIVER_CONF} ${P4C_BINARY_DIR}/p4c-gen-conf
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${GEN_BFRT_SCHEMA} ${P4C_BINARY_DIR}/bfrt_schema.py
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4include ${CMAKE_CURRENT_BINARY_DIR}/p4include
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${P4C_BINARY_DIR} ${MANIFEST_CONFIG}` ${P4C_BINARY_DIR}/p4c-manifest-config
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${P4C_BINARY_DIR} ${GEN_BFRT_CONF}` ${P4C_BINARY_DIR}/p4c-gen-bfrt-conf
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${P4C_BINARY_DIR} ${GEN_DRIVER_CONF}` ${P4C_BINARY_DIR}/p4c-gen-conf
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${P4C_BINARY_DIR} ${GEN_BFRT_SCHEMA}` ${P4C_BINARY_DIR}/bfrt_schema.py
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${CMAKE_CURRENT_BINARY_DIR} ${P4C_BINARY_DIR}/p4include` ${CMAKE_CURRENT_BINARY_DIR}/p4include
+  COMMAND ${CMAKE_COMMAND} -E create_symlink `realpath --relative-to=${CMAKE_CURRENT_BINARY_DIR} ${P4C_BINARY_DIR}/p4_14include` ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
 add_dependencies(p4c_driver linkp4cbarefoot)
 add_dependencies(linkp4cbarefoot remove_psa_for_tofino)
