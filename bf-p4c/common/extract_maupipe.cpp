@@ -708,7 +708,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             if (!expr) continue;
             if (p->name == "size") {
                 if (!expr->is<IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%");
+                    ::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%", expr);
                 mtr->size = expr->to<IR::Constant>()->asInt();
             } else if (p->name == "type") {
                 if (!expr->is<IR::Member>())

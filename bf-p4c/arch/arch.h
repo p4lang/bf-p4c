@@ -178,7 +178,7 @@ struct RewriteControlAndParserBlocks : public PassManager {
             auto toplevel = evaluator->getToplevelBlock();
             auto main = toplevel->getMain();
             ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
-                        "program: does not instantiate `main`", "");
+                        "program: does not instantiate `main`");
             main->apply(*parseTna);
         }));
         passes.push_back(

@@ -577,7 +577,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             if (!param.second) continue;
             auto pipe = param.second;
             if (!pipe->is<IR::PackageBlock>()) {
-                ::error(ErrorType::ERR_INVALID, "package block. You are compiling for the %2% "
+                ::error(ErrorType::ERR_INVALID, "%1% package block. You are compiling for the %2% "
                         "P4 architecture.\n"
                         "Please verify that you included the correct architecture file.",
                         pipe, BackendOptions().arch);
@@ -600,7 +600,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock* pkg) {
                 auto parsers = pkg->findParameterValue(parsersName);
                 if (!parsers->is<IR::PackageBlock>()) {
-                    ::error(ErrorType::ERR_INVALID, "package block. "
+                    ::error(ErrorType::ERR_INVALID, "%1% package block. "
                             "You are compiling for the %2% P4 architecture.\n"
                             "Please verify that you included the correct architecture file.",
                             parsers, BackendOptions().arch);

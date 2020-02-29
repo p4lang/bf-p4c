@@ -148,7 +148,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Unsupported type parameter for Value Set"
+  "Unsupported type argument for Value Set"
   testdata/p4_14_samples/parser_value_set2.p4
   testdata/p4_16_samples/pvs-nested-struct.p4
   )
@@ -381,6 +381,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/arith3-bmv2.p4
   testdata/p4_16_samples/arith4-bmv2.p4
   testdata/p4_16_samples/arith5-bmv2.p4
+  testdata/p4_16_samples/issue2190.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -548,7 +549,7 @@ p4c_add_xfail_reason("tofino"
 
 # are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
-  "error: .*: Not found no such field in standard_metadata"
+  "error: .*: no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
   )
 
@@ -574,7 +575,7 @@ p4c_add_xfail_reason("tofino"
 # END: XFAILs with translation
 
 p4c_add_xfail_reason("tofino"
-  "error: .*: Unsupported action spanning multiple stages."
+  "error: .*: action spanning multiple stages."
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/murdoch_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/photostats_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/sidestepped_0.p4
@@ -678,7 +679,7 @@ p4c_add_xfail_reason("tofino"
 
 # expected failure -- rng must be on hit path
 p4c_add_xfail_reason("tofino"
-  "Unsupported.*action requires rng.*hit pathway.*driver can only currently program the miss pathway"
+  "action requires rng.*hit pathway.*driver can only currently program the miss pathway"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/hash_table_column_duplicated.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
 )
@@ -766,7 +767,7 @@ p4c_add_xfail_reason("tofino"
 
 # This test attempts to match on a field of `error` type.
 p4c_add_xfail_reason("tofino"
-  "error: Unsupported error: width not well-defined"
+  "error: error: width not well-defined"
   testdata/p4_16_samples/issue1062-1-bmv2.p4
   testdata/p4_16_samples/issue1062-bmv2.p4
   testdata/p4_16_samples/psa-example-parser-checksum.p4
@@ -798,7 +799,7 @@ p4c_add_xfail_reason("tofino"
 
 # v1model translation issue
 p4c_add_xfail_reason("tofino"
-  "error: meter_color_t: Not found declaration"
+  "error: meter_color_t: declaration not found"
   testdata/p4_16_samples/issue1989-bmv2.p4
 )
 
@@ -1058,7 +1059,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-539
 p4c_add_xfail_reason("tofino"
-  "error: .*: Not found declaration"
+  "error: .*: declaration not found"
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue1768-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
@@ -1426,7 +1427,7 @@ p4c_add_xfail_reason("tofino"
 
 # optional match type not supported
 p4c_add_xfail_reason("tofino"
-  "error: optional: Not found declaration"
+  "error: optional: declaration not found"
   testdata/p4_16_samples/table-entries-optional-bmv2.p4
 )
 
@@ -1483,8 +1484,12 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1819
 p4c_add_xfail_reason("tofino"
-  "Unsupported on target"
+  "A saturated unsigned subtract .* cannot have the second operand .* as a constant value."
   extensions/p4_tests/p4_16/compile_only/p4c-1819-neg.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unsupported on target"
   # Unsupported on target Action profile .* on table .* does not have any action data
   ../glass/testsuite/p4_tests/arista/COMPILER-559/case2987.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-593/case3011.p4

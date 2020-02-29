@@ -124,7 +124,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: .*: Not found no such field in standard_metadata"
+  "error: .*: no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
 )
 
@@ -141,7 +141,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: .*: Unsupported action spanning multiple stages."
+  "error: .*: action spanning multiple stages."
   testdata/p4_14_samples/action_inline.p4
 )
 
@@ -163,7 +163,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Unsupported type parameter for Value Set"
+  "Unsupported type argument for Value Set"
   testdata/p4_14_samples/parser_value_set2.p4
   )
 
@@ -214,7 +214,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-539
 p4c_add_xfail_reason("tofino2"
-  "error: .*: Not found declaration"
+  "error: .*: declaration not found"
   # We fail to translate `generate_digest()`.
   testdata/p4_14_samples/issue1058.p4
   # We fail to translate `resubmit()`.

@@ -2878,7 +2878,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         out << indent << "match_key_fields_values:" << std::endl;
         for (auto key : entry->getKeys()->components) {
             ERROR_CHECK(key_index < tbl->match_key.size(), ErrorType::ERR_INVALID,
-                        "key. Static entry has more keys than those specified "
+                        "invalid %1% key. Static entry has more keys than those specified "
                         "in match field for table %2%.", key, tbl->externalName());
             auto match_key = tbl->match_key[key_index];
             if (match_key->match_type == "selector" || match_key->match_type == "dleft_hash") {
@@ -2920,7 +2920,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 // This error should be caught in front end as an invalid key
                 // expression
                 ERROR_CHECK(match_key->match_type == "ternary", ErrorType::ERR_INVALID,
-                            "mask value specified in static entry for field %2% a "
+                            "%1%: mask value specified in static entry for field %2% a "
                             "non ternary match type in table %3%.",
                             key, canon_name(match_key_name), tbl->externalName());
                 // Ternary match with value and mask specified
@@ -2952,8 +2952,8 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 // expression
                 ERROR_CHECK(match_key->match_type == "range", ErrorType::ERR_INVALID,
                             "range value specified in static entry for field %2% a "
-                            "non range match type in table %3%.",
-                            tbl, canon_name(match_key_name), tbl->externalName());
+                            "non range match type in table %1%.",
+                            tbl, canon_name(match_key_name));
                 // Extract start and end values from range node
                 if (auto range_start = r->left->to<IR::Constant>())
                     out << indent << "range_start: \"0x"

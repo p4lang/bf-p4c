@@ -179,7 +179,7 @@ bool ExtractDeparser::preorder(const IR::MethodCallExpression* mc) {
             generateDigest(digests["pktgen"], "pktgen", expr, mc, nullptr, true /* singleEntry */);
         } else {
             fatal_error(ErrorType::ERR_UNSUPPORTED,
-                        "method call %1% in deparser", mc);
+                        "Unsupported method call %1% in deparser", mc);
         }
     } else if (em->method->name == "pack") {
         if (em->actualExternType->getName() == "Digest") {
@@ -233,7 +233,8 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     const IR::Literal *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
-        fatal_error(ErrorType::ERR_UNSUPPORTED, "unconditional %2%.emit", mc, name);
+        fatal_error(ErrorType::ERR_UNSUPPORTED, "%1%: Unsupported unconditional %2%.emit",
+                    mc, name);
         return;
     } else if (auto eq = pred->to<IR::Equ>()) {
         if ((k = eq->left->to<IR::Constant>()))
@@ -253,7 +254,8 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         }
     }
     if (!k) {
-        fatal_error(ErrorType::ERR_UNSUPPORTED, "condition %2% in %3%.emit", mc, pred, name);
+        fatal_error(ErrorType::ERR_UNSUPPORTED, "%1%: Unsupported condition %2% in %3%.emit",
+                    mc, pred, name);
         return;
     } else if (k->is<IR::Constant>() && !singleEntry) {
         digest_index = k->to<IR::Constant>()->asInt();

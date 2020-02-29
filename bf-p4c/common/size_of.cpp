@@ -52,17 +52,17 @@ const IR::Node* BackendConstantFolding::postorder(IR::Slice* e) {
 
     auto cmsb = msb->to<IR::Constant>();
     if (cmsb == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "an integer value", msb);
+        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", msb);
         return e;
     }
     auto clsb = lsb->to<IR::Constant>();
     if (clsb == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "an integer value", lsb);
+        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", lsb);
         return e;
     }
     auto cbase = e0->to<IR::Constant>();
     if (cbase == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "an integer value", e->e0);
+        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", e->e0);
         return e;
     }
 

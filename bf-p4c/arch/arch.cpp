@@ -175,7 +175,7 @@ bool ParseTna::preorder(const IR::PackageBlock* block) {
 const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Parser *node) {
     auto orig = getOriginal();
     if (!block_info->count(orig)) {
-        ::error(ErrorType::ERR_INVALID, "parser. You are compiling for the %2% "
+        ::error(ErrorType::ERR_INVALID, "%1% parser. You are compiling for the %2% "
                 "P4 architecture.\n"
                 "Please verify that you included the correct architecture file.",
                 node, BackendOptions().arch);
@@ -195,7 +195,7 @@ const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Parser *node) {
 const IR::Node* DoRewriteControlAndParserBlocks::postorder(IR::P4Control *node) {
     auto orig = getOriginal();
     if (!block_info->count(orig)) {
-        ::error(ErrorType::ERR_INVALID, "control. You are compiling for the %2% "
+        ::error(ErrorType::ERR_INVALID, "%1% control. You are compiling for the %2% "
                 "P4 architecture.\n"
                 "Please verify that you included the correct architecture file.",
                 node, BackendOptions().arch);

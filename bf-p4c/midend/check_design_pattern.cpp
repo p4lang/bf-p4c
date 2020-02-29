@@ -39,7 +39,7 @@ bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
             auto arg = args->at(fieldListIdx);
             if (auto lexp = arg->expression->to<IR::ListExpression>()) {
                 if (lexp->size() == 0) {
-                    std::string errString = " field list cannot be empty";
+                    std::string errString = "%1%: field list cannot be empty";
                     if (externName != "Hash")
                         errString += ", use emit()?";
                     error(ErrorType::ERR_UNSUPPORTED, errString.c_str(), expr);
@@ -47,7 +47,7 @@ bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
                 }
             }
         } else {
-            error(ErrorType::ERR_UNSUPPORTED, " field list argument not present", expr);
+            error(ErrorType::ERR_UNSUPPORTED, "%1%: field list argument not present", expr);
         }
 
         const IR::Type* cannoType;

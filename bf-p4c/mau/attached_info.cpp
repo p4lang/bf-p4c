@@ -19,9 +19,9 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
     auto ba = findContext<IR::MAU::BackendAttached>();
     if (users[type] != nullptr) {
         ::error(ErrorType::ERR_INVALID,
-                "overlap. Both %2% and %3% require the %4% address hardware, and cannot be on "
-                "the same table %5%.",
-                am, am->name, users[type]->name, addr_type_name(type), tbl->externalName());
+                "overlap. Both %1% and %2% require the %3% address hardware, and cannot be on "
+                "the same table %4%.",
+                am, users[type]->name, addr_type_name(type), tbl->externalName());
         return false;
     }
     users[type] = am;
@@ -29,7 +29,7 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
     if (!am->direct) {
         if (am->size <= 0) {
             ::error(ErrorType::ERR_NOT_FOUND,
-                    "indirect attached table %2%. Does not have a size.", am, am->name);
+                    "indirect attached table %1%. Does not have a size.", am);
             return false;
         }
     }
@@ -52,9 +52,9 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         if (from_hash) {
             if (!tbl->has_match_data()) {
                 ::error(ErrorType::ERR_INVALID,
-                        "When an attached memory %2% is addressed by hash and requires "
-                        "per action enabling, then the table %3% must have match data",
-                         am, am->name, tbl->externalName());
+                        "When an attached memory %1% is addressed by hash and requires "
+                        "per action enabling, then the table %2% must have match data",
+                         am, tbl->externalName());
                 return false;
             }
         }
@@ -65,9 +65,9 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         if (from_hash) {
             if (!tbl->has_match_data()) {
                 ::error(ErrorType::ERR_INVALID,
-                        "When an attached memory %2% is addressed by hash and requires "
-                        "multiple meter_type, then the table %3% must have match data",
-                        am, am->name, tbl->externalName());
+                        "When an attached memory %1% is addressed by hash and requires "
+                        "multiple meter_type, then the table %2% must have match data",
+                        am, tbl->externalName());
                 return false;
             }
         }
@@ -105,7 +105,7 @@ bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::Selector *as) {
 bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::ActionData *ad) {
     BUG_CHECK(!ad->direct, "Cannot have a direct action data table before table placement");
     if (ad->size <= 0)
-        error(ErrorType::ERR_NOT_FOUND, "size count in %2% %3%", ad, ad->kind(), ad->name);
+        error(ErrorType::ERR_NOT_FOUND, "size count in %2% %1%", ad, ad->kind());
     int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
 
     IR::MAU::Table::IndirectAddress ia;

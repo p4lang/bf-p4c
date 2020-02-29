@@ -654,9 +654,9 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     //    value of 0 to conditionally execute the subtract or not
     // Both these solutions require program transformations
     if (bits && !bits->isSigned && eRight->to<IR::Constant>()) {
-        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\n"
-            "A saturated unsigned subtract (ssubu) cannot have the second operand\n "
-            "(value to be subtracted) as a constant value.\n"
+        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%"
+            "A saturated unsigned subtract (ssubu) cannot have the second operand "
+            "(value to be subtracted) as a constant value.  "
             "Try rewriting the relevant P4 by initializing the constant value "
             "to be subtracted within a field.", e->srcInfo);
     }
@@ -784,11 +784,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
     if (prim->name == "modify_field") {
         long mask;
         if ((prim->operands.size() | 1) != 3) {
-            error(ErrorType::ERR_INVALID, "wrong number of operands to %2%", prim->srcInfo,
-                  prim->name);
+            error(ErrorType::ERR_INVALID, "wrong number of operands to %1%", prim);
         } else if (!phv.field(dest)) {
-            error(ErrorType::ERR_INVALID, "destination of %2% must be a field", prim->srcInfo,
-                  prim->name);
+            error(ErrorType::ERR_INVALID, "destination of %1% must be a field", prim);
         } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
             return rv;
         } else if (!checkSrc1(prim->operands[1])) {
@@ -806,7 +804,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                 auto type = prim->operands[0]->type->to<IR::Type::Bits>();
                 auto arg = mux->e0->to<IR::MAU::ActionArg>();
                 if (!arg) {
-                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditions in an action must "
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditions in an action must "
                           "be simple comparisons of an action data parameter\nTry moving the test "
                           "out of the action and into a control apply block, or making it part "
                           "of the table key", prim->srcInfo);
@@ -823,7 +821,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                     cond_arg->one_on_true = false;
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e2, cond_arg });
-                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment must "
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditional assignment must "
                           "be reversed, as the non PHV parameter must be on the true branch for "
                           "support in the driver", prim->srcInfo);
                 } else if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
@@ -833,12 +831,12 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
                     cond_arg->one_on_true = false;
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e1, mux->e2, cond_arg });
-                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment must "
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditional assignment must "
                           "be reversed, as the non PHV parameter must be on the true branch for "
                           "support in the driver", prim->srcInfo);
                 } else {
-                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nConditional assignment is too "
-                          "complicated to support in a single operation\nTry moving the test "
+                    error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditional assignment is "
+                          "too complicated to support in a single operation\nTry moving the test "
                           "out of the action and into a control apply block, or making it part "
                           "of the table key", prim->srcInfo); }
                 return rv;
@@ -848,8 +846,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         } else if (prim->operands.size() == 2) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {
-            error(ErrorType::ERR_INVALID, "mask of %2% must be a constant", prim->srcInfo,
-                  prim->name);
+            error(ErrorType::ERR_INVALID, "mask of %1% must be a constant", prim);
         } else if (1L << dest->type->width_bits() == mask + 1) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", dest, prim->operands[1]);
         } else if (isDepositMask(mask)) {
@@ -878,11 +875,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
     } else if (prim->name == "min" || prim->name == "max") {
         if (prim->operands.size() != 2) {
-            error(ErrorType::ERR_INVALID, "wrong number of operands to %2%", prim->srcInfo,
-                  prim->name);
+            error(ErrorType::ERR_INVALID, "wrong number of operands to %1%", prim);
         } else if (!prim->type->is<IR::Type::Bits>()) {
-            error(ErrorType::ERR_INVALID, "non-numeric operrands to %2%", prim->srcInfo,
-                  prim->name);
+            error(ErrorType::ERR_INVALID, "non-numeric operrands to %1%", prim);
         } else {
             cstring op = prim->name;
             op += prim->type->to<IR::Type::Bits>()->isSigned ? 's' : 'u';
@@ -1966,7 +1961,7 @@ void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) 
             le_bitrange bits = {0, 0};
             auto field = phv.field(instr->operands[i], &bits);
             ::error(ErrorType::ERR_UNSUPPORTED,
-                    "action spanning multiple stages. "
+                    "%1%: action spanning multiple stages. "
                     "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
                     "stages for a single action. We currently support only single stage actions. "
                     "Please consider rewriting the action to be a single stage action.",

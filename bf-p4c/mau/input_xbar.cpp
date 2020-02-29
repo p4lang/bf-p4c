@@ -1599,8 +1599,8 @@ class IXBar::FieldManagement : public Inspector {
                     it--;
                 } else {
                     ::error(ErrorType::ERR_INVALID,
-                            "Overlapping field %2% in table %3% not supported with the hashing "
-                            "algorithm", tbl, field->name, tbl->externalName());
+                            "Overlapping field %2% in table %1% not supported with the hashing "
+                            "algorithm", tbl, field->name);
                 }
             }
             field_list_check[field->name] |= used_bits;
@@ -1976,7 +1976,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
         auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
         if (pragma_val == nullptr) {
             ::error(ErrorType::ERR_INVALID,
-                    "proxy_hash_algorithm pragma on table %2% must be a string", tbl, tbl->name);
+                    "proxy_hash_algorithm pragma on table %1% must be a string", tbl);
         } else if (alloc.proxy_hash_key_use.algorithm.setup(pragma_val)) {
             hash_function_found = true;
         }
@@ -1991,7 +1991,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
     if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::HashFunction::IDENTITY)
         ::error(ErrorType::ERR_UNSUPPORTED,
                 "A proxy hash table with an identity algorithm is not supported, as specified "
-                "on table %2%.  Using a normal exact match table.", tbl, tbl->name);
+                "on table %1%.  Using a normal exact match table.", tbl);
 
     int start_bit = alloc.proxy_hash_key_use.hash_bits.ffs();
     std::map<int, le_bitrange> bit_starts;

@@ -2787,10 +2787,10 @@ bool Format::analyze_actions(FormatType_t format_type) {
 
     if (locked_in_all_actions_bits > Format::IMMEDIATE_BITS) {
         if (format_type == ActionData::NORMAL)
-            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %2%, the number of bits "
-                  "required to go through the immediate pathway %3% (e.g. data coming from Hash, "
-                  "RNG, Meter Color) is greater than the available bits %4%, and can not be "
-                  "allocated", tbl, tbl->name, locked_in_all_actions_bits, Format::IMMEDIATE_BITS);
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "\nIn table %1%, the number of bits "
+                  "required to go through the immediate pathway %2% (e.g. data coming from Hash, "
+                  "RNG, Meter Color) is greater than the available bits %3%, and can not be "
+                  "allocated", tbl, locked_in_all_actions_bits, Format::IMMEDIATE_BITS);
         // Don't flag an error if this happens with non-NORMAL format, instead just don't create
         // any formats of that type.  If TablePlacement ends up needing such a format, it will
         // flag an error then.

@@ -330,7 +330,7 @@ bool CreateSaluInstruction::preorder(const IR::Function *func) {
     for (auto i = 1U; i < params->parameters.size(); ++i) {
         if (auto rt = params->parameters.at(i)->type->to<IR::Type_Enum>()) {
             if (return_encoding)
-                error(ErrorType::ERR_UNSUPPORTED, "Multiple enum return values", func);
+                error(ErrorType::ERR_UNSUPPORTED, "%1%: Multiple enum return values", func);
             action->return_encoding = return_encoding =
                 new IR::MAU::SaluAction::ReturnEnumEncoding(rt);
             return_enum_word = out_word; }
@@ -382,7 +382,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         LOG4("  return_encoding->cmp_used = 0x" << hex(return_encoding->cmp_used)); }
     if (action->action.empty()) {
         action->action.push_back(new IR::MAU::Instruction("nop"));
-        warning(ErrorType::ERR_EXPECTED, "stateful action '%2%' to have instructions "
+        warning(ErrorType::ERR_EXPECTED, "%1%: stateful action '%2%' to have instructions "
             "assigned. Please verify the action is valid.", salu, action->name); }
     clearFuncState();
 }
@@ -1516,7 +1516,7 @@ const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Member *ex
     } else if ((prim = getParent<IR::Primitive>()) && prim->name == "modify_field") {
         // ok
     } else {
-        error(ErrorType::ERR_UNSUPPORTED, "enum reference", exp);
+        error(ErrorType::ERR_UNSUPPORTED, "%1%: enum reference", exp);
         return exp;
     }
     unsigned val = encoding->tag_used.at(exp->member.name);

@@ -726,7 +726,7 @@ class AnalyzeProgram : public Inspector {
     bool preorder(const IR::P4Program *) override {
         auto main = structure->toplevel->getMain();
         ERROR_CHECK(main != nullptr, ErrorType::ERR_INVALID,
-                    "program: does not instantiate `main`", "");
+                    "program: does not instantiate `main`");
         return true;
     }
 

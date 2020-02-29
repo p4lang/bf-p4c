@@ -459,14 +459,14 @@ bool IR::MAU::Table::getAnnotation(cstring name, int &val) const {
     if (!match_table) return false;
     if (auto annot = match_table->annotations->getSingle(name)) {
         if (annot->expr.size() != 1) {
-            error(ErrorType::ERR_UNEXPECTED, "%2% pragma provided to table %3% has multiple "
+            error(ErrorType::ERR_UNEXPECTED, "%1%: %2% pragma provided to table %3% has multiple "
                   "parameters, while only one is expected", annot, name, externalName());
         } else if (auto constant = annot->expr.at(0)->to<IR::Constant>()) {
             val = constant->asInt();
             return true;
         } else {
-            error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a constant",
-                  annot, name, externalName()); } }
+            error(ErrorType::ERR_INVALID, "Invalid %1%: %2% pragma provided to table %3% is not "
+                  "a constant", annot, name, externalName()); } }
     return false;
 }
 
@@ -474,13 +474,13 @@ bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {
     if (!match_table) return false;
     if (auto annot = match_table->annotations->getSingle(name)) {
         if (annot->expr.size() != 1) {
-            error(ErrorType::ERR_UNEXPECTED, "%2% pragma provided to table %3% has multiple "
+            error(ErrorType::ERR_UNEXPECTED, "%1%: %2% pragma provided to table %3% has multiple "
                   "parameters, while only one is expected", annot, name, externalName());
         } else if (auto v = annot->expr.at(0)->to<IR::StringLiteral>()) {
             val = *v;
             return true;
         } else {
-            error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a "
+            error(ErrorType::ERR_INVALID, "Invalid %1%: %2% pragma provided to table %3% is not a "
                   "string literal", annot, name, externalName()); } }
     return false;
 }
@@ -495,8 +495,8 @@ bool IR::MAU::Table::getAnnotation(cstring name, std::vector<ID> &val) const {
             if (auto v = expr->to<IR::StringLiteral>())
                 val.push_back(*v);
             else
-                error(ErrorType::ERR_INVALID, "%2% pragma provided to table %3% is not a "
-                      "string literal", annot, name, externalName()); } }
+                error(ErrorType::ERR_INVALID, "Invalid %1%: %2% pragma provided to table %3% is "
+                      "not a string literal", annot, name, externalName()); } }
     return rv;
 }
 
@@ -509,9 +509,9 @@ int IR::MAU::Table::get_placement_priority_int() const {
         for (auto *expr : annot->expr) {
             if (auto constant = expr->to<IR::Constant>()) {
                 if (val_set)
-                    ::error(ErrorType::ERR_INVALID, "Only one integer value is allowed for a "
-                        "placement_priority on table %2% for its global score", annot,
-                        externalName());
+                    ::error(ErrorType::ERR_INVALID, "Invalid %1%: Only one integer value is "
+                            "allowed for a placement_priority on table %2% for its global score",
+                            annot, externalName());
                 val = constant->asInt();
                 val_set = true;
             }
@@ -568,8 +568,8 @@ int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) 
             valid_pragma = false;
         }
         if (!valid_pragma)
-            ::error(ErrorType::ERR_INVALID, "Stage pragma provided can have only one or two "
-                    "constant parameters >= 0", annot);
+            ::error(ErrorType::ERR_INVALID, "Invalid %1%: Stage pragma provided can have only "
+                    "one or two constant parameters >= 0", annot);
         return valid_pragma;
     };
 
@@ -623,13 +623,13 @@ int IR::MAU::Table::get_pragma_max_actions() const {
         int num_actions = actions.size();
         int max_limit = InstructionMemory::IMEM_ROWS * InstructionMemory::IMEM_COLORS;
         if (pragma_val < num_actions) {
-            error(ErrorType::ERR_INVALID, "Invalid max_actions pragma usage on table %2%.  "
+            error(ErrorType::ERR_INVALID, "%1%Invalid max_actions pragma usage on table %2%.  "
                   "The maximum actions (%3%) specified cannot be less than the number of "
                   "callable actions listed (%4%).",
                   srcInfo, externalName(), pragma_val, num_actions);
             return -1;
         } else if (pragma_val > max_limit) {
-            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Invalid max_actions pragma usage on "
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Invalid max_actions pragma usage on "
                   "table %2%.  The maximum actions specified (%3%) cannot exceed %4%.",
                   srcInfo, externalName(), pragma_val, max_limit);
             return -1;
@@ -646,8 +646,8 @@ boost::optional<int> IR::MAU::Table::is_force_immediate() const {
             if (pragma_val == 0 || pragma_val == 1) {
                 return pragma_val;
             } else {
-              error(ErrorType::ERR_INVALID, "Invalid force_immediate pragma usage on table %2%.  "
-                    "Only 0 and 1 are allowed.", srcInfo, externalName());
+              error(ErrorType::ERR_INVALID, "%1%Invalid force_immediate pragma usage on "
+                    "table %2%.  Only 0 and 1 are allowed.", srcInfo, externalName());
               return boost::none; } }
     return boost::none;
 }

@@ -11,7 +11,7 @@ void CheckUnsupported::postorder(const IR::P4Table *tbl) {
                 ++lpm_count;
         }
         if (lpm_count > 1)
-            error(ErrorType::ERR_UNSUPPORTED, "table %2% Cannot match on multiple fields using "
+            error(ErrorType::ERR_UNSUPPORTED, "%1%table %2% Cannot match on multiple fields using "
                   "lpm match type", tbl->srcInfo, tbl->name.originalName);
     }
 }
