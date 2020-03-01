@@ -426,11 +426,6 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "counter cnt bytes value is .*, expected .*"
-  testdata/p4_14_samples/counter3.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "error: .*: Duplicates declaration .*"
   extensions/p4_tests/p4_16/compile_only/p4c-2495.p4
 )

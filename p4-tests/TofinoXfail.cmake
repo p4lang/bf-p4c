@@ -1730,8 +1730,3 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/stf/parser_error.p4
   extensions/p4_tests/p4_16/stf/parser_error.p4
 )
-
-p4c_add_xfail_reason("tofino"
-  "counter cnt bytes value is .*, expected .*"
-  testdata/p4_14_samples/counter3.p4
-)

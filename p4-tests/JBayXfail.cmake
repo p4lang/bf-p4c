@@ -354,11 +354,6 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "counter cnt bytes value is .*, expected .*"
-  testdata/p4_14_samples/counter3.p4
-)
-
-p4c_add_xfail_reason("tofino2"
   "jbay_test_harness CRASH with signal 6"
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
 )
