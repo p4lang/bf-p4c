@@ -340,9 +340,7 @@ class Table : BFN::Unit {
             }
             if (!gateway_only()) {
                 if (next.count("$hit") || next.count("$miss")) {
-                    size_t valid_next_table_size = next.count("$hit") + next.count("$miss")
-                                                   + next.count("$try_next_stage");
-                    BUG_CHECK(valid_next_table_size == next.size(),
+                    BUG_CHECK(!action_chain() && !has_default_path(),
                               "Somehow have a hit/miss table combined with an action chain");
                 }
             }

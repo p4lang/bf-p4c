@@ -546,11 +546,8 @@ TablePlacement::GatewayMergeChoices
 
             // If we have dependence ordering problems
             if (should_skip) continue;
-            // if (deps->happens_before_control)
             // If this table also uses gateways
             if (t->uses_gateway()) continue;
-            // FIXME: Look for notes above preorder for IR::MAU::Table
-            if (t->next.count("$hit") || t->next.count("$miss")) continue;
             // Currently would potentially require multiple gateways if split into
             // multiple tables.  Not supported yet during allocation
             if (t->for_dleft()) continue;
@@ -2439,53 +2436,201 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
     }
 }
 
-/** Note from gateway_merge:
+
+/**
+ * When merging a match table and a gateway, the next map of these tables have to be merged.
+ * Consider the following example, where the condition will be merged with table t2:
  *
- *  Currently the algorithm is not sophisiticated enough to link a gateway table that has either
- *  a $hit or $miss next table information.  The reason is the following:
+ *    if (cond) {
+ *        t1.apply();
+ *        t2.apply();
+ *        t3.apply();
+ *    }
  *
- *  Let's say we have the following example before table placement:
+ * The original IR graph would look something like:
  *
- *       cond-1
- *         |
- *         | $true
- *         |
- *      { t1, t2, t3 }
- *         |
- *         | $miss
- *         |
- *      { t1_miss }
+ * cond
+ *   |
+ *   | $true
+ *   |
+ * [ t1, t2, t3 ] 
  *
- *  where t1 and cond-1 are going to be linked into 1 logical table.
+ * Now after the merge, the IR graph would look like:
  *
- *  This is currently converted to:
+ *  cond
+ *   t2
+ *   |
+ *   | $default
+ *   |
+ * [ t1, t3 ]
  *
- *             cond-1
- *               t1
- *             /   \
- *      $miss /     \ $default
- *           /       \
- *     { t1_miss }  { t2, t3 }
+ * In this case, when the condition cond is true, the gateway will then run the table t2.
  *
- *  This is fairly nonsensical, and incorrect.  Now because t1 is linked to the conditional,
- *  in order to run t2 and t3 if t1 does run is to always run t2 and t3 on default.
+ * Now another example:
  *
- *  A correct next table propagation would look like the following:
+ *     if (cond) {
+ *         t1.apply();
+ *         t2.apply();
+ *         t3.apply();
+ *     } else {
+ *         t4.apply();
+ *     }
+ *              cond
+ *              / \
+ *       $true /   \ $false
+ *            /     \
+ * [ t1, t2, t3 ]    [ t4 ]
  *
- *             cond-1
- *               t1
- *             /   \
- *      $miss /     \ $hit
- *           /       \
- *  { t1_miss } ---> { t2, t3 }
- *            $default
+ * After the linkage:
  *
- *  Essentially by not having a $default pathway combined with a hit/miss pathway, the control
- *  flow is correct.  Though this case is simple, other corner cases lead to a lot more difficult
- *  next table calculations, i.e. multiple layers of this miss chaining with a conditional.
- *  Thus currently the algorithm restricts linking conditionals with tables that have either
- *  $hit or $miss.
+ *              cond
+ *              t2
+ *              / \
+ *    $default /   \ $false
+ *            /     \
+ * [ t1, t3 ]       [ t4 ]
+ *
+ * A $default path is added for the replacement branch, as the $true branch is removed from
+ * the gateway rows, instead representing to run table.
+ *
+ * Now this gets a bit trickier if the merged table has control flow off of it as well.  Say t2
+ * is an action chain, e.g.:
+ *
+ *    if (cond) {
+ *        t1.apply();
+ *        switch (t2.apply().action_run()) {
+ *            a1 : { t2_a1.apply(); }
+ *        }
+ *        t3.apply();
+ *    }
+ *
+ * Original IR graph:
+ *
+ * cond
+ *   |
+ *   | $true
+ *   |
+ * [ t1, t2, t3 ]
+ *       |
+ *       | a1 
+ *       |
+ *     [ t2_al ] 
+ *
+ * Post merge:
+ *              cond
+ *              t2
+ *              / \
+ *    $default /   \ a1 
+ *            /     \
+ * [ t1, t3 ]       [ t2_a1, t1, t3 ]
+ *
+ * A default pathway has been added, and to all pathways, the tables on the same sequence are
+ * added.  If t2 had a default pathway already, then, simply t1 and t3 would have been added to
+ * the next table graph.
+ *
+ * Last corner case is instead of an action chain, the table is a hit or miss:
+ *
+ *    if (cond) {
+ *        t1.apply();
+ *        if (t2.apply().miss) {
+ *            t2_miss.apply();
+ *        }
+ *        t3.apply();
+ *    }
+ *
+ * Original IR graph:
+ *
+ * cond
+ *   |
+ *   | $true
+ *   |
+ * [ t1, t2, t3 ]
+ *       |
+ *       | $miss 
+ *       |
+ *     [ t2_miss ] 
+ *
+ * Now, a $default pathway cannot be added to a hit miss table, currently in the IR.  Thus instead
+ * the IR will be transformed to:
+ *
+ *              cond
+ *              t2
+ *              / \
+ *        $hit /   \ $miss 
+ *            /     \
+ * [ t1, t3 ]       [ t2_miss, t1, t3 ]
+ *
+ * This ensure that the tables t1 and t3 are run on both pathways.
  */
+void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
+        const TablePlacement::Placed *placed, IR::MAU::Table::Layout &gw_layout) {
+    auto match = placed->table;
+    BUG_CHECK(match && tbl->gateway_only() && !match->uses_gateway(), "Table IR is not set up "
+        "in the preorder");
+    LOG3("folding gateway " << tbl->name << " onto " << match->name);
+
+    tbl->gateway_name = tbl->name;
+    tbl->name = match->name;
+    tbl->srcInfo = match->srcInfo;
+    for (auto &gw : tbl->gateway_rows)
+        if (gw.second == placed->gw_result_tag)
+            gw.second = cstring();
+
+    // Clone IR Information
+    tbl->match_table = match->match_table;
+    tbl->match_key = match->match_key;
+    tbl->actions = match->actions;
+    tbl->attached = match->attached;
+    tbl->entries_list = match->entries_list;
+
+    // Generate the correct table layout from the options
+    gw_layout = tbl->layout;
+
+    // Remove the conditional sequence under the branch
+    auto *seq = tbl->next.at(placed->gw_result_tag)->clone();
+    tbl->next.erase(placed->gw_result_tag);
+    if (seq->tables.size() != 1) {
+        bool found = false;
+        for (auto it = seq->tables.begin(); it != seq->tables.end(); it++) {
+            if (*it == match) {
+                seq->tables.erase(it);
+                found = true;
+                break;
+            }
+        }
+        BUG_CHECK(found, "failed to find match table");
+    } else {
+        BUG_CHECK(seq->tables[0] == match, "Only a single match table in the problem");
+        seq = 0;
+    }
+
+    // Add all of the tables in the same sequence (i.e. t1 and t3) to all of the branches
+    for (auto &next : match->next) {
+        BUG_CHECK(tbl->next.count(next.first) == 0, "Added to another table");
+        if (seq) {
+            auto *new_next = next.second->clone();
+            for (auto t : seq->tables)
+                new_next->tables.push_back(t);
+            tbl->next[next.first] = new_next;
+        } else {
+            tbl->next[next.first] = next.second;
+        }
+    }
+
+    // Create the missing $hit, $miss, or $default branch if the program does not have it
+    if (match->hit_miss_p4()) {
+        if (match->next.count("$hit") == 0 && seq)
+            tbl->next["$hit"] = seq;
+        if (match->next.count("$miss") == 0 && seq)
+            tbl->next["$miss"] = seq;
+    } else if (!match->has_default_path() && seq) {
+        tbl->next["$default"] = seq;
+    }
+
+    for (auto &gw : tbl->gateway_rows)
+        if (gw.second && !tbl->next.count(gw.second))
+            tbl->next[gw.second] = new IR::MAU::TableSeq();
+}
 
 IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     auto it = self.table_placed.find(tbl->name);
@@ -2503,57 +2648,9 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
 
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
-        auto match = it->second->table;
+        merge_match_and_gateway(tbl, it->second, gw_layout);
         gw_only = false;
-        assert(match && tbl->gateway_only() && !match->uses_gateway());
-        LOG3("folding gateway " << tbl->name << " onto " << match->name);
-        tbl->gateway_name = tbl->name;
-        tbl->name = match->name;
-        tbl->srcInfo = match->srcInfo;
-        for (auto &gw : tbl->gateway_rows)
-            if (gw.second == it->second->gw_result_tag)
-                gw.second = cstring();
-        tbl->match_table = match->match_table;
-        tbl->match_key = match->match_key;
-        tbl->actions = match->actions;
-        tbl->attached = match->attached;
-        tbl->entries_list = match->entries_list;
-        // Use clone to copy all contents of match above?
-
-        /* Generate the correct table layout from the options */
-        gw_layout = tbl->layout;
         gw_layout_used = true;
-        auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
-        tbl->next.erase(it->second->gw_result_tag);
-        if (seq->tables.size() != 1) {
-            bool found = false;
-            for (auto it = seq->tables.begin(); it != seq->tables.end(); it++)
-                if (*it == match) {
-                    seq->tables.erase(it);
-                    found = true;
-                    break; }
-            BUG_CHECK(found, "failed to find match table");
-        } else {
-            assert(seq->tables[0] == match);
-            seq = 0; }
-        bool have_default = false;
-        for (auto &next : match->next) {
-            assert(tbl->next.count(next.first) == 0);
-            if (next.first == "$default")
-                have_default = true;
-            if (seq) {
-                auto *new_next = next.second->clone();
-                for (auto t : seq->tables)
-                    new_next->tables.push_back(t);
-                tbl->next[next.first] = new_next;
-            } else {
-                tbl->next[next.first] = next.second; } }
-        if (!have_default && seq)
-            tbl->next["$default"] = seq;
-        if (have_default || seq)
-            for (auto &gw : tbl->gateway_rows)
-                if (gw.second && !tbl->next.count(gw.second))
-                    tbl->next[gw.second] = new IR::MAU::TableSeq();
     } else if (it->second->table->match_table) {
         gw_only = false;
     }

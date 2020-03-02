@@ -174,6 +174,8 @@ class TransformTables : public MauTransform {
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Node *preorder(IR::MAU::BackendAttached *) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;
+    void merge_match_and_gateway(IR::MAU::Table *tbl, const TablePlacement::Placed *placed,
+        IR::MAU::Table::Layout &gw_layout);
     IR::MAU::Table *break_up_atcam(IR::MAU::Table *tbl, const TablePlacement::Placed *placed,
         int stage_table = -1, IR::MAU::Table **last = nullptr);
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl,
