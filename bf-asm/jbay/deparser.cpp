@@ -297,9 +297,10 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                 regs.chunk_info[ch].pov = pov.at(&ent.pov->reg) + ent.pov->lo;
                 regs.chunk_info[ch].seg_vld = 1;
                 regs.chunk_info[ch].seg_sel = seg_tag;
-                regs.chunk_info[ch].seg_slice = i/8U; 
+                regs.chunk_info[ch].seg_slice = i/8U;
             }
             if (!check_chunk(lineno, ch)) break;
+            tof2lab44_workaround(lineno, ch);
             prev = -1;
         } else {
             // Phv, Constant, or Checksum
@@ -372,7 +373,11 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                         if (int(csum_repl->first + 2) <= i + j + 1)
                             ++csum_repl;
                     } else {
-                        chunk[ch].byte_off.phv_offset[j] = i + j; } } }
+                        chunk[ch].byte_off.phv_offset[j] = i + j;
+                    }
+                }
+            }
+            tof2lab44_workaround(lineno, ch);
             if (!check_chunk(lineno, ch)) break;
         } else {
             // Phv, Constant, or Checksum

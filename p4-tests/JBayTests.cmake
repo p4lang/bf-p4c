@@ -80,6 +80,10 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1585_b" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b/p4c_1585_b.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_b")
 
+p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c_2527" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527/npb.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527")
+
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)
 p4c_add_ptf_test_with_ptfdir_and_spec (
@@ -275,6 +279,7 @@ bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_idletimeout" "${CMAKE_
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino2/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT 2400)
+set_tests_properties("tofino2/p4c_2527" PROPERTIES TIMEOUT 1200)
 
 include(SwitchJBay.cmake)
 include(JBayXfail.cmake)
