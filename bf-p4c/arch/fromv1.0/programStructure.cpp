@@ -2444,12 +2444,12 @@ void TnaProgramStructure::removeP14IntrinsicMetadataTypes() {
 
 void TnaProgramStructure::loadModel() {
     if (BackendOptions().arch == "tna")
-        include("tna.p4");
+        include("tna.p4", "-D__TARGET_TOFINO__=1");
     else if (BackendOptions().arch == "t2na")
-        include("t2na.p4");
+        include("t2na.p4", "-D__TARGET_TOFINO__=2");
 #if HAVE_CLOUDBREAK
     else if (BackendOptions().arch == "t3na")
-        include("t3na.p4");
+        include("t3na.p4", "-D__TARGET_TOFINO__=3");
 #endif
     else
         ::error("Must specify either --arch tna or --arch t2na"

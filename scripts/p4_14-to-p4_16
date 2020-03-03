@@ -6,7 +6,7 @@ if [ $# -lt 2 ]; then
       fi
 
 bindir=$(dirname $(realpath $0))
-incdir=$bindir/../share/p4c
+incdir=$(realpath $bindir/../share/p4c)
 export P4C_16_INCLUDE_PATH=$incdir/p4include
 export P4C_14_INCLUDE_PATH=$incdir/p4_14include
 infile=$1
