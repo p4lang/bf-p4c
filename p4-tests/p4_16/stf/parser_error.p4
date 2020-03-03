@@ -2,10 +2,20 @@
 
 struct metadata { }
 
+header ethernet_t {
+    bit<48>     dest;
+    bit<48>     src;
+    bit<16>     ethertype;
+}
+
 header h1_t {
     bit<16> ig_err;
     bit<16> eg_err;
     bit<16> len;
+}
+
+header padding {
+    bit<320>    pad;   // pad to 64-byte minimum ethernet fram size
 }
 
 header h2_t {
@@ -13,8 +23,10 @@ header h2_t {
 }
 
 struct headers {
-    h1_t h1;
-    h2_t h2;
+    ethernet_t  ether;
+    h1_t        h1;
+    padding     pad;
+    h2_t        h2;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr,
@@ -23,7 +35,9 @@ parser ParserImpl(packet_in packet, out headers hdr,
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
+        packet.extract(hdr.ether);
         packet.extract(hdr.h1);
+        packet.extract(hdr.pad);
         transition select (hdr.h1.ig_err) {
              0x0: parse_h2;
              default: accept;

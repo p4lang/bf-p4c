@@ -11,11 +11,25 @@
 /*************************************************************************
  ***********************  H E A D E R S  *********************************
  *************************************************************************/
+header_type ethernet_t {
+    fields {
+        dest : 48;
+        src  : 48;
+        type : 16;
+    }
+}
+
 header_type h1_t {
     fields {
         ig_err   : 16;
         eg_err   : 16;
         len      : 16;
+    }
+}
+
+header_type padding_t {
+    fields {
+        padding : 320;  // 40 byte to make minimum 64-byte ethernet frame
     }
 }
 
@@ -32,11 +46,23 @@ header_type h2_t {
 /*************************************************************************
  ***********************  P A R S E R  ***********************************
  *************************************************************************/
+header ethernet_t ethernet;
 header h1_t h1;
+header padding_t padding;
 header h2_t h2;
 
 parser start {
+    extract(ethernet);
+    return parse_h1;
+}
+
+parser parse_h1 {
     extract(h1);
+    return parse_padding;
+}
+
+parser parse_padding {
+    extract(padding);
     return select(h1.ig_err) {
         0x0 : parse_h2;
         default : ingress;

@@ -1722,11 +1722,3 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )
-
-# New stf failures due to Model changes
-# packet now has 4 more bytes in the pipeline (for the ethernet trailer)
-p4c_add_xfail_reason("tofino"
-  "shorter than expected"
-  extensions/p4_tests/p4_14/stf/parser_error.p4
-  extensions/p4_tests/p4_16/stf/parser_error.p4
-)
