@@ -714,8 +714,29 @@ public:
     virtual void set_pred();
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
+
+    const std::vector<const p4_param*> 
+    find_p4_params(std::string s, std::string t = "", int start_bit = -1, int width = -1) const {
+        remove_name_tail_range(s);
+        std::vector<const p4_param*> params;
+        if (start_bit <= -1) return params;
+        if (width <= -1) return params;
+        int end_bit = start_bit + width;
+        for (auto &p : p4_params_list) {
+            if ((p.name == s) || (p.alias == s)) {
+                int p_end_bit = p.start_bit + p.bit_width;
+                if (!t.empty() && (p.type != t)) continue;
+                if (p.start_bit > start_bit) continue;
+                if (p_end_bit < end_bit) continue;
+                params.push_back(&p);
+            }
+        }
+        return params;
+    }
+
     const p4_param *find_p4_param(std::string s, std::string t = "", int start_bit = -1, int width = -1) const {
         remove_name_tail_range(s);
+        std::vector<p4_param*> params;
         for (auto &p : p4_params_list) {
             if ((p.name == s) || (p.alias == s)) {
                 if (!t.empty() && (p.type != t)) continue;
@@ -726,7 +747,9 @@ public:
                 return &p;
             }
         }
-        return nullptr; }
+        return nullptr; 
+    }
+
     const p4_param *find_p4_param_type(std::string &s) const {
         for (auto &p : p4_params_list)
             if (p.type == s) return &p;
@@ -1167,6 +1190,10 @@ public:
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width,
         unsigned index, bitvec &tcam_bits, unsigned byte_offset) const;
+    void gen_entry_cfg2(json::vector &out, std::string field_name,
+        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, std::string source,
+        unsigned start_bit, unsigned field_width, bitvec &tcam_bits) const; 
+    void gen_entry_range_cfg(json::map &entry, bool duplicate, unsigned nibble_offset) const; 
     void set_partition_action_handle(unsigned handle) {
         if (p4_table) p4_table->set_partition_action_handle(handle); }
     void set_partition_field_name(std::string name) {
