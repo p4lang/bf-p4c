@@ -286,10 +286,10 @@ struct ParserLoopsInfo {
 struct AncestorStates {
     /// We maintain the visited states in a stack as we visit
     /// in a DFS order.
-    std::vector<const IR::BFN::ParserState*> stack;
+    std::vector<IR::BFN::ParserState*> stack;
 
     /// Encounter this state, push to stack.
-    void push(const IR::BFN::ParserState* state) {
+    void push(IR::BFN::ParserState* state) {
         stack.push_back(state);
     }
 
@@ -355,14 +355,6 @@ struct AncestorStates {
             GetHeaderStackIndex getHeaderStackIndex(header);
             state->p4State->apply(getHeaderStackIndex);
 
-            // XXX(zma) taking a shortcut here of computing current index
-            // by getting the max index of all references of the header
-            // on current ancestor stack. This is incorrect if there are
-            // multiple inconsistent previous indices that may lead to the
-            // current state, in which case, it's an user error (cannot
-            // consistently resolve the header stack index). The right thing
-            // to do is look at the parse graph and check the indices of all
-            // previous references are consistent.
             if (getHeaderStackIndex.rv > rv)
                 rv = getHeaderStackIndex.rv;
         }
@@ -426,7 +418,7 @@ class GetBackendParser {
     std::map<cstring, IR::BFN::ParserState*>    backendStates;
     std::map<IR::BFN::ParserState*, const IR::ParserState*> origP4States;
 
-    std::map<cstring, unsigned>                 max_loop_depth;   // state name tp depth
+    std::map<cstring, unsigned>                 max_loop_depth;   // state name to depth
     std::map<cstring, cstring>                  p4StateNameToStateName;
 
     P4::TypeMap*      typeMap;
@@ -441,8 +433,189 @@ class GetBackendParser {
     AncestorStates ancestors;
 };
 
+/// Resolves the "next" and "last" stack references according to the spec.
+/// Call this on the frontend IR::ParserState node; will resolve all
+/// IR::BFN::UnresolvedHeaderStackIndex into concrete indices.
+struct ResolveHeaderStackIndex : public Transform {
+    IR::BFN::ParserState* state;
+    const std::map<cstring, IR::BFN::ParserState*> backendStates;
+    const ordered_set<const IR::ParserState*>* topoAncestors = nullptr;
+    AncestorStates* ancestors = nullptr;
+
+    /// Local map of header to stack index.
+    /// The stack index can be advanced multiple times in the current state.
+    std::map<cstring, int> headerToCurrentIndex;
+    std::set<cstring> resolvedHeaders;
+
+    bool stackOutOfBound = false;
+
+    ResolveHeaderStackIndex(IR::BFN::ParserState* s, AncestorStates* ans) :
+        state(s), ancestors(ans) { }
+
+    ResolveHeaderStackIndex(IR::BFN::ParserState* s,
+            const std::map<cstring, IR::BFN::ParserState*>& bs,
+            const ordered_set<const IR::ParserState*>* ans) :
+        state(s), backendStates(bs), topoAncestors(ans) { }
+
+    bool isStackOutOfBound(const IR::HeaderStackItemRef* ref, int index) {
+        auto stackSize = ref->base()->type->to<IR::Type_Stack>()
+                                     ->size->to<IR::Constant>()->asInt();
+
+        return index < 0 || index >= stackSize;
+    }
+
+    struct GetHeaderStackIndex : public Inspector {
+        cstring header;
+        int rv = -1;
+
+        explicit GetHeaderStackIndex(cstring hdr) : header(hdr) { }
+
+        bool preorder(const IR::HeaderStackItemRef* ref) override {
+            auto hdr = ref->baseRef()->name;
+
+            if (hdr == header) {
+                auto index = ref->index()->to<IR::Constant>();
+                rv = index->asUnsigned();
+            }
+
+            return false;
+        }
+
+        void postorder(const IR::MethodCallStatement* statement) override {
+            auto* call = statement->methodCall;
+            if (auto* method = call->method->to<IR::Member>()) {
+                if (method->member == "extract") {
+                    auto dest = (*call->arguments)[0]->expression;
+                    auto hdr = dest->to<IR::HeaderRef>();
+
+                    if (!hdr->is<IR::HeaderStackItemRef>()) {
+                        if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
+                            rv = 0;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    int getCurrentIndexFromTopoAncestors(cstring header) {
+        std::map<int, std::set<const IR::ParserState*>> resolves;
+
+        for (auto anc : *topoAncestors) {
+            GetHeaderStackIndex getHeaderStackIndex(header);
+            anc->apply(getHeaderStackIndex);
+
+            if (getHeaderStackIndex.rv != -1)
+                resolves[getHeaderStackIndex.rv].insert(anc);
+        }
+
+        // multiple reaching indices, we need to mark all ancestors as strided
+        if (resolves.size() > 1) {
+            LOG3("unable to consistently resolve header index for " << header);
+
+            for (auto& kv : resolves) {
+                for (auto s : kv.second) {
+                    auto* state = backendStates.at(s->name);
+                    state->stride = true;
+                    LOG3("mark " << s->name << " as strided");
+                }
+            }
+
+            return 0;
+        } else if (resolves.size() == 1) {
+            return resolves.begin()->first + 1;
+        } else {
+            return 0;
+        }
+    }
+
+    /// Returns the current stack index of the header.
+    /// Looks into the visited ancestor states and see what's the current index.
+    /// If not found in ancestor states, we are visiting this header for the first
+    /// time.
+    int getCurrentIndex(cstring header) {
+        int currentIndex = -1;
+
+        if (headerToCurrentIndex.count(header)) {
+            currentIndex = headerToCurrentIndex.at(header);
+        } else if (state->stride) {
+            // The strided header will be allocated in a loop
+            // and whose index increment will be managed by the
+            // destination adjustment counter at runtime.
+            headerToCurrentIndex[header] = currentIndex = 0;
+        } else if (topoAncestors) {
+            currentIndex = getCurrentIndexFromTopoAncestors(header);
+            headerToCurrentIndex[header] = currentIndex;
+        } else {
+            currentIndex = ancestors->getCurrentIndex(header);
+            headerToCurrentIndex[header] = currentIndex;
+        }
+
+        return currentIndex;
+    }
+
+    IR::Node* postorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        if (auto* method = call->method->to<IR::Member>()) {
+            if (method->member == "extract") {
+                auto dest = (*call->arguments)[0]->expression;
+                auto hdr = dest->to<IR::HeaderRef>();
+
+                if (!hdr->is<IR::HeaderStackItemRef>()) {
+                    auto header = hdr->to<IR::ConcreteHeaderRef>()->ref->name;
+
+                    int currentIndex = getCurrentIndex(header);
+
+                    // For normal header, we allow single extract.
+                    if (currentIndex > 0) {
+                        stackOutOfBound = true;
+                    }
+                }
+            }
+        }
+
+        return statement;
+    }
+
+    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+        auto ref = findContext<IR::HeaderStackItemRef>();
+        auto header = ref->baseRef()->name;
+
+        int currentIndex = getCurrentIndex(header);
+
+        // "last" refers to the previous index from the current index
+        if (unresolved->index == "last")
+            currentIndex--;
+
+        if (isStackOutOfBound(ref, currentIndex))
+            stackOutOfBound = true;
+
+        LOG4("resolved " << header << " stack index " << unresolved->index
+                         << " to " << currentIndex);
+
+        resolvedHeaders.insert(header);
+
+        auto resolved = new IR::Constant(currentIndex);
+
+        auto statement = findContext<IR::MethodCallStatement>();
+        if (statement) {
+            auto call = statement->methodCall;
+            if (auto method = call->method->to<IR::Member>()) {
+                // "next" is "automatically advanced on each successful call to extract"
+                if (method->member == "extract" && unresolved->index == "next") {
+                    headerToCurrentIndex[header]++;
+                }
+            }
+        }
+
+        return resolved;
+    }
+};
+
 const IR::BFN::Parser*
 GetBackendParser::createBackendParser() {
+    // 1. create backend states
+
     for (auto state : parser->states) {
         auto stateName = getStateName(state);
 
@@ -460,7 +633,53 @@ GetBackendParser::createBackendParser() {
             max_loop_depth[stateName] = parserPragmas.max_loop_depth.at(state);
         else if (parserLoopsInfo.max_loop_depth.count(state->name))
             max_loop_depth[stateName] = parserLoopsInfo.max_loop_depth.at(state->name);
+
+        if (parserLoopsInfo.need_strided_allocation(state->name)) {
+            backendState->stride = true;
+            LOG3("mark " << state->name << " as strided");
+        }
     }
+
+    // 2. resolve header stack indices if graph has no loops
+
+    P4ParserGraphs pg(refMap, typeMap, false);
+    parser->apply(pg);
+
+    if (!pg.has_loops(parser)) {
+        auto topo = pg.topological_sort(parser);
+
+        std::map<cstring, const IR::ParserState*> resolved_map;
+
+        for (auto name : topo) {
+            if (name == "accept" || name == "reject")
+                continue;
+
+            if (backendStates.count(name)) {
+                auto* state = backendStates[name];
+
+                ordered_set<const IR::ParserState*> ancestors;
+
+                for (auto anc : pg.get_all_ancestors(state->p4State)) {
+                    if (resolved_map.count(anc->name))
+                        ancestors.insert(resolved_map.at(anc->name));
+                }
+
+                ResolveHeaderStackIndex resolveHeaderStackIndex(state, backendStates, &ancestors);
+                auto resolved = state->p4State->apply(resolveHeaderStackIndex)
+                                     ->to<IR::ParserState>();
+
+                if (resolveHeaderStackIndex.stackOutOfBound) {
+                    LOG4("stack out of bound at " << state->name);
+                    resolved = nullptr;
+                }
+
+                state->p4State = resolved;
+                resolved_map[resolved->name] = resolved;
+            }
+        }
+    }
+
+    // 3. now convert states and stitch them together
 
     bool isLoopState = false;
     IR::BFN::ParserState* startState = convertState(getStateName("start"), isLoopState);
@@ -548,110 +767,6 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
     state->transitions.push_back(transition);
     ancestors.pop();
 }
-
-/// Resolves the "next" and "last" stack references according to the spec.
-/// Call this on the frontend IR::ParserState node; will resolve all
-/// IR::BFN::UnresolvedHeaderStackIndex into concrete indices.
-struct ResolveHeaderStackIndex : public Transform {
-    const IR::BFN::ParserState* state;
-    AncestorStates& ancestors;
-
-    /// Local map of header to stack index.
-    /// The stack index can be advanced multiple times in the current state.
-    std::map<cstring, int> headerToCurrentIndex;
-    std::set<cstring> resolvedHeaders;
-
-    bool stackOutOfBound = false;
-
-    ResolveHeaderStackIndex(const IR::BFN::ParserState* s, AncestorStates& ans) :
-        state(s), ancestors(ans) { }
-
-    bool isStackOutOfBound(const IR::HeaderStackItemRef* ref, int index) {
-        auto stackSize = ref->base()->type->to<IR::Type_Stack>()
-                                     ->size->to<IR::Constant>()->asInt();
-
-        return index < 0 || index >= stackSize;
-    }
-
-    /// Returns the current stack index of the header.
-    /// Looks into the visited ancestor states and see what's the current index.
-    /// If not found in ancestor states, we are visiting this header for the first
-    /// time.
-    int getCurrentIndex(cstring header) {
-        int currentIndex = -1;
-
-        if (headerToCurrentIndex.count(header)) {
-            currentIndex = headerToCurrentIndex.at(header);
-        } else if (state->stride) {
-            // The strided header will be allocated in a loop
-            // and whose index increment will be managed by the
-            // destination adjustment counter at runtime.
-            headerToCurrentIndex[header] = currentIndex = 0;
-        } else {
-            currentIndex = ancestors.getCurrentIndex(header);
-            headerToCurrentIndex[header] = currentIndex;
-        }
-
-        return currentIndex;
-    }
-
-    IR::Node* postorder(IR::MethodCallStatement* statement) override {
-        auto* call = statement->methodCall;
-        if (auto* method = call->method->to<IR::Member>()) {
-            if (method->member == "extract") {
-                auto dest = (*call->arguments)[0]->expression;
-                auto hdr = dest->to<IR::HeaderRef>();
-
-                if (!hdr->is<IR::HeaderStackItemRef>()) {
-                    auto header = hdr->to<IR::ConcreteHeaderRef>()->ref->name;
-
-                    int currentIndex = getCurrentIndex(header);
-
-                    // For normal header, we allow single extract.
-                    if (currentIndex > 0) {
-                        stackOutOfBound = true;
-                    }
-                }
-            }
-        }
-
-        return statement;
-    }
-
-    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
-        auto ref = findContext<IR::HeaderStackItemRef>();
-        auto header = ref->baseRef()->name;
-
-        int currentIndex = getCurrentIndex(header);
-
-        // "last" refers to the previous index from the current index
-        if (unresolved->index == "last")
-            currentIndex--;
-
-        if (isStackOutOfBound(ref, currentIndex))
-            stackOutOfBound = true;
-
-        LOG4("resolved " << header << " stack index " << unresolved->index
-                         << " to " << currentIndex);
-
-        resolvedHeaders.insert(header);
-
-        auto resolved = new IR::Constant(currentIndex);
-
-        auto statement = findContext<IR::MethodCallStatement>();
-        if (statement) {
-            auto call = statement->methodCall;
-            if (auto method = call->method->to<IR::Member>()) {
-                // "next" is "automatically advanced on each successful call to extract"
-                if (method->member == "extract" && unresolved->index == "next") {
-                    headerToCurrentIndex[header]++;
-                }
-            }
-        }
-
-        return resolved;
-    }
-};
 
 const IR::BFN::PacketRVal*
 resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
@@ -1364,11 +1479,6 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
 
     auto* state = backendStates[name];
 
-    if (parserLoopsInfo.need_strided_allocation(name)) {
-        state->stride = true;
-        LOG3("mark " << name << " as strided");
-    }
-
     if (ancestors.visited(state)) {
         LOG3("parser state " << name << " is in a loop");
 
@@ -1419,7 +1529,7 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
 
 IR::BFN::ParserState*
 GetBackendParser::convertBody(IR::BFN::ParserState* state) {
-    ResolveHeaderStackIndex resolveHeaderStackIndex(state, ancestors);
+    ResolveHeaderStackIndex resolveHeaderStackIndex(state, &ancestors);
     auto resolved = state->p4State->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
 
     if (resolveHeaderStackIndex.stackOutOfBound) {

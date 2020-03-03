@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
 #define EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
 
+#include <boost/graph/adjacency_list.hpp>
 #include "backends/graphs/parsers.h"
 
 /// Extends p4c's parser graph with various algorithms
@@ -93,11 +94,37 @@ class P4ParserGraphs: public graphs::ParserGraphs {
         return rv;
     }
 
+    ordered_set<const IR::ParserState*>
+    get_all_ancestors(const IR::ParserState* state) const {
+        ordered_set<const IR::ParserState*> rv;
+
+        auto parser = get_parser(state);
+
+        for (auto s : states.at(parser)) {
+            if (is_descendant(state->name, s->name))
+                rv.insert(s);
+        }
+
+        return rv;
+    }
+
+    boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS>
+    create_boost_graph(const IR::P4Parser* parser,
+                       std::map<int, cstring>& id_to_state) const;
+
     std::set<std::set<cstring>>
     compute_strongly_connected_components(const IR::P4Parser* parser) const;
 
     std::set<std::set<cstring>>
     compute_loops(const IR::P4Parser* parser) const;
+
+    bool has_loops(const IR::P4Parser* parser) const {
+        auto loops = compute_loops(parser);
+        return !loops.empty();
+    }
+
+    std::vector<cstring>
+    topological_sort(const IR::P4Parser* parser) const;
 
     std::map<cstring, ordered_set<cstring>> preds, succs;
 
