@@ -146,6 +146,8 @@ class PhvLogging : public MauInspector {
     void getAllParserDefs(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
     void getAllDeparserUses(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
 
+    void addPardeReadsAndWrites(const PHV::Field* f, ordered_set<PardeInfo>& rv,
+                                Phv_Schema_Logger::ContainerSlice *cs) const;
     void addTableKeys(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWReads(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWWrites(const PHV::FieldSlice& sl, ContainerSlice *cs) const;

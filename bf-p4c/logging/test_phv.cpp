@@ -87,7 +87,7 @@ int main() {
     logger.append_fields(field2);
 
     // Container1
-    auto container1 = new Container(32, "normal", 10, 10, 2);
+    auto container1 = new Container(32, "normal", "ingress", 10, 10, 2);
     auto slice_info1 = new Slice(2, 7);
     auto field_slice1 = new FieldSlice("f1", slice_info1);
     auto phv_slice1 = new Slice(0, 7);
@@ -100,7 +100,7 @@ int main() {
     logger.append_containers(container1);
 
     // Container2
-    auto container2 = new Container(16, "tagalong", 0, 0, 4);
+    auto container2 = new Container(16, "tagalong", "ingress", 0, 0, 4);
     auto slice_info2 = new Slice(0, 1);
     auto field_slice2 = new FieldSlice("f2", slice_info2);
     auto phv_slice2 = new Slice(0, 1);

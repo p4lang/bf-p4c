@@ -145,17 +145,8 @@ PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl) {
     getAllParserDefs(sl.field, parde);
     getAllDeparserUses(sl.field, parde);
 
-    auto dType = getDeparserAccessType(sl.field);
-    std::for_each(parde.begin(), parde.end(),
-                  [&](PardeInfo& entry) {
-                      if (entry.unit == "parser")
-                          cs->append_writes(new Access(ParserLocation("ibuf",
-                                                                      entry.parserState,
-                                                                      entry.unit)));
-                      else if (entry.unit == "deparser" && strcmp(dType, "none") != 0)
-                          cs->append_reads(new Access(DeparserLocation(dType,
-                                                                       entry.unit)));
-                  });
+    // Add PARDE reads and writes.
+    addPardeReadsAndWrites(sl.field, parde, cs);
 
     // Add all the MAU reads/writes.
     PHV::FieldSlice slice(sl.field, sl.field_bits());
@@ -377,6 +368,24 @@ PhvLogging::getAllParserDefs(const PHV::Field* f, ordered_set<PhvLogging::PardeI
 }
 
 void
+PhvLogging::addPardeReadsAndWrites(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv,
+                                   Phv_Schema_Logger::ContainerSlice *cs) const {
+    LOG4("Adding parde reads and writes for Field: " << f);
+    auto dType = getDeparserAccessType(f);
+    std::for_each(rv.begin(), rv.end(),
+                  [&](PardeInfo& entry) {
+                      if (entry.unit == "parser") {
+                          std::string parserStateName(stripThreadPrefix(entry.parserState));
+                          cs->append_writes(new Access(ParserLocation("ibuf",
+                                                                      parserStateName,
+                                                                      entry.unit))); }
+                      else if (entry.unit == "deparser" && strcmp(dType, "none") != 0)
+                          cs->append_reads(new Access(DeparserLocation(dType,
+                                                                       entry.unit)));
+                  });
+}
+
+void
 PhvLogging::addTableKeys(const PHV::FieldSlice &sl, Phv_Schema_Logger::ContainerSlice *cs) const {
     LOG4("Adding input xbar read for slice: " << sl);
     if (info.sliceXbarToTables.count(sl)) {
@@ -475,7 +484,10 @@ void PhvLogging::logContainers() {
             mauGroupId = phvSpec.mauGroupId(c);
             deparserGroupId = phvSpec.deparserGroupId(c);
         }
+        // Get gress associated with the field slices in this container
+        auto firstSlice = *kv.second.begin();
         auto containerEntry = new Container(c.size(), containerType(c),
+                                            getGress(firstSlice.field),
                                             deparserGroupId, mauGroupId,
                                             cid);
         for (auto sl : kv.second) {
