@@ -86,20 +86,86 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                       "locked to ingress");
             } else if (kv.value == "concurrent") {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
-                if (stageno == Target::NUM_MAU_STAGES()/2)
+                if (stageno == Target::NUM_MAU_STAGES()/2 && options.target == TOFINO)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
-#ifdef HAVE_JBAY
                 else if (!Target::SUPPORT_CONCURRENT_STAGE_DEP())
                     error(kv.value.lineno, "no concurrent execution on %s", Target::name());
-#endif /* HAVE_JBAY */
             } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
-                if (stageno == Target::NUM_MAU_STAGES()/2)
+                if (stageno == Target::NUM_MAU_STAGES()/2 && options.target == TOFINO)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
             } else if (kv.value == "match")
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
             else
                 error(kv.value.lineno, "Invalid stage dependency %s", value_desc(kv.value));
+            continue;
+
+        } else if (kv.key == "mpr_stage_id") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if CHECKTYPE(kv.value, tINT) {
+                if (kv.value.i > stageno)
+                    error(kv.value.lineno, "mpr_stage_id value cannot be greater than current stage.");
+                stage[stageno].mpr_stage_id[gress] = kv.value.i;
+            }
+            continue;
+        } else if (kv.key == "mpr_always_run") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if CHECKTYPE(kv.value, tINT) {
+                stage[stageno].mpr_always_run |= kv.value.i;
+            }
+            continue;
+        } else if (kv.key == "mpr_bus_dep_next_table") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if CHECKTYPE(kv.value, tINT) {
+                stage[stageno].mpr_bus_dep_next_table[gress] |= kv.value.i;
+            }
+            continue;
+        } else if (kv.key == "mpr_bus_dep_glob_exec") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if CHECKTYPE(kv.value, tINT) {
+                stage[stageno].mpr_bus_dep_glob_exec |= kv.value.i;
+            }
+            continue;
+        } else if (kv.key == "mpr_bus_dep_long_brch") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if CHECKTYPE(kv.value, tINT) {
+                stage[stageno].mpr_bus_dep_long_branch |= kv.value.i;
+            }
+            continue;
+        } else if (kv.key == "mpr_next_table_lut") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &lut : kv.value.map) {
+                    if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= LOGICAL_TABLES_PER_STAGE)
+                        error(lut.key.lineno, "Invalid mpr_next_table_lut key.");
+                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                        error(lut.value.lineno, "Invalid mpr_next_table_lut value.");
+                    stage[stageno].mpr_next_table_lut[gress][lut.key.i] = lut.value.i;
+                }
+            }
+            continue;
+        } else if (kv.key == "mpr_glob_exec_lut") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &lut : kv.value.map) {
+                    if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= LOGICAL_TABLES_PER_STAGE)
+                        error(lut.key.lineno, "Invalid mpr_glob_exec_lut key.");
+                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                        error(lut.value.lineno, "Invalid mpr_glob_exec_lut value.");
+                    stage[stageno].mpr_glob_exec_lut[lut.key.i] |= lut.value.i;
+            } }
+            continue;
+        } else if (kv.key == "mpr_long_brch_lut") {
+            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
+            if (CHECKTYPE(kv.value, tMAP)) {
+                for (auto &lut : kv.value.map) {
+                    if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= MAX_LONGBRANCH_TAGS)
+                        error(lut.key.lineno, "Invalid mpr_long_brch_lut key.");
+                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                        error(lut.value.lineno, "Invalid mpr_long_brch_lut value.");
+                    stage[stageno].mpr_long_brch_lut[lut.key.i] |= lut.value.i;
+                }
+            }
             continue;
         } else if (kv.key == "error_mode") {
             if (gress == GHOST)
@@ -195,10 +261,9 @@ void AsmStage::output(json::map &ctxt_json) {
     }
     if (stage.empty()) return;
 
-#if HAVE_JBAY
     /* Allow to set any stage as match dependent based on a pattern - Should never be used for
      * normal compilation */
-    if (options.target == JBAY && !options.stage_dependency_pattern.empty()) {
+    if (options.target != TOFINO && !options.stage_dependency_pattern.empty()) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
             for (unsigned i = 0; i < stage.size(); i++) {
                     if ((options.stage_dependency_pattern.size() > i) &&
@@ -210,7 +275,6 @@ void AsmStage::output(json::map &ctxt_json) {
             }
         }
     }
-#endif
 
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
@@ -386,10 +450,13 @@ int Stage::pred_cycle(gress_t gress) {
     return Target::MAU_BASE_PREDICATION_DELAY() + tcam_delay(gress);
 }
 
+void Stage::verify_have_mpr(std::string key, int line_number) {
+  if (!Target::HAS_MPR())
+    error(line_number, "%s is not available on target %s.", key.c_str(), Target::name());
+}
+
 #include "tofino/stage.cpp"
-#ifdef HAVE_JBAY
 #include "jbay/stage.cpp"
-#endif /* HAVE_JBAY */
 #ifdef HAVE_CLOUDBREAK
 #include "cloudbreak/stage.cpp"
 #endif /* HAVE_CLOUDBREAK */

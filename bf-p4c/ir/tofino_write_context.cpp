@@ -11,6 +11,8 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     while (ctxt->child_index == 0 &&
             (ctxt->node->is<IR::ArrayIndex>() ||
              ctxt->node->is<IR::HeaderStackItemRef>() ||
+             ctxt->node->is<IR::MAU::MultiOperand>() ||
+             ctxt->node->is<IR::ListExpression>() ||
              ctxt->node->is<IR::Slice>() ||
              ctxt->node->is<IR::Member>())) {
         ctxt = ctxt->parent;
@@ -150,17 +152,24 @@ bool TofinoWriteContext::isIxbarRead(bool /* root_value */) {
         if (!ctxt || !ctxt->node)
             return false;
     }
-
     if (findContext<IR::MAU::TableKey>()) {
         return true;
     }
-
     if (findContext<IR::MAU::HashDist>()) {
         return true;
     }
-
     if (findContext<IR::MAU::AttachedMemory>()) {
         return true;
+    }
+
+    // Gateway expressions
+    // This doesn't work for some reason...
+    if (ctxt && ctxt->node->is<IR::Expression>()) {
+        while (ctxt && ctxt->node->is<IR::Expression>()) {
+            ctxt = ctxt->parent;
+        }
+        if (ctxt && ctxt->node->is<IR::MAU::Table>()) {
+            return true; }
     }
     return false;
 }

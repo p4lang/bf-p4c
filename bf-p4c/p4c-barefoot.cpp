@@ -200,6 +200,7 @@ class GenerateOutputs : public PassManager {
                                 // information in assembly
                     new BFN::AsmOutput(b.get_phv(), b.get_clot(), b.get_defuse(),
                                        b.get_flexible_logging(), b.get_nxt_tbl(),
+                                       b.get_power_and_mpr(),
                                        b.get_tbl_summary(), b.get_live_range_report(), o, success),
                     o.debugInfo ? new PhvLogging(phvLogFile.c_str(), b.get_phv(), b.get_clot(),
                                                  *b.get_phv_logging(), b.get_defuse(),

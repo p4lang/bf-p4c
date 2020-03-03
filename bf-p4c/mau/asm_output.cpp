@@ -1,5 +1,7 @@
+#include <map>
 #include <regex>
 #include <string>
+#include <vector>
 #include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/lib/error_type.h"
@@ -57,10 +59,23 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     // phase0 info within the parser node
     auto* pipe = mauasm.pipe;
 
+    std::map<gress_t, std::map<int, bool>> stages_saw = {};
+    std::vector<gress_t> gr;
+    gr.push_back(INGRESS);
+    gr.push_back(EGRESS);
+    if (Device::currentDevice() != Device::TOFINO)
+      gr.push_back(GHOST);
+    for (auto g : gr) {
+      std::map<int, bool> in_stage = {};
+      stages_saw.emplace(g, in_stage);
+    }
+
     for (auto p : pipe->thread[INGRESS].parsers) {
         if (auto* parser = p->to<IR::BFN::LoweredParser>()) {
             if (auto p0 = parser->phase0) {
                 out << "stage 0 ingress:" << std::endl;
+                mauasm.power_and_mpr->emit_stage_asm(out, INGRESS, 0);
+                stages_saw.at(INGRESS).emplace(0, true);
                 out << p0;
                 phase0OutputAsm = true;
             }
@@ -73,11 +88,11 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             maxStages[stage.first.first] = stage.first.second;
 
     for (auto &stage : mauasm.by_stage) {
-        if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS)
+        if (!phase0OutputAsm || stage.first.second != 0 || stage.first.first != INGRESS) {
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
-        if (Device::currentDevice() != Device::TOFINO &&
-            stage.first.first != GHOST && stage.first.second > 0)
-            out << indent << "dependency: match" << std::endl;
+            mauasm.power_and_mpr->emit_stage_asm(out, stage.first.first, stage.first.second);
+            stages_saw.at(stage.first.first).emplace(stage.first.second, true);
+        }
         if (Device::currentDevice() != Device::TOFINO &&
             stage.first.second == maxStages[stage.first.first])
             mauasm.emit_always_init_action(out, indent, stage.first);
@@ -86,10 +101,13 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
                 stage.first.first /* gress */);
         }
     }
-    if (mauasm.by_stage.empty() && !phase0OutputAsm) {
-        // minimal pipe config for empty program
-        out << "stage 0 ingress: {}" << std::endl; }
-
+    // Need to emit MPR and dependency config for empty stages.
+    for (int stage=0; stage < Device::numStages(); ++stage) {
+      for (auto g : gr) {
+        if (stages_saw.at(g).find(stage) == stages_saw.at(g).end()) {
+          out << "stage " << stage << " " << g << ":" << std::endl;
+          mauasm.power_and_mpr->emit_stage_asm(out, g, stage);
+    } } }
     return out;
 }
 

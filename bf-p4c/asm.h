@@ -33,6 +33,7 @@ class AsmOutput : public Inspector {
     const FieldDefUse &defuse;
     const LogRepackedHeaders *flex;
     const NextTable *nxt_tbl;
+    const MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     const TableSummary &tbl_summary;
     const LiveRangeReport *live_range_report;
     const BFN_Options &options;
@@ -50,11 +51,13 @@ class AsmOutput : public Inspector {
               const FieldDefUse& defuse,
               const LogRepackedHeaders *flex,
               const NextTable* nxts,
+              const MauPower::FinalizeMauPredDepsPower* pmpr,
               const TableSummary& tbl_summary,
               const LiveRangeReport* live_range_report,
               const BFN_Options &opts,
               bool success)
         : phv(phv), clot(clot), defuse(defuse), flex(flex), nxt_tbl(nxts),
+          power_and_mpr(pmpr),
           tbl_summary(tbl_summary), live_range_report(live_range_report),
           options(opts), _successfulCompile(success) {}
 
@@ -67,7 +70,7 @@ class AsmOutput : public Inspector {
             cstring outputFile = outputDir + "/" + options.programName + ".bfa";
             std::ofstream out(outputFile, std::ios_base::out);
 
-            MauAsmOutput mauasm(phv, pipe, nxt_tbl, options);
+            MauAsmOutput mauasm(phv, pipe, nxt_tbl, power_and_mpr, options);
             pipe->apply(mauasm);
 
             out << "version:" << std::endl

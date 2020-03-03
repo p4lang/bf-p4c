@@ -1,11 +1,12 @@
 #ifndef EXTENSIONS_BF_P4C_DEVICE_H_
 #define EXTENSIONS_BF_P4C_DEVICE_H_
 
+#include "ir/gress.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
-#include "phv/phv_spec.h"
+#include "mau/power_spec.h"
 #include "parde/parde_spec.h"
-#include "ir/gress.h"
+#include "phv/phv_spec.h"
 
 class Device {
  public:
@@ -35,6 +36,8 @@ class Device {
     static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
     struct StatefulAluSpec;
     static const StatefulAluSpec& statefulAluSpec() { return Device::get().getStatefulAluSpec(); }
+    static const MauPowerSpec& mauPowerSpec() { return Device::get().getMauPowerSpec(); }
+    static int numPipes() { return Device::get().getNumPipes(); }
     static int numStages() { return Device::get().getNumStages(); }
     static int numLongBranchTags() { return Device::get().getLongBranchTags(); }
     static bool hasLongBranches() { return numLongBranchTags() > 0; }
@@ -60,6 +63,7 @@ class Device {
     virtual const PhvSpec& getPhvSpec() const = 0;
     virtual const PardeSpec& getPardeSpec() const = 0;
     virtual const StatefulAluSpec& getStatefulAluSpec() const = 0;
+    virtual const MauPowerSpec& getMauPowerSpec() const = 0;
     virtual int getNumPipes() const = 0;
     virtual int getNumPortsPerPipe() const = 0;
     virtual int getNumChannelsPerPort() const = 0;
@@ -84,6 +88,7 @@ class Device {
 class TofinoDevice : public Device {
     const TofinoPhvSpec phv_;
     const TofinoPardeSpec parde_;
+    const TofinoMauPowerSpec mau_power_;
 
  public:
     TofinoDevice() : Device("Tofino"), parde_() {}
@@ -113,12 +118,14 @@ class TofinoDevice : public Device {
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return false; }
 };
 
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
     const JBayPardeSpec parde_;
+    const JBayMauPowerSpec mau_power_;
 
  protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -149,6 +156,7 @@ class JBayDevice : public Device {
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
 };
 
@@ -178,6 +186,7 @@ class JBayUDevice : public JBayDevice {
 class CloudbreakDevice : public Device {
     const CloudbreakPhvSpec phv_;
     const CloudbreakPardeSpec parde_;
+    const CloudbreakMauPowerSpec mau_power_;
 
  protected:
 #ifdef EMU_OVERRIDE_STAGE_COUNT
@@ -208,6 +217,7 @@ class CloudbreakDevice : public Device {
     const PhvSpec& getPhvSpec() const override { return phv_; }
     const PardeSpec& getPardeSpec() const override { return parde_; }
     const StatefulAluSpec& getStatefulAluSpec() const override;
+    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
 };
 #endif /* HAVE_CLOUDBREAK */

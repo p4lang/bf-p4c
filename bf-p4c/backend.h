@@ -6,6 +6,7 @@
 
 #include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
@@ -50,6 +51,7 @@ class Backend : public PassManager {
     LogFlexiblePacking *flexibleLogging;
     CollectPhvLoggingInfo *phvLoggingInfo;
     NextTable *nextTblProp;
+    MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     LiveRangeReport *liveRangeReport;
 
  public:
@@ -58,6 +60,7 @@ class Backend : public PassManager {
     const PhvInfo       &get_phv()     const { return phv; }
     const ClotInfo      &get_clot()    const { return clot; }
     const FieldDefUse   &get_defuse()  const { return defuse; }
+    const MauPower::FinalizeMauPredDepsPower* get_power_and_mpr() const { return power_and_mpr; }
     const NextTable *get_nxt_tbl() const { return nextTblProp; }
     const TableSummary &get_tbl_summary() const { return table_summary; }
     const LiveRangeReport *get_live_range_report() const { return liveRangeReport; }

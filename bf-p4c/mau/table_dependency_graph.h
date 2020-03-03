@@ -27,6 +27,11 @@
 class TableGraphNode;
 struct DependencyGraph {
     typedef enum {
+        MAU_DEP_MATCH      = 2,  // Field written is read at match input crossbar.
+        MAU_DEP_ACTION     = 1,  // Field written is read and/or written at PHV ALU.
+        MAU_DEP_CONCURRENT = 0   // No dependency.
+    } mau_dependencies_t;
+    typedef enum {
         NONE                        = 1,          // No dependence label.
         CONTROL_ACTION              = (1 << 1),   // Control dependence due to action.
         CONTROL_COND_TRUE           = (1 << 2),   // Control dependence due to gateway
@@ -189,6 +194,21 @@ struct DependencyGraph {
     ordered_map<typename Graph::edge_descriptor, const PHV::FieldSlice*> data_annotations_metadata;
     ordered_map<typename Graph::edge_descriptor, std::string> ctrl_annotations;
 
+    // Note: these maps only make sense if there is a PHV allocation.
+    // Map from table to PHV containers written.
+    std::map<const IR::MAU::Table*, std::map<const PHV::Container, bool>> containers_write_ = {};
+    // Map from table to PHV containers read at the match input crossbar.
+    std::map<const IR::MAU::Table*,
+             std::map<const PHV::Container, bool>> containers_read_xbar_ = {};
+    // Map from table to PHV containers read at the PHV ALUs.
+    std::map<const IR::MAU::Table*,
+             std::map<const PHV::Container, bool>> containers_read_alu_ = {};
+    // Map to memoize results of calls to "find_mau_dependency"
+    // This map uses the hardware terminology for MAU stage dependencies,
+    // so dependencies_t is not used.
+    std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
+             DependencyGraph::mau_dependencies_t> table_dep_ = {};
+
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages,         // Number of tables that depend on this table and
@@ -248,6 +268,10 @@ struct DependencyGraph {
         vertex_rst.clear();
         passContext = "";
         placed = false;
+        containers_write_.clear();
+        containers_read_xbar_.clear();
+        containers_read_alu_.clear();
+        table_dep_.clear();
     }
 
     /// @returns boolean indicating if an edge is a type of anti edge
@@ -447,6 +471,57 @@ struct DependencyGraph {
             return boost::none;
         }
         return gathered_data;
+    }
+
+    void print_dep_type_map(std::ostream &out) const;
+    void print_container_access(std::ostream &out) const;
+
+    /**
+      * Returns the MAU stage dependency that exists from table 'from' to table 'to'.
+      * Note that this function does not know the control flow; it only checks the
+      * PHV containers written and read by the two tables.  If the two tables
+      * are not on the same control flow, it is the caller's responsiblity to know they
+      * are concurrent.
+      * This function cannot be called until PHV allocation has completed.  If it is,
+      * the maps accessed will not have been populated.
+      */
+    DependencyGraph::mau_dependencies_t find_mau_dependency(const IR::MAU::Table* from,
+                                                            const IR::MAU::Table* to) {
+      if (!finalized)
+        BUG("Dependence graph used before being fully constructed.");
+      std::pair<const IR::MAU::Table*, const IR::MAU::Table*> p = std::make_pair(from, to);
+      if (table_dep_.find(p) != table_dep_.end())
+        return table_dep_.at(p);
+      if (from && to && from->gress == to->gress) {
+         if (containers_write_.find(to) != containers_write_.end()) {
+            // check if containers read at xbar = match dependency
+            if (containers_read_xbar_.find(from) != containers_read_xbar_.end()) {
+              for (auto c : containers_write_.at(to)) {
+                 for (auto c2 : containers_read_xbar_.at(from)) {
+                   if (c == c2) {
+                     table_dep_.emplace(p, MAU_DEP_MATCH);
+                     return MAU_DEP_MATCH;
+            } } } }
+            // check if containers read at PHV ALUs = action dependency
+            if (containers_read_alu_.find(from) != containers_read_alu_.end()) {
+              for (auto c : containers_write_.at(to)) {
+                 for (auto c2 : containers_read_alu_.at(from)) {
+                   if (c == c2) {
+                     table_dep_.emplace(p, MAU_DEP_ACTION);
+                     return MAU_DEP_ACTION;
+            } } } }
+            // check if containers written at PHV ALUs = action dependency
+            if (containers_write_.find(from) != containers_write_.end()) {
+              for (auto c : containers_write_.at(to)) {
+                 for (auto c2 : containers_write_.at(from)) {
+                   if (c == c2) {
+                     table_dep_.emplace(p, MAU_DEP_ACTION);
+                     return MAU_DEP_ACTION;
+            } } } }
+         }
+      }
+      table_dep_.emplace(p, MAU_DEP_CONCURRENT);
+      return MAU_DEP_CONCURRENT;
     }
 
     /**

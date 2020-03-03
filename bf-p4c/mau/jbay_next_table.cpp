@@ -221,7 +221,7 @@
  *
  *         switch (t1.apply().action_run) {
  *             a1 : { t2.apply(); t3.apply(); }
- *             a2 : { t3.apply(); t2.apply(); } 
+ *             a2 : { t3.apply(); t2.apply(); }
  *         }
  *
  *     This is because the tables themselves have a logical order through predication.  This
@@ -229,7 +229,7 @@
  *
  *         switch (t1.apply().action_run) {
  *             a1 : { t2.apply(); t3.apply(); }
- *             a2 : { t3.apply(); t4.apply(); } 
+ *             a2 : { t3.apply(); t4.apply(); }
  *             a3 : { t4.apply(); t2.apply(); }
  *         }
  *
@@ -345,6 +345,14 @@ struct NextTable::Prop::NTInfo {
         }
     }
 };
+
+std::pair<ssize_t, ssize_t> NextTable::get_live_range_for_lb_with_dest(UniqueId dest) const {
+  for (auto some_lbus_use : lbus) {
+    if (some_lbus_use.dest && some_lbus_use.dest->unique_id() == dest)
+      return std::make_pair(some_lbus_use.fst, some_lbus_use.lst);
+  }
+  return std::make_pair(-1, -1);
+}
 
 // Checks if there is any overlap between two tags
 bool NextTable::LBUse::operator&(const LBUse& r) const {

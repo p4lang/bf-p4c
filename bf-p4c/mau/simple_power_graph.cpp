@@ -1,0 +1,346 @@
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+
+#include "bf-p4c/mau/simple_power_graph.h"
+
+namespace MauPower {
+
+bool Edge::is_equivalent(const Edge* other) const {
+  // Don't care about debug values, just about connectivity.
+  if (child_nodes_.size() != other->child_nodes_.size())
+    return false;
+  for (auto* c1 : child_nodes_) {
+    bool found = false;
+    for (auto* c2 : other->child_nodes_) {
+      if (c1->is_equivalent(c2)) {
+        found = true;
+        break;
+    } }
+    if (!found)
+      return false;
+  }
+  return true;
+}
+
+cstring Edge::get_edge_color() const {
+  if (child_nodes_.size() > 1) {
+    std::vector<std::string> lut;
+    lut.push_back("red");
+    lut.push_back("blue");
+    lut.push_back("green");
+    lut.push_back("orange");
+    lut.push_back("purple");
+    lut.push_back("yellow");
+    lut.push_back("brown");
+    lut.push_back("cyan");
+    return lut.at(id_ % lut.size()); }
+  return "black";
+}
+
+void Node::create_and_add_edge(cstring edge_name, std::vector<Node*>& child_nodes) {
+  LOG4("create_and_add_edge:");
+  LOG4("   edge_name " << edge_name);
+  LOG4("   child_nodes: " << child_nodes.size());
+  for (auto c : child_nodes) {
+    if (c)
+      LOG4("     " << c->unique_id_);
+  }
+  Edge* e = new Edge(out_edges_.size(), edge_name, child_nodes);
+  add_edge(e);
+}
+
+void Node::add_edge(Edge* edge) {
+  bool found = false;
+  for (auto e : out_edges_) {
+    if (e->is_equivalent(edge)) {
+        found = true;
+        break;
+    } }
+  if (!found)
+    out_edges_.push_back(edge);
+}
+
+bool Node::is_equivalent(const Node* other) const {
+  // Don't care about debug values, just about connectivity.
+  if (unique_id_ != other->unique_id_)
+    return false;
+  if (out_edges_.size() != other->out_edges_.size())
+    return false;
+  for (auto* e1 : out_edges_) {
+    bool found = false;
+    for (auto* e2 : other->out_edges_) {
+      if (e1->is_equivalent(e2)) {
+        found = true;
+        break;
+      } }
+    if (!found)
+      return false;
+  }
+  return true;
+}
+
+Node* SimplePowerGraph::create_node(UniqueId id) {
+  Node* n;
+  if (nodes_.find(id) != nodes_.end()) {
+    n = nodes_.at(id);
+  } else {
+    n = new Node(id, get_next_id());
+    nodes_.emplace(id, n);
+  }
+  return n;
+}
+
+void SimplePowerGraph::add_connection(UniqueId parent,
+                                      ordered_set<UniqueId> activated,
+                                      cstring edge_name) {
+  // Setup parent
+  Node* pnode = create_node(parent);
+  // Setup edge
+  std::vector<Node*> child_nodes;
+  for (auto u : activated) {
+    LOG4(parent << " -> " << u);
+    Node* child = create_node(u);
+    if (child)
+      child_nodes.push_back(child);
+  }
+  if (child_nodes.size() > 0)
+    pnode->create_and_add_edge(edge_name, child_nodes);
+}
+
+/**
+  * Outputs the final placed table control flow graphs to a .dot file.
+  */
+void SimplePowerGraph::to_dot(cstring filename) {
+  std::ofstream myfile;
+  myfile.open(filename);
+
+  std::queue<Node*> queue;
+  queue.push(get_root());
+  std::map<UniqueId, bool> visited = {};
+
+  myfile << "digraph " << name_ << " {" << std::endl;
+
+  // nodes
+  for (auto i : nodes_) {
+    myfile << i.second->id_;
+    myfile << " [label=\"" << i.second->unique_id_ << "\"";
+    myfile << " shape=box color=\"black\"];" << std::endl;
+  }
+  // edges
+  for (auto i : nodes_) {
+    for (auto e : i.second->out_edges_) {
+      for (auto c : e->child_nodes_) {
+        myfile << i.second->id_ << "-> " << c->id_;
+        cstring ename = e->name_;
+        myfile << " [label=\"" << ename << "\" color=\""
+               << e->get_edge_color() << "\"];" << std::endl;
+  } } }
+  myfile << "}" << std::endl;
+  myfile.close();
+}
+
+void SimplePowerGraph::get_leaves(UniqueId node, std::vector<UniqueId>& leaves) {
+  if (nodes_.find(node) == nodes_.end()) {
+    return; }
+  std::queue<Node*> queue;
+  queue.push(nodes_.at(node));
+  std::map<UniqueId, bool> visited = {};
+  while (!queue.empty()) {
+    Node* cur = queue.front();
+    queue.pop();
+    if (visited.find(cur->unique_id_) != visited.end()) {  // already visited
+      continue; }
+    visited.emplace(cur->unique_id_, true);
+    if (cur->out_edges_.size() == 0) {  // leaf
+      leaves.push_back(cur->unique_id_); }
+    for (auto e : cur->out_edges_) {
+      for (auto c : e->child_nodes_) {
+        if (visited.find(c->unique_id_) == visited.end()) {  // not found yet
+          queue.push(c);
+    } } }
+  }
+}
+
+/**
+  * Topological visit of table control flow graph.
+  */
+void SimplePowerGraph::topo_visit(Node *node,
+                                  std::stack<Node*> *stack,
+                                  std::map<Node*, bool> *visited) {
+  visited->emplace(node, true);
+  for (auto* e : node->out_edges_) {
+    for (auto* c : e->child_nodes_) {
+      if (visited->find(c) == visited->end()) {  // not visited
+          topo_visit(c, stack, visited);
+      } }
+  }
+  stack->push(node);
+}
+
+/**
+  * Returns a topological sorting of the graph.
+  */
+std::vector<Node*> SimplePowerGraph::topo_sort() {
+  std::vector<Node*> topo;
+  std::map<Node*, bool> visited = {};
+  std::stack<Node*> stack;
+
+  topo_visit(get_root(), &stack, &visited);
+  while (!stack.empty()) {
+      auto n = stack.top();
+      stack.pop();
+      topo.push_back(n);
+  }
+  return topo;
+}
+
+bool SimplePowerGraph::can_reach(UniqueId parent, UniqueId child) {
+  if (nodes_.find(parent) == nodes_.end() || nodes_.find(child) == nodes_.end()) {
+    return false; }
+  LOG6("can_reach(" << parent << ", " << child << ")");
+  std::pair<int, int> mem = std::make_pair(nodes_.at(parent)->id_, nodes_.at(child)->id_);
+  if (found_reachable_.find(mem) != found_reachable_.end())
+    return found_reachable_.at(mem);
+  std::queue<Node*> queue;
+  queue.push(nodes_.at(parent));
+  std::map<UniqueId, bool> visited = {};
+  while (!queue.empty()) {
+    Node* cur = queue.front();
+    queue.pop();
+    if (cur->unique_id_ == child) {
+      found_reachable_.emplace(mem, true);
+      LOG6("  true");
+      return true;
+    }
+    if (visited.find(cur->unique_id_) != visited.end()) {  // already visited
+      continue; }
+    visited.emplace(cur->unique_id_, true);
+    for (auto e : cur->out_edges_) {
+      for (auto c : e->child_nodes_) {
+        if (visited.find(c->unique_id_) == visited.end()) {  // not found yet
+          queue.push(c);
+    } } }
+  }
+  found_reachable_.emplace(mem, false);
+  LOG6("  false");
+  return false;
+}
+
+bool SimplePowerGraph::active_simultaneously(UniqueId parent, UniqueId child) {
+  if (nodes_.find(parent) == nodes_.end() || nodes_.find(child) == nodes_.end()) {
+    return false; }
+  LOG6("active_simultaneously(" << parent << ", " << child << ")");
+  std::pair<int, int> mem = std::make_pair(nodes_.at(parent)->id_, nodes_.at(child)->id_);
+  if (found_simultaneous_.find(mem) != found_simultaneous_.end())
+    return found_simultaneous_.at(mem);
+  if (can_reach(parent, child)) {
+    LOG6("  active_simul = true");
+    found_simultaneous_.emplace(mem, true);
+    return true;
+  }
+  // If there exists any Edge where the 'left' node activates parallel sub-graphs
+  // that include both parent and child, then parent and child are considered as
+  // active at the same time.
+  for (auto n : nodes_) {
+    for (auto e : n.second->out_edges_) {
+      bool reach_p = false;
+      bool reach_c = false;
+      // parallel sub-graphs only occurs when an Edge has more than one
+      // child node
+      if (e->child_nodes_.size() > 1) {
+        for (auto n2 : e->child_nodes_) {
+          if (can_reach(n2->unique_id_, parent))
+            reach_p = true;
+          if (can_reach(n2->unique_id_, child))
+            reach_c = true;
+      } }
+      if (reach_p && reach_c) {
+        LOG6("  active_simul = true");
+        found_simultaneous_.emplace(mem, true);
+        return true;
+      }
+  } }
+  LOG6("  active_simul = false");
+  found_simultaneous_.emplace(mem, false);
+  return false;
+}
+
+double
+SimplePowerGraph::get_tables_on_worst_path(const std::map<UniqueId, PowerMemoryAccess>& tma,
+                                           std::set<Node*>& rv) {
+  std::set<UniqueId> worst_path;
+  double pwr = visit_node_power(get_root(), tma, worst_path);
+  std::map<Node*, bool> worst = {};
+  std::queue<Node*> queue;
+  queue.push(get_root());
+  while (!queue.empty()) {
+    Node* n = queue.front();
+    queue.pop();
+    if (worst.find(n) == worst.end()) {
+      if (worst_path_edges_.find(n) != worst_path_edges_.end()) {
+        Edge* e = worst_path_edges_.at(n);
+        for (Node* child : e->child_nodes_) {
+          queue.push(child);
+      } }
+      worst.emplace(n, true);
+    }
+  }
+  for (auto w : worst) {
+    rv.insert(w.first); }
+  return pwr;
+}
+
+double SimplePowerGraph::visit_node_power(Node* n,
+                                          const std::map<UniqueId, PowerMemoryAccess>& tma,
+                                          std::set<UniqueId>& worst_path) {
+  if (computed_power_.find(n->id_) != computed_power_.end())
+    return computed_power_.at(n->id_);
+  // Determine which outgoing edge has the worst-case power estimate.
+  double worst_power = 0.0;
+  std::set<UniqueId> local_worst_path;  // after determine worst path, return in worst path
+  for (auto e : n->out_edges_) {
+    // Do not double-count tables that will be seen in "multi-execute" paths, e.g.
+    // when a long branch that activates multiple tables reconverges into the control flow.
+    std::set<UniqueId> edge_worst_path;
+    for (auto c : e->child_nodes_) {
+      std::set<UniqueId> next_worst_path;
+      visit_node_power(c, tma, next_worst_path);
+      for (auto uid : next_worst_path) {
+        edge_worst_path.insert(uid); }
+    }
+    double edge_power = 0.0;
+    for (auto uid : edge_worst_path) {
+      auto pma = tma.at(uid);
+      edge_power += pma.compute_table_power(Device::numPipes());
+    }
+
+    if (edge_power > worst_power) {
+      worst_power = edge_power;
+      worst_path_edges_[n] = e;
+      local_worst_path.clear();
+      for (auto uid : edge_worst_path) {
+        local_worst_path.insert(uid); }
+      LOG4("table " << n->unique_id_ << " goes to edges");
+      for (auto c : e->child_nodes_) {
+        LOG4("  " << c->unique_id_); }
+    }
+  }
+  if (tma.find(n->unique_id_) != tma.end()) {
+    auto pma = tma.at(n->unique_id_);
+    worst_power += pma.compute_table_power(Device::numPipes());
+  }
+  computed_power_.emplace(n->id_, worst_power);
+  worst_path.insert(n->unique_id_);
+  for (auto uid : local_worst_path) {
+    worst_path.insert(uid); }
+  LOG4("Worst power for " << n->unique_id_ << " is " << float2str(worst_power));
+  return worst_power;
+}
+
+};  // end namespace MauPower

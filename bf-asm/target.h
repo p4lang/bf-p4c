@@ -61,6 +61,7 @@
     M(int, STATEFUL_CONST_WIDTH) M(int, STATEFUL_TMATCH_UNITS) \
     M(int, METER_ALU_GROUP_DATA_DELAY) \
     M(bool, SUPPORT_ALWAYS_RUN) \
+    M(bool, HAS_MPR) \
     M(bool, SUPPORT_CONCURRENT_STAGE_DEP) \
     M(bool, SUPPORT_OVERFLOW_BUS) \
     M(bool, SUPPORT_SALU_FAST_CLEAR) \
@@ -160,6 +161,7 @@ class Target::Tofino : public Target {
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
         STATEFUL_CONST_WIDTH = 32,
         SUPPORT_ALWAYS_RUN = 0,
+        HAS_MPR = 0,
         SUPPORT_CONCURRENT_STAGE_DEP = 1,
         SUPPORT_OVERFLOW_BUS = 1,
         SUPPORT_SALU_FAST_CLEAR = 0,
@@ -266,6 +268,7 @@ class Target::JBay : public Target {
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
         STATEFUL_CONST_WIDTH = 34,
         SUPPORT_ALWAYS_RUN = 1,
+        HAS_MPR = 1,
         SUPPORT_CONCURRENT_STAGE_DEP = 0,
         SUPPORT_OVERFLOW_BUS = 0,
         SUPPORT_SALU_FAST_CLEAR = 1,
@@ -405,6 +408,7 @@ class Target::Cloudbreak : public Target {
         STATEFUL_PRED_MASK = (1U << (1 << STATEFUL_CMP_UNITS)) - 1,
         STATEFUL_CONST_WIDTH = 34,
         SUPPORT_ALWAYS_RUN = 1,
+        HAS_MPR = 1,
         SUPPORT_CONCURRENT_STAGE_DEP = 0,
         SUPPORT_OVERFLOW_BUS = 0,
         SUPPORT_SALU_FAST_CLEAR = 1,

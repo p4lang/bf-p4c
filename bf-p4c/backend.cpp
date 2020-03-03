@@ -16,10 +16,10 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
-#include "bf-p4c/mau/characterize_power.h"
 #include "bf-p4c/mau/check_duplicate.h"
 #include "bf-p4c/mau/dump_json_graph.h"
 #include "bf-p4c/mau/empty_controls.h"
+#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/gen_prim_json.h"
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/mau/instruction_selection.h"
@@ -104,6 +104,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
+
+    // Create even if Tofino, since this checks power is within limits.
+    power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, nextTblProp, options);
 
     auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
         new AllocateClot(clot, phv, uses) : nullptr;
@@ -285,18 +288,15 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new FindDependencyGraph(phv, deps, &options, "placement_graph",
                 "After Table Placement"),
         new DumpJsonGraph(deps, &jsonGraph, "After Table Placement", true),
-        new CharacterizePower(deps,
-#if BAREFOOT_INTERNAL
-                              options.no_power_check,
-#endif
-                              options.display_power_budget,
-                              options.disable_power_check,
-                              options.debugInfo,
-                              Device::numLongBranchTags() == 0 || options.disable_long_branch),
+
         // Call this at the end of the backend. This changes the logical stages used for PHV
         // allocation to physical stages based on actual table placement.
         Device::currentDevice() != Device::TOFINO
-            ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr
+            ? new FinalizeStageAllocation(phv, defuse, deps, table_summary) : nullptr,
+
+        // Must be called as last pass.  If the power budget is exceeded,
+        // we cannot produce a binary file.
+        power_and_mpr,
     });
     setName("Barefoot backend");
 

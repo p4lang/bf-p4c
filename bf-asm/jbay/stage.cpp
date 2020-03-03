@@ -133,7 +133,7 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             }
         }
     }
-    
+
     for (gress_t gress : Range(INGRESS, EGRESS))
         if (table_use[gress] & USE_TCAM)
             regs.tcams.tcam_piped |= options.match_compiler ? 3 : 1 << gress;
@@ -165,10 +165,25 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     if (long_branch_terminate)
         merge.pred_long_brch_terminate = long_branch_terminate;
     for (gress_t gress : Range(INGRESS, GHOST)) {
-        merge.mpr_stage_id[gress] = stageno;
         if (long_branch_thread[gress])
             merge.pred_long_brch_thread[gress] = long_branch_thread[gress];
     }
+
+    for (gress_t gress : Range(INGRESS, GHOST)) {
+        merge.mpr_stage_id[gress] = mpr_stage_id[gress];
+        for (int id=0; id < LOGICAL_TABLES_PER_STAGE; ++id) {
+          merge.mpr_next_table_lut[gress][id] = mpr_next_table_lut[gress][id]; }
+    }
+    for (int id=0; id < LOGICAL_TABLES_PER_STAGE; ++id) {
+      merge.mpr_glob_exec_lut[id] = mpr_glob_exec_lut[id]; }
+    for (int id=0; id < MAX_LONGBRANCH_TAGS; ++id) {
+      merge.mpr_long_brch_lut[id] = mpr_long_brch_lut[id]; }
+    merge.mpr_always_run = mpr_always_run;
+    merge.mpr_bus_dep.mpr_bus_dep_egress = mpr_bus_dep_next_table[EGRESS];
+    merge.mpr_bus_dep.mpr_bus_dep_ingress =
+      mpr_bus_dep_next_table[INGRESS] | mpr_bus_dep_next_table[GHOST];
+    merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec;
+    merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch;
 
     merge.mpr_long_brch_thread = long_branch_thread[EGRESS];
     if (auto conflict = (long_branch_thread[INGRESS] | long_branch_thread[GHOST])
@@ -177,16 +192,6 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         for (auto tag : bitvec(conflict)) {
             error(long_branch_use[tag]->lineno, "Need one-stage turnaround before reusing "
                   "long_branch tag %d in a different thread", tag); } }
-
-    if (stageno != AsmStage::numstages()-1) {
-        merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP;
-        merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
-        for (auto *tbl : this[1].tables)
-            if (this[1].stage_dep[timing_thread(tbl->gress)] != MATCH_DEP)
-                merge.mpr_bus_dep.mpr_bus_dep_glob_exec |= 1 << tbl->logical_id;
-        for (gress_t gress : Range(INGRESS, GHOST)) {
-            if (this[1].stage_dep[timing_thread(gress)] != MATCH_DEP)
-                merge.mpr_bus_dep.mpr_bus_dep_long_brch |= this[1].long_branch_thread[gress]; } }
 
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];

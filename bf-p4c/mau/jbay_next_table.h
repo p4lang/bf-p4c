@@ -21,7 +21,30 @@ class NextTable : public PassManager {
     std::map<UniqueId, std::unordered_map<int, std::set<UniqueId>>> lbs;
     size_t get_num_lbs() { return size_t(max_tag + 1); }  // For metrics
     size_t get_num_dts() { return num_dts; }
+    /**
+      * @return pair consisting of the live range of a long branch that activates
+      *         the indicated destination.  The pair is first stage, last stage.
+      *         If no destination is found, returns -1, -1.
+      */
+    std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId dest) const;
     NextTable();
+    friend std::ostream& operator<<(std::ostream& out, const NextTable& nt) {
+      out << "Long Branches:" << std::endl;
+      for (auto id_tag : nt.lbs) {
+        out << "  " << id_tag.first << " has long branch mapping:" << std::endl;
+        for (auto tag_tbls : id_tag.second) {
+          out << "    " << tag_tbls.first << ":" << std::endl;
+          for (auto t : tag_tbls.second) {
+            out << "      " << t << std::endl;
+      } } }
+      if (nt.lbs.size() == 0)
+        out << "  unused" << std::endl;
+      out << "Liveness:" << std::endl;
+      for (auto luse : nt.lbus) {
+        out << "  " << luse << std::endl;
+      }
+      return out;
+    }
 
  private:
     // Represents a long branch targeting a single destination (unique on destination)

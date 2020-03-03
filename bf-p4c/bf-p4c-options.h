@@ -27,6 +27,8 @@ class BFN_Options : public CompilerOptions {
     bool backward_compatible = false;
     bool display_power_budget = false;
     bool disable_power_check = false;
+    bool disable_mpr_config = true;  // FIXME: Turn back on after debug 2 remaining tests.
+    bool force_match_dependency = false;
     bool adjust_egress_packet_length = true;
     bool infer_payload_offset = false;
     bool parser_timing_reports = false;

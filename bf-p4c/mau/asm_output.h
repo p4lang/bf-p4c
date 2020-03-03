@@ -7,6 +7,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/jbay_next_table.h"
@@ -21,6 +22,7 @@ class MauAsmOutput : public MauInspector {
     const PhvInfo       &phv;
     const IR::BFN::Pipe *pipe;
     const NextTable *nxt_tbl;
+    const MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     const BFN_Options   &options;
 
  private:
@@ -167,9 +169,11 @@ class MauAsmOutput : public MauInspector {
     class EmitHashExpression;
 
  public:
-    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe, const NextTable *nxts,
+    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe,
+                 const NextTable *nxts, const MauPower::FinalizeMauPredDepsPower* pmpr,
                  const BFN_Options &options)
-            : phv(phv), pipe(pipe), nxt_tbl(nxts), options(options),
+            : phv(phv), pipe(pipe), nxt_tbl(nxts), power_and_mpr(pmpr),
+              options(options),
               default_next(Device::numLongBranchTags() == 0 || options.disable_long_branch) { }
 };
 

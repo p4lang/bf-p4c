@@ -55,6 +55,18 @@ BFN_Options::BFN_Options() {
         [this](const char *) { disable_power_check = true; return true; },
         "Raises the threshold for the power budget check",
         OptionFlags::Hide);
+    registerOption("--disable-mpr-config", nullptr,
+        [this](const char *) { disable_mpr_config = true; return true; },
+        "Disables MPR configuration, switching all tables to be always run.",
+        OptionFlags::Hide);
+    registerOption("--enable-mpr-config", nullptr,
+        [this](const char *) { disable_mpr_config = false; return true; },
+        "Enables MPR configuration.",  // Just intended for debugging if switch off by default
+        OptionFlags::Hide);
+    registerOption("--force-match-dependency", nullptr,
+        [this](const char *) { force_match_dependency = true; return true; },
+        "Forces all MAU stages to have a match dependency to the previous stage.",
+        OptionFlags::Hide);
 #if BAREFOOT_INTERNAL
     registerOption("--no-power-check", nullptr,
         [this](const char *) { no_power_check = true; return true; },
@@ -131,7 +143,7 @@ BFN_Options::BFN_Options() {
             auto_init_metadata = true;
             ::warning(ErrorType::WARN_DEPRECATED,
                 "The --auto-init-metadata command-line option is deprecated and will be "
-                "removed in a future release. Please use modify your P4 source to use the "
+                "removed in a future release. Please modify your P4 source to use the "
                 "%s annotation instead.",
                 PragmaAutoInitMetadata::name);
             return true;

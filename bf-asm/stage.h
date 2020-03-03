@@ -59,6 +59,20 @@ public:
     enum { NO_CONFIG=0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
                         error_mode[2];
 
+    // MPR stage config
+    int mpr_stage_id[3] = { 0 };  // per-gress
+    int mpr_always_run = 0;
+    int mpr_bus_dep_next_table[3] = { 0 };  // per-gress
+    int mpr_bus_dep_glob_exec = 0;
+    int mpr_bus_dep_long_branch = 0;
+    // per gress, per logical table
+    Alloc2D<int, 3, LOGICAL_TABLES_PER_STAGE> mpr_next_table_lut;
+    // per global execute bit
+    Alloc1D<int, LOGICAL_TABLES_PER_STAGE> mpr_glob_exec_lut;
+    // per long branch tag
+    Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
+
+
     int                         pass1_logical_id, pass1_tcam_id;
 
 protected:
@@ -90,6 +104,7 @@ public:
     int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);
     int cycles_contribute_to_latency(gress_t gress);
+    void verify_have_mpr(std::string key, int line_number);
     static int first_table(gress_t gress);
     static unsigned end_of_pipe() { return Target::END_OF_PIPE(); }
     static Stage *stage(int stageno);

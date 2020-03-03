@@ -271,11 +271,14 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/asm_output.cpp
   mau/attached_info.cpp
   mau/attached_output.cpp
-  mau/characterize_power.cpp
+  mau/build_power_graph.cpp
+  mau/determine_power_usage.cpp
   mau/dynamic_dep_metrics.cpp
   mau/dynhash.cpp
   mau/field_use.cpp
+  mau/finalize_mau_pred_deps_power.cpp
   mau/db-gateway.cpp
+  mau/dump_json_graph.cpp
   mau/gateway.cpp
   mau/gen_prim_json.cpp
   mau/handle_assign.cpp
@@ -288,11 +291,13 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/ixbar_realign.cpp
   mau/jbay_next_table.cpp
   mau/mau_alloc.cpp
+  mau/mau_power.cpp
   mau/memories.cpp
   mau/reduction_or.cpp
   mau/resource_estimate.cpp
   mau/resource.cpp
   mau/selector_update.cpp
+  mau/simple_power_graph.cpp
   mau/split_alpm.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
@@ -305,7 +310,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/table_summary.cpp
   mau/table_injected_deps.cpp
   mau/table_flow_graph.cpp
-  mau/dump_json_graph.cpp
+  mau/walk_power_graph.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
 build_unified(BF_P4C_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -318,11 +323,14 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/asm_output.h
   mau/attached_info.h
   mau/attached_output.h
-  mau/characterize_power.h
+  mau/build_power_graph.h
+  mau/default_next.h
+  mau/determine_power_usage.h
+  mau/dump_json_graph.h
   mau/dynamic_dep_metrics.h
   mau/dynhash.h
-  mau/default_next.h
   mau/field_use.h
+  mau/finalize_mau_pred_deps_power.h
   mau/gateway.h
   mau/gen_prim_json.h
   mau/handle_assign.h
@@ -335,6 +343,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/ixbar_realign.h
   mau/jbay_next_table.h
   mau/mau_alloc.h
+  mau/mau_power.h
   mau/memories.h
   mau/push_pop.h
   mau/reduction_or.h
@@ -342,6 +351,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/resource_estimate.h
   mau/resource.h
   mau/selector_update.h
+  mau/simple_power_graph.h
   mau/split_alpm.h
   mau/split_gateways.h
   mau/stateful_alu.h
@@ -355,7 +365,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/table_seqdeps.h
   mau/table_summary.h
   mau/table_injected_deps.h
-  mau/dump_json_graph.h
+  mau/walk_power_graph.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")
 

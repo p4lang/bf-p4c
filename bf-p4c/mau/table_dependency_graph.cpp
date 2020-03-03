@@ -147,6 +147,46 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
+void DependencyGraph::print_dep_type_map(std::ostream &out) const {
+  out << "Dependency type map" << std::endl;
+  for (auto t1 : dep_type_map) {
+    out << "Table " << t1.first->externalName() << ":" << std::endl;
+    for (auto t2 : dep_type_map.at(t1.first)) {
+      out << "  table " << t2.first->externalName() << " : "
+        << TableGraphEdge::labels_to_sub_types.at(dep_type_map.at(t1.first).at(t2.first))
+        << std::endl;
+  } }
+}
+
+void DependencyGraph::print_container_access(std::ostream &out) const {
+  ordered_set<const IR::MAU::Table*> tbls;
+  for (auto t1 : containers_write_) {
+    tbls.insert(t1.first); }
+  for (auto t1 : containers_read_xbar_) {
+    tbls.insert(t1.first); }
+  for (auto t1 : containers_read_alu_) {
+    tbls.insert(t1.first); }
+
+  for (auto t1 : tbls) {
+    out << "Table " << t1->externalName() << std::endl;
+    if (containers_write_.find(t1) != containers_write_.end()) {
+      out << " writes containers:" << std::endl;
+      for (auto c : containers_write_.at(t1)) {
+        out << "   " << c.first << std::endl; }
+    }
+    if (containers_read_xbar_.find(t1) != containers_read_xbar_.end()) {
+      out << " reads containers at match input crossbar:" << std::endl;
+      for (auto c : containers_read_xbar_.at(t1)) {
+        out << "   " << c.first << std::endl; }
+    }
+    if (containers_read_alu_.find(t1) != containers_read_alu_.end()) {
+      out << " reads containers at PHV ALUs:" << std::endl;
+      for (auto c : containers_read_alu_.at(t1)) {
+        out << "   " << c.first << std::endl; }
+    }
+  }
+}
+
 void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
     static ordered_map<DependencyGraph::dependencies_t, std::pair<cstring, cstring>> dep_color = {
         { DependencyGraph::IXBAR_READ,
@@ -864,11 +904,14 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
 
 class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
     FindDataDependencyGraph                &self;
-    const IR::MAU::Table               *table;
+    const IR::MAU::Table                   *table;
+    bool gateway_context = false;
     ordered_map<PHV::Container, bitvec>    cont_writes;
 
  public:
     UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
+    UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t, bool gw_ctxt) :
+      self(self), table(t), gateway_context(gw_ctxt) {}
 
     profile_t init_apply(const IR::Node* root) override {
         cont_writes.clear();
@@ -890,7 +933,8 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
 
     bool preorder(const IR::Expression *e) override {
         auto* originalField = self.phv.field(e);
-        if (!originalField) return true;
+        if (!originalField) {
+          return true; }
         ordered_set<const PHV::Field*> candidateFields;
         candidateFields.insert(originalField);
         if (self.phv.getAliasMap().count(originalField))
@@ -934,13 +978,26 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                     a.action_read.insert(std::make_pair(table, action_context));
                 }
             }
-            if (isWrite() && self.phv.alloc_done()) {
-                /// FIXME(cc): Do we need to restrict the context here, or is it always the
-                /// whole pipeline?
+
+            if (self.phv.alloc_done()) {
+              if (isWrite()) {
+                  /// FIXME(cc): Do we need to restrict the context here, or is it always the
+                  /// whole pipeline?
+                  field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                      bitvec range(sl.container_bit, sl.width);
+                      cont_writes[sl.container] |= range;
+                      self.dg.containers_write_[table][sl.container] = true;
+                  });
+              }
+              if (isIxbarRead() || gateway_context) {
                 field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
-                    bitvec range(sl.container_bit, sl.width);
-                    cont_writes[sl.container] |= range;
+                    self.dg.containers_read_xbar_[table][sl.container] = true;
                 });
+              } else if (isRead()) {
+                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                    self.dg.containers_read_alu_[table][sl.container] = true;
+                });
+              }
             }
         }
         return false;
@@ -999,7 +1056,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     // Mark fields read/written by this table in accesses.
     // FIXME: Should have a separate gateway row IR to visit rather than other information
     for (auto &gw : t->gateway_rows)
-        gw.first->apply(UpdateAccess(*this, t));
+        gw.first->apply(UpdateAccess(*this, t, true));
 
     // FIXME: Need to have this as part of the visitors on Actions, rather than on Attached
     // Tables, but these visitor information really needs to be cleaned up.
