@@ -166,7 +166,10 @@ struct ResolveExtractSaves : Modifier {
                     extract->source = find_rval.rv;
             }
 
-            LOG4("as: " << extract->source);
+            if (extract->source->is<IR::BFN::SavedRVal>())
+                LOG4("cannot resolve?");
+            else
+                LOG4("as: " << extract->source);
         }
 
         return false;
@@ -411,6 +414,20 @@ struct CopyPropParserDef : public ParserModifier {
     }
 };
 
+struct CheckUnresolvedExtractSource : public ParserInspector {
+    bool preorder(const IR::BFN::Extract* extract) override {
+        if (extract->source->is<IR::BFN::SavedRVal>()) {
+            auto state = findContext<IR::BFN::ParserState>();
+
+            ::fatal_error("Unable to resolve extraction source."
+                " This is likely due to the source having no absolute offset from the"
+                " state %1%. %2%", state->name, extract);
+        }
+
+        return false;
+    }
+};
+
 struct ParserCopyProp : public PassManager {
     explicit ParserCopyProp(const PhvInfo& phv) {
         auto* parserInfo = new CollectParserInfo;
@@ -423,6 +440,8 @@ struct ParserCopyProp : public PassManager {
             parserInfo,
             collectUseDef,
             copyPropDef,
+            new ResolveExtractSaves(phv),
+            new CheckUnresolvedExtractSource,
             LOGGING(4) ? new DumpParser("after_parser_copy_prop") : nullptr
         });
     }

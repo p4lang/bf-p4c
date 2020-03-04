@@ -862,16 +862,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/strength3.p4
 )
 
-# Also P4C-1446
-# Bug with handling sub-parser.
-p4c_add_xfail_reason("tofino"
-  "Extraction source .* out of .* input buffer"
-  extensions/p4_tests/p4_16/compile_only/p4c-1970.p4
-  extensions/p4_tests/p4_16/compile_only/serializer-struct.p4
-  extensions/p4_tests/p4_16/compile_only/serializer2.p4
-  extensions/p4_tests/p4_16/compile_only/serializer3.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "Unsupported type header_union U"
   testdata/p4_16_samples/header-bool-bmv2.p4
@@ -1356,9 +1346,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
-  testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue1409-bmv2.p4
-  testdata/p4_16_samples/issue1607-bmv2.p4
 )
 
 # P4C-2367: failed due to the removal of hack in phv_fields.cpp:1393
@@ -1649,11 +1637,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "No matching table for suffix 'IngressB.test'"
-  extensions/p4_tests/p4_16/stf/serializer.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Checksum destination field .* is not byte-aligned in the header. Checksum engine is unable to update a field if it is not byte-aligned"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/checksum_align.p4
   extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
@@ -1721,4 +1704,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Inferred container alignments for field .* that are impossible to satisfy"
+  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-1970.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Use of uninitialized parser value"
+  testdata/p4_16_samples/array-copy-bmv2.p4
+  testdata/p4_16_samples/issue1607-bmv2.p4
 )
