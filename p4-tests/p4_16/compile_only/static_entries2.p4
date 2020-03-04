@@ -131,7 +131,7 @@ control SwitchIngress(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
     // Exercising typedef, bool in action
-    action set_port_and_smac(src_addr_t src_addr, bit<9> port, bool link_local) {
+    action set_port_and_smac(src_addr_t src_addr, PortId_t port, bool link_local) {
         hdr.ethernet.src_addr = (bit<48>) src_addr;
         ig_intr_tm_md.ucast_egress_port = port;
         hdr.ethernet.flags.link_local = link_local;
@@ -156,11 +156,11 @@ control SwitchIngress(
             // hdr.ethernet.lpm_type: lpm;
         }
         actions = { set_port_and_smac; }
-        const default_action = set_port_and_smac(32w0xFF, 9w0x1, false);
+        const default_action = set_port_and_smac(32w0xFF, 0x1, false);
         const entries = {
-            (_, 1, 150 &&& 0xffff0000ffff0000ffff0000ffff0000,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 9w0x2, true); // priority 0
-            (true, 2, _, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 9w0x3, true);          // priority 1
-            (false, 3, _, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 9w0x4, false);       // priority 2
+            (_, 1, 150 &&& 0xffff0000ffff0000ffff0000ffff0000,  255 &&& 0xf0, _ /*, _ */) : set_port_and_smac(32w0xFA, 0x2, true); // priority 0
+            (true, 2, _, _, _ /*, _ */) : set_port_and_smac(32w0xFB, 0x3, true);          // priority 1
+            (false, 3, _, _, 1..9 /*, 8 */) : set_port_and_smac(32w0xFC, 0x4, false);       // priority 2
         }
     }
 

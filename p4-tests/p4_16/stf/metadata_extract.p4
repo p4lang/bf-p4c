@@ -88,7 +88,7 @@ control SwitchIngressDeparser(packet_out pkt, inout switch_header_t hdr, in swit
 }
 
 control SwitchIngress(inout switch_header_t hdr, inout switch_metadata_t ig_md, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    action act(bit<9> port) {
+    action act(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
     table test {

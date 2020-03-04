@@ -36,7 +36,7 @@ control Ingress(inout headers_t hdr, inout metadata_t meta, in ingress_intrinsic
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-  action act(bit<9> port) {ig_intr_tm_md.ucast_egress_port = port;}
+  action act(PortId_t port) {ig_intr_tm_md.ucast_egress_port = port;}
     
    apply {act(1);}
 }

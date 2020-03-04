@@ -66,21 +66,21 @@ control Test(
         in egress_intrinsic_metadata_from_parser_t eg_intr_from_prsr,
         inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
-    Register<bit<8>, bit<9>>(256, 0) reg;
-    RegisterAction<bit<8>, bit<9>, bit<8>>(reg) reg_set = {
+    Register<bit<8>, PortId_t>(256, 0) reg;
+    RegisterAction<bit<8>, PortId_t, bit<8>>(reg) reg_set = {
         void apply(inout bit<8> val) {
             val = 1;
         }
     };
-    RegisterAction<bit<8>, bit<9>, bool>(reg) reg_lookup = {
+    RegisterAction<bit<8>, PortId_t, bool>(reg) reg_lookup = {
         void apply(inout bit<8> val, out bool rv) {
             rv = (val != 0);
             val = 0;
         }
     };
 
-    Register<bit<8>, bit<9>>(256, 0) reg2;
-    RegisterAction<bit<8>, bit<9>, bool>(reg2) reg2_lookup = {
+    Register<bit<8>, PortId_t>(256, 0) reg2;
+    RegisterAction<bit<8>, PortId_t, bool>(reg2) reg2_lookup = {
         void apply(inout bit<8> val, out bool rv) {
             rv = (val == 0);
         }

@@ -52,7 +52,7 @@ control IngressP(
         meta.local.m4 = p4;
     }
 
-    action set_hdr(bit<9> port) {
+    action set_hdr(PortId_t port) {
         hdr.data.x1 = meta.local.m1;
         hdr.data.x2 = meta.local.m2;
         hdr.data.x3 = meta.local.m2;

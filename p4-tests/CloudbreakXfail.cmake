@@ -351,70 +351,45 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/verify_checksum.p4
 )
 
-# port type mismatch between v1model and cloudbreak
+# ports are 11 bits on cloudbreak, so programs that assume 9 bits won't work
 p4c_add_xfail_reason("tofino3"
   "Cannot unify bit<9> to bit<11>|Cannot unify bit<11> to bit<9>|bit<11> and bit<9>|bit<34> to bit<32>"
-  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
-  extensions/p4_tests/p4_16/compile_only/parser_match_14.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match_wide1.p4
-  extensions/p4_tests/p4_16/compile_only/all_dep_edges.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2284.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match5.p4
-  extensions/p4_tests/p4_16/compile_only/multiple_apply3.p4
-  extensions/p4_tests/p4_16/compile_only/tcam_no_versioning.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match1.p4
-  extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2350.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2479.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match4.p4
+  extensions/p4_tests/p4_14/stf/egress_port_init.p4
   extensions/p4_tests/p4_16/compile_only/empty_header_stack.p4
-  extensions/p4_tests/p4_16/compile_only/static_entries2.p4
-  extensions/p4_tests/p4_16/compile_only/match_key_slices.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2274.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match2.p4
-  extensions/p4_tests/p4_16/compile_only/default_actions.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match_extern.p4
-  extensions/p4_tests/p4_16/compile_only/atcam_match3.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-b.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
-  extensions/p4_tests/p4_16/customer/keysight/p4c-2314.p4
-  extensions/p4_tests/p4_16/customer/kaloom/p4c-1641.p4
-  extensions/p4_tests/p4_16/customer/microsoft/p4c-2387.p4
-  extensions/p4_tests/p4_16/stf/byte-rotate-merge.p4
-  extensions/p4_tests/p4_16/stf/metadata_extract.p4
-  extensions/p4_tests/p4_16/stf/p4c-1426.p4
-  extensions/p4_tests/p4_16/compile_only/all_ctrl_edges.p4
   extensions/p4_tests/p4_16/compile_only/inline_subparser.p4
-  extensions/p4_tests/p4_16/compile_only/register.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+  extensions/p4_tests/p4_16/compile_only/too_many_pov_bits.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1308-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1557.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1586.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1599.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
+  extensions/p4_tests/p4_16/customer/microsoft/p4c-2387.p4
   extensions/p4_tests/p4_16/ptf/digest.p4
   extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4
-  extensions/p4_tests/p4_14/stf/egress_port_init.p4
   testdata/p4_14_samples/issue-1426.p4
 )
 

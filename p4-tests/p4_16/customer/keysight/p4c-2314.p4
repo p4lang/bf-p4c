@@ -391,7 +391,7 @@ parser SwitchIngressParser(
     state start {
         tofino_parser.apply(pkt, ig_intr_md);
         transition select(ig_intr_md.ingress_port) {
-            68 &&& 9w0x7f: parse_pktgen_eth;
+            68 &&& 0x7f: parse_pktgen_eth;
             default: parse_eth;
         }
     }
@@ -700,7 +700,7 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
       @brief(Egress Port)
       @description ("Egress port specification")
       @Api(label=Port,type=uint32,format=dec)
-      bit<9> eg_port
+      PortId_t eg_port
     ) {
         ig_tm_md.ucast_egress_port = eg_port;
     }
@@ -708,7 +708,7 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
     @brief("Set packet unicast egress dataplane port number")
     @feature(name="unicast_action", service_id="unicast_action", display_name="Unicast to Port")
     action do_set_unicast(
-        @Api(name=txPort, label="Tx Port",display_fmt="fp_ports",wr_xform="fromFpPorts", rd_xform="toFpPorts") bit<9> eg_port)
+        @Api(name=txPort, label="Tx Port",display_fmt="fp_ports",wr_xform="fromFpPorts", rd_xform="toFpPorts") PortId_t eg_port)
 
     {
         _set_eg_port(eg_port);
@@ -723,7 +723,7 @@ control process_port_forwarding(inout ingress_metadata_t ig_md,
         ig_tm_md.level2_exclusion_id = yid;
         ig_tm_md.level1_mcast_hash = h1;
         ig_tm_md.level2_mcast_hash = h2;
-        _set_eg_port(9w511);
+        _set_eg_port(511);
     }
 
     @name(".do_set_mcast1_md")
@@ -1630,7 +1630,7 @@ control process_stream_metering(inout ingress_metadata_t ig_md) {
 control process_stream_meter_drops(inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
     @name(".do_stream_meter_drop")
     action do_stream_meter_drop() {
-        ig_tm_md.ucast_egress_port = 9w511;
+        ig_tm_md.ucast_egress_port = 511;
     }
     @name(".stream_meter_drop_tbl")
     table stream_meter_drop_tbl {

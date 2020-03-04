@@ -33,7 +33,7 @@ struct headers_t {
 }
 
 struct user_metadata_t {
-    bit<9> cpu_port;
+    PortId_t cpu_port;
     bit<3> ring_id;
 }
 

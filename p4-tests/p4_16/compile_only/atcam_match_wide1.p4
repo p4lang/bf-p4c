@@ -44,7 +44,7 @@ control IngressP(
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     action noop() {}
 
-    action init_index(bit<10> p_index, bit<9> port) {
+    action init_index(bit<10> p_index, PortId_t port) {
         meta.partition.partition_index = p_index;
         ig_intr_tm_md.ucast_egress_port = port;
     }

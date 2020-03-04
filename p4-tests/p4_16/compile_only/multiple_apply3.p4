@@ -42,7 +42,7 @@ control IngressP(
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     action noop() {}
-    action set_port(bit<9> port) {
+    action set_port(PortId_t port) {
         ig_intr_tm_md.ucast_egress_port = port;
     }
 

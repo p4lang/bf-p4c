@@ -31,7 +31,7 @@ struct headers {
 
 struct switch_cpu_port_value_set_t {
     bit<16> ether_type;
-    bit<9> port;
+    PortId_t port;
 }
 
 header ingress_skip_t {

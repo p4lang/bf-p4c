@@ -57,8 +57,8 @@ control EgressP(
         in egress_intrinsic_metadata_from_parser_t eg_intr_prsr_md,
         inout egress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout egress_intrinsic_metadata_for_output_port_t eg_intr_oport_md) {
-    Register<bit<32>, bit<9>>(32w1024) port_pkts_reg;
-    RegisterAction<bit<32>, bit<9>, bit<8>>(port_pkts_reg) port_pkts_alu = {
+    Register<bit<32>, PortId_t>(32w1024) port_pkts_reg;
+    RegisterAction<bit<32>, PortId_t, bit<8>>(port_pkts_reg) port_pkts_alu = {
         void apply(inout bit<32> value, out bit<8> read_value){
             if (value < hdr.data.max_counter){
                 value = value + 1;
