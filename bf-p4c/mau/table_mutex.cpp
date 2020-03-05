@@ -91,15 +91,23 @@ bool TablesMutuallyExclusive::miss_mutex_action_chain(const IR::MAU::Table *tbl,
  *     - All Tables in a TableSeq are not mutually exclusive with each other
  *     - The successors of these tables are also not mutually exclusive with each other
  *     - A table is not mutually exclusive with any of its successors
- *
  * The reverse of the non-mutex graph is the mutual exclusion
  */
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // Compute the table_succ entry for this table.
     bitvec succ;
-    for (auto n : Values(tbl->next)) {
-        for (auto t : n->tables) {
+    for (auto& n : tbl->next) {
+        bitvec local_succ;
+        for (auto t : n.second->tables) {
             succ |= table_succ[t];
+            // Collect all the succcessors of tbl which will be affect the mutex analysis
+            // due to exit table t
+            local_succ.setbit(table_ids.at(t));
+            exit_succ[tbl] |= exit_succ[t];
+            if (t->is_exit_table()) {
+                exit_succ[tbl] |= local_succ;
+                break;
+            }
         }
     }
     succ.setbit(table_ids.at(tbl));
@@ -125,14 +133,20 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
      * [t2]  [t3]
      *
      * Here, we ensure that t4 is marked as not mutually exclusive with all of t1's table_succ
-     * entries. */
+     * entries.*/
     for (size_t i = 0; i < seq->tables.size(); i++) {
         auto i_tbl = seq->tables.at(i);
-
+        if (i_tbl->is_exit_table()) continue;
         for (size_t j = i+1; j < seq->tables.size(); j++) {
             auto j_tbl = seq->tables.at(j);
-            for (auto i_id : table_succ[i_tbl])
+            for (auto i_id : table_succ[i_tbl]) {
+                // Ensure that if the one of the successor of i_tbl is an exit table, then
+                // some of the table_succ of i_tbl will be mutually exclusive with j_tbl and its
+                // sucessors
+                if (exit_succ.count(i_tbl) && exit_succ[i_tbl].getbit(i_id)) continue;
                 non_mutex[i_id] |= table_succ[j_tbl];
+            }
+            if (j_tbl->is_exit_table()) break;
         }
     }
 }

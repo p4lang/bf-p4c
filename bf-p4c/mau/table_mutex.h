@@ -91,6 +91,10 @@ class TablesMutuallyExclusive : public MauInspector {
     /// control flow. A value of 0 indicates mutual exclusion.
     SymBitMatrix                                non_mutex;
 
+    // If a table is present as an key, it means that one of its sucessor is an exit table.
+    // The bit vec represents the exit table and tables before the exit table in a tableSeq
+    ordered_map<const IR::MAU::Table*, bitvec> exit_succ;
+
     void postorder(const IR::MAU::Table *tbl) override;
     void postorder(const IR::MAU::TableSeq *seq) override;
     bool miss_mutex_action_chain(const IR::MAU::Table *tbl, const IR::MAU::Action *default_act,

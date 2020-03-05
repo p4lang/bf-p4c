@@ -421,6 +421,13 @@ bool IR::MAU::Table::has_exit_action() const {
     return false;
 }
 
+bool IR::MAU::Table::is_exit_table() const {
+    if (has_exit_action() && !has_non_exit_action()) {
+        return true;
+    }
+    return false;
+}
+
 std::vector<const IR::MAU::Action*> IR::MAU::Table::get_exit_actions() const {
     std::vector<const IR::MAU::Action*> exit_actions;
     for (auto &n : actions)

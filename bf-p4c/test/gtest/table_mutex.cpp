@@ -602,4 +602,85 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"), names.at("igrs.t3")));
     EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t6"), names.at("igrs.t7")));
 }
+
+TEST_F(TableMutexTest, ExitTableMutex1) {
+    auto test = createTableMutexTestCase(
+     P4_SOURCE(P4Headers::NONE, R"(
+     action nop() {}
+     action a1() { headers.h1.f1 = headers.h1.f2; }
+     action a2() { exit;}
+     action a3() { headers.h1.f2 = headers.h1.f3;}
+     action a4() { headers.h1.f1 = headers.h1.f3;}
+
+     table t1 {
+        key = { headers.h1.f5 : exact; }
+        actions = { @defaultonly nop; a1; a3;}
+        const default_action = nop;
+    }
+
+    table t2 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1; a3;}
+    }
+
+    table t3 {
+        key = { headers.h1.f2 : exact;}
+        actions = {a2;}
+        const default_action = a2; 
+    }
+    table t4 {
+        key = { headers.h1.f3 : exact;}
+        actions = {nop; a1; a3;}
+    }
+    table t5 {
+        key = { headers.h1.f4 : exact;}
+        actions = {nop; a1; a3;}
+    }
+    table t6 {
+        key = { headers.h1.f3 : exact;}
+        actions = {nop; a1;}
+    }
+    table t7 {
+        key = { headers.h1.f3 : exact;}
+        actions = {a2;}
+        const default_action = a2;
+    }
+    table t8 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a1;}
+    }
+    table t9 {
+        key = { headers.h1.f1 : exact; }
+        actions = { nop; a4;}
+    }
+
+    apply {
+        t9.apply();
+        if (t1.apply().hit) {
+            switch(t2.apply().action_run) {
+                a1: {t5.apply();}
+                a3: {t4.apply(); t3.apply();}
+                default : {}
+            }
+        } else {
+            switch(t6.apply().action_run) {
+                a1: {t7.apply();}
+                nop: {}
+            }
+        }
+        t8.apply();
+    }
+    )"));
+    ASSERT_TRUE(test);
+    TablesMutuallyExclusive mutex;
+    test->pipe = test->pipe->apply(mutex);
+    auto &names = mutex.name_to_tables;
+    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
+    EXPECT_TRUE(mutex(names.at("igrs.t4"), names.at("igrs.t8")));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t8")));
+    EXPECT_TRUE(mutex(names.at("igrs.t7"), names.at("igrs.t8")));
+    EXPECT_FALSE(mutex(names.at("igrs.t9"), names.at("igrs.t4")));
+    EXPECT_FALSE(mutex(names.at("igrs.t5"), names.at("igrs.t8")));
+}
+
 }  // namespace Test

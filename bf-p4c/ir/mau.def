@@ -236,6 +236,7 @@ class Table : BFN::Unit {
     bool has_exit_action() const;
     std::vector<Action> get_exit_actions() const;
     bool has_non_exit_action() const;
+    bool is_exit_table() const; // will the table always exit?
     bool has_exit_recursive() const;  // is there an exit here or any control dependent table?
     int get_random_seed() const;
     int get_pragma_max_actions() const;
