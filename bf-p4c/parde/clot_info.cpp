@@ -1391,14 +1391,7 @@ class GreedyClotAllocator : public Visitor {
             }
 
             for (auto extract_info : extract_map.at(field)) {
-                if (extracts.empty()) {
-                    // Starting a new candidate.
-                    if (!clotInfo.can_start_clot(extract_info)) continue;
-
-                    auto& state_bit_offsets = extract_info->state_bit_offsets();
-                    next_offset_by_state.insert(state_bit_offsets.begin(),
-                                                state_bit_offsets.end());
-                } else {
+                if (!extracts.empty()) {
                     // We have a break in contiguity if the current extract_info is extracted in a
                     // different set of states than the current candidate or if the current
                     // extract_info has any state-relative bit offsets that are different from what
@@ -1407,27 +1400,44 @@ class GreedyClotAllocator : public Visitor {
 
                     bool have_contiguity_break =
                         extract_state_bit_offsets.size() != next_offset_by_state.size();
-                    if (!have_contiguity_break) {
+                    if (have_contiguity_break) {
+                        LOG6("  Contiguity break: extracted in a different set of states");
+                    } else {
                         for (auto& entry : next_offset_by_state) {
                             auto& state = entry.first;
                             auto next_offset = entry.second;
 
-                            have_contiguity_break =
-                                !extract_state_bit_offsets.count(state)
-                                || extract_state_bit_offsets.at(state) != next_offset;
+                            have_contiguity_break = !extract_state_bit_offsets.count(state);
+                            if (have_contiguity_break) {
+                                LOG6("  Contiguity break: extracted in a different set of states");
+                                break;
+                            }
 
-                            if (have_contiguity_break) break;
+                            have_contiguity_break =
+                                extract_state_bit_offsets.at(state) != next_offset;
+                            if (have_contiguity_break) {
+                                LOG6("  Contiguity break in state " << state->name);
+                                break;
+                            }
                         }
                     }
 
                     if (have_contiguity_break) {
                         // We have a break in contiguity. Create a new CLOT candidate, if possible,
                         // and set things up for the next candidate.
-                        LOG6("  Contiguity break");
                         try_add_clot_candidate(result, pseudoheader, extracts);
                         extracts.clear();
                         next_offset_by_state.clear();
                     }
+                }
+
+                if (extracts.empty()) {
+                    // Starting a new candidate.
+                    if (!clotInfo.can_start_clot(extract_info)) continue;
+
+                    auto& state_bit_offsets = extract_info->state_bit_offsets();
+                    next_offset_by_state.insert(state_bit_offsets.begin(),
+                                                state_bit_offsets.end());
                 }
 
                 // Add to the existing prefix.
