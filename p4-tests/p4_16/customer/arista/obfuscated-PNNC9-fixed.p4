@@ -13,7 +13,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -68,43 +68,43 @@ header Rugby {
     bit<3>  Cacao;
     bit<1>  Mankato;
     bit<4>  Rockport;
-    @flexible 
+    @flexible
     bit<8>  Union;
-    @flexible 
+    @flexible
     bit<1>  Virgil;
-    @flexible 
+    @flexible
     bit<3>  Florin;
-    @flexible 
+    @flexible
     bit<24> Requa;
-    @flexible 
+    @flexible
     bit<24> Sudbury;
-    @flexible 
+    @flexible
     bit<12> Allgood;
-    @flexible 
+    @flexible
     bit<6>  Chaska;
-    @flexible 
+    @flexible
     bit<3>  Selawik;
-    @flexible 
+    @flexible
     bit<9>  Waipahu;
-    @flexible 
+    @flexible
     bit<2>  Shabbona;
-    @flexible 
+    @flexible
     bit<1>  Ronan;
-    @flexible 
+    @flexible
     bit<1>  Anacortes;
-    @flexible 
+    @flexible
     bit<32> Corinth;
-    @flexible 
+    @flexible
     bit<16> Willard;
-    @flexible 
+    @flexible
     bit<3>  Bayshore;
-    @flexible 
+    @flexible
     bit<12> Florien;
-    @flexible 
+    @flexible
     bit<12> Freeburg;
-    @flexible 
+    @flexible
     bit<1>  Matheson;
-    @flexible 
+    @flexible
     bit<6>  Uintah;
 }
 
@@ -2449,7 +2449,7 @@ control Exeter(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
     @name(".Ozona") action Ozona() {
         Doddridge.Sublett.Alameda = Doddridge.Darien.Alameda;
     }
-    @disable_atomic_modify(1) @name(".Leland") table Leland {
+    @disable_atomic_modify(1) @placement_priority(".Tularosa", ".Alnwick") @name(".Leland") table Leland {
         actions = {
             Yulee();
             Oconee();
@@ -3823,7 +3823,7 @@ control Cornwall(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intr
         Doddridge.Murphy.Pittsboro = Pittsboro;
         Doddridge.Murphy.Ericsburg = Ericsburg;
     }
-    @disable_atomic_modify(1) @name(".Comobabi") table Comobabi {
+    @disable_atomic_modify(1) @placement_priority(".Dandridge") @name(".Comobabi") table Comobabi {
         actions = {
             Langhorne();
             @defaultonly NoAction();

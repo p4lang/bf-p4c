@@ -1696,12 +1696,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "tofino supports up to 12 stages, using 13"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-PNNC9-fixed.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-5PQ2c.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )
