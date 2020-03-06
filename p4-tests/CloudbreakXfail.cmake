@@ -421,3 +421,9 @@ p4c_add_xfail_reason("tofino3"
   "error: The following operation is not yet supported"
   testdata/p4_14_samples/issue-1559.p4
 )
+
+# P4 program error
+p4c_add_xfail_reason("tofino3"
+  ".* @dynamic_table_key_masks annotation only permissible with exact matches"
+  extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
+)

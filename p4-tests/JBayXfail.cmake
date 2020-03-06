@@ -357,3 +357,8 @@ p4c_add_xfail_reason("tofino2"
   "jbay_test_harness CRASH with signal 6"
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "Table .* @dynamic_table_key_masks annotation only permissible with exact matches"
+  extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
+)

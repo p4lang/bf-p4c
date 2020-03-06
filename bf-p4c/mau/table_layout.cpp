@@ -336,6 +336,15 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
 
     if (!layout.alpm && !layout.atcam && !layout.ternary && !layout.proxy_hash)
         layout.exact = true;
+
+    if (!layout.exact && tbl->match_table) {
+        auto annot = tbl->match_table->getAnnotations();
+        auto s = annot->getSingle("dynamic_table_key_masks");
+        ERROR_CHECK(!s || s->expr.size() <= 0, ErrorType::ERR_INVALID,
+                    "Table %1%. @dynamic_table_key_masks annotation only permissible with "
+                    "exact matches", tbl->externalName());
+    }
+
     if (layout.proxy_hash) {
         ERROR_CHECK(!layout.atcam && !layout.ternary, ErrorType::ERR_INVALID,
                     "proxy hash table for table %1%. Cannot be ternary.", tbl);

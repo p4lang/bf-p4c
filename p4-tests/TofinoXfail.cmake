@@ -1711,3 +1711,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/array-copy-bmv2.p4
   testdata/p4_16_samples/issue1607-bmv2.p4
 )
+
+# P4 program error
+p4c_add_xfail_reason("tofino"
+  ".* @dynamic_table_key_masks annotation only permissible with exact matches"
+  extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
+)
