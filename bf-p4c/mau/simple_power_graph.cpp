@@ -7,7 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "bf-p4c/mau/simple_power_graph.h"
+#include "ir/ir.h"
+#include "simple_power_graph.h"
 
 namespace MauPower {
 

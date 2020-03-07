@@ -4,6 +4,8 @@
 #include <utility>
 
 #include "ir/ir.h"
+#include "ir/json_generator.h"
+#include "ir/json_loader.h"
 
 void rangeToJSON(JSONGenerator& json, int lo, int hi) {
     json.toJSON(std::make_pair(lo, hi));

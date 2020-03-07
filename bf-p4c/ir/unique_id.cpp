@@ -1,4 +1,6 @@
 #include "ir/ir.h"
+#include "ir/json_generator.h"
+#include "ir/json_loader.h"
 
 static const char *attached_id_to_str[] = {
     "", "tind", "idletime", "stats", "meter", "selector", "salu", "action_data"
@@ -8,6 +10,18 @@ static const char *speciality_to_str[] = {
     "", "atcam", "dleft"
 };
 
+void UniqueAttachedId::toJSON(JSONGenerator &json) const {
+    json << json.indent << "\"name\": " << name << ",\n"
+         << json.indent << "\"type\": " << type << ",\n";
+}
+
+UniqueAttachedId UniqueAttachedId::fromJSON(JSONLoader &json) {
+    UniqueAttachedId uai;
+    if (!json.json) return uai;
+    json.load("name", uai.name);
+    json.load("type", uai.type);
+    return uai;
+}
 
 std::string UniqueAttachedId::build_name() const {
     std::string rv = "";

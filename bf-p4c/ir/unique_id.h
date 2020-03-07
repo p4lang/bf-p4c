@@ -2,8 +2,10 @@
 #define EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_
 
 #include <iostream>
-#include "ir/json_generator.h"
-#include "ir/json_loader.h"
+#include "lib/cstring.h"
+
+class JSONGenerator;
+class JSONLoader;
 
 /** The purpose of this class is to provide a unique identification of an BackendAttached table
  *  per IR::MAU::Table object.  The only way to guarantee to uniqueness is both by name and
@@ -60,18 +62,8 @@ class UniqueAttachedId {
             type = ACTION_DATA;
     }
 
-    void toJSON(JSONGenerator &json) const {
-        json << json.indent << "\"name\": " << name << ",\n"
-             << json.indent << "\"type\": " << type << ",\n";
-    }
-
-    static UniqueAttachedId fromJSON(JSONLoader &json) {
-        UniqueAttachedId uai;
-        if (!json.json) return uai;
-        json.load("name", uai.name);
-        json.load("type", uai.type);
-        return uai;
-    }
+    void toJSON(JSONGenerator &json) const;
+    static UniqueAttachedId fromJSON(JSONLoader &json);
 
     bool has_meter_type() const {
         return type == METER || type == STATEFUL_ALU || type == SELECTOR;

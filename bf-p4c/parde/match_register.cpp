@@ -2,6 +2,8 @@
 
 #include <sstream>
 #include "ir/ir.h"
+#include "ir/json_generator.h"
+#include "ir/json_loader.h"
 
 int MatchRegister::s_id = 0;
 

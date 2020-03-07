@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "ir/unique_id.h"
 #include "bf-p4c/mau/mau_power.h"
 
 namespace MauPower {

@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "ir/gress.h"
+#include "ir/ir.h"
 #include "ir/unique_id.h"
+#include "bf-p4c/device.h"
 #include "power_schema.h"
 
 namespace MauPower {
