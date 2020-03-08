@@ -143,6 +143,12 @@ bool MauFeatures::try_convert_to_match_dep() {
         int i_stage = (s % Device::numStages()) + get_stage_offset(INGRESS);
         stage_dep_to_previous_[i_stage] = DEP_MATCH;
       }
+      if (!BackendOptions().disable_mpr_config && !BackendOptions().disable_long_branch) {
+        // if using global exec and mpr, all threads must match
+        for (auto gr : Range(INGRESS, GHOST)) {
+            int stage = (s % Device::numStages()) + get_stage_offset(gr);
+            stage_dep_to_previous_[stage] = DEP_MATCH; }
+      }
       return true;
     }
   }
@@ -156,6 +162,21 @@ void MauFeatures::update_deps_for_device() {
       if (stage_dep_to_previous_.at(stage) == DEP_CONCURRENT)
         stage_dep_to_previous_[stage] = DEP_ACTION;
     }
+
+    if (!BackendOptions().disable_mpr_config && !BackendOptions().disable_long_branch) {
+        // if using long branch (specifically global_exec) and mpr, can't have different
+        // depedence between ingress and egress unless we can get consistent logical table
+        // use between ingress and egress and adjacent stages
+        for (int stage=0; stage < Device::numStages(); ++stage) {
+          int i_stage = stage + get_stage_offset(INGRESS);
+          int e_stage = stage + get_stage_offset(EGRESS);
+          mau_dep_t i_dep = stage_dep_to_previous_.at(i_stage);
+          mau_dep_t e_dep = stage_dep_to_previous_.at(e_stage);
+          if (i_dep != e_dep) {
+            stage_dep_to_previous_[i_stage] = DEP_MATCH;
+            stage_dep_to_previous_[e_stage] = DEP_MATCH; } }
+    }
+
     // Ingress and Ghost have to have the same timing, which requires them
     // to have the same dependency type.
     for (int stage=0; stage < Device::numStages(); ++stage) {
@@ -165,8 +186,8 @@ void MauFeatures::update_deps_for_device() {
       mau_dep_t g_dep = stage_dep_to_previous_.at(g_stage);
       if (i_dep != g_dep) {
         stage_dep_to_previous_[i_stage] = DEP_MATCH;
-        stage_dep_to_previous_[g_stage] = DEP_MATCH;
-  } } }
+        stage_dep_to_previous_[g_stage] = DEP_MATCH; } }
+  }
 }
 
 int MauFeatures::compute_pipe_latency(gress_t gress) const {
