@@ -515,7 +515,8 @@ void Parser::Checksum::pass1(Parser *parser) {
     if (type == 0 && dest) {
         if (dest->lo != dest->hi)
             error(dest.lineno, "checksum verification destination must be single bit");
-        else dst_bit_hdr_end_pos = dest->lo;
+        else
+            dst_bit_hdr_end_pos = dest->lo;
         if (options.target == JBAY && dest->reg.size == 8 && dest->reg.deparser_id() % 2)
             dst_bit_hdr_end_pos += 8;
     } else if (type == 1 && dest && dest.size() != dest->reg.size) {
@@ -535,12 +536,13 @@ void Parser::Checksum::pass2(Parser *parser) {
                 avail = i;
         }
         if (addr < 0) {
-            if (avail >= 0)
+            if (avail >= 0) {
                 parser->checksum_use[unit][addr = avail] = this;
-            else
+            } else {
                 error(lineno, "Ran out of room in parser checksum control RAM of"
                         " %sgress unit %d (%d rows available)",
                       gress ? "e" : "in", unit, PARSER_CHECKSUM_ROWS);
+            }
         }
     }
 }

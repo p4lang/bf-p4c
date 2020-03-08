@@ -324,8 +324,14 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
         ++i; }
 
     for (i = 0; i < checksum_use.size(); i++) {
-        for (auto csum : checksum_use[i])
-            if (csum) csum->write_config(regs, this); }
+        for (auto csum : checksum_use[i]) {
+            if (csum) {
+                csum->write_config(regs, this);
+                if (csum->dest)
+                    phv_use[csum->gress].setbit(csum->dest->reg.parser_id());
+            }
+        }
+    }
 
     if (gress == EGRESS) {
         regs.egress.epbreg.chan0_group.chnl_ctrl.meta_opt = meta_opt;
