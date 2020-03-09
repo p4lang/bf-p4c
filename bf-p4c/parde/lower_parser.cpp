@@ -1577,13 +1577,16 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
             if (f_name.find(BFN::COMPILER_META) != std::string::npos
              && f_name.find("residual_checksum_") != std::string::npos)
                 isResidualChecksum = true;
-
+            // If a field slice is on an even byte in the checksum operation field list
+            // and even byte in the container and vice-versa then swap is true
+            // Offset : offset of the field slice is offset of the field + difference between
+            // field.hi and slice.hi
             if (!isResidualChecksum &&
-                (offset/8) % 2 != (slice.container_bits().hi/8 + 1) % 2) {
+                ((offset + phv_field->size - slice.field_bits().hi -1)/8) % 2 ==
+                 (slice.container_bits().hi/8) % 2) {
                 swap = (1 << slice.container_bits().hi/16U) |
                              (1 << slice.container_bits().lo/16U);
             }
-            offset += slice.width;
             containerToSwap[slice.container] |= swap;
         }
     }

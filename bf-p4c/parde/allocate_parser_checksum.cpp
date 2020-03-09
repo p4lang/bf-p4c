@@ -1,6 +1,7 @@
 #include <map>
 #include "allocate_parser_checksum.h"
 
+#include "lib/bitrange.h"
 #include "lib/cstring.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/clot_info.h"
@@ -520,26 +521,58 @@ struct InsertParserClotChecksums : public PassManager {
         CollectClotChecksumFields(const PhvInfo& phv, const ClotInfo& clotInfo) :
             phv(phv), clotInfo(clotInfo) {}
 
-        bool preorder(const IR::BFN::Deparser* deparser) override {
+        // This function checks if a particular field slice is allocated in both clot and phv
+        // Returns slices that are only clot allocated
+        ordered_set<le_bitrange> get_only_clot_allocated_slices(const PHV::Field* field,
+                                                                le_bitrange clotRange) {
+            ordered_set<le_bitrange> clotRanges;
+            bitvec diffrange;
+            diffrange.setrange(clotRange.lo, clotRange.size());
+            for (auto slice : field->get_alloc()) {
+                // check if phv slice in range with clot slice
+                if (clotRange.lo > slice.field_bits().hi || clotRange.hi < slice.field_bits().lo)
+                    continue;
+                diffrange.clrrange(slice.field_bit, slice.width);
+            }
+            for (auto br : bitranges(diffrange)) {
+                clotRanges.insert(le_bitrange(br.first, br.second));
+            }
+            return clotRanges;
+        }
+
+        bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override {
             // look for clot fields in deparser checksums
 
-            for (auto emit : deparser->emits) {
-                if (auto csum = emit->to<IR::BFN::EmitChecksum>()) {
-                    for (auto source : csum->sources) {
-                        auto field = phv.field(source->field->field);
-                        if (auto* clot = clotInfo.fully_allocated(field)) {
-                            checksum_field_to_clot[field] = clot;
-                            checksum_field_to_offset[field] = source->offset;
-                        }
+            for (auto source : emitChecksum->sources) {
+                le_bitrange field_range;
+                auto field = phv.field(source->field->field, &field_range);
+                auto clot_map = clotInfo.allocated_slices(field);
+                if (!clot_map) continue;
+                for (auto slice_clot : *clot_map) {
+                    // Only include field slices that are allocated in clots only. Discard the
+                    // once that are allocated in clot and phv.
+                    for (auto clot_slice : get_only_clot_allocated_slices(field,
+                                                              slice_clot.first->range())) {
+                        auto clot = slice_clot.second;
+                        checksum_field_slice_to_clot[field][clot_slice] = clot;
+                        // checksum offset of field slice is offset of field + difference
+                        // between field.hi and slice.hi
+                        checksum_field_slice_to_offset[field][clot_slice] =
+                                   source->offset + field_range.hi - clot_slice.hi;
                     }
                 }
             }
 
             return false;
         }
-        std::map<const PHV::Field*, const Clot*> checksum_field_to_clot;
-        // Maps checksum field used in CLOT to their offset in deparser checksum fieldlist
-        std::map<const PHV::Field*, int> checksum_field_to_offset;
+        // Maps checksum fields used in clot to range of each field slice allocated to clots
+        // Each range of field slice maps to its corresponding clot
+        std::map<const PHV::Field*,
+                       std::map<le_bitrange, const Clot*>> checksum_field_slice_to_clot;
+        // Maps checksum field used in CLOT to range of each field slice allocated to clots
+        // Each range of field size maps to their offset in deparser checksum fieldlist
+        std::map<const PHV::Field*,
+                        std::map<le_bitrange, int>> checksum_field_slice_to_offset;
         const PhvInfo& phv;
         const ClotInfo& clotInfo;
     };
@@ -579,24 +612,31 @@ struct InsertParserClotChecksums : public PassManager {
         }
 
         bool preorder(const IR::BFN::ParserState* state) override {
-             auto parser = findContext<IR::BFN::Parser>();
-            auto& checksum_field_to_clot = clot_checksum_fields.checksum_field_to_clot;
-            auto& checksum_field_to_offset = clot_checksum_fields.checksum_field_to_offset;
+            auto parser = findContext<IR::BFN::Parser>();
+            auto& checksum_field_slice_to_clot = clot_checksum_fields.checksum_field_slice_to_clot;
+            auto& checksum_field_slice_to_offset =
+                                        clot_checksum_fields.checksum_field_slice_to_offset;
             for (auto stmt : state->statements) {
                 if (auto extract = stmt->to<IR::BFN::ExtractClot>()) {
-                    auto dest = phv.field(extract->dest->field);
-
-                    if (checksum_field_to_clot.count(dest)) {
-                        auto clot = checksum_field_to_clot.at(dest);
+                    le_bitrange field_range;
+                    auto dest = phv.field(extract->dest->field, &field_range);
+                    auto rval = extract->source->to<IR::BFN::PacketRVal>();
+                    if (!checksum_field_slice_to_clot.count(dest)) continue;
+                    for (auto& range_clot : checksum_field_slice_to_clot.at(dest)) {
+                        // check if the field slice is extracted in this stmt
+                        if (field_range.lo > range_clot.first.hi ||
+                                        field_range.hi < range_clot.first.lo) {
+                            continue;
+                        }
+                        auto clot = range_clot.second;
                         bool swap = false;
-                        auto rval = extract->source->to<IR::BFN::PacketRVal>();
                         // If a field is on an even byte in the checksum operation field list
                         // but on an odd byte in the input buffer and vice-versa then swap is true.
-                        if ((checksum_field_to_offset.at(dest)/8) % 2 != rval->range.loByte() % 2) {
+                        if ((checksum_field_slice_to_offset.at(dest).at(range_clot.first)/8) % 2 !=
+                                                                  (rval->range.lo/8) % 2) {
                             swap = true;
                         }
                         auto add = create_checksum_add(clot, rval, swap);
-
                         state_to_clot_primitives[state][clot].push_back(add);
                         clot_to_states[parser][clot].insert(state);
                     }
