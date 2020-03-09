@@ -1004,7 +1004,6 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     boost::optional<FieldAlignment> alignment() const { return alignment_i; }
 
     /// See documentation for `Field::validContainerRange()`.
-    /// TODO(cole): Refactor this.
     nw_bitrange validContainerRange() const { return validContainerRange_i; }
 
     /// Kind of field of this slice.

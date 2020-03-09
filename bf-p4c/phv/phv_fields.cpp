@@ -1025,11 +1025,45 @@ PHV::FieldSlice::FieldSlice(
     // Calculate valid container range for this slice by shrinking
     // the valid range of the field by the size of the "tail"
     // (i.e. the least significant bits) not in this slice.
-    if (field_i->validContainerRange_i == ZeroToMax()) {
+    if (field->validContainerRange_i == ZeroToMax()) {
         validContainerRange_i = ZeroToMax();
     } else {
-        int new_size = field_i->validContainerRange_i.size() - range.lo;
-        validContainerRange_i = field_i->validContainerRange_i.resizedToBits(new_size); }
+        int new_size = field->validContainerRange_i.size() - range.lo;
+        // handle type upcast in extract.
+        // e.g. in a parser state, if we have
+        // struct md { bit<24> tunnel_id; }
+        // header example {
+        //     bit<16> tunnel_id;
+        //     bit<16> junk;
+        // }
+        // md.tunnel_id = (bit<24>)hdr.example.tunnel_id
+        //                input buffer
+        // xxxxxx0.....................15..............31
+        //          hdr.tunnel_id            hdr.junk
+        //       |                     |
+        //       v                     v
+        //      15.....................0
+        //         md.tunnel_id[15:0]
+        // valid container range of md.tunnel_id is [0..15](Network Order),
+        // because you can't extract from the outside of input buffer(those xxx).
+        // The wired thing is that, the field is 24 bits, which can't fit into
+        // the valid container range [0..15].
+        // It indicates that
+        // (1) the field must be split into [16, 8] to satisfy the valid container range.
+        // (2) the 8-bit slice is not extracted, so no constraints introduced in this state.
+        //     But if it is extracted in some other parser state, then
+        //     the container valid range should be the intersection of all.
+        // For (1), slicing iterator do not have this information but rely on searching.
+        // For (2), it's complicated to take the intersection of those ranges under current
+        // code structure. So we simply set it to the most conservative case: [0..size-1],
+        // which means the slice must be place at the begining of the container, like there
+        // are no other fields before it in the input buffer.
+        if (new_size <= 0) {
+            validContainerRange_i = StartLen(0, range.size());
+        } else {
+            validContainerRange_i = field->validContainerRange_i.resizedToBits(new_size);
+        }
+    }
 }
 
 void PHV::FieldSlice::setStartBits(PHV::Size size, bitvec startPositions) {

@@ -129,4 +129,29 @@ TEST_F(TofinoField, foreach_byte) {
     });
 }
 
+
+class TofinoFieldSlice : public TofinoBackendTest {};
+
+// If the size of a field's valid_container_range is smaller than field's size,
+// then the fieldSlice created from the field should have a conservative valid
+// container range, [0...size-1].
+TEST_F(TofinoFieldSlice, field_size_lt_valid_range) {
+    // mock a field.
+    auto* f = new PHV::Field();
+    std::stringstream ss;
+    f->id = 16;
+    f->size = 32;
+    ss << "f" << f->id;
+    f->name = ss.str();
+    f->gress = INGRESS;
+    f->validContainerRange_i = StartLen(0, 24);
+    f->alignment = FieldAlignment(le_bitrange(StartLen(3, 32)));
+    f->set_parsed(true);
+
+    auto fs1 = new PHV::FieldSlice(f, StartLen(0, 24));
+    auto fs2 = new PHV::FieldSlice(f, StartLen(24, 8));
+    EXPECT_EQ(nw_bitrange(StartLen(0, 24)), fs1->validContainerRange());
+    EXPECT_EQ(nw_bitrange(StartLen(0, 8)), fs2->validContainerRange());
+}
+
 }  // namespace Test
