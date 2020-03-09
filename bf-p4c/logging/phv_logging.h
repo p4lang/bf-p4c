@@ -143,6 +143,9 @@ class PhvLogging : public MauInspector {
 
     const char * getDeparserAccessType(const PHV::Field* f) const;
 
+    // @returns the name with the prefix '.' stripped out
+    std::string stripDotPrefix(const cstring name) const;
+
     void getAllParserDefs(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
     void getAllDeparserUses(const PHV::Field* f, ordered_set<PardeInfo>& rv) const;
 

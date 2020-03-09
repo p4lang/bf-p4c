@@ -117,7 +117,7 @@ ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
 
 Phv_Schema_Logger::FieldSlice*
 PhvLogging::logFieldSlice(const PHV::Field* f) {
-    std::string fieldName(f->name);
+    std::string fieldName(stripThreadPrefix(f->name));
     auto si = new Slice(0, f->size - 1);
     auto fs = new FieldSlice(fieldName, si);
     return fs;
@@ -125,7 +125,7 @@ PhvLogging::logFieldSlice(const PHV::Field* f) {
 
 Phv_Schema_Logger::FieldSlice*
 PhvLogging::logFieldSlice(const PHV::Field::alloc_slice& sl) {
-    std::string fieldName(sl.field->name);
+    std::string fieldName(stripThreadPrefix(sl.field->name));
     auto si = new Slice(sl.field_bit, sl.field_hi());
     auto fs = new FieldSlice(fieldName, si);
     return fs;
@@ -166,9 +166,9 @@ void PhvLogging::logFields() {
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
     /* Add fields to the log file */
     for (auto kv : fields) {
-        std::string headerName(kv.first);
+        std::string headerName(stripThreadPrefix(kv.first));
         for (const auto* f : kv.second) {
-            std::string fieldName(f->name);
+            std::string fieldName(stripThreadPrefix(f->name));
 
             auto state = "";
             PHV::Field::AllocState allocState = getAllocatedState(f);
@@ -236,7 +236,7 @@ void PhvLogging::logFields() {
                     for (const auto* f2 : kv.second) {
                         if (sl.field == f2) continue;
                         if (phv.isFieldNoPack(sl.field, f2)) {
-                            std::string fieldNamePack(f2->name);
+                            std::string fieldNamePack(stripThreadPrefix(f2->name));
                             auto fPack = new FieldInfo(f2->size, getFieldType(f2),
                                              fieldNamePack, getGress(f2), "");
                             auto s_loc_Pack = new SourceLocation("DummyFile", -1);
@@ -269,8 +269,9 @@ void PhvLogging::logHeaders() {
     ordered_map<cstring, ordered_set<const PHV::Field*>> headerFields = getFields();
     /* Add header structures to the log file */
     for (auto kv : headerFields) {
-        std::string headerName(kv.first);
-        auto* s = new Structure(headerName, "header");
+        std::string headerName(stripThreadPrefix(kv.first));
+        auto firstSlice = *kv.second.begin();
+        auto* s = new Structure(getGress(firstSlice), headerName, "header");
         for (const auto* f : kv.second) {
             auto fs = logFieldSlice(f);
             s->append(fs); }
@@ -336,6 +337,12 @@ const char * PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
     return "none";
 }
 
+std::string PhvLogging::stripDotPrefix(const cstring name) const {
+    // Check if the name starts with a '.' and strip it
+    if (name[0] != '.') return name.c_str();
+    return name.substr(1).c_str();
+}
+
 void
 PhvLogging::getAllDeparserUses(const PHV::Field* f, ordered_set<PhvLogging::PardeInfo>& rv) const {
     if (f->padding) return;
@@ -397,7 +404,7 @@ PhvLogging::addTableKeys(const PHV::FieldSlice &sl, Phv_Schema_Logger::Container
                                                         logicalID/16,
                                                         "mau",
                                                         "" /* action_name */,
-                                                        tableName.c_str())));
+                                                        stripDotPrefix(tableName))));
         }
     }
 }
@@ -421,8 +428,8 @@ PhvLogging::addVLIWReads(const PHV::FieldSlice& sl, Phv_Schema_Logger::Container
                 cs->append_reads(new Access(MAULocation("vliw",
                                                         logicalID/16,
                                                         "mau",
-                                                        actionName,
-                                                        tableName)));
+                                                        stripDotPrefix(actionName),
+                                                        stripDotPrefix(tableName))));
         }
     }
 }
@@ -446,8 +453,8 @@ PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, Phv_Schema_Logger::Containe
                 cs->append_writes(new Access(MAULocation("vliw",
                                                          logicalID/16,
                                                          "mau",
-                                                         actionName,
-                                                         tableName)));
+                                                         stripDotPrefix(actionName),
+                                                         stripDotPrefix(tableName))));
         }
     }
 }
@@ -457,7 +464,7 @@ void PhvLogging::addMutexFields(const PHV::Field::alloc_slice& sl,
     LOG4("Adding mutually exclusive fields for slice: " << sl);
     for (const auto* f2 : phv.fields_in_container(sl.container)) {
         if (phv.isFieldMutex(sl.field, f2)) {
-            std::string fieldName(f2->name);
+            std::string fieldName(stripThreadPrefix(f2->name));
             cs->append_mutually_exclusive_with(fieldName);
         }
     }

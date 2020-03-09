@@ -31,7 +31,7 @@ int main() {
     using ContainerSlice = Phv_Schema_Logger::ContainerSlice;
 
     // Structures
-    auto structure1 = new Structure("h1", "header");
+    auto structure1 = new Structure("ingress", "h1", "header");
     auto f1_fs_slice = new Slice(0, 7);
     auto f1_sl = new FieldSlice("f1", f1_fs_slice);
     auto f2_fs_slice = new Slice(0, 15);
