@@ -405,10 +405,63 @@ class ClotInfo {
         return is_unused(field) ? slice_clots(field) : nullptr;
     }
 
+    /// @return nullptr if the field containing the @arg slice is read-only or modified. Otherwise,
+    /// if the field containing the @arg slice is unused, returns each CLOT-allocated slice that
+    /// overlaps with the given @arg slice, mapped to its corresponding CLOT.
+    //
+    // If we had more precise slice-level usage information, we could instead return a non-null
+    // result if the given slice were unused.
+    std::map<const PHV::FieldSlice*, Clot*, PHV::FieldSlice::Greater>*
+    allocated_slices(const PHV::FieldSlice* slice) const {
+        return is_unused(slice->field()) ? slice_clots(slice) : nullptr;
+    }
+
     /// @return the given field's CLOT if the field is unused and is entirely covered in a CLOT.
     /// Otherwise, nullptr is returned.
     const Clot* fully_allocated(const PHV::Field* field) const {
         return is_unused(field) ? whole_field_clot(field) : nullptr;
+    }
+
+    /// @return the given field slice's CLOT allocation if the field containing the slice is unused
+    /// and the slice is entirely CLOT-allocated. Otherwise, nullptr is returned.
+    //
+    // If we had more precise slice-level usage information, we could instead return a non-null
+    // result if the given slice were unused.
+    std::set<const Clot*, Clot::Less>* fully_allocated(const PHV::FieldSlice& slice) const {
+        return fully_allocated(&slice);
+    }
+
+    /// @return the given field slice's CLOT allocation if the field containing the slice is unused
+    /// and the slice is entirely CLOT-allocated. Otherwise, nullptr is returned.
+    //
+    // If we had more precise slice-level usage information, we could instead return a non-null
+    // result if the given slice were unused.
+    std::set<const Clot*, Clot::Less>* fully_allocated(const PHV::FieldSlice* slice) const {
+        auto allocated = allocated_slices(slice);
+        if (!allocated) return nullptr;
+
+        // Go through the CLOT allocation for the given slice and collect up the set of CLOTs. As
+        // we do this, figure out which bits in the slice are CLOT-allocated.
+        auto result = new std::set<const Clot*, Clot::Less>();
+        bitvec clotted_bits;
+
+        for (const auto& entry : *allocated) {
+            const auto& cur_slice = entry.first;
+            const auto& cur_clot = entry.second;
+
+            auto clotted_range = cur_slice->range().intersectWith(slice->range());
+            clotted_bits.setrange(clotted_range.lo, clotted_range.size());
+
+            result->insert(cur_clot);
+        }
+
+        bitvec expected(slice->range().lo, slice->range().size());
+        if (clotted_bits != expected) {
+            // Whole slice not CLOT-allocated.
+            return nullptr;
+        }
+
+        return result;
     }
 
     /// Adjusts all allocated CLOTs so that they neither start nor end with an overwritten field

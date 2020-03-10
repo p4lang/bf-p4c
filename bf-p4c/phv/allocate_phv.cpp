@@ -324,8 +324,16 @@ AllocScore::AllocScore(
         for (const auto& slice : slices) {
             if (slice.field()->is_solitary())
                 score[kind].n_wasted_bits += (container.size() - slice.width());
-            if (clot.fully_allocated(slice.field()))
-                score[kind].n_clot_bits += slice.width(); }
+
+            // Loop over all CLOT-allocated slices that overlap with "slice" and add the number of
+            // overlapping bits to the score.
+            PHV::FieldSlice field_slice(slice.field(), slice.field_slice());
+            const auto& slice_range = field_slice.range();
+            for (auto* clotted_slice : Keys(*clot.slice_clots(&field_slice))) {
+                const auto& clot_range = slice_range.intersectWith(clotted_slice->range());
+                score[kind].n_clot_bits += clot_range.size();
+            }
+        }
 
         if (kind == PHV::Kind::normal) {
             for (const auto& slice : slices) {
@@ -1080,6 +1088,8 @@ CoreAllocation::tryAllocSliceList(
         // The metadata slices that require initialization after live range shrinking.
         ordered_set<PHV::AllocSlice> metaInitSlices;
         PHV::Transaction perContainerAlloc = alloc_attempt.makeTransaction();
+        // Flag case that overlay requires new container such as dark overlay
+        bool new_overlay_container = false;
         // Check that the placement can be done through metadata initialization.
         for (auto& slice : candidate_slices) {
             if (!uses_i.is_referenced(slice.field()) && !slice.field()->isGhostField()) continue;
@@ -1172,8 +1182,6 @@ CoreAllocation::tryAllocSliceList(
                             alloced_slices)) {
                     LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
                          " by pushing one of them into a dark container.");
-                    PHV::Allocation::MutuallyLiveSlices container_state =
-                        perContainerAlloc.slicesByLiveness(c, candidate_slices);
                     auto darkInitNodes = dark_init_i.findInitializationNodes(group, alloced_slices,
                             slice, perContainerAlloc);
                     if (!darkInitNodes) {
@@ -1191,6 +1199,7 @@ CoreAllocation::tryAllocSliceList(
                             if (primNum++ == 0) continue;
                             metaInitSlices.insert(prim.getDestinationSlice());
                         }
+                        new_overlay_container = true;
                         // Create initialization points for the dark container.
                         generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
                                 new_candidate_slices, perContainerAlloc);
@@ -1205,10 +1214,15 @@ CoreAllocation::tryAllocSliceList(
         }
         if (!can_place) continue;  // try next container
 
-        if (new_candidate_slices.size() > 0) {
+        if ((new_candidate_slices.size() > 0) ||
+            (new_overlay_container && (metaInitSlices.size() > 0))) {
             candidate_slices.clear();
             for (auto& sl : new_candidate_slices)
                 candidate_slices.push_back(sl);
+            if (new_overlay_container) {
+                for (auto& sl : metaInitSlices)
+                    candidate_slices.push_back(sl);
+            }
         }
 
         if (LOGGING(5) && metaInitSlices.size() > 0) {
@@ -1258,9 +1272,13 @@ CoreAllocation::tryAllocSliceList(
                         initPointsForTransaction->end());
         }
         // Get the initialization actions that were determined as part of the current transaction.
-        if (initNodes)
-            for (auto kv : *initNodes)
+        if (initNodes) {
+            for (auto kv : *initNodes) {
                 initActions[kv.first].insert(kv.second.begin(), kv.second.end());
+                LOG6("\t\t\tAdding initActions for field: " << kv.first);
+            }
+        }
+
         PHV::Allocation::MutuallyLiveSlices container_state = perContainerAlloc.slicesByLiveness(c,
                 candidate_slices);
         // Actual slices in the container, after accounting for metadata overlay.
@@ -1283,6 +1301,8 @@ CoreAllocation::tryAllocSliceList(
             // If the current slice overlays with at least one candidate slice AND its live range
             // does not overlap with the candidate slices, we do not consider the existing slice to
             // be part of the live container state.
+            LOG6("\t\tKeep container_state slice " << field_slice << " in actual_container_state:"
+                 << ((hasOverlay && sliceLiveRangeDisjointWithAllCandidates) ? "NO" : "YES") );
             if (hasOverlay && sliceLiveRangeDisjointWithAllCandidates) continue;
             actual_container_state.insert(field_slice);
             // Get initialization actions for all other slices in this container and not overlaying
@@ -1568,6 +1588,10 @@ CoreAllocation::tryAllocSliceList(
     return alloc_attempt;
 }
 
+
+// Used for dark overlays - Replaces original slice allocation with
+// new slice allocation and spilt slice allocation in dark and normal
+// ---
 void CoreAllocation::generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
         const ordered_set<PHV::AllocSlice>& alloced_slices,
@@ -1575,7 +1599,8 @@ void CoreAllocation::generateNewAllocSlices(
         std::vector<PHV::AllocSlice>& new_candidate_slices,
         PHV::Transaction& alloc_attempt) const {
     std::vector<PHV::AllocSlice> initializedAllocSlices;
-    for (auto& entry : slices) {
+    for (auto& entry : slices) {  // Iterate over the initialization of the new field and the dark
+                                                  // allocated field (spill + write-back)
         auto dest = entry.getDestinationSlice();
         LOG5("\t\t\tAdding dest: " << dest);
         dest.setInitPrimitive(&(entry.getInitPrimitive()));
@@ -1620,25 +1645,29 @@ void CoreAllocation::generateNewAllocSlices(
 }
 
 static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& sc) {
+    // If the device doesn't support CLOTs, then don't bother checking.
+    if (Device::numClots() == 0) return false;
+
     // In JBay, a clot-candidate field may sometimes be allocated to a PHV
     // container, eg. if it is adjacent to a field that must be packed into a
     // larger container, in which case the clot candidate would be used as
     // padding.
 
-    // XXX(cole): It's possible that part of a clot-candidate will be allocated
-    // to PHV and part to the clot, eg. a 12b field where 4b are in PHV and 8b
-    // are drawn from the clot.  This is permissible in theory, but the rest of
-    // the compiler doesn't yet support fields partially allocated to the PHV.
+    // Check slice lists.
+    bool needPhvAllocation = std::any_of(sc.slice_lists().begin(), sc.slice_lists().end(),
+        [&](const PHV::SuperCluster::SliceList* slices) {
+            return std::any_of(slices->begin(), slices->end(),
+                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
+        });
 
-    // Clot candidates, by definition, aren't involved in MAU operations
-    // and so will only have one slice list.
-    if (sc.slice_lists().size() == 1) {
-        auto* slices = *sc.slice_lists().begin();
-        bool allClotCandidates = std::all_of(slices->begin(), slices->end(),
-            [&](const PHV::FieldSlice& slice) { return clots.fully_allocated(slice.field()); });
-        if (allClotCandidates)
-            return true; }
-    return false;
+    // Check rotational clusters.
+    needPhvAllocation |= std::any_of(sc.clusters().begin(), sc.clusters().end(),
+        [&](const PHV::RotationalCluster* cluster) {
+            return std::any_of(cluster->slices().begin(), cluster->slices().end(),
+                [&](const PHV::FieldSlice& slice) { return !clots.fully_allocated(slice); });
+        });
+
+    return !needPhvAllocation;
 }
 
 bool CoreAllocation::buildAlignmentMaps(
@@ -2020,8 +2049,10 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     for (auto* sc : cluster_groups)
         if (isClotSuperCluster(clot_i, *sc))
             to_remove.insert(sc);
-    for (auto* sc : to_remove)
+    for (auto* sc : to_remove) {
         cluster_groups.remove(sc);
+        LOG4("  ...Skipping CLOT-allocated super cluster: " << sc);
+    }
 
     size_t numBridgedConflicts = bridgedFieldsWithAlignmentConflicts.size();
     AllocationStrategy *strategy =
