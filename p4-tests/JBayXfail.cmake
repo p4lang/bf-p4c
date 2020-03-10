@@ -78,7 +78,6 @@ p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4

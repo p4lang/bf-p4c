@@ -722,11 +722,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Resizing ClosedRange to zero size"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1815-1.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from .* which has type .*"
   testdata/p4_16_samples/issue1210.p4
 )
