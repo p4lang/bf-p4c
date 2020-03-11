@@ -10,7 +10,7 @@
 #include "bf-p4c/phv/parser_extract_balance_score.h"
 #include "lib/log.h"
 
-#define GREATER(comparison)  ((comparison > 0) ? " (BETTER)" : " (WORSE)")
+#define GREATER(comparison)  (LOGGING(6) ? ((comparison > 0) ? " (BETTER)" : " (WORSE)") : "")
 
 std::vector<const PHV::Field*>
 FieldPackingOpportunity::fieldsInOrder(

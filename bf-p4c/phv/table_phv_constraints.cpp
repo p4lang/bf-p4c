@@ -35,24 +35,36 @@ bool TernaryMatchKeyConstraints::isTernary(IR::MAU::Table *tbl) const {
 void
 TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::Table* tbl) const {
     LOG4("\tCalculating ternary match key constraints for " << tbl->name);
-    size_t totalBytesUsed = 0;
+    size_t totalRoundedUpBytes = 0;
     size_t totalMetadataBytesUsed = 0;
     size_t totalBitsUsed = 0;
-    ordered_set<PHV::Field*> fields;
+
+    // *ALEX*: Commenting *OFF* code used for constraining alignment
+    // of ternary match fields. The imposed alignment constraints may
+    // lead to erroneous PHV allocation fails due to preventing packing
+    // of 1bit or narrow fields into PHV containers (See P4C-2538)
+
+    // *OFF* ordered_set<PHV::Field*> fields;
+
     // Calculate total rounded up (to nearest byte) size of all match key fields
     // Also calculate total rounded up (to nearest byte) size of all match key metadata fields
     for (const IR::MAU::TableKey* matchKey : tbl->match_key) {
         LOG5("\t\t" << matchKey->expr);
         le_bitrange bits;
         PHV::Field* f = phv.field(matchKey->expr, &bits);
-        size_t roundedUpSize = (f->size % BITS_IN_BYTE == 0) ? (f->size / BITS_IN_BYTE) : (f->size /
-                BITS_IN_BYTE + 1);
+        size_t roundedUpSize = (f->size % BITS_IN_BYTE == 0) ? (f->size / BITS_IN_BYTE) :
+            ((f->size / BITS_IN_BYTE) + 1);
         totalBitsUsed += bits.size();
-        totalBytesUsed += roundedUpSize;
+        totalRoundedUpBytes += roundedUpSize;
         if (f->metadata && !f->deparsed_to_tm()) {
             totalMetadataBytesUsed += roundedUpSize;
-            fields.insert(f); } }
+            // *OFF*      fields.insert(f);
+        }
+    }
     LOG4("\tTotal bits used for match key by ternary table : " << totalBitsUsed);
+    LOG4("\tTotal bytes used for match key by ternary table : " <<
+         (((totalBitsUsed % BITS_IN_BYTE) == 0) ? (totalBitsUsed / BITS_IN_BYTE) :
+          ((totalBitsUsed / BITS_IN_BYTE) + 1)));
 
     if (totalBitsUsed > MAX_TERNARY_MATCH_KEY_BITS) {
         ::error("Ternary table %1% uses %2%b as ternary match key. Maximum number of bits "
@@ -62,28 +74,31 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
         return;
     }
 
-    LOG4("\tTotal bytes used for match key by ternary table: " << totalBytesUsed);
+    LOG4("\tTotal rounded up bytes used for match key by ternary table: " << totalRoundedUpBytes);
     LOG4("\tTotal bytes used for match key by metadata     : " << totalMetadataBytesUsed);
     // xxx(Deep): Can we calculate a better threshold?
     // If the total size then exceeds the match key size threshold defined for ternary tables,
     // introduce a bit in byte alignment for all metadata fields
-    if (totalBytesUsed <  TERNARY_MATCH_KEY_BITS_THRESHOLD)
-        return;
-    for (auto* f : fields) {
-        // Extract the non-const version of the field
-        le_bitrange range = StartLen(0, f->size - 1);
-        FieldAlignment alignment(range);
-        bool updateAlignment = true;
-        if (f->alignment)
-            if (alignment != *(f->alignment))
-                updateAlignment = false;
-        if (updateAlignment) {
-            f->updateAlignment(alignment);
-            LOG4("\tSetting alignment for field " << f->name << " to " << alignment);
-        } else {
-            ::warning("Could not set bit in byte alignment for field %1%", f->name);
-        }
-    }
+
+    // *OFF* if (totalRoundedUpBytes <  TERNARY_MATCH_KEY_BITS_THRESHOLD)
+
+    return;
+
+    // *OFF* for (auto* f : fields) {
+    // *OFF*     // Extract the non-const version of the field
+    // *OFF*     le_bitrange range = StartLen(0, f->size - 1);
+    // *OFF*     FieldAlignment alignment(range);
+    // *OFF*     bool updateAlignment = true;
+    // *OFF*     if (f->alignment)
+    // *OFF*         if (alignment != *(f->alignment))
+    // *OFF*             updateAlignment = false;
+    // *OFF*     if (updateAlignment) {
+    // *OFF*         f->updateAlignment(alignment);
+    // *OFF*         LOG4("\tSetting alignment for field " << f->name << " to " << alignment);
+    // *OFF*     } else {
+    // *OFF*         ::warning("Could not set bit in byte alignment for field %1%", f->name);
+    // *OFF*     }
+    // *OFF* }
 }
 
 bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {
