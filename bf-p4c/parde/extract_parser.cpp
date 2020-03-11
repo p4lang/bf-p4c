@@ -671,10 +671,10 @@ GetBackendParser::createBackendParser() {
                 if (resolveHeaderStackIndex.stackOutOfBound) {
                     LOG4("stack out of bound at " << state->name);
                     resolved = nullptr;
+                } else {
+                    state->p4State = resolved;
+                    resolved_map[resolved->name] = resolved;
                 }
-
-                state->p4State = resolved;
-                resolved_map[resolved->name] = resolved;
             }
         }
     }
