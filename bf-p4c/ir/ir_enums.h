@@ -23,6 +23,17 @@ enum class TypeLocation { DEFAULT, OVERHEAD, GATEWAY_PAYLOAD, NOT_SET };
 enum class ColorMapramAddress { IDLETIME, STATS, MAPRAM_ADDR_TYPES, NOT_SET };
 enum class SelectorMode { FAIR, RESILIENT, SELECTOR_MODES };
 
+/// Table attribute for indicating whether the table is an always-run action, an always-run table,
+/// or neither.
+enum class AlwaysRun {
+    /// Indicates that the table is not always-run.
+    NONE,
+    /// Indicates that the table is an always-run table.
+    TABLE,
+    /// Indicates that the table represents an always-run action.
+    ACTION
+};
+
 }  // end namespace MAU
 
 namespace BFN {
@@ -61,5 +72,8 @@ bool operator>>(cstring s, IR::BFN::ChecksumMode &t);
 
 std::ostream& operator<<(std::ostream &out, const IR::BFN::ParserWriteMode &t);
 bool operator>>(cstring s, IR::BFN::ParserWriteMode &t);
+
+std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar);
+bool operator>>(cstring s, IR::MAU::AlwaysRun &ar);
 
 #endif /* BF_P4C_IR_IR_ENUMS_H_ */

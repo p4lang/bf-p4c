@@ -406,9 +406,9 @@ TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *
 
     if (!tbl) return node;
 
-    if (tbl->logical_id >= 0) {
+    if (tbl->global_id()) {
         node.stage_number = tbl->stage();
-        node.logical_id = tbl->logical_id / 16;
+        node.logical_id = *tbl->logical_id;
     }
 
     // Add all types here
@@ -506,9 +506,9 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
         auto tbl = get_vertex(v);
         auto gress = static_cast<int>(tbl->gress);
 
-        if (tbl->logical_id >= 0) {
+        if (tbl->global_id()) {
             node.stage_number = tbl->stage();
-            node.logical_id = tbl->logical_id / 16;
+            node.logical_id = *tbl->logical_id;
         }
 
         // Add all types here

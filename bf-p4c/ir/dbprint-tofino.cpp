@@ -8,8 +8,8 @@ using namespace IndentCtl;
 
 void IR::MAU::Table::dbprint(std::ostream &out) const {
     out << "table " << name;
-    if (logical_id >= 0)
-        out << '[' << gress << ' ' << hex(logical_id) << ']';
+    if (global_id())
+        out << '[' << gress << ' ' << hex(*global_id()) << ']';
     if (dbgetflags(out) & Brief)
         return;
     for (auto &gw : gateway_rows) {

@@ -335,9 +335,10 @@ struct NextTable::Prop::NTInfo {
         // Collect tables into stages for this sequence
         for (auto t : ts->tables) {
             auto st = t->stage();
-            BUG_CHECK(st >= 0, "Unplaced table %s", t->name);
+            BUG_CHECK(t->global_id(), "Unplaced table %s", t->name);
+            BUG_CHECK(tbl->global_id(), "Unplaced table %s", tbl->name);
             BUG_CHECK(first_stage <= st, "Table %s (LID: %d) placed before parent %s (LID: %d)",
-                      t->name, t->logical_id, tbl->name, tbl->logical_id);
+                      t->name, *t->global_id(), tbl->name, *tbl->global_id());
             // Update last stage
             last_stage = st > last_stage ? st : last_stage;
             // Add to the correct vector
@@ -402,13 +403,15 @@ void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &execu
     if (size_t(nti.first_stage) >= nti.stages.size()) return;
     // Guarantee that all tables no matter what are preceded by the parent control table
     for (auto nt : nti.stages.at(nti.first_stage)) {
-        BUG_CHECK(nti.parent->logical_id <= nt->logical_id,
+        BUG_CHECK(nti.parent->global_id(), "Unplaced table %s", nti.parent->name);
+        BUG_CHECK(nt->global_id(), "Unplaced table %s", nt->name);
+        BUG_CHECK(*nti.parent->global_id() <= *nt->global_id(),
                   "Table %s has LID %d, less than parent table %s (LID %d)", nt->name,
-                  nt->logical_id, nti.parent->name, nti.parent->logical_id);
+                  *nt->global_id(), nti.parent->name, *nti.parent->global_id());
         LOG3("  - " << nt->name << " to " << nti.seq_nm << "; LOCAL_EXEC from " << nti.parent->name
              << " in stage " << nt->stage());
         self.props[get_uid(nti.parent)][nti.seq_nm].insert(get_uid(nt));
-        executed_paths[nti.first_stage].setbit(nt->logical_id);
+        executed_paths[nti.first_stage].setbit(*nt->global_id());
     }
     // Vertically compress each stage; i.e. calculate all of the local_execs, giving us a single
     // representative table for each stage to use in cross stage propagation
@@ -424,7 +427,9 @@ void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &execu
             auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"];
             for (size_t k = j + 1; k < tables.size(); k++) {
                 auto nt = tables.at(k);
-                BUG_CHECK(rep->logical_id < nt->logical_id,
+                BUG_CHECK(rep->global_id(), "Unplaced table %s", rep->name);
+                BUG_CHECK(nt->global_id(), "Unplaced table %s", nt->name);
+                BUG_CHECK(*rep->global_id() < *nt->global_id(),
                           "Tables not in logical ID order; representative %s has greater LID "
                           "than %s.", rep->name, nt->name);
                 if (local_exec_tables.getbit(k)) continue;
@@ -434,7 +439,7 @@ void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &execu
                          << " in stage " << nt->stage());
                     r_i_r.insert(get_uid(nt));
                     local_exec_tables.setbit(k);
-                    executed_paths[i].setbit(nt->logical_id);
+                    executed_paths[i].setbit(*nt->global_id());
                 }
             }
         }
@@ -446,7 +451,7 @@ void NextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &execu
     for (int i = nti.first_stage + 1; i <= nti.last_stage; i++) {
         if (stages[i].empty()) continue;
         for (auto rep : stages.at(i)) {
-            if (executed_paths[i].getbit(rep->logical_id)) continue;
+            if (executed_paths[i].getbit(*rep->global_id())) continue;
             cstring branch = "$run_if_ran";
             int prev_st = 0;
             const IR::MAU::Table *prev_t = nullptr;
@@ -496,7 +501,7 @@ void NextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &execu
             }
             // Add to the propagation map for asm gen
             self.props[get_uid(prev_t)][branch].insert(get_uid(rep));
-            executed_paths[i].setbit(rep->logical_id);
+            executed_paths[i].setbit(*rep->global_id());
         }
     }
 }
@@ -505,8 +510,8 @@ bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
     int st = t->stage();
     self.max_stage = st > self.max_stage ? st : self.max_stage;
     self.mems[st].update(t->resources->memuse);
-    if (t->logical_id > self.stage_id[st])
-        self.stage_id[st] = t->logical_id;
+    if (*t->global_id() > self.stage_id[st])
+        self.stage_id[st] = *t->global_id();
     if (!findContext<IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
     // Add all of the table's table sequences
@@ -521,7 +526,7 @@ bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
 }
 
 void NextTable::Prop::end_apply() {
-    for (int i = 0; i < self.max_stage; ++i) {  // Fix up stage_id
+    for (unsigned i = 0; i < self.max_stage; ++i) {  // Fix up stage_id
         if (self.stage_id[i] < i * Memories::LOGICAL_TABLES)
             self.stage_id[i] = i * Memories::LOGICAL_TABLES;
         else
@@ -702,7 +707,7 @@ IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
 
     // Only add tables that are after the table starting this particular part of the sequence
     for (auto dumb_tbl : dumb_tbls[key]) {
-        if (dumb_tbl->logical_id > control_tbl->logical_id) {
+        if (*dumb_tbl->global_id() > *control_tbl->global_id()) {
             ts->tables.push_back(dumb_tbl);
         }
     }
@@ -710,13 +715,13 @@ IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
     // Put tables into LID sorted order
     std::sort(ts->tables.begin(), ts->tables.end(),
               [](const IR::MAU::Table* t1, const IR::MAU::Table* t2)
-              { return t1->logical_id < t2->logical_id; });
+              { return *t1->global_id() < *t2->global_id(); });
     return ts;
 }
 
 IR::Node* NextTable::TagReduce::preorder(IR::MAU::Table* t) {
     if (self.al_runs.count(t->unique_id()))
-        t->always_run = true;
+        t->always_run = IR::MAU::AlwaysRun::TABLE;
     return t;
 }
 
@@ -780,7 +785,7 @@ struct NextTable::TagReduce::merge_t {
 
 NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
     merge_t rv;
-    std::map<int, int> stage_id(self.stage_id);  // Need our own copy
+    std::map<int, unsigned> stage_id(self.stage_id);  // Need our own copy
     auto cap = [&](int k) {  // Check the capacity of a stage. 0 means full
                    return (k+1) * Memories::LOGICAL_TABLES - stage_id[k];
                };
@@ -899,7 +904,7 @@ bool NextTable::TagReduce::merge_tags() {
                                     LOG3("    - " << tname << " in stage " << st
                                          << ", targeting dest " << kv.first.dest->name);
                                     auto* dt = new IR::MAU::Table(tname, kv.first.thread());
-                                    dt->logical_id = self.stage_id[st]++;
+                                    dt->set_global_id(self.stage_id[st]++);
                                     stage_dts[st].push_back(dt);
                                     a.push_back(dt);
                                     return a;

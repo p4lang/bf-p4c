@@ -27,7 +27,7 @@ namespace MauPower {
 bool WalkPowerGraph::preorder(const IR::MAU::Table* t) {
   external_names_.emplace(t->unique_id(), t->externalName());
   gress_map_.emplace(t->unique_id(), t->gress);
-  stages_.emplace(t->unique_id(), t->logical_id / Memories::LOGICAL_TABLES);
+  stages_.emplace(t->unique_id(), t->stage());
   if (longest_table_name_ < t->externalName().size())
     longest_table_name_ = t->externalName().size();
   return true;
@@ -189,7 +189,7 @@ void WalkPowerGraph::compute_mpr() {
       if (s == 0) {  // stage 0 is special for MPR, everything is always_run
         int always_run = 0;
         for (auto tbl : tables_in_stage) {
-          always_run |= (1 << (tbl->logical_id % Memories::LOGICAL_TABLES)); }
+          if (tbl->logical_id) always_run |= (1 << *tbl->logical_id); }
         mpr->set_mpr_always_run(s, always_run);
       } else {
         mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(g, s);
@@ -206,12 +206,14 @@ void WalkPowerGraph::compute_mpr() {
         // - mpr_long_branch_ for long branches
 
         for (auto parent : tables_prev) {
+          if (!parent->logical_id) continue;
           int active = 0;
           for (auto child : tables_in_stage) {
+            if (!child->logical_id) continue;
             if (graph->can_reach(parent->unique_id(), child->unique_id())) {
-              active |= (1 << (child->logical_id % Memories::LOGICAL_TABLES));
+              active |= (1 << *child->logical_id);
           } }
-          mpr->set_mpr_next_table(s, parent->logical_id % Memories::LOGICAL_TABLES, active);
+          mpr->set_mpr_next_table(s, *parent->logical_id, active);
         }
 
         // Global exec powers on tables in the current stage based on the
@@ -232,16 +234,18 @@ void WalkPowerGraph::compute_mpr() {
           // Find which tables in this stage could be activated by global exec
           for (auto parent : tables_prev_minus_1) {
             for (auto child : tables_prev) {
+              if (!child->logical_id) continue;
               if (graph->can_reach(parent->unique_id(), child->unique_id())) {
                 // Since this 'child' table could be activated by global execute,
                 // we now have to find what tables 'child' can reach in the current
                 // stage.  This becomes the activation vector for this particular
                 // execute bit.
-                int exec_bit = child->logical_id % Memories::LOGICAL_TABLES;
+                int exec_bit = *child->logical_id;
                 int activate = 0;
                 for (auto tbl_in_stage : tables_in_stage) {
+                  if (!tbl_in_stage->logical_id) continue;
                   if (graph->can_reach(child->unique_id(), tbl_in_stage->unique_id())) {
-                    activate |= (1 << tbl_in_stage->logical_id % Memories::LOGICAL_TABLES);
+                    activate |= (1 << *tbl_in_stage->logical_id);
                 } }
                 mpr->set_or_mpr_global_exec(s, exec_bit, activate);
                 LOG5("Working on global exec bit in stage " << s);
@@ -255,8 +259,9 @@ void WalkPowerGraph::compute_mpr() {
           // in stage 1 until the first match dependent stage will have to be set to mpr always run.
           int active = 0;
           for (auto cur : tables_in_stage) {
+            if (!cur->logical_id) continue;
             if (cur->gress == g) {
-              active |= (1 << (cur->logical_id % Memories::LOGICAL_TABLES));
+              active |= (1 << *cur->logical_id);
               LOG4("Since the last match dependent stage is 0, no global execute bits will have"
                    << " been set and resolved.");
               LOG4("Setting " << cur->externalName() << " to always run.");
@@ -271,23 +276,25 @@ void WalkPowerGraph::compute_mpr() {
         // If the dependency is not match, check what intermediate hops can
         // reach the current stage.
         for (auto tbl : tables_in_stage) {
+          if (!tbl->logical_id) continue;
           if (initiated_by.find(tbl->unique_id()) != initiated_by.end()) {
             std::set<std::pair<int, UniqueId>> tags_and_ids = initiated_by.at(tbl->unique_id());
             LOG4("Table " << tbl->unique_id() << " is activated by:");
             for (auto p : tags_and_ids) {
-              int active = 1 << (tbl->logical_id % Memories::LOGICAL_TABLES);
+              int active = 1 << *tbl->logical_id;
               LOG4("  tag " << p.first << " and initiated by id " << p.second);
               int initiated_in_stage = (mau_features_->table_to_stage_.at(p.second)) %
                                         Device::numStages();
               // If this initiated table can reach other tables in this stage, those
               // also have to be activated (either in the LUT or as part of always run).
               for (auto in_stage : tables_in_stage) {
+                if (!in_stage->logical_id) continue;
                 if (tbl->unique_id() == in_stage->unique_id()) {
                   continue; }
                 if (graph->can_reach(tbl->unique_id(), in_stage->unique_id())) {
                   LOG4("  As a consequence, table " << in_stage->externalName()
                        << " also will be activated in the LUT.");
-                  active |= (1 << (in_stage->logical_id % Memories::LOGICAL_TABLES));
+                  active |= (1 << *in_stage->logical_id);
               } }
               if (initiated_in_stage <= last_match_dep_stage) {
                 mpr->set_or_mpr_long_branch(s, p.first, active);
@@ -305,21 +312,29 @@ void WalkPowerGraph::compute_mpr() {
 
         int always_run = 0;
         for (auto tbl : tables_in_stage) {
-          if (tbl->always_run) {
+          if (!tbl->logical_id) continue;
+          switch (tbl->always_run) {
+          case IR::MAU::AlwaysRun::NONE:
+          case IR::MAU::AlwaysRun::ACTION:
+            continue;
+
+          case IR::MAU::AlwaysRun::TABLE:
             LOG4("Table " << tbl->externalName() << " is marked as always run.");
-            always_run |= (1 << (tbl->logical_id % Memories::LOGICAL_TABLES));
+            always_run |= (1 << *tbl->logical_id);
             // Unfortunately, the way we currently setup the predication path requires
             // any other tables reachable in the stage to also be set to always run,
             // because there will be no input pointer (next table, global exec, long branch)
             // to us for the MPR LUTs on input.
             for (auto tbl2 : tables_in_stage) {
+              if (!tbl2->logical_id) continue;
               if (tbl->unique_id() == tbl2->unique_id()) {
                 continue; }
               if (graph->can_reach(tbl->unique_id(), tbl2->unique_id())) {
                 LOG4("  As a consequence, table " << tbl2->externalName()
                      << " also has to be set to always run.");
-                always_run |= (1 << (tbl2->logical_id % Memories::LOGICAL_TABLES));
+                always_run |= (1 << *tbl2->logical_id);
             } }
+            break;
         } }
         mpr->set_or_mpr_always_run(s, always_run);
       }
@@ -347,7 +362,8 @@ void WalkPowerGraph::compute_mpr() {
           // reflect that the global execute bits in the last match dependent
           // stage are what has resolved (those tables are potentially turned on).
           for (auto some_tbl : tables_last_match_dep) {
-            glob_active |= (1 << (some_tbl->logical_id % Memories::LOGICAL_TABLES));
+            if (!some_tbl->logical_id) continue;
+            glob_active |= (1 << *some_tbl->logical_id);
           }
           mpr->set_or_mpr_bus_dep_glob_exec(s, glob_active);
 
@@ -388,9 +404,19 @@ void WalkPowerGraph::compute_mpr() {
         mau_features_->get_tables_in_gress_stage(g, s, tables_in_stage);
         int always_run = 0;
         for (auto tbl : tables_in_stage) {
-          if (tbl->always_run) {
-            LOG4("Table " << tbl->externalName() << " was marked as always run."); }
-          always_run |= (1 << (tbl->logical_id % Memories::LOGICAL_TABLES));
+          switch (tbl->always_run) {
+          case IR::MAU::AlwaysRun::NONE:
+            break;
+
+          case IR::MAU::AlwaysRun::ACTION:
+            continue;
+
+          case IR::MAU::AlwaysRun::TABLE:
+            LOG4("Table " << tbl->externalName() << " was marked as always run.");
+            break;
+          }
+
+          always_run |= (1 << *tbl->logical_id);
         }
         mpr->set_or_mpr_always_run(s, always_run);
         // MPR Bus dep still has to be programmed to avoid model asserts.
@@ -556,7 +582,8 @@ double WalkPowerGraph::estimate_power_non_tofino() {
       int active = mpr_settings_.at(g)->get_mpr_always_run_for_stage(s);
       mau_features_->get_tables_in_gress_stage(g, s, tbls);
       for (auto t : tbls) {
-        int lid = t->logical_id % Memories::LOGICAL_TABLES;
+        if (!t->logical_id) continue;
+        int lid = *t->logical_id;
         if (active & (1 << lid)) {
           LOG4("  " << t->unique_id());
           log_it = true;
@@ -661,17 +688,20 @@ WalkPowerGraph::is_mpr_powered_on(gress_t gress, int stage, const IR::MAU::Table
   if (stage == last_match_dep_stage)  // Function cannot be called when already match-dependent.
     return false;
 
+  if (!table->logical_id) return false;
+
   std::vector<const IR::MAU::Table*> prev_tbls;
   mau_features_->get_tables_in_gress_stage(gress, last_match_dep_stage, prev_tbls);
   for (auto pt : prev_tbls) {
+    if (!pt->logical_id) continue;
     if (on_critical_path_.find(pt->unique_id()) == on_critical_path_.end() &&
         always_powered_on_.find(pt->unique_id()) == always_powered_on_.end()) {
-      int prev_lt = pt->logical_id % Memories::LOGICAL_TABLES;
+      int prev_lt = *pt->logical_id;
       int nt_active = mpr_settings_.at(gress)->get_mpr_next_table(stage, prev_lt);
       int glob_active = mpr_settings_.at(gress)->get_mpr_global_exec(stage, prev_lt);
       // Long branches are currently set to always run for this scenario.
 
-      int cur_lt = table->logical_id % Memories::LOGICAL_TABLES;
+      int cur_lt = *table->logical_id % Memories::LOGICAL_TABLES;
       if (nt_active & (1 << cur_lt))
         return true;
       if (glob_active & (1 << cur_lt))

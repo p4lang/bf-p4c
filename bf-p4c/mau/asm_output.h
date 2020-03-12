@@ -41,7 +41,7 @@ class MauAsmOutput : public MauInspector {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
     bool preorder(const IR::MAU::Table *tbl) override {
-        auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
+        auto tableId = std::make_pair(tbl->gress, tbl->stage());
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
     bool preorder(const IR::MAU::BackendAttached *) override {

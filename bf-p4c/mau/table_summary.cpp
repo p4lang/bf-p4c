@@ -53,13 +53,14 @@ void TableSummary::end_apply() {
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
-    if (t->logical_id < 0) {
+    if (!t->global_id()) {
         if (no_errors_before_summary)
             addPlacementError(t->toString() + " not placed");
         return true; }
-    BUG_CHECK(order.count(t->logical_id) == 0, "Encountering table multiple times in IR traversal");
-    assert(order.count(t->logical_id) == 0);
-    order[t->logical_id] = t;
+    BUG_CHECK(order.count(*t->global_id()) == 0,
+              "Encountering table multiple times in IR traversal");
+    assert(order.count(*t->global_id()) == 0);
+    order[*t->global_id()] = t;
     LOG3("Table " << t->name);
     tableNames[t->name] = getTableName(t);
     if (t->gateway_name) {
@@ -256,13 +257,13 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
         // int entries = t->layout.entries;
         // StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
 
-        int curr_stage = t->logical_id/16;
+        int curr_stage = t->stage();
         if (curr_stage != prev_stage)
             tp.addSep();
 
         tp.addRow({
             std::to_string(curr_stage),
-            std::to_string(t->logical_id),
+            std::to_string(*t->global_id()),
             std::string(1, (t->gress ? 'E' : 'I')),
             std::string(t->name.c_str()),
             std::to_string(t->layout.ixbar_bytes),

@@ -2361,7 +2361,7 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
         if (lt != 0)
             table_part->remove_gateway();
         // Clear gateway_name for the split table
-        table_part->logical_id = placed->logical_id + lt;
+        table_part->set_global_id(placed->logical_id + lt);
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
         auto rsrcs = placed->resources.clone()->rename(tbl, stage_table, lt);
@@ -2399,7 +2399,7 @@ IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
 
         if (lt != 0)
             table_part->remove_gateway();
-        table_part->logical_id = placed->logical_id + lt;
+        table_part->set_global_id(placed->logical_id + lt);
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
 
@@ -2639,7 +2639,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         return tbl; }
     if (tbl->is_placed())
         return tbl;
-    tbl->logical_id = it->second->logical_id;
+    tbl->set_global_id(it->second->logical_id);
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     IR::MAU::Table::Layout gw_layout;
@@ -2707,7 +2707,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         add_attached_tables(table_part, pl->use.preferred(), &pl->resources);
         if (gw_layout_used)
             table_part->layout += gw_layout;
-        table_part->logical_id = pl->logical_id;
+        table_part->set_global_id(pl->logical_id);
         table_part->stage_split = pl->stage_split;
 
         if (pl->entries) {
@@ -2855,7 +2855,7 @@ IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
-                return a->logical_id < b->logical_id;
+                return a->global_id() < b->global_id();
         });
     }
     seq->deps.clear();  // FIXME -- not needed/valid?  perhaps set to all 1s?

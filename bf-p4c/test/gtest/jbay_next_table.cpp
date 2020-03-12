@@ -104,8 +104,8 @@ class GTestTablePlacement : public PassManager {
             BUG_CHECK(stage >= 0, "Invalid stage on %1%", tbl->externalName());
             int logical_id = stage_ids[stage]++;
 
-            int global_log_id = stage * Memories::LOGICAL_TABLES + logical_id;
-            tbl->logical_id = global_log_id;
+            tbl->stage_ = stage;
+            tbl->logical_id = logical_id;
             tbl->resources = new TableResourceAlloc();
             return true;
         }

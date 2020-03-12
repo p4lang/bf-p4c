@@ -36,7 +36,7 @@ class TableTree {
     void print(std::ostream &out, const IR::MAU::Table *tbl) const {
         ordered_map<const IR::MAU::TableSeq *, safe_vector<cstring>> next;
         out << indent++;
-        if (tbl->logical_id >= 0) out << hex(tbl->logical_id) << ": ";
+        if (tbl->global_id()) out << hex(*tbl->global_id()) << ": ";
         out << tbl->name;
         const char *sep = "(";
         for (auto &row : tbl->gateway_rows) {

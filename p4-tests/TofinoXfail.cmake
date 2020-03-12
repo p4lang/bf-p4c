@@ -602,6 +602,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "The method call of read and write on a Register is currently not supported in p4c|error: Tofino does not support nested checksum updates"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
+)
+
+p4c_add_xfail_reason("tofino"
   "The method call of read and write on a Register is currently not supported in p4c"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
@@ -1366,7 +1371,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: Tofino does not support nested checksum updates"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129/comp_1129.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129b/comp_1129b.p4

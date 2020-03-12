@@ -1,5 +1,6 @@
 #emit
 struct TableResourceAlloc;
+#include <boost/optional.hpp>
 #include "bf-p4c/ir/ir_enums.h"
 #include "bf-p4c/ir/unique_id.h"
 #include "bf-p4c/mau/hash_function.h"
@@ -23,15 +24,10 @@ class Table : BFN::Unit {
     gress_t                                     gress;
     cstring                                     gateway_name;                   // ignored for ==?
     cstring                                     gateway_cond;
-    /** Each stage has 16 slots for tables.  Logical IDs are numbered from 0
-     * (Stage 0, Slot 0) to N * 16 + 15 (Stage N, Slot 15).  The @logical_id is
-     * where this table has been assigned, or -1 if it has not yet been
-     * assigned.
-     *
-     * If @logical_id is not -1, the stage this table is assigned to is
-     * `(int)(logical_id/16)`.
-     */
-    int                                         logical_id = -1;
+    /// The stage to which this table is assigned, if any.
+    boost::optional<unsigned>                   stage_ = boost::none;
+    /// The logical ID within the stage to which this table is assigned.
+    boost::optional<unsigned>                   logical_id = boost::none;
     // The split within the stage for an atcam/dleft table
     int                                         stage_split = -1;               // ignored for ==?
     int                                         logical_split = -1;             // ignored for ==?
@@ -72,7 +68,7 @@ class Table : BFN::Unit {
     // true, if we insert initialization to/from dark containers in this table. In that case, we
     // cannot split these tables.
     bool                                        has_dark_init = false;
-    bool                                        always_run = false;
+    AlwaysRun                                   always_run = AlwaysRun::NONE;
     bool                                        suppress_context_json = false;
 
 
@@ -273,7 +269,19 @@ class Table : BFN::Unit {
     // ir-generator can't parse {}-initializer (thinks it is the ctor body
 #end
 
-    int logical_order() const { return logical_id + gress * 4096; }
+    /** Returns the global logical ID for this table. Each stage has 16 slots
+     * for tables.  Global logical IDs are numbered from 0 (Stage 0, Slot 0) to
+     * N * 16 + 15 (Stage N, Slot 15).
+     */
+    boost::optional<int> global_id() const {
+        if (stage_ && logical_id) return *stage_ * StageUse::MAX_LOGICAL_IDS + *logical_id;
+        return boost::none;
+    }
+    void set_global_id(int id) {
+        stage_ = id / StageUse::MAX_LOGICAL_IDS;
+        logical_id = id % StageUse::MAX_LOGICAL_IDS;
+    }
+    int logical_order() const { return *global_id() + gress * 4096; }
     Table *clone_rename(cstring ext) const {
         Table *rv = clone();
         rv->name += ext;
@@ -310,12 +318,24 @@ class Table : BFN::Unit {
         // Add '-gateway' suffix to table name if gateway_name is not unique
         if (!gName.startsWith("cond")) gName = gName + "-gateway";
         return gName; }
-    int stage() const override {
-        return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
+    int stage() const override { return stage_ ? *stage_ : -1; }
     gress_t thread() const override { return gress; }
     toString { return "table " + externalName(); }
     validate {
         std::set<cstring> gw_next;
+        if (always_run == AlwaysRun::ACTION) {
+            // This table represents an always-run action, so a few things should be empty here.
+            BUG_CHECK(gateway_rows.empty(),
+                "always-run action %s is ill-formed: cannot have gateway rows", name);
+            BUG_CHECK(attached.empty(),
+                "always-run action %s is ill-formed: cannot have attached tables", name);
+            BUG_CHECK(match_key.empty(),
+                "always-run action %s is ill-formed: cannot have match keys", name);
+            BUG_CHECK(next.empty(),
+                "always-run action %s is ill-formed: cannot have next tables", name);
+            BUG_CHECK(gateway_payload == nullptr,
+                "always-run action %s is ill-formed: cannot have gateway payloads", name);
+        }
         for (auto &gw : gateway_rows) {
             if (&gw != &gateway_rows.back())
                 CHECK_NULL(gw.first);

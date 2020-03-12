@@ -222,3 +222,23 @@ bool operator>>(cstring s, IR::BFN::ParserWriteMode &t) {
     }
     return false;
 }
+
+static const char *always_run_to_str[] = {
+    "NONE", "TABLE", "ACTION"
+};
+
+std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar) {
+    out << always_run_to_str[static_cast<int>(ar)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::AlwaysRun &ar) {
+    for (int i = 0; i < 3; i++) {
+        if (always_run_to_str[i] == s) {
+            ar = static_cast<IR::MAU::AlwaysRun>(i);
+            return true;
+        }
+    }
+
+    return false;
+}

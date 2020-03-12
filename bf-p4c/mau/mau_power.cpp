@@ -27,13 +27,16 @@ gress_t get_gress(int stage) {
   return INGRESS;
 }
 
-int get_stage(int logical_id, gress_t g) {
+int get_stage(const IR::MAU::Table* t) {
+  auto g = t->gress;
+  BUG_CHECK(t->stage_, "Table %s was not assigned a stage number", t->name);
+
   if (g == EGRESS) {
-     return (logical_id / 16) + Device::numStages();
+     return t->stage() + Device::numStages();
   } else if (g == GHOST) {
-     return (logical_id / 16) + (2 * Device::numStages());
+     return t->stage() + (2 * Device::numStages());
   } else {
-     return logical_id / 16;
+     return t->stage();
   }
 }
 

@@ -3304,11 +3304,20 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
     TableMatch fmt(*this, phv, tbl);
     indent_t    indent(1);
+    BUG_CHECK(tbl->logical_id, "Table %s was not assigned a table ID", tbl->name);
     out << indent++ << tbl->get_table_type_string()
-        << ' ' << unique_id << ' ' << tbl->logical_id % 16U
+        << ' ' << unique_id << ' ' << *tbl->logical_id
         << ':' << std::endl;
-    if (tbl->always_run)
-        out << indent << "always_run: true" << std::endl;
+    switch (tbl->always_run) {
+    case IR::MAU::AlwaysRun::NONE:
+        break;
+    case IR::MAU::AlwaysRun::TABLE:
+        out << indent << "always_run: true" << std::endl; break;
+    default:
+        // TODO(Jed): emit this as "always_run_action"
+        BUG("Encountered always-run action while outputting assembly");
+        break;
+    }
     if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {

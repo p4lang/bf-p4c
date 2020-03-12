@@ -13,11 +13,10 @@ Visitor::profile_t CollectIXBarInfo::init_apply(const IR::Node* node) {
 }
 
 void CollectIXBarInfo::postorder(const IR::MAU::Table *tbl) {
-    unsigned stage = tbl->logical_id / StageUse::MAX_LOGICAL_IDS;
     if (!tbl->resources->match_ixbar.ternary)
         return;
     for (auto& use : tbl->resources->match_ixbar.use) {
-        _stage[stage].push_back(use);
+        _stage[tbl->stage()].push_back(use);
         _byteToTables[use] = tbl;
     }
 }

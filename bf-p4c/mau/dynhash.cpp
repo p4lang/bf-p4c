@@ -39,7 +39,7 @@ bool GatherDynamicHashAlloc::preorder(const IR::MAU::Table *tbl) {
             auto key = ir_alloc.dyn_hash_name;
             BUG_CHECK(verify_hash_gen.count(key), "Cannot associate the hash allocation for "
                 "dyn hash key %s", key);
-            HashFuncLoc hfl(tbl->logical_id / 16U, hd_use.hash_group());
+            HashFuncLoc hfl(tbl->stage(), hd_use.hash_group());
             auto value = std::make_pair(hfl, &ir_alloc);
             hash_gen_alloc[key].emplace_back(value);
         }

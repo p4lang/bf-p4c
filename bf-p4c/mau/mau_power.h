@@ -28,7 +28,7 @@ cstring dep_to_name(mau_dep_t dep);
 // However, note that function signatures assume the stage argument
 // runs from 0 to n-1.  This is checked.
 gress_t get_gress(int stage);
-int get_stage(int logical_id, gress_t g);
+int get_stage(const IR::MAU::Table* t);
 int get_stage_offset(gress_t g);
 std::string float2str(double d);
 void get_gress_iterator(std::vector<gress_t>& rv);

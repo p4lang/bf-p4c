@@ -314,6 +314,12 @@ class CoreAllocation {
      * ActionPhvConstraints.
      *
      * Uses mutex_i and uses_i.
+     *
+     * @param alloc the allocation computed so far.
+     * @param group the container group to which the slice list is to be allocated.
+     * @param super_cluster ???
+     * @param start_positions a map. Keys are the field slices to be allocated. Values are the
+     *                        corresponding conditional constraint on the field slice.
      */
     boost::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,

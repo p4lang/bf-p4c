@@ -80,7 +80,8 @@ void DeterminePowerUsage::find_stage_dependencies() {
         for (auto* t2 : prev) {
           if (t1->gress == t2->gress &&
               (control_graph->active_simultaneously(t2->unique_id(), t1->unique_id()) ||
-               t1->always_run || t2->always_run)) {
+               t1->always_run == IR::MAU::AlwaysRun::TABLE ||
+               t2->always_run == IR::MAU::AlwaysRun::TABLE)) {
             // Returns the dependency type from t1 to t2.
             DependencyGraph::mau_dependencies_t mau_dep = dep_graph_.find_mau_dependency(t1, t2);
             LOG4("MAU DEP t1 = " << t1->externalName() << " and t2 = "
@@ -191,16 +192,16 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
 }
 
 void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
-  int logical_table_id = t->logical_id;
-  int stage = get_stage(logical_table_id, t->gress);
+  if (!t->logical_id) return;
+  int stage = get_stage(t);
   table_uses_mocha_container_.emplace(t->unique_id(), uses_mocha_containers_in_ixbar(t));
-  if ((logical_table_id / Memories::LOGICAL_TABLES) >= Device::numStages()) {
+  if (t->stage() >= Device::numStages()) {
     exceeds_stages_ = true;
     return;
   }
   mau_features_->stage_to_tables_[stage].push_back(t);
   mau_features_->table_to_stage_.emplace(t->unique_id(),
-                                         logical_table_id / Memories::LOGICAL_TABLES);
+                                         t->stage());
   auto my_unique_id = t->unique_id();
 
   // Sum up memory accesses of each type of resource
@@ -414,7 +415,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
   LOG4("\nTable = " << t->externalName());
   LOG4("  power = " << table_power << " Watts.");
   LOG4("  normalized weight = " << normalized_wt << ".");
-  LOG4("  logical_id = " << logical_table_id << ".");
+  LOG4("  logical_id = " << *t->global_id() << ".");
   LOG4("\n" << memory_access);
   table_memory_access_.emplace(my_unique_id, memory_access);
 }

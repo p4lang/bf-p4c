@@ -2,7 +2,7 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 
 bool CalcMaxPhysicalStages::preorder(const IR::MAU::Table* tbl) {
-    int stage = tbl->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+    int stage = tbl->stage();
     if (stage + 1 > deparser_stage[tbl->gress])
         deparser_stage[tbl->gress] = stage + 1;
     return true;
@@ -35,7 +35,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
             le_bitrange bits;
             auto* f = phv.field(ref.second, &bits);
             if (usePhysicalStages) {
-                BUG_CHECK(t->logical_id != -1, "Table %1% is unallocated", t->name);
+                BUG_CHECK(t->global_id(), "Table %1% is unallocated", t->name);
                 auto minStages = phv.minStage(t);
                 for (auto stage : minStages) {
                     stageToTables[stage][t].insert(bits);
@@ -170,7 +170,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                         return alloc.field_bits().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
-                    int stage = kv.first->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+                    int stage = kv.first->stage();
                     LOG3("\t\t  Read table: " << kv.first->name << ", stage: " << stage);
                     if (minPhysicalRead == NOTSET && maxPhysicalRead == NOTSET) {
                         // Initial value not set.
@@ -198,7 +198,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                         return alloc.field_bits().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
-                    int stage = kv.first->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+                    int stage = kv.first->stage();
                     LOG3("\t\t  Written table: " << kv.first->name << ", stage: " << stage);
                     if (minPhysicalWrite == NOTSET && maxPhysicalWrite == NOTSET) {
                         // Initial value not set, so this stage is both maximum and minimum.
@@ -310,7 +310,7 @@ Visitor::profile_t UpdateFieldAllocation::init_apply(const IR::Node* root) {
 }
 
 bool UpdateFieldAllocation::preorder(const IR::MAU::Table* tbl) {
-    int stage = tbl->logical_id / TableSummary::NUM_LOGICAL_TABLES_PER_STAGE;
+    int stage = tbl->stage();
     PhvInfo::addMinStageEntry(tbl, stage);
     return true;
 }

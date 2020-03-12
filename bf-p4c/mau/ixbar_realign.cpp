@@ -7,7 +7,7 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
     IXBarVerify        &self;
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::MAU::Table *t) override {
-        BUG_CHECK(t->logical_id >= 0, "Table not placed");
+        BUG_CHECK(t->global_id(), "Table not placed");
         unsigned stage = t->stage();
         if (stage >= self.stage.size())
             self.stage.resize(stage + 1);

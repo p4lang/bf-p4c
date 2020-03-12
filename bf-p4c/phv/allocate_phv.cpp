@@ -954,6 +954,7 @@ CoreAllocation::tryAllocSliceList(
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const PHV::Allocation::ConditionalConstraint& start_positions) const {
+    // Collect up the field slices to be allocated.
     PHV::SuperCluster::SliceList slices;
     for (auto& kv : start_positions)
         slices.push_back(kv.first);
@@ -961,7 +962,7 @@ CoreAllocation::tryAllocSliceList(
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
     int container_size = int(group.width());
 
-    // Set previous_container to the container returned as part of start_positions
+    // Set previous_container to the container provided as part of start_positions, if any.
     PHV::Container previous_container;
     LOG5("trying to allocate slices at container indices: ");
     for (auto& slice : slices) {
@@ -1020,6 +1021,10 @@ CoreAllocation::tryAllocSliceList(
             return boost::none; } }
 
     // Return if the slices can't fit together in a container.
+    //
+    // Compute the aggregate size required for the slices before comparing against the container
+    // size. As we do this, figure out whether we have a wide arithmetic lo operation and find the
+    // associated hi field slice.
     int aggregate_size = 0;
     bool wide_arith_lo = false;
     PHV::SuperCluster::SliceList *hi_slice = nullptr;

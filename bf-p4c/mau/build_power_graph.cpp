@@ -70,7 +70,8 @@ bool BuildPowerGraph::preorder(const IR::MAU::TableSeq *seq) {
 bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
   SimplePowerGraph* graph = get_graph(tbl->gress);
   LOG4("Table " << tbl->externalName());
-  if (tbl->always_run) {
+  switch (tbl->always_run) {
+  case IR::MAU::AlwaysRun::TABLE:
     LOG4("  always run!");
     if (always_run_.size() > 0) {
       UniqueId last = always_run_.back();
@@ -83,6 +84,13 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
       }
     }
     always_run_.push_back(tbl->unique_id());
+    break;
+
+  case IR::MAU::AlwaysRun::NONE:
+    break;
+
+  case IR::MAU::AlwaysRun::ACTION:
+    return true;
   }
 
   // Build connections by looking at action names, $hit, $miss, $try_next_stage, $default.
