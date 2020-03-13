@@ -33,6 +33,7 @@ show_help () {
     echo >&2 "   --small-config         only builds the compiler and testing"
     echo >&2 "   --minimal-config       disable most build targets other than the compiler"
     echo >&2 "   --disable-unified      disable unified build"
+    echo >&2 "   --cmake-gen <gen>      see 'cmake -h' for list of generators"
 }
 
 
@@ -70,6 +71,10 @@ while [ $# -gt 0 ]; do
         ;;
     --disable-unified)
         disableUnified=true
+        ;;
+    --cmake-gen)
+        cmakeGen="$2"
+        shift
         ;;
     -D*)
         otherArgs+=" $1"
@@ -131,6 +136,7 @@ fi
 mkdir -p ${builddir}
 pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
+      ${cmakeGen:+"-G${cmakeGen}"} \
       ${ENABLED_COMPONENTS} \
       -DENABLE_GMP=OFF \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=1\
