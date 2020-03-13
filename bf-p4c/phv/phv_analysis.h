@@ -25,6 +25,7 @@
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
+#include "bf-p4c/logging/phv_logging.h"
 
 /** This is the main PHV allocation pass manager.
   */
@@ -79,7 +80,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
             FieldDefUse &defuse,
             DependencyGraph &deps,
             const DeparserCopyOpt &decaf,
-            MauBacktracker& alloc);
+            MauBacktracker& alloc,
+            CollectPhvLoggingInfo *phvLoggingInfo);
 };
 
 #endif  /* BF_P4C_PHV_PHV_ANALYSIS_H_ */

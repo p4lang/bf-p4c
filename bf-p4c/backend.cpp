@@ -100,7 +100,8 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
-                                              defuse, deps, decaf, table_alloc /*, &jsonGraph */);
+                                              defuse, deps, decaf, table_alloc,
+                                              phvLoggingInfo /*, &jsonGraph */);
     // Collect next table info if we're using LBs
     nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
         ? new NextTable : nullptr;
@@ -269,7 +270,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),
         new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis),
-        phvLoggingInfo,
         new InstructionAdjustment(phv),
         nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
