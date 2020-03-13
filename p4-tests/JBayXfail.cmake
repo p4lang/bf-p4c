@@ -361,3 +361,9 @@ p4c_add_xfail_reason("tofino2"
   "Table .* @dynamic_table_key_masks annotation only permissible with exact matches"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
 )
+
+# P4C-2555
+p4c_add_xfail_reason("tofino2"
+  "Ran out of chunks in field dictionary"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
+)

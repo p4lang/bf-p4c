@@ -386,6 +386,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
   extensions/p4_tests/p4_16/customer/microsoft/p4c-2387.p4
   extensions/p4_tests/p4_16/ptf/digest.p4
   extensions/p4_tests/p4_16/ptf/hash_driven_stats.p4
