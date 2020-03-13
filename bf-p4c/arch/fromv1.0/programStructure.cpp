@@ -806,7 +806,7 @@ class FindHeaderReference : public Inspector {
                 use |= structure->controlParamUse.at(p->name); }
         } else if (p->name == "drop" || p->name == "mark_for_drop" ||
                    p->name == "mark_to_drop") {
-            if (structure->currentGress == INGRESS)
+            if (structure->getGress(control) == INGRESS)
                 use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
             else
                 use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"));
@@ -2514,6 +2514,9 @@ bool CollectBridgedFields::preorder(const IR::MethodCallExpression*) {
 }
 
 bool CollectBridgedFields::preorder(const IR::Member* expr) {
+    auto context = findContext<IR::Function>();
+    if (context)
+        return false;
     const bool exprIsRead = isRead();
     const bool exprIsWrite = isWrite();
     if (exprIsRead)

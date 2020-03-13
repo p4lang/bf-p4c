@@ -159,7 +159,6 @@ class TnaProgramStructure : public ProgramStructure {
     cstring convertLinearPathToStructFieldName(BFN::LinearPath* path);
     void checkForReservedTnaTypes();
     void collectHeaderReference(const IR::V1Control* control);
-    gress_t getGress(cstring name);
     void parseUpdateLocationAnnotation(std::set<gress_t>&, const IR::Annotation*, cstring);
     bool useResidualChecksum();
     bool useBridgeMetadata();
@@ -195,6 +194,7 @@ class TnaProgramStructure : public ProgramStructure {
     gress_t currentGress;
     std::map<cstring, bitvec> controlParamUse;
     std::map<cstring, gress_t> mapControlToGress;
+    gress_t getGress(cstring name);
     std::map<unsigned long, unsigned> cloneIndexHashes[2];
     std::map<unsigned long, unsigned> resubmitIndexHashes;
     std::map<unsigned long, unsigned> digestIndexHashes;
