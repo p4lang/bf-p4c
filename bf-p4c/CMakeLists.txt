@@ -673,6 +673,7 @@ set (BF_P4C_GRAPHS_SRCS
 
 set (p4include_HEADERS
   p4include/tofino.p4
+  p4include/tofino_fixed.p4
   p4include/tofino1arch.p4
   p4include/tna.p4
   p4include/tofino/lpf.p4

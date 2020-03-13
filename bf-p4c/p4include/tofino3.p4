@@ -1211,4 +1211,6 @@ extern Alpm {
     Alpm(@optional bit<32> number_partitions, @optional bit<32> subtrees_per_partition);
 }
 
+#include "tofino_fixed.p4"
+
 #endif  /* _TOFINO3_P4_ */
