@@ -95,6 +95,12 @@ p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
   "smoketest_switch_16_compile_j1_profile" ${switch_p4_16_j1} "${testExtraArgs}" "-DJ1_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata\" -arch tna -to 1200")
 p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_j1_profile")
 
+set (SWITCH_P4_16_D2 ${SWITCH_P4_16_ROOT}/p4src/switch-tofino/switch_tofino_d2.p4)
+file (RELATIVE_PATH switch_p4_16_d2 ${P4C_SOURCE_DIR} ${SWITCH_P4_16_D2})
+p4c_add_test_with_args("tofino" ${P4C_RUNTEST} FALSE
+  "smoketest_switch_16_compile_d2_profile" ${switch_p4_16_d2} "${testExtraArgs}" "-DD2_PROFILE -I${SWITCH_P4_16_INC} -Xp4c=\"--auto-init-metadata\" -arch tna -to 1200")
+p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_d2_profile")
+
 # We cannot run some tests in our environment as some interfaces referenced in the port
 # mapping file specified for bf-switch don't exist.
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x1" ${SWITCH_P4_16_X1}
@@ -130,6 +136,7 @@ set_tests_properties("tofino/smoketest_switch_16_compile_x2_profile" PROPERTIES 
 set_tests_properties("tofino/smoketest_switch_16_compile_x3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_m1_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_j1_profile" PROPERTIES TIMEOUT 1200)
+set_tests_properties("tofino/smoketest_switch_16_compile_d2_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 4500)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 5400)
