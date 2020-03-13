@@ -160,11 +160,19 @@ WORKDIR /bfn/bf-p4c-compilers
 ENV ((test "$BUILD_FOR" = "tofino" || test "$BUILD_FOR" = "release" || \
       test "$BUILD_FOR" = "glass") && LDFLAGS="-Wl,-s")
 RUN (test "$BUILD_FOR" = "tofino" && /usr/local/bin/ccache --zero-stats && \
-    ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    (test "$IMAGE_TYPE" = "non-unified" && ./bootstrap_bfn_compilers.sh \
+                                 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                                  -DINSTALL_LIBDYNHASH=OFF \
                                  -DENABLE_P4C_GRAPHS=OFF \
                                  -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
                                  -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF \
+                                 --disable-unified ) || \
+    (test "$IMAGE_TYPE" = "test" && ./bootstrap_bfn_compilers.sh \
+                                 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                                 -DINSTALL_LIBDYNHASH=OFF \
+                                 -DENABLE_P4C_GRAPHS=OFF \
+                                 -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF \
+                                 -DENABLE_EBPF=OFF -DENABLE_STF2PTF=OFF) \
                                  && \
     cd build && \
     make && \
@@ -218,7 +226,8 @@ RUN rm -rf .git
 
 WORKDIR /bfn/
 RUN (test "$IMAGE_TYPE" = "release" && rm -rf bf-p4c-compilers) || \
-    (test "$IMAGE_TYPE" = "test")
+    (test "$IMAGE_TYPE" = "test") || \
+    (test "$IMAGE_TYPE" = "non-unified")
 
 # cleanup space on the image
 RUN apt-get clean -y && apt-get autoclean -y
