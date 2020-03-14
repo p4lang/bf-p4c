@@ -377,6 +377,8 @@ void MeterTable::write_regs(REGS &regs) {
                 if (hashdata_bytemask != 0U) {
                     vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                     hashdata_bytemask;
+                    setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + side],
+                                 input_xbar->hash_group());
                 } else {
                     // FIXME: Need to be some validation between Tofino and JBay if the input
                     // xbar is valid for these meters.
