@@ -367,3 +367,9 @@ p4c_add_xfail_reason("tofino2"
   "Ran out of chunks in field dictionary"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
+
+# DRV-3485
+p4c_add_xfail_reason("tofino2"
+  "BfruntimeReadWriteRpcException"
+  p4_16_programs_tna_ternary_match
+)

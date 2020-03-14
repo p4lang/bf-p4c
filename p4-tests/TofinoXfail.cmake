@@ -1716,3 +1716,9 @@ p4c_add_xfail_reason("tofino"
   ".* @dynamic_table_key_masks annotation only permissible with exact matches"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
 )
+
+# DRV-3485
+p4c_add_xfail_reason("tofino"
+  "BfruntimeReadWriteRpcException"
+  p4_16_programs_tna_ternary_match
+)

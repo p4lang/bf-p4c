@@ -83,7 +83,7 @@ set (TOFINO_MUST_PASS_TESTS
   p4_16_programs_tna_range_match
   p4_16_programs_tna_register
   p4_16_programs_tna_simple_switch
-  p4_16_programs_tna_ternary_match
+  #p4_16_programs_tna_ternary_match
 
   # Switch compile only
   smoketest_switch_16_compile_a0_profile
