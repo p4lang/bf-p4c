@@ -189,7 +189,10 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             ++idx; }
         if (size_t(idx) >= params->parameters.size()) return false;
         BUG_CHECK(size_t(idx) < param_types->size(), "param index out of range"); }
-    if (field_idx == 0 && field && regtype->is<IR::Type_StructLike>()) {
+    if (field && regtype->is<IR::Type_StructLike>() && argType == regtype) {
+        BUG_CHECK(field_idx == 0 || (local && local->use == LocalVar::NONE),
+                  "invalid reuse of local %s.%s", pe, field);
+        field_idx = 0;
         for (auto f : regtype->to<IR::Type_StructLike>()->fields) {
             if (f->name == field) {
                 argType = f->type;
@@ -397,6 +400,10 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
         etype = OUTPUT;
         operands.push_back(new IR::Constant(1)); }
     BUG_CHECK(operands.size() > (etype < OUTPUT), "%1%: recursion failure", srcInfo);
+    if (operands.front()->type->width_bits() > Device::statefulAluSpec().MaxSize)
+        warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Wide operations not supported in "
+                "stateful alu, will only operate on bottom %2% bits", srcInfo,
+                Device::statefulAluSpec().MaxSize);
     if (dest && dest->use != LocalVar::ALUHI) {
         BUG_CHECK(etype == VALUE, "assert failure");
         LocalVar::use_t use = LocalVar::NONE;

@@ -18,3 +18,6 @@ Layout
 
 5. customer
 - all p4_16 programs which are customer issues (these could be of any test category above (1-4))
+
+6. errors
+- p4_16 programs that are expected to give compile-time errors
