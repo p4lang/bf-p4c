@@ -96,6 +96,40 @@ def count_array_loop(count, func, context=None, current_dim=0):
     else:
         func(context)
 
+
+
+def format_comment(outfile, indent, text):
+    """
+    Output text as a C++ comment block in an output file
+    FIXME -- need better way of dealing with [list]?  For now just replace each [*] with
+             newline and indent and assume they're all in lists.
+    """
+
+    text = text.replace('[list]', '')
+    text = text.replace('[/list]', '\n')
+    text = text.replace('[*]', '\n    ')
+    text = text.replace('[code]', "'")
+    text = text.replace('[/code]', "'")
+    text = text.replace('[italic]', '')
+    text = text.replace('[/italic]', '')
+    lines = text.splitlines()
+    for line in lines:
+        line = line.rstrip()
+        pfx = len(line) - len(line.lstrip())
+        while len(line) > 0:
+            outfile.write(indent)
+            outfile.write("// ")
+            outfile.write(' ' * pfx)
+            line = line.lstrip()
+            pt = line.rfind(' ', 0, 90-pfx-len(indent))
+            if len(line) + len(indent) + pfx > 90 and pt > 0:
+                outfile.write(line[0:pt])
+                line = line[pt+1:]
+            else:
+                outfile.write(line)
+                line = ''
+            outfile.write("\n")
+
 ########################################################################
 ## Structures
 
@@ -972,6 +1006,8 @@ class csr_composite_object (csr_object):
             notclass = typ.is_field() or typ.top_level()
             isglobal = el.name in args.global_types
             if args.gen_decl != 'defn':
+                if hasattr(el, 'description') and el.description:
+                    format_comment(outfile, indent, el.description)
                 outfile.write(indent)
                 if args.checked_array and notclass and el.count != (1,):
                     for idx in el.count:
@@ -1769,6 +1805,7 @@ def parse_csrcompiler_csv (filename, section_name):
         for row in csv_reader:
             array_size = parse_array_size(row["Array"])
 
+            active_object = None
             if len(active_group) > 0:
                 active_container = active_group[-1]
             else:
@@ -1785,6 +1822,7 @@ def parse_csrcompiler_csv (filename, section_name):
                 reg_width = int(row["Register Size"].replace(" bits",""),0)
                 active_container.objs.append(reg(row["Identifier"], array_size, int(row["Offset"],0), reg_width, active_addr_map))
                 active_reg = active_container.objs[-1]
+                active_object = active_reg
                 if row["Reset Value"] == "":
                     active_reg_default = 0
                 else:
@@ -1816,6 +1854,7 @@ def parse_csrcompiler_csv (filename, section_name):
                             raise CsrException("Field reset value list is not the same length as the field array itself (in CSV file '"+filename+"' line "+str(row_num)+")")
 
                 active_reg.fields.append(field(row["Identifier"], array_size, msb, lsb, default, active_reg))
+                active_object = active_reg.fields[-1]
             elif row["Type"] == "addressmap instance":
                 try:
                     stride = int(row["Stride"].replace(" bytes",""),0)
@@ -1847,6 +1886,7 @@ def parse_csrcompiler_csv (filename, section_name):
                     )
                 )
                 active_group.append(active_container.objs[-1])
+                active_object = active_group[-1]
             elif row["Type"] == "endgroup":
                 popped_group = active_group.pop()
                 if popped_group.stride == None:
@@ -1862,6 +1902,9 @@ def parse_csrcompiler_csv (filename, section_name):
                 pass
             else:
                 raise CsrException("Unrecognized type '"+row["Type"]+"' in CSV file '"+filename+"' line "+str(row_num))
+
+            if "Description" in row and row["Description"] and active_object:
+                active_object.description = row["Description"]
 
             row_num += 1
 
