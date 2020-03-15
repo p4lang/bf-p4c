@@ -1,6 +1,78 @@
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/lib/union_find.hpp"
 
+class SuperClusterSliceListOrderItr {
+    ordered_set<PHV::SuperCluster::SliceList*>::const_iterator list_itr_i;
+    std::list<PHV::FieldSlice>::const_iterator fs_itr_i;
+    bool done_i = false;
+    const PHV::SuperCluster* sc_i;
+    int offset_i = 0;
+
+ public:
+    explicit SuperClusterSliceListOrderItr(const PHV::SuperCluster* sc) {
+        if (sc->slice_lists().size() == 0) {
+            done_i = true;
+            return;
+        }
+        list_itr_i = sc->slice_lists().begin();
+        fs_itr_i = (*list_itr_i)->begin();
+        sc_i = sc;
+    }
+
+    bool done() {
+        return done_i;
+    }
+
+    bool next() {
+        if (done_i) {
+            return false;
+        }
+        int last_size = fs_itr_i->size();
+        fs_itr_i++;
+        if (fs_itr_i == (*list_itr_i)->end()) {
+            list_itr_i++;
+            if (list_itr_i == sc_i->slice_lists().end()) {
+                done_i = true;
+                return false;
+            } else {
+                fs_itr_i = (*list_itr_i)->begin();
+            }
+        }
+        offset_i += last_size;
+        return true;
+    }
+
+    std::pair<PHV::FieldSlice, int> val() {
+        return std::make_pair(*fs_itr_i, offset_i);
+    }
+};
+
+// build_offsets_to_compress_schema returns map<int,int> that rst[x] = y indicates
+// the x offset bit is a slice point, in y-th bit of the compress_schema.
+std::map<int, int> build_offsets_to_compress_schema(const PHV::SuperCluster* sc, bitvec schema) {
+    std::map<int, int> rst;
+    if (schema.empty()) {
+        return rst;
+    }
+    int right = 0;
+    int bits_right = 0;
+    for (const auto& sl : sc->slice_lists()) {
+        const int sz = std::accumulate(sl->begin(), sl->end(), 0,
+        [] (int s, PHV::FieldSlice fs) -> int {
+            return s + fs.size();
+        });
+        const int nbits = std::max(0, sz / 8 + (sz % 8) - 1);
+        for (int i = 0; i < nbits; i++) {
+            if (schema[bits_right + i]) {
+                rst[right + (i + 1) * 8] = bits_right + i;
+            }
+        }
+        right += sz;
+        bits_right += nbits;
+    }
+    return rst;
+}
+
 cstring PHV::SlicingIterator::get_slice_coordinates(
         const int slice_list_size,
         const std::pair<int, int>& slice_locations) const {
@@ -180,6 +252,41 @@ PHV::SlicingIterator::SlicingIterator(
             print_slicing_state(sliceLocations, exactSliceListSize);
         } while (change_i && iterations_i < 5);
 
+        // Drop false positive required slice at no_split fields.
+        if (!required_slices_i.empty()) {
+            const auto required = build_offsets_to_compress_schema(sc, required_slices_i);
+            auto next_required_slice = required.begin();
+            auto fs_itr = SuperClusterSliceListOrderItr(sc);
+            boost::optional<FieldSlice> last = boost::none;
+            LOG8("Checking required bits valid: " << sc
+                << " required_slices: " << required_slices_i);
+            while (!fs_itr.done()) {
+                const auto fs_offset = fs_itr.val();
+                const auto fs = fs_offset.first;
+                const auto offset = fs_offset.second;
+                const auto next_split = next_required_slice->first;
+                if (offset == next_split || offset + fs.size() > next_split) {
+                    // slice on the right of this fs.
+                    if (offset == next_split) {
+                        if (last != boost::none && (*last).field() == fs.field()
+                            && fs.field()->no_split()) {
+                            LOG1("Dropping required but no_split between ("
+                                << *last  << ")" << fs);
+                            required_slices_i.clrbit(next_required_slice->second);
+                        }
+                    } else if (fs.field()->no_split()) {
+                        LOG1("Dropping required but no_split on: " << fs);
+                        required_slices_i.clrbit(next_required_slice->second);
+                    }
+                    next_required_slice.operator++();
+                    if (next_required_slice == required.end()) {
+                        break;
+                    }
+                }
+                fs_itr.next();
+            }
+        }
+
         if (LOGGING(5)) {
             std::stringstream ss;
             for (int i = 0; i < sentinel_idx_i; ++i)
@@ -231,7 +338,7 @@ PHV::SlicingIterator::SlicingIterator(
             return; } }
 
     BUG_CHECK(sentinel_idx_i > 0, "Bad compressed schema sentinel: %1%", sentinel_idx_i);
-    LOG3("    ...there are 2^" << sentinel_idx_i << " ways to slice");
+    LOG4("    ...there are 2^" << sentinel_idx_i << " ways to slice");
     if (LOGGING(5)) {
         LOG5("Initial compressed schema: " << compressed_schemas_i);
         std::stringstream ss;
