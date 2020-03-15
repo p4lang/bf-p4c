@@ -1700,12 +1700,13 @@ class ConstructSymbolTable : public Inspector {
         auto egress_spec = new IR::Member(tm_meta, "ucast_egress_port");
         IR::PathExpression *intr_meta = new IR::PathExpression("ig_intr_md");
         auto ingress_port = new IR::Member(intr_meta, "ingress_port");
+        int portWidth = Device::portBitWidth();
 
         auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
         stmts->push_back(new IR::AssignmentStatement(new IR::Slice(egress_spec, 6, 0),
                 new IR::Slice(mce->arguments->at(0)->expression, 6, 0)));
-        stmts->push_back(new IR::AssignmentStatement(new IR::Slice(egress_spec, 8, 7),
-                new IR::Slice(ingress_port, 8, 7)));
+        stmts->push_back(new IR::AssignmentStatement(new IR::Slice(egress_spec, portWidth-1, 7),
+                new IR::Slice(ingress_port, portWidth-1, 7)));
         structure->_map.emplace(node, stmts);
     }
 
