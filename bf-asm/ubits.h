@@ -89,6 +89,13 @@ template<int N> struct ubits : ubits_base {
         write = true;
         log("+=", v);
         return check(); }
+    const ubits &operator^=(uint64_t v) {
+        if (disabled_)
+            ERROR("Overwriting disabled register value in " << this);
+        value ^= v;
+        write = true;
+        log("^=", v);
+        return check(); }
     const ubits &set_subfield(uint64_t v, unsigned bit, unsigned size) {
         if (disabled_)
             ERROR("Overwriting disabled register value in " << this);

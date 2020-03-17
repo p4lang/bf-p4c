@@ -64,6 +64,7 @@ class InputXbar {
         int             lineno = -1;
         unsigned        tables = 0; //Bit set for table index
         uint64_t        seed = 0;
+        bool            seed_parity = false; // Parity to be set on the seed value
     };
     Table       *table;
     std::map<int, HashCol>                              empty_hash_table;

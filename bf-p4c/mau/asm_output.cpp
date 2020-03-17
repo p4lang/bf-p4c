@@ -1240,6 +1240,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
             out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
                 << std::endl;
             out << indent << "seed: 0x" << use->hash_seed[hash_group] << std::endl;
+            if (use->is_parity_enabled())
+                out << indent << "seed_parity: true" << std::endl;
             --indent;
         }
     }

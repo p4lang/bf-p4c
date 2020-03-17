@@ -159,6 +159,9 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                                     hash_groups[index].tables |= 1U << el.value.i;
                             } else if (CHECKTYPE(el.value, tVEC))
                                 tbl = &el.value.vec;
+                        } else if (el.key == "seed_parity") {
+                            if (el.value.type == tSTR && el.value == "true")
+                                    hash_groups[index].seed_parity = true;
                         } else
                             error(el.key.lineno, "invalid hash group descriptor"); }
                 } else
@@ -706,10 +709,15 @@ void InputXbar::write_regs(REGS &regs) {
             hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
             regs.dp.mau_match_input_xbar_exact_match_enable[gress].rewrite();
             regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= hg.second.tables; }
+        int seed_parity = 0;
         if (hg.second.seed) {
-            for (int bit = 0; bit < 52; ++bit)
-                if ((hg.second.seed >> bit) & 1)
-                    hash.hash_seed[bit] |= UINT64_C(1) << grp; }
+            for (int bit = 0; bit < 52; ++bit) {
+                if ((hg.second.seed >> bit) & 1) {
+                    seed_parity ^= 1;
+                    hash.hash_seed[bit] |= UINT64_C(1) << grp; 
+                }
+            }
+        }
         if (gress == INGRESS)
             regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else
@@ -719,12 +727,32 @@ void InputXbar::write_regs(REGS &regs) {
         if (hg.second.tables && !options.disable_gfm_parity) {
             // Enable check if parity bit is set on all tables in hash group
             int hash_group_parity = true;
+            int parity_bit = -1;
             for (int index : bitvec(hg.second.tables)) {
                 if (!hash_table_parity.count(index)) {
                     hash_group_parity = false;
-                    break; } }
-            if (hash_group_parity)
+                    break; 
+                } else {
+                    if (parity_bit == -1) {
+                        parity_bit = hash_table_parity[index];
+                    } else {
+                        if (hash_table_parity[index] != parity_bit)
+                            error(hg.second.lineno, "Hash tables within a hash group "
+                                    "do not have the same parity bit - %d", grp);
+                    }
+                }
+            }
+            if (hash_group_parity) {
+                if (parity_bit < 0) 
+                    error(hg.second.lineno, "No parity bit found for hash group %d", grp); 
                 regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
+                if (seed_parity) {  // flip parity bit setup on group for even parity
+                    if (!hg.second.seed_parity)
+                        warning(hg.second.lineno, "hash group %d has parity enabled, but setting seed_parity"
+                                " is disabled, changing seed to even parity", grp);
+                    hash.hash_seed[parity_bit] ^= (1 << grp);
+                }
+            }
         }
     }
 }

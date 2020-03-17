@@ -228,6 +228,10 @@ stage <constant> <thread>:
                     # one or more hash tables to xor together for this group
                 seed: <hash>
                     # 52-bit hash seed value
+                seed_parity: <bool>
+                    # optional parameter to indicate if seed must be parity
+                    # encoded, must be true when hash parity is enabled on the
+                    # group.
                 <int>
                     # a single table to use for the group
             group <constant>: '[]'
