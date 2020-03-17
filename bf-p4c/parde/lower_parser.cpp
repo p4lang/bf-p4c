@@ -1099,11 +1099,9 @@ struct ElimEmptyState : public ParserTransform {
             if (auto next = get_unconditional_transition(transition->next)) {
                 if (int(transition->shift + next->shift) <=
                     Device::pardeSpec().byteInputBufferSize()) {
+                    LOG3("elim empty state " << transition->next->name);
                     transition->next = next->next;
                     transition->shift += next->shift;
-
-                    auto state = findContext<IR::BFN::ParserState>();
-                    LOG3("elim empty state " << state->name);
                 }
             }
         }

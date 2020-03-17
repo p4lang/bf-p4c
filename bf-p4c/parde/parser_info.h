@@ -95,7 +95,7 @@ class ParserGraphImpl : public DirectedGraph {
 
     bool is_loopback_state(cstring state) const {
         for (auto& kv : _loopbacks) {
-            if (state == stripThreadPrefix(kv.first.second))
+            if (stripThreadPrefix(state) == stripThreadPrefix(kv.first.second))
                 return true;
         }
 
