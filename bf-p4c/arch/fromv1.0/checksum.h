@@ -22,7 +22,8 @@ namespace V1 {
 
 class TranslateParserChecksums : public PassManager {
  public:
-    std::map<const IR::Expression*, IR::Member*> bridgedResidualChecksums;
+    std::map<const IR::Expression*, IR::Member*> residualChecksums;
+    std::set<const IR::Expression*> needBridging;
     std::map<const IR::Expression*, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
     std::map<const IR::Expression*, std::map<gress_t, const IR::ParserState*>> destToGressToState;
     DeclToStates ingressVerifyDeclToStates;
@@ -112,9 +113,10 @@ createChecksumError(const IR::Declaration* decl, gress_t gress) {
 }
 
 static std::vector<gress_t>
-getChecksumUpdateLocations(const IR::BlockStatement* block, cstring pragma) {
+getChecksumUpdateLocations(const IR::MethodCallExpression* call,
+                           const IR::BlockStatement* block,
+                           cstring pragma) {
     std::vector<gress_t> updateLocations;
-
     if (pragma == "calculated_field_update_location")
         updateLocations = { EGRESS };
     else if (pragma == "residual_checksum_parser_update_location")
@@ -126,7 +128,8 @@ getChecksumUpdateLocations(const IR::BlockStatement* block, cstring pragma) {
         if (annot->name.name == pragma) {
             auto& exprs = annot->expr;
             auto gress = exprs[0]->to<IR::StringLiteral>();
-
+            auto pCall = exprs[1]->to<IR::MethodCallExpression>();
+            if (!pCall->equiv(*call)) continue;
             if (gress->value == "ingress")
                 updateLocations = { INGRESS };
             else if (gress->value == "egress")
@@ -171,9 +174,11 @@ class CollectParserChecksums : public Inspector {
 
                 auto block = findContext<IR::BlockStatement>();
                 parserUpdateLocations[node] =
-                    getChecksumUpdateLocations(block, "residual_checksum_parser_update_location");
+                    getChecksumUpdateLocations(mce, block,
+                                       "residual_checksum_parser_update_location");
                 deparserUpdateLocations[node] =
-                    getChecksumUpdateLocations(block, "calculated_field_update_location");
+                    getChecksumUpdateLocations(mce, block,
+                                         "calculated_field_update_location");
             }
         }
     }
@@ -342,19 +347,23 @@ class InsertParserChecksums : public Inspector {
         auto condition = mc->arguments->at(0)->expression;
         auto fieldlist = mc->arguments->at(1)->expression;
         auto destfield = mc->arguments->at(2)->expression;
+        if (parserUpdateLocations.size() == 1 &&
+            parserUpdateLocations[0] == INGRESS &&
+            deparserUpdateLocations.size() == 1 &&
+            deparserUpdateLocations[0] == EGRESS) {
+            translate->needBridging.insert(destfield);
+        }
 
-        bool needBridging = parserUpdateLocations.size() == 1 &&
-                            parserUpdateLocations[0] == INGRESS &&
-                            deparserUpdateLocations.size() == 1 &&
-                            deparserUpdateLocations[0] == EGRESS;
-
-        if (needBridging && !translate->bridgedResidualChecksums.count(destfield)) {
+        if (!translate->residualChecksums.count(destfield)) {
             auto *compilerMetadataPath =
                     new IR::PathExpression(COMPILER_META);
+            auto* cgAnnotation = new IR::Annotations({
+                       new IR::Annotation(IR::ID("__compiler_generated"), { })});
 
             auto *compilerMetadataDecl = const_cast<IR::Type_Struct*>(
                 structure->type_declarations.at("compiler_generated_metadata_t")
                          ->to<IR::Type_Struct>());
+            compilerMetadataDecl->annotations = cgAnnotation;
 
             std::stringstream residualFieldName;
             residualFieldName << "residual_checksum_";
@@ -367,7 +376,7 @@ class InsertParserChecksums : public Inspector {
                 new IR::StructField(residualFieldName.str().c_str(),
                                     IR::Type::Bits::get(16)));
 
-            translate->bridgedResidualChecksums[destfield] = residualChecksum;
+            translate->residualChecksums[destfield] = residualChecksum;
             translate->destToGressToState[destfield][deparserUpdateLocations[0]] = state;
         }
 
@@ -436,10 +445,7 @@ class InsertParserChecksums : public Inspector {
                             new IR::Member(new IR::PathExpression(decl->name), "get"),
                             { });
 
-                    auto* residualChecksum = needBridging ?
-                                             translate->bridgedResidualChecksums.at(destfield) :
-                                             destfield;
-
+                    auto* residualChecksum = translate->residualChecksums.at(destfield);
                     IR::Statement* stmt = new IR::AssignmentStatement(residualChecksum, getCall);
                     if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {
                         if (!boolLiteral->value) {

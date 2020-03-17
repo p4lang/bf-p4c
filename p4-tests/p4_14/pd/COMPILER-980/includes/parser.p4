@@ -1374,7 +1374,7 @@ field_list inner_udp_checksum_list {
     inner_udp.length_ ;
     payload;
 }
-
+@pragma calculated_field_update_location ingress
 field_list_calculation inner_udp_checksum {
     input {
         inner_udp_checksum_list;

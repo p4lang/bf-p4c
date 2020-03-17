@@ -1114,7 +1114,7 @@ class ConstructSymbolTable : public Inspector {
     void addResidualFields(cstring cloneHeaderName,
                            std::vector<DigestFieldInfo>* digestFieldsFromSource,
                            cstring cloneType) {
-        if (parserChecksums->bridgedResidualChecksums.empty()) return;
+        if (parserChecksums->needBridging.empty()) return;
         auto header = structure->type_declarations.at(cloneHeaderName)->to<IR::Type_Header>();
         auto fields = new IR::IndexedVector<IR::StructField>();
         for (auto f : header->fields) {
@@ -1143,7 +1143,7 @@ class ConstructSymbolTable : public Inspector {
                 cstring fieldName = "__field_" + std::to_string(idx);
                 fields->push_back(new IR::StructField(IR::ID(fieldName), IR::Type::Bits::get(16)));
                 auto tpl = std::make_tuple(fieldName, IR::Type::Bits::get(16),
-                            parserChecksums->bridgedResidualChecksums.at(gressToStateMap.first));
+                            parserChecksums->residualChecksums.at(gressToStateMap.first));
                 digestFieldsFromSource->push_back(tpl);
                 idx++;
             }
@@ -1734,9 +1734,8 @@ class ConstructSymbolTable : public Inspector {
                 exprs.push_back(f);
 
             if (which == "update_checksum_with_payload") {
-                if (location == EGRESS &&
-                    parserChecksums->bridgedResidualChecksums.count(destfield)) {
-                    auto pr = parserChecksums->bridgedResidualChecksums.at(destfield);
+                if (parserChecksums->residualChecksums.count(destfield)) {
+                    auto pr = parserChecksums->residualChecksums.at(destfield);
                     exprs.push_back(pr);
                     if (parserChecksums->residualChecksumPayloadFields.count(destfield)) {
                         for (auto f :
@@ -1792,7 +1791,8 @@ class ConstructSymbolTable : public Inspector {
     void cvtUpdateChecksum(const IR::MethodCallStatement *call, cstring which) {
         auto block = findContext<IR::BlockStatement>();
         std::vector<gress_t> deparserUpdateLocations =
-            getChecksumUpdateLocations(block, "calculated_field_update_location");
+            getChecksumUpdateLocations(call->methodCall->to<IR::MethodCallExpression>(),
+                                       block, "calculated_field_update_location");
         bool zerosAsOnes = getZerosAsOnes(block, call);
         if (analyzeChecksumCall(call, which))
             implementUpdateChecksum(call, which, deparserUpdateLocations, zerosAsOnes);
