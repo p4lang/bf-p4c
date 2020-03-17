@@ -1,3 +1,5 @@
+#include <numeric>
+
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/lib/union_find.hpp"
 
