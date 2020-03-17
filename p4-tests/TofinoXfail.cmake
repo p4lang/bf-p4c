@@ -1245,6 +1245,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/checksum1-bmv2.p4
   testdata/p4_16_samples/issue1025-bmv2.p4
+  testdata/p4_16_samples/issue2176-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1347,6 +1348,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
+  testdata/p4_14_samples/issue2196.p4
 )
 
 # P4C-2367: failed due to the removal of hack in phv_fields.cpp:1393
