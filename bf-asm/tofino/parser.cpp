@@ -556,6 +556,7 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
     for (auto m : narrow_to_wide_matches) {
         auto preds = m->get_all_preds();
         all_preds.insert(preds.begin(), preds.end());
+        all_preds.insert(m);
     }
 
     for (auto p : all_preds) {
