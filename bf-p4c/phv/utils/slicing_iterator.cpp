@@ -276,7 +276,8 @@ PHV::SlicingIterator::SlicingIterator(
                                 << *last  << ")" << fs);
                             required_slices_i.clrbit(next_required_slice->second);
                         }
-                    } else if (fs.field()->no_split()) {
+                    } else if (fs.field()->no_split() ||
+                                noSplitSlices.find(fs) != noSplitSlices.end()) {
                         LOG1("Dropping required but no_split on: " << fs);
                         required_slices_i.clrbit(next_required_slice->second);
                     }
@@ -321,6 +322,7 @@ PHV::SlicingIterator::SlicingIterator(
             for (int i = 0; i < sentinel_idx_i; ++i)
                 ss << (compressed_schemas_i[i] ? "1" : "-");
             LOG5("Initial compressed schemas after enforcing containers: " << ss.str()); }
+
     } else {
         // In this case, there are no slice lists, and the SuperCluster
         // contains a single RotationalCluster.  We will try all slicings of
