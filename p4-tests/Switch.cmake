@@ -138,7 +138,7 @@ set_tests_properties("tofino/smoketest_switch_16_compile_m1_profile" PROPERTIES 
 set_tests_properties("tofino/smoketest_switch_16_compile_j1_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile_d2_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 4500)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 5400)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 5400)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 4500)
 
