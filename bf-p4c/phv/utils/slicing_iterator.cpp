@@ -1574,7 +1574,7 @@ boost::optional<PHV::FieldSlice> PHV::SlicingIterator::getBestSlicingPoint(
                     // Move to the next one.
                     candidateSliceStraddlesSliceLists = true;
                 } else {
-                    int hi = (8 * i) - currentSize - 1;
+                    int hi = (8 * i) - currentSize - 1 + slice.range().lo;
                     LOG7("\t\t\t\tNeed to add bit [" << slice.range().lo << ", " << hi << "] "
                          "for slice " << slice);
                     le_bitrange loRange = StartLen(slice.range().lo, hi - slice.range().lo + 1);
