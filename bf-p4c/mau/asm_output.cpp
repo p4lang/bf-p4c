@@ -97,8 +97,17 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             stage.first.second == maxStages[stage.first.first])
             mauasm.emit_always_init_action(out, indent, stage.first);
         for (auto &tbl : stage.second) {
-            mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
-                stage.first.first /* gress */);
+            switch (tbl.tableInfo->always_run) {
+            case IR::MAU::AlwaysRun::NONE:
+            case IR::MAU::AlwaysRun::TABLE:
+                mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
+                    stage.first.first /* gress */);
+                break;
+
+            case IR::MAU::AlwaysRun::ACTION:
+                mauasm.emit_always_run_action(out, tbl.tableInfo, stage.first.second /* stage */,
+                    stage.first.first /* gress */);
+            }
         }
     }
     // Need to emit MPR and dependency config for empty stages.
@@ -1893,6 +1902,7 @@ MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cst
    instructions have specific tags so that we can output the correct hash distribution
    unit corresponding to it. */
 class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
+ protected:
     const MauAsmOutput          &self;
     std::ostream                &out;
     const IR::MAU::Table        *table;
@@ -2386,6 +2396,21 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
     : self(s), out(o), table(tbl), indent(i) { visitDagOnce = false; }
+};
+
+/// Behaves mostly the same as EmitAction, except all the preamble before the action's instructions
+/// is replaced with an always_run_action header.
+class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
+    bool preorder(const IR::MAU::Action*) override {
+        out << indent++ << "always_run_action:" << std::endl;
+        is_empty = true;
+        return false;
+    }
+
+ public:
+    EmitAlwaysRunAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl,
+                        indent_t i) : EmitAction(s, o, tbl, i) {
+    }
 };
 
 void MauAsmOutput::TableMatch::init_proxy_hash(const IR::MAU::Table *tbl) {
@@ -3300,26 +3325,28 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
        gress_t gress) const {
+    BUG_CHECK(tbl->always_run != IR::MAU::AlwaysRun::ACTION,
+        "Emitting always-run action as a table");
+    BUG_CHECK(tbl->stage() == stage, "Emitting table %s for stage %d in stage %d",
+        tbl->name, tbl->stage(), stage);
+    BUG_CHECK(tbl->gress == gress, "Emitting table %s for %s in %s",
+        tbl->name, tbl->gress, gress);
+
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     auto unique_id = tbl->unique_id();
     LOG1("Emitting table " << unique_id);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
     TableMatch fmt(*this, phv, tbl);
-    indent_t    indent(1);
+    indent_t indent(1);
+
     BUG_CHECK(tbl->logical_id, "Table %s was not assigned a table ID", tbl->name);
     out << indent++ << tbl->get_table_type_string()
         << ' ' << unique_id << ' ' << *tbl->logical_id
         << ':' << std::endl;
-    switch (tbl->always_run) {
-    case IR::MAU::AlwaysRun::NONE:
-        break;
-    case IR::MAU::AlwaysRun::TABLE:
-        out << indent << "always_run: true" << std::endl; break;
-    default:
-        // TODO(Jed): emit this as "always_run_action"
-        BUG("Encountered always-run action while outputting assembly");
-        break;
+    if (tbl->always_run == IR::MAU::AlwaysRun::TABLE) {
+        out << indent << "always_run: true" << std::endl;
     }
+
     if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
@@ -3446,6 +3473,21 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
 
     for (auto back_at : tbl->attached)
         back_at->apply(EmitAttached(*this, out, tbl, stage, gress));
+}
+
+void MauAsmOutput::emit_always_run_action(std::ostream &out, const IR::MAU::Table *tbl, int stage,
+       gress_t gress) const {
+    BUG_CHECK(tbl->always_run == IR::MAU::AlwaysRun::ACTION,
+        "Emitting table %s as always-run action", tbl->name);
+    BUG_CHECK(tbl->stage() == stage, "Emitting always-run action for stage %d in stage %d",
+        tbl->stage(), stage);
+    BUG_CHECK(tbl->gress == gress, "Emitting always-run action for %s in %s",
+        tbl->gress, gress);
+
+    indent_t indent(1);
+    for (auto action : Values(tbl->actions)) {
+        action->apply(EmitAlwaysRunAction(*this, out, tbl, indent));
+    }
 }
 
 /**

@@ -335,6 +335,10 @@ class Table : BFN::Unit {
                 "always-run action %s is ill-formed: cannot have next tables", name);
             BUG_CHECK(gateway_payload == nullptr,
                 "always-run action %s is ill-formed: cannot have gateway payloads", name);
+
+            // Also ensure we just have a single action in the table.
+            BUG_CHECK(actions.size() == 1,
+                "always-run action %s is ill-formed: must have exactly one action", name);
         }
         for (auto &gw : gateway_rows) {
             if (&gw != &gateway_rows.back())

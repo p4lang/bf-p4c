@@ -131,6 +131,8 @@ class MauAsmOutput : public MauInspector {
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
+    void emit_always_run_action(std::ostream &out, const IR::MAU::Table *tbl, int stage,
+        gress_t gress) const;
     void emit_static_entries(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl) const;
     void next_table_non_action_map(const IR::MAU::Table *,
             safe_vector<NextTableSet> &next_table_map) const;
@@ -164,6 +166,7 @@ class MauAsmOutput : public MauInspector {
     NextTableSet next_for(const IR::MAU::Table *tbl, cstring what) const;
 
     class EmitAction;
+    class EmitAlwaysRunAction;
     class EmitAttached;
     class UnattachedName;
     class EmitHashExpression;
