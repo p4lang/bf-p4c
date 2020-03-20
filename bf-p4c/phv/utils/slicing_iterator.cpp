@@ -75,6 +75,30 @@ std::map<int, int> build_offsets_to_compress_schema(const PHV::SuperCluster* sc,
     return rst;
 }
 
+// sort_slicelist returns a new super cluster that it's
+// listlists are sorted by
+// 1. slice lists.
+// 2. slice lists with no_split.
+PHV::SuperCluster* sort_sc_slicelist(const PHV::SuperCluster* sc) {
+    std::list<PHV::SuperCluster::SliceList*> slice_lists;
+    for (const auto& sl : sc->slice_lists()) {
+        slice_lists.push_back(sl);
+    }
+    slice_lists.sort(
+        [] (PHV::SuperCluster::SliceList* s1, PHV::SuperCluster::SliceList* s2) {
+            if (s1->front().field()->no_split() != s2->front().field()->no_split()) {
+                return int(s1->front().field()->no_split()) < int(s2->front().field()->no_split());
+            }
+            return s1->front().field()->exact_containers() >
+                    s1->front().field()->exact_containers();
+        });
+    ordered_set<PHV::SuperCluster::SliceList*> new_lists;
+    for (const auto& sl : slice_lists) {
+        new_lists.push_back(sl);
+    }
+    return new PHV::SuperCluster(sc->clusters(), new_lists);
+}
+
 cstring PHV::SlicingIterator::get_slice_coordinates(
         const int slice_list_size,
         const std::pair<int, int>& slice_locations) const {
@@ -103,6 +127,12 @@ PHV::SlicingIterator::SlicingIterator(
         : sc_i(sc), enforcePragmas(e), done_i(false) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
+
+    sc = sort_sc_slicelist(sc);
+    sc_i = sc;
+    LOG5("SlicingIterator's sorted SuperCluster:");
+    LOG5(sc);
+
     num_slicings = 0;
 
     SLICING_THRESHOLD = f ? PRE_SLICING_THRESHOLD : ALLOCATION_THRESHOLD;
