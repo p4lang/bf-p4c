@@ -45,6 +45,5 @@ set (JBAY_MUST_PASS_TESTS
   smoketest_switch_16_compile
 
   # Customer profiles
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2238.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
   )
