@@ -103,7 +103,7 @@ RUN (test "$BUILD_FOR" = "tofino" && echo "Building for tofino") || \
 WORKDIR /tmp
 RUN (test "$BUILD_FOR" = "release" && \
      wget http://downloads.sourceforge.net/project/boost/boost/1.67.0/boost_1_67_0.tar.bz2 && \
-     tar xvjf boost_1_67_0.tar.bz2 && \
+     tar xjf boost_1_67_0.tar.bz2 && \
      cd boost_1_67_0 && \
      ./bootstrap.sh --prefix=/usr/local && \
      ./b2 -$MAKEFLAGS --build-type=minimal variant=release && \
