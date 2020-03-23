@@ -374,3 +374,9 @@ p4c_add_xfail_reason("tofino2"
   "BfruntimeReadWriteRpcException"
   p4_16_programs_tna_ternary_match
 )
+
+# P4C-2572
+p4c_add_xfail_reason("tofino2"
+  "parser error allocated to multiple containers?"
+  extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
+)
