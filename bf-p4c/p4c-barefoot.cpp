@@ -325,6 +325,8 @@ int main(int ac, char **av) {
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
     log_dump(program, "After midend");
+    if (::errorCount() > 0)
+        return PROGRAM_ERROR;
 
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
