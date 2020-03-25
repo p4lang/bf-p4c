@@ -246,7 +246,7 @@ struct my_egress_headers_t {
     ethernet_t         ethernet;
     vlan_tag_t[2]      vlan_tag;
     ipv4_t             ipv4;
-    egress_ipv4_t      egr_ipv4;
+    // egress_ipv4_t      ipv4;
 }
 
     /********  G L O B A L   E G R E S S   M E T A D A T A  *********/
@@ -288,7 +288,7 @@ parser EgressParser(packet_in      pkt,
     }
 
     state parse_ipv4 {
-        pkt.extract(hdr.egr_ipv4, ((bit<32>)hdr.egr_ipv4.ihl - 32w5) * 32);
+        pkt.extract(hdr.ipv4, ((bit<32>)hdr.ipv4.ihl - 32w5) * 32);
         transition accept;
     }
 }

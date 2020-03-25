@@ -123,8 +123,9 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::StructField* varbit_field,
         const IR::Expression* varsize_expr,
         const IR::Expression*& encode_var,
-        std::map<unsigned, const IR::Constant*>& compile_time_constants,
-        std::set<unsigned>& reject_values) {
+        std::map<unsigned, unsigned>& match_to_length,
+        std::map<unsigned, unsigned>& length_to_match,
+        std::set<unsigned>& reject_matches) {
     CollectVariables find_encode_var;
     varsize_expr->apply(find_encode_var);
 
@@ -151,14 +152,15 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
 
             auto varbit_field_size = varbit_field->type->to<IR::Type_Varbits>()->size;
             if (!c->fitsInt() || c->asInt() > varbit_field_size) {
-                reject_values.insert(i);
+                reject_matches.insert(i);
                 LOG4("compile time constant exceeds varbit field size: " << c->asUnsigned());
             } else {
                 check_compile_time_constant(c, call, varbit_field_size, true);
-                compile_time_constants[i] = c;
+                match_to_length[i] = c->asUnsigned();
+                length_to_match[c->asUnsigned()] = i;
             }
         } else {
-            reject_values.insert(i);
+            reject_matches.insert(i);
         }
 
         branches_needed++;
@@ -179,10 +181,10 @@ bool CollectVarbitExtract::enumerate_varbit_field_values(
     LOG2(varsize_expr << " needs " << branches_needed << " branches to implement");
     LOG2(varsize_expr << " evaluate to compile time constants:");
 
-    for (auto& kv : compile_time_constants)
+    for (auto& kv : match_to_length)
         LOG2(encode_var << " = " << kv.first << " : " << kv.second);
 
-    for (auto& v : reject_values)
+    for (auto& v : reject_matches)
         LOG2(encode_var << " = " << v << " : reject");
 
     return true;
@@ -210,30 +212,36 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     }
 
     const IR::Expression* encode_var = nullptr;
-    std::map<unsigned, const IR::Constant*> compile_time_constants;
-    std::set<unsigned> reject_values;
+    std::map<unsigned, unsigned> match_to_length;
+    std::map<unsigned, unsigned> length_to_match;
+    std::set<unsigned> reject_matches;
 
     if (auto c = varsize_expr->to<IR::Constant>()) {
         auto varbit_field_size = varbit_field->type->to<IR::Type_Varbits>()->size;
 
         check_compile_time_constant(c, call, varbit_field_size);
-        compile_time_constants[0] = c;  // use 0 as key, but really don't care
+        match_to_length[0] = c->asUnsigned();  // use 0 as key, but really don't care
+        length_to_match[c->asUnsigned()] = 0;
     } else {
         bool ok = enumerate_varbit_field_values(call, state, varbit_field, varsize_expr,
-                                      encode_var, compile_time_constants, reject_values);
+                            encode_var, match_to_length, length_to_match, reject_matches);
         if (!ok) return;
     }
 
     state_to_varbit_header[state] = hdr_type;
     state_to_varbit_field[state] = varbit_field;
     state_to_encode_var[state] = encode_var;
+    state_to_match_to_length[state] = match_to_length;
+    state_to_length_to_match[state] = length_to_match;
+    state_to_reject_matches[state] = reject_matches;
+
+    auto path = (*call->arguments)[0]->expression->to<IR::Member>()
+                                         ->expr->to<IR::PathExpression>();
+
+    varbit_field_to_extract_call_path[varbit_field] = path;
 
     varbit_field_to_header_instance[varbit_field] = hdr_inst->member;
-    varbit_field_to_compile_time_constants[varbit_field] = compile_time_constants;
-    varbit_field_to_reject_values[varbit_field] = reject_values;
-
     header_type_to_varbit_field[hdr_type] = varbit_field;
-    varbit_field_to_extract_call[varbit_field] = call;
 }
 
 const IR::StructField* get_varbit_structfield(const IR::Member* member) {
@@ -314,8 +322,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                                     P4C_UNIMPLEMENTED("Checksum subtract is currently not "
                                          "supported to have varbit fields %1%", call);
                                 }
-                                varbit_field_to_csum_call
-                                        [get_varbit_structfield(member)].insert(call);
+                                state_to_csum_add[state].insert(call);
                             }
                         }
                     }
@@ -386,9 +393,9 @@ create_add_statement(const IR::Member* method,
 
 const IR::ParserState*
 RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
-        const IR::Expression* select, const IR::StructField* varbit_field, unsigned length,
-        cstring name) {
-    for (auto& kv : state_to_branches) {
+        const IR::ParserState* state, const IR::Expression* select,
+        const IR::StructField* varbit_field, unsigned length, cstring name) {
+    for (auto& kv : state_to_branch_states) {
         auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
             for (auto s : kv.second) {
@@ -401,17 +408,14 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     IR::IndexedVector<IR::StatOrDecl> statements;
 
     auto header = varbit_field_to_header_types[varbit_field][length];
-
-    auto call = cve.varbit_field_to_extract_call.at(varbit_field);
-    auto path = (*call->arguments)[0]->expression->to<IR::Member>()
-                                     ->expr->to<IR::PathExpression>();
+    auto path = cve.varbit_field_to_extract_call_path.at(varbit_field);
 
     auto varbit_hdr_inst = create_instance_name(header->name);
     auto extract = create_extract_statement(parser, path, varbit_hdr_inst);
     statements.push_back(extract);
 
-    if (cve.varbit_field_to_csum_call.count(varbit_field)) {
-        for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
+    if (cve.state_to_csum_add.count(state)) {
+        for (auto call : cve.state_to_csum_add.at(state)) {
             auto method = call->method->to<IR::Member>();
             statements.push_back(create_add_statement(method, path, header));
         }
@@ -430,13 +434,21 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
                                     const IR::StructField* varbit_field,
                                     const IR::Type_Header* orig_header,
                                     cstring orig_hdr_name) {
-    for (auto& kv : state_to_branches) {
+    for (auto& kv : state_to_branch_states) {
         auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
             for (auto s : kv.second) {
                 if (name == s.second->name)
                     return s.second;
             }
+        }
+    }
+
+    for (auto& kv : state_to_end_state) {
+        auto p = cve.state_to_parser.at(kv.first);
+        if (p == parser) {
+            if (name == kv.second->name)
+                return kv.second;
         }
     }
 
@@ -465,9 +477,7 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
 
     IR::IndexedVector<IR::StatOrDecl> statements;
 
-    auto call = cve.varbit_field_to_extract_call.at(varbit_field);
-    auto path = (*call->arguments)[0]->expression->to<IR::Member>()
-                                         ->expr->to<IR::PathExpression>();
+    auto path = cve.varbit_field_to_extract_call_path.at(varbit_field);
 
     if (post_hdr->fields.size()) {
         varbit_field_to_post_header_type[varbit_field] = post_hdr;
@@ -478,8 +488,8 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
         statements.push_back(extract);
     }
 
-    if (cve.varbit_field_to_csum_call.count(varbit_field)) {
-        for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
+    if (cve.state_to_csum_add.count(state)) {
+        for (auto call : cve.state_to_csum_add.at(state)) {
             auto method = call->method->to<IR::Member>();
             statements.push_back(create_add_statement(method, path, post_hdr));
         }
@@ -493,21 +503,21 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
 
 void RewriteVarbitUses::create_branches(const IR::ParserState* state,
                                         const IR::StructField* varbit_field) {
-    ordered_map<unsigned, const IR::ParserState*> match_to_branch_state;
+    ordered_map<unsigned, const IR::ParserState*> length_to_branch_state;
 
     auto parser = cve.state_to_parser.at(state);
     auto orig_hdr = cve.state_to_varbit_header.at(state);
     auto orig_hdr_inst = cve.varbit_field_to_header_instance.at(varbit_field);
     auto encode_var = cve.state_to_encode_var.at(state);
 
-    auto& value_map = cve.varbit_field_to_compile_time_constants.at(varbit_field);
+    auto& value_map = cve.state_to_match_to_length.at(state);
 
     cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
     const IR::ParserState* no_option_state = nullptr;
 
     for (auto& kv : value_map) {
-        auto match = kv.first;
-        auto length = kv.second->asUnsigned();
+        // auto match = kv.first;
+        auto length = kv.second;
 
         if (length) {
             auto header = create_varbit_header_type(orig_hdr, orig_hdr_inst, varbit_field, length);
@@ -523,24 +533,25 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
             cstring name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_" +
                     cstring::to_cstring(length) + "b";
 
-            auto branch_state = create_branch_state(parser, select, varbit_field, length, name);
+            auto branch_state = create_branch_state(parser, state, select,
+                                                    varbit_field, length, name);
 
-            match_to_branch_state[match] = branch_state;
+            length_to_branch_state[length] = branch_state;
         } else {
             no_option_state = create_end_state(parser, state, no_option_state_name,
                                                varbit_field, orig_hdr, orig_hdr_inst);
 
-            match_to_branch_state[match] = no_option_state;
+            length_to_branch_state[length] = no_option_state;
         }
     }
 
     if (!no_option_state) {
         no_option_state = create_end_state(parser, state, no_option_state_name,
                                            varbit_field, orig_hdr, orig_hdr_inst);
-        match_to_branch_state[0] = no_option_state;
     }
 
-    state_to_branches[state] = match_to_branch_state;
+    state_to_branch_states[state] = length_to_branch_state;
+    state_to_end_state[state] = no_option_state;
 }
 
 bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
@@ -560,10 +571,16 @@ bool RewriteVarbitUses::preorder(IR::BFN::TnaParser* parser) {
 
     std::set<const IR::ParserState*> states;
 
-    for (auto& kv : state_to_branches) {
+    for (auto& kv : state_to_branch_states) {
         if (cve.state_to_parser.at(kv.first) == orig) {
             for (auto& ms : kv.second)
                 states.insert(ms.second);
+        }
+    }
+
+    for (auto& kv : state_to_end_state) {
+        if (cve.state_to_parser.at(kv.first) == orig) {
+            states.insert(kv.second);
         }
     }
 
@@ -585,29 +602,30 @@ create_select_case(unsigned bitwidth, unsigned value, unsigned mask, cstring nex
 bool RewriteVarbitUses::preorder(IR::ParserState* state) {
     auto orig = getOriginal<IR::ParserState>();
 
-    if (!state_to_branches.count(orig))
+    if (!state_to_branch_states.count(orig))
         return true;
 
-    auto& match_to_branch_state = state_to_branches.at(orig);
+    auto& length_to_branch_state = state_to_branch_states.at(orig);
+    auto& length_to_match = cve.state_to_length_to_match.at(orig);
 
     IR::Vector<IR::SelectCase> select_cases;
 
-    auto varbit_field = cve.state_to_varbit_field.at(orig);
     auto encode_var = cve.state_to_encode_var.at(orig);
 
     if (encode_var) {
         unsigned var_bitwidth = encode_var->type->width_bits();
         unsigned var_mask = (1 << var_bitwidth) - 1;
 
-        for (auto& ms : match_to_branch_state) {
-            auto match = ms.first;
+        for (auto& ms : length_to_branch_state) {
+            auto length = ms.first;
+            auto match = length_to_match.at(length);
             auto next_state = ms.second;
 
             auto select_case = create_select_case(var_bitwidth, match, var_mask, next_state->name);
             select_cases.push_back(select_case);
         }
 
-        for (auto reject : cve.varbit_field_to_reject_values.at(varbit_field)) {
+        for (auto reject : cve.state_to_reject_matches.at(orig)) {
             auto select_case = create_select_case(var_bitwidth, reject, var_mask, "reject");
             select_cases.push_back(select_case);
         }
@@ -617,11 +635,10 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
 
         auto select = new IR::SelectExpression(new IR::ListExpression(select_on), select_cases);
         state->selectExpression = select;
-    } else {  // unconditional transition (varsize expr is constant)
-        BUG_CHECK(match_to_branch_state.size() == 1 &&
-                  match_to_branch_state.count(0), "unconditional branch does not exist?");
+    }  else {  // unconditional transition (varsize expr is constant)
+        BUG_CHECK(length_to_branch_state.size() == 1, "more than one unconditional branch?");
 
-        auto next_state = match_to_branch_state.at(0);
+        auto next_state = length_to_branch_state.begin()->second;
         auto path = new IR::PathExpression(next_state->name);
         state->selectExpression = path;
     }
@@ -779,11 +796,13 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
 
                         components.push_back(hdr_field);
                     }
-                } else if (cve.varbit_field_to_csum_call.count(varbit_field)) {
-                    for (auto call : cve.varbit_field_to_csum_call.at(varbit_field)) {
-                        if (call->equiv(*mc)) {
-                            has_varbit = true;
-                            break;
+                } else if (auto state = findOrigCtxt<IR::ParserState>()) {
+                    if (cve.state_to_csum_add.count(state)) {
+                        for (auto call : cve.state_to_csum_add.at(state)) {
+                            if (call->equiv(*mc)) {
+                                has_varbit = true;
+                                break;
+                            }
                         }
                     }
                 }

@@ -106,17 +106,22 @@ class CollectVarbitExtract : public Inspector {
 
     std::map<const IR::StructField*, cstring> varbit_field_to_header_instance;
 
-    std::map<const IR::StructField*,
-             std::set<const IR::MethodCallExpression*>> varbit_field_to_csum_call;
+    std::map<const IR::ParserState*,
+             std::set<const IR::MethodCallExpression*>> state_to_csum_add;
 
-    std::map<const IR::StructField*,
-             std::map<unsigned, const IR::Constant*>> varbit_field_to_compile_time_constants;
+    std::map<const IR::ParserState*,
+             std::map<unsigned, unsigned>> state_to_match_to_length;
 
-    std::map<const IR::StructField*, std::set<unsigned>> varbit_field_to_reject_values;
+    // reverse map of above
+    std::map<const IR::ParserState*,
+             std::map<unsigned, unsigned>> state_to_length_to_match;
+
+    std::map<const IR::ParserState*, std::set<unsigned>> state_to_reject_matches;
 
     std::map<const IR::Type_Header*, const IR::StructField*> header_type_to_varbit_field;
 
-    std::map<const IR::StructField*, const IR::MethodCallExpression*> varbit_field_to_extract_call;
+    std::map<const IR::StructField*,
+             const IR::PathExpression*> varbit_field_to_extract_call_path;
 
  private:
     bool is_legal_runtime_value(const IR::Expression* verify,
@@ -134,8 +139,9 @@ class CollectVarbitExtract : public Inspector {
         const IR::StructField* varbit_field,
         const IR::Expression* varsize_expr,
         const IR::Expression*& encode_var,
-        std::map<unsigned, const IR::Constant*>& compile_time_constants,
-        std::set<unsigned>& reject_values);
+        std::map<unsigned, unsigned>& match_to_length,
+        std::map<unsigned, unsigned>& length_to_match,
+        std::set<unsigned>& reject_matches);
 
     void enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
@@ -155,7 +161,9 @@ class RewriteVarbitUses : public Modifier {
     const CollectVarbitExtract& cve;
 
     std::map<const IR::ParserState*,
-             ordered_map<unsigned, const IR::ParserState*>> state_to_branches;
+             ordered_map<unsigned, const IR::ParserState*>> state_to_branch_states;
+
+    std::map<const IR::ParserState*, const IR::ParserState*> state_to_end_state;
 
  public:
     std::map<const IR::StructField*,
@@ -170,6 +178,7 @@ class RewriteVarbitUses : public Modifier {
 
     const IR::ParserState*
     create_branch_state(const IR::BFN::TnaParser* parser,
+                        const IR::ParserState* state,
                         const IR::Expression* select,
                         const IR::StructField* varbit_field, unsigned length, cstring name);
 
