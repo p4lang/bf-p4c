@@ -38,7 +38,6 @@ class BuildPowerGraph : public MauInspector, BFN::ControlFlowVisitor {
   SimplePowerGraph* ingress_graph_;
   SimplePowerGraph* egress_graph_;
   SimplePowerGraph* ghost_graph_;
-  DefaultNext* default_next_;
   const NextTable* next_table_properties_;
   const BFN_Options& options_;
   // Keep track of which logical tables are marked as always run.

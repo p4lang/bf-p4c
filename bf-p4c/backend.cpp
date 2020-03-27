@@ -103,8 +103,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
                                               defuse, deps, decaf, table_alloc,
                                               phvLoggingInfo /*, &jsonGraph */);
     // Collect next table info if we're using LBs
-    nextTblProp = Device::numLongBranchTags() > 0 && !options.disable_long_branch
-        ? new NextTable : nullptr;
+    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch)
+        nextTblProp = new JbayNextTable;
+    else
+        nextTblProp = new DefaultNext(true);
 
     // Create even if Tofino, since this checks power is within limits.
     power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, nextTblProp, options);

@@ -1830,6 +1830,7 @@ class MauAsmOutput::NextTableSet {
         if (t) tables.insert(t->unique_id()); }
     NextTableSet(UniqueId ui) {                                 // NOLINT(runtime/explicit)
         tables.insert(ui); }
+    NextTableSet(ordered_set<UniqueId> s) : tables(s) {}        // NOLINT(runtime/explicit)
 
     operator cstring() const {
         BUG_CHECK(tables.size() == 1, "not a single next table");
@@ -1853,49 +1854,10 @@ class MauAsmOutput::NextTableSet {
 };
 
 MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cstring what) const {
-    if (what == "$miss" && tbl->next.count("$try_next_stage"))
-        what = "$try_next_stage";
-
-    if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
-        BUG_CHECK(!Device::numLongBranchTags() || options.disable_long_branch,
-                  "long branch incompatible with exit action");
-        NextTableSet rv;
+    NextTableSet rv = nxt_tbl->next_for(tbl, what);
+    if (rv.empty())
         rv.insert(UniqueId("END"));
-        return rv;
-    }
-    if (!tbl->next.count(what))
-        what = "$default";
-    if (tbl->next.count(what)) {
-        // Jbay specific
-        if (tbl->next.at(what) && nxt_tbl) {
-            // We want to build this set according to the NextTableProp
-            NextTableSet rv;
-
-            // Add tables according to next table propagation (if it has an entry in the map)
-            if (nxt_tbl->props.count(tbl->unique_id())) {
-                auto prop = nxt_tbl->props.at(tbl->unique_id());
-                for (auto id : prop[what])
-                    rv.insert(id);
-                // Add the run_if_ran set
-                for (auto always : prop["$run_if_ran"])
-                    rv.insert(always);
-                return rv;
-            }
-        }
-        if (tbl->next.at(what) && !tbl->next.at(what)->empty())  // Tofino specific
-            return tbl->next.at(what)->front();
-    }
-    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
-        // Always add run_if_ran set
-        NextTableSet rv;
-        if (nxt_tbl->props.count(tbl->unique_id())) {
-            auto prop = nxt_tbl->props.at(tbl->unique_id());
-            for (auto always : prop["$run_if_ran"])
-                rv.insert(always);
-        }
-        return rv;
-    }
-    return default_next.next_in_thread_uniq_id(tbl);
+    return rv;
 }
 
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
@@ -3383,11 +3345,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         }
     }
 
-    if (Device::numLongBranchTags() > 0 && !options.disable_long_branch
-        && nxt_tbl->lbs.count(tbl->unique_id())) {
+    if (!nxt_tbl->long_branches(tbl->unique_id()).empty()) {
         out << indent++ << "long_branch:" << std::endl;
         // Check for long branches out of this table
-        for (auto tag : nxt_tbl->lbs.at(tbl->unique_id())) {
+        for (auto tag : nxt_tbl->long_branches(tbl->unique_id())) {
             out << indent << tag.first << ": [";
             const char *sep = " ";
             for (auto id : tag.second) {

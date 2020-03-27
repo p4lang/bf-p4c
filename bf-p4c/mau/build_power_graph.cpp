@@ -16,7 +16,6 @@ BuildPowerGraph::BuildPowerGraph(const NextTable* next_table_properties,
   ingress_graph_ = new SimplePowerGraph(toString(INGRESS));
   egress_graph_ = new SimplePowerGraph(toString(EGRESS));
   ghost_graph_ = new SimplePowerGraph(toString(GHOST));
-  default_next_ = new DefaultNext(options.disable_long_branch);
 }
 
 SimplePowerGraph* BuildPowerGraph::get_graph(gress_t g) {
@@ -29,7 +28,6 @@ SimplePowerGraph* BuildPowerGraph::get_graph(gress_t g) {
 }
 
 Visitor::profile_t BuildPowerGraph::init_apply(const IR::Node *root) {
-  root->apply(*default_next_);  // setup default next data structure
   return MauInspector::init_apply(root);
 }
 
@@ -138,56 +136,8 @@ void BuildPowerGraph::flow_merge(Visitor& /* v */) {
   // nothing to do yet.
 }
 
-
-/**
-  * Copied from asm_output.cpp, but replaced NextTableSet with ordered_set,
-  * (NextTableSet is essentially a wrapper around that anyway.)
-  * Refactor to eliminate duplicate code.
-  */
 ordered_set<UniqueId> BuildPowerGraph::next_for(const IR::MAU::Table *tbl, cstring what) const {
-  if (what == "$miss" && tbl->next.count("$try_next_stage"))
-    what = "$try_next_stage";
-
-  ordered_set<UniqueId> rv;
-  if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
-    BUG_CHECK(!Device::numLongBranchTags() || options_.disable_long_branch,
-              "long branch incompatible with exit action");
-    return rv;  // empty set is fine
-  }
-  if (!tbl->next.count(what))
-    what = "$default";
-  if (tbl->next.count(what)) {
-    // Tofino2 specific
-    if (tbl->next.at(what) && next_table_properties_) {
-      // We want to build this set according to the NextTableProp
-      // Add tables according to next table propagation (if it has an entry in the map)
-      if (next_table_properties_->props.count(tbl->unique_id())) {
-        auto prop = next_table_properties_->props.at(tbl->unique_id());
-        for (auto id : prop[what])
-            rv.insert(id);
-        // Add the run_if_ran set
-        for (auto always : prop["$run_if_ran"])
-            rv.insert(always);
-        return rv; }
-    }
-    if (tbl->next.at(what) && !tbl->next.at(what)->empty()) {  // Tofino specific
-      auto* nt = tbl->next.at(what)->front();
-      if (nt)
-        rv.insert(nt->unique_id());
-      return rv;
-    }
-  }
-  if (Device::numLongBranchTags() > 0 && !options_.disable_long_branch) {
-    // Always add run_if_ran set
-    if (next_table_properties_->props.count(tbl->unique_id())) {
-      auto prop = next_table_properties_->props.at(tbl->unique_id());
-      for (auto always : prop["$run_if_ran"])
-          rv.insert(always);
-    }
-    return rv;
-  }
-  rv.insert(default_next_->next_in_thread_uniq_id(tbl));
-  return rv;
+  return next_table_properties_->next_for(tbl, what);
 }
 
 };  // end namespace MauPower

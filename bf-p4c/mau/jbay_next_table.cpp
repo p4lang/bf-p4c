@@ -14,7 +14,7 @@
  *      condition is met. This specifies how the next table "signal" propagtes through tables at
  *      runtime.  More specifically, for a given table and a given table sequence owned by that
  *      table, it specifies the set of table that are to run under that table sequence's
- *      condition.   The NextTable object captures one table that needs to be run and how that
+ *      condition.   The JbayNextTable object captures one table that needs to be run and how that
  *      signal is propagate to it (either by LOCAL_EXEC, GLOBAL_EXEC, or LONG_BRANCH).  The pass
  *      is split into 3 stages: EmptyIds, NextTableAlloc, and AddDummyTables (which must run in that
  *      order).
@@ -273,13 +273,13 @@
  * while it does not reduce long branch requirements, does reduce dummy table requirements in
  * order to merge.
  */
-bool NextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const IR::MAU::Table *tbl) {
+bool JbayNextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const IR::MAU::Table *tbl) {
     auto seq = findContext<IR::MAU::TableSeq>();
     self.table_to_seqs[tbl].insert(seq);
     return true;
 }
 
-bool NextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Table *tbl) {
+bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Table *tbl) {
     bool first_run = true;
     ordered_set<const IR::MAU::Table *> seen_after;
     for (auto seq : self.table_to_seqs.at(tbl)) {
@@ -317,7 +317,7 @@ bool NextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Tabl
  * same tables); (2) under different tables. In the case of (1), we do not need to run it twice, but
  * do so right now out of convenience. In the case of (2), we do need to run it multiple times,
  * since the NTP needs to be associated with different tables. */
-struct NextTable::Prop::NTInfo {
+struct JbayNextTable::Prop::NTInfo {
     const IR::MAU::Table* parent;  // Origin of this control flow
     dyn_vector<dyn_vector<const IR::MAU::Table*>> stages;  // Tables in each stage
     const int first_stage;
@@ -347,7 +347,7 @@ struct NextTable::Prop::NTInfo {
     }
 };
 
-std::pair<ssize_t, ssize_t> NextTable::get_live_range_for_lb_with_dest(UniqueId dest) const {
+std::pair<ssize_t, ssize_t> JbayNextTable::get_live_range_for_lb_with_dest(UniqueId dest) const {
   for (auto some_lbus_use : lbus) {
     if (some_lbus_use.dest && some_lbus_use.dest->unique_id() == dest)
       return std::make_pair(some_lbus_use.fst, some_lbus_use.lst);
@@ -356,7 +356,7 @@ std::pair<ssize_t, ssize_t> NextTable::get_live_range_for_lb_with_dest(UniqueId 
 }
 
 // Checks if there is any overlap between two tags
-bool NextTable::LBUse::operator&(const LBUse& r) const {
+bool JbayNextTable::LBUse::operator&(const LBUse& r) const {
     BUG_CHECK(fst <= lst && r.fst <= r.lst, "LBUse first and last have been corrupted!");
     if ((lst - fst) < 2 || (r.lst - r.fst) < 2)
         return false;
@@ -366,7 +366,7 @@ bool NextTable::LBUse::operator&(const LBUse& r) const {
         return !(fst > r.lst || lst < r.fst);
 }
 
-void NextTable::LBUse::extend(const IR::MAU::Table* t) {
+void JbayNextTable::LBUse::extend(const IR::MAU::Table* t) {
     ssize_t st = t->stage();
     BUG_CHECK(ssize_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
     // If tables are in the same stage, we don't need to do anything
@@ -374,14 +374,14 @@ void NextTable::LBUse::extend(const IR::MAU::Table* t) {
     fst = st < fst ? st : fst;
 }
 
-bool NextTable::Tag::add_use(const LBUse& lbu) {
+bool JbayNextTable::Tag::add_use(const LBUse& lbu) {
     for (auto u : uses)
         if (u & lbu) return false;
     uses.push_back(lbu);
     return true;
 }
 
-NextTable::profile_t NextTable::Prop::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::Prop::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
     // Clear maps, since we have to rebuild them
     self.props.clear();
@@ -395,11 +395,11 @@ NextTable::profile_t NextTable::Prop::init_apply(const IR::Node* root) {
     return MauInspector::init_apply(root);
 }
 
-bool NextTable::Prop::preorder(const IR::BFN::Pipe*) {
+bool JbayNextTable::Prop::preorder(const IR::BFN::Pipe*) {
     return self.rebuild;
 }
 
-void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
+void JbayNextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
     if (size_t(nti.first_stage) >= nti.stages.size()) return;
     // Guarantee that all tables no matter what are preceded by the parent control table
     for (auto nt : nti.stages.at(nti.first_stage)) {
@@ -446,7 +446,7 @@ void NextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &execu
     }
 }
 
-void NextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
+void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &executed_paths) {
     auto stages = nti.stages;
     for (int i = nti.first_stage + 1; i <= nti.last_stage; i++) {
         if (stages[i].empty()) continue;
@@ -506,11 +506,11 @@ void NextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &execu
     }
 }
 
-bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
+bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
     int st = t->stage();
     self.max_stage = st > self.max_stage ? st : self.max_stage;
     self.mems[st].update(t->resources->memuse);
-    if (*t->global_id() > self.stage_id[st])
+    if (*t->global_id() > static_cast<int>(self.stage_id[st]))
         self.stage_id[st] = *t->global_id();
     if (!findContext<IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
@@ -525,8 +525,8 @@ bool NextTable::Prop::preorder(const IR::MAU::Table* t) {
     return true;
 }
 
-void NextTable::Prop::end_apply() {
-    for (unsigned i = 0; i < self.max_stage; ++i) {  // Fix up stage_id
+void JbayNextTable::Prop::end_apply() {
+    for (unsigned i = 0; static_cast<int>(i) < self.max_stage; ++i) {  // Fix up stage_id
         if (self.stage_id[i] < i * Memories::LOGICAL_TABLES)
             self.stage_id[i] = i * Memories::LOGICAL_TABLES;
         else
@@ -536,7 +536,7 @@ void NextTable::Prop::end_apply() {
     LOG1("FINISHED NEXT TABLE PROPAGATION");
 }
 
-NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::LBAlloc::init_apply(const IR::Node* root) {
     if (!self.rebuild) return MauInspector::init_apply(root);  // Early exit
     // Clear old values
     self.stage_tags.clear();
@@ -564,7 +564,7 @@ NextTable::profile_t NextTable::LBAlloc::init_apply(const IR::Node* root) {
     return MauInspector::init_apply(root);
 }
 
-int NextTable::LBAlloc::alloc_lb(const LBUse& u) {
+int JbayNextTable::LBAlloc::alloc_lb(const LBUse& u) {
     int tag = 0;
     bool need_new = true;
     // Keep looping and trying to add LB to a tag
@@ -585,12 +585,12 @@ int NextTable::LBAlloc::alloc_lb(const LBUse& u) {
     return tag;
 }
 
-bool NextTable::LBAlloc::preorder(const IR::BFN::Pipe*) {
+bool JbayNextTable::LBAlloc::preorder(const IR::BFN::Pipe*) {
     return false;
 }
 
 // Pretty prints tag information
-void NextTable::LBAlloc::pretty_tags() {
+void JbayNextTable::LBAlloc::pretty_tags() {
     std::vector<std::string> header;
     header.push_back("Tag #");
     for (int i = 0; i < self.max_stage; ++i)
@@ -636,7 +636,7 @@ void NextTable::LBAlloc::pretty_tags() {
     log << std::endl;
 }
 
-void NextTable::LBAlloc::pretty_srcs() {
+void JbayNextTable::LBAlloc::pretty_srcs() {
     std::vector<std::string> header({"Dest. table", "Tag #", "Range", "Src tables"});
     TablePrinter* tp = new TablePrinter(log, header, TablePrinter::Align::CENTER);
     tp->addSep();
@@ -660,7 +660,7 @@ void NextTable::LBAlloc::pretty_srcs() {
     log << std::endl;
 }
 
-void NextTable::LBAlloc::end_apply() {
+void JbayNextTable::LBAlloc::end_apply() {
     pretty_tags();
     LOG2(log.str());
     // Reset and print source dest info
@@ -669,12 +669,12 @@ void NextTable::LBAlloc::end_apply() {
     LOG3(log.str());
 }
 
-NextTable::profile_t NextTable::TagReduce::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::TagReduce::init_apply(const IR::Node* root) {
     self.num_dts = 0;
     return MauTransform::init_apply(root);
 }
 
-IR::Node* NextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
+IR::Node* JbayNextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
     if (!self.rebuild) {  // Short circuit when we don't need dumb tables
         return p;
     }
@@ -693,7 +693,7 @@ IR::Node* NextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
     return p;
 }
 
-IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
+IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
     // Get the original pointer
     auto key = dynamic_cast<const IR::MAU::TableSeq*>(getOriginal());
     // Add new tables
@@ -719,7 +719,7 @@ IR::Node* NextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
     return ts;
 }
 
-IR::Node* NextTable::TagReduce::preorder(IR::MAU::Table* t) {
+IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::Table* t) {
     if (self.al_runs.count(t->unique_id()))
         t->always_run = IR::MAU::AlwaysRun::TABLE;
     return t;
@@ -727,7 +727,7 @@ IR::Node* NextTable::TagReduce::preorder(IR::MAU::Table* t) {
 
 /* Represents a symmetric matrix as a flattened vector. (i, j) = (j, i) */
 template <class T>
-class NextTable::TagReduce::sym_matrix {
+class JbayNextTable::TagReduce::sym_matrix {
     std::vector<T> m;
     size_t dim;
     inline bool inrng(size_t i) const { return i < dim; }
@@ -774,7 +774,7 @@ class NextTable::TagReduce::sym_matrix {
     }
 };
 
-struct NextTable::TagReduce::merge_t {
+struct JbayNextTable::TagReduce::merge_t {
     Tag merged;
     std::map<LBUse, std::set<int>> dum;
     bool success;
@@ -783,7 +783,7 @@ struct NextTable::TagReduce::merge_t {
     merge_t() : success(true), finalized(false), num_dts(0) {}
 };
 
-NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
+JbayNextTable::TagReduce::merge_t JbayNextTable::TagReduce::merge(Tag l, Tag r) const {
     merge_t rv;
     std::map<int, unsigned> stage_id(self.stage_id);  // Need our own copy
     auto cap = [&](int k) {  // Check the capacity of a stage. 0 means full
@@ -863,8 +863,8 @@ NextTable::TagReduce::merge_t NextTable::TagReduce::merge(Tag l, Tag r) const {
 
 // Only called after we determine we need dumb tables. Finds (locally) minimal configuration of dumb
 // tables
-NextTable::TagReduce::sym_matrix<NextTable::TagReduce::merge_t>
-NextTable::TagReduce::find_merges() const {
+JbayNextTable::TagReduce::sym_matrix<JbayNextTable::TagReduce::merge_t>
+JbayNextTable::TagReduce::find_merges() const {
     // Comparison between tag i and tag j
     sym_matrix<merge_t> m(self.stage_tags.size());
     // Get all of the possible dummy tables
@@ -878,7 +878,7 @@ NextTable::TagReduce::find_merges() const {
 
 // Merges tags until we've reduced long branch pressure far enough. Returns true if LB pressure can
 // be lowered to below device limtis, false o.w.
-bool NextTable::TagReduce::merge_tags() {
+bool JbayNextTable::TagReduce::merge_tags() {
     // Continue merging until our long branches have been minimized
     for (int num_merges = self.stage_tags.size() - Device::numLongBranchTags();
          num_merges; --num_merges) {
@@ -919,7 +919,7 @@ bool NextTable::TagReduce::merge_tags() {
     return true;
 }
 
-void NextTable::TagReduce::alloc_dt_mems() {
+void JbayNextTable::TagReduce::alloc_dt_mems() {
     // Allocate memories for dumb tables
     for (auto stage : stage_dts) {
         // Need to store resources until allocation has finished
@@ -944,7 +944,7 @@ void NextTable::TagReduce::alloc_dt_mems() {
 }
 
 // FIXME: best to add a ConditionalVisitor to pass_manager.h. Ask Chris about this and see PR#3474
-NextTable::NextTable() {
+JbayNextTable::JbayNextTable() {
     addPasses({ &localize_seqs,
                new Prop(*this),
                new LBAlloc(*this),
@@ -952,4 +952,28 @@ NextTable::NextTable() {
                &localize_seqs,
                new Prop(*this),
                new LBAlloc(*this)});
+}
+
+ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring what) const {
+    if (what == "$miss" && tbl->next.count("$try_next_stage"))
+        what = "$try_next_stage";
+
+    if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
+        BUG("long branch incompatible with exit action");
+        return {};
+    }
+    if (!tbl->next.count(what))
+        what = "$default";
+    ordered_set<UniqueId> rv;
+    if (props.count(tbl->unique_id())) {
+        auto prop = props.at(tbl->unique_id());
+        // We want to build this set according to the NextTableProp
+        // Add tables according to next table propagation (if it has an entry in the map)
+        for (auto id : prop[what])
+            rv.insert(id);
+        // Always add run_if_ran set
+        for (auto always : prop["$run_if_ran"])
+            rv.insert(always);
+    }
+    return rv;
 }

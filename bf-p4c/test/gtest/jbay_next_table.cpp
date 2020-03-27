@@ -211,7 +211,7 @@ V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, NextTable* nt ) {
+const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, JbayNextTable* nt ) {
     PassManager quick_backend = {
         new MultipleApply(BackendOptions()),
         new GTestTablePlacement,
@@ -285,7 +285,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), 2UL);
 }
@@ -351,7 +351,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), 1U);  // Should be able to merge
 }
@@ -422,7 +422,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), 2U);  // Can't merge!
 }
@@ -493,7 +493,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), 1U);
 }
@@ -735,7 +735,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));  // Check reduction success
     ASSERT_EQ(nt->get_num_dts(), 12U);  // Every possible merge requires 12 tables
@@ -979,7 +979,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));  // Check reduction success
     ASSERT_EQ(nt->get_num_dts(), 3U);  // Merge final two tags with only 3 tables
@@ -1222,7 +1222,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
     ASSERT_EQ(nt->get_num_dts(), 1U);
@@ -1471,7 +1471,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
     ASSERT_EQ(nt->get_num_dts(), 2U);  // Add two tags to the 7-10 use to eliminate it
@@ -1721,7 +1721,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
     ASSERT_EQ(nt->get_num_dts(), 4U);  // Add 4 to either partial overlaps is sufficient
@@ -1997,7 +1997,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
     ASSERT_EQ(nt->get_num_dts(), 3U);  // Need to add 3 tables from stages 3-5 to the tag on egress
@@ -2272,7 +2272,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
     }
 )"));
     ASSERT_TRUE(test);
-    NextTable* nt = new NextTable();
+    JbayNextTable* nt = new JbayNextTable();
     test->pipe = runMockPasses(test->pipe, nt);
     ASSERT_EQ(nt->get_num_lbs(), size_t(Device::numLongBranchTags()));
     ASSERT_EQ(nt->get_num_dts(), 4U);  // Best option is to add 4 tables to deal with the

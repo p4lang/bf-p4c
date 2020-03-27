@@ -138,23 +138,21 @@ void WalkPowerGraph::compute_mpr() {
       mau_features_->get_tables_in_gress_stage(g, s, tables_in_stage);
       // Setup what long branches are initiated at the end of each stage.
       for (auto t : tables_in_stage) {
-        if (next_table_properties_->lbs.find(t->unique_id()) !=
-            next_table_properties_->lbs.end()) {
-          for (auto id_to_tag : next_table_properties_->lbs.at(t->unique_id())) {
-            // id_to_tag.first is long branch tag ID
-            // id_to_tag.second is std::set<UniqueId>
-            // map Long Branch Tag ID to logical table that initiated it
-            exit_stage[id_to_tag.first] = t->unique_id();
-            for (auto some_id : id_to_tag.second) {
-              if (initiated_by.find(some_id) == initiated_by.end()) {
-                std::set<std::pair<int, UniqueId>> tag_id;
-                initiated_by.emplace(some_id, tag_id);
-              }
-              std::pair<int, UniqueId> ti = std::make_pair(id_to_tag.first, t->unique_id());
-              initiated_by[some_id].insert(ti);
+        for (auto id_to_tag : next_table_properties_->long_branches(t->unique_id())) {
+          // id_to_tag.first is long branch tag ID
+          // id_to_tag.second is std::set<UniqueId>
+          // map Long Branch Tag ID to logical table that initiated it
+          exit_stage[id_to_tag.first] = t->unique_id();
+          for (auto some_id : id_to_tag.second) {
+            if (initiated_by.find(some_id) == initiated_by.end()) {
+              std::set<std::pair<int, UniqueId>> tag_id;
+              initiated_by.emplace(some_id, tag_id);
             }
+            std::pair<int, UniqueId> ti = std::make_pair(id_to_tag.first, t->unique_id());
+            initiated_by[some_id].insert(ti);
           }
-      } }
+        }
+      }
       active_long_branch.emplace(s, exit_stage);
     }
 

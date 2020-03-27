@@ -345,6 +345,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/mau_alloc.h
   mau/mau_power.h
   mau/memories.h
+  mau/next_table.h
   mau/push_pop.h
   mau/reduction_or.h
   mau/remove_noop_gateway.h

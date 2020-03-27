@@ -6,7 +6,6 @@
 #include <vector>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/mau/default_next.h"
 #include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/resource.h"
@@ -33,12 +32,10 @@ class MauAsmOutput : public MauInspector {
         const IR::MAU::Table *tableInfo;
     };
 
-    DefaultNext         default_next;
     std::map<std::pair<gress_t, int>, std::vector<TableInstance>>       by_stage;
     ordered_map<std::pair<int, const IR::MAU::Selector *>,
                 std::pair<UniqueId, const Memories::Use *>>     selector_memory;
     profile_t init_apply(const IR::Node *root) override {
-        root->apply(default_next);
         return MauInspector::init_apply(root); }
     bool preorder(const IR::MAU::Table *tbl) override {
         auto tableId = std::make_pair(tbl->gress, tbl->stage());
@@ -175,9 +172,7 @@ class MauAsmOutput : public MauInspector {
     MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe,
                  const NextTable *nxts, const MauPower::FinalizeMauPredDepsPower* pmpr,
                  const BFN_Options &options)
-            : phv(phv), pipe(pipe), nxt_tbl(nxts), power_and_mpr(pmpr),
-              options(options),
-              default_next(Device::numLongBranchTags() == 0 || options.disable_long_branch) { }
+            : phv(phv), pipe(pipe), nxt_tbl(nxts), power_and_mpr(pmpr), options(options) { }
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

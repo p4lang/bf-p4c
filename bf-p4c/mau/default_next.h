@@ -7,9 +7,9 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/phv/utils/utils.h"  // for operator<<(ordered_set)
+#include "next_table.h"
 
-
-class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
+class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisitor {
     int id;
     static int id_counter;
     bool long_branch_disabled = false;
@@ -110,6 +110,31 @@ class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
             rv.insert(UniqueId("END"));
         return rv;
     }
+
+    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const {
+        if (what == "$miss" && tbl->next.count("$try_next_stage"))
+            what = "$try_next_stage";
+        if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
+            return {};
+        if (!tbl->next.count(what))
+            what = "$default";
+        if (tbl->next.count(what) && !tbl->next.at(what)->empty())
+            return { tbl->next.at(what)->front()->unique_id() };
+        auto *nt = next_in_thread(tbl);
+        if (nt) return { nt->unique_id() };
+        return {};
+    }
+
+    void dbprint(std::ostream &out) const {
+        out << "DefaultNext:" << IndentCtl::indent;
+        for (auto &pn : possible_nexts) {
+            out << Log::endl << pn.first << ": {";
+            const char *sep = " ";
+            for (auto el : pn.second) {
+                out << sep << el;
+                sep = ", "; }
+            out << (sep+1) << "}"; }
+        out << IndentCtl::unindent; }
 };
 
 #endif /* BF_P4C_MAU_DEFAULT_NEXT_H_ */

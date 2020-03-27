@@ -5,6 +5,7 @@
 #include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/table_layout.h"
+#include "next_table.h"
 
 
 /* This pass determines next table propagation in tofino2. It minimizes the use of long branches
@@ -12,7 +13,7 @@
  * using global_exec/local_exec instead. This pass must be run after modifications to IR graph are
  * done, otherwise its data will be invalidated.
  */
-class NextTable : public PassManager {
+class JbayNextTable : public PassManager, public NextTable {
  public:
     // Map from tables->condition (tseq names)->sets of tables that need to occur next
     using next_map_t = std::map<UniqueId, std::unordered_map<cstring, std::set<UniqueId>>>;
@@ -27,8 +28,8 @@ class NextTable : public PassManager {
       *         If no destination is found, returns -1, -1.
       */
     std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId dest) const;
-    NextTable();
-    friend std::ostream& operator<<(std::ostream& out, const NextTable& nt) {
+    JbayNextTable();
+    friend std::ostream& operator<<(std::ostream& out, const JbayNextTable& nt) {
       out << "Long Branches:" << std::endl;
       for (auto id_tag : nt.lbs) {
         out << "  " << id_tag.first << " has long branch mapping:" << std::endl;
@@ -45,6 +46,11 @@ class NextTable : public PassManager {
       }
       return out;
     }
+    void dbprint(std::ostream &out) const { out << *this; }
+    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const;
+    const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId tbl) const {
+        if (!lbs.count(tbl)) return NextTable::long_branches(tbl);
+        return lbs.at(tbl); }
 
  private:
     // Represents a long branch targeting a single destination (unique on destination)
@@ -166,7 +172,7 @@ class NextTable : public PassManager {
     // Computes a minimal scheme for how to propagate next tables and records long branches for
     // allocation. Also gathers information for dumb table allocation/addition.
     class Prop : public MauInspector {
-        NextTable& self;
+        JbayNextTable& self;
 
         // Holds information for propagating a single table sequence
         struct NTInfo;
@@ -181,7 +187,7 @@ class NextTable : public PassManager {
         void end_apply() override;
 
      public:
-        explicit Prop(NextTable& ntp) : self(ntp) {}
+        explicit Prop(JbayNextTable& ntp) : self(ntp) {}
     };
 
     /*==================================Data gathered by LBAlloc==================================*/
@@ -191,7 +197,7 @@ class NextTable : public PassManager {
     std::map<LBUse, int>                         use_tags;  // Map from uses to tags
     // Allocates long branches into tags
     class LBAlloc : public MauInspector {
-        NextTable& self;
+        JbayNextTable& self;
         profile_t init_apply(const IR::Node* root) override;  // Allocates long branches to tags
         bool preorder(const IR::BFN::Pipe*) override;  // Early abort
         int alloc_lb(const LBUse&);  // Finds a tag in self.stage_tags to fit the LBUse
@@ -202,13 +208,13 @@ class NextTable : public PassManager {
         void end_apply() override;  // Pretty print
 
      public:
-        explicit LBAlloc(NextTable& ntp) : self(ntp) {}
+        explicit LBAlloc(JbayNextTable& ntp) : self(ntp) {}
     };
 
     size_t                                       num_dts;
     // Attempts to reduce the number of tags in use to the max supported by the device
     class TagReduce : public MauTransform {
-        NextTable& self;
+        JbayNextTable& self;
 
         template <class T> class sym_matrix;  // Symmetric matrix for merging
         struct merge_t;  // Represents an "in-progress" merge of two tags
@@ -227,7 +233,7 @@ class NextTable : public PassManager {
         IR::Node* preorder(IR::MAU::Table*) override;  // Set always run tags
         IR::Node* preorder(IR::MAU::TableSeq*) override;  // Add specified tables to table sequences
      public:
-        explicit TagReduce(NextTable& ntp) : self(ntp) { visitDagOnce = false; }
+        explicit TagReduce(JbayNextTable& ntp) : self(ntp) { visitDagOnce = false; }
     };
 };
 
