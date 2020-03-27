@@ -22,6 +22,8 @@ class AllocationReport {
 
     ordered_map<PHV::Container, boost::optional<gress_t>> container_to_gress;
 
+    ordered_set<AllocSlice> alloc_slices;
+
     int total_allocated_bits = 0;
     int total_unallocated_bits = 0;
     int valid_ingress_unallocated_bits = 0;
@@ -190,6 +192,9 @@ class AllocationReport {
         if (!printMetricsOnly)
             ss << printAllocation() << std::endl;
 
+        if (!printMetricsOnly)
+            ss << printAllocSlices() << std::endl;
+
         ss << printContainerStatus() << std::endl;
         ss << printOverlayStatus() << std::endl;
         ss << printOccupancyMetrics() << std::endl;
@@ -201,6 +206,7 @@ class AllocationReport {
     void collectStatus();
 
     cstring printAllocation() const;
+    cstring printAllocSlices() const;
     cstring printOverlayStatus() const;
     cstring printContainerStatus();
     cstring printOccupancyMetrics() const;

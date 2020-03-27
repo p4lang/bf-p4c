@@ -22,6 +22,7 @@ void PHV::AllocationReport::collectStatus() {
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
             total_allocated_bits += slice.width();
             container_to_bits_allocated[c] += slice.width();
+            alloc_slices.insert(slice);
         }
 
         if (allocatedBits == bitvec(0, c.size())) {
@@ -185,6 +186,28 @@ PHV::AllocationReport::printAllocation() const {
         tp2.print();
     }
 
+    return out.str();
+}
+
+cstring
+PHV::AllocationReport::printAllocSlices() const {
+    std::stringstream out;
+
+    TablePrinter tp(out, { "Field Slice", "Container", "Container Type", "Container Slice"},
+            TablePrinter::Align::LEFT);
+
+    for (auto slice = alloc_slices.sorted_begin(); slice != alloc_slices.sorted_end(); slice++) {
+        auto formatted = format_alloc_slice(*slice);
+        tp.addRow({
+                std::string(slice->field()->name) + formatted.second,
+                std::string(slice->container().toString()),
+                std::string(slice->container().type().toString()),
+                formatted.first,
+        });
+    }
+
+    tp.print();
+    out << std::endl;
     return out.str();
 }
 
