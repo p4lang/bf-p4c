@@ -790,9 +790,7 @@ class TableGraphEdge {
         Util::JsonObject* edgeJson = new Util::JsonObject();
         edgeJson->emplace("id", new Util::JsonValue(std::to_string(id)));
         edgeJson->emplace("source", new Util::JsonValue(std::to_string(source)));
-        cstring targetStr = std::to_string(target);
-        if (target == 0) targetStr = "SINK";
-        edgeJson->emplace("target", new Util::JsonValue(targetStr));
+        edgeJson->emplace("target", new Util::JsonValue(std::to_string(target)));
         edgeJson->emplace("metadata", create_edge_md_json());
         return edgeJson;
     }

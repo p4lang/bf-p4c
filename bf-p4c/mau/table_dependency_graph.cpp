@@ -611,10 +611,8 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
     // Flow Graph Control Edges
     if (!fg.is_empty()) {
         // FlowGraph::dump_viz(std::cout, fg);
-        bool source_added   = false;
-        bool sink_added     = false;
-        int source_node_id  = -1;
-        int sink_node_id    = -1;
+        int source_node_id[3] = { -1, -1, -1 };
+        int sink_node_id[3]   = { -1, -1, -1 };
         FlowGraph::Graph::edge_iterator fedges, fedges_end;
         for (boost::tie(fedges, fedges_end) = boost::edges(fg.g); fedges != fedges_end; ++fedges) {
             TableGraphEdge edge;
@@ -644,26 +642,24 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
             if (labelToVertex.count(source)) {
                 edge.source = labelToVertex.at(source);
             } else {
-                if (!source_added) {
+                if (source_node_id[src_gress] < 0) {
                     source = new IR::MAU::Table(src_name, src_gress);
                     auto node = create_node(++node_id, source);
                     nodesJson[static_cast<int>(src_gress)]->append(node.create_node_json());
-                    source_added = true;
-                    source_node_id = node_id;
+                    source_node_id[src_gress] = node_id;
                 }
-                edge.source = source_node_id;
+                edge.source = source_node_id[src_gress];
             }
             if (labelToVertex.count(target)) {
                 edge.target = labelToVertex.at(target);
             } else {
-                if (!sink_added) {
+                if (sink_node_id[tgt_gress] < 0) {
                     target = new IR::MAU::Table(tgt_name, tgt_gress);
                     auto node = create_node(++node_id, target);
                     nodesJson[static_cast<int>(tgt_gress)]->append(node.create_node_json());
-                    sink_added = true;
-                    sink_node_id = node_id;
+                    sink_node_id[tgt_gress] = node_id;
                 }
-                edge.target = sink_node_id;
+                edge.target = sink_node_id[tgt_gress];
             }
 
             auto edge_data = fg.get_ctrl_dependency_info(*fedges);
