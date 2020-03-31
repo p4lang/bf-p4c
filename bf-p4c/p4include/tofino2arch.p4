@@ -21,7 +21,6 @@
 
 #include "core.p4"
 #include "tofino2.p4"
-#include "tofino_fixed.p4"
 
 // The following declarations provide a template for the programmable blocks in
 // Tofino2.
