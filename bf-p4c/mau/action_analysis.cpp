@@ -1195,12 +1195,45 @@ bool ActionAnalysis::TotalAlignment::contiguous() const {
 /**
  * Determines if the source is to be wrapped around the container.  If the thing is wrapped,
  * the low position of the source is required to determine the location
+ *
+ * A deposit-field operation has source that can be rotated bit by bit.  This rotation can
+ * rotate the data around the container.  The destination of a deposit-field src1 has to be
+ * contiguous, but this doesn't mean that the source is contiguous.
+ *
+ * Say for example you were writing a 4 bit field, i.e. f1 = f2.   The allocation could be
+ *
+ * B0 [5..2] = f1[3..0]
+ * B1 [7..6] = f2[1..0]
+ * B1 [1..0] = f2[3..2]
+ *
+ * By right rotating B1 by 4 bits, this will shift the B1 into the correct place.  But notice that
+ * the field f2 is non contiguous in it's own container.
+ *
+ * The instructions in the assembly file, when writing one slice to another slice are:
+ *    - set dest_container(dest_bit_hi..dest_bit_lo), src_container(src_bit_hi..src_bit_lo)
+ *
+ * However, this is impossible to write with a source that is wrapped, as src_bit_hi is less
+ * than src_bit_lo.  This is instead synthesized as a direct deposit-field instruction:
+ *
+ *     - deposit_field B0[5..2], B1(1), B0
+ *
+ * This funciton returns true if the instruction has to be synthesized directly as a deposit-field
+ * because the source slice is not a lo to hi range.  It also can return a lo and hi value for
+ * the IR::MAU::WrappedSlice
+ *
+ * 2 corner cases:
+ *     1. The source is the entire container (thus if the source is shifted at all, it is wrapped)
+ *     2. The source is a portion of a container (bitvec operations)
  */
 bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, int *lo,
         int *hi) const {
     BUG_CHECK(contiguous(), "Wrapped Shift instruction can only be src1 operations");
 
-    if (read_bits().popcount() == static_cast<int>(container.size())) {
+    // implicit_read_bits might not yet be determined.  Therefore at this point,
+    // the direct_read_bits may not be the full container, but within the addition of the
+    // implicit_read_bits would be.  Noted in p4c-2598
+    if (read_bits().popcount() == static_cast<int>(container.size()) ||
+        df_src1_mask().popcount() == static_cast<int>(container.size())) {
         if (right_shift == 0) {
             return false;
         } else {
