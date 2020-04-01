@@ -109,6 +109,7 @@ struct InstructionMemory {
         void clear() {
             all_instrs.clear();
         }
+        void merge(const Use &alloc);
     };
 
     std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;
@@ -128,11 +129,13 @@ struct InstructionMemory {
     bool is_noop_slot(int row, int color);
     bool find_row_and_color(bitvec current_bv, gress_t gress,
                                 int &row, int &color, bool &first_noop);
+    bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
+    bool alloc_always_run_instr(const IR::MAU::Table *tbl, Use &alloc, bitvec current_bv);
 
  public:
     bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv, bool gw_linked,
         ActionData::FormatType_t format_type, SplitAttachedInfo &sai);
-    bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
+    void update_always_run(const Use &alloc, gress_t gress);
     void update(cstring name, const Use &alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);

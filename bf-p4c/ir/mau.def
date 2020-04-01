@@ -240,6 +240,7 @@ class Table : BFN::Unit {
     boost::optional<int> is_force_immediate() const;
     bool has_match_data() const;
     bool for_dleft() const;
+    bool is_always_run_action() const { return always_run == IR::MAU::AlwaysRun::ACTION; }
     bool getAnnotation(cstring name, int &val) const;
     bool getAnnotation(cstring name, ID &val) const;
     bool getAnnotation(cstring name, std::vector<ID> &val) const;

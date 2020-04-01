@@ -41,6 +41,8 @@ class Device {
     static int numStages() { return Device::get().getNumStages(); }
     static int numLongBranchTags() { return Device::get().getLongBranchTags(); }
     static bool hasLongBranches() { return numLongBranchTags() > 0; }
+    static int alwaysRunIMemAddr() { return Device::get().getAlwaysRunIMemAddr(); }
+    static bool hasAlwaysRunInstr() { return alwaysRunIMemAddr() >= 0; }
     static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
@@ -69,6 +71,7 @@ class Device {
     virtual int getNumChannelsPerPort() const = 0;
     virtual int getNumStages() const = 0;
     virtual int getLongBranchTags() const = 0;
+    virtual int getAlwaysRunIMemAddr() const = 0;
     virtual unsigned getMaxCloneId(gress_t) const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
@@ -99,6 +102,7 @@ class TofinoDevice : public Device {
     int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return 12; }
     int getLongBranchTags() const override { return 0; }
+    int getAlwaysRunIMemAddr() const override { return -1; }
     unsigned getMaxCloneId(gress_t gress) const override {
         switch (gress) {
         case INGRESS: return 7;  // one id reserved for IBuf
@@ -143,6 +147,7 @@ class JBayDevice : public Device {
     int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
     int getLongBranchTags() const override { return 8; }
+    int getAlwaysRunIMemAddr() const override { return 63; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
@@ -204,6 +209,7 @@ class CloudbreakDevice : public Device {
     int getNumChannelsPerPort() const override { return 18; }
     int getNumStages() const override { return NUM_MAU_STAGES; }
     int getLongBranchTags() const override { return 8; }
+    int getAlwaysRunIMemAddr() const override { return 63; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }

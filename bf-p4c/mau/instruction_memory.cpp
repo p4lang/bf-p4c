@@ -6,7 +6,6 @@
 
 bool GenerateVLIWInstructions::preorder(const IR::MAU::Action *act) {
     const IR::MAU::Table *tbl = findContext<IR::MAU::Table>();
-    LOG1("    Help me " << act->name << " " << tbl->name << " " << format_type);
     current_vliw.clear();
     const IR::MAU::Action *act_to_visit = act;
     // Need to capture the instructions that will be created during the splitting of the tables
@@ -41,6 +40,23 @@ bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
         return false;
     }
     return true;
+}
+
+void InstructionMemory::Use::merge(const Use &alloc) {
+    BUG_CHECK(all_instrs.size() == 1 && alloc.all_instrs.size() == 1, "Only always run "
+        "tables can be merged");
+    cstring key = all_instrs.begin()->first;
+    VLIW_Instruction a_instr = all_instrs.begin()->second;
+    VLIW_Instruction b_instr = alloc.all_instrs.begin()->second;
+
+    BUG_CHECK(static_cast<int>(a_instr.gen_addr()) == Device::alwaysRunIMemAddr() &&
+              static_cast<int>(b_instr.gen_addr()) == Device::alwaysRunIMemAddr() &&
+              key == "$always_run", "Only always run tables can be merged");
+
+    VLIW_Instruction m_instr(a_instr.non_noop_instructions | b_instr.non_noop_instructions,
+                             a_instr.row,
+                             a_instr.color);
+    all_instrs.emplace(key, m_instr);;
 }
 
 bool InstructionMemory::is_noop_slot(int row, int color) {
@@ -85,8 +101,12 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
                 continue;
             if (!use[i][j].isNull())
                 continue;
+
             row = i;
             color = j;
+            int addr = (row << ROW_ADDR_SHIFT) | (color << COLOR_ADDR_SHIFT);
+            if (Device::hasAlwaysRunInstr() && Device::alwaysRunIMemAddr() == addr)
+                continue;
             return true;
         }
         BUG("Unreachable section of the instruction memory allocation");
@@ -154,10 +174,33 @@ bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool
     return true;
 }
 
+bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &alloc,
+        bitvec current_bv) {
+    auto &use = imem_use(tbl->gress);
+    auto &slot_in_use = imem_slot_inuse(tbl->gress);
+
+    // Eventual goal is to run ActionAnalysis on the merged actions with all other
+    // AlwaysRun actions (in case two tables interact with the same container).  But
+    // at this point, no container conflicts
+    int row = Device::alwaysRunIMemAddr() / 2;
+    bitvec reserved;
+    for (int color = 0; color < 2; color++)
+        reserved |= slot_in_use[row][color];
+    if (!(reserved & current_bv).empty())
+        return false;
+    int ar_color = Device::alwaysRunIMemAddr() % 2;
+    use[row][ar_color] = "$always_run_action";
+    slot_in_use[row][ar_color] |= current_bv;
+    Use::VLIW_Instruction single_instr(current_bv, row, ar_color);
+    alloc.all_instrs.emplace("$always_run_action", single_instr);
+    return true;
+}
+
 bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
         bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
     // Action Profiles always have the same instructions for every table
     LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
+
 
     if (shared_instr(tbl, alloc, gw_linked)) {
         return true;
@@ -166,6 +209,11 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
 
     GenerateVLIWInstructions gen_vliw(phv, format_type, sai);
     tbl->apply(gen_vliw);
+    if (tbl->is_always_run_action()) {
+        auto act_it = Values(tbl->actions).begin();
+        auto current_bv = gen_vliw.get_instr((*act_it));
+        return alloc_always_run_instr(tbl, alloc, current_bv);
+    }
     auto &use = imem_use(tbl->gress);
     auto &slot_in_use = imem_slot_inuse(tbl->gress);
 
@@ -242,12 +290,38 @@ void InstructionMemory::update(cstring name, const Use &alloc, gress_t gress) {
     }
 }
 
+void InstructionMemory::update_always_run(const Use &alloc, gress_t gress) {
+    auto &use = imem_use(gress);
+    auto &slot_in_use = imem_slot_inuse(gress);
+
+    BUG_CHECK(alloc.all_instrs.size() == 1, "Always run instruction can only have one instruction");
+    for (auto &entry : alloc.all_instrs) {
+        auto a_name = "$always_run_action";
+        auto instr = entry.second;
+        BUG_CHECK(static_cast<int>(instr.gen_addr()) == Device::alwaysRunIMemAddr(),
+                  "Always Run Table Misassigned");
+        int row = instr.row;
+        int color = instr.color;
+        use[row][color] = a_name;
+        int opposite_color = color == 1 ? 0 : 1;
+        if (!(slot_in_use[row][opposite_color] & instr.non_noop_instructions).empty())
+            BUG("Colliding instructions on row %d for action %s and action %s", row,
+                use[row][opposite_color], a_name);
+        // This is an OR
+        slot_in_use[row][color] |= instr.non_noop_instructions;
+    }
+}
+
 void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc, gress_t gress) {
     update(name, alloc->instr_mem, gress);
 }
 
 void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc,
         const IR::MAU::Table *tbl) {
+    if (tbl->is_always_run_action()) {
+        update_always_run(alloc->instr_mem, tbl->gress);
+        return;
+    }
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         auto ad = at->to<IR::MAU::ActionData>();
@@ -268,3 +342,4 @@ void InstructionMemory::update(const IR::MAU::Table *tbl) {
     }
     update(tbl->name, tbl->resources, tbl);
 }
+

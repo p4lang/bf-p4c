@@ -183,53 +183,64 @@ class TransformTables : public MauTransform {
     void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, int entries);
 };
 
-/*
-class DoTablePlacement : public MauTransform {
-    TablePlacement &self;
+
+
+class MergeAlwaysRunActions : public PassManager {
+    struct AlwaysRunKey {
+        int stage;
+        gress_t gress;
+
+        bool operator<(const AlwaysRunKey &ark) const {
+           if (stage != ark.stage)
+               return stage < ark.stage;
+           return gress < ark.gress;
+        }
+
+        AlwaysRunKey(int s, gress_t g) : stage(s), gress(g) {}
+    };
+
+    std::map<AlwaysRunKey, ordered_set<const IR::MAU::Table *>> ar_tables_per_stage;
+    std::map<AlwaysRunKey, const IR::MAU::Table *> merge_per_stage;
+
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = PassManager::init_apply(node);
+        ar_tables_per_stage.clear();
+        merge_per_stage.clear();
+        return rv;
+    }
+
+    class Scan : public MauInspector {
+        MergeAlwaysRunActions &self;
+        bool preorder(const IR::MAU::Table *) override;
+        void end_apply() override;
+
+     public:
+        explicit Scan(MergeAlwaysRunActions &s) : self(s) {}
+    };
+
+    class Update : public MauTransform {
+        MergeAlwaysRunActions &self;
+        const IR::MAU::Table *preorder(IR::MAU::Table *) override;
+
+     public:
+        explicit Update(MergeAlwaysRunActions &s) : self(s) {}
+    };
+
+    const IR::MAU::Table *ar_replacement(int st, gress_t gress) {
+        AlwaysRunKey ark(st, gress);
+        if (ar_tables_per_stage.count(ark) == 0)
+            BUG("MergeAlwaysRunActions cannot find stage of an always run table");
+        auto set = ar_tables_per_stage.at(ark);
+        return *(set.begin());
+    }
 
  public:
-    explicit DoTablePlacement(TablePlacement &s) : self(s) {}
-    struct GroupPlace;
-    class Backfill;
-
-
- public:
-    void initForPipe(const IR::BFN::Pipe *, ordered_set<const GroupPlace *> &);
-    IR::Node *preorder(IR::BFN::Pipe *) override;
-    IR::Node *preorder(IR::MAU::TableSeq *) override;
-    IR::Node *postorder(IR::MAU::TableSeq *) override;
-    IR::Node *preorder(IR::MAU::Table *) override;
-    IR::Node *preorder(IR::MAU::BackendAttached *) override;
-    IR::Node *postorder(IR::BFN::Pipe *pipe) override;
-    IR::MAU::Table *break_up_atcam(IR::MAU::Table *tbl, const TablePlacement::Placed *placed,
-        int stage_table = -1, IR::MAU::Table **last = nullptr);
-    IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl,
-        const TablePlacement::Placed *placed, int stage_table = -1);
-
-    /// @returns true if all the metadata initialization induced dependencies for table @t are
-    /// satisfied, i.e. all the tables that must be placed before table t (due to ordering imposed
-    /// by the live range shrinking pass) have been placed. @returns false otherwise.
-    bool are_metadata_deps_satisfied(const TablePlacement::Placed *placed,
-        const IR::MAU::Table* t) const;
-
-    TablePlacement::Placed *try_backfill_table(const TablePlacement::Placed *done,
-        const IR::MAU::Table *tbl, cstring before);
-    bool can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        const ordered_set<const IR::MAU::Table *> &partly_placed,
-        const TablePlacement::Placed *placed);
-    bool gateway_thread_can_start(const IR::MAU::Table *, const TablePlacement::Placed *placed);
-    IR::MAU::Table *create_starter_table(gress_t gress);
-    const TablePlacement::Placed *place_table(ordered_set<const GroupPlace *>&work,
-        const TablePlacement::Placed *pl);
-
-    void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, int entries);
-
-    template <class... Args> void error(Args... args) {
-        auto &ctxt = BaseCompileContext::get();
-        self.summary.addPlacementError(ctxt.errorReporter().format_message(args...)); }
-    int errorCount() const { return ::errorCount() + self.summary.placementErrorCount(); }
+    MergeAlwaysRunActions() {
+        addPasses({
+            new Scan(*this),
+            new Update(*this)
+        });
+    }
 };
-*/
-
 
 #endif /* BF_P4C_MAU_TABLE_PLACEMENT_H_ */

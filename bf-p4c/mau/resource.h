@@ -49,6 +49,7 @@ struct TableResourceAlloc {
     void toJSON(JSONGenerator &json) const { json << "null"; }
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
 
+    void merge_instr(const TableResourceAlloc *);
     bool has_tind() const;
     safe_vector<int> hash_dist_immed_units() const;
     int rng_unit() const;

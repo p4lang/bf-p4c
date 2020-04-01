@@ -26,6 +26,10 @@ TableResourceAlloc *TableResourceAlloc::rename(const IR::MAU::Table *tbl, int st
     return this;
 }
 
+void TableResourceAlloc::merge_instr(const TableResourceAlloc *resources) {
+    instr_mem.merge(resources->instr_mem);
+}
+
 /**
  * A ternary indirect table might have been created, when the original layout did not have
  * one, as a gateway is overriding the original TCAM table.

@@ -383,11 +383,19 @@ struct TablePlacement::Placed {
             resources.meter_format = *mf; }
 
     void setup_logical_id() {
-        if (prev && prev->stage == stage) {
-            if (prev->table->gateway_only())
+        if (table->is_always_run_action()) {
+            logical_id = -1;
+            return;
+        }
+
+        auto curr = prev;
+        while (curr && curr->table->is_always_run_action())
+            curr = curr->prev;
+        if (curr && curr->stage == stage) {
+            if (curr->table->gateway_only())
                 logical_id = prev->logical_id + 1;
             else
-                logical_id = prev->logical_id + prev->use.preferred()->logical_tables();
+                logical_id = curr->logical_id + prev->use.preferred()->logical_tables();
         } else {
             logical_id = stage * StageUse::MAX_LOGICAL_IDS;
         }
@@ -782,6 +790,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 
     for (auto *p : whole_stage) {
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
+        // Always Run Tables cannot be counted in the logical table check
         current_mem.add_table(p->table, p->gw, &p->resources, p->use.preferred(),
                               p->entries, p->stage_split, p->attached_entries);
         p->resources.memuse.clear(); }
@@ -2854,12 +2863,78 @@ IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
 IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
+            // Always Run Action will appear logically after all tables in its stage but before
+            // all tables in subsequent stages
             [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
-                return a->global_id() < b->global_id();
+                bool a_always_run = a->is_always_run_action();
+                bool b_always_run = b->is_always_run_action();
+                if (!a_always_run && !b_always_run)
+                    return a->global_id() < b->global_id();
+                if (a->stage() < b->stage())
+                    return a->stage() < b->stage();
+                if (!a_always_run || !b_always_run)
+                    return !a_always_run;
+                return a->name < b->name;
         });
     }
     seq->deps.clear();  // FIXME -- not needed/valid?  perhaps set to all 1s?
     return seq;
+}
+
+/**
+ * The goal of this pass is to merge all of the pre table-placement always run objects into a
+ * single IR::MAU::Table.  Each always run action during table placement is placed
+ * separately, however in the hardware, the action is a single IR::MAU::Action, and thus
+ * must be merged together.
+ *
+ * The idea behind this is that if each always run action is indeed always run, then this table
+ * must appear on every single IR pathway while honoring the IR rules of topological order.
+ * Thus, by replacing a single always run table per stage and per gress will indeed place the
+ * merged always run action in a legal place.  This is essentially what this pass does.
+ *
+ * The Scan pass is to find all always run action, and create a set of post table placement
+ * tables that are merged per stage and gress.  The second step will find a single original
+ * always run action per stage and gress, and replace it with this merged table.  All other
+ * always run actions will be replaced with a nullptr.
+ */
+bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
+    if (tbl->is_always_run_action()) {
+        AlwaysRunKey ark(tbl->stage(), tbl->gress);
+        self.ar_tables_per_stage[ark].insert(tbl);
+    }
+    return true;
+}
+
+void MergeAlwaysRunActions::Scan::end_apply() {
+    for (auto entry : self.ar_tables_per_stage) {
+        cstring name = "$always_run_post_place_" + std::to_string(entry.first.stage);
+        IR::MAU::Table *merged_table = new IR::MAU::Table(name, entry.first.gress);
+        merged_table->stage_ = entry.first.stage;
+        merged_table->always_run = IR::MAU::AlwaysRun::ACTION;
+        IR::MAU::Action *act = new IR::MAU::Action("$always_run_act");
+        TableResourceAlloc *resources = new TableResourceAlloc();
+        // Should really only be an Action and an instr_mem allocation
+        for (auto tbl : entry.second) {
+            BUG_CHECK(tbl->actions.size() == 1, "Always run tables can only have one action");
+            const IR::MAU::Action *local_act = *(Values(tbl->actions).begin());
+            for (auto instr : local_act->action)
+                act->action.push_back(instr);
+            resources->merge_instr(tbl->resources);
+        }
+    }
+}
+
+const IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(IR::MAU::Table *tbl) {
+    auto orig_tbl = getOriginal()->to<IR::MAU::Table>();
+    if (!tbl->is_always_run_action())
+        return tbl;
+    AlwaysRunKey ark(tbl->stage(), tbl->gress);
+    auto tbl_to_replace = self.ar_replacement(ark.stage, ark.gress);
+    if (tbl_to_replace == orig_tbl) {
+        return self.merge_per_stage.at(ark);
+    } else {
+        return nullptr;
+    }
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator
@@ -2888,6 +2963,7 @@ TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
          &con_paths,
          new SetupInfo(*this),
          new DecidePlacement(*this),
-         new TransformTables(*this)
+         new TransformTables(*this),
+         new MergeAlwaysRunActions
      });
 }

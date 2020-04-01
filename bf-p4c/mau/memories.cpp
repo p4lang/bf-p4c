@@ -644,7 +644,9 @@ bool Memories::analyze_tables(mem_info &mi) {
     for (auto *ta : tables) {
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (entries == -1 || entries == 0) {
+        if (table->always_run == IR::MAU::AlwaysRun::ACTION) {
+            continue;
+        } else if (entries == -1 || entries == 0) {
             auto unique_id = ta->build_unique_id(nullptr, true);
             if (ta->table_link != nullptr) {
                 unique_id = ta->table_link->build_unique_id(nullptr, true);

@@ -280,6 +280,7 @@ bool JbayNextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const IR::MAU::Tabl
 }
 
 bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Table *tbl) {
+    if (tbl->always_run == IR::MAU::AlwaysRun::ACTION) return true;
     bool first_run = true;
     ordered_set<const IR::MAU::Table *> seen_after;
     for (auto seq : self.table_to_seqs.at(tbl)) {
@@ -507,6 +508,8 @@ void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &e
 }
 
 bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
+    if (t->always_run == IR::MAU::AlwaysRun::ACTION)
+        return true;
     int st = t->stage();
     self.max_stage = st > self.max_stage ? st : self.max_stage;
     self.mems[st].update(t->resources->memuse);
@@ -720,6 +723,8 @@ IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
 }
 
 IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::Table* t) {
+    if (t->always_run == IR::MAU::AlwaysRun::ACTION)
+        return t;
     if (self.al_runs.count(t->unique_id()))
         t->always_run = IR::MAU::AlwaysRun::TABLE;
     return t;
