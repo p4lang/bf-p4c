@@ -199,6 +199,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/check_for_unimplemented_features.cpp
   common/pragma/collect_global_pragma.cpp
   common/elim_unused.cpp
+  common/empty_tableseq.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
   common/flexible_packing.cpp
@@ -223,6 +224,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/pragma/collect_global_pragma.h
   common/debug_info.h
   common/elim_unused.h
+  common/empty_tableseq.h
   common/extract_maupipe.h
   common/field_defuse.h
   common/flexible_packing.h
@@ -268,6 +270,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_data_bus.cpp
   mau/action_format.cpp
   mau/action_mutex.cpp
+  mau/add_always_run.cpp
   mau/asm_output.cpp
   mau/attached_info.cpp
   mau/attached_output.cpp
@@ -320,6 +323,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_data_bus.h
   mau/action_format.h
   mau/action_mutex.h
+  mau/add_always_run.h
   mau/asm_output.h
   mau/attached_info.h
   mau/attached_output.h
@@ -996,6 +1000,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/add_always_run.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp

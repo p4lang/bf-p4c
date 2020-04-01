@@ -107,6 +107,13 @@ struct FlowGraph {
     /// Maps each table to its corresponding vertex ID in the Boost graph.
     ordered_map<const IR::MAU::Table*, int> tableToVertexIndex;
 
+    /// All tables in this graph, excluding the nullptr table, used to represent the sink node.
+    std::set<const IR::MAU::Table*> tables;
+
+    /// The dominator set for each table in the graph. Lazily computed.
+    mutable boost::optional<std::map<const IR::MAU::Table*,
+                                     std::set<const IR::MAU::Table*>>> dominators;
+
     // By default, emptyFlowGraph is set to true to indicate that there are no vertices in the
     // graph. Only when the first actual table is added to the flow graph is this member set to
     // false.
@@ -120,6 +127,7 @@ struct FlowGraph {
 
     FlowGraph(void) : path_finder(this->g) {
         gress = boost::none;
+        dominators = boost::none;
     }
 
     /// Maps each table to its associated graph vertex.
@@ -141,6 +149,7 @@ struct FlowGraph {
         reachableNodes.clear();
         tableToVertexIndex.clear();
         tableToVertex.clear();
+        tables.clear();
         emptyFlowGraph = true;
     }
 
@@ -159,6 +168,14 @@ struct FlowGraph {
         BUG_CHECK(reachableNodes.count(v1), "No reachable nodes entry for %1%", t1->name);
         return reachableNodes.at(v1).getbit(v2);
     }
+
+    /// @returns the dominator set of the given table. If the IR is well-formed (i.e., the flow
+    /// graph is a DAG), then passing nullptr for @table will produce the set of tables that are
+    /// always executed.
+    const std::set<const IR::MAU::Table*> get_dominators(const IR::MAU::Table* table) const;
+
+    /// Determines whether the given table is executed on all paths.
+    bool is_always_reached(const IR::MAU::Table*) const;
 
     /// Helper for find_path.
     BFSPathFinder path_finder;
@@ -189,6 +206,11 @@ struct FlowGraph {
         return tableToVertexIndex.at(tbl);
     }
 
+    /// @returns all tables in this graph.
+    const std::set<const IR::MAU::Table*> get_tables() const {
+        return tables;
+    }
+
     /// @return the vertex associated with the given table, creating the vertex if one does not
     /// already exist.
     typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* table) {
@@ -203,6 +225,7 @@ struct FlowGraph {
         // Create new vertex.
         auto v = boost::add_vertex(table, g);
         tableToVertex[table] = v;
+        if (table) tables.insert(table);
 
         // If the vertex being added corresponds to a real table (not the sink), then the flow
         // graph is no longer empty; set the emptyFlowGraph member accordingly.
@@ -237,6 +260,20 @@ struct FlowGraph {
             BUG("Boost Graph Library failed to add edge.");
         boost::get(boost::edge_annotation, g)[maybe_new_e.first] = edge_label;
         return {maybe_new_e.first, true};
+    }
+
+    std::vector<const IR::MAU::Table*> topological_sort() const {
+        std::vector<Graph::vertex_descriptor> internal_result;
+        boost::topological_sort(g, std::back_inserter(internal_result));
+
+        // Boost produces a reverse order with internal vertices. Reverse the list while converting
+        // to tables.
+        std::vector<const IR::MAU::Table*> result;
+        for (auto it = internal_result.rbegin(); it != internal_result.rend(); ++it) {
+            result.push_back(get_vertex(*it));
+        }
+
+        return result;
     }
 
     friend std::ostream &operator<<(std::ostream &, const FlowGraph&);
@@ -292,6 +329,19 @@ class FindFlowGraph : public MauInspector {
         // next_tables in different contexts.
         visitDagOnce = false;
     }
+};
+
+/// Computes a table control-flow graph for each gress in the IR.
+class FindFlowGraphs : public MauInspector {
+ private:
+    /// The computed flow graphs.
+    ordered_map<gress_t, FlowGraph>& flow_graphs;
+
+    Visitor::profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const IR::MAU::TableSeq*) override;
+
+ public:
+    explicit FindFlowGraphs(ordered_map<gress_t, FlowGraph>& out) : flow_graphs(out) {}
 };
 
 #endif /* BF_P4C_MAU_TABLE_FLOW_GRAPH_H_ */

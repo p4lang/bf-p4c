@@ -422,6 +422,27 @@ apply {
     EXPECT_EQ(fg.can_reach(t5, t6), false);
     EXPECT_EQ(fg.can_reach(t7, t7), false);
     EXPECT_EQ(fg.can_reach(t3, t7), true);
+
+    // Test dominators.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> expectedDominators;
+    expectedDominators[t11] = {t11};
+    expectedDominators[t12] = {t11, t12};
+    expectedDominators[t1] = {t11, t12, t1};
+    expectedDominators[t2] = {t11, t12, t1, t2};
+    expectedDominators[t3] = {t11, t12, t1, t3};
+    expectedDominators[t4] = {t11, t12, t1, t3, t4};
+    expectedDominators[t5] = {t11, t12, t1, t3, t4, t5};
+    expectedDominators[t6] = {t11, t12, t1, t3, t4, t6};
+    expectedDominators[t7] = {t11, t12, t1, t3, t4, t7};
+    expectedDominators[t8] = {t11, t8};
+    expectedDominators[t9] = {t11, t8, t9};
+    expectedDominators[t10] = {t11, t8, t9, t10};
+    expectedDominators[nullptr] = {t11, t8, t9, t10};
+    for (auto table_dominators : expectedDominators) {
+        auto& table = table_dominators.first;
+        auto& dominators = table_dominators.second;
+        EXPECT_EQ(dominators, fg.get_dominators(table));
+    }
 }
 
 /// Tests case where there cannot be a default-next table.
@@ -570,6 +591,19 @@ apply {
         expected_edges.erase(src);
     }
     EXPECT_EQ(expected_edges.size(), UINT32_C(0));
+
+    // Test dominators.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> expectedDominators;
+    expectedDominators[t1] = {t1};
+    expectedDominators[t2] = {t1, t2};
+    expectedDominators[t3] = {t1, t2, t3};
+    expectedDominators[t4] = {t1, t2, t4};
+    expectedDominators[nullptr] = {t1, t2, t4};
+    for (auto table_dominators : expectedDominators) {
+        auto& table = table_dominators.first;
+        auto& dominators = table_dominators.second;
+        EXPECT_EQ(dominators, fg.get_dominators(table));
+    }
 }
 
 /// Tests case where tables are not applied in consistent order on all branches.
@@ -713,6 +747,18 @@ apply {
     EXPECT_EQ(fg.can_reach(t2, t3), true);
     EXPECT_EQ(fg.can_reach(t3, t2), true);
     EXPECT_EQ(fg.can_reach(t3, t3), true);
+
+    // Test dominators.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> expectedDominators;
+    expectedDominators[t1] = {t1};
+    expectedDominators[t2] = {t1, t2};
+    expectedDominators[t3] = {t1, t3};
+    expectedDominators[nullptr] = {t1};
+    for (auto table_dominators : expectedDominators) {
+        auto& table = table_dominators.first;
+        auto& dominators = table_dominators.second;
+        EXPECT_EQ(dominators, fg.get_dominators(table));
+    }
 }
 
 /// Tests case where tables are applied multiple times.
@@ -1060,5 +1106,26 @@ apply {
     EXPECT_EQ(fg.can_reach(t7, t2), true);
     EXPECT_EQ(fg.can_reach(t6, t6), true);
     EXPECT_EQ(fg.can_reach(t9, t8), true);
+
+    // Test dominators.
+    std::map<const IR::MAU::Table*, std::set<const IR::MAU::Table*>> expectedDominators;
+    expectedDominators[t11] = {t11};
+    expectedDominators[t12] = {t11, t12};
+    expectedDominators[t1] = {t11, t12, t1};
+    expectedDominators[t2] = {t11, t2};
+    expectedDominators[t3] = {t11, t3};
+    expectedDominators[t4] = {t11, t3, t4};
+    expectedDominators[t5] = {t11, t3, t4, t5};
+    expectedDominators[t6] = {t11, t6};
+    expectedDominators[t7] = {t11, t2, t7};
+    expectedDominators[t8] = {t11, t8};
+    expectedDominators[t9] = {t11, t8, t9};
+    expectedDominators[t10] = {t11, t8, t9, t10};
+    expectedDominators[nullptr] = {t11, t6};
+    for (auto table_dominators : expectedDominators) {
+        auto& table = table_dominators.first;
+        auto& dominators = table_dominators.second;
+        EXPECT_EQ(dominators, fg.get_dominators(table));
+    }
 }
 }  // namespace Test

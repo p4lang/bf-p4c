@@ -152,13 +152,19 @@ class MultipleApply : public PassManager {
         return mutex_errors.count(name);
     }
 
+    unsigned num_mutex_errors() { return mutex_errors.size(); }
+
     bool topological_error(cstring name) {
         return topological_errors.count(name);
     }
 
+    unsigned num_topological_errors() { return topological_errors.size(); }
+
     bool default_next_error(cstring name) {
         return default_next_errors.find(name) != default_next_errors.end();
     }
+
+    unsigned num_default_next_errors() { return default_next_errors.size(); }
 
     // For gtests, allow doing just the passes for de-duplicating tables and allow specifying which
     // gress is being visited.

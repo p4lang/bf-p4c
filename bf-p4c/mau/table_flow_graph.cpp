@@ -49,6 +49,89 @@ void FlowGraph::dump_viz(std::ostream &out, const FlowGraph &fg) {
     out << "}" << std::endl;
 }
 
+const std::set<const IR::MAU::Table*>
+FlowGraph::get_dominators(const IR::MAU::Table* table) const {
+    if (!dominators) {
+        // Compute dominator sets. Taken from the Wikipedia article on dominators.
+        using TableSet = std::set<const IR::MAU::Table*>;
+        using DominatorMap = std::map<const IR::MAU::Table*, TableSet>;
+        dominators = boost::optional<DominatorMap>(DominatorMap());
+        auto& dominators = *this->dominators;
+
+        // The start node dominates itself. For all other nodes, set all nodes as the
+        // dominators.
+        auto* source = get_vertex(v_source);
+        for (auto* table : tables) {
+            if (table == source) dominators[table].insert(table);
+            else
+                dominators[table] = tables;
+        }
+        dominators[nullptr] = tables;
+
+        // The dominator set for each table is the intersection of the dominator sets of all the
+        // table's predecessors. This means that any time we recompute a table's dominator set, its
+        // successors will also need to be recomputed.
+        //
+        // Start by recomputing all of the start node's successors.
+        TableSet toRecompute;
+        typename FlowGraph::Graph::out_edge_iterator out_edges, out_edges_end;
+        boost::tie(out_edges, out_edges_end) = boost::out_edges(v_source, g);
+        for (; out_edges != out_edges_end; ++out_edges) {
+            auto target = boost::target(*out_edges, g);
+            toRecompute.insert(get_vertex(target));
+        }
+
+        while (!toRecompute.empty()) {
+            auto* table = *toRecompute.begin();
+            toRecompute.erase(table);
+
+            // Recompute the dominator set for the current table. Take the intersection of
+            // the current dominator sets of all the table's predecessors.
+            TableSet recomputed = tables;
+
+            typename FlowGraph::Graph::in_edge_iterator edges, edges_end;
+            boost::tie(edges, edges_end) = boost::in_edges(get_vertex(table), g);
+            BUG_CHECK(edges != edges_end, "Table flow graph has more than one source node");
+            for (; edges != edges_end; ++edges) {
+                auto src = boost::source(*edges, g);
+                const IR::MAU::Table* parent = get_vertex(src);
+                TableSet parentDominators = dominators.at(parent);
+                TableSet intersection;
+                std::set_intersection(recomputed.begin(), recomputed.end(),
+                                      parentDominators.begin(), parentDominators.end(),
+                                      std::inserter(intersection, intersection.begin()));
+
+                recomputed = std::move(intersection);
+            }
+
+            // Add the current table itself to the recomputed set.
+            recomputed.insert(table);
+
+            if (recomputed != dominators.at(table)) {
+                // Save the recomputed set and add the current table's successors to the set of
+                // tables whose dominator sets need to be recomputed.
+                dominators[table] = std::move(recomputed);
+
+                boost::tie(out_edges, out_edges_end) = boost::out_edges(get_vertex(table), g);
+                for (; out_edges != out_edges_end; ++out_edges) {
+                    auto target = boost::target(*out_edges, g);
+                    toRecompute.insert(get_vertex(target));
+                }
+            }
+        }
+
+        // Remove the null table from the dominator set for the sink.
+        dominators[nullptr].erase(nullptr);
+    }
+
+    return dominators->at(table);
+}
+
+bool FlowGraph::is_always_reached(const IR::MAU::Table* table) const {
+    // Check that the table dominates the graph's sink node.
+    return get_dominators(nullptr).count(table);
+}
+
 Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
     auto rv = Inspector::init_apply(node);
     fg.clear();
@@ -164,10 +247,10 @@ void FindFlowGraph::end_apply() {
     typename FlowGraph::Graph::vertex_iterator v, v_end;
     bool source_found = false;
     for (boost::tie(v, v_end) = boost::vertices(fg.g); v != v_end; ++v) {
+        fg.tableToVertexIndex[fg.get_vertex(*v)] = *v;
+
         if (*v == fg.v_sink)
             continue;
-
-        fg.tableToVertexIndex[fg.get_vertex(*v)] = *v;
 
         auto in_edge_pair = boost::in_edges(*v, fg.g);
         if (in_edge_pair.first == in_edge_pair.second) {
@@ -218,4 +301,23 @@ void FindFlowGraph::end_apply() {
             fg.reachableNodes[*src] |= fg.reachableNodes[*mid];
         }
     }
+}
+
+Visitor::profile_t FindFlowGraphs::init_apply(const IR::Node* root) {
+    // Clear the flow graphs every time the visitor is applied.
+    auto result = Inspector::init_apply(root);
+    flow_graphs.clear();
+    return result;
+}
+
+bool FindFlowGraphs::preorder(const IR::MAU::TableSeq* thread) {
+    // Each top-level TableSeq should represent the whole MAU pipeline for a single gress. Build
+    // the control-flow graph for that.
+    if (!thread->empty()) {
+        auto gress = thread->front()->gress;
+        thread->apply(FindFlowGraph(flow_graphs[gress]));
+    }
+
+    // Prune the visitor.
+    return false;
 }
