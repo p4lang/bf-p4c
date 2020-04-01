@@ -1178,6 +1178,37 @@ void TnaProgramStructure::createIngressParser() {
 
     IR::IndexedVector<IR::Declaration> stateful;
     auto states = new IR::IndexedVector<IR::ParserState>();
+
+    ordered_map<cstring, ordered_set<cstring>> transitions;
+    for (auto p : parserStates) {
+        forAllMatching<IR::CaseEntry>(p.first, [p, &transitions](const IR::CaseEntry* sc) {
+            transitions[p.first->name.name].insert(sc->action);
+        });
+        if (p.first->default_return.name != nullptr) {
+            transitions[p.first->name].insert(p.first->default_return);
+        }
+    }
+
+    ordered_map<cstring, ordered_set<cstring>> reachable_states;
+    // compute all states reachable from 'state'
+    auto compute_reachable_states = [&](cstring state) {
+        ordered_set<cstring> worklist;
+        for (auto t : transitions[state])
+            worklist.insert(t);
+        while (!worklist.empty()) {
+            auto w = worklist.front();
+            reachable_states[state].insert(w);
+            auto next = transitions[w];
+            for (auto n : next)
+                reachable_states[state].insert(n);
+            worklist.erase(w);
+        }
+    };
+
+    compute_reachable_states("start");
+    compute_reachable_states("start_i2e_mirrored");
+    compute_reachable_states("start_e2e_mirrored");
+
     for (auto p : parserStates) {
         auto state = convertParser(p.first, &stateful);
         if (state == nullptr)
@@ -1188,6 +1219,16 @@ void TnaProgramStructure::createIngressParser() {
         if (state->name == "start_i2e_mirrored" ||
             state->name == "start_e2e_mirrored")
             continue;
+
+        if (reachable_states["start_i2e_mirrored"].count(state->name) &&
+            !reachable_states["start"].count(state->name)) {
+            continue;
+        }
+
+        if (reachable_states["start_e2e_mirrored"].count(state->name) &&
+            !reachable_states["start"].count(state->name))
+            continue;
+
         states->push_back(state);
     }
 
