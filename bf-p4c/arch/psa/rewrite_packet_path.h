@@ -1,13 +1,13 @@
-#ifndef BF_P4C_ARCH_REWRITE_PACKET_PATH_H_
-#define BF_P4C_ARCH_REWRITE_PACKET_PATH_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
+#define EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
 
 #include "p4/methodInstance.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "ir/ir.h"
-#include "program_structure.h"
-#include "psa_program_structure.h"
+#include "bf-p4c/arch/program_structure.h"
+#include "programStructure.h"
 
 namespace BFN {
 
@@ -21,5 +21,5 @@ struct RewritePacketPath : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_REWRITE_PACKET_PATH_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_ */
 

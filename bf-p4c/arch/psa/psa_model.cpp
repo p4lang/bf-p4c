@@ -1,4 +1,4 @@
-#include "bf-p4c/arch/psa_model.h"
+#include "psa_model.h"
 
 namespace BFN {
 

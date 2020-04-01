@@ -5,7 +5,7 @@
 #include "frontends/p4/coreLibrary.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/arch/bridge_metadata.h"
-#include "psa_program_structure.h"
+#include "programStructure.h"
 #include "rewrite_packet_path.h"
 
 namespace BFN {

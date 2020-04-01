@@ -1,8 +1,8 @@
 #include "bf-p4c/arch/arch.h"
-#include "bf-p4c/arch/psa.h"
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/arch/t2na.h"
 #include "bf-p4c/arch/v1model.h"
+#include "bf-p4c/arch/psa/psa.h"
 #include "bf-p4c/device.h"
 
 namespace BFN {

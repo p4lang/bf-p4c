@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_PSA_H_
-#define BF_P4C_ARCH_PSA_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
+#define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
 
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -15,8 +15,8 @@
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
-#include "bf-p4c/arch/psa_program_structure.h"
 #include "bf-p4c/arch/arch.h"
+#include "programStructure.h"
 
 namespace BFN {
 
@@ -29,4 +29,4 @@ class PortableSwitchTranslation : public PassManager {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_PSA_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_ */

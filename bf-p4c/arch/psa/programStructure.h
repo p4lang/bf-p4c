@@ -1,11 +1,11 @@
-#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAM_STRUCTURE_H_
-#define EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAM_STRUCTURE_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
+#define EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
 
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/arch/psa_model.h"
+#include "bf-p4c/arch/psa/psa_model.h"
 #include "bf-p4c/ir/gress.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -85,6 +85,7 @@ struct ProgramStructure : BFN::ProgramStructure {
     void createPipeline();
 
     const IR::P4Program *create(const IR::P4Program *program) override;
+    void loadModel();
 
     ProgramStructure() :
         BFN::ProgramStructure(), psa_model(PsaModel::instance) { }
@@ -94,4 +95,4 @@ struct ProgramStructure : BFN::ProgramStructure {
 
 }  // namespace BFN
 
-#endif  /* EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAM_STRUCTURE_H_ */
+#endif  /* EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_ */

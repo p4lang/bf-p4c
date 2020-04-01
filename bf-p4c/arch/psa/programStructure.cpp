@@ -1,6 +1,8 @@
-#include "psa_program_structure.h"
+#include "programStructure.h"
 #include "psa_converters.h"
+#include "midend/validateProperties.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
+#include "bf-p4c/arch/arch.h"
 
 namespace BFN {
 

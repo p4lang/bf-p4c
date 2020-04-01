@@ -558,13 +558,14 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/collect_bridged_fields.cpp
   arch/helpers.cpp
   arch/program_structure.cpp
-  arch/psa.cpp
-  arch/psa_converters.cpp
-  arch/psa_model.cpp
-  arch/psa_program_structure.cpp
+  arch/psa/psa.cpp
+  arch/psa/psa_converters.cpp
+  arch/psa/psa_model.cpp
+  arch/psa/programStructure.cpp
+  arch/psa/rewrite_packet_path.cpp
+  arch/psa/rewrite_bridge_metadata.cpp
   arch/remove_set_metadata.cpp
   arch/rewrite_action_selector.cpp
-  arch/rewrite_packet_path.cpp
   arch/bridge.cpp
   arch/tna.cpp
   arch/v1model.cpp
@@ -592,13 +593,14 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/collect_bridged_fields.h
   arch/helpers.h
   arch/program_structure.h
-  arch/psa.h
-  arch/psa_converters.h
-  arch/psa_model.h
-  arch/psa_program_structure.h
+  arch/psa/psa.h
+  arch/psa/psa_converters.h
+  arch/psa/psa_model.h
+  arch/psa/programStructure.h
+  arch/psa/rewrite_packet_path.h
+  arch/psa/rewrite_bridge_metadata.h
   arch/remove_set_metadata.h
   arch/rewrite_action_selector.h
-  arch/rewrite_packet_path.h
   arch/bridge.h
   arch/tna.h
   arch/v1model.h

@@ -1,9 +1,9 @@
-#ifndef BF_P4C_ARCH_PSA_CONVERTERS_H_
-#define BF_P4C_ARCH_PSA_CONVERTERS_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_CONVERTERS_H_
+#define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_CONVERTERS_H_
 
 #include <cmath>
 #include "ir/ir.h"
-#include "bf-p4c/arch/psa_program_structure.h"
+#include "programStructure.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/safe_vector.h"
@@ -192,4 +192,4 @@ class PathExpressionConverter : public ExpressionConverter {
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_PSA_CONVERTERS_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_PSA_CONVERTERS_H_ */

@@ -1,17 +1,17 @@
 #include <cmath>
 #include <fstream>
 #include "bf-p4c/device.h"
-#include "intrinsic_metadata.h"
 #include "psa.h"
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
 #include "midend/convertEnums.h"
-#include "bridge_metadata.h"
 #include "midend/copyStructures.h"
 #include "midend/validateProperties.h"
-#include "psa_program_structure.h"
+#include "programStructure.h"
 #include "psa_converters.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/arch/intrinsic_metadata.h"
 
 namespace BFN {
 
@@ -688,6 +688,7 @@ class LoadTargetArchitecture : public Inspector {
         setup_metadata_map();
         char* drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
         Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+        LOG1("path " << p4includePath << " " << drvP4IncludePath);
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
         std::vector<const char *>filenames;

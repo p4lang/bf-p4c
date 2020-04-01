@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_PSA_MODEL_H_
-#define BF_P4C_ARCH_PSA_MODEL_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_
+#define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_
 
 #include "frontends/common/model.h"
 #include "frontends/p4/coreLibrary.h"
@@ -486,4 +486,4 @@ class PsaModel : public ::Model::Model {
 
 }  // namespace BFN
 
-#endif  /* BF_P4C_ARCH_PSA_MODEL_H_*/
+#endif  /* EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_ */
