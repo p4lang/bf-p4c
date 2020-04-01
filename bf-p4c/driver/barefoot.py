@@ -241,8 +241,9 @@ class BarefootBackend(BackendDriver):
         output_dir = self._output_directory
         basepath = "{}/{}".format(output_dir, self._source_basename)
 
-        self.add_command_option('preprocessor', "-o")
-        self.add_command_option('preprocessor', "{}.p4pp".format(basepath))
+        if not opts.run_preprocessor_only:
+            self.add_command_option('preprocessor', "-o")
+            self.add_command_option('preprocessor', "{}.p4pp".format(basepath))
         self.add_command_option('preprocessor', self._source_filename)
 
         self.add_command_option('compiler', "--target " + self._target)
@@ -311,7 +312,7 @@ class BarefootBackend(BackendDriver):
         if opts.disable_gfm_parity:
             self.add_command_option('compiler', '--disable-gfm-parity')
             self.add_command_option('assembler', '--disable-gfm-parity')
- 
+
         if opts.log_hashes:
             self.add_command_option('assembler', '--log-hashes')
 
