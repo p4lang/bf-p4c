@@ -75,6 +75,7 @@ template<> struct CounterlikeTraits<::BFN::CounterExtern> {
         else if (name == "PACKETS_AND_BYTES") return CounterSpec::PACKETS_AND_BYTES;
         return CounterSpec::UNSPECIFIED;
     }
+    static boost::optional<size_t> indexTypeParamIdx() { return 1; }
 };
 
 /// CounterlikeTraits<> specialization for MeterExtern
@@ -98,6 +99,7 @@ template<> struct CounterlikeTraits<::BFN::MeterExtern> {
         else if (name == "BYTES") return MeterSpec::BYTES;
         return MeterSpec::UNSPECIFIED;
     }
+    static boost::optional<size_t> indexTypeParamIdx() { return 0; }
 };
 
 }  // namespace Helpers
@@ -1295,10 +1297,11 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto actionSelector = getActionSelector(externBlock);
             if (actionSelector) addActionSelector(symbols, p4info, *actionSelector, pipeName);
         } else if (externBlock->type->name == "Counter") {
-            auto counter = Counterlike<CounterExtern>::from(externBlock);
+            auto counter = Counterlike<CounterExtern>::from(externBlock, refMap, typeMap,
+                                                            p4RtTypeInfo);
             if (counter) addCounter(symbols, p4info, *counter, pipeName);
         } else if (externBlock->type->name == "Meter") {
-            auto meter = Counterlike<MeterExtern>::from(externBlock);
+            auto meter = Counterlike<MeterExtern>::from(externBlock, refMap, typeMap, p4RtTypeInfo);
             if (meter) addMeter(symbols, p4info, *meter, pipeName);
         } else if (externBlock->type->name == "Digest") {
             auto digest = getDigest(decl, p4RtTypeInfo);

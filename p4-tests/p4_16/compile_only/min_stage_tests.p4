@@ -117,10 +117,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-struct Meta { }
-
-control vrfy(inout headers h, inout Meta m) { apply {} }
-control update(inout headers h, inout Meta m) { apply {} }
+control vrfy(inout headers h, inout metadata m) { apply {} }
+control update(inout headers h, inout metadata m) { apply {} }
 
 control deparser(packet_out b, in headers h) {
     apply { }

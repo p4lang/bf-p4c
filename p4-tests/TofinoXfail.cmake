@@ -372,7 +372,6 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   testdata/p4_16_samples/arith1-bmv2.p4
   testdata/p4_16_samples/arith2-bmv2.p4
-  testdata/p4_16_samples/issue512.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
   )
 
@@ -1718,4 +1717,50 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "BfruntimeReadWriteRpcException"
   p4_16_programs_tna_ternary_match
+)
+
+#new p4c tests that fail
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: expected a method call"
+  testdata/p4_16_samples/issue2221-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Conditions in an action must be simple comparisons of an action data parameter"
+  testdata/p4_16_samples/issue512.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "1 expected packet on port 0 not seen"
+  testdata/p4_16_samples/issue2170-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: MyPacketTypes: declaration not found"
+  testdata/p4_16_samples/v1model-digest-custom-type.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Tofino requires byte-aligned headers, but header .* is not byte-aligned"
+  testdata/p4_16_samples/custom-type-restricted-fields.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: action spanning multiple stages"
+  testdata/p4_16_samples/nested_if_lvalue_dependencies.p4
+  testdata/p4_16_samples/nested_if_else.p4
+  testdata/p4_16_samples/nested_if_statement.p4
+)
+
+# old p4c test that now fails with our backend -- why?
+p4c_add_xfail_reason("tofino"
+  "error: StructInitializerExpression: Expected a bit<> or int<> value"
+  testdata/p4_16_samples/issue232-bmv2.p4
+)
+
+# Test that fails due to extra sanity checking in fronend def_use pass
+# P4C-2612
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: Overwriting definitions"
+  ../glass/testsuite/p4_tests/mau/test_config_163_stateful_table_math_unit.p4
 )

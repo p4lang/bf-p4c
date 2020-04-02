@@ -1493,6 +1493,7 @@ struct switch_egress_checks_t {
     // Add more checks here.
 }
 
+@flexible
 struct switch_lookup_fields_t {
  // l2
     mac_addr_t mac_src_addr;
@@ -1528,6 +1529,7 @@ struct switch_lookup_fields_t {
     switch_drop_reason_t drop_reason;
 }
 
+#if 0
 @flexible
 struct switch_lookup_fields_egress_t {
  // l2
@@ -1558,7 +1560,7 @@ struct switch_lookup_fields_egress_t {
 
     switch_drop_reason_t drop_reason;
 }
-
+#endif
 
 
 @flexible
@@ -1754,7 +1756,7 @@ struct switch_egress_metadata_t {
     switch_egress_flags_t flags;
 //  switch_egress_checks_t checks;
 
-    switch_lookup_fields_egress_t lkp;
+    switch_lookup_fields_t lkp;
     switch_tunnel_metadata_t tunnel_0;
     switch_tunnel_metadata_t tunnel_1;
     switch_tunnel_metadata_t tunnel_2;

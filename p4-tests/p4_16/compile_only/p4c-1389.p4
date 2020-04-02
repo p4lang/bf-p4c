@@ -10,7 +10,7 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
 
-    Counter<bit<32>,_>(4096, CounterType_t.PACKETS) cntr;
+    Counter<bit<32>,bit<12>>(4096, CounterType_t.PACKETS) cntr;
 
     action count(bit<12> idx) { cntr.count(idx); }
     action noop() { }
