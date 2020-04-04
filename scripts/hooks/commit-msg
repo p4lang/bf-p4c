@@ -1,51 +1,165 @@
 #!/usr/bin/env python
 
+"""git commit decorator
+
+If the name of the current branch contains a JIRA ticket number (e.g.,
+p4c-1234), this script augments the body of the commit message with a stanza
+that transitions the associated JIRA ticket:
+
+  p4c-1234 #assign #start-work [COMMIT SUMMARY]
+
+It also adds the JIRA ticket number to the beginning of the commit summary if
+it's not there already.
+"""
+
+import os
 import sys
 import subprocess
 import re
+import tempfile
 
+class Colors:
+    WARNING = '\033[1;93;100m'
+    ERROR = '\033[1;31;100m'
+    ENDC = '\033[0m'
 
 class Decorator:
-  def get_branch(self):
+    supported_pragmas = ["no-jira"]
+    supported_projects = [
+            "brig",
+            "compiler",
+            "drv",
+            "model",
+            "p4c",
+            "p4vis",
+        ]
+
+    def get_branch(self):
         name = subprocess.Popen("git symbolic-ref -q HEAD", shell=True,
                                 stdout=subprocess.PIPE).stdout.read().decode()
         return '/'.join(name.rstrip('\n').split('/')[2:])
 
-  def get_fix(self, branch):
-        l = branch.split('/')
-        m = re.match("(brig|p4c|compiler|drv)-(\d+)", l[-1], re.IGNORECASE)
+    """Parses the branch name for information about the JIRA ticket.
+
+    Returns a (project_name, ticket number) pair on success, None on failure.
+    """
+    def parse_branch(self):
+        # Get the ticket number from the branch name, if possible.
+        l = self.get_branch().split('/')
+        m = re.match("(%s)-(\d+)" % "|".join(self.supported_projects),
+                l[-1], re.IGNORECASE)
         if m is not None:
-          return m.group(1), m.group(2)
+          return m.group(1).upper(), m.group(2)
         return None, None
 
-  def __init__(self):
-        self.branch = self.get_branch()
-        self.project, self.fix = self.get_fix(self.branch)
+    """Initializes the object by parsing the original commit message"""
+    def parse_msg(self):
+        # These are the properties that we'll be extracting from the message.
+        self.orig_summary = None
+        self.orig_body = None  # Everything appearing after orig_summary.
+        self.project = None  # Derived from orig_summary.
+        self.ticket_number = None  # Derived from orig_summary.
+        self.summary = None  # Omits the project and ticket number.
+        self.body = []  # Excludes comment lines.
+        self.pragmas = []
 
-  def decorate(self, m):
-        if self.fix is None:
-          return m
+        lines = self.orig_msg.split('\n')
 
-        summary = m.split('\n')[0]
+        # Remove lines from the beginning of the message until we reach the
+        # first non-empty, non-comment line.
+        while lines and (not lines[0].strip() or lines[0].startswith("#")):
+            lines = lines[1:]
+
+        if not lines:
+            # We have an empty commit message, so git will abort the commit.
+            # Just exit nicely.
+            sys.exit(0)
+
+        self.orig_summary = lines[0].strip()
+        self.orig_body = lines[1:]
+
+        m = re.match("(%s)-(\d+):(.*)" % "|".join(self.supported_projects),
+                self.orig_summary, re.IGNORECASE)
+        if m is not None:
+            self.project = m.group(1).upper()
+            self.ticket_number = m.group(2)
+            self.summary = m.group(3).strip()
+        else:
+            self.summary = self.orig_summary
+
+        self.body = [line for line in self.orig_body
+                          if not line.startswith("#")]
+
+        # Find any pragmas by matching on lines that, when stripped of
+        # whitespace, start and end with brackets.
+        for line in [line.strip() for line in self.body]:
+            m = re.match("^\[(.*)\]$", line)
+            if m is None: continue
+
+            # Remove brackets and strip whitespace.
+            line = m.group(1).strip()
+
+            if line in self.supported_pragmas:
+                self.pragmas.append(line)
+
+    def __init__(self, msg):
+        self.orig_msg = msg
+        self.parse_msg()
+
+        # Incorporate project and ticket number from branch name.
+        # Warn if it doesn't match the one in the commit message.
+        branch_jira = self.parse_branch()
+        if self.ticket_number is None:
+            (self.project, self.ticket_number) = branch_jira
+        elif branch_jira not in \
+                [(None, None), (self.project, self.ticket_number)]:
+            print(f"""{Colors.WARNING}Warning:{Colors.ENDC} JIRA ticket in commit message does not match branch name.
+Preferring the ticket in the commit message""",
+                file=sys.stderr)
+
+        if self.ticket_number is None and not "no-jira" in self.pragmas:
+            # Save the user-supplied commit message to a temporary file.
+            fd, fname = tempfile.mkstemp(
+                    prefix="commit-msg-",
+                    suffix=".txt",
+                    text=True)
+            with open(fname, 'w') as f:
+                f.write(self.orig_msg)
+            os.close(fd)
+
+            print(f"""{Colors.ERROR}Commit rejected:{Colors.ENDC} no JIRA ticket number provided.
+To override this check, add a "[no-jira]" line to your commit message.
+
+You can retrieve your commit message from %s""" % fname,
+                file=sys.stderr)
+            sys.exit(1)
+
+    def decorate(self):
+        if self.ticket_number is None:
+            return self.orig_msg
+
+        result = ["%s-%s: %s" % \
+                (self.project, self.ticket_number, self.summary)]
+        result.extend(self.body)
+
+        # This is the stanza for transitioning the JIRA ticket.
         stanza = "%s-%s #assign #start-work %s" % \
-              (self.project.upper(), self.fix, summary)
+              (self.project, self.ticket_number, self.summary)
+
+        # See if we already have the JIRA stanza.
         have_stanza = False
-        have_message = False
-        n = ""
-        for l in m.split('\n'):
-          n += "%s\n" % l
-          if l.startswith('#'): continue  # Ignore comment lines.
-          have_message |= l.strip() != ""
-          have_stanza |= stanza in l
-        if have_message and not have_stanza:
-          n += '\n' + stanza + '\n'
-        return n
+        for line in self.body:
+            have_stanza |= stanza in line
+        if not have_stanza:
+            result.append(stanza)
+
+        return "\n".join(result)
 
 msg = None
 with open(sys.argv[1], 'r+') as file:
-  msg = file.read()
-  d = Decorator()
-  new_msg = d.decorate(msg)
-  file.seek(0)
-  file.write(new_msg)
-  file.truncate()
+    msg = file.read()
+    d = Decorator(msg)
+    new_msg = d.decorate()
+    file.seek(0)
+    file.write(new_msg)
+    file.truncate()

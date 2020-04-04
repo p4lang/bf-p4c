@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+"""pre-commit linter
+
+Catches some basic coding style issues as code is committed by running
+`tools/cpplint.py` on the compiler source.
+"""
+
 from __future__ import print_function
 import sys, os, subprocess, re, shlex
 
