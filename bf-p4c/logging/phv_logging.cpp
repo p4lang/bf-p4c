@@ -308,7 +308,7 @@ const char * PhvLogging::getFieldType(const PHV::Field* f) const {
     // How to identify compiler added fields ($?)
     if (f->padding) return "padding";
     if (f->bridged) return "bridged";
-    if (f->metadata && f->is_intrinsic()) return "imeta";
+    if (f->is_intrinsic()) return "imeta";  // All intrinsic fields are metadata
     // if (f->privatized()) return Records::field_class_t::COMPILER_ADDED;
     if (f->metadata) return "meta";
     if (f->pov) return "pov";
