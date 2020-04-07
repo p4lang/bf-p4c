@@ -39,6 +39,7 @@
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"
+#include "bf-p4c/parde/resolve_negative_extract.h"
 #include "bf-p4c/parde/reset_invalidated_checksum_headers.h"
 #include "bf-p4c/parde/infer_payload_offset.h"
 #include "bf-p4c/parde/stack_push_shims.h"
@@ -180,6 +181,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new CollectPhvInfo(phv),
         new ParserCopyProp(phv),
+        new ResolveNegativeExtract,
         new CollectPhvInfo(phv),
         (Device::currentDevice() == Device::JBAY && options.infer_payload_offset) ?
             new InferPayloadOffset(phv, defuse) : nullptr,

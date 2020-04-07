@@ -1695,10 +1695,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )
 
+# @override_phase0_table_name( ".blah" )
 p4c_add_xfail_reason("tofino"
-  "error: Inferred container alignments for field .* that are impossible to satisfy"
-  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-1970.p4
+  "error: syntax error, unexpected '.'"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1763,4 +1763,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Overwriting definitions"
   ../glass/testsuite/p4_tests/mau/test_config_163_stateful_table_math_unit.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Parser state .* requires fields from an earlier state which have been lost"
+  ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
 )

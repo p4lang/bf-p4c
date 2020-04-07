@@ -426,6 +426,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/phase0.h
   parde/parde_utils.h
   parde/parser_info.h
+  parde/resolve_negative_extract.h
   parde/split_parser_state.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
