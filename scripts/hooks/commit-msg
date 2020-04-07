@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """git commit decorator
 
@@ -113,8 +113,8 @@ class Decorator:
             (self.project, self.ticket_number) = branch_jira
         elif branch_jira not in \
                 [(None, None), (self.project, self.ticket_number)]:
-            print(f"""{Colors.WARNING}Warning:{Colors.ENDC} JIRA ticket in commit message does not match branch name.
-Preferring the ticket in the commit message""",
+            print("""%sWarning:%s JIRA ticket in commit message does not match branch name.
+Preferring the ticket in the commit message""" % (Colors.WARNING, Colors.ENDC),
                 file=sys.stderr)
 
         if self.ticket_number is None and not "no-jira" in self.pragmas:
@@ -127,10 +127,11 @@ Preferring the ticket in the commit message""",
                 f.write(self.orig_msg)
             os.close(fd)
 
-            print(f"""{Colors.ERROR}Commit rejected:{Colors.ENDC} no JIRA ticket number provided.
+            print("""%sCommit rejected:%s no JIRA ticket number provided.
 To override this check, add a "[no-jira]" line to your commit message.
 
-You can retrieve your commit message from %s""" % fname,
+You can retrieve your commit message from %s"""
+                    % (Colors.ERROR, Colors.ENDC, fname),
                 file=sys.stderr)
             sys.exit(1)
 
