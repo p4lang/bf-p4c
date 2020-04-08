@@ -720,7 +720,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error: Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
+  "error: Field is extracted in the parser.*incompatible alignment"
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
 )

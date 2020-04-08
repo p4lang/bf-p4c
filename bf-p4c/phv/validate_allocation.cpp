@@ -651,24 +651,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             nw_bitrange containerSlice =
               alloc.container_bits().toOrder<Endian::Network>(alloc.container.size());
 
-            // The first bit of the field must have the same alignment in the
-            // container as it does in the input buffer.
-            if (fieldSlice.lo == 0) {
-                ERROR_CHECK(containerSlice.lo % 8 == requiredAlignment,
-                            "Field is extracted in the parser, but its "
-                            "first container slice has an incompatible "
-                            "alignment: %1%", cstring::to_cstring(field));
-                return;
-            }
-
-            // Other slices (which represent a continuation of the same field
-            // into other containers) must be byte aligned, since container
-            // boundaries must always correspond with input buffer byte
-            // boundaries.
-            ERROR_CHECK(containerSlice.isLoAligned(),
-                        "Field is extracted in the parser into multiple "
-                        "containers, but the container slices after the first "
-                        "aren't byte aligned: %1%", cstring::to_cstring(field));
+            // The field must have the same alignment in the
+            // container as it does in the input buffer, so the fieldslices must
+            // have corresponding alignment requirements, which are shifted by
+            // the lo fo fieldSlice bits from the original requirement.
+            ERROR_CHECK(containerSlice.lo % 8 == (requiredAlignment + fieldSlice.lo % 8) % 8,
+                        "Field is extracted in the parser, but its "
+                        "container slice has an incompatible "
+                        "alignment: %1%", cstring::to_cstring(field));
         }
     });
 
