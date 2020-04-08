@@ -2912,10 +2912,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
     }
 
     alloc.type = Use::METER;
-    if (mtr->direct)
-        alloc.used_by = tbl->match_table->externalName() + "$meter";
-    else
-        alloc.used_by = mtr->name + "";
+    alloc.used_by = mtr->name.toString();
 
     if (!on_search_bus) {
         auto &mah = alloc.meter_alu_hash;
@@ -3281,10 +3278,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     }
 
     alloc.type = Use::STATEFUL_ALU;
-    if (salu->direct)
-        alloc.used_by = tbl->match_table->externalName() + "$register";
-    else
-        alloc.used_by = salu->name + "";
+    alloc.used_by = salu->name.toString();
 
     if (!on_search_bus) {
         if (!setup_stateful_hash_bus(phv, salu, alloc, sources)) {
