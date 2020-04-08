@@ -24,91 +24,85 @@ void DeterminePowerUsage::find_stage_dependencies() {
     dep_graph_.print_dep_type_map(std::cout);
     dep_graph_.print_container_access(std::cout); }
   // Initialize stage_dep_to_previous_: stage encoding is ingress, egress, ghost.
-  for (int stage=0; stage < 3*Device::numStages(); ++stage) {
-    if (force_match_dependency_) {
-      mau_features_->stage_dep_to_previous_.emplace(stage, DEP_MATCH);
-      continue;
-    }
-    if ((stage % Device::numStages()) == 0) {
-      // stage 0 considered match dependent
-      mau_features_->stage_dep_to_previous_.emplace(stage, DEP_MATCH);
-    } else if (Device::currentDevice() == Device::TOFINO &&
-               (stage % Device::numStages()) == (Device::numStages() / 2)) {
-      // Forced match dependency between stages 5 and 6 for Tofino.
-      mau_features_->stage_dep_to_previous_.emplace(stage, DEP_MATCH);
-    } else {
-      // Start all stages off as concurrent.
-      // For Tofino2+, this will be converted to action prior to output.
-      mau_features_->stage_dep_to_previous_.emplace(stage, DEP_CONCURRENT);
+  for (gress_t gress : Device::allGresses()) {
+    for (int stage=0; stage < Device::numStages(); ++stage) {
+      if (force_match_dependency_) {
+        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+        continue;
+      }
+      if (stage == 0) {
+        // stage 0 considered match dependent
+        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+      } else if (Device::currentDevice() == Device::TOFINO && stage == Device::numStages() / 2) {
+        // Forced match dependency between stages 5 and 6 for Tofino.
+        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_MATCH;
+      } else {
+        // Start all stages off as concurrent.
+        // For Tofino2+, this will be converted to action prior to output.
+        mau_features_->stage_dep_to_previous_[gress][stage] = DEP_CONCURRENT;
+      }
     }
   }
+
   if (force_match_dependency_)
     LOG4("User indicated that all MAU stage dependencies must be match.");
 
 
   // Use dependency graph to find final table placement stage dependencies.
-  for (int stage=1; stage < 3*Device::numStages(); ++stage) {
-    if ((stage % Device::numStages()) == 0)  // skip stage 0
-      continue;
-    gress_t g = get_gress(stage);
-    std::vector<const IR::MAU::Table*> cur;
-    mau_features_->get_tables_in_gress_stage(g, stage % Device::numStages(), cur);
-    mau_dep_t worst_dep =
-      mau_features_->get_dependency_for_gress_stage(g, stage % Device::numStages());
+  for (gress_t gress : Device::allGresses()) {
+    for (int stage=1; stage < Device::numStages(); ++stage) {
+      mau_dep_t worst_dep =
+        mau_features_->get_dependency_for_gress_stage(gress, stage);
 
-    // Check dependencies from tables in current stage to tables in a previous stage.
-    // (Until we see a match dependency.)
-    int prev_stage = stage - 1;
-    while (worst_dep != DEP_MATCH) {
-      std::vector<const IR::MAU::Table*> prev;
-      mau_features_->get_tables_in_gress_stage(g, prev_stage % Device::numStages(), prev);
-      for (auto* t1 : cur) {
-        if (worst_dep == DEP_MATCH)
-          break;
-        if (t1->gress != g)
-          continue;
-        if (table_uses_mocha_container_.find(t1->unique_id()) !=
-            table_uses_mocha_container_.end()) {
-          if (table_uses_mocha_container_.at(t1->unique_id())) {
-            worst_dep = DEP_MATCH;
-            LOG4("  Table " << t1->externalName() << " (stage " << stage
-              << ") uses mocha containers.");
-            LOG4("    So dependency to previous stage will be set to match.");
+      // Check dependencies from tables in current stage to tables in a previous stage.
+      // (Until we see a match dependency.)
+      int prev_stage = stage - 1;
+      while (worst_dep != DEP_MATCH) {
+        for (auto* t1 : mau_features_->stage_to_tables_[gress][stage]) {
+          if (worst_dep == DEP_MATCH)
             break;
-        } }
-        auto control_graph = graphs_->get_graph(t1->gress);
-        for (auto* t2 : prev) {
-          if (t1->gress == t2->gress &&
-              (control_graph->active_simultaneously(t2->unique_id(), t1->unique_id()) ||
-               t1->always_run == IR::MAU::AlwaysRun::TABLE ||
-               t2->always_run == IR::MAU::AlwaysRun::TABLE)) {
-            // Returns the dependency type from t1 to t2.
-            DependencyGraph::mau_dependencies_t mau_dep = dep_graph_.find_mau_dependency(t1, t2);
-            LOG4("MAU DEP t1 = " << t1->externalName() << " and t2 = "
-                 << t2->externalName() << " is " << mau_dep);
-            if (mau_dep == DependencyGraph::MAU_DEP_MATCH) {
+          if (t1->gress != gress)
+            continue;
+          if (table_uses_mocha_container_.find(t1->unique_id()) !=
+              table_uses_mocha_container_.end()) {
+            if (table_uses_mocha_container_.at(t1->unique_id())) {
               worst_dep = DEP_MATCH;
-              LOG4("   match dep: " << t1->externalName() << " (stage " << stage << ") to "
-                   << t2->externalName() << " (stage " << prev_stage << ")");
-              break;  // kill loop, this is worst dependency
-            } else if (mau_dep == DependencyGraph::MAU_DEP_ACTION) {
-              // Keep looking for match dependency.
-              worst_dep = DEP_ACTION;
-              LOG4("   action dep: " << t1->externalName() << " (stage " << stage << ") to "
-                   << t2->externalName() << " (stage " << prev_stage << ")");
-            }
-      } } }
-      if ((prev_stage % Device::numStages()) == 0)
-        break;
-      if (mau_features_->get_dependency_for_gress_stage(g,
-                           prev_stage % Device::numStages()) == DEP_MATCH)
-        break;  // can stop looking if found match dependent stage
-      --prev_stage;
-    }  // end while
-    mau_features_->stage_dep_to_previous_[stage] = worst_dep;
-    LOG4("Setting " << toString(g) <<
-         " stage " << (stage % Device::numStages()) <<
-         " dependency to " << dep_to_name(worst_dep));
+              LOG4("  Table " << t1->externalName() << " (stage " << stage
+                << ") uses mocha containers.");
+              LOG4("    So dependency to previous stage will be set to match.");
+              break;
+          } }
+          auto control_graph = graphs_->get_graph(t1->gress);
+          for (auto* t2 : mau_features_->stage_to_tables_[gress][prev_stage]) {
+            if (t1->gress == t2->gress &&
+                (control_graph->active_simultaneously(t2->unique_id(), t1->unique_id()) ||
+                 t1->always_run == IR::MAU::AlwaysRun::TABLE ||
+                 t2->always_run == IR::MAU::AlwaysRun::TABLE)) {
+              // Returns the dependency type from t1 to t2.
+              DependencyGraph::mau_dependencies_t mau_dep = dep_graph_.find_mau_dependency(t1, t2);
+              LOG4("MAU DEP t1 = " << t1->externalName() << " and t2 = "
+                   << t2->externalName() << " is " << mau_dep);
+              if (mau_dep == DependencyGraph::MAU_DEP_MATCH) {
+                worst_dep = DEP_MATCH;
+                LOG4("   match dep: " << t1->externalName() << " (stage " << stage << ") to "
+                     << t2->externalName() << " (stage " << prev_stage << ")");
+                break;  // kill loop, this is worst dependency
+              } else if (mau_dep == DependencyGraph::MAU_DEP_ACTION) {
+                // Keep looking for match dependency.
+                worst_dep = DEP_ACTION;
+                LOG4("   action dep: " << t1->externalName() << " (stage " << stage << ") to "
+                     << t2->externalName() << " (stage " << prev_stage << ")");
+              }
+        } } }
+        if (prev_stage == 0)
+          break;
+        if (mau_features_->get_dependency_for_gress_stage(gress, prev_stage) == DEP_MATCH)
+          break;  // can stop looking if found match dependent stage
+        --prev_stage;
+      }  // end while
+      mau_features_->stage_dep_to_previous_[gress][stage] = worst_dep;
+      LOG4("Setting " << gress << " stage " << stage << " dependency to " << worst_dep);
+    }
   }
 }
 
@@ -193,15 +187,14 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
 
 void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
   if (!t->logical_id) return;
-  int stage = get_stage(t);
   table_uses_mocha_container_.emplace(t->unique_id(), uses_mocha_containers_in_ixbar(t));
   if (t->stage() >= Device::numStages()) {
     exceeds_stages_ = true;
     return;
   }
-  mau_features_->stage_to_tables_[stage].push_back(t);
-  mau_features_->table_to_stage_.emplace(t->unique_id(),
-                                         t->stage());
+  mau_features_->stage_to_tables_[t->gress][t->stage()].push_back(t);
+  mau_features_->table_to_stage_.emplace(t->unique_id(), t->stage());
+  mau_features_->uid_to_table_.emplace(t->unique_id(), t);
   auto my_unique_id = t->unique_id();
 
   // Sum up memory accesses of each type of resource
@@ -249,7 +242,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
     if (mem.type == Memories::Use::TERNARY) {
       // All TCAMs are read for a lookup
       match_table.tcam_read += all_mems;
-      mau_features_->has_tcam_[stage] = true;
+      mau_features_->has_tcam_[t->gress][t->stage()] = true;
 
     } else if (mem.type == Memories::Use::EXACT) {
       // One unit of depth in each way is accessed on a table read.
@@ -260,7 +253,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
         ++num_ways;
         match_table.ram_read += way.width;
       }
-      mau_features_->has_exact_[stage] = true;
+      mau_features_->has_exact_[t->gress][t->stage()] = true;
       // FIXME(mea): If this is a keyless table, compiler currently always
       // uses an exact match bus.  This would have to be changed
       // when that does.
@@ -282,7 +275,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
       }
 
       match_table.ram_read += (col_ram_width * num_cols);
-      mau_features_->has_exact_[stage] = true;
+      mau_features_->has_exact_[t->gress][t->stage()] = true;
 
     } else if (mem.type == Memories::Use::TIND) {
       tind_table.ram_read += 1;
@@ -317,7 +310,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
       meter_table += local_meter_table;
       attached_memory_usage_.emplace(use.first, local_meter_table);
       if (have_meter_lpf_or_wred) {
-        mau_features_->has_meter_lpf_or_wred_[stage] = true;
+        mau_features_->has_meter_lpf_or_wred_[t->gress][t->stage()] = true;
       }
 
     } else if (mem.type == Memories::Use::SELECTOR) {
@@ -329,7 +322,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
 
       selector_table += local_selector_table;
       attached_memory_usage_.emplace(use.first, local_selector_table);
-      mau_features_->has_selector_[stage] = true;
+      mau_features_->has_selector_[t->gress][t->stage()] = true;
 
       int sel_words = 1;
       if (mau_features_->selector_group_size_.find(use.first) !=
@@ -338,8 +331,8 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
           StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE - 1;
         sel_words = gsize / StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
       }
-      mau_features_->max_selector_words_[stage] =
-        std::max(mau_features_->max_selector_words_.at(stage), sel_words);
+      mau_features_->max_selector_words_[t->gress][t->stage()] =
+        std::max(mau_features_->max_selector_words_[t->gress][t->stage()], sel_words);
 
     } else if (mem.type == Memories::Use::STATEFUL) {
       auto *att = t->get_attached(use.first);
@@ -352,7 +345,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
 
         stateful_table += local_stateful_table;
         attached_memory_usage_.emplace(use.first, local_stateful_table); }
-      mau_features_->has_stateful_[stage] = true;
+      mau_features_->has_stateful_[t->gress][t->stage()] = true;
 
     } else if (mem.type == Memories::Use::COUNTER) {
       auto local_stat_table = PowerMemoryAccess();
@@ -373,7 +366,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
 
       stat_table += local_stat_table;
       attached_memory_usage_.emplace(use.first, local_stat_table);
-      mau_features_->has_stats_[stage] = true;
+      mau_features_->has_stats_[t->gress][t->stage()] = true;
 
     } else if (mem.type == Memories::Use::IDLETIME) {
       idletime_table.ram_read += 1;  // only access and update one idletime
@@ -458,8 +451,7 @@ void DeterminePowerUsage::update_stage_dependencies_for_min_latency() {
     egress_stage < Device::numStages()) {
     mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(EGRESS, egress_stage);
     if (dep != DEP_MATCH) {
-      int e_stage = egress_stage + get_stage_offset(EGRESS);
-      mau_features_->stage_dep_to_previous_[e_stage] = DEP_MATCH;
+      mau_features_->stage_dep_to_previous_[EGRESS][egress_stage] = DEP_MATCH;
       LOG4("Converted egress stage " << egress_stage << " to match dependent.");
     }
     ++egress_stage;

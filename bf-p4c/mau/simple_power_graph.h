@@ -89,9 +89,11 @@ class Node {
   * via local_exec, global_exec, and long branching.
   */
 class SimplePowerGraph {
+  std::map<UniqueId, Node*> nodes_ = {};
+  std::map<UniqueId, std::set<UniqueId>> pred_ = {};
+
  public:
   const cstring name_;  // graph name, e.g. ingress or egress
-  std::map<UniqueId, Node*> nodes_ = {};
 
   explicit SimplePowerGraph(cstring gress) : name_(gress), running_id_(1) {
     UniqueId root_uid;
@@ -137,6 +139,13 @@ class SimplePowerGraph {
     * dependency analysis.
     */
   bool active_simultaneously(UniqueId parent, UniqueId child);
+  /**
+    * Returns the predecessors of a node -- the tables that can invoke this node
+    */
+  const std::set<UniqueId> &predecessors(UniqueId child) const {
+    if (pred_.count(child)) return pred_.at(child);
+    static std::set<UniqueId> empty;
+    return empty; }
   /**
     * Returns a topological sort of the Nodes in this graph.
     */

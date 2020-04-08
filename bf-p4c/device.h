@@ -4,6 +4,7 @@
 #include "ir/gress.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
+#include "lib/range.h"
 #include "mau/power_spec.h"
 #include "parde/parde_spec.h"
 #include "phv/phv_spec.h"
@@ -44,6 +45,8 @@ class Device {
     static int alwaysRunIMemAddr() { return Device::get().getAlwaysRunIMemAddr(); }
     static bool hasAlwaysRunInstr() { return alwaysRunIMemAddr() >= 0; }
     static unsigned maxCloneId(gress_t gress) { return Device::get().getMaxCloneId(gress); }
+    static gress_t maxGress() { return Device::get().getMaxGress(); }
+    static RangeIter<gress_t> allGresses() { return Range(INGRESS, maxGress()); }
     static unsigned maxResubmitId() { return Device::get().getMaxResubmitId(); }
     static unsigned maxDigestId() { return Device::get().getMaxDigestId(); }
     /* type is 'int' because width_bits() is defined as 'int' in ir/base.def */
@@ -73,6 +76,7 @@ class Device {
     virtual int getLongBranchTags() const = 0;
     virtual int getAlwaysRunIMemAddr() const = 0;
     virtual unsigned getMaxCloneId(gress_t) const = 0;
+    virtual gress_t getMaxGress() const = 0;
     virtual unsigned getMaxResubmitId() const = 0;
     virtual unsigned getMaxDigestId() const = 0;
     virtual unsigned getMaxDigestSizeInBytes() const = 0;
@@ -110,6 +114,7 @@ class TofinoDevice : public Device {
         default:      return 8;
         }
     }
+    gress_t getMaxGress() const override { return EGRESS; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     int getCloneSessionIdWidth() const override { return 10; }
@@ -149,6 +154,7 @@ class JBayDevice : public Device {
     int getLongBranchTags() const override { return 8; }
     int getAlwaysRunIMemAddr() const override { return 63; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
+    gress_t getMaxGress() const override { return GHOST; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
@@ -211,6 +217,7 @@ class CloudbreakDevice : public Device {
     int getLongBranchTags() const override { return 8; }
     int getAlwaysRunIMemAddr() const override { return 63; }
     unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
+    gress_t getMaxGress() const override { return GHOST; }
     unsigned getMaxResubmitId() const override { return 8; }
     unsigned getMaxDigestId() const override { return 8; }
     unsigned getMaxDigestSizeInBytes() const override { return (384/8); }

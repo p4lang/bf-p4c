@@ -57,16 +57,8 @@ Table::NextTables::NextTables(value_t &v) : lineno(v.lineno) {
 }
 
 bool Table::NextTables::can_use_lb(int stage, const NextTables &lbrch) {
-    BUG_CHECK(next_table_ == nullptr);
     if (options.disable_long_branch) return false;
     if (!lbrch.subset_of(*this)) return false;
-    for (auto &n : next) {
-        if (!n || n->stage->stageno <= stage + 1 || lbrch.next.count(n))
-            continue;
-        if (next_table_) {
-            next_table_ = nullptr;
-            return false; }
-        next_table_ = n; }
     return true;
 }
 
@@ -76,21 +68,26 @@ void Table::NextTables::resolve_long_branch(const Table *tbl,
     resolved = true;
     for (auto &lb : lbrch) {
         if (can_use_lb(tbl->stage->stageno, lb.second)) {
-            long_branch = lb.first;
-            return; } }
+            lb_tags |= 1U << lb.first; } }
     for (auto &lb : tbl->long_branch) {
         if (can_use_lb(tbl->stage->stageno, lb.second)) {
-            long_branch = lb.first;
-            return; } }
+            lb_tags |= 1U << lb.first; } }
     for (auto &n : next) {
         if (!n) continue;
-        if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch &&
-            n->stage->stageno <= tbl->stage->stageno + 1)
-            continue;
+        if (Target::LONG_BRANCH_TAGS() > 0 && !options.disable_long_branch) {
+            if (n->stage->stageno <= tbl->stage->stageno + 1)  // local or global exec
+                continue;
+            auto lb_covers = [this, n](const std::pair<const int, NextTables> &lb) -> bool {
+                return ((lb_tags >> lb.first) & 1) && lb.second.next.count(n); };
+            if (std::any_of(lbrch.begin(), lbrch.end(), lb_covers))
+                continue;
+            if (std::any_of(tbl->long_branch.begin(), tbl->long_branch.end(), lb_covers))
+                continue; }
         if (next_table_) {
             error(n.lineno, "Can't have multiple next tables for table %s", tbl->name());
             break; }
-        next_table_ = n; }
+        next_table_ = n;
+        continue2: ; }
 }
 
 unsigned Table::NextTables::next_in_stage(int stage) const {
@@ -2044,8 +2041,8 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
             action_format_per_action["next_table_exec"] =
                 ((act.next_table_miss_ref.next_in_stage(table->stage->stageno) & 0xfffe) << 15) +
                 (act.next_table_miss_ref.next_in_stage(table->stage->stageno + 1) & 0xffff);
-            int lbrch = act.next_table_miss_ref.long_branch_tag();
-            action_format_per_action["next_table_long_brch"] = lbrch >= 0 ? 1U << lbrch : 0; }
+            action_format_per_action["next_table_long_brch"] =
+                act.next_table_miss_ref.long_branch_tags(); }
         action_format_per_action["vliw_instruction"] = act.code;
         action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
 

@@ -1,0 +1,16 @@
+
+# Need to figure out how to inject ghost packets in the model.  For now just a couple
+# of normal packets
+
+add ghost.map_register_idx 1 md.qid:0x333 set_register_idx(idx:0x333)
+
+ghost run 0x333:11000
+
+expect 3 11111111 00002af8 3333 44 55 01 02 03 04
+packet 0 11111111 22222222 3333 44 55 01 02 03 04
+
+expect 3 12345678 00000000 abcd 44 55 01 02 03 04
+packet 0 12345678 12345678 abcd 44 55 01 02 03 04
+
+expect 3 11111111 00002af8 3333 44 55 01 02 03 04
+packet 0 11111111 22222222 3333 44 55 01 02 03 04

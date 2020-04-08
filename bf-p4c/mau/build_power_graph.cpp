@@ -33,9 +33,7 @@ Visitor::profile_t BuildPowerGraph::init_apply(const IR::Node *root) {
 
 void BuildPowerGraph::end_apply(const IR::Node *root) {
   if (options_.debugInfo) {  // graph outputs
-    std::vector<gress_t> gr;
-    get_gress_iterator(gr);
-    for (auto g : gr) {
+    for (gress_t g : Device::allGresses()) {
       SimplePowerGraph* graph = get_graph(g);
       std::string fname = graph->name_ + ".power.dot";
       auto logDir = BFNContext::get().getOutputDirectory("graphs", root->to<IR::BFN::Pipe>()->id);
@@ -56,9 +54,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::TableSeq *seq) {
     SimplePowerGraph* graph = get_graph(t->gress);
     Node* root = graph->get_root();
     if (root->out_edges_.size() == 0) {
-      ordered_set<UniqueId> activated;
-      activated.insert(t->unique_id());
-      graph->add_connection(root->unique_id_, activated, "$start");
+      graph->add_connection(root->unique_id_, {t->unique_id()}, "$start");
       break;
     }
   }
@@ -76,9 +72,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
       std::vector<UniqueId> leaves;
       graph->get_leaves(last, leaves);
       for (auto u : leaves) {
-        ordered_set<UniqueId> connect_always_run;
-        connect_always_run.insert(tbl->unique_id());
-        graph->add_connection(u, connect_always_run, "$always");
+        graph->add_connection(u, {tbl->unique_id()}, "$always");
       }
     }
     always_run_.push_back(tbl->unique_id());
@@ -110,12 +104,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
         graph->add_connection(tbl->unique_id(), gw_edges, line.second);
   } } }
 
-  std::vector<cstring> edge_types;
-  edge_types.push_back("$hit");
-  edge_types.push_back("$miss");
-  edge_types.push_back("$try_next_stage");
-  edge_types.push_back("$default");
-
+  std::vector<cstring> edge_types = { "$hit", "$miss", "$try_next_stage", "$default" };
   for (cstring edge_name : edge_types) {
     ordered_set<UniqueId> found_edges = next_for(tbl, edge_name);
     if (found_edges.size() > 0) {

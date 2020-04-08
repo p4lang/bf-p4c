@@ -7,16 +7,16 @@ cstring toString(gress_t gress) {
   switch (gress) {
     case INGRESS: return "ingress";
     case EGRESS: return "egress";
-    case GHOST: return "ghost"; }
-  BUG("Unexpected *gress value");
+    case GHOST: return "ghost";
+    default: BUG("Unexpected *gress value"); }
 }
 
 cstring toSymbol(gress_t gress) {
   switch (gress) {
     case INGRESS: return "I";
     case EGRESS: return "E";
-    case GHOST: return "G"; }
-  BUG("Unexpected *gress value");
+    case GHOST: return "G";
+    default: BUG("Unexpected *gress value"); }
 }
 
 cstring createThreadName(gress_t gress, cstring name) {

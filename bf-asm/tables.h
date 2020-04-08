@@ -158,7 +158,7 @@ public:
 
     class NextTables {
         std::set<Ref>   next;
-        int             long_branch = -1;       // long branch tag to use (if any)
+        unsigned        lb_tags = 0;            // long branch tags to use (bitmask)
         const Table     *next_table_ = nullptr; // table to use as next table (if any)
         bool            resolved = false;
         bool            can_use_lb(int stage, const NextTables &);
@@ -187,7 +187,7 @@ public:
             BUG_CHECK(resolved);
             return next_table_ ? next_table_->p4_name() : "END"; }
         const Table *next_table() const { return next_table_; }
-        int long_branch_tag() const { return long_branch; }
+        unsigned long_branch_tags() const { return lb_tags; }
         unsigned next_in_stage(int stage) const;
         bool need_next_map_lut() const;
         void force_single_next_table();

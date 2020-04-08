@@ -87,13 +87,9 @@ bool Node::is_equivalent(const Node* other) const {
 }
 
 Node* SimplePowerGraph::create_node(UniqueId id) {
-  Node* n;
-  if (nodes_.find(id) != nodes_.end()) {
-    n = nodes_.at(id);
-  } else {
+  Node* &n = nodes_[id];
+  if (!n)
     n = new Node(id, get_next_id());
-    nodes_.emplace(id, n);
-  }
   return n;
 }
 
@@ -109,6 +105,7 @@ void SimplePowerGraph::add_connection(UniqueId parent,
     Node* child = create_node(u);
     if (child)
       child_nodes.push_back(child);
+    pred_[u].insert(parent);
   }
   if (child_nodes.size() > 0)
     pnode->create_and_add_edge(edge_name, child_nodes);
@@ -147,22 +144,22 @@ void SimplePowerGraph::to_dot(cstring filename) {
 }
 
 void SimplePowerGraph::get_leaves(UniqueId node, std::vector<UniqueId>& leaves) {
-  if (nodes_.find(node) == nodes_.end()) {
+  if (!nodes_.count(node)) {
     return; }
   std::queue<Node*> queue;
   queue.push(nodes_.at(node));
-  std::map<UniqueId, bool> visited = {};
+  std::set<UniqueId> visited = {};
   while (!queue.empty()) {
     Node* cur = queue.front();
     queue.pop();
-    if (visited.find(cur->unique_id_) != visited.end()) {  // already visited
+    if (visited.count(cur->unique_id_)) {  // already visited
       continue; }
-    visited.emplace(cur->unique_id_, true);
+    visited.insert(cur->unique_id_);
     if (cur->out_edges_.size() == 0) {  // leaf
       leaves.push_back(cur->unique_id_); }
     for (auto e : cur->out_edges_) {
       for (auto c : e->child_nodes_) {
-        if (visited.find(c->unique_id_) == visited.end()) {  // not found yet
+        if (!visited.count(c->unique_id_)) {  // not found yet
           queue.push(c);
     } } }
   }
@@ -202,7 +199,7 @@ std::vector<Node*> SimplePowerGraph::topo_sort() {
 }
 
 bool SimplePowerGraph::can_reach(UniqueId parent, UniqueId child) {
-  if (nodes_.find(parent) == nodes_.end() || nodes_.find(child) == nodes_.end()) {
+  if (!nodes_.count(parent) || !nodes_.count(child)) {
     return false; }
   LOG6("can_reach(" << parent << ", " << child << ")");
   std::pair<int, int> mem = std::make_pair(nodes_.at(parent)->id_, nodes_.at(child)->id_);
@@ -234,7 +231,7 @@ bool SimplePowerGraph::can_reach(UniqueId parent, UniqueId child) {
 }
 
 bool SimplePowerGraph::active_simultaneously(UniqueId parent, UniqueId child) {
-  if (nodes_.find(parent) == nodes_.end() || nodes_.find(child) == nodes_.end()) {
+  if (!nodes_.count(parent) || !nodes_.count(child)) {
     return false; }
   LOG6("active_simultaneously(" << parent << ", " << child << ")");
   std::pair<int, int> mem = std::make_pair(nodes_.at(parent)->id_, nodes_.at(child)->id_);

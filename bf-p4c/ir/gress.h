@@ -11,6 +11,7 @@ enum gress_t {
   INGRESS = 0,
   EGRESS = 1,
   GHOST = 2,
+  GRESS_T_COUNT  // number of different threads (max of all targets)
 };
 
 /// @return, given a thread @gress, the _other_ thread.  Ingress and Ghost are considered the

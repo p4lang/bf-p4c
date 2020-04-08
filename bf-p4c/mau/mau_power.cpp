@@ -9,45 +9,21 @@
 
 namespace MauPower {
 
-cstring dep_to_name(mau_dep_t dep) {
+std::ostream &operator<<(std::ostream &out, mau_dep_t dep) {
   if (dep == DEP_MATCH) {
-    return "match";
+    out << "match";
   } else if (dep == DEP_ACTION) {
-    return "action";
+    out << "action";
   } else {
-    return "concurrent";
+    out << "concurrent";
   }
+  return out;
 }
 
-gress_t get_gress(int stage) {
-  if ((stage / Device::numStages()) == 1)
-    return EGRESS;
-  else if ((stage / Device::numStages()) == 2)
-    return GHOST;
-  return INGRESS;
-}
-
-int get_stage(const IR::MAU::Table* t) {
-  auto g = t->gress;
-  BUG_CHECK(t->stage_, "Table %s was not assigned a stage number", t->name);
-
-  if (g == EGRESS) {
-     return t->stage() + Device::numStages();
-  } else if (g == GHOST) {
-     return t->stage() + (2 * Device::numStages());
-  } else {
-     return t->stage();
-  }
-}
-
-int get_stage_offset(gress_t g) {
-  if (g == EGRESS) {
-    return Device::numStages();
-  } else if (g == GHOST) {
-    return 2 * Device::numStages();
-  } else {
-    return 0;
-  }
+std::string toString(mau_dep_t dep) {
+  std::stringstream tmp;
+  tmp << dep;
+  return tmp.str();
 }
 
 std::string float2str(double d) {
@@ -58,46 +34,20 @@ std::string float2str(double d) {
   return s.str();
 }
 
-void get_gress_iterator(std::vector<gress_t>& rv) {
-  rv.push_back(INGRESS);
-  rv.push_back(EGRESS);
-  if (Device::currentDevice() != Device::TOFINO) {
-    rv.push_back(GHOST); }
-}
-
 int MauFeatures::get_max_selector_words(gress_t gress, int stage) const {
-  int s = stage + get_stage_offset(gress);
-  if (max_selector_words_.find(s) != max_selector_words_.end())
-    return max_selector_words_.at(s);
-  return 0;
+  return max_selector_words_[gress][stage];
 }
 
 bool MauFeatures::stage_has_feature(gress_t gress, int stage, stage_feature_t feature) const {
-  int s = stage + get_stage_offset(gress);
-  if (feature == HAS_EXACT && has_exact_.find(s) != has_exact_.end() &&
-      has_exact_.at(s))
-    return true;
-  else if (feature == HAS_TCAM && has_tcam_.find(s) != has_tcam_.end() &&
-           has_tcam_.at(s))
-    return true;
-  else if (feature == HAS_STATS && has_stats_.find(s) != has_stats_.end() &&
-           has_stats_.at(s))
-    return true;
-  else if (feature == HAS_SEL && has_selector_.find(s) != has_selector_.end() &&
-           has_selector_.at(s))
-    return true;
-  else if (feature == HAS_LPF_OR_WRED &&
-           has_meter_lpf_or_wred_.find(s) != has_meter_lpf_or_wred_.end() &&
-           has_meter_lpf_or_wred_.at(s))
-    return true;
-  else if (feature == HAS_STFUL &&
-           has_stateful_.find(s) != has_stateful_.end() &&
-           has_stateful_.at(s))
-    return true;
-  else if (feature == WIDE_SEL &&
-           max_selector_words_.find(s) != max_selector_words_.end() &&
-           max_selector_words_.at(s) > 1)
-    return true;
+  switch (feature) {
+  case HAS_EXACT: return has_exact_[gress][stage];
+  case HAS_TCAM: return has_tcam_[gress][stage];
+  case HAS_STATS: return has_stats_[gress][stage];
+  case HAS_SEL: return has_selector_[gress][stage];
+  case HAS_LPF_OR_WRED: return has_meter_lpf_or_wred_[gress][stage];
+  case HAS_STFUL: return has_stateful_[gress][stage];
+  case WIDE_SEL: return max_selector_words_[gress][stage] > 0;
+  default: BUG("Unkown feature %s", feature); }
   return false;
 }
 
@@ -106,53 +56,30 @@ std::ostream& MauFeatures::emit_dep_asm(std::ostream& out, gress_t g, int stage)
   // the ghost thread induce a dependency, it has already been merged into ingress.
   if (g != GHOST) {
     mau_dep_t dep = get_dependency_for_gress_stage(g, stage);
-    out << "  dependency: " << dep_to_name(dep) << std::endl;
+    out << "  dependency: " << dep << std::endl;
   }
   return out;
 }
 
 mau_dep_t MauFeatures::get_dependency_for_gress_stage(gress_t g, int stage) const {
-  int s = stage + get_stage_offset(g);
-  if (stage_dep_to_previous_.find(s) != stage_dep_to_previous_.end())
-    return stage_dep_to_previous_.at(s);
-  return DEP_MATCH;
-}
-
-void MauFeatures::get_tables_in_gress_stage(gress_t g, int stage,
-                                            std::vector<const IR::MAU::Table*>& tables) const {
-  int s = stage + get_stage_offset(g);
-  if (stage_to_tables_.find(s) != stage_to_tables_.end()) {
-    for (auto tbl : stage_to_tables_.at(s)) {
-      if (tbl->gress == g) {
-        tables.push_back(tbl);
-  } } }
+  return ::get(stage_dep_to_previous_[g], stage, DEP_MATCH);
 }
 
 bool MauFeatures::try_convert_to_match_dep() {
-  for (int s=0; s < kNumberGress * Device::numStages(); ++s) {
-    if (Device::currentDevice() == Device::TOFINO && s == (2*Device::numStages())) {
-      return false;  // no Ghost for Tofino
-    }
-    mau_dep_t dep = stage_dep_to_previous_.at(s);
-    if (dep != DEP_MATCH) {
-      LOG4("Convert " << toString(get_gress(s)) << " stage "
-                      << (s % Device::numStages()) << " to match dependent.");
-      stage_dep_to_previous_[s] = DEP_MATCH;
-      // Ingress and Ghost have to have the same dependency types.
-      if (get_gress(s) == INGRESS) {
-        int g_stage = (s % Device::numStages()) + get_stage_offset(GHOST);
-        stage_dep_to_previous_[g_stage] = DEP_MATCH;
-      } else if (get_gress(s) == GHOST) {
-        int i_stage = (s % Device::numStages()) + get_stage_offset(INGRESS);
-        stage_dep_to_previous_[i_stage] = DEP_MATCH;
+  for (gress_t gress : Device::allGresses()) {
+    for (int s=0; s < Device::numStages(); ++s) {
+      mau_dep_t dep = stage_dep_to_previous_[gress][s];
+      if (dep != DEP_MATCH) {
+        LOG4("Convert " << gress << " stage " << s << " to match dependent.");
+        stage_dep_to_previous_[gress][s] = DEP_MATCH;
+        // Ingress and Ghost have to have the same dependency types.
+        if (gress == INGRESS) {
+          stage_dep_to_previous_[GHOST][s] = DEP_MATCH;
+        } else if (gress == GHOST) {
+          stage_dep_to_previous_[INGRESS][s] = DEP_MATCH;
+        }
+        return true;
       }
-      if (!BackendOptions().disable_mpr_config && !BackendOptions().disable_long_branch) {
-        // if using global exec and mpr, all threads must match
-        for (auto gr : Range(INGRESS, GHOST)) {
-            int stage = (s % Device::numStages()) + get_stage_offset(gr);
-            stage_dep_to_previous_[stage] = DEP_MATCH; }
-      }
-      return true;
     }
   }
   return false;
@@ -161,35 +88,21 @@ bool MauFeatures::try_convert_to_match_dep() {
 // There is no concurrent on Tofino2 and beyond.
 void MauFeatures::update_deps_for_device() {
   if (Device::currentDevice() != Device::TOFINO) {
-    for (int stage=0; stage < kNumberGress * Device::numStages(); ++stage) {
-      if (stage_dep_to_previous_.at(stage) == DEP_CONCURRENT)
-        stage_dep_to_previous_[stage] = DEP_ACTION;
-    }
-
-    if (!BackendOptions().disable_mpr_config && !BackendOptions().disable_long_branch) {
-        // if using long branch (specifically global_exec) and mpr, can't have different
-        // depedence between ingress and egress unless we can get consistent logical table
-        // use between ingress and egress and adjacent stages
-        for (int stage=0; stage < Device::numStages(); ++stage) {
-          int i_stage = stage + get_stage_offset(INGRESS);
-          int e_stage = stage + get_stage_offset(EGRESS);
-          mau_dep_t i_dep = stage_dep_to_previous_.at(i_stage);
-          mau_dep_t e_dep = stage_dep_to_previous_.at(e_stage);
-          if (i_dep != e_dep) {
-            stage_dep_to_previous_[i_stage] = DEP_MATCH;
-            stage_dep_to_previous_[e_stage] = DEP_MATCH; } }
+    for (gress_t gress : Device::allGresses()) {
+      for (int stage=0; stage < Device::numStages(); ++stage) {
+        if (stage_dep_to_previous_[gress][stage] == DEP_CONCURRENT)
+          stage_dep_to_previous_[gress][stage] = DEP_ACTION;
+      }
     }
 
     // Ingress and Ghost have to have the same timing, which requires them
     // to have the same dependency type.
     for (int stage=0; stage < Device::numStages(); ++stage) {
-      int i_stage = stage + get_stage_offset(INGRESS);
-      int g_stage = stage + get_stage_offset(GHOST);
-      mau_dep_t i_dep = stage_dep_to_previous_.at(i_stage);
-      mau_dep_t g_dep = stage_dep_to_previous_.at(g_stage);
+      mau_dep_t i_dep = stage_dep_to_previous_[INGRESS][stage];
+      mau_dep_t g_dep = stage_dep_to_previous_[GHOST][stage];
       if (i_dep != g_dep) {
-        stage_dep_to_previous_[i_stage] = DEP_MATCH;
-        stage_dep_to_previous_[g_stage] = DEP_MATCH; } }
+        stage_dep_to_previous_[INGRESS][stage] = DEP_MATCH;
+        stage_dep_to_previous_[GHOST][stage] = DEP_MATCH; } }
   }
 }
 
@@ -291,15 +204,13 @@ bool MauFeatures::stage_has_chained_feature(gress_t gress, int stage,
 
 bool MauFeatures::are_there_more_tables(gress_t gress, int start_stage) const {
   for (int s = start_stage; s < Device::numStages(); ++s) {
-    std::vector<const IR::MAU::Table*> tbls;
-    get_tables_in_gress_stage(gress, s, tbls);
-    if (tbls.size() != 0)
+    if (stage_to_tables_[gress][s].size() != 0)
       return true;
   }
   return false;
 }
 
-void MauFeatures::print_features(std::ofstream& out, gress_t gress) const {
+void MauFeatures::print_features(std::ostream& out, gress_t gress) const {
   std::stringstream heading;
   std::stringstream sep;
   for (int i = 0; i < 120; i++)
@@ -328,7 +239,7 @@ void MauFeatures::print_features(std::ofstream& out, gress_t gress) const {
     << "|" << boost::format("%=16s") % "to Previous"
     << "|" << std::endl;
   heading << sep.str();
-  out << heading;
+  out << heading.str();
 
   for (int stage=0; stage < Device::numStages(); ++stage) {
     std::stringstream st, ex, tern, stats, lpf, sel, stfl, deps;
@@ -345,7 +256,7 @@ void MauFeatures::print_features(std::ofstream& out, gress_t gress) const {
     if (stage_has_feature(gress, stage, HAS_STFUL)) { stfl << "Yes"; } else { stfl << "No"; }
 
     mau_dep_t dep = get_dependency_for_gress_stage(gress, stage);
-    deps << dep_to_name(dep);
+    deps << dep;
 
     std::stringstream line;
     line << "|" << boost::format("%=10s") % st.str()
@@ -357,12 +268,12 @@ void MauFeatures::print_features(std::ofstream& out, gress_t gress) const {
       << "|" << boost::format("%=16s") % stfl.str()
       << "|" << boost::format("%=16s") % deps.str()
       << "|" << std::endl;
-    out << line;
+    out << line.str();
   }
   out << sep.str() << std::endl;
 }
 
-void MauFeatures::print_latency(std::ofstream& out, gress_t gress) const {
+void MauFeatures::print_latency(std::ostream& out, gress_t gress) const {
   std::stringstream heading;
   std::stringstream sep;
   for (size_t i = 0; i < 75; i++)
@@ -386,7 +297,7 @@ void MauFeatures::print_latency(std::ofstream& out, gress_t gress) const {
 
   heading << sep.str();
   out << toString(gress) << " MAU Latency" << std::endl;
-  out << heading;
+  out << heading.str();
 
   auto& spec = Device::mauPowerSpec();
   for (int stage=0; stage < Device::numStages(); ++stage) {
@@ -402,7 +313,7 @@ void MauFeatures::print_latency(std::ofstream& out, gress_t gress) const {
     } else if (dep == DEP_ACTION) {
       add_to_lat = spec.get_action_latency_contribution();
     }
-    deps << dep_to_name(dep);
+    deps << dep;
 
     st << boost::format("%2d") % (stage % Device::numStages());
     clk << boost::format("%2d") % stage_latency;
@@ -416,9 +327,9 @@ void MauFeatures::print_latency(std::ofstream& out, gress_t gress) const {
       << "|" << boost::format("%=16s") % deps.str()
       << "|" << boost::format("%=16s") % add.str()
       << "|" << std::endl;
-    out << line;
+    out << line.str();
   }
-  out << sep;
+  out << sep.str();
   out << "Total latency for " << toString(gress) << ": ";
   out << compute_pipe_latency(gress) << std::endl << std::endl;
 }
@@ -459,7 +370,7 @@ void MauFeatures::log_json_stage_characteristics(gress_t g, PowerLogging* logger
     bool stful = stage_has_chained_feature(g, stage, HAS_STFUL) &&
       !stage_has_feature(g, stage, HAS_STFUL);
 
-    std::string dep_str(dep_to_name(dep));
+    std::string dep_str(toString(dep));
     std::string gr_str(toString(g));
 
     auto *featuresBJ = new Features(ext, lpf, sel, stful, sts, tcm, 0);
@@ -477,24 +388,27 @@ void MauFeatures::log_json_stage_characteristics(gress_t g, PowerLogging* logger
 }
 
 bool MprSettings::need_to_emit(lut_t type, int stage) const {
-  const std::map<int, std::map<int, int>>* to_use = nullptr;
+  const dyn_vector<int> * to_use = nullptr;
   if (type == NEXT_TABLE_LUT)
-    to_use = &mpr_next_table_;
+    to_use = &mpr_next_table_[stage];
   else if (type == GLOB_EXEC_LUT)
-    to_use = &mpr_global_exec_;
+    to_use = &mpr_global_exec_[stage];
   else if (type == LONG_BRANCH_LUT)
-    to_use = &mpr_long_branch_;
+    to_use = &mpr_long_branch_[stage];
 
   if (to_use) {
-    if (to_use->find(stage) != to_use->end()) {
-      for (int i=0; i < Memories::LOGICAL_TABLES; ++i) {
-        if (to_use->at(stage).find(i) != to_use->at(stage).end() && to_use->at(stage).at(i) != 0)
-          return true;
-  } } }
+    for (auto v : *to_use) {
+      if (v != 0)
+        return true;
+  } }
   return false;
 }
 
 std::ostream& MprSettings::emit_stage_asm(std::ostream& out, int stage) const {
+  if (mau_features_.get_dependency_for_gress_stage(gress_, stage+1) == DEP_MATCH) {
+    BUG_CHECK(get_mpr_bus_dep_next_table(stage) == 0, "mpr_bus_dep_next_table not zero");
+    BUG_CHECK(get_mpr_bus_dep_glob_exec(stage) == 0, "mpr_bus_dep_glob_exec not zero");
+    BUG_CHECK(get_mpr_bus_dep_long_brch(stage) == 0, "mpr_bus_dep_long_brch not zero"); }
   out << "  mpr_stage_id: " << get_mpr_stage(stage) << std::endl;
   out << "  mpr_bus_dep_next_table: " << (get_mpr_bus_dep_next_table(stage) ? 1 : 0) << std::endl;
   out << "  mpr_bus_dep_glob_exec: 0x" << hex(get_mpr_bus_dep_glob_exec(stage)) << std::endl;
@@ -521,20 +435,7 @@ std::ostream& MprSettings::emit_stage_asm(std::ostream& out, int stage) const {
   return out;
 }
 
-MprSettings::MprSettings(gress_t gress) : gress_(gress) {
-  for (int stage=0; stage < Device::numStages(); ++stage) {
-    mpr_stage_id_[stage] = 0;
-    mpr_next_table_[stage] = {};
-    mpr_global_exec_[stage] = {};
-    mpr_long_branch_[stage] = {};
-    mpr_always_run_[stage] = 0;
-    for (int id=0; id < Memories::LOGICAL_TABLES; ++id) {
-      mpr_next_table_[stage][id] = 0;
-      mpr_global_exec_[stage][id] = 0; }
-    for (int id=0; id < Device::numLongBranchTags(); ++id) {
-      mpr_long_branch_[stage][id] = 0; }
-  }
-}
+MprSettings::MprSettings(gress_t gress, MauFeatures &mf) : gress_(gress), mau_features_(mf) {}
 
 void MprSettings::set_mpr_stage(int stage, int mpr_stage) {
   BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
@@ -542,9 +443,7 @@ void MprSettings::set_mpr_stage(int stage, int mpr_stage) {
 }
 
 int MprSettings::get_mpr_stage(int stage) const {
-  if (mpr_stage_id_.find(stage) != mpr_stage_id_.end())
-    return mpr_stage_id_.at(stage);
-  return 0;
+  return mpr_stage_id_[stage];
 }
 
 void MprSettings::set_mpr_always_run(int stage, int id_vector) {
@@ -558,9 +457,7 @@ void MprSettings::set_or_mpr_always_run(int stage, int id_vector) {
 }
 
 int MprSettings::get_mpr_always_run_for_stage(int stage) const {
-  if (mpr_always_run_.find(stage) != mpr_always_run_.end())
-    return mpr_always_run_.at(stage);
-  return 0;
+  return mpr_always_run_[stage];
 }
 
 void MprSettings::set_mpr_next_table(int stage, int logical_id, int id_vector) {
@@ -570,11 +467,15 @@ void MprSettings::set_mpr_next_table(int stage, int logical_id, int id_vector) {
   mpr_next_table_[stage][logical_id] = id_vector;
 }
 
+void MprSettings::set_or_mpr_next_table(int stage, int logical_id, int id_vector) {
+  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
+  BUG_CHECK(logical_id >= 0 && logical_id < Memories::LOGICAL_TABLES,
+            "Invalid logical_id %d", logical_id);
+  mpr_next_table_[stage][logical_id] |= id_vector;
+}
+
 int MprSettings::get_mpr_next_table(int stage, int logical_id) const {
-  if (mpr_next_table_.find(stage) != mpr_next_table_.end()) {
-    if (mpr_next_table_.at(stage).find(logical_id) != mpr_next_table_.at(stage).end()) {
-      return mpr_next_table_.at(stage).at(logical_id); } }
-  return 0;
+  return mpr_next_table_[stage][logical_id];
 }
 
 void MprSettings::set_mpr_global_exec(int stage, int exec_bit, int id_vector) {
@@ -592,10 +493,7 @@ void MprSettings::set_or_mpr_global_exec(int stage, int exec_bit, int id_vector)
 }
 
 int MprSettings::get_mpr_global_exec(int stage, int exec_bit) const {
-  if (mpr_global_exec_.find(stage) != mpr_global_exec_.end()) {
-    if (mpr_global_exec_.at(stage).find(exec_bit) != mpr_global_exec_.at(stage).end()) {
-      return mpr_global_exec_.at(stage).at(exec_bit); } }
-  return 0;
+  return mpr_global_exec_[stage][exec_bit];
 }
 
 void MprSettings::set_mpr_long_branch(int stage, int tag_id, int id_vector) {
@@ -606,10 +504,7 @@ void MprSettings::set_mpr_long_branch(int stage, int tag_id, int id_vector) {
 }
 
 int MprSettings::get_mpr_long_branch(int stage, int tag_id) const {
-  if (mpr_long_branch_.find(stage) != mpr_long_branch_.end()) {
-    if (mpr_long_branch_.at(stage).find(tag_id) != mpr_long_branch_.at(stage).end()) {
-      return mpr_long_branch_.at(stage).at(tag_id); } }
-  return 0;
+  return mpr_long_branch_[stage][tag_id];
 }
 
 void MprSettings::set_or_mpr_long_branch(int stage, int tag_id, int id_vector) {
@@ -625,9 +520,7 @@ void MprSettings::set_mpr_bus_dep_next_table(int stage, bool action_dep) {
 }
 
 bool MprSettings::get_mpr_bus_dep_next_table(int stage) const {
-  if (mpr_bus_dep_next_table_.find(stage) != mpr_bus_dep_next_table_.end()) {
-    return mpr_bus_dep_next_table_.at(stage); }
-  return 0;
+  return mpr_bus_dep_next_table_[stage];
 }
 
 void MprSettings::set_mpr_bus_dep_glob_exec(int stage, int id_vector) {
@@ -641,9 +534,7 @@ void MprSettings::set_or_mpr_bus_dep_glob_exec(int stage, int id_vector) {
 }
 
 int MprSettings::get_mpr_bus_dep_glob_exec(int stage) const {
-  if (mpr_bus_dep_glob_exec_.find(stage) != mpr_bus_dep_glob_exec_.end()) {
-    return mpr_bus_dep_glob_exec_.at(stage); }
-  return 0;
+  return mpr_bus_dep_glob_exec_[stage];
 }
 
 void MprSettings::set_mpr_bus_dep_long_brch(int stage, int id_vector) {
@@ -657,9 +548,7 @@ void MprSettings::set_or_mpr_bus_dep_long_brch(int stage, int id_vector) {
 }
 
 int MprSettings::get_mpr_bus_dep_long_brch(int stage) const {
-  if (mpr_bus_dep_long_brch_.find(stage) != mpr_bus_dep_long_brch_.end()) {
-    return mpr_bus_dep_long_brch_.at(stage); }
-  return 0;
+  return mpr_bus_dep_long_brch_[stage];
 }
 
 void MprSettings::print_data(std::ostream &out, int cols, std::string id_name,
@@ -741,7 +630,7 @@ void MprSettings::print_data(std::ostream &out, int cols, std::string id_name,
       all_data << "|" << boost::format("%=12s") % "-"; }
     all_data << "|" << boost::format(sl.str()) % "-" << "|" << std::endl;
   }
-  out << heading << all_data << sep;
+  out << heading.str() << all_data.str() << sep.str();
 }
 
 std::ostream& operator<<(std::ostream &out, const MprSettings &m) {
@@ -757,7 +646,7 @@ std::ostream& operator<<(std::ostream &out, const MprSettings &m) {
     for (int id=0; id < Memories::LOGICAL_TABLES; ++id) {
       vec.push_back(s);
       vec.push_back(id);
-      vec.push_back(m.mpr_next_table_.at(s).at(id)); } }
+      vec.push_back(m.mpr_next_table_[s][id]); } }
   out << "MPR Next Table" << std::endl;
   m.print_data(out, 3, "Logical ID", vec, true);
   vec.clear();
@@ -765,7 +654,7 @@ std::ostream& operator<<(std::ostream &out, const MprSettings &m) {
     for (int id=0; id < Memories::LOGICAL_TABLES; ++id) {
       vec.push_back(s);
       vec.push_back(id);
-      vec.push_back(m.mpr_global_exec_.at(s).at(id)); } }
+      vec.push_back(m.mpr_global_exec_[s][id]); } }
   out << "MPR Global Exec" << std::endl;
   m.print_data(out, 3, "Execute Bit", vec, true);
   vec.clear();
@@ -773,7 +662,7 @@ std::ostream& operator<<(std::ostream &out, const MprSettings &m) {
     for (int id=0; id < Device::numLongBranchTags(); ++id) {
       vec.push_back(s);
       vec.push_back(id);
-      vec.push_back(m.mpr_long_branch_.at(s).at(id)); } }
+      vec.push_back(m.mpr_long_branch_[s][id]); } }
   out << "MPR Long Branch" << std::endl;
   m.print_data(out, 3, "Tag ID", vec, true);
   vec.clear();

@@ -19,6 +19,7 @@
 #include "ir/unique_id.h"
 #include "lib/json.h"
 #include "lib/path.h"
+#include "lib/set.h"
 #include "power_schema.h"
 #include "version.h"
 
@@ -57,7 +58,10 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
     updated_deps = false;
     if (Device::currentDevice() != Device::TOFINO) {
       clear_mpr_settings();
-      compute_mpr(); }
+      compute_mpr();
+      if (check_mpr_conflict()) {
+        updated_deps = true;
+        continue; } }
 
     total_power = estimate_power();
     if (total_power > (spec.get_max_power() + rounding)) {
@@ -107,301 +111,163 @@ void WalkPowerGraph::clear_mpr_settings() {
   for (auto ms : mpr_settings_) {
     delete ms.second; }
   mpr_settings_.clear();
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
-    mpr_settings_.emplace(g, new MprSettings(g)); }
+  for (gress_t g : Device::allGresses()) {
+    mpr_settings_.emplace(g, new MprSettings(g, *mau_features_)); }
 }
 
+/** Match Power config
+ * Match power config (whether or not to power the match of tables in a stage) depends
+ * on the predication of a previous stage.  Problem is, if the stage is not match dependent
+ * on the previous stage, the previous stage's predication output will be too late for
+ * the match, so we need to use an earlier stage's predication output (not the immediately
+ * previous stage).
+ *
+ * To manage all this, we divide the stages in each thread into "non-match-dependent groups"
+ * The first stage in each group is match dependent on the previous stage and subsequent stages
+ * in the group are not match dependent on the previous stage.  Then we forward the predication
+ * output of the last stage in each group to all the stages in the following group for match
+ * power enable/disable.  Each global exec bit and each long branch tag can be separately
+ * forwarded (or not), so as long as different threads agree on who is using each bit, they
+ * can use different match/action dependency for each stage.  So we might have:
+ *
+ * 
+ *  stage    0   1   2   3   4   5   6   7   8  ...
+ *         +---+---+---+---+---+---+---+---+---+
+ * ingress | M | M | A | A | A | M | M | A | A |
+ *         +---+---+---+---+---+---+---+---+---+
+ *  egress | M | A | A | M | A | M | A | M | M |
+ *         +---+---+---+---+---+---+---+---+---+
+ *
+ * so in ingress the groups are stage 0, stages 1-4, stage 5, and stages 6-8, while in egress
+ * they are stages 0-2, stages 3-4, stages 5-6, stage 7, and stage 8.
+ * All the tables in ingress stages 1-4 have their match power determined from the predication
+ * output of stage 0, and we forward that output across all 4 stages.  Egress stages 3-4 have
+ * their match power determined by the predication output of stage 2.  This means that ingress
+ * and egress need to agree on who gets to use each mpr bus global exec bit coming out of stage
+ * 0 and stage 2, or there will be a problem.  So after we calculate the mpr bus usage, we
+ * check if there are any conflicts between ingress and egress (check_mpr_conflict()) and if
+ * there are, we change a stage to be match dependent (spliting the stage group) and redo
+ * mpr config.
+ */
 void WalkPowerGraph::compute_mpr() {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-
   if (next_table_properties_)
     LOG4("" << *next_table_properties_);
 
-  for (gress_t g : gr) {
+  for (gress_t g : Device::allGresses()) {
     MprSettings* mpr = mpr_settings_.at(g);
     SimplePowerGraph* graph = graphs_->get_graph(g);
     // Initialize MPR settings.
-    int last_match_dep_stage = 0;
-    // Keep track of what active long branch tags exit a given stage.
-    // Map from stage to Map from tag ID to uniqueID that initiated it.
-    std::map<int, std::map<int, UniqueId>> active_long_branch = {};
-
-    // If a table is activated by a long branch, keep track of the long branch
-    // tag ID and who initiated the long branch.
-    std::map<UniqueId, std::set<std::pair<int, UniqueId>>> initiated_by = {};
-    for (int s = 0; s < Device::numStages(); ++s) {
-      std::map<int, UniqueId> exit_stage = {};
-      std::vector<const IR::MAU::Table*> tables_in_stage;
-      mau_features_->get_tables_in_gress_stage(g, s, tables_in_stage);
-      // Setup what long branches are initiated at the end of each stage.
-      for (auto t : tables_in_stage) {
-        for (auto id_to_tag : next_table_properties_->long_branches(t->unique_id())) {
-          // id_to_tag.first is long branch tag ID
-          // id_to_tag.second is std::set<UniqueId>
-          // map Long Branch Tag ID to logical table that initiated it
-          exit_stage[id_to_tag.first] = t->unique_id();
-          for (auto some_id : id_to_tag.second) {
-            if (initiated_by.find(some_id) == initiated_by.end()) {
-              std::set<std::pair<int, UniqueId>> tag_id;
-              initiated_by.emplace(some_id, tag_id);
-            }
-            std::pair<int, UniqueId> ti = std::make_pair(id_to_tag.first, t->unique_id());
-            initiated_by[some_id].insert(ti);
-          }
-        }
-      }
-      active_long_branch.emplace(s, exit_stage);
-    }
-
-    LOG4("Long branches per stage:");
-    for (auto per_stage : active_long_branch) {
-      LOG4("  Stage " << per_stage.first << ": ("
-        << dep_to_name(mau_features_->get_dependency_for_gress_stage(g, per_stage.first))
-        << ")");
-      for (auto tags : per_stage.second) {
-        LOG4("    Tag ID: " << tags.first << " initiated by " << tags.second);
-    } }
-
-    LOG4("Initiated by long branches:");
-    for (auto some_id : initiated_by) {
-      LOG4("  id " << some_id.first);
-      std::pair<ssize_t, ssize_t> live_range =
-        next_table_properties_->get_live_range_for_lb_with_dest(some_id.first);
-      for (auto p : some_id.second) {
-        LOG4("    tag " << p.first << " and id " << p.second); }
-      if (live_range.first != -1 && live_range.second != -1) {
-        LOG4("    tag live range: " << live_range.first << " to " << live_range.second); }
-    }
-
-    for (int s = 0; s < Device::numStages(); ++s) {
+    int last_match_dep_stage = -1;  // last stage in the previous group of stages
+    for (int stage = 0; stage < Device::numStages(); ++stage) {
       if (disable_mpr_config_)
         break;  // set all tables to MPR always run instead
+      if (mau_features_->get_dependency_for_gress_stage(g, stage) == DEP_MATCH)
+        last_match_dep_stage = stage-1;
+      mpr->set_mpr_stage(stage, last_match_dep_stage+1);
 
-      // No need to initialize mpr_next_table_, mpr_global_exec_, mpr_long_branch_
-      // Those are ready to go after object construction.
-      std::vector<const IR::MAU::Table*> tables_in_stage;
-      mau_features_->get_tables_in_gress_stage(g, s, tables_in_stage);
-      if (s == 0) {  // stage 0 is special for MPR, everything is always_run
-        int always_run = 0;
-        for (auto tbl : tables_in_stage) {
+      int always_run = 0;
+      if (last_match_dep_stage < 0) {
+        for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
           if (tbl->logical_id) always_run |= (1 << *tbl->logical_id); }
-        mpr->set_mpr_always_run(s, always_run);
       } else {
-        mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(g, s);
-        if (dep == DEP_MATCH)
-          last_match_dep_stage = s;
-        mpr->set_mpr_stage(s, last_match_dep_stage);
-
-        std::vector<const IR::MAU::Table*> tables_prev;
-        mau_features_->get_tables_in_gress_stage(g, last_match_dep_stage, tables_prev);
-
-        // Knowing what is reachable now allows setting:
-        // - mpr_next_table_ for local execute
-        // - mpr_global_exec_ for global execute (one stage away)
-        // - mpr_long_branch_ for long branches
-
-        for (auto parent : tables_prev) {
-          if (!parent->logical_id) continue;
-          int active = 0;
-          for (auto child : tables_in_stage) {
-            if (!child->logical_id) continue;
-            if (graph->can_reach(parent->unique_id(), child->unique_id())) {
-              active |= (1 << *child->logical_id);
-          } }
-          mpr->set_mpr_next_table(s, *parent->logical_id, active);
-        }
-
-        // Global exec powers on tables in the current stage based on the
-        // activation vector that is input.  To program this register,
-        // find the logical tables in this current stage that could be activated
-        // by global execute and then find what other tables in the current
-        // stage could also be predicated on.
-        // If the dependency is not match, check what tables can be activated
-        // in the current stage based on any intermediate paths.
-        // The lookup table (LUT) is indexed by the global execute bit that is
-        // activated.  So, if bit[1] is activated in the vector, the LUT here
-        // for entry 1 should power on whatever tables are reachable from
-        // logical table 1 in the given stage.
-        if (last_match_dep_stage != 0) {
-          std::vector<const IR::MAU::Table*> tables_prev_minus_1;
-          mau_features_->get_tables_in_gress_stage(g, last_match_dep_stage - 1,
-                                                   tables_prev_minus_1);
-          // Find which tables in this stage could be activated by global exec
-          for (auto parent : tables_prev_minus_1) {
-            for (auto child : tables_prev) {
-              if (!child->logical_id) continue;
-              if (graph->can_reach(parent->unique_id(), child->unique_id())) {
-                // Since this 'child' table could be activated by global execute,
-                // we now have to find what tables 'child' can reach in the current
-                // stage.  This becomes the activation vector for this particular
-                // execute bit.
-                int exec_bit = *child->logical_id;
-                int activate = 0;
-                for (auto tbl_in_stage : tables_in_stage) {
-                  if (!tbl_in_stage->logical_id) continue;
-                  if (graph->can_reach(child->unique_id(), tbl_in_stage->unique_id())) {
-                    activate |= (1 << *tbl_in_stage->logical_id);
-                } }
-                mpr->set_or_mpr_global_exec(s, exec_bit, activate);
-                LOG5("Working on global exec bit in stage " << s);
-                LOG5("  last_match_dep_stage is " << last_match_dep_stage);
-                LOG5("  exec_bit is " << exec_bit);
-                LOG5("  activate is " << activate);
-          } } }
-        } else {
-          // When the last match dependency stage is 0, there has been no opportunity to set
-          // any global execute bits that will be resolved.  As a result, all the tables
-          // in stage 1 until the first match dependent stage will have to be set to mpr always run.
-          int active = 0;
-          for (auto cur : tables_in_stage) {
-            if (!cur->logical_id) continue;
-            if (cur->gress == g) {
-              active |= (1 << *cur->logical_id);
-              LOG4("Since the last match dependent stage is 0, no global execute bits will have"
-                   << " been set and resolved.");
-              LOG4("Setting " << cur->externalName() << " to always run.");
-          } }
-          mpr->set_or_mpr_always_run(s, active);
-        }
-
-        // Long branch activates tables two or more MAU stages away.
-        // To set the long branch MPR configuration register,
-        // find what long branch tags will have resolved upon entering
-        // the current MAU stage.
-        // If the dependency is not match, check what intermediate hops can
-        // reach the current stage.
-        for (auto tbl : tables_in_stage) {
-          if (!tbl->logical_id) continue;
-          if (initiated_by.find(tbl->unique_id()) != initiated_by.end()) {
-            std::set<std::pair<int, UniqueId>> tags_and_ids = initiated_by.at(tbl->unique_id());
-            LOG4("Table " << tbl->unique_id() << " is activated by:");
-            for (auto p : tags_and_ids) {
-              int active = 1 << *tbl->logical_id;
-              LOG4("  tag " << p.first << " and initiated by id " << p.second);
-              int initiated_in_stage = (mau_features_->table_to_stage_.at(p.second)) %
-                                        Device::numStages();
-              // If this initiated table can reach other tables in this stage, those
-              // also have to be activated (either in the LUT or as part of always run).
-              for (auto in_stage : tables_in_stage) {
-                if (!in_stage->logical_id) continue;
-                if (tbl->unique_id() == in_stage->unique_id()) {
-                  continue; }
-                if (graph->can_reach(tbl->unique_id(), in_stage->unique_id())) {
-                  LOG4("  As a consequence, table " << in_stage->externalName()
-                       << " also will be activated in the LUT.");
-                  active |= (1 << *in_stage->logical_id);
-              } }
-              if (initiated_in_stage <= last_match_dep_stage) {
-                mpr->set_or_mpr_long_branch(s, p.first, active);
-              } else {
-                // When long branch was initiated in a stage and there is no
-                // match dependency separation, we have to figure out what the
-                // last resolved long branch would be and find what intermediate
-                // tables could have been run.
-                // For now, just set tables that meet this criteria as always run.
-                LOG4("Unable to resolve last match dependency long branch initiation.");
-                LOG4("Setting " << tbl->externalName() << " to always run.");
-                mpr->set_or_mpr_always_run(s, active);
-              }
-        } } }
-
-        int always_run = 0;
-        for (auto tbl : tables_in_stage) {
-          if (!tbl->logical_id) continue;
-          switch (tbl->always_run) {
-          case IR::MAU::AlwaysRun::NONE:
-          case IR::MAU::AlwaysRun::ACTION:
-            continue;
-
-          case IR::MAU::AlwaysRun::TABLE:
-            LOG4("Table " << tbl->externalName() << " is marked as always run.");
+        for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
+          if (!tbl->logical_id) continue;  // ignore unplaced and non- tables
+          if (tbl->always_run == IR::MAU::AlwaysRun::TABLE) {
             always_run |= (1 << *tbl->logical_id);
-            // Unfortunately, the way we currently setup the predication path requires
-            // any other tables reachable in the stage to also be set to always run,
-            // because there will be no input pointer (next table, global exec, long branch)
-            // to us for the MPR LUTs on input.
-            for (auto tbl2 : tables_in_stage) {
-              if (!tbl2->logical_id) continue;
-              if (tbl->unique_id() == tbl2->unique_id()) {
-                continue; }
-              if (graph->can_reach(tbl->unique_id(), tbl2->unique_id())) {
-                LOG4("  As a consequence, table " << tbl2->externalName()
-                     << " also has to be set to always run.");
-                always_run |= (1 << *tbl2->logical_id);
-            } }
-            break;
-        } }
-        mpr->set_or_mpr_always_run(s, always_run);
+            continue; }
+          // ordered_set can be safely appended to while iterating over it
+          ordered_set<const IR::MAU::Table *> tables = { tbl };
+          // First we need to find all the tables that might directly or indirectly invoke
+          // this table that are in the same non-match-dep group of stages.  We then need
+          // enable match power for this table if any of them might run.
+          for (auto t : tables) {
+            for (auto p_uid : graph->predecessors(t->unique_id())) {
+              if (!mau_features_->uid_to_table_.count(p_uid)) continue;
+              auto p = mau_features_->uid_to_table_.at(p_uid);
+              if (!tables.count(p) && p->stage() > last_match_dep_stage)
+                tables.insert(p); } }
+          // Now look through the predecessors of all of those tables and enable match power
+          // on this table based on them
+          int glob_exec = 0;    // incoming global exec bits dependent on
+          int long_branch = 0;  // incoming long branch tags dependent on
+          int next_tables = 0;  // incoming next table values dependent on
+          for (auto t : tables) {
+            auto &predecessors = graph->predecessors(t->unique_id());
+            if (t->always_run == IR::MAU::AlwaysRun::TABLE || predecessors.empty()) {
+              always_run |= (1 << *tbl->logical_id);
+              // this table needs to be mpr always run, so don't need to trigger
+              // it any other way
+              glob_exec = 0;
+              long_branch = 0;
+              next_tables = 0;
+              break;
+            } else {
+              BUG_CHECK(t->stage() > last_match_dep_stage, "inconsistent stage");
+              for (auto p_uid : predecessors) {
+                if (!mau_features_->uid_to_table_.count(p_uid)) continue;
+                auto p = mau_features_->uid_to_table_.at(p_uid);
+                if (p->stage() > last_match_dep_stage) continue;
+                if (p->resources->table_format.next_table_bits() > 3) {
+                  // Annoying corner case -- tables that have too many potential next tables
+                  // for the next table map cannot use global_exec/long_branch and must use
+                  // the next table.  Should mark these special corner case tables in the IR.
+                  next_tables |= 1 << *t->logical_id;
+                } else if (t->stage() == p->stage() + 1) {
+                  // trigger via global exec
+                  glob_exec |= (1 << *t->logical_id);
+                } else {
+                  // trigger via long branch or next table
+                  int tag = next_table_properties_->long_branch_tag_for(p_uid, t->unique_id());
+                  if (tag >= 0) {
+                    long_branch |= 1 << tag;
+                  } else {
+                    next_tables |= 1 << *t->logical_id;
+                  }
+                }
+              }
+            }
+          }
+          int s = last_match_dep_stage;
+          mpr->glob_exec_use[s] |= glob_exec;
+          mpr->long_branch_use[s] |= long_branch;
+          while (++s < stage) {
+            mpr->glob_exec_use[s] |= glob_exec;
+            mpr->long_branch_use[s] |= long_branch;
+            mpr->set_or_mpr_bus_dep_glob_exec(s, glob_exec);
+            mpr->set_or_mpr_bus_dep_long_brch(s, long_branch);
+          }
+          for (auto exec_bit : bitvec(glob_exec))
+            mpr->set_or_mpr_global_exec(stage, exec_bit, 1 << *tbl->logical_id);
+          for (auto lb_tag : bitvec(long_branch))
+            mpr->set_or_mpr_long_branch(stage, lb_tag, 1 << *tbl->logical_id);
+          for (auto nxt : bitvec(next_tables))
+            mpr->set_or_mpr_next_table(stage, nxt, 1 << *tbl->logical_id);
+        }
       }
+      mpr->set_mpr_always_run(stage, always_run);
 
-      // Configure MPR bus dependency settings.
-      if (s != (Device::numStages() - 1)) {
-        mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, s + 1);
+      // Configure MPR next_table bus dependency settings.
+      // FIXME -- do this automatically in the assembler?  It must always be the same
+      // as the next stage's dependency
+      if (stage != (Device::numStages() - 1)) {
+        mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, stage + 1);
         // Note, there is no need to pass along bus dependencies if there
         // are no more tables to program.
         // However, model asserts if next table is not passed through.  :(
         if (next_dep != DEP_MATCH) {
           // Next table bus dependency settings.
-          mpr->set_mpr_bus_dep_next_table(s, true);
+          // FIXME -- don't really need to set this if we never use next_table?
+          mpr->set_mpr_bus_dep_next_table(stage, true);
         }
-
-        if (next_dep != DEP_MATCH && mau_features_->are_there_more_tables(g, s + 1)) {
-          // Global execute bus dependency settings.
-          int glob_active = 0;
-          std::vector<const IR::MAU::Table*> tables_last_match_dep;
-          mau_features_->get_tables_in_gress_stage(g, last_match_dep_stage,
-                                                   tables_last_match_dep);
-          // Pass through the global execute bits that would have last resolved.
-          // Given that global execute is turning on tables in the next stage
-          // (the stage that is action dependent), the configuration has to
-          // reflect that the global execute bits in the last match dependent
-          // stage are what has resolved (those tables are potentially turned on).
-          for (auto some_tbl : tables_last_match_dep) {
-            if (!some_tbl->logical_id) continue;
-            glob_active |= (1 << *some_tbl->logical_id);
-          }
-          mpr->set_or_mpr_bus_dep_glob_exec(s, glob_active);
-
-          // Long branch bus dependency settings.
-          // Pass through the long branch Tag IDs that would have last resolved.
-          for (auto some_id : initiated_by) {  // loop through all long branch destinations
-            std::pair<ssize_t, ssize_t> live_range =
-              next_table_properties_->get_live_range_for_lb_with_dest(some_id.first);
-            std::set<std::pair<int, UniqueId>> tags_and_ids = initiated_by.at(some_id.first);
-            // Tag ID is passed through iff tag is live in this stage, according to:
-            //   live start <= stage < live end
-            if (live_range.first != -1 && s >= live_range.first && s < live_range.second) {
-              for (auto p : tags_and_ids) {
-                LOG4("Tag ID: " << p.first);
-                int initiated_in_stage = (mau_features_->table_to_stage_.at(p.second)) %
-                                          Device::numStages();
-                if (initiated_in_stage <= last_match_dep_stage) {
-                  int lb_active = 1 << (p.first % Device::numLongBranchTags());
-                  mpr->set_or_mpr_bus_dep_long_brch(s, lb_active);
-                  LOG4("  Setting active : " << lb_active);
-                } else {
-                  // Tables on this long-branch path will have been set as always
-                  // run, since the action-dependent chain will not be able to
-                  // inject its update.
-                  LOG4("  Unable to set mpr_bus_dep long_brch, since tag initiated in "
-                    << initiated_in_stage << ", which is after the last match dependent "
-                    << "stage of " << last_match_dep_stage);
-          } } } }
-        }  // next_dep != DEP_MATCH
-      }  // s != last stage
+      }  // stage != last stage
     }  // stage
 
     // Bypass normal MPR config.
     if (disable_mpr_config_) {
-      for (int s = 0; s < Device::numStages(); ++s) {
-        mpr->set_mpr_stage(s, s);  // mpr stage doesn't matter when everything is always run
-        std::vector<const IR::MAU::Table*> tables_in_stage;
-        mau_features_->get_tables_in_gress_stage(g, s, tables_in_stage);
+      for (int stage = 0; stage < Device::numStages(); ++stage) {
+        mpr->set_mpr_stage(stage, stage);  // mpr stage doesn't matter when everything is always run
         int always_run = 0;
-        for (auto tbl : tables_in_stage) {
+        for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
           switch (tbl->always_run) {
           case IR::MAU::AlwaysRun::NONE:
             break;
@@ -416,16 +282,41 @@ void WalkPowerGraph::compute_mpr() {
 
           always_run |= (1 << *tbl->logical_id);
         }
-        mpr->set_or_mpr_always_run(s, always_run);
+        mpr->set_or_mpr_always_run(stage, always_run);
         // MPR Bus dep still has to be programmed to avoid model asserts.
-        if (s != (Device::numStages() - 1)) {
-          mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, s + 1);
+        if (stage != (Device::numStages() - 1)) {
+          mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, stage + 1);
           if (next_dep == DEP_ACTION) {  // model asserts if this is not passed through.
             // Next table
-            mpr->set_mpr_bus_dep_next_table(s, true);
+            mpr->set_mpr_bus_dep_next_table(stage, true);
         } }
     } }
   }  // gress
+}
+
+bool WalkPowerGraph::check_mpr_conflict() {
+  bool change = false;
+  for (int stage = 0; stage < Device::numStages(); ++stage) {
+    auto ig_dep = mau_features_->get_dependency_for_gress_stage(INGRESS, stage);
+    auto eg_dep = mau_features_->get_dependency_for_gress_stage(EGRESS, stage);
+    if (ig_dep != eg_dep) {
+      auto ig_mpr = mpr_settings_.at(INGRESS);
+      auto eg_mpr = mpr_settings_.at(EGRESS);
+      if ((ig_mpr->glob_exec_use[stage] & eg_mpr->glob_exec_use[stage]) != 0 ||
+          (ig_mpr->long_branch_use[stage] & eg_mpr->long_branch_use[stage]) != 0) {
+        change = true;
+        if (ig_dep == DEP_MATCH) {
+          mau_features_->stage_dep_to_previous_[EGRESS][stage] = DEP_MATCH;
+        } else if (eg_dep == DEP_MATCH) {
+          mau_features_->stage_dep_to_previous_[INGRESS][stage] = DEP_MATCH;
+          mau_features_->stage_dep_to_previous_[GHOST][stage] = DEP_MATCH;
+        } else {
+          BUG("impossible gress dep combo ig=%d eg=%d", ig_dep, eg_dep);
+        }
+      }
+    }
+  }
+  return change;
 }
 
 /**
@@ -452,9 +343,7 @@ double WalkPowerGraph::estimate_power() {
   */
 double WalkPowerGraph::estimate_power_tofino() {
   double NINF = -(std::pow(2.0, 32) - 1);  // small enough for practical purposes
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (gress_t g : gr) {
+  for (gress_t g : Device::allGresses()) {
     SimplePowerGraph *graph = graphs_->get_graph(g);
     std::vector<Node*> topo = graph->topo_sort();
     std::map<Node*, double> dist = {};
@@ -515,9 +404,7 @@ double WalkPowerGraph::estimate_power_tofino() {
     for (int s=0; s < Device::numStages(); ++s) {
       mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(g, s);
       if (dep != DEP_MATCH) {
-        std::vector<const IR::MAU::Table*> tbls;
-        mau_features_->get_tables_in_gress_stage(g, s, tbls);
-        for (auto t : tbls) {
+        for (auto t : mau_features_->stage_to_tables_[g][s]) {
           if (on_critical_path_.find(t->unique_id()) == on_critical_path_.end()) {
             always_powered_on_.emplace(t->unique_id(), true);
             if (table_memory_access_.find(t->unique_id()) != table_memory_access_.end()) {
@@ -559,9 +446,7 @@ double WalkPowerGraph::estimate_power_tofino() {
   * We also have to add in any 'always run' tables, again based on MPR settings.
   */
 double WalkPowerGraph::estimate_power_non_tofino() {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     // Find worst case table control flow.
     SimplePowerGraph *graph = graphs_->get_graph(g);
     std::set<Node*> worst_tbls;
@@ -576,10 +461,8 @@ double WalkPowerGraph::estimate_power_non_tofino() {
     LOG4("Always on tables:");
     bool log_it = false;
     for (int s=0; s < Device::numStages(); ++s) {
-      std::vector<const IR::MAU::Table*> tbls;
       int active = mpr_settings_.at(g)->get_mpr_always_run_for_stage(s);
-      mau_features_->get_tables_in_gress_stage(g, s, tbls);
-      for (auto t : tbls) {
+      for (auto t : mau_features_->stage_to_tables_[g][s]) {
         if (!t->logical_id) continue;
         int lid = *t->logical_id;
         if (active & (1 << lid)) {
@@ -603,9 +486,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
       mau_dep_t dep = mau_features_->get_dependency_for_gress_stage(g, s);
       if (dep == DEP_MATCH)
         continue;
-      std::vector<const IR::MAU::Table*> tbls;
-      mau_features_->get_tables_in_gress_stage(g, s, tbls);
-      for (auto t : tbls) {
+      for (auto t : mau_features_->stage_to_tables_[g][s]) {
         if (is_mpr_powered_on(g, s, t)) {
             // only add memory contribution once
           if (on_critical_path_.find(t->unique_id()) == on_critical_path_.end() &&
@@ -649,9 +530,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
                  << " tables in each thread as powered on for estimation purposes.");
             LOG4("  ingress latency is " << i_lat);
             LOG4("  egress latency is " << e_lat);
-            std::vector<const IR::MAU::Table*> tbls;
-            mau_features_->get_tables_in_gress_stage(g, s, tbls);
-            for (auto t : tbls) {
+            for (auto t : mau_features_->stage_to_tables_[g][s]) {
               // Make sure do not double count the table.
               if (on_critical_path_.find(t->unique_id()) == on_critical_path_.end() &&
                   always_powered_on_.find(t->unique_id()) == always_powered_on_.end()) {
@@ -688,9 +567,7 @@ WalkPowerGraph::is_mpr_powered_on(gress_t gress, int stage, const IR::MAU::Table
 
   if (!table->logical_id) return false;
 
-  std::vector<const IR::MAU::Table*> prev_tbls;
-  mau_features_->get_tables_in_gress_stage(gress, last_match_dep_stage, prev_tbls);
-  for (auto pt : prev_tbls) {
+  for (auto pt : mau_features_->stage_to_tables_[gress][last_match_dep_stage]) {
     if (!pt->logical_id) continue;
     if (on_critical_path_.find(pt->unique_id()) == on_critical_path_.end() &&
         always_powered_on_.find(pt->unique_id()) == always_powered_on_.end()) {
@@ -765,17 +642,13 @@ void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
 }
 
 void WalkPowerGraph::print_features(std::ofstream& out) const {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     mau_features_->print_features(out, g); }
   out << std::endl;
 }
 
 void WalkPowerGraph::print_latency(std::ofstream& out) const {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     mau_features_->print_latency(out, g); }
   out << std::endl;
 }
@@ -785,9 +658,7 @@ void WalkPowerGraph::print_mpr_settings(std::ofstream& out) const {
     out << "User disabled MPR configuration." << std::endl;
     out << "All tables will be powered on." << std::endl;
   }
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     out << *mpr_settings_.at(g) << std::endl; }
   out << std::endl;
 }
@@ -805,13 +676,11 @@ void WalkPowerGraph::print_mpr_settings(std::ofstream& out) const {
   ------------------------------------------------------------------------------
   */
 void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
   std::map<gress_t, bool> has_always = {};
 
   // Sorting...
   std::map<gress_t, std::map<int, std::vector<UniqueId>>> in_stages;
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     std::map<int, std::vector<UniqueId>> gm;
     for (int s=0; s < Device::numStages(); ++s) {
       std::vector<UniqueId> sm;
@@ -855,7 +724,7 @@ void WalkPowerGraph::print_worst_power(std::ofstream& out) const {
   }
 
   // Printing...
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     out << std::endl << "Worst case " << toString(g) << " table flow" << std::endl;
     std::stringstream heading;
     std::stringstream sep;
@@ -985,9 +854,7 @@ void WalkPowerGraph::produce_json_tables() {
 
 void WalkPowerGraph::produce_json_total_power(int pipe_id) {
   using TotalPower = PowerLogging::Total_Power;
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (gress_t g : gr) {
+  for (gress_t g : Device::allGresses()) {
     std::string gr_str(toString(g));
     double gr_pwr = gress_powers_.at(g);
     auto tp = new TotalPower(gr_str, pipe_id, gr_pwr);
@@ -997,9 +864,7 @@ void WalkPowerGraph::produce_json_total_power(int pipe_id) {
 
 void WalkPowerGraph::produce_json_total_latency(int pipe_id) {
   using TotalLatency = PowerLogging::Total_Latency;
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (gress_t g : gr) {
+  for (gress_t g : Device::allGresses()) {
     std::string gr_str(toString(g));
     logger_->append_total_latency(new TotalLatency(gr_str,
                                                    mau_features_->compute_pipe_latency(g),
@@ -1008,9 +873,7 @@ void WalkPowerGraph::produce_json_total_latency(int pipe_id) {
 }
 
 void WalkPowerGraph::produce_json_stage_characteristics() {
-  std::vector<gress_t> gr;
-  get_gress_iterator(gr);
-  for (auto g : gr) {
+  for (gress_t g : Device::allGresses()) {
     mau_features_->log_json_stage_characteristics(g, logger_);
   }
 }

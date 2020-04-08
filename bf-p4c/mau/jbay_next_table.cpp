@@ -529,7 +529,7 @@ bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
 }
 
 void JbayNextTable::Prop::end_apply() {
-    for (unsigned i = 0; static_cast<int>(i) < self.max_stage; ++i) {  // Fix up stage_id
+    for (int i = 0; i < self.max_stage; ++i) {  // Fix up stage_id
         if (self.stage_id[i] < i * Memories::LOGICAL_TABLES)
             self.stage_id[i] = i * Memories::LOGICAL_TABLES;
         else
@@ -790,7 +790,7 @@ struct JbayNextTable::TagReduce::merge_t {
 
 JbayNextTable::TagReduce::merge_t JbayNextTable::TagReduce::merge(Tag l, Tag r) const {
     merge_t rv;
-    std::map<int, unsigned> stage_id(self.stage_id);  // Need our own copy
+    std::map<int, int> stage_id(self.stage_id);  // Need our own copy
     auto cap = [&](int k) {  // Check the capacity of a stage. 0 means full
                    return (k+1) * Memories::LOGICAL_TABLES - stage_id[k];
                };

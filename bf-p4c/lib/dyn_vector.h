@@ -34,9 +34,10 @@ class dyn_vector : public std::vector<T, _Alloc> {
             this->resize(n+1);
         return this->at(n); }
     const_reference operator[](size_type n) const {
-        if (n >= this->size())
-            this->resize(n+1);
-        return this->at(n); }
+        if (n < this->size())
+            return this->at(n);
+        static const T default_value = T();
+        return default_value; }
 };
 
 #endif /* BF_P4C_LIB_DYN_VECTOR_H_ */

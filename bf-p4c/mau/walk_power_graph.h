@@ -102,6 +102,7 @@ class WalkPowerGraph : public MauInspector {
     */
   void clear_mpr_settings();
   void compute_mpr();
+  bool check_mpr_conflict();  // check for ingress/egress match/action conflict
   /**
     * Function to call to estimate the total MAU power.
     */
@@ -135,7 +136,7 @@ class WalkPowerGraph : public MauInspector {
   /**
     * Text-based logging functions.
     */
-    void create_mau_power_log(const IR::Node *root) const;
+  void create_mau_power_log(const IR::Node *root) const;
   void print_features(std::ofstream& out) const;
   void print_latency(std::ofstream& out) const;
   void print_mpr_settings(std::ofstream& out) const;

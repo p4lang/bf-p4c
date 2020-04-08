@@ -29,9 +29,7 @@ template<> void GatewayTable::write_next_table_regs(Target::Cloudbreak::mau_regs
                 = n.next_in_stage(stage->stageno) >> 1;
             merge.pred_map_glob[logical_id][i].pred_map_glob_exec
                 = n.next_in_stage(stage->stageno + 1);
-            int lbt = n.long_branch_tag();
-            if (lbt >= 0)
-                merge.pred_map_glob[logical_id][i].pred_map_long_brch |= 1 << lbt;
+            merge.pred_map_glob[logical_id][i].pred_map_long_brch |= n.long_branch_tags();
             ++i; }
         // is this needed?  The model complains if we leave the unused slots as 0
         while(i < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)

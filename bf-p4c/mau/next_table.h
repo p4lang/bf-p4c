@@ -12,6 +12,11 @@ class NextTable : public virtual Visitor {
         return empty; }
     virtual std::pair<ssize_t, ssize_t> get_live_range_for_lb_with_dest(UniqueId) const {
         return { -1, -1 }; }
+    int long_branch_tag_for(UniqueId from, UniqueId to) const {
+        for (auto &lb : long_branches(from))
+            if (lb.second.count(to))
+                return lb.first;
+        return -1; }
 };
 
 #endif /* BF_P4C_MAU_NEXT_TABLE_H_ */

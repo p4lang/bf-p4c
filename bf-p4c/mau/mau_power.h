@@ -10,6 +10,7 @@
 #include "ir/ir.h"
 #include "ir/unique_id.h"
 #include "bf-p4c/device.h"
+#include "lib/dyn_vector.h"
 #include "power_schema.h"
 
 namespace MauPower {
@@ -20,18 +21,14 @@ enum stage_feature_t {HAS_EXACT = 0, HAS_TCAM = 1, HAS_STATS = 2,
                       WIDE_SEL = 6};
 enum lut_t {NEXT_TABLE_LUT = 0, GLOB_EXEC_LUT = 1, LONG_BRANCH_LUT = 2};
 
-cstring dep_to_name(mau_dep_t dep);
+std::ostream &operator<<(std::ostream &, mau_dep_t);
 // The internal encoding of stage numbers is:
 //      0 to n-1 for ingress stages
 //      n to 2n-1 for egress stages
 //      2n to 3n-1 for ghost stages
 // However, note that function signatures assume the stage argument
 // runs from 0 to n-1.  This is checked.
-gress_t get_gress(int stage);
-int get_stage(const IR::MAU::Table* t);
-int get_stage_offset(gress_t g);
 std::string float2str(double d);
-void get_gress_iterator(std::vector<gress_t>& rv);
 
 /**
   * A class to represent MAU stage characteristics, such as:
@@ -40,50 +37,41 @@ void get_gress_iterator(std::vector<gress_t>& rv);
   */
 class MauFeatures {
  public:
-  static const int kNumberGress = 3;
+  static const int kNumberGress = GRESS_T_COUNT;
   using PowerLogging = Logging::Power_Schema_Logger;
   // For calculating latencies
-  // map from stage number to Boolean indicating if resource type is in use.
-  std::map<int, bool> has_exact_ = {};
+  // map from gress and stage number to Boolean indicating if resource type is in use.
+  bitvec has_exact_[kNumberGress];
   // has_tcam_ would also include ternary result buses in ram array.
-  std::map<int, bool> has_tcam_ = {};
-  std::map<int, bool> has_meter_lpf_or_wred_ = {};
-  std::map<int, bool> has_selector_ = {};
-  std::map<int, int> max_selector_words_ = {};  // maps to maximum selector words
-  std::map<int, bool> has_stateful_ = {};
-  std::map<int, bool> has_stats_ = {};
+  bitvec has_tcam_[kNumberGress];
+  bitvec has_meter_lpf_or_wred_[kNumberGress];
+  bitvec has_selector_[kNumberGress];
+  dyn_vector<int> max_selector_words_[kNumberGress];  // max across tables in stage
+  bitvec has_stateful_[kNumberGress];
+  bitvec has_stats_[kNumberGress];
 
   // map from UniqueId to Boolean indicating
   // if it will run at EOP.
   // The UniqueId is the attached table's UniqueId.
-  std::map<UniqueId, bool> counter_runs_at_eop_ = {};
-  std::map<UniqueId, bool> meter_runs_at_eop_ = {};
+  std::map<UniqueId, bool> counter_runs_at_eop_;
+  std::map<UniqueId, bool> meter_runs_at_eop_;
   // for keeping track if have LPF or WRED 'meter'
-  std::map<UniqueId, bool> meter_is_lpf_or_wred_ = {};
+  std::map<UniqueId, bool> meter_is_lpf_or_wred_;
   // stores maximum number of selector members
   // (more than 120 requires multiple RAM words)
-  std::map<UniqueId, int> selector_group_size_ = {};
+  std::map<UniqueId, int> selector_group_size_;
 
   // Maps stage number to vector of logical tables found in the stage
-  std::map<int, std::vector<const IR::MAU::Table*>> stage_to_tables_ = {};
+  dyn_vector<std::vector<const IR::MAU::Table*>> stage_to_tables_[kNumberGress];
   // Maps UniqueId to stage number it's in.
-  std::map<UniqueId, int> table_to_stage_ = {};
+  std::map<UniqueId, int> table_to_stage_;
+  // Maps UniqueId back to the table
+  std::map<UniqueId, const IR::MAU::Table*> uid_to_table_;
 
   // Maps stage number to its dependency type to previous stage.
   // Note the encoding is as described above.
-  std::map<int, mau_dep_t> stage_dep_to_previous_ = {};
+  std::map<int, mau_dep_t> stage_dep_to_previous_[kNumberGress];
 
-  MauFeatures() {
-    for (int stage=0; stage < kNumberGress * Device::numStages(); ++stage) {
-      has_exact_.emplace(stage, false);
-      has_tcam_.emplace(stage, false);
-      has_meter_lpf_or_wred_.emplace(stage, false);
-      has_selector_.emplace(stage, false);
-      max_selector_words_.emplace(stage, 0);
-      has_stateful_.emplace(stage, false);
-      has_stats_.emplace(stage, false);
-    }
-  }
   /**
     * @param gress The thread of compute.
     * @param stage The MAU stage number, running 0 to n-1.
@@ -105,13 +93,6 @@ class MauFeatures {
     * @return Stage dependency type to the previous MAU stage.
     */
   mau_dep_t get_dependency_for_gress_stage(gress_t g, int stage) const;
-  /**
-    * @param gress The thread of compute.
-    * @param stage The MAU stage number, running 0 to n-1.
-    * @param tables Fills in logical tables found in the gress-stage.
-    */
-  void get_tables_in_gress_stage(gress_t g, int stage,
-                                 std::vector<const IR::MAU::Table*>& tables) const;
   /**
     * Attempts to convert a MAU stage dependency to match dependent.
     * If a stage can be changed, the change is performed and this function returns true.
@@ -155,11 +136,11 @@ class MauFeatures {
   /**
     * Produces lovely text tables showing features and dependencies.
     */
-  void print_features(std::ofstream& out, gress_t gress) const;
+  void print_features(std::ostream& out, gress_t gress) const;
   /**
     * Produces lovely text tables showing latencies and dependencies.
     */
-  void print_latency(std::ofstream& out, gress_t gress) const;
+  void print_latency(std::ostream& out, gress_t gress) const;
   /**
     * Produces the power.json output.
     */
@@ -186,12 +167,13 @@ class MauFeatures {
 class MprSettings {
  public:
   const gress_t gress_;
-  explicit MprSettings(gress_t gress);
+  MauFeatures   &mau_features_;
+  MprSettings(gress_t gress, MauFeatures &);
   /**
     * @param stage The MAU stage number where the configuration will be written.
-    * @param mpr_stage The preceding match-dependent stage where the input
-    *                  next_table, glob_exec, and long_branch input will be
-    *                  drawn from.
+    * @param mpr_stage This stage, if it is match dependent, or the preceding match-dependent
+    *                  stage otherwise.  The next_table, glob_exec, and long_branch input will be
+    *                  drawn from the output of the stage before this.
     */
   void set_mpr_stage(int stage, int mpr_stage);
   int get_mpr_stage(int stage) const;
@@ -203,6 +185,7 @@ class MprSettings {
     *                  in the current MAU stage to power on.
     */
   void set_mpr_next_table(int stage, int logical_id, int id_vector);
+  void set_or_mpr_next_table(int stage, int logical_id, int id_vector);
   int get_mpr_next_table(int stage, int logical_id) const;
   /**
     * @param stage The MAU stage number where the configuration will be written.
@@ -309,7 +292,7 @@ class MprSettings {
     * See example programming in Section 6.4.2.3.5 (Match Power Reduction Example)
     * in the Tofino2 Match Action Unit Micro Architecture document.
     */
-  std::map<int, int> mpr_stage_id_ = {};
+  dyn_vector<int> mpr_stage_id_;
 
   /**
     * map from stage number to map from logical table id to a
@@ -320,7 +303,7 @@ class MprSettings {
     * (This coincides with local execute as well.)
     * Inner map is at most 16 entries for each possible logical table ID in a stage.
     */
-  std::map<int, std::map<int, int>> mpr_next_table_ = {};
+  dyn_vector<dyn_vector<int>> mpr_next_table_;
 
   /**
     * map from stage number to map from global execute bit (of previous
@@ -329,7 +312,7 @@ class MprSettings {
     * if the previous match dependent global execute bit is enabled.
     * Inner map is at most 16 entries for each possible global execute bit in a stage.
     */
-  std::map<int, std::map<int, int>> mpr_global_exec_ = {};
+  dyn_vector<dyn_vector<int>> mpr_global_exec_;
 
   /**
     * map from stage number to map from long branch tag ID to a logical table
@@ -337,19 +320,19 @@ class MprSettings {
     * on in this stage when the long branch tag ID is seen at the input.
     * Inner map is at most 8 entries for the 8 tags.
     */
-  std::map<int, std::map<int, int>> mpr_long_branch_ = {};
+  dyn_vector<dyn_vector<int>> mpr_long_branch_;
 
   /**
     * map from stage number to activation vector (16 bits), saying which
     * logical tables in a given stage are always run.
     */
-  std::map<int, int> mpr_always_run_ = {};
+  dyn_vector<int> mpr_always_run_;
 
   /**
     * map from stage number to Boolean, saying whether the following
     * stage is action dependent on the current stage.
     */
-  std::map<int, bool> mpr_bus_dep_next_table_ = {};
+  bitvec mpr_bus_dep_next_table_;
 
   /**
     * map from stage number to 16-bit ID vector, saying whether the following
@@ -359,7 +342,7 @@ class MprSettings {
     * due to the action dependency).  A zero value means the current stage will
     * update the particular global execute bit position.
     */
-  std::map<int, int> mpr_bus_dep_glob_exec_ = {};
+  dyn_vector<int> mpr_bus_dep_glob_exec_;
 
   /**
     * map from stage number to 8-bit ID vector, saying whether the following
@@ -369,10 +352,20 @@ class MprSettings {
     * due to the action dependency).  A zero value means the current stage will
     * update the particular long branch tag ID bit position.
     */
-  std::map<int, int> mpr_bus_dep_long_brch_ = {};
+  dyn_vector<int> mpr_bus_dep_long_brch_;
 
   void print_data(std::ostream &out, int cols, std::string id_name,
                   std::vector<int> data, bool use_bin) const;
+
+ public:
+  /* for each stage, which mpr_glob_exec bits output by this stage are needed by later stages.
+   * for action dependent stages, this will be identical to the previous match dependent stage.
+   */
+  dyn_vector<int> glob_exec_use;
+  /* for each stage, which mpr_long_branch tags output by this stage are needed by later stages.
+   * for action dependent stages, this will be identical to the previous match dependent stage.
+   */
+  dyn_vector<int> long_branch_use;
 };
 
 

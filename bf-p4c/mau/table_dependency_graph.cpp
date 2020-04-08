@@ -1271,7 +1271,6 @@ ControlPathwaysToTable::Path ControlPathwaysToTable::common_reverse_path(const P
     Path rv;
     auto a_it = a.rbegin();
     auto b_it = b.rbegin();
-    int iterator = 0;
     while (a_it != a.rend() && b_it != b.rend()) {
         const IR::Node *a_node = *a_it;
         const IR::Node *b_node = *b_it;
@@ -1423,7 +1422,7 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
                 print += " ]";
                 LOG1("\tSeq " << print);
             } else if (auto pipe = (*it)->to<IR::BFN::Pipe>()) {
-                LOG1("\tPipe");
+                LOG1("\tPipe " << pipe->name);
             } else {
                 LOG1("\tIDK?");
             }
