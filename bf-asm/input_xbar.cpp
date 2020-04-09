@@ -574,19 +574,6 @@ void InputXbar::pass2() {
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
             }
         }
-        // If hash parity bit is set on the hash table, calculate the hash
-        // parity column data by xor'ing the remaining columns
-        if (hash_table_parity.count(hash.first)) {
-            bitvec hashparitycol(0);
-            auto hash_parity_col_no = hash_table_parity[hash.first];
-            for (auto &col : hash.second) {
-                auto &c = col.first;
-                auto &h = col.second;
-                if (c != hash_parity_col_no)
-                    hashparitycol ^= h.data;
-            }
-            hash.second[hash_parity_col_no].data = hashparitycol;
-        }
     }
 }
 
@@ -709,11 +696,9 @@ void InputXbar::write_regs(REGS &regs) {
             hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
             regs.dp.mau_match_input_xbar_exact_match_enable[gress].rewrite();
             regs.dp.mau_match_input_xbar_exact_match_enable[gress] |= hg.second.tables; }
-        int seed_parity = 0;
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit) {
                 if ((hg.second.seed >> bit) & 1) {
-                    seed_parity ^= 1;
                     hash.hash_seed[bit] |= UINT64_C(1) << grp; 
                 }
             }
@@ -726,11 +711,10 @@ void InputXbar::write_regs(REGS &regs) {
         // in pass2
         if (hg.second.tables && !options.disable_gfm_parity) {
             // Enable check if parity bit is set on all tables in hash group
-            int hash_group_parity = true;
             int parity_bit = -1;
             for (int index : bitvec(hg.second.tables)) {
                 if (!hash_table_parity.count(index)) {
-                    hash_group_parity = false;
+                    parity_bit = -1;
                     break; 
                 } else {
                     if (parity_bit == -1) {
@@ -742,10 +726,16 @@ void InputXbar::write_regs(REGS &regs) {
                     }
                 }
             }
-            if (hash_group_parity) {
-                if (parity_bit < 0) 
-                    error(hg.second.lineno, "No parity bit found for hash group %d", grp); 
+            if (parity_bit >= 0) {
                 regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
+                // Hash seed must have even parity for the group. Loop through
+                // all bits set on the group for hash seed to determine if the
+                // parity bit must be set 
+                int seed_parity = 0;
+                for (int bit = 0; bit < 52; ++bit) {
+                    auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
+                    seed_parity ^= seed_bit;
+                }
                 if (seed_parity) {  // flip parity bit setup on group for even parity
                     if (!hg.second.seed_parity)
                         warning(hg.second.lineno, "hash group %d has parity enabled, but setting seed_parity"
