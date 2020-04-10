@@ -114,12 +114,6 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 stage[stageno].mpr_always_run |= kv.value.i;
             }
             continue;
-        } else if (kv.key == "mpr_bus_dep_next_table") {
-            stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
-            if CHECKTYPE(kv.value, tINT) {
-                stage[stageno].mpr_bus_dep_next_table[gress] |= kv.value.i;
-            }
-            continue;
         } else if (kv.key == "mpr_bus_dep_glob_exec") {
             stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
             if CHECKTYPE(kv.value, tINT) {

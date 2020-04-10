@@ -406,11 +406,9 @@ bool MprSettings::need_to_emit(lut_t type, int stage) const {
 
 std::ostream& MprSettings::emit_stage_asm(std::ostream& out, int stage) const {
   if (mau_features_.get_dependency_for_gress_stage(gress_, stage+1) == DEP_MATCH) {
-    BUG_CHECK(get_mpr_bus_dep_next_table(stage) == 0, "mpr_bus_dep_next_table not zero");
     BUG_CHECK(get_mpr_bus_dep_glob_exec(stage) == 0, "mpr_bus_dep_glob_exec not zero");
     BUG_CHECK(get_mpr_bus_dep_long_brch(stage) == 0, "mpr_bus_dep_long_brch not zero"); }
   out << "  mpr_stage_id: " << get_mpr_stage(stage) << std::endl;
-  out << "  mpr_bus_dep_next_table: " << (get_mpr_bus_dep_next_table(stage) ? 1 : 0) << std::endl;
   out << "  mpr_bus_dep_glob_exec: 0x" << hex(get_mpr_bus_dep_glob_exec(stage)) << std::endl;
   out << "  mpr_bus_dep_long_brch: 0x" << hex(get_mpr_bus_dep_long_brch(stage)) << std::endl;
   out << "  mpr_always_run: 0x" << hex(get_mpr_always_run_for_stage(stage)) << std::endl;
@@ -512,15 +510,6 @@ void MprSettings::set_or_mpr_long_branch(int stage, int tag_id, int id_vector) {
   BUG_CHECK(tag_id >= 0 && tag_id < Device::numLongBranchTags(),
             "Invalid long branch tag_id %d", tag_id);
   mpr_long_branch_[stage][tag_id] |= id_vector;
-}
-
-void MprSettings::set_mpr_bus_dep_next_table(int stage, bool action_dep) {
-  BUG_CHECK(stage >= 0 && stage < Device::numStages(), "Invalid stage %d", stage);
-  mpr_bus_dep_next_table_[stage] = action_dep;
-}
-
-bool MprSettings::get_mpr_bus_dep_next_table(int stage) const {
-  return mpr_bus_dep_next_table_[stage];
 }
 
 void MprSettings::set_mpr_bus_dep_glob_exec(int stage, int id_vector) {
@@ -671,12 +660,6 @@ std::ostream& operator<<(std::ostream &out, const MprSettings &m) {
     vec.push_back(m.mpr_always_run_.at(s)); }
   out << "MPR Always Run" << std::endl;
   m.print_data(out, 2, "Active", vec, true);
-  vec.clear();
-  for (int s=0; s < Device::numStages(); ++s) {
-    vec.push_back(s);
-    vec.push_back(m.get_mpr_bus_dep_next_table(s) ? 1 : 0); }
-  out << "MPR Bus Dep Next Table" << std::endl;
-  m.print_data(out, 2, "Bus Dep", vec, false);
   vec.clear();
   for (int s=0; s < Device::numStages(); ++s) {
     vec.push_back(s);

@@ -62,7 +62,6 @@ public:
     // MPR stage config
     int mpr_stage_id[3] = { 0 };  // per-gress
     int mpr_always_run = 0;
-    int mpr_bus_dep_next_table[3] = { 0 };  // per-gress
     int mpr_bus_dep_glob_exec = 0;
     int mpr_bus_dep_long_branch = 0;
     // per gress, per logical table

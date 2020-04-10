@@ -231,16 +231,6 @@ class MprSettings {
   int get_mpr_always_run_for_stage(int stage) const;
   /**
     * @param stage The MAU stage number where the configuration will be written.
-    * @param action_dep Boolean indicating if the *following* stage is action
-    *                   dependent, indicating that the input next table value
-    *                   should be passed through unchanged.  If the next stage
-    *                   is match dependent, this value will be updated by the
-    *                   current stage.
-    */
-  void set_mpr_bus_dep_next_table(int stage, bool action_dep);
-  bool get_mpr_bus_dep_next_table(int stage) const;
-  /**
-    * @param stage The MAU stage number where the configuration will be written.
     * @param id_vector A 16-bit vector indicating if the *following* stage is
     *                  action dependent for the given global execute activation
     *                  bit.  A value of '1' indicates that the input global
@@ -327,12 +317,6 @@ class MprSettings {
     * logical tables in a given stage are always run.
     */
   dyn_vector<int> mpr_always_run_;
-
-  /**
-    * map from stage number to Boolean, saying whether the following
-    * stage is action dependent on the current stage.
-    */
-  bitvec mpr_bus_dep_next_table_;
 
   /**
     * map from stage number to 16-bit ID vector, saying whether the following

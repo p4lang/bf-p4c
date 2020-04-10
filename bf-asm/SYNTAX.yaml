@@ -784,9 +784,6 @@ stage <constant> <thread>:
         - <instruction> <operands>
     # configuration setting for mpr_stage_id
     mpr_stage_id: <int>
-    # configuration setting for mpr_bus_dep_ingress / mpr_bus_dep_egress
-    # 0 means treat as match dependent, 1 means treat as aciton dependent
-    mpr_bus_dep_next_table: <int>
     # configuration setting for mpr_bus_dep_glob_exec
     # A bit that is 0 means treat that global execute bit as pass-through (action dependent),
     # because the next stage is action dependent, while a 1 means update it in the current stage.

@@ -245,21 +245,6 @@ void WalkPowerGraph::compute_mpr() {
         }
       }
       mpr->set_mpr_always_run(stage, always_run);
-
-      // Configure MPR next_table bus dependency settings.
-      // FIXME -- do this automatically in the assembler?  It must always be the same
-      // as the next stage's dependency
-      if (stage != (Device::numStages() - 1)) {
-        mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, stage + 1);
-        // Note, there is no need to pass along bus dependencies if there
-        // are no more tables to program.
-        // However, model asserts if next table is not passed through.  :(
-        if (next_dep != DEP_MATCH) {
-          // Next table bus dependency settings.
-          // FIXME -- don't really need to set this if we never use next_table?
-          mpr->set_mpr_bus_dep_next_table(stage, true);
-        }
-      }  // stage != last stage
     }  // stage
 
     // Bypass normal MPR config.
@@ -283,13 +268,6 @@ void WalkPowerGraph::compute_mpr() {
           always_run |= (1 << *tbl->logical_id);
         }
         mpr->set_or_mpr_always_run(stage, always_run);
-        // MPR Bus dep still has to be programmed to avoid model asserts.
-        if (stage != (Device::numStages() - 1)) {
-          mau_dep_t next_dep = mau_features_->get_dependency_for_gress_stage(g, stage + 1);
-          if (next_dep == DEP_ACTION) {  // model asserts if this is not passed through.
-            // Next table
-            mpr->set_mpr_bus_dep_next_table(stage, true);
-        } }
     } }
   }  // gress
 }

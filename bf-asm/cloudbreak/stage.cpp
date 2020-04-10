@@ -154,9 +154,9 @@ template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
     for (int id=0; id < MAX_LONGBRANCH_TAGS; ++id) {
       merge.mpr_long_brch_lut[id] = mpr_long_brch_lut[id]; }
     merge.mpr_always_run = mpr_always_run;
-    merge.mpr_bus_dep.mpr_bus_dep_egress = mpr_bus_dep_next_table[EGRESS];
-    merge.mpr_bus_dep.mpr_bus_dep_ingress =
-      mpr_bus_dep_next_table[INGRESS] | mpr_bus_dep_next_table[GHOST];
+    if (stageno != AsmStage::numstages()-1) {
+        merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
+        merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP; }
     merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec;
     merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch;
 
