@@ -761,6 +761,11 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
   endif()
 endforeach()
 
+# Add extra flags for p4_16_programs
+# Exclude the MirrorHA tests as they have hard coded install path (specific to p4factory)
+bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_mirror"
+        "all ^test.TestIngEgrMirrorHA ^test.TestNegativeMirrorHA")
+
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_1585_a" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a/p4c_1585_a.p4"
     "${testExtraArgs} -target tofino -arch tna -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1585_a")

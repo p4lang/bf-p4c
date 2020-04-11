@@ -1713,12 +1713,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
 )
 
-# DRV-3485
-p4c_add_xfail_reason("tofino"
-  "BfruntimeReadWriteRpcException"
-  p4_16_programs_tna_ternary_match
-)
-
 #new p4c tests that fail
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: expected a method call"
