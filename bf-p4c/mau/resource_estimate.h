@@ -115,6 +115,7 @@ struct StageUseEstimate {
     void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);
     void unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
+    bool can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void calculate_partition_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int ram_depth);
     bool ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);

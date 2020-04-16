@@ -291,6 +291,9 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
     bool independent_hash = ways != -1;
     int way_total = ways != -1 ? ways : simul_lookups;
 
+    if (way_total == 1 && can_be_identity_hash(tbl, lo, calculated_depth))
+        return true;
+
     int depth_needed = std::min(calculated_depth, int(StageUse::MAX_SRAMS));
     int depth = 0;
 
@@ -338,6 +341,76 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
 
     calculated_depth = depth;
     return true;
+}
+
+/**
+ * An optimization for an exact match table.
+ *
+ * If a key is under a certain number of bits, instead of using a random hash of that key
+ * to find the position, an identity can be used instead.  This makes sense for keys
+ * 10 bits or less, as an identity hash would just source to an individual RAM line.
+ *
+ * If one was to have, for example, a 12 bit key, this support is possible.  If 4 entries
+ * fit per RAM line, then by using an identity hash, each entry can fit within a single RAM.
+ *
+ * The driver, however, is limited in its current support.  The driver uses a reserved entry as
+ * the miss entry.  This miss entry will be used if the table ever misses.  If the miss-entry
+ * has action data requirements or potentially stateful requirements, then those entries must be
+ * stored.
+ *
+ * The driver always programs the miss entry at the highest address, meaning that if an identity
+ * address is used, if the table requires a miss-entry, then the all 1 field will collide with
+ * the miss-entry.
+ *
+ * This could be fixed by a dynamic miss-entry, JIRA DRV-2874.  If the miss-entry could move to
+ * any open miss-entry, then all of these tables could support this identity hash.  If the table
+ * was to ever fill all entries, then by definition, the table could never miss.
+ *
+ * The current limitations are if a direct resource is required.  This will reserve the all 0
+ * miss-entry, no matter what.
+ *
+ * In the future, when this is supported, a table with a direct resource can still use this
+ * identity optimization if and only if the miss-entry never uses that resource, which is
+ * a more complex check, but not hard to add
+ */
+bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOption *lo,
+        int &calculated_depth) {
+    // In order for the default entry to be safely added, the driver currently uses the largest
+    // hash address always.  With a standard exact match, this is not a problem due to ease of
+    // movement, but with an identity it is unclear if the last hash address.  The fix is to
+    // allow a dynamic hash movement
+    bool action_profile = false;
+    bool direct_attached = false;
+    for (auto back_at : tbl->attached) {
+        if (back_at->attached->is<IR::MAU::ActionData>())
+            action_profile = true;
+        if (back_at->attached->direct)
+            direct_attached = true;
+    }
+
+    if (direct_attached)
+        return false;
+
+    if (!action_profile && lo->layout.action_data_bytes_in_table) {
+        return false;
+    }
+
+    int extra_identity_bits = lo->layout.ixbar_width_bits - ceil_log2(Memories::SRAM_DEPTH);
+    // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
+    if (extra_identity_bits <= 8) {
+        int entries_needed = (1 << extra_identity_bits);
+        int RAMs_needed = (entries_needed + lo->way.match_groups - 1) / lo->way.match_groups;
+        RAMs_needed = 1 << ceil_log2(RAMs_needed);
+        // Minimum way number is generally 4
+
+        if (RAMs_needed <= calculated_depth) {
+            lo->way_sizes = { RAMs_needed };
+            lo->identity = true;
+            calculated_depth = RAMs_needed;
+            return true;
+        }
+    }
+    return false;
 }
 
 /** This calculates the number of simultaneous lookups within an exact match table, using the
@@ -399,33 +472,9 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
         calculated_depth = calculated_depth == 1 ? 3 : 4;
     }
 
-    // In order for the default entry to be safely added, the driver currently uses the largest
-    // hash address always.  With a standard exact match, this is not a problem due to ease of
-    // movement, but with an identity it is unclear if the last hash address.  The fix is to
-    // allow a dynamic hash movement
-    bool default_entry_required = false;
-    if (lo->layout.action_data_bytes_in_table > 0)
-        default_entry_required = true;
-    for (auto back_at : tbl->attached) {
-        if (back_at->attached->direct)
-            default_entry_required = true;
-    }
 
-    int extra_identity_bits = lo->layout.ixbar_width_bits - ceil_log2(Memories::SRAM_DEPTH);
-    // Generally the limit becomes around 18 bits: 4 way pack plus 64 bits of entries
-    if (extra_identity_bits <= 8 && !default_entry_required) {
-        int entries_needed = (1 << extra_identity_bits);
-        int RAMs_needed = (entries_needed + lo->way.match_groups - 1) / lo->way.match_groups;
-        RAMs_needed = 1 << ceil_log2(RAMs_needed);
-        // Minimum way number is generally 4
-
-        if (RAMs_needed <= calculated_depth) {
-            lo->way_sizes = { RAMs_needed };
-            lo->identity = true;
-            calculated_depth = RAMs_needed;
-            return;
-        }
-    }
+    if (can_be_identity_hash(tbl, lo, calculated_depth))
+        return;
 
     if (calculated_depth < 8) {
         switch (calculated_depth) {
