@@ -567,9 +567,9 @@ void MeterTable::write_regs(REGS &regs) {
         }
         if (push_on_overflow)
             adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
-        adrdist.meter_bubble_req[gress].bubble_req_1x_class_en |= 1 << ((home->row/4U)+4);
+        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << ((home->row/4U)+4);
     } else {
-        adrdist.meter_bubble_req[gress].bubble_req_1x_class_en |= 1 << (home->row/4U);
+        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << (home->row/4U);
         adrdist.packet_action_at_headertime[1][home->row/4U] = 1; }
     if (push_on_overflow)
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;

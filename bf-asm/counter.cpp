@@ -235,7 +235,7 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                     stats.lrt_threshold[idx] = l.threshold;
                     stats.lrt_update_interval[idx] = l.interval;
                     ++idx; } }
-            stat_ctl.stats_alu_egress = gress;
+            stat_ctl.stats_alu_egress = timing_thread(gress);
             stat_ctl.stats_bytecount_adjust = 0; // TODO
             stat_ctl.stats_alu_error_enable = 0; // TODO
             if (logical_id >= 0)
@@ -290,10 +290,10 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                 regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
             movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
         }
-        adrdist.stats_bubble_req[gress].bubble_req_1x_class_en |= 1 << (4 + stats_group_index);
+        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << (4 + stats_group_index);
     } else {
         adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
-        adrdist.stats_bubble_req[gress].bubble_req_1x_class_en |= 1 << stats_group_index;
+        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << stats_group_index;
     }
     if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
