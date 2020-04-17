@@ -122,11 +122,11 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
 
 #define CLOUDBREAK_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)              \
     CLOUDBREAK_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)                  \
-    CLOUDBREAK_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT, REVERSE, IFIDX) }
+    CLOUDBREAK_DIGEST_TABLE(GRESS, NAME, TBL, IFID, YES, CNT, REVERSE, IFIDX) }
 #define CLOUDBREAK_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT, REVERSE, IFIDX)        \
     CLOUDBREAK_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)                  \
     for (auto &r : ARRAY) {                                                                     \
-        CLOUDBREAK_DIGEST_TABLE(GRESS, r.TBL, IFID, NO, CNT, REVERSE, IFIDX) } }
+        CLOUDBREAK_DIGEST_TABLE(GRESS, NAME, r.TBL, IFID, NO, CNT, REVERSE, IFIDX) } }
 
 #define CLOUDBREAK_COMMON_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT, REVERSE, IFIDX)              \
     DEPARSER_DIGEST(Cloudbreak, GRESS, NAME, CNT, can_shift = true; ) {                         \
@@ -135,11 +135,11 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
         SEL.shft = data.shift + data.select->lo;                                                \
         SEL.disable_ = 0;
 
-#define CLOUDBREAK_DIGEST_TABLE(GRESS, REG, IFID, IFVALID, CNT, REVERSE, IFIDX)                 \
+#define CLOUDBREAK_DIGEST_TABLE(GRESS, NAME, REG, IFID, IFVALID, CNT, REVERSE, IFIDX)                 \
         for (auto &set : data.layout) {                                                         \
             int id = set.first >> data.shift;                                                   \
             int idx = 0;                                                                        \
-            REVERSE( int maxidx = REG IFIDX([id]).phvs.size() - 1; )                            \
+            int maxidx = REG IFIDX([id]).phvs.size() - 1;                                       \
             bool first = true;                                                                  \
             int last = -1;                                                                      \
             for (auto &reg : set.second) {                                                      \
@@ -147,8 +147,12 @@ HO_I_INTRINSIC_RENAME(hash_lag_ecmp_mcast_1, hash2, YES)
                     first = false;                                                              \
                     IFID( REG IFIDX([id]).id_phv = reg->reg.deparser_id(); continue; ) }        \
                 if (last == reg->reg.deparser_id()) continue;                                   \
-                for (int i = reg->reg.size/8; i > 0; i--)                                       \
-                    REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id();     \
+                for (int i = reg->reg.size/8; i > 0; i--) {                                     \
+                    if (idx > maxidx) {                                                         \
+                        error(data.lineno, "%s digest limited to %d bytes",                     \
+                                #NAME, maxidx + 1);                                             \
+                        break; }                                                                \
+                    REG IFIDX([id]).phvs[REVERSE(maxidx -) idx++] = reg->reg.deparser_id(); }   \
                 last = reg->reg.deparser_id(); }                                                \
             IFVALID( REG IFIDX([id]).valid = 1; )                                               \
             REG IFIDX([id]).len = idx; }
