@@ -160,7 +160,7 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
     return retval;
 }
 
-const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) {
+const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
     auto origType = typeMap->getType(st->typeName)->to<IR::Type_Type>();
     BUG_CHECK(origType, "Expected %1% to be a type", st->typeName);
     if (!origType->type->is<IR::Type_Header>())
@@ -175,7 +175,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) 
 
     LOG3(" start modifying ");
     IR::IndexedVector<IR::NamedExpression> components;
-    // XXX(hanw): TypeChecking algorithm on IR::StructInitializerExpression
+    // XXX(hanw): TypeChecking algorithm on IR::StructExpression
     // does not annotate the expression with the original IR::Type_Header.
     // Instead, it creates another IR::Type_Header instance with the same name
     // as the original header type, but without the annotation on the fields.
@@ -214,7 +214,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructInitializerExpression *st) 
         index++;
     }
 
-    auto retval = new IR::StructInitializerExpression(st->srcInfo, st->typeName, components);
+    auto retval = new IR::StructExpression(st->srcInfo, st->typeName, components);
     LOG6("rewrite field list to " << retval);
     return retval;
 }

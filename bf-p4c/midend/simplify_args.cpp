@@ -178,7 +178,7 @@ bool FlattenHeader::preorder(IR::MethodCallExpression* mc) {
         flattened_args->push_back(new IR::Argument(flatten_list(liste)));
         mc->arguments = flattened_args;
         LOG4("Flattened arguments: " << mc);
-    } else if (auto* liste = aexpr->to<IR::StructInitializerExpression>()) {
+    } else if (auto* liste = aexpr->to<IR::StructExpression>()) {
         LOG4("Flattening arguments: " << liste);
         auto* flattened_args = new IR::Vector<IR::Argument>();
         if (type->name == "Mirror")
@@ -224,11 +224,11 @@ cstring FlattenHeader::makePath(cstring sep) const {
 }
 
 void FlattenHeader::flattenStructInitializer(
-        const IR::StructInitializerExpression *expr,
+        const IR::StructExpression *expr,
         IR::IndexedVector<IR::NamedExpression> *components) {
     for (auto e : expr->components) {
         pathSegments.push_back(e->name);
-        if (const auto* c = e->expression->to<IR::StructInitializerExpression>()) {
+        if (const auto* c = e->expression->to<IR::StructExpression>()) {
             flattenStructInitializer(c, components);
         } else if (auto* member = e->expression->to<IR::Member>()) {
             if (auto type = member->type->to<IR::Type_Struct>()) {
@@ -254,12 +254,12 @@ void FlattenHeader::flattenStructInitializer(
     }
 }
 
-IR::StructInitializerExpression*
-FlattenHeader::doFlattenStructInitializer(const IR::StructInitializerExpression* e) {
+IR::StructExpression*
+FlattenHeader::doFlattenStructInitializer(const IR::StructExpression* e) {
     // removing nested StructInitailzierExpression
     auto no_nested_struct = new IR::IndexedVector<IR::NamedExpression>();
     flattenStructInitializer(e, no_nested_struct);
-    return new IR::StructInitializerExpression(e->srcInfo, e->typeName, *no_nested_struct);
+    return new IR::StructExpression(e->srcInfo, e->typeName, *no_nested_struct);
 }
 
 IR::ListExpression* FlattenHeader::flatten_list(const IR::ListExpression* args) {
@@ -386,7 +386,7 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
 
         if (fieldList.size() > 0)
             return new IR::Argument(arg->srcInfo,
-                    new IR::StructInitializerExpression(new IR::Type_Name(type_name), fieldList));
+                    new IR::StructExpression(new IR::Type_Name(type_name), fieldList));
     }
     return arg;
 }

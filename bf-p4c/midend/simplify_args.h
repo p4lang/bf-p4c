@@ -45,10 +45,9 @@ class FlattenHeader : public Modifier {
 
     std::vector<cstring> pathSegments{};
     cstring makePath(cstring sep) const;
-    void flattenStructInitializer(const IR::StructInitializerExpression* e,
+    void flattenStructInitializer(const IR::StructExpression* e,
             IR::IndexedVector<IR::NamedExpression>* c);
-    IR::StructInitializerExpression*
-        doFlattenStructInitializer(const IR::StructInitializerExpression* e);
+    IR::StructExpression* doFlattenStructInitializer(const IR::StructExpression* e);
     IR::ListExpression* flatten_list(const IR::ListExpression* args);
     void explode(const IR::Expression*, IR::Vector<IR::Expression>*);
 

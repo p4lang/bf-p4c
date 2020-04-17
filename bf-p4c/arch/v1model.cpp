@@ -43,7 +43,6 @@ class LoadTargetArchitecture : public Inspector {
 
  public:
     explicit LoadTargetArchitecture(ProgramStructure *structure) : structure(structure) {
-        setName("LoadTargetArchitecture");
         CHECK_NULL(structure);
     }
 
@@ -932,7 +931,7 @@ class ConstructSymbolTable : public Inspector {
      * algorithm to optimize the header layout. This header type should be internal
      * to the compiler. No compiler output should rely on the generated header type.
      */
-    const IR::StructInitializerExpression*
+    const IR::StructExpression*
         convertFieldList(cstring prefix, std::vector<DigestFieldInfo>* digestFieldsFromSource,
                 std::vector<DigestFieldInfo>* digestFieldsGeneratedByCompiler = nullptr,
                 bool isHeader = true) {
@@ -946,7 +945,7 @@ class ConstructSymbolTable : public Inspector {
         }
         for (auto f : *digestFieldsFromSource) {
             LOG3(" source type " << std::get<1>(f));
-            /// if there is a nested tuple, convert it to a nested StructInitializerExpression
+            /// if there is a nested tuple, convert it to a nested StructExpression
             /// and do so recursively.
             if (std::get<1>(f)->is<IR::Type_BaseList>()) {
                 auto list = std::get<2>(f)->to<IR::ListExpression>();
@@ -968,8 +967,7 @@ class ConstructSymbolTable : public Inspector {
             }
         }
         cstring headerTypeName = prefix + (isHeader ? "_header_t" : "_struct_t");
-        return new IR::StructInitializerExpression(new IR::Type_Name(headerTypeName),
-                                                   *initializer);
+        return new IR::StructExpression(new IR::Type_Name(headerTypeName), *initializer);
     }
 
     /*
@@ -1061,7 +1059,7 @@ class ConstructSymbolTable : public Inspector {
             auto decl = new IR::Declaration_Instance(typeName->path->name, annotations,
                                                      declType, declArgs);
             structure->ingressDeparserDeclarations.push_back(decl);
-        } else if (auto st = field_list->expression->to<IR::StructInitializerExpression>()) {
+        } else if (auto st = field_list->expression->to<IR::StructExpression>()) {
             auto args = new IR::Vector<IR::Argument>(new IR::Argument(st));
             auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
             auto member = new IR::Member(expr, "pack");
@@ -1331,7 +1329,7 @@ class ConstructSymbolTable : public Inspector {
         }
         addResidualFields(cloneHeaderName, digestFieldsFromSource, cloneType);
 
-        const IR::StructInitializerExpression* fieldList =
+        const IR::StructExpression* fieldList =
             convertFieldList(generatedCloneHeaderTypeName,
                     digestFieldsFromSource, digestFieldsGeneratedByCompiler);
 
@@ -1912,7 +1910,8 @@ class ConstructSymbolTable : public Inspector {
         ERROR_CHECK(type->baseType->path->name == "register",
                   "register converter cannot be applied to %1%", type->baseType->path->name);
         BUG_CHECK(node->arguments->size() == 1, "register must have exactly one argument");
-        BUG_CHECK(type->arguments->size() == 1, "register must have exactly one type argument");
+        BUG_CHECK(type->arguments->size() == 1 || type->arguments->size() == 2,
+                  "register must have one or two type arguments");
 
         auto typeArgs = new IR::Vector<IR::Type>();
         auto eltype = type->arguments->at(0);
@@ -1933,7 +1932,10 @@ class ConstructSymbolTable : public Inspector {
 
         if (node->arguments->at(0)->expression->to<IR::Constant>()->asInt()) {
             args->push_back(node->arguments->at(0));
-            typeArgs->push_back(IR::Type::Bits::get(32));
+            if (type->arguments->size() == 2)
+                typeArgs->push_back(type->arguments->at(1));
+            else
+                typeArgs->push_back(IR::Type::Bits::get(32));
             type = new IR::Type_Specialized(
                 new IR::Type_Name("Register"), typeArgs);
         } else {
@@ -2001,8 +2003,6 @@ class ConstructSymbolTable : public Inspector {
     }
 
     void cvtCounterDecl(const IR::Declaration_Instance* node) {
-        auto type = node->type->to<IR::Type_Name>();
-        if (!type) return;
         auto typeArgs = new IR::Vector<IR::Type>();
         // type<W>
         if (auto anno = node->annotations->getSingle("min_width")) {
@@ -2014,7 +2014,9 @@ class ConstructSymbolTable : public Inspector {
             WARNING("Could not infer min_width for counter %s, using bit<64>" << node);
         }
         // type<S>
-        if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
+        if (auto type = node->type->to<IR::Type_Specialized>()) {
+            typeArgs->push_back(type->arguments->at(0));
+        } else if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
             typeArgs->push_back(s->type->to<IR::Type_Bits>());
         }
 
@@ -2025,10 +2027,10 @@ class ConstructSymbolTable : public Inspector {
     }
 
     void cvtMeterDecl(const IR::Declaration_Instance* node) {
-        auto type = node->type->to<IR::Type_Name>();
-        if (!type) return;
         auto typeArgs = new IR::Vector<IR::Type>();
-        if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
+        if (auto type = node->type->to<IR::Type_Specialized>()) {
+            typeArgs->push_back(type->arguments->at(0));
+        } else if (auto s = node->arguments->at(0)->expression->to<IR::Constant>()) {
             typeArgs->push_back(s->type->to<IR::Type_Bits>());
         }
         auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Meter"), typeArgs);
@@ -2211,7 +2213,7 @@ class ConstructSymbolTable : public Inspector {
                     fieldListString << comp;
                 }
             } else if (auto fieldList =
-                    argument->expression->to<IR::StructInitializerExpression>()) {
+                    argument->expression->to<IR::StructExpression>()) {
                 for (auto comp : fieldList->components) {
                     fieldListString << comp;
                 }

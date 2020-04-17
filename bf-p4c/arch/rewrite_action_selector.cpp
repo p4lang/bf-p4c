@@ -37,7 +37,7 @@ const IR::Node* RewriteActionSelector::postorder(IR::Declaration_Instance *di) {
                                 StageUseEstimate::COMPILER_DEFAULT_SELECTOR_POOLS)));
                 const IR::Annotations* annot = nullptr;
                 if (auto ann = di->getAnnotation(IR::Annotation::nameAnnotation)) {
-                    auto annName = IR::Annotation::getName(ann);
+                    auto annName = ann->getName();
                     cstring name = annName + "_sel";
                     annot = di->annotations->addOrReplace(
                             IR::Annotation::nameAnnotation, new IR::StringLiteral(name));

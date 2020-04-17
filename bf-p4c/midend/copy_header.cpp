@@ -5,7 +5,7 @@ namespace BFN {
 
 const IR::Node* DoCopyHeaders::postorder(IR::AssignmentStatement* statement) {
     if (statement->right->to<IR::ListExpression>() ||
-            statement->right->to<IR::StructInitializerExpression>())
+            statement->right->to<IR::StructExpression>())
         return statement;
     auto ltype = typeMap->getType(statement->left, true);
     if (auto strct = ltype->to<IR::Type_Header>()) {

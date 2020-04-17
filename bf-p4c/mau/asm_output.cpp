@@ -2756,7 +2756,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
         cstring annName = "";
         if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {
-            annName = IR::Annotation::getName(ann);
+            annName = ann->getName();
             // P4_14-->P4_16 translation names valid matches with a
             // "$valid$" suffix (note the trailing "$").  However, Brig
             // and pdgen use "$valid".
@@ -2886,7 +2886,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
             auto match_key_name = phv.field(match_key->expr)->externalName();
             // Use annotation names if present
             if (auto ann = match_key->getAnnotation(IR::Annotation::nameAnnotation)) {
-                auto annName = IR::Annotation::getName(ann);
+                auto annName = ann->getName();
                 // Remove slicing info if present
                 std::string s(annName.c_str());
                 std::smatch sm;

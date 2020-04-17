@@ -1746,9 +1746,24 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/nested_if_statement.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: .*expected a method call"
+  testdata/p4_16_samples/issue2287-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: .*too many side-effect in one expression"
+  testdata/p4_16_samples/issue2289.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: .*unexpected statement with call"
+  testdata/p4_16_samples/issue2291-bmv2.p4
+)
+
 # old p4c test that now fails with our backend -- why?
 p4c_add_xfail_reason("tofino"
-  "error: StructInitializerExpression: Expected a bit<> or int<> value"
+  "error: StructExpression: Expected a bit<> or int<> value"
   testdata/p4_16_samples/issue232-bmv2.p4
 )
 

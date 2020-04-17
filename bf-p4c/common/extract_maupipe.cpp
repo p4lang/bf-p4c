@@ -1352,7 +1352,7 @@ class GetBackendTables : public MauInspector {
                           boost::optional<cstring> partition_index) {
         boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
         if (auto nameAnn = annotations->getSingle(IR::Annotation::nameAnnotation))
-            name_annotation = IR::Annotation::getName(nameAnn);
+            name_annotation = nameAnn->getName();
 
         auto slices = convertMaskToSlices(mask);
         for (auto slice : slices) {
@@ -1418,7 +1418,7 @@ class GetBackendTables : public MauInspector {
 
                 boost::optional<cstring> name_annotation = boost::make_optional(false, cstring());
                 if (auto nameAnn = key_elem->getAnnotation(IR::Annotation::nameAnnotation))
-                    name_annotation = IR::Annotation::getName(nameAnn);
+                    name_annotation = nameAnn->getName();
 
                 if (partition_index && name_annotation && (*partition_index == *name_annotation))
                     ixbar_read->partition_index = true;

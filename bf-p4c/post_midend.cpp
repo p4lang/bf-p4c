@@ -43,7 +43,7 @@ class ReplaceFlexHeaderTypes : public Transform {
 
     // rewrite struct initializer expression according to the
     // packed flexible header format.
-    const IR::Node* preorder(IR::StructInitializerExpression* expr) override {
+    const IR::Node* preorder(IR::StructExpression* expr) override {
         if (auto st = expr->type->to<IR::Type_StructLike>()) {
             if (map->count(st->name) == 0)
                 return expr;
@@ -73,7 +73,7 @@ class ReplaceFlexHeaderTypes : public Transform {
                     }
                 }
                 // if
-                return new IR::StructInitializerExpression(expr->typeName, *comp);
+                return new IR::StructExpression(expr->typeName, *comp);
             }
         }
         return expr;

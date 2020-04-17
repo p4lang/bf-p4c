@@ -700,7 +700,7 @@ void IR::MAU::Table::remove_gateway() {
 
 cstring IR::MAU::Action::externalName() const {
     if (auto *name_annot = annotations->getSingle("name"))
-        return IR::Annotation::getName(name_annot);
+        return name_annot->getName();
     return name.toString();
 }
 

@@ -50,7 +50,7 @@ class AnalyzeProgram : public Inspector {
     explicit AnalyzeProgram(PSA::ProgramStructure* structure,
                             P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
         : structure(structure), refMap(refMap), typeMap(typeMap)
-    { CHECK_NULL(structure); setName("AnalyzePsaProgram"); }
+    { CHECK_NULL(structure); }
 
     bool preorder(const IR::P4Program*) override {
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(

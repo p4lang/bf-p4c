@@ -28,7 +28,7 @@ class FillFromBlockMap : public Transform {
         }
     }
 
-    const IR::StructInitializerExpression *preorder(IR::StructInitializerExpression * si) override {
+    const IR::StructExpression *preorder(IR::StructExpression * si) override {
         // Don't visit typeName, but visit everything else.
         preorder(static_cast<IR::Expression *>(si));
         visit(si->components, "components");

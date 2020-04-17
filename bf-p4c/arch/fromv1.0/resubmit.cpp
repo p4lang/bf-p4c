@@ -34,11 +34,11 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
         return boost::none;
     }
     const IR::Expression* expression = methodCall->arguments->at(0)->expression;
-    if (expression->is<IR::StructInitializerExpression>()) {
+    if (expression->is<IR::StructExpression>()) {
         LOG2("resubmit emits struct initializer expression " << expression);
-        const IR::StructInitializerExpression* fieldList = nullptr;
+        const IR::StructExpression* fieldList = nullptr;
         {
-            fieldList = expression->to<IR::StructInitializerExpression>();
+            fieldList = expression->to<IR::StructExpression>();
             if (!fieldList) {
                 ::warning("Expected field list: %1%", methodCall);
                 return boost::none;

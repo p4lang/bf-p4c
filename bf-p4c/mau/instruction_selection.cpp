@@ -1150,6 +1150,13 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
         }
     } else {
         simpl_expr = index_expr;
+        if (auto sl = index_expr->to<IR::Slice>()) {
+            // corner case -- action arg used both for index and elsewhere in P4_14 which
+            // is inferred as larger than the index size (due to the other use).  We end up
+            // with a slice on the index which we want to ignore.
+            if (sl->e0->is<IR::MAU::ActionArg>() && sl->getL() == 0 &&
+                (2 << sl->getH()) >= synth2port->size) {
+                simpl_expr = sl->e0; } }
     }
 
     bool both_hash_and_index = false;

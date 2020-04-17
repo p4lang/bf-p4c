@@ -93,7 +93,7 @@ CONVERT_PRIMITIVE(count_from_hash) {
     if (!temp) return nullptr;
     auto counterref = new IR::PathExpression(structure->counters.get(counter));
     auto method = new IR::Member(counterref, structure->v1model.counter.increment.Id());
-    auto arg = new IR::Cast(structure->v1model.counter.index_type,
+    auto arg = new IR::Cast(IR::Type::Bits::get(counter->index_width()),
                             new IR::PathExpression(new IR::Path(temp)));
     block->push_back(new IR::MethodCallStatement(primitive->srcInfo, method,
                                                  { new IR::Argument(arg) }));
@@ -113,7 +113,7 @@ static bool makeMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructure 
         return false; }
     auto meterref = new IR::PathExpression(structure->meters.get(meter));
     auto method = new IR::Member(meterref, structure->v1model.meter.executeMeter.Id());
-    auto arg = new IR::Cast(structure->v1model.meter.index_type, index);
+    auto arg = new IR::Cast(IR::Type::Bits::get(meter->index_width()), index);
     block->push_back(new IR::MethodCallStatement(srcInfo, method,
                                                  { new IR::Argument(arg),
                                                    new IR::Argument(dest) }));

@@ -317,7 +317,7 @@ static bool makeTnaMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructu
         return false; }
     auto meterref = new IR::PathExpression(structure->meters.get(meter));
     auto method = new IR::Member(meterref, "execute");
-    auto arg = new IR::Cast(structure->v1model.meter.index_type, index);
+    auto arg = new IR::Cast(IR::Type::Bits::get(meter->index_width()), index);
     auto args = new IR::Vector<IR::Argument>();
     args->push_back(new IR::Argument(arg));
     if (color) {
@@ -355,7 +355,7 @@ CONVERT_PRIMITIVE(count_from_hash, 2) {
     auto block = P4V1::generate_hash_block_statement(structure, primitive, temp, conv, 2);
     auto counterref = new IR::PathExpression(structure->counters.get(counter));
     auto method = new IR::Member(counterref, structure->v1model.counter.increment.Id());
-    auto arg = new IR::Cast(structure->v1model.counter.index_type,
+    auto arg = new IR::Cast(IR::Type::Bits::get(counter->index_width()),
                             new IR::PathExpression(new IR::Path(temp)));
     block->push_back(new IR::MethodCallStatement(primitive->srcInfo, method,
                                                  { new IR::Argument(arg) }));

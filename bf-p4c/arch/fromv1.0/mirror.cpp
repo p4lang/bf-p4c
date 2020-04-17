@@ -36,10 +36,10 @@ analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
         return boost::none;
     }
     const IR::Expression* expression = methodCall->arguments->at(1)->expression;
-    if (expression->is<IR::StructInitializerExpression>()) {
-        const IR::StructInitializerExpression* fieldList = nullptr;
+    if (expression->is<IR::StructExpression>()) {
+        const IR::StructExpression* fieldList = nullptr;
         {
-            fieldList = expression->to<IR::StructInitializerExpression>();
+            fieldList = expression->to<IR::StructExpression>();
             if (!fieldList) {
                 ::warning("Expected field list: %1%", methodCall);
                 return boost::none;

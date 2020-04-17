@@ -23,7 +23,7 @@ const IR::Expression* BackendConstantFolding::getConstant(const IR::Expression* 
             if (getConstant(e) == nullptr)
                 return nullptr;
         return expr;
-    } else if (auto si = expr->to<IR::StructInitializerExpression>()) {
+    } else if (auto si = expr->to<IR::StructExpression>()) {
         for (auto e : si->components)
             if (getConstant(e->expression) == nullptr)
                 return nullptr;

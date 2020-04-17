@@ -2757,7 +2757,7 @@ control MirrorRewrite(inout switch_header_t hdr,
     action adjust_length(bit<16> length_offset) {
         pkt_length = pkt_length + length_offset;
     }
-    table pkt_length {
+    table pkt_length_table {
         key = { mirror_md.type : exact; }
         actions = { adjust_length; }
         const entries = {

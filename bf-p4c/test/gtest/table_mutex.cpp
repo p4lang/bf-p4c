@@ -517,8 +517,8 @@ const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe,
 TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     auto test = createTableMutexTestCase(
         P4_SOURCE(P4Headers::NONE, R"(
-    counter(32, CounterType.packets_and_bytes) tcount;
-    counter(32, CounterType.packets_and_bytes) scount;
+    counter<bit<5>>(32, CounterType.packets_and_bytes) tcount;
+    counter<bit<5>>(32, CounterType.packets_and_bytes) scount;
     action nop() {}
     action a1() { headers.h1.f1 = headers.h1.f2; }
     action a2() { tcount.count(1); }

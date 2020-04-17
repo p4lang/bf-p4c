@@ -85,7 +85,7 @@ class AddPaddingFields : public Transform {
         all_header_types(all_header_types) {}
 
     const IR::Node* preorder(IR::Type_Header* st) override;
-    const IR::Node* preorder(IR::StructInitializerExpression *) override;
+    const IR::Node* preorder(IR::StructExpression *) override;
 };
 
 class PadFlexibleField : public PassManager {
