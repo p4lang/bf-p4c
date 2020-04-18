@@ -1441,9 +1441,12 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1723
 p4c_add_xfail_reason("tofino"
-  "Invalid args to MakeSlice"
-  ba101_07-simple_l3_ind_cntr
+  "error: Could not place table .* could not fit within a single input crossbar in an MAU stage"
   extensions/p4_tests/p4_14/compile_only/p4c-2271.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Invalid args to MakeSlice"
   ../glass/testsuite/p4_tests/mau/adb_issue_from_faster.p4
 )
 

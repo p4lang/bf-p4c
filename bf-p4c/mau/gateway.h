@@ -130,7 +130,12 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::BAnd *) override { return true; }
     bool preorder(const IR::BOr *) override { return true; }
     void constant(uint64_t val);
-    bool preorder(const IR::Constant *c) override { constant(c->asUint64()); return true; }
+    bool preorder(const IR::Constant *c) override {
+        if (c->value < 0)
+            constant(~static_cast<uint64_t>(-c->value - 1));  // 2s complement
+        else
+            constant(static_cast<uint64_t>(c->value));
+        return true; }
     bool preorder(const IR::BoolLiteral *c) override { constant(c->value); return true; }
     bool preorder(const IR::Equ *) override;
     bool preorder(const IR::Neq *) override;

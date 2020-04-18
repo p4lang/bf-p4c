@@ -102,26 +102,31 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     Pattern::Match<IR::Constant>        k1, k2;
     int width = e->left->type->width_bits();
     if (((e1 & k1) == k2).match(e) || ((e1 & k1) != k2).match(e)) {
+        BUG_CHECK(!e1->is<IR::Constant>(), "constant folding failed");
         // masked comparison
-        auto shift = ffs(k1->value);
+        auto shift = ffs(abs(k1->value));
         if (shift > 0) {
-            if (unsigned(ffs(k2->value)) >= unsigned(shift)) {
+            if (unsigned(ffs(abs(k2->value))) >= unsigned(shift)) {
                 // subtle point -- unsigned casts above to be true when ffs returns -1
                 e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
                                        MakeSlice(k1, shift, width - 1));
-                e->right = new IR::Constant(k2->value >> shift);
+                e->right = new IR::Constant(e->left->type, k2->value >> shift);
+                width -= shift;
             } else {
                 auto rv = new IR::BoolLiteral(e->srcInfo, e->is<IR::Equ>() ? false : true);
                 warning("Masked comparison is always %s", rv);
                 return rv; } }
     } else if (((e1 & k1) == (e2 & k2)).match(e) || ((e1 & k1) != (e2 & k2)).match(e)) {
+        BUG_CHECK(!e1->is<IR::Constant>(), "constant folding failed");
+        BUG_CHECK(!e2->is<IR::Constant>(), "constant folding failed");
         BUG_CHECK(width == e1->type->width_bits(), "Type mismatch in CanonGatewayExpr");
         auto shift = ffs(k1->value | k2->value);
         if (shift > 0) {
             e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
                                    MakeSlice(k1, shift, width - 1));
             e->right = new IR::BAnd(MakeSlice(e2, shift, width - 1),
-                                    MakeSlice(k2, shift, width - 1)); } }
+                                    MakeSlice(k2, shift, width - 1));
+            width -= shift; } }
     if (width > 32) {
         // We can't handle wide matches in one go, so split it.
         int slice_at = 32 - byte_align(e->left);
@@ -346,18 +351,20 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
 
 const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
     if (e->left->is<IR::Constant>()) {
+        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
     if (auto k = e->right->to<IR::Constant>()) {
         int maxbit = floor_log2(k->value);
-        if (e->left->type->width_bits() > maxbit + 1) {
+        if (maxbit >= 0 && e->left->type->width_bits() > maxbit + 1) {
             e->left = MakeSlice(e->left, 0, maxbit);
             e->type = e->left->type; } }
     return e;
 }
 const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
     if (e->left->is<IR::Constant>()) {
+        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
