@@ -422,6 +422,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const ClotInfo& clot_i;
     ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
     const CollectStridedHeaders& strided_headers_i;
+    const PhvUse& uses_i;
 
  public:
     BruteForceAllocationStrategy(const CoreAllocation& alloc,
@@ -430,11 +431,13 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
                                  const CalcCriticalPathClusters& cpc,
                                  const ClotInfo& clot,
                                  ordered_set<cstring>& bf,
-                                 const CollectStridedHeaders& hs)
+                                 const CollectStridedHeaders& hs,
+                                 const PhvUse& uses)
         : AllocationStrategy(alloc, out), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
           bridgedFieldsWithAlignmentConflicts(bf),
-          strided_headers_i(hs) { }
+          strided_headers_i(hs),
+          uses_i(uses) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,

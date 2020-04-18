@@ -4,8 +4,10 @@
 #include "bf-p4c/phv/utils/utils.h"
 
 namespace PHV {
-/** Increment @bv as if it were an unsigned integer of unbounded size. */
-void inc(bitvec& bv);
+/** Increment @bv as if it were an unsigned integer of unbounded size.
+ *  invisible bits will be skipped(treated as invisible) during adding.
+ */
+void inc(bitvec& bv, const bitvec* invisible_bits = nullptr);
 
 /** Consider a bitvec where each bit indicates whether a field list should be
  * sliced at a corresponding 8b boundary.  Eg.
@@ -74,6 +76,10 @@ class SlicingIterator {
     static constexpr uint64_t PRE_SLICING_THRESHOLD = (1 << 20);
     static constexpr uint64_t ALLOCATION_THRESHOLD = (1 << 16);
 
+    // enable the short term fix(exp_further_split) only after we tries 10000
+    // times but haven't found any valid slicing.
+    static constexpr uint64_t ENABLE_EXP_SPLIT_AFTER = 10000;
+
     /// Supercluster associated with this slicing iterator.
     const SuperCluster* sc_i;
 
@@ -93,6 +99,12 @@ class SlicingIterator {
     /// true when all possible slicings have been exhausted. Two iterators
     /// with `done_i` set are always equal.
     bool done_i;
+
+    /// exp_split_enabled_i will allow exp_split on un well-formed clusters.
+    bool exp_split_enabled_i = false;
+
+    /// to prioritize tphv field slicing.
+    const PhvUse* uses_i;
 
     /// true if the associated supercluster has slice lists.
     bool has_slice_lists_i;
@@ -116,7 +128,7 @@ class SlicingIterator {
     ordered_map<PHV::FieldSlice, int> initialOffset;
 
     /// Number of different slicings tried by the slicing iterator.
-    uint64_t num_slicings;
+    uint64_t num_slicings_i;
 
     void enforce_MAU_constraints_for_meta_slice_lists(
             ordered_map<PHV::SuperCluster::SliceList*, bitvec>& split_schema) const;
@@ -225,6 +237,7 @@ class SlicingIterator {
     explicit SlicingIterator(
             const SuperCluster* sc,
             const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+            const PhvUse* uses,
             bool enforce_pragmas = true,
             bool error_on_slicing_fail = true);
 
@@ -256,6 +269,14 @@ class SlicingIterator {
     // for allocation.
     static std::list<PHV::SuperCluster*> merge_wide_arith_super_clusters(
       const std::list<PHV::SuperCluster*> sc);
+
+    // exp_further_split experimentally splits a cluster that is not well-formed
+    // due to there are slice lists  whose sizes are larger than other
+    // exact container slice list.  The power of this function is limited,
+    // it only tries to split the first larger slice list by 8/16 bits.
+    // If both not work ,return boost::none;
+    static boost::optional<std::list<PHV::SuperCluster*>> exp_further_split(
+        PHV::SuperCluster* sc);
 };
 
 }  // namespace PHV

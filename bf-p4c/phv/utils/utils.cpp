@@ -1453,16 +1453,13 @@ ordered_set<PHV::FieldSlice> PHV::SuperCluster::slices() const {
 
 /// @returns true if all slices lists and slices are smaller than 32b and no
 /// slice list contains more than one slice per aligned cluster.
-
 /// XXX(cole): Also check that slice lists with exact_container requirements
 /// are all the same size.  We should check this ahead of time, though.
-
 /// XXX(cole): Also check that deparsed bottom bits fields are at the front of
 /// their slice lists.
-bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc) {
-    LOG6("Examining sliced SuperCluster: ");
-    LOG6(sc);
-    ordered_set<int> exact_list_sizes;
+bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) {
+    err->set(PHV::ErrorCode::unknown);
+    std::map<int, const PHV::SuperCluster::SliceList*> exact_list_sizes;
     int widest = 0;
 
     // Check that slice lists do not contain slices from the same
@@ -1473,22 +1470,30 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc) {
         bool has_exact_containers = false;
         for (auto& slice : *list) {
             if (slice.field()->deparsed_bottom_bits() && slice.range().lo == 0 && size != 0) {
-                LOG6("    ...but slice at offset " << size << " has deparsed_bottom_bits: "
-                     << slice);
+                *err << "slice at offset " << size << " has deparsed_bottom_bits: "
+                       << slice;
                 return false; }
             has_exact_containers |= slice.field()->exact_containers();
             size += slice.size();
             auto* cluster = &sc->aligned_cluster(slice);
             if (seen.find(cluster) != seen.end()) {
-                LOG6("    ...but slice list has two slices from the same aligned cluster: ");
-                LOG6("        " << list);
+                *err << "but slice list has two slices from the same aligned cluster: \n";
+                *err << list;
                 return false; }
             seen.insert(cluster); }
-        widest = std::max(widest, size);
+        // XXX(yumin): a slice list like below: actually requires > 8 bit container because
+        // 6(the alignment constraint) + 6 (the size of the field) = 12 > 8.
+        // [ ingress::Cassa.Dairyland.Osterdock<6> ^6 ^bit[0..9] meta [0:5] ]
+        if (auto alignment = list->front().alignment()) {
+            widest = std::max(widest, int((*alignment).align) + size);
+        } else {
+            widest = std::max(widest, size);
+        }
+
         if (has_exact_containers)
-            exact_list_sizes.insert(size);
+            exact_list_sizes[size] = list;
         if (size > int(PHV::Size::b32)) {
-            LOG6("    ...but 32 < " << list);
+            *err << "    ...but 32 < " << list << "\n";
             return false; } }
 
     // Check the widths of slices in RotationalClusters, which could be wider
@@ -1501,24 +1506,32 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc) {
     // Check that all slice lists with exact container requirements are the
     // same size.
     if (exact_list_sizes.size() > 1) {
-        LOG6("    ...but slice lists with 'exact container' constraints differ in size");
+        err->set(PHV::ErrorCode::slicelist_sz_mismatch);
+        *err << "    ...but slice lists with 'exact container' constraints differ in size\n";
+        for (const auto& kv : exact_list_sizes) {
+            *err << "total: "<< kv.first << ", : " << *kv.second << "\n";
+        }
         return false; }
 
     // Check that nothing is wider than the widest slice list with exact
     // container requirements.
-    if (exact_list_sizes.size() > 0 && widest > *exact_list_sizes.begin()) {
-        LOG6("    ...but supercluster contains a slice/slice list wider than a slice list with "
-             "the 'exact container' constraint");
+    if (exact_list_sizes.size() > 0 && widest > (*exact_list_sizes.begin()).first) {
+        err->set(PHV::ErrorCode::slicelist_sz_mismatch);
+        *err << "    ...but supercluster contains a slice/slice list wider "
+            "than a slice list with the 'exact container' constraint\n";
+        for (const auto& kv : exact_list_sizes) {
+            *err << "total: "<< kv.first << ", : " << *kv.second << "\n";
+        }
         return false; }
 
     for (auto* rotational : sc->clusters())
         for (auto* aligned : rotational->clusters())
             for (auto& slice : *aligned)
                 if (slice.size() > int(PHV::Size::b32)) {
-                    LOG6("    ...but 32 < " << slice);
+                    *err << "    ...but 32 < " << slice;
                     return false; }
 
-    LOG6("    ...and SC is well formed");
+    err->set(PHV::ErrorCode::ok);
     return true;
 }
 

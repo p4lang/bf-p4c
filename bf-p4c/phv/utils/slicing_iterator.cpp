@@ -1,5 +1,5 @@
 #include <numeric>
-
+#include "bf-p4c/phv/error.h"
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/lib/union_find.hpp"
 
@@ -77,20 +77,73 @@ std::map<int, int> build_offsets_to_compress_schema(const PHV::SuperCluster* sc,
 
 // sort_slicelist returns a new super cluster that it's
 // listlists are sorted by
-// 1. slice lists.
-// 2. slice lists with no_split.
-PHV::SuperCluster* sort_sc_slicelist(const PHV::SuperCluster* sc) {
+// 0. is all no_split.
+// 1. exact containers lice lists sizes , from not okay(2432+) to ok.
+// 2. tphv candidates number.
+PHV::SuperCluster* sort_sc_slicelist(const PHV::SuperCluster* sc, const PhvUse* uses) {
     std::list<PHV::SuperCluster::SliceList*> slice_lists;
     for (const auto& sl : sc->slice_lists()) {
         slice_lists.push_back(sl);
     }
-    slice_lists.sort(
-        [] (PHV::SuperCluster::SliceList* s1, PHV::SuperCluster::SliceList* s2) {
-            if (s1->front().field()->no_split() != s2->front().field()->no_split()) {
-                return int(s1->front().field()->no_split()) < int(s2->front().field()->no_split());
+    using StatsMap = ordered_map<const PHV::SuperCluster::SliceList*, int>;
+    StatsMap tphv_candidates;
+    for (const auto* sl : slice_lists) {
+        int n = 0;
+        for (const auto& fs : *sl) {
+            if (fs.is_tphv_candidate(*uses)) {
+                n++;
             }
-            return s1->front().field()->exact_containers() >
-                    s1->front().field()->exact_containers();
+        }
+        tphv_candidates[sl] = n;
+    }
+
+    StatsMap all_no_split;
+    for (const auto* sl : slice_lists) {
+        bool flag = true;
+        for (const auto& fs : *sl) {
+            if (!fs.field()->no_split()) {
+                flag = false;
+                break;
+            }
+        }
+        all_no_split[sl] = flag;
+    }
+
+    StatsMap bad_shape;
+    for (const auto* sl : slice_lists) {
+        int sz = 0;
+        bool exact_container = false;
+        for (const auto& fs : *sl) {
+            sz += fs.size();
+            if (fs.field()->exact_containers()) {
+                exact_container = true;
+            }
+        }
+        if (exact_container) {
+            bad_shape[sl] = (sz == 24 || sz > 32);
+        } else {
+            bad_shape[sl] = false;
+        }
+    }
+
+
+    std::vector<std::pair<StatsMap*, bool>> conds = {
+        {&all_no_split, true}, {&bad_shape, false}, {&tphv_candidates, false},
+    };
+
+    slice_lists.sort(
+        [&] (PHV::SuperCluster::SliceList* s1, PHV::SuperCluster::SliceList* s2) {
+            for (const auto& cond : conds) {
+                if (cond.first->at(s1) == cond.first->at(s2)) {
+                    continue;
+                }
+                if (cond.second) {
+                    return cond.first->at(s1) < cond.first->at(s2);
+                } else {
+                    return cond.first->at(s1) > cond.first->at(s2);
+                }
+            }
+            return false;
         });
     ordered_set<PHV::SuperCluster::SliceList*> new_lists;
     for (const auto& sl : slice_lists) {
@@ -122,18 +175,19 @@ void PHV::SlicingIterator::print_slicing_state(
 PHV::SlicingIterator::SlicingIterator(
         const SuperCluster* sc,
         const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pa,
+        const PhvUse* uses,
         bool e,
         bool f)
-        : sc_i(sc), enforcePragmas(e), done_i(false) {
+      : sc_i(sc), enforcePragmas(e), done_i(false), uses_i(uses) {
     LOG5("Making SlicingIterator for SuperCluster:");
     LOG5(sc);
 
-    sc = sort_sc_slicelist(sc);
+    sc = sort_sc_slicelist(sc, uses);
     sc_i = sc;
     LOG5("SlicingIterator's sorted SuperCluster:");
     LOG5(sc);
 
-    num_slicings = 0;
+    num_slicings_i = 0;
 
     SLICING_THRESHOLD = f ? PRE_SLICING_THRESHOLD : ALLOCATION_THRESHOLD;
 
@@ -2488,12 +2542,31 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
 
         // Try slicing using this set of expanded schemas.
         auto res = split_super_cluster(sc_i, split_schemas);
-        // If we found a good slicing, return it.
-        if (res && std::all_of(res->begin(), res->end(), PHV::SuperCluster::is_well_formed)) {
-            LOG6("Supercluster with slice list produces well-formed superclusters");
-            return res;
+        if (res) {
+            auto further_splitted = std::list<PHV::SuperCluster*>{};
+            for (auto* s : *res) {
+                PHV::Error err;
+                if (PHV::SuperCluster::is_well_formed(s, &err)) {
+                    further_splitted.push_back(s);
+                    continue;
+                }
+                // not well formed but can be further splitted.
+                // enabled if we haven't find a valid slicing after the ENABLE_EXP_SPLIT_AFTER.
+                if (exp_split_enabled_i && err.is(PHV::ErrorCode::slicelist_sz_mismatch)) {
+                    if (auto clusters = exp_further_split(s)) {
+                        further_splitted.insert(
+                            further_splitted.end(),
+                            std::begin(*clusters), std::end(*clusters));
+                        continue;
+                    }
+                }
+                // not well-formed
+                LOG3("Supercluster does not get sliced into well-formed superclusters, reason:");
+                LOG3(err.str());
+                return boost::none;
+            }
+            return further_splitted;
         } else {
-            LOG6("Supercluster does not get sliced into well-formed superclusters");
             return boost::none;
         }
     } else {
@@ -2512,7 +2585,8 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
         auto res = split_super_cluster(sc_i, split_schema);
 
         // If successful, return it.
-        if (res && std::all_of(res->begin(), res->end(), PHV::SuperCluster::is_well_formed))
+        if (res && std::all_of(res->begin(), res->end(), [] (const SuperCluster* s) {
+                    return PHV::SuperCluster::is_well_formed(s);} ))
             return res;
         else
             return boost::none; }
@@ -2527,29 +2601,35 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
         return *this;
 
     while (!compressed_schemas_i[sentinel_idx_i]) {
-        if (num_slicings % 10000 == 0)
-            LOG4("Tried " << num_slicings << " slicings.");
-        if (num_slicings > 0 && num_slicings > SLICING_THRESHOLD) {
+        if (num_slicings_i % 10000 == 0)
+            LOG4("Tried " << num_slicings_i << " slicings.");
+        if (num_slicings_i > 0 && num_slicings_i > SLICING_THRESHOLD) {
             // Do not throw error in this case, because the slicing is attempted during allocation.
             // We have at least one supercluster (produced after preslicing) that could be allocated
             // to a Tofino/Tofino2 container size.
             if (SLICING_THRESHOLD == ALLOCATION_THRESHOLD) {
                 LOG4("Could not allocate the following supercluster to smaller container sizes "
-                     "(tried " << num_slicings << ") slicings:");
+                     "(tried " << num_slicings_i << ") slicings:");
                 LOG4(sc_i);
                 done_i = true;
                 return *this;
             }
             std::stringstream ss;
             ss << "Slicing the following supercluster is taking too long..." << std::endl;
-            ss << "Tried " << num_slicings << " slicings." << std::endl;
+            ss << "Tried " << num_slicings_i << " slicings." << std::endl;
             ss << sc_i;
             BUG("%1%", ss.str());
         }
+        // reset and start over.
+        if (!exp_split_enabled_i && cached_i.empty() && num_slicings_i > ENABLE_EXP_SPLIT_AFTER) {
+            LOG1("enable exp_split and reset compressed_schemas");
+            exp_split_enabled_i = true;
+            compressed_schemas_i = required_slices_i;
+        }
         // Increment the bitvec...
-        PHV::inc(compressed_schemas_i);
+        PHV::inc(compressed_schemas_i, &required_slices_i);
         // Increment the counter for number of slicings.
-        ++num_slicings;
+        ++num_slicings_i;
         // and set the required slices...
         compressed_schemas_i |= required_slices_i;
         // and set the least significant bits necessary to ensure that
@@ -2576,6 +2656,56 @@ bool PHV::SlicingIterator::operator==(const SlicingIterator& other) const {
     bool equal_compressed_schemas = compressed_schemas_i == other.compressed_schemas_i;
     return sc_i == other.sc_i && (both_done || equal_compressed_schemas);
 }
+
+boost::optional<std::list<PHV::SuperCluster*>>
+PHV::SlicingIterator::exp_further_split(PHV::SuperCluster* sc) {
+    std::map<int, std::vector<SuperCluster::SliceList*>> sz_slicelists;
+    auto get_sz = [] (SuperCluster::SliceList* sl) {
+        int sz = 0;
+        for (auto& fs : *sl) {
+            sz += fs.size();
+        }
+        return sz;
+    };
+    for (auto* sl : sc->slice_lists()) {
+        int sz = get_sz(sl);
+        sz_slicelists[sz].push_back(sl);
+    }
+
+    auto make_schema =
+        [] (std::vector<SuperCluster::SliceList*> slicelists, int at) {
+            ordered_map<SuperCluster::SliceList*, bitvec> split_schemas;
+            for (const auto& sl : slicelists) {
+                split_schemas[sl].setbit(at);
+            }
+            return split_schemas;
+        };
+
+    auto is_valid_sc =
+        [get_sz] (PHV::SuperCluster* cluster) {
+            for (auto* sl : cluster->slice_lists()) {
+                if ((*sl->begin()).field()->exact_containers()) {
+                    int sz = get_sz(sl);
+                    if (sz != 8 && sz != 16 && sz != 32) {
+                        return false;
+                    }
+                }
+            }
+            return PHV::SuperCluster::is_well_formed(cluster);
+        };
+
+    int max_sz = sz_slicelists.rbegin()->first;
+    for (int at : std::vector<int>{16, 8}) {
+        if (max_sz > at) {
+            auto after = split_super_cluster(sc, make_schema(sz_slicelists[max_sz], at));
+            if (after && std::all_of(after->begin(), after->end(), is_valid_sc)) {
+                return after;
+            }
+        }
+    }
+    return boost::none;
+}
+
 
 namespace PHV {
 
@@ -2633,17 +2763,18 @@ inline void enforce_container_sizes(
     }
 }
 
-void inc(bitvec& bv) {
+void inc(bitvec& bv, const bitvec* invisible) {
     if (bv.empty()) {
         bv.setbit(0);
         return; }
 
     int max = *bv.max();
-    int zeroes = 0;
-    int i;
-    for (i = 0; i <= max; ++i) {
+    int i = 0;
+    for (; i <= max; ++i) {
+        if (invisible != nullptr && invisible->getbit(i)) {
+            continue;
+        }
         if (bv.getbit(i)) {
-            zeroes++;
             bv.clrbit(i);
         } else {
             break; } }

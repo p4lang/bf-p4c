@@ -496,6 +496,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/add_initialization.h
   phv/add_special_constraints.h
   phv/allocate_phv.h
+  phv/error.h
   phv/asm_output.h
   phv/auto_init_metadata.h
   phv/check_unallocated.h

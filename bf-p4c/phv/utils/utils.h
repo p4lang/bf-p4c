@@ -4,6 +4,7 @@
 #include <boost/optional.hpp>
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/phv/error.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitvec.h"
@@ -1281,7 +1282,7 @@ class SuperCluster : public ClusterStats {
 
     /// @returns true if no structural constraints prevent this super cluster
     /// from fitting.
-    static bool is_well_formed(const SuperCluster* sc);
+    static bool is_well_formed(const SuperCluster* sc, PHV::Error* err = new PHV::Error());
 };
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);

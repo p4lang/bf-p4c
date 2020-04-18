@@ -360,7 +360,7 @@ boost::optional<int> ActionPhvConstraints::ConstraintTracker::can_be_both_source
                 written_bits.setrange(dst.container_slice().lo, dst.width());
         }
 
-        if (written_bits.popcount() != container.size())
+        if (written_bits.popcount() != int(container.size()))
             return boost::none;
 
         for (auto entry : src_to_dst_bits) {
