@@ -223,7 +223,19 @@ class Field : public LiftLess<Field> {
     /// True if this Field is a validity bit.
     bool            pov;
 
-    /// If this field is an alias destination, then maintain a pointer to the alias source.
+    /// If this field is an alias destination, then maintain a pointer to the
+    /// alias source. Alias destinations are the canonical representation for
+    /// alias sources.
+    ///
+    /// For example, if we have
+    /// @pa_alias("ingress", "h.f", "h.f1")
+    /// @pa_alias("ingress", "h.f", "h.f2")
+    ///
+    /// then h.f (the first field mentioned in each annotation) is an alias
+    /// destination for h.f1 and h.f2, which are sources (the second field in each
+    /// annotation). The ReplaceAllAliases pass replaces references to h.f1 with
+    /// an h.f reference that has h.f1 as its alias source, and similarly for
+    /// references to h.f2.
     const PHV::Field* aliasSource = nullptr;
 
     /// Associate source info to each field

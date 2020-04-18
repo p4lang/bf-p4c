@@ -265,7 +265,7 @@ std::string PragmaAlias::pretty_print() {
     std::stringstream out;
     out << "Alias pragmas:" << std::endl;
 
-    TablePrinter* tp = new TablePrinter(out, {"Destination", "Source",
+    TablePrinter* tp = new TablePrinter(out, {"Source", "Destination",
             "Created By"}, TablePrinter::Align::CENTER);
     tp->addSep();
 

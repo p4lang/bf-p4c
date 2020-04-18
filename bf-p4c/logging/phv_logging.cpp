@@ -115,26 +115,53 @@ ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
     return fields;
 }
 
+ordered_map<const PHV::Field*, const PHV::Field*> PhvLogging::getFieldAliases() {
+    ordered_map<const PHV::Field*, const PHV::Field*> aliasMap;
+
+    /* Check all allocated fields for their aliases to build a reverse alias map*/
+    for (const auto& f : phv) {
+        if (!f.aliasSource) continue;
+        if (aliasMap.count(f.aliasSource) > 0) {
+            // Should this be a BUG_CHECK? Ideally this behavior should be
+            // caught during PHV analysis / allocation phase and we should not
+            // fail during logging.
+            LOG3(" Field : " << f << " has an alias : " << f.aliasSource <<
+                    " which already exists in the alias map. This could be an"
+                    " issue with aliasing as an alias source cannot have multiple"
+                    " alias destinations");
+            continue;
+        }
+        aliasMap[f.aliasSource] = &f;
+    }
+    return aliasMap;
+}
 Phv_Schema_Logger::FieldSlice*
-PhvLogging::logFieldSlice(const PHV::Field* f) {
-    std::string fieldName(stripThreadPrefix(f->name));
+PhvLogging::logFieldSlice(const PHV::Field* f, bool use_alias = false) {
+    std::string fieldName = std::string(stripThreadPrefix(f->name));
+    if (use_alias && f->aliasSource)
+        fieldName = std::string(stripThreadPrefix(f->aliasSource->name));
     auto si = new Slice(0, f->size - 1);
     auto fs = new FieldSlice(fieldName, si);
     return fs;
 }
 
 Phv_Schema_Logger::FieldSlice*
-PhvLogging::logFieldSlice(const PHV::Field::alloc_slice& sl) {
-    std::string fieldName(stripThreadPrefix(sl.field->name));
+PhvLogging::logFieldSlice(const PHV::Field::alloc_slice& sl,
+                            bool use_alias = false) {
+    auto f = sl.field;
+    std::string fieldName = std::string(stripThreadPrefix(f->name));
+    if (use_alias && f->aliasSource)
+        fieldName = std::string(stripThreadPrefix(f->aliasSource->name));
     auto si = new Slice(sl.field_bit, sl.field_hi());
     auto fs = new FieldSlice(fieldName, si);
     return fs;
 }
 
 Phv_Schema_Logger::ContainerSlice*
-PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl) {
+PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl,
+                                bool use_alias = false) {
     const auto& phvSpec = Device::phvSpec();
-    auto fs = logFieldSlice(sl);
+    auto fs = logFieldSlice(sl, use_alias);
     auto ps = new Slice(sl.container_bit, sl.container_hi());
     auto cid = phvSpec.physicalAddress(phvSpec.containerToId(sl.container),
                                                    PhvSpec::MAU);
@@ -164,11 +191,19 @@ PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl) {
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
+
+    auto aliases = getFieldAliases();
     /* Add fields to the log file */
     for (auto kv : fields) {
         std::string headerName(stripThreadPrefix(kv.first));
         for (const auto* f : kv.second) {
             std::string fieldName(stripThreadPrefix(f->name));
+
+            bool use_alias = (aliases.count(f) > 0);
+            if (use_alias) {
+                // Field is an alias, use info from original field
+                f = aliases[f];
+            }
 
             auto state = "";
             PHV::Field::AllocState allocState = getAllocatedState(f);
@@ -179,16 +214,16 @@ void PhvLogging::logFields() {
             else if (f->fullyPhvAllocated(allocState))
                 state = "allocated";
 
-            LOG3("Field: " << f->name << ", allocState: " <<
+            LOG3("Field: " << fieldName << ", allocState: " <<
                 allocState << ", state: " << state);
 
             auto fi = new FieldInfo(f->size, getFieldType(f), fieldName, getGress(f), "");
             auto field = new Field(fi, state, headerName);
 
             for (auto& sl : f->get_alloc()) {
-                auto fs = logFieldSlice(sl);
-                field->append_field_slices(logFieldSlice(sl));
-                field->append_phv_slices(logContainerSlice(sl));
+                auto fs = logFieldSlice(sl, use_alias);
+                field->append_field_slices(logFieldSlice(sl, use_alias));
+                field->append_phv_slices(logContainerSlice(sl, use_alias));
 
                 auto c = new Constraint(fs);
                 auto s_loc = new SourceLocation("DummyFile", -1);
@@ -474,6 +509,7 @@ void PhvLogging::logContainers() {
     const auto& phvSpec = Device::phvSpec();
     // Populate container structures.
     ordered_map<const PHV::Container, ordered_set<PHV::Field::alloc_slice>> allocation;
+    auto aliases = getFieldAliases();
     for (auto& field : phv) {
         for (auto& slice : field.get_alloc())
             allocation[slice.container].insert(slice); }
@@ -498,7 +534,16 @@ void PhvLogging::logContainers() {
                                             deparserGroupId, mauGroupId,
                                             cid);
         for (auto sl : kv.second) {
-            auto cs = logContainerSlice(sl);
+            bool use_alias = (aliases.count(sl.field) > 0);
+            auto f = use_alias ? aliases[sl.field] : sl.field;
+            f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+               if (alloc.container == sl.container
+                    && alloc.field_bit == sl.field_bit
+                    && alloc.container_bit == sl.container_bit
+                    && alloc.width == sl.width)
+                    sl = alloc;
+            });
+            auto cs = logContainerSlice(sl, use_alias);
             containerEntry->append(cs);
         }
         logger.append_containers(containerEntry);
