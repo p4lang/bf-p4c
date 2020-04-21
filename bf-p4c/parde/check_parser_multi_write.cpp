@@ -20,13 +20,16 @@ struct InferWriteMode : public ParserTransform {
     std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
 
     ordered_set<const IR::BFN::Extract*> zero_inits;
+    ordered_set<const IR::BFN::Extract*> dead_extracts;
 
+    // Find the first writes, i.e. inits, given the set of extracts. The set of extracts
+    // belong to the same field. An init is a write that has no prior write in the parser IR.
     ordered_set<const IR::BFN::Extract*>
     find_inits(const ordered_set<const IR::BFN::Extract*>& extracts) {
         ordered_set<const IR::BFN::Extract*> inits;
 
         for (auto p : extracts) {
-            bool has_ancestor = false;
+            bool is_prev = false;
 
             auto ps = field_to_states.extract_to_state.at(p);
             auto parser = field_to_states.state_to_parser.at(ps);
@@ -37,13 +40,24 @@ struct InferWriteMode : public ParserTransform {
 
                 auto qs = field_to_states.extract_to_state.at(q);
 
+                // case 1. q is in a parser state that is an ancestor to p
                 if (parser_info.graph(parser).is_ancestor(qs, ps)) {
-                    has_ancestor = true;
+                    is_prev = true;
                     break;
+                } else if (ps == qs) {
+                // case 2. p and q are in the same parser state but q happens before p
+                    for (auto o : extracts) {
+                        if (o == p)
+                            break;
+                        if (o == q) {
+                            is_prev = true;
+                            break;
+                        }
+                    }
                 }
             }
 
-            if (!has_ancestor)
+            if (!is_prev)
                inits.insert(p);
         }
 
@@ -113,6 +127,17 @@ struct InferWriteMode : public ParserTransform {
                     }
                 }
 
+                if (is_prev && !same_const_source(p, q))
+                    rv.insert(q);
+            } else if (ps == qs) {
+                bool is_prev = false;
+
+                for (auto o : extracts) {
+                    if (o == p)
+                        break;
+                    if (o == q)
+                        is_prev = true;
+                }
 
                 if (is_prev && !same_const_source(p, q))
                     rv.insert(q);
@@ -213,7 +238,7 @@ struct InferWriteMode : public ParserTransform {
         return nullptr;
     }
 
-    // At this timee, a field's write mode is either SINGLE_WRITE or BITWISE_OR (from program
+    // At this time, a field's write mode is either SINGLE_WRITE or BITWISE_OR (from program
     // directly). We will try to infer the fields with multiple extracts as SINGLE_WRITE,
     // BITWISE_OR or CLEAR_ON_WRITE.
     void infer_write_mode(const PHV::Field* dest,
@@ -249,6 +274,7 @@ struct InferWriteMode : public ParserTransform {
 
         if (!counter_example) {
             mark_write_mode(IR::BFN::ParserWriteMode::CLEAR_ON_WRITE, dest, extracts);
+            mark_dead_clear_on_writes(extracts);
         } else {
             auto ps = field_to_states.extract_to_state.at(counter_example->curr);
 
@@ -259,11 +285,51 @@ struct InferWriteMode : public ParserTransform {
         }
     }
 
+    // For consecutive writes to the same field in the same state, the last write wins.
+    // In example below, a.x receives two writes, with only the last write taking effect,
+    // and the first extract can be dead code eliminated. The extracts are writes to the
+    // field.
+    //
+    //    packet.extract(hdr.a);
+    //    packet.extract(hdr.b);
+    //
+    //    hdr.a.x = hdr.b.y;
+    //
+    void mark_dead_clear_on_writes(const ordered_set<const IR::BFN::Extract*>& extracts) {
+        std::map<const IR::BFN::ParserState*,
+                 ordered_set<const IR::BFN::Extract*>> state_to_extracts;
+
+        for (auto e : extracts) {
+            auto s = field_to_states.extract_to_state.at(e);
+            state_to_extracts[s].insert(e);
+        }
+
+        for (auto& kv : state_to_extracts) {
+            // If more than one writes exist, the last write wins.
+            // Mark all other writes as dead to be elim'd later.
+
+            if (kv.second.size() > 1) {
+                int i = 0;
+                for (auto e : kv.second) {
+                    if (i == kv.second.size() - 1)
+                        break;
+                    dead_extracts.insert(e);
+                    i++;
+                }
+            }
+        }
+    }
+
     IR::Node* preorder(IR::BFN::Extract* extract) override {
         auto orig = getOriginal<IR::BFN::Extract>();
 
         if (zero_inits.count(orig)) {
             LOG3("removed zero init " << extract);
+            return nullptr;
+        }
+
+        if (dead_extracts.count(orig)) {
+            LOG3("removed dead extract " << extract);
             return nullptr;
         }
 

@@ -353,9 +353,9 @@ parser MirrorCfgHdrParser(packet_in pkt,
 
     state parse_mirror_cfg {
         pkt.extract(hdr.mirror_cfg_hdr);
-
+#if 0
         hdr.mirror_cfg_hdr.pipe_process_state = (bit<7>) PipeProcessState.ING_PRSR;
-
+#endif
         transition accept;
     }
 }
