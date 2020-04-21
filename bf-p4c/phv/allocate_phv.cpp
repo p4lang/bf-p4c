@@ -1263,6 +1263,7 @@ CoreAllocation::tryAllocSliceList(
         // the required alignment later on during the allocation of the supercluster.
         std::set<int> conditionalConstraintsToErase;
         // Check whether the candidate slice allocations respect action-induced constraints.
+        CanPackErrorCode canPackErrorCode;
         boost::optional<PHV::Allocation::ConditionalConstraints> action_constraints;
         PHV::Allocation::LiveRangeShrinkingMap initActions;
 
@@ -1327,8 +1328,9 @@ CoreAllocation::tryAllocSliceList(
             for (auto& slice : candidate_slices) LOG6("  " << slice);
         }
 
-        action_constraints = actions_i.can_pack(perContainerAlloc, candidate_slices,
-                actual_container_state, initActions, super_cluster);
+        std::tie(canPackErrorCode, action_constraints) =
+            actions_i.can_pack(perContainerAlloc, candidate_slices,
+                    actual_container_state, initActions, super_cluster);
         bool creates_new_container_conflicts =
             actions_i.creates_container_conflicts(actual_container_state, initActions,
                     meta_init_i.getTableActionsMap());
@@ -1336,13 +1338,14 @@ CoreAllocation::tryAllocSliceList(
         // allocation.
         if (action_constraints && initActions.size() > 0 && creates_new_container_conflicts) {
             LOG5("\t\t...action constraint: creates new container conflicts for this packing."
-                 " cannot pack into container " << c);
+                 " cannot pack into container " << c << canPackErrorCode);
 
             continue;
         }
 
         if (!action_constraints) {
-            LOG5("        ...action constraint: cannot pack into container " << c);
+            LOG5("        ...action constraint: cannot pack into container " << c
+                    << canPackErrorCode);
             continue;
         } else if (action_constraints->size() > 0) {
             if (LOGGING(5)) {

@@ -1523,7 +1523,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_bitwise_op_with_un
     return rv;
 }
 
-boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::can_pack(
+CanPackReturnType ActionPhvConstraints::can_pack(
         const PHV::Allocation& alloc,
         std::vector<PHV::AllocSlice>& slices,
         PHV::Allocation::MutuallyLiveSlices& original_container_state,
@@ -1532,7 +1532,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     PHV::Allocation::ConditionalConstraints rv;
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
-        return rv;
+        return std::make_tuple(CanPackErrorCode::SLICE_EMPTY, rv);
 
     ordered_map<const IR::MAU::Action*, unsigned> operationType;
     ordered_map<const IR::MAU::Action*, bool> usesActionDataConstant;
@@ -1571,7 +1571,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // Check if table placement induced any no pack constraints on fields that are candidates for
     // packing. If yes, packing not possible.
     if (pack_conflicts_present(container_state, slices, sc))
-        return boost::none;
+        return std::make_tuple(CanPackErrorCode::PACK_CONSTRAINT_PRESENT, boost::none);
 
     // Create candidate packing
     for (auto slice : slices)
@@ -1580,7 +1580,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     // Check if any of the fields are stateful ALU writes and check the data bus alignment
     // constraints.
     if (stateful_destinations_constraints_violated(container_state))
-        return boost::none;
+        return std::make_tuple(CanPackErrorCode::STATEFUL_DEST_CONSTRAINT, boost::none);
 
 #if 0
     // Check for parser constant extract for non 8b containers.
@@ -1600,7 +1600,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (count_bitmasked_set_instructions(existingVector, initActions) != 0) {
             LOG5("\t\tThis packing requires a bitmasked-set instruction for a slice that reads "
                  "special action data. Therefore, this packing is not possible.");
-            return boost::none;
+            return std::make_tuple(CanPackErrorCode::BITMASK_CONSTRAINT, boost::none);
         }
     }
 
@@ -1630,7 +1630,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
     for (auto& s : container_state)
         uniqueFields.insert(s.field());
     if (!checkSpecialityPacking(uniqueFields))
-        return boost::none;
+        return std::make_tuple(CanPackErrorCode::SPECIALTY_DATA, boost::none);
 
     // Perform analysis related to number of sources for every action. Only MOVE and BITWISE
     // operations get here. Store all the packing constraints induced by this
@@ -1663,11 +1663,11 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
 
         if (operationType[action] == OperandInfo::WHOLE_CONTAINER || operationType[action] ==
                 OperandInfo::MIXED)
-            return boost::none;
+            return std::make_tuple(CanPackErrorCode::MIXED_OPERAND, boost::none);
 
         if (operationType[action] == OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
             if (!are_adjacent_field_slices(container_state)) {
-                return boost::none;
+                return std::make_tuple(CanPackErrorCode::NONE_ADJACENT_FIELD, boost::none);
             } else {
                 LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent");
             }
@@ -1687,13 +1687,13 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // If the action requires combining a speciality action data with a non-speciality action
         // data, we return false because the compiler currently does not support such packing.
         if (all_or_none_ad_constant_sources == COMPLEX_AD_PACKING_REQ)
-            return boost::none;
+            return std::make_tuple(CanPackErrorCode::COMPLEX_AD_PACKING, boost::none);
 
         // If the action involves a bitwise operation for the proposed packing in container c, and
         // only some of the field slices are written using action data or constant sources, then
         // this packing is not valid.
         if (operationType[action] == OperandInfo::BITWISE && !all_or_none_ad_constant_sources)
-            return boost::none;
+            return std::make_tuple(CanPackErrorCode::BITWISE_MIXED_AD, boost::none);
 
         NumContainers sources =
             num_container_sources(alloc, container_state, action, copacking_constraints);
@@ -1710,16 +1710,19 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         // in every action that writes one of those fields.
         if (mocha_or_dark) {
             // Only one container source for dark/mocha.
-            if (sources.num_allocated > 1) return boost::none;
+            if (sources.num_allocated > 1)
+                return std::make_tuple(
+                        CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE, boost::none);
             if (!all_field_slices_written_together(container_state, set_of_actions, initActions))
-                return boost::none;
+                return std::make_tuple(
+                        CanPackErrorCode::TF2_ALL_WRITTEN_TOGETHER, boost::none);
             phvMustBeAligned[action] = true; }
 
         // If source fields have already been allocated and number of sources greater than 2, then
         // packing is not possible (TOO_MANY_SOURCES)
         if (sources.num_allocated > 2) {
             LOG5("\t\t\t\tAction " << action->name << " uses more than two PHV sources.");
-            return boost::none; }
+            return std::make_tuple(CanPackErrorCode::MORE_THAN_TWO_SOURCES, boost::none); }
 
         // num_source_containers == 2 if execution gets here
         // If source fields have already been allocated and there are two PHV sources in addition to
@@ -1727,7 +1730,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
         if (sources.num_allocated == 2 && has_ad_constant_sources) {
             LOG5("\t\t\t\tAction " << action->name << " uses action data/constant in addition to "
                     "two PHV sources");
-            return boost::none; }
+            return std::make_tuple(CanPackErrorCode::TWO_SOURCES_AND_CONSTANT, boost::none); }
 
         // Check the validity of packing for move operations, and generate intermediate structures
         // that will be used to create conditional constraints.
@@ -1735,7 +1738,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             if (!check_and_generate_constraints_for_move_with_unallocated_sources(alloc, action, c,
                     container_state, sources, has_ad_constant_sources, phvMustBeAligned,
                     numSourceContainers, copacking_constraints, initActions))
-                return boost::none;
+                return std::make_tuple(CanPackErrorCode::MOVE_AND_UNALLOCATED_SOURCE, boost::none);
         } else if (operationType[action] == OperandInfo::BITWISE) {
             // Check the validity of bitwise operations and generate intermediate structures that
             // will be used to create conditional constraints.
@@ -1744,7 +1747,8 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             // operation (for this action).
             if (!check_and_generate_constraints_for_bitwise_op_with_unallocated_sources(action,
                     container_state, sources, copacking_constraints))
-                return boost::none;
+                return std::make_tuple(CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE,
+                        boost::none);
         } else if (operationType[action] != OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
             BUG("Operation type other than BITWISE and MOVE encountered."); } }
 
@@ -1781,8 +1785,10 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                         LOG6("\t\t\t\tFound one unallocated PHV source"); }
                     continue; }
                 if (slice.container_slice() != source->container_slice()) {
+                    LOG1("container slice " << slice << " source " << source);
                     LOG5("\t\t\t\tContainer alignment for slice and source do not match");
-                    return boost::none; } } }
+                    return std::make_tuple(CanPackErrorCode::SLICE_ALIGNMENT, boost::none); }
+            } }
 
         // TODO(cole): If phvMustBeAligned[action] and one of the fields to be
         // packed is in the UnionFind data structure (i.e. is a source), then
@@ -1794,7 +1800,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 verify_two_container_alignment(alloc, container_state, action, c,
                         unallocatedSourceRequiresAlignment);
             if (!classifiedSourceSlices)
-                return boost::none;
+                return std::make_tuple(CanPackErrorCode::PACK_AND_ALIGNED, boost::none);
             if (LOGGING(5)) {
                 LOG5("\t\t\t\tFirst container source contains " <<
                         classifiedSourceSlices.get()[1].size() << " slice(s)");
@@ -1805,7 +1811,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                 for (auto sl : classifiedSourceSlices.get()[2])
                     LOG5("\t\t\t\t\t" << sl); }
             if (!masks_valid(classifiedSourceSlices.get(), c))
-                return boost::none;
+                return std::make_tuple(CanPackErrorCode::INVALID_MASK, boost::none);
             if (numUnallocatedContainers[action] == 2) {
                 hasTwoUnallocatedPHVSources[action] = true;
             } else if (numUnallocatedContainers[action] == 1) {
@@ -1848,7 +1854,8 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                     if (offset!= firstOffset) {
                         LOG5("\t\t\t\tSource slices are at different offsets with respect to "
                                 "destination slices");
-                        return boost::none; } } } } }
+                        return std::make_tuple(CanPackErrorCode::SLICE_DIFF_OFFSET,
+                                boost::none); } } } } }
 
     // XXX(cole): If there are conditional constraints---i.e. if these slices
     // can only be packed if some unallocated source operands are packed in the
@@ -1883,7 +1890,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             if (!assign_containers_to_unallocated_sources(alloc, kv.second, req_container)) {
                 LOG5("\t\t\t\tMultiple slices that must go into the same container are allocated "
                         "to different containers");
-                return boost::none; }
+                return std::make_tuple(CanPackErrorCode::COPACK_UNSATISFIED, boost::none); }
             ordered_set<PHV::FieldSlice> setFieldSlices;
             setFieldSlices.insert(set->begin(), set->end());
             copacking_set[setIndex++] = setFieldSlices;
@@ -1983,7 +1990,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                     LOG5("\t\t\tPacking failed because " << packing_slice <<
                             " would (conservatively) need to be aligned at more than one position: "
                             << cstring::to_cstring(req_alignment));
-                    return boost::none; }
+                    return std::make_tuple(CanPackErrorCode::MULTIPLE_ALIGNMENTS, boost::none); }
                 bitPosition = *boost_bitpos;
             } else if (req_alignment.size() == 1) {
                 bitPosition = *(req_alignment.begin());
@@ -2003,7 +2010,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
                     LOG5("\t\t\tPacking failed because " << packing_slice << " and " << kv.first <<
                          " slice would (conservatively) need to be aligned at the same position in "
                          "the same container.");
-                    return boost::none; } }
+                    return std::make_tuple(CanPackErrorCode::OVERLAPPING_SLICES, boost::none); } }
 
             // If a slice that is part of the conditional constraints is already allocated, we do
             // not need to actually add the allocated slice to the conditional constraints list.
@@ -2045,7 +2052,7 @@ boost::optional<PHV::Allocation::ConditionalConstraints> ActionPhvConstraints::c
             rv[kv_unallocated.first] = per_unallocated_source;
     }
 
-    return rv;
+    return std::make_tuple(CanPackErrorCode::NO_ERROR, rv);
 }
 
 bool ActionPhvConstraints::creates_container_conflicts(
@@ -3158,5 +3165,11 @@ std::ostream &operator<<(std::ostream &out, const ActionPhvConstraints::OperandI
     if (info.flags & ActionPhvConstraints::OperandInfo::WHOLE_CONTAINER_SAME_FIELD)
         out << " SAME ";
     out << "]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& ec) {
+    out << " CanPackErrorCode: ";
+    out << (unsigned) ec;
     return out;
 }

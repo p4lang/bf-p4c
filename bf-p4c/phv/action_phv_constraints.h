@@ -13,9 +13,53 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/utils/utils.h"
 
+struct ActionPhvConstraintLogging {
+    int error;
+};
+
+/**
+ * This class is used to make action_phv_constraint logs easier to understand
+ * during debugging. The 'can_pack' function returns
+ */
+struct ActionPhvConstraintCanPack {
+    boost::optional<ActionPhvConstraintLogging> logging;
+    boost::optional<PHV::Allocation::ConditionalConstraint> conditional_constraints;
+};
+
+enum class CanPackErrorCode : unsigned {
+    NO_ERROR = 0,
+    SLICE_EMPTY = 1,
+    PACK_CONSTRAINT_PRESENT = 2,
+    STATEFUL_DEST_CONSTRAINT = 3,
+    BITMASK_CONSTRAINT = 4,
+    SPECIALTY_DATA = 5,
+    MIXED_OPERAND = 6,
+    NONE_ADJACENT_FIELD = 7,
+    COMPLEX_AD_PACKING = 8,
+    BITWISE_MIXED_AD = 9,
+    TF2_MORE_THAN_ONE_SOURCE = 10,
+    TF2_ALL_WRITTEN_TOGETHER = 11,
+    MORE_THAN_TWO_SOURCES = 12,
+    TWO_SOURCES_AND_CONSTANT = 13,
+    MOVE_AND_UNALLOCATED_SOURCE = 14,
+    BITWISE_AND_UNALLOCATED_SOURCE = 15,
+    SLICE_ALIGNMENT = 16,
+    PACK_AND_ALIGNED = 17,
+    INVALID_MASK = 18,
+    SLICE_DIFF_OFFSET = 19,
+    COPACK_UNSATISFIED = 20,
+    MULTIPLE_ALIGNMENTS = 21,
+    OVERLAPPING_SLICES = 22,
+};
+
+std::ostream &operator<<(std::ostream &out, const CanPackErrorCode& info);
+
+using CanPackReturnType = std::tuple<CanPackErrorCode,
+      boost::optional<PHV::Allocation::ConditionalConstraints>>;
+
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls. Methods in AllocatePHV query the information contained in class members
-  * here to determine constraints on packing induced by MAU actions. 
+  * here to determine constraints on packing induced by MAU actions.
   * @pre Must be run after InstructionSelection, as it is dependent on ActionAnalysis
   */
 class ActionPhvConstraints : public Inspector {
@@ -280,7 +324,7 @@ class ActionPhvConstraints : public Inspector {
     /// Clears any state accumulated in prior invocations of this pass.
     profile_t init_apply(const IR::Node *root) override;
 
-    /** Builds the data structures to be used in the API function call 
+    /** Builds the data structures to be used in the API function call
       * Also checks that the actions can be scheduled on Tofino in the same stage
       * without splitting and without considering PHV allocation (yet to happen)
       */
@@ -691,7 +735,7 @@ class ActionPhvConstraints : public Inspector {
      * all the other sources are put in the same set in the UnionFind. The
      * allocator needs to be aware of this case.
      */
-    boost::optional<PHV::Allocation::ConditionalConstraints> can_pack(
+    CanPackReturnType can_pack(
             const PHV::Allocation& alloc,
             std::vector<PHV::AllocSlice>& slices,
             PHV::Allocation::MutuallyLiveSlices& original_container_state,
