@@ -7,17 +7,11 @@
 
 class BFN_Options : public CompilerOptions {
  public:
-    bool trivial_phvalloc = false;
-    bool phv_interference = true;
-    bool cluster_interference = true;
-    bool phv_slicing = true;
-    bool phv_overlay = true;
     bool allowUnimplemented = false;
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
     bool use_clot = true;
-    bool jbay_analysis = false;
     float phv_scale_factor = 1;
     bool create_graphs = false;
     bool privatization = false;
@@ -41,6 +35,7 @@ class BFN_Options : public CompilerOptions {
     bool table_placement_in_order = false;
     bool disable_gfm_parity = false;
     int relax_phv_init = 0;
+    bool quick_phv_alloc = false;
 #if BAREFOOT_INTERNAL || 1
     // FIXME -- Cmake does not consistently set BAREFOOT_INTERNAL for all source
     // files (why?), so having the layout of any class depend on it will result in

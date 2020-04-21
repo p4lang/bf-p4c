@@ -5,7 +5,6 @@
 #include "bf-p4c/phv/parde_phv_constraints.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/table_phv_constraints.h"
-#include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/add_special_constraints.h"
 #include "bf-p4c/phv/allocate_phv.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -45,10 +44,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                 domTree, alloc),
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), action_constraints),
       strided_headers(phv) {
-    if (options.trivial_phvalloc) {
-        addPasses({
-            new PHV::TrivialAlloc(phv)});
-    } else {
         addPasses({
             // Identify uses of fields in MAU, PARDE
             &uses,
@@ -127,7 +122,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
             phvLoggingInfo
-        }); }
+        });
 
     setName("PHV Analysis");
 }

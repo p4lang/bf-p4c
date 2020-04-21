@@ -453,7 +453,6 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/phv_spec.cpp
   phv/privatization.cpp
   phv/table_phv_constraints.cpp
-  phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   phv/analysis/critical_path_clusters.cpp
   phv/analysis/dark_live_range.cpp
@@ -514,7 +513,6 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/phv_spec.h
   phv/privatization.h
   phv/table_phv_constraints.h
-  phv/trivial_alloc.h
   phv/validate_allocation.h
   phv/analysis/critical_path_clusters.h
   phv/analysis/dark_live_range.h
@@ -1035,7 +1033,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tphv_slice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/v1model_translate.cpp

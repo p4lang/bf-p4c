@@ -10,7 +10,6 @@
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {

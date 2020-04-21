@@ -30,21 +30,6 @@ BFN_Options::BFN_Options() {
     registerOption("-o", "dir",
                    [this](const char* arg) { outputDir = arg; return true; },
                    "Write output to outdir.\n");
-    registerOption("--trivpa", nullptr,
-        [this](const char *) { trivial_phvalloc = true; return true; },
-        "Use the trivial PHV allocator");
-    registerOption("--nophvintf", nullptr,
-        [this](const char *) { phv_interference = false; return true; },
-        "Do not use cluster_phv_interference interference-graph based PHV reduction");
-    registerOption("--noclusterintf", nullptr,
-        [this](const char *) { cluster_interference = false; return true; },
-        "Do not use cluster_to_cluster interference interference-graph based PHV reduction");
-    registerOption("--nophvslice", nullptr,
-        [this](const char *) { phv_slicing = false; return true; },
-        "Do not use cluster_phv_slicing based PHV slices");
-    registerOption("--nophvover", nullptr,
-        [this](const char *) { phv_overlay = false; return true; },
-        "Do not use cluster_phv_overlay based PHV overlays");
     registerOption("--allowUnimplemented", nullptr,
         [this](const char *) { allowUnimplemented = true; return true; },
         "Allow assembly generation even if there are unimplemented features in the P4 code");
@@ -120,11 +105,6 @@ BFN_Options::BFN_Options() {
             use_clot = false;
             return true;
         }, "Do not use clots in Tofino2");
-    registerOption("--tofino2-phv-analysis", nullptr,
-        [this](const char *) {
-            jbay_analysis = true;
-            return true;
-        }, "Perform Tofino2 mocha and dark analysis");
     registerOption("--phv_scale_factor", "arg",
         [this](const char* arg) {
             float temp = std::atof(arg);
@@ -233,6 +213,9 @@ BFN_Options::BFN_Options() {
             "Relax PHV initialization. Default:0 "
             "Values 1 and 2 incrementally relax PHV initialization in later MAU stages in order "
             "to relax PHV Allocation in earlier MAU stages; this may affect table placement");
+    registerOption("--quick-phv-alloc", nullptr,
+        [this](const char *) { quick_phv_alloc = true; return true; },
+         "Reduce PHV allocation search space for faster compilation");
 }
 
 using Target = std::pair<cstring, cstring>;

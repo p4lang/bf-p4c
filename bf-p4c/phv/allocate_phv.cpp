@@ -3447,7 +3447,7 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
         /// XXX(zma) strided cluster can have many slices in the supercluster
         /// and the number of slicing can blow up (need a better way to stop
         /// than this crude heuristic).
-        if (cluster_group->needsStridedAlloc())
+        if (cluster_group->needsStridedAlloc() || BackendOptions().quick_phv_alloc)
             MAX_SLICING_TRY = 128;
 
         while (!slice_it.done()) {

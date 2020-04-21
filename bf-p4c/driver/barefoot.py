@@ -184,6 +184,9 @@ class BarefootBackend(BackendDriver):
         self._argGroup.add_argument("--log-hashes",
                                     action="store_true", default=False,
                                     help="Log hash functions in use to mau.hashes.log.");
+        self._argGroup.add_argument("--quick-phv-alloc",
+                                    action="store_true", default=False,
+                                    help="Reduce PHV allocation search space for faster compilation.");
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self._argGroup.add_argument("--gdb", action="store_true", default=False,
                                         help="run the backend compiler under gdb")
@@ -315,6 +318,9 @@ class BarefootBackend(BackendDriver):
 
         if opts.log_hashes:
             self.add_command_option('assembler', '--log-hashes')
+
+        if opts.quick_phv_alloc:
+            self.add_command_option('compiler', '--quick-phv-alloc')
 
         self.skip_compilation = []
         if opts.skip_compilation:
