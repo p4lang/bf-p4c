@@ -763,6 +763,7 @@ enum MathOp_t {
 extern MathUnit<T> {
     /// Configure a math unit for use in a register action
     MathUnit(bool invert, int<2> shift, int<6> scale,
+             // Note: data tuple contains values in order from 15..0 (reversed)
              tuple< bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,
                     bit<8>, bit<8>, bit<8>, bit<8>,

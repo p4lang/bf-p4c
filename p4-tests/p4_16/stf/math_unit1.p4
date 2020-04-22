@@ -10,8 +10,8 @@ control ingress(inout headers hdr, inout metadata meta,
                 inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
                 inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
     Register<bit<16>, bit<16>>(1) accum;
-    MathUnit<bit<16>>(false, 1, -6, { 0, 0, 0, 0, 0, 0, 0, 0,
-                                    64, 81, 100, 121, 144, 169, 196, 225 }) square;
+    MathUnit<bit<16>>(false, 1, -6, { 225, 196, 169, 144, 121, 100, 81, 64,
+                                      0, 0, 0, 0, 0, 0, 0, 0 }) square;
     RegisterAction<bit<16>, bit<1>, bit<16>>(accum) run = {
         void apply(inout bit<16> value, out bit<16> rv) {
             value = square.execute(hdr.data.h1);

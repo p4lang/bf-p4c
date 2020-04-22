@@ -670,12 +670,12 @@ bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
                 math.scale = k->asInt();
             else
                 error("%s is not a constant", mu->arguments->at(i-1)->expression);
-            i = 16 - data->components.size();
-            BUG_CHECK(i == 0 || i == 4 || i == 8, "Wrong number of MathUnit values");
+            BUG_CHECK(data->components.size() <= 16, "Wrong number of MathUnit values");
+            i = 15;
             for (auto e : data->components) {
                 if (auto k = e->to<IR::Constant>())
                     math.table[i] = k->asInt();
-                ++i; }
+                --i; }
         } else if (auto k = mu->arguments->at(i)->expression->to<IR::Constant>()) {
             double val = k->asUint64();
             BUG_CHECK(i == 1 || i == 2, "typechecking failure");
