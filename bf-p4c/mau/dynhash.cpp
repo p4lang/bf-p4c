@@ -399,7 +399,7 @@ void GenerateDynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, 
             for (int i = fieldinfo.lo; i <= fieldinfo.hi; i++) {
                 Util::JsonObject *_xbar_byte = new Util::JsonObject();
                 _xbar_byte->emplace("byte_number", (byte.loc.group * 16 + byte.loc.byte));
-                _xbar_byte->emplace("bit_in_byte", (i - fieldinfo.lo));
+                _xbar_byte->emplace("bit_in_byte", (i - fieldinfo.lo + fieldinfo.cont_lo));
                 _xbar_byte->emplace("name", fieldNames.at(fieldinfo.field));
                 _xbar_byte->emplace("field_bit", i);
                 _xbar->append(_xbar_byte);
