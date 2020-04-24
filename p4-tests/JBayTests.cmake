@@ -211,7 +211,9 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_32q_2pipe
   tna_action_profile
   tna_action_selector
+  tna_bridged_md
   tna_counter
+  tna_custom_hash
   tna_digest
   tna_dkm
   tna_dyn_hashing
@@ -222,13 +224,19 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
   tna_mirror
+  tna_multicast
   tna_operations
   tna_port_metadata
   tna_port_metadata_extern
+  tna_proxy_hash
   tna_pvs
+  tna_random
   tna_range_match
   tna_register
+  tna_snapshot
+  tna_symmetric_hash
   tna_ternary_match
+  tna_timestamp
   )
 
 # No ptf, compile-only
@@ -239,6 +247,12 @@ p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_resubmit" ${p4_16_programs_path}/tna_resubmit/tna_resubmit.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_resubmit" "")
+
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_pktgen" ${p4_16_programs_path}/tna_pktgen/tna_pktgen.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_pktgen" "")
+bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_pktgen" "all ^test.PortDownPktgenTest")
 
 file(RELATIVE_PATH p4_16_internal_p4_16_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16)
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
@@ -259,6 +273,9 @@ p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_internal_p4_16_t2na_static_entry" ${p4_16_internal_p4_16_path}/t2na_static_entry/t2na_static_entry.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
   "p4_16_internal_p4_16_tna_pvs_multi_states" ${p4_16_internal_p4_16_path}/tna_pvs_multi_states/tna_pvs_multi_states.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
+bfn_set_ptf_test_spec("tofino2" "p4_16_internal_p4_16_tna_pvs_multi_states" "all")
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_internal_p4_16_t2na_ghost" ${p4_16_internal_p4_16_path}/t2na_ghost/t2na_ghost.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16" "")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
@@ -270,6 +287,14 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
     bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_${t}" ${ports_json})
   endif()
 endforeach()
+
+# PTF, disable failing tests
+p4c_add_test_with_args ("tofino2" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_checksum" ${p4_16_programs_path}/tna_checksum/tna_checksum.p4 "${testExtraArgs} -tofino2 -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_checksum" "")
+bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_checksum" 
+    "all ^test.Ipv4UdpTranslateSpecialUpdTest")
+bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_snapshot" 
+    "all ^test.SnapshotTest")
 
 # Set ports.json for tna_idletime test
 bfn_set_ptf_ports_json_file("tofino2" "p4_16_programs_tna_dkm" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_dkm/ports.json")

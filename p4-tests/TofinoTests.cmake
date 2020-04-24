@@ -710,7 +710,10 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_32q_2pipe
   tna_action_profile
   tna_action_selector
+  tna_bridged_md
+  tna_checksum
   tna_counter
+  tna_custom_hash
   tna_digest
   tna_dkm
   tna_dyn_hashing
@@ -721,19 +724,32 @@ set (P4FACTORY_P4_16_PROGRAMS
   tna_meter_bytecount_adjust
   tna_meter_lpf_wred
   tna_mirror
+  tna_multicast
   tna_operations
+  tna_pktgen
   tna_port_metadata
   tna_port_metadata_extern
+  tna_proxy_hash
   tna_pvs
+  tna_random
   tna_range_match
   tna_register
+  tna_resubmit
+  tna_symmetric_hash
   tna_ternary_match
+  tna_timestamp
   )
 
 ## Internal P4-16 Programs
 set (P4FACTORY_P4_16_PROGRAMS_INTERNAL
   tna_pvs_multi_states
+  tna_multi_prsr_programs_multi_pipes
   )
+
+# TODO: How to enable these tests?
+# tna_with_pdfixed_thrift
+# tna_ipv4_checksum
+# tna_register_bfrt_integration
 
 # No ptf, compile-only
 file(RELATIVE_PATH p4_16_programs_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs)
@@ -743,6 +759,11 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_a" ${p4_16_programs_path}/tna_32q_multiprogram/program_a/tna_32q_multiprogram_a.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "p4_16_programs_tna_32q_multiprogram_b" ${p4_16_programs_path}/tna_32q_multiprogram/program_b/tna_32q_multiprogram_b.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_32q_multiprogram" "")
+
+# PTF Fails, Compile only
+# tna_snapshot
+p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
+  "p4_16_programs_tna_snapshot" ${p4_16_programs_path}/tna_snapshot/tna_snapshot.p4 "${testExtraArgs} -tofino -arch tna -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs" "")
 
 # P4-16 Programs with PTF tests
 foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
@@ -768,6 +789,14 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
     bfn_set_ptf_ports_json_file("tofino" "p4_16_programs_internal_${t}" ${ports_json})
   endif()
 endforeach()
+
+# Disable failing tests
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen" 
+     "all ^test.PortDownPktgenTest")
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_checksum" 
+     "all ^test.Ipv4UdpTranslateSpecialUpdTest")
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes" 
+     "test.Phase0TableOpTest")
 
 # Add extra flags for p4_16_programs
 # Exclude the MirrorHA tests as they have hard coded install path (specific to p4factory)
