@@ -1665,11 +1665,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
-)
-
-# P4C-2350
-p4c_add_xfail_reason("tofino"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
 )

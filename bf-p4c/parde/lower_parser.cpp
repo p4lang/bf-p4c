@@ -1667,7 +1667,8 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                     lastPov = f->povBit;
                 }
             }
-            groups[newGroup] = lastPov;
+            if (newGroup)
+                groups[newGroup] = lastPov;
             int groupidx = 0;
             for (auto& group : groups) {
                 phvSources.clear();

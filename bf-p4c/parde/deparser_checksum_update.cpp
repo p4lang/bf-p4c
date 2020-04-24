@@ -39,7 +39,7 @@ struct FieldListInfo {
     std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
 
     // Information regarding update conditions
-    std::vector<UpdateConditionInfo*> updateConditions;
+    ordered_set<UpdateConditionInfo*> updateConditions;
 
     // To indicate zeros_as_ones feature is activated
     bool zerosAsOnes = false;
@@ -78,7 +78,6 @@ struct ChecksumUpdateInfo {
 
     void markAsUnconditional(const FieldListInfo* listInfo) {
         isUnconditional = true;
-
         ordered_set<FieldListInfo*> redundantListInfo;
         for (auto info : fieldListInfos) {
             if (listInfo != info) {
@@ -369,21 +368,21 @@ getUpdateCondition(const IR::Expression* condition) {
     return nullptr;
 }
 
-static std::vector<UpdateConditionInfo*>
+static ordered_set<UpdateConditionInfo*>
 analyzeUpdateChecksumCondition(const IR::IfStatement* ifstmt) {
-    std::vector<UpdateConditionInfo*> updateConditions;
+    ordered_set<UpdateConditionInfo*> updateConditions;
     if (!ifstmt->ifTrue || ifstmt->ifFalse) {
         return updateConditions;
     }
     auto* condition = ifstmt->condition;
     while (auto andCondition = condition->to<IR::LAnd>()) {
-        updateConditions.push_back(getUpdateCondition(andCondition->right));
+        updateConditions.insert(getUpdateCondition(andCondition->right));
         if (auto leftEquation =  andCondition->left->to<IR::Equ>()) {
-            updateConditions.push_back(getUpdateCondition(leftEquation));
+            updateConditions.insert(getUpdateCondition(leftEquation));
         }
        condition = andCondition->left;
     }
-    updateConditions.push_back(getUpdateCondition(condition));
+    updateConditions.insert(getUpdateCondition(condition));
     return updateConditions;
 }
 
@@ -431,7 +430,7 @@ struct CollectUpdateChecksums : public Inspector {
                             }
                         }
                         if (!updateCondExists) {
-                            listInfo->updateConditions.push_back(updateCondition);
+                            listInfo->updateConditions.insert(updateCondition);
                         }
 
                     } else {
@@ -460,38 +459,33 @@ struct GetChecksumPovBits : public Inspector {
     explicit GetChecksumPovBits(ChecksumUpdateInfoMap& checksums)
         : checksums(checksums) { }
 
-    // FIXME -- yet another 'deep' comparison for expressions
-    bool equiv(const IR::Expression* a, const IR::Expression* b) {
-        if (a == b) return true;
-        if (typeid(*a) != typeid(*b)) return false;
-        if (auto ma = a->to<IR::Member>()) {
-            auto mb = b->to<IR::Member>();
-            return ma->member == mb->member && equiv(ma->expr, mb->expr); }
-        if (auto ra = a->to<IR::ConcreteHeaderRef>()) {
-            auto rb = b->to<IR::ConcreteHeaderRef>();
-            return ra->equiv(*rb); }
-        return false;
-    }
-
     bool preorder(const IR::BFN::EmitField* emit) override {
         auto source = emit->source->field->to<IR::Member>();
         if (checksums.count(source->toString())) {
             auto csum = checksums.at(source->toString());
             csum->povBit = emit->povBit;
             FieldListInfo* uncondFieldList = nullptr;
+            UpdateConditionInfo* uncond = nullptr;
             for (auto listInfo : csum->fieldListInfos) {
-            // Condition is same as header validity bit. Header validity bit needs to be true
-            // for any kind of checksum update. Hence, this checksum is same as an
+            // Header validity bit needs to be true for any kind of checksum update. If the only
+            // condition is the valid bit then this checksum is same as an
             // unconditional checksum. Deleting all other conditional checksum.
-
                 for (auto uc : listInfo->updateConditions) {
-                    if (equiv(csum->povBit->field, uc->field)) {
+                    if (csum->povBit->field->equiv(*uc->field)) {
                         uncondFieldList = listInfo;
+                        uncond = uc;
                     }
                 }
             }
-            if (uncondFieldList)
-                csum->markAsUnconditional(uncondFieldList);
+            if (uncondFieldList) {
+                if (uncondFieldList->updateConditions.size() > 1) {
+                    // If some other field is also used as condition along with header validity bit,
+                    // then the checksum is not unconditional. Removing only valid bit condition
+                    uncondFieldList->updateConditions.erase(uncond);
+                } else {
+                    csum->markAsUnconditional(uncondFieldList);
+                }
+            }
             // TODO(zma) If the condition bit dominates the header validity bit
             // in the parse graph, we can also safely ignore the condition.
         }
@@ -648,6 +642,20 @@ struct SubstituteChecksumLVal : public Transform {
 /// is predicated by the header validity bit, but this should be a
 /// general table "fusing" optimization in the backend.
 
+
+// Finds the key and return position. Will return -1 if key not found
+int get_key_position(const std::vector<const IR::Expression*> &keys,
+                     const IR::Expression* findKey) {
+    int idx = 0;
+    for (auto key : keys) {
+        if (key->equiv(*findKey)) {
+            return idx;
+        }
+        idx++;
+    }
+    return -1;
+}
+
 void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
                                   ChecksumUpdateInfo* csumInfo,
                                   gress_t gress) {
@@ -660,9 +668,8 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
     keys.push_back(csumInfo->povBit->field);
     for (auto fieldListInfo : csumInfo->fieldListInfos) {
         for (auto updateCond : fieldListInfo->updateConditions) {
-            if (std::find(keys.begin(), keys.end(), updateCond->field) == keys.end()) {
+            if (get_key_position(keys, updateCond->field) < 0)
                 keys.push_back(updateCond->field);
-            }
         }
     }
 
@@ -683,8 +690,7 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
         unsigned match = 1 << (keys.size() - 1);   // match for valid bit
         int dontCareBits = INT_MAX;
         for (auto updateCond : fieldListInfo->updateConditions) {
-            int keyDiff = keys.size() - std::distance(keys.begin(),
-            (std::find(keys.begin(), keys.end(), updateCond->field))) - 1;
+            int keyDiff = keys.size() - get_key_position(keys, updateCond->field) - 1;
             if (keyDiff < dontCareBits) dontCareBits = keyDiff;
             if (!updateCond->conditionNegated) {
                 match |= (1 << (keyDiff));
@@ -811,7 +817,7 @@ struct CollectNestedChecksumInfo : public Inspector {
         return false;
     }
 
-    std::vector<UpdateConditionInfo*> findUpdateCondition(const IR::BFN::EmitChecksum* checksum) {
+    ordered_set<UpdateConditionInfo*> findUpdateCondition(const IR::BFN::EmitChecksum* checksum) {
         auto checksumInfo = checksumsMap[checksum->dest->field->toString()];
 
         if (checksumInfo->isUnconditional)
