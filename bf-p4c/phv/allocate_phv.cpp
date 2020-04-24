@@ -12,6 +12,44 @@
 
 #define GREATER(comparison)  (LOGGING(6) ? ((comparison > 0) ? " (BETTER)" : " (WORSE)") : "")
 
+// alloc_alignment_merge return merged alloc alignment if no conflict.
+boost::optional<AllocAlignment> alloc_alignment_merge(
+    const AllocAlignment& a, const AllocAlignment& b) {
+    AllocAlignment rst;
+    for (auto& alignment : std::vector<const AllocAlignment*>{&a, &b}) {
+        // wont' be conflict
+        for (auto& fs_int : alignment->slice_alignment) {
+            rst.slice_alignment[fs_int.first] = fs_int.second;
+        }
+        // may conflict
+        for (auto& cluster_int : alignment->cluster_alignment) {
+            const auto* cluster = cluster_int.first;
+            auto align = cluster_int.second;
+            if (rst.cluster_alignment.count(cluster) &&
+                rst.cluster_alignment[cluster] != align) {
+                return boost::none;
+            }
+            rst.cluster_alignment[cluster] = align;
+        }
+    }
+    return rst;
+}
+
+std::string str_supercluster_alignments(PHV::SuperCluster& sc, const AllocAlignment& align) {
+    std::stringstream ss;
+    ss << "slicelist alignments: " << "\n";
+    for (const auto* sl : sc.slice_lists()) {
+        ss << "[";
+        cstring sep = "";
+        for (const auto& fs : *sl) {
+            ss << sep << "{" << fs << ", " << align.slice_alignment.at(fs) << "}";
+            sep = ", ";
+        }
+        ss << "]" << "\n";
+    }
+    return ss.str();
+}
+
 std::vector<const PHV::Field*>
 FieldPackingOpportunity::fieldsInOrder(
         const std::list<PHV::SuperCluster*>& sorted_clusters) const {
@@ -929,10 +967,12 @@ CoreAllocation::tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
+        const PHV::SuperCluster::SliceList& slice_list,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const {
     PHV::Allocation::ConditionalConstraint start_pos;
-    for (auto kv : start_positions)
-        start_pos[kv.first] = PHV::Allocation::ConditionalConstraintData(kv.second);
+    for (auto fs : slice_list) {
+        start_pos[fs] = PHV::Allocation::ConditionalConstraintData(start_positions.at(fs));
+    }
     return tryAllocSliceList(alloc, group, super_cluster, start_pos);
 }
 
@@ -1538,39 +1578,43 @@ CoreAllocation::tryAllocSliceList(
             std::vector<PHV::AllocSlice> hi_candidate_slices;
             bool can_alloc_hi = false;
             for (const auto next_container : group) {
-                if ((c.index() + 1) == next_container.index()) {
-                    LOG5("Checking adjacent container " << next_container);
-                    const std::vector<PHV::Container> one_container = {next_container};
-                    // so confusing, parameter size here means bit width,
-                    // but group.size() returns the number of containers.
-                    auto small_grp = PHV::ContainerGroup(group.width(), one_container);
+                if ((c.index() + 1) != next_container.index()) {
+                    continue;
+                }
+                LOG5("Checking adjacent container " << next_container);
+                const std::vector<PHV::Container> one_container = {next_container};
+                // so confusing, parameter size here means bit width,
+                // but group.size() returns the number of containers.
+                auto small_grp = PHV::ContainerGroup(group.width(), one_container);
 
-                    ordered_map<PHV::FieldSlice, int> hi_slice_alignment;
-                    ordered_map<const PHV::AlignedCluster*, int> hi_cluster_alignment;
-                    ordered_set<cstring> tmpBridgedConflicts;
-                    bool buildHiSetup = buildAlignmentMaps(small_grp,
-                                                           super_cluster,
-                                                           hi_slice,
-                                                           hi_slice_alignment,
-                                                           hi_cluster_alignment,
-                                                           tmpBridgedConflicts);
-                    if (!buildHiSetup) {
-                        LOG6("Couldn't build hi setup?");
-                        can_alloc_hi = false;
-                        break; }
+                auto hi_alignments = build_slicelist_alignment(
+                    small_grp, super_cluster, hi_slice);
+                if (hi_alignments.empty()) {
+                    LOG6("Couldn't build hi alignments");
+                    can_alloc_hi = false;
+                    break;
+                }
 
-                    auto try_hi = tryAllocSliceList(this_alloc, small_grp,
-                                                    super_cluster, hi_slice_alignment);
+                for (const auto& alloc_align : hi_alignments) {
+                    auto try_hi = tryAllocSliceList(
+                        this_alloc, small_grp, super_cluster, *hi_slice,
+                        alloc_align.slice_alignment);
                     if (try_hi != boost::none) {
                         LOG5("Wide arith hi slice could be allocated in " << next_container);
                         LOG5("" << hi_slice);
-                        can_alloc_hi = true; }
-                    break; } }
+                        can_alloc_hi = true;
+                        // XXX(yumin): try_hi is not commited???
+                        break;
+                    }
+                }
+                break;
+            }
             if (!can_alloc_hi) {
               LOG5("Wide arithmetic hi slice could not be allocated.");
               continue;
             } else {
-              LOG5("Wide arithmetic hi slice could be allocated."); }
+              LOG5("Wide arithmetic hi slice could be allocated.");
+            }
         }
         perContainerAlloc.commit(this_alloc);
 
@@ -1585,7 +1629,8 @@ CoreAllocation::tryAllocSliceList(
             LOG5("       ...Best score for container " << c);
             best_score = score;
             // best_candidate = std::move(this_alloc); }
-            best_candidate = std::move(perContainerAlloc); }
+            best_candidate = std::move(perContainerAlloc);
+        }
     }  // end of for containers
 
     if (!best_candidate) {
@@ -1678,129 +1723,165 @@ static bool isClotSuperCluster(const ClotInfo& clots, const PHV::SuperCluster& s
     return !needPhvAllocation;
 }
 
-bool CoreAllocation::buildAlignmentMaps(
-  const PHV::ContainerGroup& container_group,
-  const PHV::SuperCluster& super_cluster,
-  const PHV::SuperCluster::SliceList* slice_list,
-  ordered_map<PHV::FieldSlice, int>& slice_alignment,
-  ordered_map<const PHV::AlignedCluster*, int>& cluster_alignment,
-  ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const {
-    int le_offset = 0;
-    for (auto& slice : *slice_list) {
-        const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
-        auto valid_start_options = satisfies_constraints(container_group, cluster);
-        if (valid_start_options == boost::none)
-            return false;
+std::vector<AllocAlignment> CoreAllocation::build_alignments(
+    int max_n,
+    const PHV::ContainerGroup& container_group,
+    PHV::SuperCluster& super_cluster) const {
+    // collect all possible alignments for each slice_list
+    std::vector<std::vector<AllocAlignment>> all_alignments;
+    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
+        auto curr_sl_alignment = build_slicelist_alignment(
+            container_group, super_cluster, slice_list);
+        all_alignments.push_back(curr_sl_alignment);
+    }
 
-        if (valid_start_options->empty()) {
-            LOG5("    ...but there are no valid starting positions for " << slice);
-            return false; }
-
-        // If this is the first slice, then its starting alignment can be adjusted.
-        if (le_offset == 0)
-            le_offset = *valid_start_options->begin();
-
-        // Return if the slice 's cluster cannot be placed at the current
-        // starting offset.
-        if (!valid_start_options->getbit(le_offset)) {
-            LOG5("    ...but slice list requires slice to start at " << le_offset <<
-                 " which its cluster cannot support: " << slice);
-            // The condition to check if fieldsWithAlignmentConflicts has this
-            // field already is essential for convergence.
-            if (slice.field()->bridged &&
-                    !bridgedFieldsWithAlignmentConflicts.count(slice.field()->name)) {
-                LOG5("   ...alignment constraint for bridged field slice " << slice <<
-                     ". May backtrack if this slice is not allocated.");
-                bridgedFieldsWithAlignmentConflicts.insert(slice.field()->name); }
-            return false; }
-
-        // Return if the slice is part of another slice list but was previously
-        // placed at a different start location.
-        // XXX(cole): We may need to be smarter about coordinating all
-        // valid starting ranges for all slice lists.
-        if (cluster_alignment.find(&cluster) != cluster_alignment.end() &&
-                cluster_alignment.at(&cluster) != le_offset) {
-            LOG5("    ...but two slice lists have conflicting alignment requirements for "
-                 "field slice %1%" << slice);
-            return false; }
-
-        // Otherwise, update the alignment for this slice's cluster.
-        cluster_alignment[&cluster] = le_offset;
-        slice_alignment[slice] = le_offset;
-        le_offset += slice.size(); }
-    return true;
+    // find max_n alignments which is a 'intersection' of one allocAlignemnt for
+    // each slice list that is not conflict with others.
+    std::vector<AllocAlignment> rst;
+    std::function<void(int depth, AllocAlignment curr)> dfs =
+        [&] (int depth, AllocAlignment curr) -> void {
+            if (depth == int(all_alignments.size())) {
+                rst.push_back(curr);
+                return;
+            }
+            for (const auto& align_choice : all_alignments[depth]) {
+                auto next = alloc_alignment_merge(curr, align_choice);
+                if (next) {
+                    dfs(depth + 1, *next);
+                }
+                if (int(rst.size()) == max_n) {
+                    return;
+                }
+            }
+        };
+    dfs(0, AllocAlignment());
+    return rst;
 }
 
-// SUPERCLUSTER <--> CONTAINER GROUP allocation.
-boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
-        const PHV::Allocation& alloc,
-        const PHV::ContainerGroup& container_group,
-        PHV::SuperCluster& super_cluster,
-        ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const {
+std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
+  const PHV::ContainerGroup& container_group,
+  const PHV::SuperCluster& super_cluster,
+  const PHV::SuperCluster::SliceList* slice_list) const {
+    std::vector<AllocAlignment> rst;
+    auto valid_list_starts = satisfies_constraints(
+        container_group, super_cluster.aligned_cluster(slice_list->front()));
+    if (valid_list_starts == boost::none) {
+        LOG5("    ...but there are no valid slice list starting position"
+             << slice_list->front());
+        return rst;
+    }
+
+    for (const int le_offset_start : *valid_list_starts) {
+        int le_offset = le_offset_start;
+        AllocAlignment curr;
+        bool success = true;
+        for (auto& slice : *slice_list) {
+            const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
+            auto valid_start_options = satisfies_constraints(container_group, cluster);
+            if (valid_start_options == boost::none) {
+                success = false;
+                break;
+            }
+
+            // if (valid_start_options->empty()) {
+            //     LOG5("    ...but there are no valid starting positions for "
+            //          << slice << " with list starts with " << le_offset_start);
+            //     success = false;
+            //     break;
+            // }
+
+            // if the slice 's cluster cannot be placed at the current offset.
+            if (!valid_start_options->getbit(le_offset)) {
+                LOG5("    ...but slice list requires slice to start at " << le_offset <<
+                     " which its cluster cannot support: " << slice <<
+                     " with list starts with " << le_offset_start);
+                success = false;
+                break;
+            }
+
+            // Return if the slice is part of another slice list but was previously
+            // placed at a different start location.
+            // XXX(cole): We may need to be smarter about coordinating all
+            // valid starting ranges for all slice lists.
+            if (curr.cluster_alignment.count(&cluster) &&
+                curr.cluster_alignment.at(&cluster) != le_offset) {
+                LOG5("    ...but two slice lists have conflicting alignment requirements for "
+                     "field slice %1%" << slice);
+                success = false;
+                break;
+            }
+
+            // Otherwise, update the alignment for this slice's cluster.
+            curr.cluster_alignment[&cluster] = le_offset;
+            curr.slice_alignment[slice] = le_offset;
+            le_offset += slice.size();
+        }
+        if (success) {
+            rst.push_back(curr);
+        }
+    }
+    return rst;
+}
+
+
+boost::optional<PHV::Transaction> CoreAllocation::alloc_super_cluster_with_alignment(
+    const PHV::Allocation& alloc,
+    const PHV::ContainerGroup& container_group,
+    PHV::SuperCluster& super_cluster,
+    const AllocAlignment& alignment) const {
     // Make a new transaction.
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
-    if (isClotSuperCluster(clot_i, super_cluster)) {
-        LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
-        return alloc_attempt; }
-
-    // Check container group/cluster group constraints.
-    if (!satisfies_constraints(container_group, super_cluster))
-        return boost::none;
-
-    // Try to allocate slice lists together, storing the offsets required of each
-    // slice's cluster.
-    ordered_map<const PHV::AlignedCluster*, int> cluster_alignment;
-    ordered_set<PHV::FieldSlice> allocated;
+    // Sort slice lists according to the number of times they
+    // have been written to and read from in various actions.
+    // This helps simplify constraints by placing destinations before sources
     std::list<const PHV::SuperCluster::SliceList*> slice_lists;
-    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists())
+    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
         slice_lists.push_back(slice_list);
-    // Sort slice lists according to the number of times they have been written to and read from in
-    // various actions. This helps simplify constraints by placing destinations before sources
+    }
     actions_i.sort(slice_lists);
-    for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
-        ordered_map<PHV::FieldSlice, int> slice_alignment;
-        bool couldSetup = buildAlignmentMaps(container_group,
-                                             super_cluster,
-                                             slice_list,
-                                             slice_alignment,
-                                             cluster_alignment,
-                                             bridgedFieldsWithAlignmentConflicts);
-        if (!couldSetup)
-            return boost::none;
 
+    ordered_set<PHV::FieldSlice> allocated;
+    for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
         // Try allocating the slice list.
-        auto partial_alloc_result =
-            tryAllocSliceList(alloc_attempt, container_group, super_cluster, slice_alignment);
-        if (!partial_alloc_result)
+        auto partial_alloc_result = tryAllocSliceList(
+            alloc_attempt, container_group, super_cluster, *slice_list,
+            alignment.slice_alignment);
+        if (!partial_alloc_result) {
+            LOG5("failed to allocate list ");
             return boost::none;
+        }
         alloc_attempt.commit(*partial_alloc_result);
 
         // Track allocated slices in order to skip them when allocating their clusters.
-        for (auto& slice : *slice_list)
-            allocated.insert(slice); }
+        for (auto& slice : *slice_list) {
+            allocated.insert(slice);
+        }
+    }
 
     // After allocating each slice list, use the alignment for each slice in
     // each list to place its cluster.
     for (auto* rotational_cluster : super_cluster.clusters()) {
         for (auto* aligned_cluster : rotational_cluster->clusters()) {
-            // Sort all field slices in an aligned cluster based on the number of times they are
-            // written to or read from in different actions
+            // Sort all field slices in an aligned cluster based on the
+            // number of times they are written to or read from in different actions
             std::vector<PHV::FieldSlice> slice_list;
-            for (PHV::FieldSlice slice : aligned_cluster->slices())
+            for (PHV::FieldSlice slice : aligned_cluster->slices()) {
                 slice_list.push_back(slice);
+            }
             actions_i.sort(slice_list);
 
             // Forall fields in an aligned cluster, they must share a same start position.
             // Compute possible starts.
             bitvec starts;
-            if (cluster_alignment.find(aligned_cluster) != cluster_alignment.end()) {
-                starts = bitvec(cluster_alignment.at(aligned_cluster), 1);
+            if (alignment.cluster_alignment.count(aligned_cluster)) {
+                starts = bitvec(alignment.cluster_alignment.at(aligned_cluster), 1);
             } else {
                 auto optStarts = satisfies_constraints(container_group, *aligned_cluster);
                 if (!optStarts) {
                     // Other constraints not satisfied, eg. container type mismatch.
-                    return boost::none; }
+                    return boost::none;
+                }
                 if (optStarts && optStarts->empty()) {
                     // Other constraints satisfied, but alignment constraints
                     // cannot be satisfied.
@@ -1808,7 +1889,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                     return boost::none; }
                 // Constraints satisfied so long as aligned_cluster is placed
                 // starting at a bit position in `starts`.
-                starts = *optStarts; }
+                starts = *optStarts;
+            }
 
             // Compute all possible alignments
             boost::optional<PHV::Transaction> best_alloc = boost::none;
@@ -1822,7 +1904,9 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                     if (allocated.find(slice) != allocated.end()) continue;
                     ordered_map<PHV::FieldSlice, int> start_map = { { slice, start } };
                     auto partial_alloc_result =
-                        tryAllocSliceList(this_alloc, container_group, super_cluster, start_map);
+                        tryAllocSliceList(
+                            this_alloc, container_group, super_cluster,
+                            PHV::SuperCluster::SliceList{slice}, start_map);
                     if (partial_alloc_result) {
                         this_alloc.commit(*partial_alloc_result);
                     } else {
@@ -1836,14 +1920,67 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                                         parser_critical_path_i);
                 if (!best_alloc || score > best_score) {
                     best_alloc = std::move(this_alloc);
-                    best_score = score; } }
+                    best_score = score;
+                }
+            }
 
-            if (!best_alloc)
+            if (!best_alloc) {
                 return boost::none;
-
-            alloc_attempt.commit(*best_alloc); } }
-
+            }
+            alloc_attempt.commit(*best_alloc);
+        }
+    }
     return alloc_attempt;
+}
+
+// SUPERCLUSTER <--> CONTAINER GROUP allocation.
+boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
+        const PHV::Allocation& alloc,
+        const PHV::ContainerGroup& container_group,
+        PHV::SuperCluster& super_cluster) const {
+    if (isClotSuperCluster(clot_i, super_cluster)) {
+        LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
+        return alloc.makeTransaction(); }
+
+    // Check container group/cluster group constraints.
+    if (!satisfies_constraints(container_group, super_cluster))
+        return boost::none;
+
+    LOG5("build alignments");
+    // build alignments.
+    int max_alignment_tries = 1;
+    std::vector<AllocAlignment> alignments = build_alignments(
+        max_alignment_tries, container_group, super_cluster);
+    if (alignments.empty()) {
+        LOG5("SuperCluster is not allocate-able due to alignment: " << super_cluster);
+        return boost::none;
+    }
+
+    LOG5("found " << alignments.size() << " valid alignemtns");
+
+    // try different alignments.
+    boost::optional<PHV::Transaction> best_alloc = boost::none;
+    AllocScore best_score = AllocScore::make_lowest();
+    for (const auto& alignment : alignments) {
+        LOG5("try alloc with alignment, " <<
+             str_supercluster_alignments(super_cluster, alignment));
+        auto this_alloc = alloc_super_cluster_with_alignment(
+            alloc, container_group, super_cluster, alignment);
+        if (this_alloc) {
+            auto score = AllocScore(*this_alloc, phv_i, clot_i, uses_i,
+                field_to_parser_states_i, parser_critical_path_i);
+            if (!best_alloc || score > best_score) {
+                best_alloc = std::move(this_alloc);
+                best_score = score;
+                // XXX(yumin): currently we stop at the first valid alignmnt
+                // and avoid search too much which might slow down compilation.
+                break;
+            }
+        } else {
+            LOG5("alloc with the above alignment failed");
+        }
+    }
+    return best_alloc;
 }
 
 
@@ -2062,11 +2199,9 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         LOG4("  ...Skipping CLOT-allocated super cluster: " << sc);
     }
 
-    size_t numBridgedConflicts = bridgedFieldsWithAlignmentConflicts.size();
     AllocationStrategy *strategy =
         new BruteForceAllocationStrategy(core_alloc_i, report, parser_critical_path_i,
                                          critical_path_clusters_i, clot_i,
-                                         bridgedFieldsWithAlignmentConflicts,
                                          strided_headers_i, uses_i);
     auto result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
 
@@ -2095,10 +2230,6 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
             LOG1(sc);
         LOG2(alloc);
     } else {
-        auto noPackBridgedFields = throwBacktrackException(numBridgedConflicts,
-                result.remaining_clusters);
-        if (noPackBridgedFields.size() > 0)
-            throw BridgedPackingTrigger::failure(noPackBridgedFields);
         bool firstRoundFit = alloc_i.didFirstRoundFit();
         if (firstRoundFit) {
             // Empty table allocation to be sent because the first round of PHV allocation should be
@@ -2166,30 +2297,6 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc) const {
             fieldAlignments, ss);
     if (diagnosed) ::error("%1%", ss.str());
     return diagnosed;
-}
-
-ordered_set<cstring> AllocatePHV::throwBacktrackException(
-        const size_t numBridgedConflicts,
-        const std::list<PHV::SuperCluster*>& unallocated) const {
-    ordered_set<cstring> noPackBridgedFields;
-    // If numBridgedConflicts and the current size of bridgedFieldsWithAlignmentConflicts is the
-    // same, then it means no field was added to this set during this round of PHV allocation.
-    // Therefore, there are no changes required to bridged metadata packing.
-    if (numBridgedConflicts == bridgedFieldsWithAlignmentConflicts.size())
-        return noPackBridgedFields;
-    for (auto* sc : unallocated) {
-        sc->forall_fieldslices([&](const PHV::FieldSlice& s) {
-            if (!s.field()->bridged) return;
-            if (!bridgedFieldsWithAlignmentConflicts.count(s.field()->name)) return;
-            noPackBridgedFields.insert(s.field()->name);
-        }); }
-    if (LOGGING(2)) {
-        if (noPackBridgedFields.size() != 0)
-            LOG2("\tThe following bridged fields must be marked no-pack with other bridged "
-                 "fields:");
-        for (auto s : noPackBridgedFields)
-            LOG2("\t  " << s); }
-    return noPackBridgedFields;
 }
 
 bool AllocatePHV::onlyPrivatizedFieldsUnallocated(
@@ -3226,8 +3333,7 @@ BruteForceAllocationStrategy::tryAllocSlicing(const std::list<PHV::SuperCluster*
             LOG4("Try container group: " << container_group);
 
             if (auto partial_alloc =
-                    core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
-                        bridgedFieldsWithAlignmentConflicts)) {
+                    core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc)) {
                 AllocScore score = AllocScore(*partial_alloc,
                         core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
                         core_alloc_i.field_to_parser_states(),
@@ -3299,8 +3405,8 @@ BruteForceAllocationStrategy::tryAllocStride(const std::list<PHV::SuperCluster*>
     for (PHV::ContainerGroup* container_group : container_groups) {
         LOG4("Try container group: " << container_group);
 
-        auto leader_alloc = core_alloc_i.tryAlloc(stride_alloc, *container_group, *leader,
-                                                  bridgedFieldsWithAlignmentConflicts);
+        auto leader_alloc = core_alloc_i.tryAlloc(
+            stride_alloc, *container_group, *leader);
         if (leader_alloc) {
             // alloc rest
             if (tryAllocStrideWithLeaderAllocated(stride, *leader_alloc)) {
@@ -3361,8 +3467,7 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
 
         PHV::ContainerGroup cg(curr.type().size(), {curr});
 
-        auto sc_alloc = core_alloc_i.tryAlloc(leader_alloc, cg, *sc,
-                                              bridgedFieldsWithAlignmentConflicts);
+        auto sc_alloc = core_alloc_i.tryAlloc(leader_alloc, cg, *sc);
 
         if (!sc_alloc) {
             LOG4("failed to alloc next stride slice in " << curr);
@@ -3486,11 +3591,14 @@ BruteForceAllocationStrategy::allocLoop(PHV::Transaction& rst,
             bool succeeded = false;
 
             if (cluster_group->needsStridedAlloc()) {
+                LOG5("invoke strided allocation");
                 unsigned num_strides = slicing.size() / cluster_group->slices().size();
                 succeeded = tryAllocSlicingStrided(num_strides,
                                                    slicing, container_groups, slicing_alloc);
             } else {
-                succeeded = tryAllocSlicing(slicing, container_groups, slicing_alloc);
+                LOG5("invoke normal allocation");
+                succeeded = tryAllocSlicing(
+                    slicing, container_groups, slicing_alloc);
             }
 
             // If allocation succeeded, check the score.

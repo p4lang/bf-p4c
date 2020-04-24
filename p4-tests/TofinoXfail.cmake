@@ -1671,6 +1671,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1699,10 +1700,9 @@ p4c_add_xfail_reason("tofino"
 )
 
 # @override_phase0_table_name( ".blah" )
-p4c_add_xfail_reason("tofino"
-  "error: syntax error, unexpected '.'"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
-)
+# p4c_add_xfail_reason("tofino"
+#   "error: syntax error, unexpected '.'"
+# )
 
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"

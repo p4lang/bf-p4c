@@ -157,6 +157,14 @@ struct AllocScore {
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score);
 
+/// AllocAlignment has two maps used by tryAllocSliceList
+struct AllocAlignment {
+    /// a slice_alignment maps field slice to start bit location in a container.
+    ordered_map<PHV::FieldSlice, int> slice_alignment;
+    /// a cluster_alignment maps aligned cluster to start bit location in a container.
+    ordered_map<const PHV::AlignedCluster*, int> cluster_alignment;
+};
+
 /** A set of functions used in PHV allocation.
  */
 class CoreAllocation {
@@ -187,16 +195,24 @@ class CoreAllocation {
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
     ordered_set<const PHV::Field*> fieldsWithAlignmentConflicts;
 
-    // Builds two maps used by tryAllocSliceList.
-    // slice_alignment maps field slice to start bit location in a container.
-    // cluster_alignment maps aligned cluster to start bit location in a container.
-    bool buildAlignmentMaps(
+    boost::optional<PHV::Transaction> alloc_super_cluster_with_alignment(
+        const PHV::Allocation& alloc,
+        const PHV::ContainerGroup& container_group,
+        PHV::SuperCluster& super_cluster,
+        const AllocAlignment& alignment) const;
+
+    /// returns @p max_n possible alloc alignments for a super cluster vs a container group
+    std::vector<AllocAlignment> build_alignments(
+        int max_n,
+        const PHV::ContainerGroup& container_group,
+        PHV::SuperCluster& super_cluster) const;
+
+    /// Builds a vector of alignments for @p slice_list,
+    /// because there are multiple starting point of a slice list
+    std::vector<AllocAlignment> build_slicelist_alignment(
       const PHV::ContainerGroup& container_group,
       const PHV::SuperCluster& super_cluster,
-      const PHV::SuperCluster::SliceList* slice_list,
-      ordered_map<PHV::FieldSlice, int>& slice_alignment,
-      ordered_map<const PHV::AlignedCluster*, int>& cluster_alignment,
-      ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const;
+      const PHV::SuperCluster::SliceList* slice_list) const;
 
  public:
     CoreAllocation(const SymBitMatrix& mutex,
@@ -282,8 +298,7 @@ class CoreAllocation {
     boost::optional<PHV::Transaction> tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        PHV::SuperCluster& cluster,
-        ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts) const;
+        PHV::SuperCluster& cluster) const;
 
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
       * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
@@ -321,6 +336,9 @@ class CoreAllocation {
      * @param start_positions a map. Keys are the field slices to be allocated. Values are the
      *                        corresponding conditional constraint on the field slice.
      */
+    /// XXX(yumin): there is an assumption that only fieldslice of the slice list, shows up
+    /// in the @start_positions map(as there is no slice list passed as args).
+    /// Better to remove this.
     boost::optional<PHV::Transaction> tryAllocSliceList(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
@@ -333,6 +351,7 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
+        const PHV::SuperCluster::SliceList& slice_list,
         const ordered_map<PHV::FieldSlice, int>& start_positions) const;
 
     void generateNewAllocSlices(
@@ -420,22 +439,20 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const CalcParserCriticalPath& parser_critical_path_i;
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const ClotInfo& clot_i;
-    ordered_set<cstring>& bridgedFieldsWithAlignmentConflicts;
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
 
  public:
-    BruteForceAllocationStrategy(const CoreAllocation& alloc,
-                                 std::ostream& out,
-                                 const CalcParserCriticalPath& ccp,
-                                 const CalcCriticalPathClusters& cpc,
-                                 const ClotInfo& clot,
-                                 ordered_set<cstring>& bf,
-                                 const CollectStridedHeaders& hs,
-                                 const PhvUse& uses)
+    BruteForceAllocationStrategy(
+        const CoreAllocation& alloc,
+        std::ostream& out,
+        const CalcParserCriticalPath& ccp,
+        const CalcCriticalPathClusters& cpc,
+        const ClotInfo& clot,
+        const CollectStridedHeaders& hs,
+        const PhvUse& uses)
         : AllocationStrategy(alloc, out), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
-          bridgedFieldsWithAlignmentConflicts(bf),
           strided_headers_i(hs),
           uses_i(uses) { }
 
@@ -555,11 +572,6 @@ class AllocatePHV : public Inspector {
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const MapTablesToIDs table_ids_i;
     const CollectStridedHeaders& strided_headers_i;
-
-    // Set of bridged metadata fields that were found to have alignment conflicts during PHV
-    // allocation. This set maintains its state across multiple rounds of PHV allocation, therefore,
-    // the set members are field names rather than the Field pointers.
-    ordered_set<cstring> bridgedFieldsWithAlignmentConflicts;
 
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
