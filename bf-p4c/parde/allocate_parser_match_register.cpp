@@ -287,7 +287,8 @@ class MatcherAllocator : public Visitor {
 
                     for (auto& kv : def_set) {
                         std::clog << graph.get_src(kv.first)->name << " -> "
-                                  << kv.first->next->name << std::endl;
+                                  << (kv.first->next ? kv.first->next->name : kv.first->loop)
+                                  << std::endl;
                     }
                 }
             }
