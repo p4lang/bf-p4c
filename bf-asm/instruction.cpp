@@ -71,7 +71,7 @@ struct operand {
         virtual Base *lookup(Base *&ref) { return this; }
         virtual bool check() { return true; }
         virtual int phvGroup() { return -1; }
-        virtual int bits(int group) = 0;
+        virtual int bits(int group, int dest_size = -1) = 0;
         virtual unsigned bitoffset(int group) const { return 0; }
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
@@ -92,7 +92,7 @@ struct operand {
                 return value == a->value;
             } else return false; }
         Const *clone() override { return new Const(*this); }
-        int32_t bits(int group) override {
+        int32_t bits(int group, int dest_size = -1) override {
             int32_t val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
                 val |= UINT64_MAX << group_size[group];
@@ -122,7 +122,7 @@ struct operand {
             return true;
         }
         int phvGroup() override { return reg->reg.mau_id() / ::Phv::mau_groupsize(); }
-        int bits(int group) override {
+        int bits(int group, int dest_size = -1) override {
             if (group != phvGroup()) {
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
@@ -166,12 +166,22 @@ struct operand {
                               : a->table->find_on_actionbus(a->name, mod, lo, hi, 0);
             return b1 == b2 && b1 >= 0; }
         Action *clone() override { return new Action(*this); }
-        int bits(int group) override {
+        int bits(int group, int dest_size = -1) override {
             int size = group_size[group]/8U;
+            BUG_CHECK(lo >= 0 && hi >= 0);
+            unsigned lo = this->lo, hi = this->hi;
+            if (dest_size > 0) {
+                // override size based on destination size for deposit-field
+                hi = lo + dest_size - 1;
+                unsigned mask = group_size[group] - 1;  // group size is power of 2 (8, 16, or 32)
+                if ((hi | mask) != (lo | mask)) {
+                    // crosses slot boundary, so is a wrap-around rotated source -- need all of it
+                    lo &= ~mask;
+                    hi = lo | mask; } }
             int byte = field ? table->find_on_actionbus(field, lo, hi, size)
                              : table->find_on_actionbus(name, mod, lo, hi, size);
             if (byte < 0) {
-                if (lo > 0 || (field && hi + 1 < int(field->size)))
+                if (this->lo > 0 || (field && this->hi + 1 < int(field->size)))
                     error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
                 else
                     error(lineno, "%s is not on the action bus", name.c_str());
@@ -239,7 +249,7 @@ struct operand {
                 return index == a->index && offset == a->offset;
             } else return false; }
         RawAction *clone() override { return new RawAction(*this); }
-        int bits(int group) override { return ACTIONBUS_OPERAND + index; }
+        int bits(int group, int dest_size = -1) override { return ACTIONBUS_OPERAND + index; }
         unsigned bitoffset(int group) const override { return offset; }
         void dbprint(std::ostream &out) const override { out << 'A' << index; }
     };
@@ -316,7 +326,7 @@ struct operand {
                     if (table->find_on_actionbus(hd, lo, hi, size) < 0)
                         table->need_on_actionbus(hd, lo, hi, size);
                     lo += 16; } } }
-        int bits(int group) override {
+        int bits(int group, int dest_size = -1) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
             int byte = table->find_on_actionbus(hd, lo, hi, size);
@@ -369,7 +379,7 @@ struct operand {
                       lo, hi, rng.unit, size);
             if (table->find_on_actionbus(rng, lo, hi, size/8U))
                 table->need_on_actionbus(rng, lo, hi, size/8U); }
-        int bits(int group) override {
+        int bits(int group, int dest_size = -1) override {
             int size = group_size[group]/8U;
             int byte = table->find_on_actionbus(rng, lo, hi, size);
             if (byte < 0) {
@@ -412,7 +422,7 @@ struct operand {
         Named *clone() override { return new Named(*this); }
         bool check() override { BUG(); return true; }
         int phvGroup() override { BUG(); return -1; }
-        int bits(int group) override { BUG(); return 0; }
+        int bits(int group, int dest_size = -1) override { BUG(); return 0; }
         unsigned bitoffset(int group) const override { BUG(); return 0; }
         void pass1(Table *, int) override { BUG(); }
         void dbprint(std::ostream &out) const override {
@@ -448,7 +458,7 @@ struct operand {
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
-    int bits(int group) { return op->lookup(op)->bits(group); }
+    int bits(int group, int dest_size = -1) { return op->lookup(op)->bits(group, dest_size); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
     template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
@@ -1051,7 +1061,7 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize()))
                     % dest->reg.size;
-    int bits = (1 << 6) | src1.bits(slot/Phv::mau_groupsize());
+    int bits = (1 << 6) | src1.bits(slot/Phv::mau_groupsize(), dest.size());
     bits |= dest->hi << 7;
     bits |= rot << 12;
     switch (Phv::reg(slot)->size) {
@@ -1361,3 +1371,5 @@ static CondMoveMux::Decode  cb_opCondMove ("cmov", CLOUDBREAK, 0x6, true,  5, "c
 #endif // HAVE_CLOUDBREAK
 
 }  // end namespace VLIW
+
+void dump(const Instruction &inst) { std::cout << inst << std::endl; }
