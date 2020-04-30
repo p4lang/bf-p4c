@@ -530,10 +530,14 @@ void TernaryMatchTable::gen_entry_cfg2(json::vector &out, std::string field_name
     entry["start_bit"] = start_bit;
     entry["field_width"] = field_width;
     out.push_back(std::move(entry));
-    tcam_bits.setrange(lsb_offset, field_width);
+    // For a range with field width < nibble width, mark the entire
+    // nibble in tcam_bits as used. The driver expects no overlap with other
+    // format entries with the unused bits in the nibble.
+    int tcam_bit_width = source == "range" ? 4 : field_width;
+    tcam_bits.setrange(lsb_offset, tcam_bit_width);
 }
 
-void TernaryMatchTable::gen_entry_range_cfg(json::map &entry, bool duplicate, 
+void TernaryMatchTable::gen_entry_range_cfg(json::map &entry, bool duplicate,
         unsigned nibble_offset) const {
     json::map &entry_range = entry["range"];
     entry_range["type"] = 4;
@@ -643,7 +647,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                 }
 
             } else {
-                gen_entry_cfg2(out, fix_name, lsb_offset, lsb_idx, msb_idx, source, 
+                gen_entry_cfg2(out, fix_name, lsb_offset, lsb_idx, msb_idx, source,
                         param_start_bit, field_width, tcam_bits);
             }
             param_start_bit += field_width;

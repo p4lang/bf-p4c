@@ -671,7 +671,7 @@ set (P4FACTORY_REGRESSION_TESTS_INTERNAL
   opcode_test_signed
   pctr
   power
-  # range                                     # PTF failure
+  range
   simple_l3_checksum_branched_end
   simple_l3_checksum_single_end
   simple_l3_checksum_taken_default_ingress
@@ -791,11 +791,11 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
 endforeach()
 
 # Disable failing tests
- bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen" 
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen"
      "all ^test.PortDownPktgenTest")
- bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_checksum" 
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_checksum"
      "all ^test.Ipv4UdpTranslateSpecialUpdTest")
- bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes" 
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes"
      "test.Phase0TableOpTest")
 
 # Add extra flags for p4_16_programs
