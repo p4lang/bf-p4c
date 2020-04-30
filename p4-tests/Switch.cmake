@@ -110,7 +110,7 @@ p4c_add_test_label("tofino" "METRICS" "smoketest_switch_16_compile_d2_profile")
          ^switch_l3.L3SVITest
          ^switch_l2.L2LagTest")
   p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_switch_16_Tests_x2" ${SWITCH_P4_16_X2}
-    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 5300" ${SWITCH_P4_16_PTF})
+    "${testExtraArgs} -arch tna -bfrt -profile x2_tofino -to 6000" ${SWITCH_P4_16_PTF})
   bfn_set_ptf_test_spec("tofino" "smoketest_switch_16_Tests_x2"
          "all
          ^switch_l3.L3SVITest
@@ -139,7 +139,7 @@ set_tests_properties("tofino/smoketest_switch_16_compile_j1_profile" PROPERTIES 
 set_tests_properties("tofino/smoketest_switch_16_compile_d2_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x1" PROPERTIES TIMEOUT 5400)
-set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 5400)
+set_tests_properties("tofino/smoketest_switch_16_Tests_x2" PROPERTIES TIMEOUT 6400)
 set_tests_properties("tofino/smoketest_switch_16_Tests_x0" PROPERTIES TIMEOUT 4500)
 
 # Switch master MSDC_PROFILE tests

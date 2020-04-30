@@ -39,7 +39,7 @@ bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         ^switch_l3.L3ECMPTest
         ^switch_l3.L3MulticastTest")
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y2" ${SWITCH_P4_16_Y2}
-  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2 -to 4400" ${SWITCH_P4_16_PTF})
+  "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y2_tofino2 -to 6000" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y2"
         "all
@@ -72,5 +72,5 @@ set_tests_properties("tofino2/smoketest_switch_16_compile_y2_profile" PROPERTIES
 set_tests_properties("tofino2/smoketest_switch_16_compile_y3_profile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_compile" PROPERTIES TIMEOUT 1200)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y1" PROPERTIES TIMEOUT 4500)
-set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT 4500)
+set_tests_properties("tofino2/smoketest_switch_16_Tests_y2" PROPERTIES TIMEOUT 6400)
 set_tests_properties("tofino2/smoketest_switch_16_Tests_y0" PROPERTIES TIMEOUT 4500)
