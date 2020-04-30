@@ -26,10 +26,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
                 error(what.lineno, "Hash column value out of range");
             return;
         } else if ((what.type == tSTR) && (what == "parity")) {
-            if (options.disable_gfm_parity) {
-                warning(what.lineno, "assembly generated with gfm parity enabled, but assembler run with --disable-gfm-parity");
-                return;
-            }
+            options.disable_gfm_parity = false;
             hash_table_parity[id] = lo;
             return;
         }

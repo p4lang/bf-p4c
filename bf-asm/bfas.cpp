@@ -24,7 +24,7 @@ option_t options = {
     .condense_json = true,
     .debug_info = false,
     .disable_egress_latency_padding = false,
-    .disable_gfm_parity = false,
+    .disable_gfm_parity = true,
     .disable_long_branch = false,
     .disable_power_gating = false,
     .gen_json = false,
@@ -162,8 +162,6 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;
-        } else if (!strcmp(av[i], "--disable-gfm-parity")) {
-            options.disable_gfm_parity = true;
         } else if (!strcmp(av[i], "--high_availability_disabled")) {
             options.high_availability_enabled = false;
         } else if (!strcmp(av[i], "--no-condense")) {
