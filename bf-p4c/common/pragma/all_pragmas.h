@@ -33,6 +33,7 @@ DEFINE_PRAGMA_CLASS(PragmaFieldListFieldSlice);
 DEFINE_PRAGMA_CLASS(PragmaFlexible);
 DEFINE_PRAGMA_CLASS(PragmaForceImmediate);
 DEFINE_PRAGMA_CLASS(PragmaForceShift);
+DEFINE_PRAGMA_CLASS(PragmaGFMParityEnable);
 DEFINE_PRAGMA_CLASS(PragmaGhostMetadata);
 DEFINE_PRAGMA_CLASS(PragmaIdletimeInterval);
 DEFINE_PRAGMA_CLASS(PragmaIdletimePerFlow);

@@ -293,6 +293,14 @@ const char *PragmaForceShift::help = "@pragma force_shift [ingress/egress] [bits
     "the state has to be split by the compiler, this pragma will cause "
     "compilation to fail.";
 
+const char *PragmaGFMParityEnable::name = "gfm_parity_enable";
+const char *PragmaGFMParityEnable::description =
+    "Enable hash parity checking on the Galois Field Matrix (GFM)";
+const char *PragmaGFMParityEnable::help = "@gfm_parity_enable\n"
+    "Global pragma which applies to the entire program. Compiler reserves a single bit"
+    " on each row of the GFM for parity and sets up the hardware to enable"
+    " parity checking on hash groups used in the program";
+
 const char *PragmaGhostMetadata::name = "__ghost_metadata";
 const char *PragmaGhostMetadata::description =
     "Declare metadata that is shared between Ingress and Ghost thread.";

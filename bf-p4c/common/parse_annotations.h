@@ -65,6 +65,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE_EMPTY(PragmaFlexible, PARSE_EMPTY, extPragma);
         BFN_PARSE(PragmaForceImmediate, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaForceShift, PARSE_PAIR, Expression, extPragma);
+        BFN_PARSE_EMPTY(PragmaGFMParityEnable, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaGhostMetadata, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaIdletimeInterval, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaIdletimePerFlow, PARSE, Expression, extPragma);

@@ -33,7 +33,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_dark_allocation = false;
     bool disable_table_placement_backfill = false;
     bool table_placement_in_order = false;
-    bool disable_gfm_parity = false;
+    bool disable_gfm_parity = true;
     int relax_phv_init = 0;
     bool quick_phv_alloc = false;
 #if BAREFOOT_INTERNAL || 1

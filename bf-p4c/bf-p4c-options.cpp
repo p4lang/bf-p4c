@@ -180,9 +180,6 @@ BFN_Options::BFN_Options() {
     registerOption("--disable-longbranch", nullptr,
         [this](const char *) { disable_long_branch = true; return true; },
         "Disable use of long branches");
-    registerOption("--disable-gfm-parity", nullptr,
-        [this](const char *) { disable_gfm_parity = true; return true; },
-         "Disable parity checking on the galois field matrix.");
     registerOption("--enable-longbranch", nullptr,
                    [this](const char *) {
                        if (Device::numLongBranchTags() > 0) {
@@ -407,6 +404,8 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
     auto pragmaName = annotation->name.name;
     if (pragmaName == "command_line")
         return parseCompilerOption(annotation);
+    if (pragmaName == "gfm_parity_enable")
+        BFNContext::get().options().disable_gfm_parity = false;
     return P4COptionPragmaParser::tryToParse(annotation);
 }
 

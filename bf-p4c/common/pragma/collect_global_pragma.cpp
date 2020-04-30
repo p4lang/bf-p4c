@@ -10,6 +10,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaAutoInitMetadata::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,
+    PragmaGFMParityEnable::name,
     PragmaMutuallyExclusive::name,
     PragmaNoOverlay::name,
     PragmaSolitary::name,
