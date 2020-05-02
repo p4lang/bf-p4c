@@ -540,15 +540,16 @@ EOF
 case $os in
     Linux)
         p4c_apt_server_available=false
-        p4c_server=compiler-svr4.swlab.barefootnetworks.com
+        p4c_server=compiler-svr4.sc.intel.com
         # check that we are on the Barefoot intranet and can access the package server.
         nc -z $p4c_server 22 > /dev/null 2>&1
         if [[ $? == 0 && $linux_distro == "Ubuntu" && $linux_version =~ "16.04" ]]; then
             p4c_apt_server_available=true
             echo "Found compiler server for prebuilt packages"
-            if [[ ! -e /etc/apt/sources.list.d/p4c.list ]]; then
-                echo "deb https://${p4c_server}/apt/ubuntu/ ${linux_codename} main" >/tmp/p4c.list
-                $SUDO mv /tmp/p4c.list /etc/apt/sources.list.d/
+            p4c_list=${p4c_server}-p4c.list
+            if [[ ! -e /etc/apt/sources.list.d/${p4c_list} ]]; then
+                echo "deb https://${p4c_server}/apt/ubuntu/ ${linux_codename} main" >/tmp/${p4c_list}
+                $SUDO mv /tmp/${p4c_list} /etc/apt/sources.list.d/
                 wget -O - http://$p4c_server/apt/p4c.gpg.key | sudo apt-key add -
                 $SUDO apt-get update
             fi
