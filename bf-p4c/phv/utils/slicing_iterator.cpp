@@ -3,6 +3,74 @@
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/lib/union_find.hpp"
 
+ordered_map<PHV::SuperCluster::SliceList*, bitvec> compressed_to_schema(
+    const ordered_map<PHV::SuperCluster::SliceList*, le_bitrange>& ranges,
+    const bitvec& compressed) {
+    ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas;
+    for (auto& kv : ranges) {
+        le_bitrange range = kv.second;
+        bitvec compressed_schema = compressed.getslice(range.lo, range.size());
+        bitvec expanded_schema;
+        for (int i = 0; i < range.size(); ++i) {
+            if (compressed_schema[i]) {
+                expanded_schema.setbit((i + 1) * 8);
+            }
+        }
+        split_schemas[kv.first] = expanded_schema;
+    }
+    return split_schemas;
+}
+
+std::string log_bit_schema(
+    const ordered_map<PHV::SuperCluster::SliceList*, bitvec>& split_schemas) {
+    std::stringstream ss;
+    ss << "Bit schema:\n";
+    for (auto& kv : split_schemas) {
+        int size = 0;
+        for (auto slice : *kv.first) {
+            size += slice.size();
+        }
+        std::stringstream xx;
+        for (int idx = 0; idx < size; ++idx) {
+            xx << (kv.second[idx] ? "1" : "-");
+        }
+        ss << "    " << xx.str() << "\n";
+        ss << "    " << kv.first << "\n";
+    }
+    ss << "\n";
+    return ss.str();
+}
+
+void bitvec_add(bitvec& rst, const bitvec& add) {
+    for (const int inc_bit : add) {
+        int i = inc_bit;
+        for (; rst.getbit(i); i++) {
+            rst.clrbit(i);
+        }
+        rst.setbit(i);
+    }
+}
+
+int get_sz(PHV::SuperCluster::SliceList* sl) {
+    int sz = 0;
+    for (auto& fs : *sl) {
+        sz += fs.size();
+    }
+    return sz;
+}
+
+bool is_allocable(PHV::SuperCluster* cluster) {
+    for (auto* sl : cluster->slice_lists()) {
+        if ((*sl->begin()).field()->exact_containers()) {
+            int sz = get_sz(sl);
+            if (sz != 8 && sz != 16 && sz != 32) {
+                return false;
+            }
+        }
+    }
+    return PHV::SuperCluster::is_well_formed(cluster);
+}
+
 class SuperClusterSliceListOrderItr {
     ordered_set<PHV::SuperCluster::SliceList*>::const_iterator list_itr_i;
     std::list<PHV::FieldSlice>::const_iterator fs_itr_i;
@@ -63,7 +131,7 @@ std::map<int, int> build_offsets_to_compress_schema(const PHV::SuperCluster* sc,
         [] (int s, PHV::FieldSlice fs) -> int {
             return s + fs.size();
         });
-        const int nbits = std::max(0, sz / 8 + (sz % 8) - 1);
+        const int nbits = std::max(0, (sz / 8) - 1 + int(sz % 8 > 0));
         for (int i = 0; i < nbits; i++) {
             if (schema[bits_right + i]) {
                 rst[right + (i + 1) * 8] = bits_right + i;
@@ -338,40 +406,53 @@ PHV::SlicingIterator::SlicingIterator(
             print_slicing_state(sliceLocations, exactSliceListSize);
         } while (change_i && iterations_i < 5);
 
-        // Drop false positive required slice at no_split fields.
-        if (!required_slices_i.empty()) {
-            const auto required = build_offsets_to_compress_schema(sc, required_slices_i);
-            auto next_required_slice = required.begin();
-            auto fs_itr = SuperClusterSliceListOrderItr(sc);
-            boost::optional<FieldSlice> last = boost::none;
-            LOG8("Checking required bits valid: " << sc
-                << " required_slices: " << required_slices_i);
-            while (!fs_itr.done()) {
-                const auto fs_offset = fs_itr.val();
-                const auto fs = fs_offset.first;
-                const auto offset = fs_offset.second;
-                const auto next_split = next_required_slice->first;
-                if (offset == next_split || offset + fs.size() > next_split) {
-                    // slice on the right of this fs.
-                    if (offset == next_split) {
-                        if (last != boost::none && (*last).field() == fs.field()
-                            && fs.field()->no_split()) {
-                            LOG1("Dropping required but no_split between ("
-                                << *last  << ")" << fs);
-                            required_slices_i.clrbit(next_required_slice->second);
-                        }
-                    } else if (fs.field()->no_split() ||
-                                noSplitSlices.find(fs) != noSplitSlices.end()) {
-                        LOG1("Dropping required but no_split on: " << fs);
-                        required_slices_i.clrbit(next_required_slice->second);
+        // mark no_split fields
+        LOG5("calc no_splits points in compressed_schema");
+        const auto mask = build_offsets_to_compress_schema(sc, bitvec(0, sentinel_idx_i + 1));
+        auto next_schema_bit = mask.begin();
+        auto fs_itr = SuperClusterSliceListOrderItr(sc);
+        boost::optional<FieldSlice> last = boost::none;
+        while (!fs_itr.done()) {
+            const auto fs_offset = fs_itr.val();
+            const auto fs = fs_offset.first;
+            const auto offset = fs_offset.second;
+            const auto next_bit = next_schema_bit->first;
+            LOG5("no_split check: "
+                 << "(schema_bit:" << next_bit << ")"
+                 << "(offset:" << offset << ")"
+                 << " fs: " << fs);
+            if (offset == next_bit || offset + fs.size() > next_bit) {
+                // bit on the right of this fs.
+                if (offset == next_bit) {
+                    // XXX(yumin): note that it's different from case2,
+                    // only if the field is no_split, not the fieldslice,
+                    // could we infer that it's no_split at the point.
+                    if (last != boost::none && (*last).field() == fs.field()
+                        && fs.field()->no_split()) {
+                        LOG5("no split is true (case 1) on " << next_schema_bit->second);
+                        no_splits_i.setbit(next_schema_bit->second);
                     }
-                    next_required_slice.operator++();
-                    if (next_required_slice == required.end()) {
-                        break;
-                    }
+                } else if (fs.field()->no_split() || noSplitSlices.count(fs)) {
+                    LOG5("no split is true (case 2) on " << next_schema_bit->second);
+                    no_splits_i.setbit(next_schema_bit->second);
                 }
+                next_schema_bit.operator++();
+                if (next_schema_bit == mask.end()) {
+                    break;
+                }
+            } else {
+                last = fs;
                 fs_itr.next();
             }
+        }
+        LOG5("no split schema: " << log_bit_schema(compressed_to_schema(ranges_i, no_splits_i)));
+
+        bitvec required_errors = required_slices_i & no_splits_i;
+        if (!required_errors.empty()) {
+            bitvec corrected = required_slices_i - required_errors;
+            LOG5("Required slices are wrong, adjusting from " << required_slices_i
+                 << " to " <<  corrected);
+            required_slices_i = corrected;
         }
 
         if (LOGGING(5)) {
@@ -399,7 +480,8 @@ PHV::SlicingIterator::SlicingIterator(
                                      sentinel_idx_i,
                                      boundaries_i,
                                      required_slices_i,
-                                     exact_containers_i);
+                                     exact_containers_i,
+                                     no_splits_i);
 
         if (LOGGING(5)) {
             std::stringstream ss;
@@ -458,8 +540,9 @@ int PHV::SlicingIterator::populate_initial_maps(
             if (!fs.field()->no_split()) return;
             noSplitSlices.insert(fs);
             auto& rot_cluster = sc_i->cluster(fs);
-            for (auto& rot_slice : rot_cluster.slices())
-            noSplitSlices.insert(rot_slice);
+            for (auto& rot_slice : rot_cluster.slices()) {
+                noSplitSlices.insert(rot_slice);
+            }
     });
     // collecting info for pa_container_size progma.
     // set no split for those progma fields.
@@ -507,8 +590,8 @@ int PHV::SlicingIterator::populate_initial_maps(
     // in sequence, and the offset represents that sequence.
     int sliceListOffset = 0;
     for (auto* list : sc_i->slice_lists()) {
-        LOG5("Determining initial co-ordinates for slice list");
-        LOG5("\t" << *list);
+        LOG6("Determining initial co-ordinates for slice list");
+        LOG6("\t" << *list);
 
         // Calculate the size of the slice list up front.
         int sliceListSize = 0;
@@ -520,21 +603,21 @@ int PHV::SlicingIterator::populate_initial_maps(
             // specified). Then add the same pragmas for all fields in the rotational cluster
             // with that field.
             pa_container_sizes_i[it->first] = it->second;
-            LOG5("  Adding pa_container_size for field: " << it->first);
+            LOG6("  Adding pa_container_size for field: " << it->first);
             for (auto sz : it->second)
-                LOG5("    " << sz);
+                LOG6("    " << sz);
             auto& rot_cluster = sc_i->cluster(slice);
             for (auto& rot_slice : rot_cluster.slices()) {
                 if (slice == rot_slice) continue;
                 if (pa_container_sizes_i.count(rot_slice.field())) {
-                    LOG5("    Both original field and rotational cluster field have "
+                    LOG6("    Both original field and rotational cluster field have "
                             "container size pragmas!");
                     // XXX(Deep): Compare the two specifications of size.
                 }
                 pa_container_sizes_i[rot_slice.field()] = it->second;
-                LOG5("  Adding pa_container_size for field: " << rot_slice);
+                LOG6("  Adding pa_container_size for field: " << rot_slice);
                 for (auto sz : it->second)
-                    LOG5("    " << sz); } }
+                    LOG6("    " << sz); } }
 
         // Set to true, if all slices in the slice list are of the same field AND there is a
         // no-split constraint on the field.
@@ -557,7 +640,7 @@ int PHV::SlicingIterator::populate_initial_maps(
                     break;
                 }
             }
-            LOG5("\tIs the slice list composed of slices of the same no-split field? " <<
+            LOG6("\tIs the slice list composed of slices of the same no-split field? " <<
                     (allSlicesNoSplitSameField ? "YES" : "NO"));
         } else {
             allSlicesNoSplitSameField = false;
@@ -577,7 +660,7 @@ int PHV::SlicingIterator::populate_initial_maps(
         for (auto& slice : *list) {
             originalSliceOffset[slice].first = sliceOffsetWithinSliceList;
             // Set the last seen slice.
-            LOG5("\tDetermining co-ordinates for slice: " << slice);
+            LOG6("\tDetermining co-ordinates for slice: " << slice);
             // If this field is no-split and the slice is smaller than the field size, and the slice
             // is the first slice of the field, use the field size instead of the slice size to set
             // the right co-ordinate.
@@ -589,7 +672,7 @@ int PHV::SlicingIterator::populate_initial_maps(
                     useFieldSizeInLieuOfSliceSize = true;
             }
             if (prevSlice)
-                LOG5("\t\tPrevious slice: " << prevSlice);
+                LOG6("\t\tPrevious slice: " << prevSlice);
             lastSliceInSliceList = &slice;
             if (slice.field()->exact_containers())
                 has_exact_containers = true;
@@ -601,7 +684,7 @@ int PHV::SlicingIterator::populate_initial_maps(
                 if (prevSlice && !prevSlice->field()->isCompilerGeneratedPaddingField()) {
                     if (sliceLocations.at(*prevSlice).second != -1) {
                         required_slices_i.setbit(sliceLocations.at(*prevSlice).second);
-                        LOG5("\t\t  Slicing before padding field " << slice);
+                        LOG6("\t\t  Slicing before padding field " << slice);
                     }
                 }
             }
@@ -614,7 +697,7 @@ int PHV::SlicingIterator::populate_initial_maps(
                         "Can't slice on field %1% in slice list %2% "
                         "(which has deparsed bottom bits) because it is not byte aligned",
                         cstring::to_cstring(slice), cstring::to_cstring(list));
-                LOG5("\t  Required slice at " << offset + (sliceOffsetWithinSliceList/ 8 - 1)
+                LOG6("\t  Required slice at " << offset + (sliceOffsetWithinSliceList/ 8 - 1)
                         << " for field slice " << slice);
                 required_slices_i.setbit(offset + (sliceOffsetWithinSliceList / 8 - 1)); }
 
@@ -623,7 +706,7 @@ int PHV::SlicingIterator::populate_initial_maps(
             // the previous slice.
             if (prevSlice && prevSlice->field() == slice.field() && slice.field()->no_split()) {
                 sliceLocations[slice] = sliceLocations[*prevSlice];
-                LOG5("\t  A. Setting co-ordinates for a no-split field's slice to the prev " <<
+                LOG6("\t  A. Setting co-ordinates for a no-split field's slice to the prev " <<
                         "slice's co-ordinates: " <<
                         get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
                 sliceOffsetWithinSliceList += slice.size();
@@ -639,7 +722,7 @@ int PHV::SlicingIterator::populate_initial_maps(
             // exclusively of slices of the same no-split field, and if the slice is not byte
             // aligned, then its left limit is the previous byte boundary. Left limit of -1
             // indicates that the slice may be split at its start.
-            LOG5("\t\tsliceOffsetWithinSliceList: " << sliceOffsetWithinSliceList <<
+            LOG6("\t\tsliceOffsetWithinSliceList: " << sliceOffsetWithinSliceList <<
                     ", offset: " << offset);
             initialOffset[slice] = offset;
             if (sliceOffsetWithinSliceList != 0 && !allSlicesNoSplitSameField &&
@@ -658,18 +741,18 @@ int PHV::SlicingIterator::populate_initial_maps(
             int addFactor = (rightOffsetForSlice / 8) - (1 - bool(rightOffsetForSlice % 8));
             // Calculate the number of bytes in the slice list.
             int sliceListBytesNeeded = sliceListSize / 8 - (1 - bool(sliceListSize % 8));
-            LOG5("\t\tSlice list size: " << sliceListSize << ", sliceListBytesNeeded: " <<
+            LOG6("\t\tSlice list size: " << sliceListSize << ", sliceListBytesNeeded: " <<
                     sliceListBytesNeeded);
 
             // If all slices in the slice list do not all correspond to the same no-split field,
             // and if the
             if (!allSlicesNoSplitSameField && addFactor != sliceListBytesNeeded) {
                 right_limit = offset + addFactor;
-                LOG5("\t\tSetting right limit offset to: " << right_limit << " (" << offset <<
+                LOG6("\t\tSetting right limit offset to: " << right_limit << " (" << offset <<
                         " + " << addFactor << ")");
             }
             sliceLocations[slice] = std::make_pair(left_limit, right_limit);
-            LOG5("\t  B. Setting initial co-ordinates for slice " << slice << " to: " <<
+            LOG6("\t  B. Setting initial co-ordinates for slice " << slice << " to: " <<
                     get_slice_coordinates(sliceListSize, sliceLocations.at(slice)));
             prevSlice = &slice;
         }
@@ -713,7 +796,7 @@ int PHV::SlicingIterator::populate_initial_maps(
 
         offset += bitsNeededForBoundaries;
         boundaries_i.setbit(offset);
-        LOG5("    ...slice list (" << sliceListSize << "b) with compressed bitvec size "
+        LOG6("    ...slice list (" << sliceListSize << "b) with compressed bitvec size "
                 << bitsNeededForBoundaries << " and offset " << offset);
 
         BUG_CHECK(lastSliceInSliceList != nullptr, "Were there no slices in the slice list?");
@@ -793,42 +876,42 @@ void PHV::SlicingIterator::impose_MAU_constraints(
     for (auto* list : candidateSliceLists) {
         for (auto& originalCandidate : *list) {
             if (alreadyConsidered.count(originalCandidate)) {
-                LOG5("Ignoring slice " << originalCandidate << " that has already been processed.");
+                LOG6("Ignoring slice " << originalCandidate << " that has already been processed.");
                 continue; }
-            LOG5("Original candidate: " << originalCandidate);
+            LOG6("Original candidate: " << originalCandidate);
             std::vector<PHV::FieldSlice> candidates;
             if (replaceSlicesMap.count(originalCandidate)) {
                 for (auto& candidate : replaceSlicesMap.at(originalCandidate)) {
                     candidates.push_back(candidate);
-                    LOG5("  Considering replacement slice: " << candidate); }
+                    LOG6("  Considering replacement slice: " << candidate); }
             } else {
                 candidates.push_back(originalCandidate); }
             for (auto& candidate : candidates) {
                 if (alreadyConsidered.count(candidate)) {
-                    LOG5("Ignoring slice " << candidate << " that has already been processed.");
+                    LOG6("Ignoring slice " << candidate << " that has already been processed.");
                     continue; }
                 alreadyConsidered.insert(candidate);
-                LOG5("Considering rotational cluster constraints for slice: " << candidate);
+                LOG6("Considering rotational cluster constraints for slice: " << candidate);
                 // { candidate } set are all slices that have an exact container requirement and
                 // belong to slice lists.
                 // auto& rot_cluster = sc_i->cluster(candidate);
                 int minSize = exactSliceListSize[candidate];
                 boost::optional<FieldSlice> minSlice;
                 if (!sliceToRotSlices.count(candidate)) {
-                    LOG5("\tNo rotational slices corresponding to " << candidate);
+                    LOG6("\tNo rotational slices corresponding to " << candidate);
                     continue; }
                 for (auto& slice : sliceToRotSlices.at(candidate)) {
-                    LOG5("\tRotational cluster slice: " << slice);
+                    LOG6("\tRotational cluster slice: " << slice);
                     // Ignore the loop if the slice in the rotational cluster is the same as the
                     // candidate slice.
                     if (slice == candidate) {
-                        LOG5("\t\tRotational slice same as the one being considered.");
+                        LOG6("\t\tRotational slice same as the one being considered.");
                         continue; }
                     // If the slice in the rotational cluster does not have the exact containers
                     // requirement (it is metadata), then it does not induce any slicing
                     // requirements.
                     if (!slice.field()->exact_containers()) {
-                        LOG5("\t\tRotational slice does not have exact containers requirement.");
+                        LOG6("\t\tRotational slice does not have exact containers requirement.");
                         continue; }
                     // If the slice list size for the non metadata slice is greater than or equal to
                     // the current field's slice list size, then continue. Because this slice might
@@ -837,13 +920,13 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     bool equal = exactSliceListSize[candidate] == exactSliceListSize[slice];
                     if (!paddingFields.count(candidate)) {
                         if (smaller) {
-                            LOG5("\t\tSlice list for candidate slice (" <<
+                            LOG6("\t\tSlice list for candidate slice (" <<
                                  exactSliceListSize[candidate] << "b) smaller than the slice list "
                                  "for slice " << slice << " (" << exactSliceListSize[slice] <<
                                  "b)");
                             continue; }
                         if (equal) {
-                            LOG5("\t\tSlice list for candidate slice (" <<
+                            LOG6("\t\tSlice list for candidate slice (" <<
                                  exactSliceListSize[candidate] << "b) equal in size to the slice "
                                  "list for slice " << slice << " (" << exactSliceListSize[slice] <<
                                  "b)");
@@ -851,7 +934,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     if (minSize > exactSliceListSize[slice]) {
                         minSlice = slice;
                         minSize = exactSliceListSize[slice];
-                        LOG5("\t\tSetting minSlice to " << slice << " and minSize to " << minSize <<
+                        LOG6("\t\tSetting minSlice to " << slice << " and minSize to " << minSize <<
                                 "b."); } }
 
                 // minSlice represents the slice in the rotational cluster with the exact containers
@@ -865,9 +948,9 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 // 3. The field is a padding field, so it may be cut off; we do not need to enforce
                 // slicing for padding fields.
                 if (!minSlice) {
-                    LOG5("\tMin slice not found. Continuing...");
+                    LOG6("\tMin slice not found. Continuing...");
                     continue; }
-                LOG5("\tNeed to slice around " << candidate << " to match slice list size " <<
+                LOG6("\tNeed to slice around " << candidate << " to match slice list size " <<
                         minSize << "b of " << *minSlice);
 
                 // Extract information about the slice list for the slice under consideration.
@@ -919,8 +1002,8 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 const FieldSlice* firstSliceInCurrentSliceList = nullptr;
                 for (unsigned i = 0; i < updatedSliceList.size(); i++) {
                     auto& slice = updatedSliceList[i];
-                    LOG5("\t\t\tSlice: " << slice);
-                    LOG5("\t\t\t  right: " << sliceLocations[slice].second);
+                    LOG6("\t\t\tSlice: " << slice);
+                    LOG6("\t\t\t  right: " << sliceLocations[slice].second);
                     // First byte of the original slice list is within its own slice list, so ignore
                     // it.  In this case, the size of the slice in its own slice list may be less
                     // than OR EQUAL to 8b.
@@ -928,7 +1011,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                             sliceLocations[slice].second == -1)
                         continue;
                     // Potential first slice in the slice list for the current slice.
-                    LOG5("\t\t\t  offsetWithinOriginalSliceList: " << offsetWithinOriginalSliceList
+                    LOG6("\t\t\t  offsetWithinOriginalSliceList: " << offsetWithinOriginalSliceList
                             << ", left = " << sliceLocations[slice].first);
                     if (offsetWithinOriginalSliceList == 0) firstSliceInCurrentSliceList = &slice;
                     // If the left limit is -1, then it indicates the start of a new slice list.
@@ -937,20 +1020,20 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     // for keeping track of the new slice list limits that are created.  Ignore the
                     // first byte of the slice list while counting offsetWithinSliceList.
                     if (offsetWithinOriginalSliceList > 8 && sliceLocations[slice].first == -1) {
-                        LOG5("\t\t\tCurrent slice: " << slice << ", setting offset to 0.");
+                        LOG6("\t\t\tCurrent slice: " << slice << ", setting offset to 0.");
                         firstSliceInCurrentSliceList = &slice;
                         offsetWithinSliceList = 0;
                         offsetWithinOriginalSliceList += slice.size();
                         if (slice != candidate) continue; }
                     if (firstSliceInCurrentSliceList != nullptr) {
-                        LOG5("\t\t\t  first Slice: " << *firstSliceInCurrentSliceList);
+                        LOG6("\t\t\t  first Slice: " << *firstSliceInCurrentSliceList);
                     } else {
-                        LOG5("\t\t\t  No first slice"); }
-                    LOG5("\t\t\t  offsetWithinSliceList: " << offsetWithinSliceList);
+                        LOG6("\t\t\t  No first slice"); }
+                    LOG6("\t\t\t  offsetWithinSliceList: " << offsetWithinSliceList);
                     // Do not include the current slice list in the offsetWithinSliceList. That way,
                     // we only slice before the current slice.
                     if (slice == candidate) {
-                        LOG5("\t\t\tCurrent slice: " << slice << ", found it! offset: " <<
+                        LOG6("\t\t\tCurrent slice: " << slice << ", found it! offset: " <<
                                 offsetWithinSliceList);
                         auto candidateSliceListSize = offsetWithinSliceList + slice.size();
                         if (candidateSliceListSize == minSize) break;
@@ -972,12 +1055,12 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                                     (8 * ROUNDUP(sizeWithoutJSlice, 8) - 8);
                                 LOG6("\t\t\tNew minSize set to: " << minSize); } }
                         break; }
-                    LOG5("\t\t\tCurrent slice: " << slice << " " << slice.size() <<
+                    LOG6("\t\t\tCurrent slice: " << slice << " " << slice.size() <<
                             "b, offset within original slice list: " << offsetWithinSliceList);
                     offsetWithinSliceList += slice.size();
                     offsetWithinOriginalSliceList += slice.size(); }
                 BUG_CHECK(firstSliceInCurrentSliceList != nullptr, "No slice in slice list?");
-                LOG5("\t\tFirst slice in current slice's slice list is: " <<
+                LOG6("\t\tFirst slice in current slice's slice list is: " <<
                         *firstSliceInCurrentSliceList);
                 bool foundFirstSliceInCurrentSliceList = false;
 
@@ -993,7 +1076,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 int processedBits = 0;
                 int left = sliceLocations[candidate].first;
                 int right = sliceLocations[candidate].second;
-                LOG5("\t  For candidate slice, left = " << left << " and right = " << right);
+                LOG6("\t  For candidate slice, left = " << left << " and right = " << right);
                 // Set if a new split in the slice list is created before the current slice.
                 bool newSliceBoundaryFoundLeft = false;
 
@@ -1008,7 +1091,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         if (slice == *firstSliceInCurrentSliceList) {
                             foundFirstSliceInCurrentSliceList = true;
                             sliceListToProcess.push_back(slice);
-                            LOG5("\t\t  Q1. Must process " << slice);
+                            LOG6("\t\t  Q1. Must process " << slice);
                             if ((originalSliceOffset.at(slice).first % 8) == 0)
                                 possibleSlicingPoints.insert(slice);
                         } else {
@@ -1016,10 +1099,10 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         }
                     } else {
                         sliceListToProcess.push_back(slice);
-                        LOG5("\t\t  Q2. Must process " << slice);
+                        LOG6("\t\t  Q2. Must process " << slice);
                         int offsetWithinOriginalSliceList = originalSliceOffset.at(slice).first;
                         int bitsLeftAfterThisSlice = originalSliceOffset.at(slice).second;
-                        LOG5("\t\t\t" << offsetWithinOriginalSliceList << ", " <<
+                        LOG6("\t\t\t" << offsetWithinOriginalSliceList << ", " <<
                              bitsLeftAfterThisSlice << ", " <<
                              originalSliceOffset.at(candidate).first << ", " << minSize);
                         if (offsetWithinOriginalSliceList % 8 == 0 && bitsLeftAfterThisSlice >=
@@ -1028,9 +1111,9 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                             possibleSlicingPoints.insert(slice); } }
                 if (possibleSlicingPoints.size() > 0) {
                     for (auto& slice : possibleSlicingPoints)
-                        LOG5("\t\t\tPossible slicing point: " << slice);
+                        LOG6("\t\t\tPossible slicing point: " << slice);
                 } else {
-                    LOG5("\t\t\tEmpty slicing points list for " << candidate);
+                    LOG6("\t\t\tEmpty slicing points list for " << candidate);
                     continue; }
 
                 LOG6("\t\t\t  offsetWithinSliceList: " << offsetWithinSliceList);
@@ -1040,23 +1123,23 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     required_slices_i.setbit(left);
                     change_i = true;
                     newSliceBoundaryFoundLeft = true;
-                    LOG5("\t  A. Slicing before slice " << candidate);
+                    LOG6("\t  A. Slicing before slice " << candidate);
                     // New slice list started.
                     offsetWithinSliceList = 0;
                     int newSliceListSize = processSliceListBefore(alreadyProcessedSlices,
                             exactSliceListSize, sliceLocations, sliceListToProcess, candidate);
-                    LOG5("\t\tCreated a new slice list of " << newSliceListSize << "b.");
+                    LOG6("\t\tCreated a new slice list of " << newSliceListSize << "b.");
                 } else if (left != -1) {
                     auto slicingPoint = getBestSlicingPoint(sliceListToProcess,
                             possibleSlicingPoints, minSize, candidate);
-                    LOG5("\t\t  Best slicing point: " << slicingPoint);
+                    LOG6("\t\t  Best slicing point: " << slicingPoint);
                     if (!sliceLocations.count(slicingPoint)) {
-                        LOG5("\t\t\tNeed to split an existing slice from the slice list");
+                        LOG6("\t\t\tNeed to split an existing slice from the slice list");
                         breakUpSlice(sliceListToProcess, slicingPoint, sliceLocations,
                                 exactSliceListSize, originalSliceOffset, replaceSlicesMap); }
                     if (sliceLocations[slicingPoint].first != -1) {
-                        LOG5("\t  B. Slicing before slice " << slicingPoint);
-                        LOG5("\t\t" << sliceLocations[slicingPoint].first);
+                        LOG6("\t  B. Slicing before slice " << slicingPoint);
+                        LOG6("\t\t" << sliceLocations[slicingPoint].first);
                         required_slices_i.setbit(sliceLocations[slicingPoint].first);
                         change_i = true;
                         newSliceBoundaryFoundLeft = true;
@@ -1073,12 +1156,12 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 // must be put into the same slice list.  E.g. if we have fields a<3b>, b<3b>,
                 // c<2b>, and b is the field under consideration (slice) and minSize is 8b, then
                 // posInSliceList = 3, and carryOver = 2b.
-                LOG5("\t  minSize: " << minSize << ", offset: " << offsetWithinSliceList <<
+                LOG6("\t  minSize: " << minSize << ", offset: " << offsetWithinSliceList <<
                         ", slice size: " << candidate.size() << ", processedBits: " <<
                         processedBits);
                 int carryOver = minSize - (offsetWithinSliceList - processedBits);
                 int carryOverAfterSlice = carryOver - candidate.size();
-                LOG5("\t  carryOver: " << carryOver << " " << carryOverAfterSlice <<
+                LOG6("\t  carryOver: " << carryOver << " " << carryOverAfterSlice <<
                         " more bits must be included in this slice list.");
 
                 // Set if a new split in the slice list is created after the current slice.
@@ -1087,7 +1170,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     newSliceBoundaryFoundRight = true;
                     required_slices_i.setbit(right);
                     change_i = true;
-                    LOG5("\t  Slicing after slice " << candidate);
+                    LOG6("\t  Slicing after slice " << candidate);
                     updateSliceListInformation(candidate, replaceSlicesMap, sliceLocations,
                             true /* after */); }
                 bool slicesLeftToProcess = carryOverAfterSlice > 0;
@@ -1102,7 +1185,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 // we decide to break a slice list at a particular boundary, we will get new slice
                 // lists; we need to update the slice lists sizes and the byte boundaries for each
                 // slice, once the point for the slicing is found.
-                LOG5("\t  Need to update the resulting slice list.");
+                LOG6("\t  Need to update the resulting slice list.");
 
                 int intraListSize = 0;
                 std::vector<FieldSlice> seenFieldSlices;
@@ -1110,10 +1193,10 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 ordered_map<FieldSlice, ordered_set<int>> splitSlices;
                 for (auto& slice : sliceListToProcess) {
                     if (alreadyProcessedSlices.count(slice)) {
-                        LOG5("\t\tNew slice list for slice " << slice << " has already been "
+                        LOG6("\t\tNew slice list for slice " << slice << " has already been "
                              "created.");
                         continue; }
-                    LOG5("\t\tCo-ordinate for slice " << slice << ": " << exactSliceListSize[slice]
+                    LOG6("\t\tCo-ordinate for slice " << slice << ": " << exactSliceListSize[slice]
                          << "b, " << sliceLocations[slice].first << "L, " <<
                          sliceLocations[slice].second << "R.");
                     // Boundary was shifted to before this field, so change the size for the fields
@@ -1121,7 +1204,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     if (newSliceBoundaryFoundLeft) {
                         // Still processing fields before the slicing point.
                         if (slice != candidate) {
-                            LOG5("\t\t  Adding " << slice << " to seen fields before slicing "
+                            LOG6("\t\t  Adding " << slice << " to seen fields before slicing "
                                  "point.");
                             seenFieldSlices.push_back(slice);
                             continue; }
@@ -1129,7 +1212,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         for (auto& sl : seenFieldSlices) {
                             intraListSize += sl.size();
                             exactSliceListSize[sl] = minSize;
-                            LOG5("\t\t  C. Setting " << sl << " co-ordinates to: " <<
+                            LOG6("\t\t  C. Setting " << sl << " co-ordinates to: " <<
                                  get_slice_coordinates(exactSliceListSize[sl], sliceLocations[sl]));
                             alreadyProcessedSlices.insert(sl); }
                         newSliceBoundaryFoundLeft = false; }
@@ -1140,12 +1223,12 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     // slice list.
                     if (slice == candidate && newSliceBoundaryFoundRight) {
                         intraListSize += slice.size();
-                        LOG5("intraListSize: " << intraListSize);
+                        LOG6("intraListSize: " << intraListSize);
                         BUG_CHECK(intraListSize % 8 == 0,
                                 "Field slicing has created a slice list at a nonbyte boundary");
                         exactSliceListSize[slice] = intraListSize;
                         sliceLocations[slice].second = -1;
-                        LOG5("\t\t  D. Setting " << slice << " co-ordinates to: " <<
+                        LOG6("\t\t  D. Setting " << slice << " co-ordinates to: " <<
                                 get_slice_coordinates(exactSliceListSize[slice],
                                     sliceLocations[slice]));
                         auto tempSize = 0;
@@ -1154,11 +1237,11 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                             exactSliceListSize[sl] = intraListSize;
                             if (8 * ROUNDUP(tempSize, 8) == minSize)
                                 sliceLocations[sl].second = -1;
-                            LOG5("\t\t  D. Setting previously seen " << sl << " co-ordinates to: "
+                            LOG6("\t\t  D. Setting previously seen " << sl << " co-ordinates to: "
                                  << get_slice_coordinates(exactSliceListSize[sl],
                                      sliceLocations[sl])); }
                         intraListSize = 0;
-                        LOG5("\t\t\tClearing seenFieldSlices");
+                        LOG6("\t\t\tClearing seenFieldSlices");
                         seenFieldSlices.clear();
                         alreadyProcessedSlices.insert(slice);
                         continue; }
@@ -1167,8 +1250,8 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                             originalSliceOffset.at(slice).first) {
                         seenFieldSlices.push_back(slice);
                         intraListSize += slice.size();
-                        LOG5("\t\t  e. Discovered already accounted for slice " << slice);
-                        LOG5("\t\t  intraListSize: " << intraListSize << " bits. Carry over: " <<
+                        LOG6("\t\t  e. Discovered already accounted for slice " << slice);
+                        LOG6("\t\t  intraListSize: " << intraListSize << " bits. Carry over: " <<
                                 carryOver);
                         continue; }
 
@@ -1177,23 +1260,23 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         seenFieldSlices.push_back(slice);
                         intraListSize += slice.size();
                         carryOver = carryOverAfterSlice;
-                        LOG5("\t\t  a. Discovered " << intraListSize << " bits. Carry over: " <<
+                        LOG6("\t\t  a. Discovered " << intraListSize << " bits. Carry over: " <<
                                 carryOver);
                         continue; }
                     if (allSlicesGoToNewSliceList) {
                         seenFieldSlices.push_back(slice);
                         intraListSize += slice.size();
                         carryOver -= slice.size();
-                        LOG5("\t\t  b. Discovered " << intraListSize << " bits. Carry over: " <<
+                        LOG6("\t\t  b. Discovered " << intraListSize << " bits. Carry over: " <<
                                 carryOver);
                         continue;
                     } else {
-                        LOG5("This slice: " << slice);
+                        LOG6("This slice: " << slice);
                         int carryOverAfterThisSlice = carryOver - slice.size();
                         if (carryOverAfterThisSlice <= 0) {
                             // Check for padding fields and setbit on the vector here.
                             intraListSize += carryOver;
-                            LOG5("\t\t\tintraListSize increased to " << intraListSize <<
+                            LOG6("\t\t\tintraListSize increased to " << intraListSize <<
                                     " due to carryOver.");
                             int sliceListSizeWithoutPadding = 0;
                             int lastRightOffset = -1;
@@ -1225,7 +1308,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                                     sliceLocations[sl].second = -1;
                                 if (roundedUpSizeSoFar < 8)
                                     sliceLocations[sl].first = -1;
-                                LOG5("\t\t  E. Setting " << sl << " co-ordinates to: " <<
+                                LOG6("\t\t  E. Setting " << sl << " co-ordinates to: " <<
                                      get_slice_coordinates(exactSliceListSize[sl],
                                          sliceLocations[sl])); }
                             if (!slice.field()->isCompilerGeneratedPaddingField() &&
@@ -1259,7 +1342,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                             if (slice.field()->isCompilerGeneratedPaddingField()) {
                                 exactSliceListSize[slice] = intraListSize;
                                 sliceLocations[slice].second = lastRightOffset;
-                                LOG5("\t\t  F. Setting " << slice << " co-ordinates to: " <<
+                                LOG6("\t\t  F. Setting " << slice << " co-ordinates to: " <<
                                         get_slice_coordinates(exactSliceListSize[slice],
                                             sliceLocations[slice]));
                                 alreadyConsidered.insert(slice);
@@ -1272,17 +1355,17 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                                     sliceToSliceLists[seenSlice] = beforeSlicingPoint;
                                 }
                                 allSlicesGoToNewSliceList = true;
-                                LOG5("\t\t\tMark all slices as part of new slice list."); }
+                                LOG6("\t\t\tMark all slices as part of new slice list."); }
                             // We have to slice at the lastRightOffset bit.
                             if (lastRightOffset != -1) {
-                                LOG5("\t\t\tSlicing at last right offset: " << lastRightOffset);
+                                LOG6("\t\t\tSlicing at last right offset: " << lastRightOffset);
                                 required_slices_i.setbit(lastRightOffset);
                                 change_i = true;
                                 // TODO 3
                             }
                             // This slice has to be split in the middle, so update its coordinates
                             // accordingly.
-                            LOG5("\t\t\tClearing seenFieldSlices");
+                            LOG6("\t\t\tClearing seenFieldSlices");
                             seenFieldSlices.clear();
                             intraListSize = 0 - (carryOverAfterThisSlice);
                             carryOver += carryOverAfterThisSlice;
@@ -1296,24 +1379,24 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                                 LOG6("\t\t\tAdding " << slice.size() + carryOverAfterThisSlice <<
                                         " to splitSlices map for " << slice);
                                 alreadyConsidered.insert(slice); }
-                            LOG5("\t\t\tClearing state in preparation for new slice list.");
-                            LOG5("\t\t\tNew intra list size: " << intraListSize <<
+                            LOG6("\t\t\tClearing state in preparation for new slice list.");
+                            LOG6("\t\t\tNew intra list size: " << intraListSize <<
                                  ", new carry over: " << carryOver);
                             continue;
                         } else {
                             // Handle case where carryOver > 0.
-                            LOG5("\t\t  G. Setting " << slice << " co-ordinates to: " <<
+                            LOG6("\t\t  G. Setting " << slice << " co-ordinates to: " <<
                                     get_slice_coordinates(exactSliceListSize[slice],
                                         sliceLocations[slice]));
                             carryOver -= slice.size();
                             seenFieldSlices.push_back(slice);
                             intraListSize += slice.size();
-                            LOG5("\t\t  c. Discovered " << intraListSize << " bits. Carry over: " <<
+                            LOG6("\t\t  c. Discovered " << intraListSize << " bits. Carry over: " <<
                                     carryOver);
                             continue; } }
                     seenFieldSlices.push_back(slice);
                     intraListSize += slice.size();
-                    LOG5("\t\t  d. Discovered " << intraListSize << " bits. Carry over: " <<
+                    LOG6("\t\t  d. Discovered " << intraListSize << " bits. Carry over: " <<
                             carryOver); }
 
                 for (auto& kv : splitSlices) {
@@ -1321,7 +1404,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                         auto range = le_bitrange(StartLen(kv.first.range().lo + *it, kv.first.size()
                                     - *it));
                         PHV::FieldSlice slicingPoint(kv.first.field(), range);
-                        LOG5("\t\t  Target slicing point: " << slicingPoint);
+                        LOG6("\t\t  Target slicing point: " << slicingPoint);
                         breakUpSlice(sliceListToProcess, slicingPoint, sliceLocations,
                                 exactSliceListSize, originalSliceOffset, replaceSlicesMap); } }
 
@@ -1330,10 +1413,10 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                 int remainingBitsVisited = 0;
                 int seenSliceListSize = 0;
                 for (auto& slice : seenFieldSlices) seenSliceListSize += slice.size();
-                LOG5("\t\tIntra list size: " << intraListSize << ", seenSliceListSize: " <<
+                LOG6("\t\tIntra list size: " << intraListSize << ", seenSliceListSize: " <<
                         seenSliceListSize);
                 for (auto& slice : seenFieldSlices) {
-                    LOG5("\t\t  Seen field slice: " << slice);
+                    LOG6("\t\t  Seen field slice: " << slice);
                     if (remainingBitsVisited / 8 == 0)
                         sliceLocations[slice].first = -1;
                     remainingBitsVisited += slice.size();
@@ -1349,7 +1432,7 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     }
                     if (nextByteBoundary == -1 || nextByteBoundary == exactSliceListSize[slice])
                         sliceLocations[slice].second = -1;
-                    LOG5("\t\t  H. Setting " << slice << " co-ordinates to: " <<
+                    LOG6("\t\t  H. Setting " << slice << " co-ordinates to: " <<
                             get_slice_coordinates(exactSliceListSize[slice],
                                 sliceLocations[slice])); } } } }
 }
@@ -1359,14 +1442,14 @@ void PHV::SlicingIterator::updateSliceLists(
         ordered_map<FieldSlice, int>& exactSliceListSize,
         const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) {
     for (const auto& kv : replaceSlicesMap) {
-        LOG5("\t\t\tReplacing: " << kv.first << " with");
-        LOG5("\t\t\t  - " << kv.second[0]);
-        LOG5("\t\t\t  - " << kv.second[1]);
+        LOG6("\t\t\tReplacing: " << kv.first << " with");
+        LOG6("\t\t\t  - " << kv.second[0]);
+        LOG6("\t\t\t  - " << kv.second[1]);
 
         initialOffset[kv.second[0]] = initialOffset[kv.first];
         initialOffset[kv.second[1]] = initialOffset[kv.first] + (kv.second[0].range().size() / 8);
-        LOG5("Update InitOffset " << kv.second[0] << " to " << initialOffset[kv.second[0]]);
-        LOG5("Update InitOffset " << kv.second[1] << " to " << initialOffset[kv.second[1]]);
+        LOG6("Update InitOffset " << kv.second[0] << " to " << initialOffset[kv.second[0]]);
+        LOG6("Update InitOffset " << kv.second[1] << " to " << initialOffset[kv.second[1]]);
     }
     std::vector<PHV::SuperCluster::SliceList*> toDelete;
     std::vector<PHV::SuperCluster::SliceList*> toAdd;
@@ -1379,7 +1462,7 @@ void PHV::SlicingIterator::updateSliceLists(
             }
         }
         if (!modifyList) continue;
-        LOG5("\t\t\tNeed to change slice list: " << std::endl << *list);
+        LOG6("\t\t\tNeed to change slice list: " << std::endl << *list);
         PHV::SuperCluster::SliceList* newSliceList = new PHV::SuperCluster::SliceList();
         for (auto& slice : *list) {
             if (!exactSliceListSize.count(slice) && replaceSlicesMap.count(slice)) {
@@ -1389,7 +1472,7 @@ void PHV::SlicingIterator::updateSliceLists(
                 newSliceList->push_back(slice);
             }
         }
-        LOG5("\t\t\tNew slice list: " << std::endl << newSliceList);
+        LOG6("\t\t\tNew slice list: " << std::endl << newSliceList);
         toDelete.push_back(list);
         toAdd.push_back(newSliceList);
     }
@@ -1404,7 +1487,7 @@ void PHV::SlicingIterator::breakUpSlice(
         ordered_map<FieldSlice, int>& exactSliceListSize,
         ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
         ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) {
-    LOG5("\t\tBreaking up at slice: " << slicingPoint);
+    LOG6("\t\tBreaking up at slice: " << slicingPoint);
     const PHV::FieldSlice* toBeErased = nullptr;
     std::vector<PHV::FieldSlice>::iterator it = list.begin();
     std::vector<PHV::FieldSlice> toAdd;
@@ -1417,77 +1500,77 @@ void PHV::SlicingIterator::breakUpSlice(
         if (it->field() != slicingPoint.field()) {
             preSlicingList.push_back(*it);
             preSlicingListSize += it->size();
-            LOG5("\t\t\t\tPre slice: " << *it);
+            LOG6("\t\t\t\tPre slice: " << *it);
             continue;
         }
         if (!it->range().overlaps(slicingPoint.range())) {
             preSlicingList.push_back(*it);
-            LOG5("\t\t\t\tPre slice: " << *it);
+            LOG6("\t\t\t\tPre slice: " << *it);
             preSlicingListSize += it->size();
             continue;
         }
         toBeErased = &(*it);
-        LOG5("\t\t\t\tSlice to be replaced: " << *it);
+        LOG6("\t\t\t\tSlice to be replaced: " << *it);
         // if (!exactSliceListSize.count(*it)) continue;
         // Found slice to be replaced.
-        LOG5("\t\t\t\tRight slice: " << slicingPoint);
-        LOG5("\t\t\t\t  Left range: " << it->range().lo << ", " << slicingPoint.range().lo << " - "
+        LOG6("\t\t\t\tRight slice: " << slicingPoint);
+        LOG6("\t\t\t\t  Left range: " << it->range().lo << ", " << slicingPoint.range().lo << " - "
                 << it->range().lo);
         PHV::FieldSlice leftSlice(it->field(), le_bitrange(StartLen(it->range().lo,
                         slicingPoint.range().lo - it->range().lo)));
         preSlicingList.push_back(leftSlice);
         preSlicingListSize += leftSlice.size();
-        LOG5("\t\t\t\t  Left slice: " << leftSlice);
-        LOG5("\t\t\t\t  Original slice offset: " << originalSliceOffset[*it].first << ", "
+        LOG6("\t\t\t\t  Left slice: " << leftSlice);
+        LOG6("\t\t\t\t  Original slice offset: " << originalSliceOffset[*it].first << ", "
              << originalSliceOffset[*it].second);
         auto rightSize = slicingPoint.size();
         postSlicingList.push_back(slicingPoint);
         for (auto it1 = it + 1; it1 != list.end(); it1++) {
             if (sliceLocations[*it1].first != -1) {
                 rightSize += it1->size();
-                LOG5("\t\t\t\t  Adding to right size: " << *it1);
+                LOG6("\t\t\t\t  Adding to right size: " << *it1);
             } else {
-                LOG5("\t\t\t\t  Not adding to right size: " << *it1);
+                LOG6("\t\t\t\t  Not adding to right size: " << *it1);
             }
         }
         preSlicingListSize = 0;
         for (auto& preSlice : preSlicingList) {
-            LOG5("\t\t\t\t  Account pre-slice: " << preSlice);
+            LOG6("\t\t\t\t  Account pre-slice: " << preSlice);
             preSlicingListSize += preSlice.size();
         }
-        LOG5("\t\t\t\t\tpreSlicingListSize: " << preSlicingListSize);
-        LOG5("\t\t\t\t\trightSize: " << rightSize);
+        LOG6("\t\t\t\t\tpreSlicingListSize: " << preSlicingListSize);
+        LOG6("\t\t\t\t\trightSize: " << rightSize);
         if (exactSliceListSize.count(*it)) {
             exactSliceListSize[leftSlice] = preSlicingListSize;
             exactSliceListSize[slicingPoint] = rightSize;
         } else {
-            LOG5("\t\t\t\t  Did not find exact list size for: " << *it);
+            LOG6("\t\t\t\t  Did not find exact list size for: " << *it);
         }
         int slicePoint = -1;
         if (sliceLocations[*it].second != -1) {
             slicePoint = sliceLocations[*it].second - ROUNDUP(slicingPoint.size(), 8);
-            LOG5("\t\t\t\t  " << sliceLocations[*it].second << " - " <<
+            LOG6("\t\t\t\t  " << sliceLocations[*it].second << " - " <<
                  ROUNDUP(slicingPoint.size(), 8) << " = " << slicePoint);
         } else if (sliceLocations[*it].first != -1) {
             slicePoint = sliceLocations[*it].first + ROUNDUP(leftSlice.size(), 8);
-            LOG5("\t\t\t\t  " << sliceLocations[*it].first << " + " <<
+            LOG6("\t\t\t\t  " << sliceLocations[*it].first << " + " <<
                  ROUNDUP(slicingPoint.size(), 8) << " = " << slicePoint);
         } else {
-            LOG5("\t\t\t\t  Did not find slice point.");
+            LOG6("\t\t\t\t  Did not find slice point.");
             if (initialOffset.count(*it)) {
-                LOG5("\t\t\t\t\tFound initial offset: " << initialOffset.at(*it));
+                LOG6("\t\t\t\t\tFound initial offset: " << initialOffset.at(*it));
                 slicePoint = initialOffset.count(*it) + (preSlicingListSize / 8);
             } else {
                 BUG("\t\t\t\t\tDid not find initial offset.");
             }
-            LOG5("\t\t\t\t  Original slice offset: " << originalSliceOffset.at(*it).first <<
+            LOG6("\t\t\t\t  Original slice offset: " << originalSliceOffset.at(*it).first <<
                  " " << originalSliceOffset.at(*it).second);
         }
-        LOG5("\t\t\tSlice point: " << slicePoint);
+        LOG6("\t\t\tSlice point: " << slicePoint);
         if (slicePoint != -1) {
             required_slices_i.setbit(slicePoint);
             change_i = true;
-            LOG5("\t\t\tSetting split at offset " << slicePoint);
+            LOG6("\t\t\tSetting split at offset " << slicePoint);
             // TODO 4
         }
         /*
@@ -1500,20 +1583,20 @@ void PHV::SlicingIterator::breakUpSlice(
         int newLeftOffset = originalSliceOffset[*it].first + leftSlice.size();
         int newRightOffset = originalSliceOffset[*it].second - leftSlice.size();
         originalSliceOffset[slicingPoint] = std::make_pair(newLeftOffset, newRightOffset);
-        LOG5("\t\t\t\tP1. Setting " << leftSlice << " co-ordinates to: " <<
+        LOG6("\t\t\t\tP1. Setting " << leftSlice << " co-ordinates to: " <<
                 get_slice_coordinates(exactSliceListSize[leftSlice], sliceLocations[leftSlice]));
-        LOG5("\t\t\t\tP2. Setting " << slicingPoint << " co-ordinates to: " <<
+        LOG6("\t\t\t\tP2. Setting " << slicingPoint << " co-ordinates to: " <<
                 get_slice_coordinates(exactSliceListSize[slicingPoint],
                     sliceLocations[slicingPoint]));
-        LOG5("\t\t\t\tSetting originalSliceOffset for " << leftSlice << " to : " <<
+        LOG6("\t\t\t\tSetting originalSliceOffset for " << leftSlice << " to : " <<
                 originalSliceOffset[leftSlice].first << ", " <<
                 originalSliceOffset[leftSlice].second);
-        LOG5("\t\t\t\tSetting originalSliceOffset for " << slicingPoint << " to : " <<
+        LOG6("\t\t\t\tSetting originalSliceOffset for " << slicingPoint << " to : " <<
                 originalSliceOffset[slicingPoint].first << ", " <<
                 originalSliceOffset[slicingPoint].second);
-        LOG5("\t\t\t\tAdding " << leftSlice << " to list");
+        LOG6("\t\t\t\tAdding " << leftSlice << " to list");
         toAdd.push_back(leftSlice);
-        LOG5("\t\t\t\tAdding " << slicingPoint << " to list");
+        LOG6("\t\t\t\tAdding " << slicingPoint << " to list");
         toAdd.push_back(slicingPoint);
         // Set slice list size of remaining slices.
         auto tempSize = slicingPoint.size();
@@ -1522,13 +1605,13 @@ void PHV::SlicingIterator::breakUpSlice(
             exactSliceListSize[*it1] = rightSize;
             if (tempSize < 8)
                 sliceLocations[*it1].first = -1;
-            LOG5("\t\t\t\tP3. Setting " << *it1 << " co-ordinates to: " <<
+            LOG6("\t\t\t\tP3. Setting " << *it1 << " co-ordinates to: " <<
                     get_slice_coordinates(exactSliceListSize[*it1], sliceLocations[*it1]));
         }
         break;
     }
     if (toBeErased != nullptr) {
-        LOG5("\tPrinting toBeErased: " << *toBeErased);
+        LOG6("\tPrinting toBeErased: " << *toBeErased);
         exactSliceListSize.erase(*toBeErased);
         sliceLocations.erase(*toBeErased);
         originalSliceOffset.erase(*toBeErased);
@@ -1544,14 +1627,14 @@ void PHV::SlicingIterator::breakUpSlice(
             for (auto& slice1 : toAdd) {
                 newList.push_back(slice1);
                 replaceSlicesMap[slice].push_back(slice1);
-                LOG5("\t\tAdding " << slice1 << " in lieu of " << slice);
+                LOG6("\t\tAdding " << slice1 << " in lieu of " << slice);
             }
         }
     }
-    LOG5("\t\t*it: " << *toBeErased);
+    LOG6("\t\t*it: " << *toBeErased);
     // Slice all the slices that are part of this rotational cluster.
     if (!sliceToRotSlices.count(*toBeErased)) {
-        LOG5("\t\t\t\tNo rotational slices for this slice.");
+        LOG6("\t\t\t\tNo rotational slices for this slice.");
     } else {
         std::set<PHV::FieldSlice> leftSet;
         std::set<PHV::FieldSlice> rightSet;
@@ -1563,7 +1646,7 @@ void PHV::SlicingIterator::breakUpSlice(
             if (rot_slice == *toBeErased) continue;
             // If already sliced slice, continue;
             if (replaceSlicesMap.count(rot_slice)) continue;
-            LOG5("\t\t\t  Need to slice rotational slice: " << rot_slice);
+            LOG6("\t\t\t  Need to slice rotational slice: " << rot_slice);
             auto& slice_lists = sc_i->slice_list(rot_slice);
             if (slice_lists.size() == 0) continue;
             auto* slice_list = *(slice_lists.begin());
@@ -1577,18 +1660,18 @@ void PHV::SlicingIterator::breakUpSlice(
                     le_bitrange(StartLen(rot_slice.range().lo, rot_slice.range().size() -
                             rightSize)));
             int slicePoint = -1;
-            LOG5("\t\t\t  Rotational slice after slice point: " << rotSlicingPoint);
+            LOG6("\t\t\t  Rotational slice after slice point: " << rotSlicingPoint);
             if (sliceLocations[rot_slice].second != -1) {
                 slicePoint = sliceLocations[rot_slice].second - ROUNDUP(rotSlicingPoint.size(), 8);
-                LOG5("\t\t\t  " << sliceLocations[rot_slice].second << " - " <<
+                LOG6("\t\t\t  " << sliceLocations[rot_slice].second << " - " <<
                         ROUNDUP(rotSlicingPoint.size(), 8) << " = " << slicePoint);
             } else if (sliceLocations[rot_slice].first != -1) {
                 slicePoint = sliceLocations[rot_slice].first + ROUNDUP(rotSliceLeft.size(), 8);
-                LOG5("\t\t\t  " << sliceLocations[rot_slice].first << " + " <<
+                LOG6("\t\t\t  " << sliceLocations[rot_slice].first << " + " <<
                         ROUNDUP(rotSliceLeft.size(), 8) << " = " << slicePoint);
             }
             if (slicePoint != -1) {
-                LOG5("\t\t\tX. Setting split at offset " << slicePoint);
+                LOG6("\t\t\tX. Setting split at offset " << slicePoint);
                 required_slices_i.setbit(slicePoint);
                 change_i = true;
                 // TODO 5
@@ -1622,8 +1705,8 @@ boost::optional<PHV::FieldSlice> PHV::SlicingIterator::getBestSlicingPoint(
     uint32_t sliceListSize = 0;
     for (auto& slice : list)
         sliceListSize += slice.size();
-    LOG5("\t\t\t  Slice list size: " << sliceListSize);
-    LOG5("\t\t\t  Candidate: " << candidate);
+    LOG6("\t\t\t  Slice list size: " << sliceListSize);
+    LOG6("\t\t\t  Candidate: " << candidate);
     for (unsigned i = 1; i < sliceListSize / 8; i++) {
         LOG7("\t\t\t  i = " << i << ", " << 8 * i);
         std::vector<PHV::FieldSlice> beforeSlicingPoint;
@@ -1686,7 +1769,7 @@ boost::optional<PHV::FieldSlice> PHV::SlicingIterator::getBestSlicingPoint(
             afterSlicingPointSize;
         if (candidateSliceListSize <= static_cast<unsigned>(minSize)) {
             LOG7("\t\t\t\tFound best slicing point at i = " << i);
-            LOG5("\t\t\t\tSlicing point: " << *(afterSlicingPoint.begin()));
+            LOG6("\t\t\t\tSlicing point: " << *(afterSlicingPoint.begin()));
             return *(afterSlicingPoint.begin());
         }
     }
@@ -1737,12 +1820,12 @@ PHV::FieldSlice PHV::SlicingIterator::getBestSlicingPoint(
             }
         }
         if (bestPoint != nullptr)
-            LOG5("\t\t\tSlicing at " << point << " causes a slice boundary to fall between "
+            LOG6("\t\t\tSlicing at " << point << " causes a slice boundary to fall between "
                  "slices.");
     }
     if (bestPoint != nullptr) return *bestPoint;
     auto customSlice = getBestSlicingPoint(list, minSize, candidate);
-    LOG5("\t\t\tCustom slice found: " << (customSlice != boost::none));
+    LOG6("\t\t\tCustom slice found: " << (customSlice != boost::none));
     if (customSlice == boost::none) return *(points.begin());
     return *customSlice;
 }
@@ -1753,7 +1836,7 @@ int PHV::SlicingIterator::processSliceListBefore(
         ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         const std::vector<FieldSlice>& list,
         const FieldSlice& point) {
-    LOG5("\t\tProcess slice list before.");
+    LOG6("\t\tProcess slice list before.");
     ordered_set<FieldSlice> processedSlices;
     int seenSlicePoint = false;
     int postSlicePointBits = 0;
@@ -1763,17 +1846,17 @@ int PHV::SlicingIterator::processSliceListBefore(
     for (auto& slice : list) {
         if (slice == point) {
             postSliceSlices.push_back(slice);
-            LOG5("\t\t  Post slice: " << slice);
+            LOG6("\t\t  Post slice: " << slice);
             seenSlicePoint = true;
             postSlicePointBits += slice.size();
         } else if (!seenSlicePoint) {
             preSliceSlices.push_back(slice);
             preSlicePointBits += slice.size();
-            LOG5("\t\t  Pre slicing point slice: " << slice);
+            LOG6("\t\t  Pre slicing point slice: " << slice);
         } else {
             postSliceSlices.push_back(slice);
             postSlicePointBits += slice.size();
-            LOG5("\t\t  Post slice: " << slice);
+            LOG6("\t\t  Post slice: " << slice);
         }
     }
 
@@ -1787,7 +1870,7 @@ int PHV::SlicingIterator::processSliceListBefore(
         auto roundedUpSize = 8 * ROUNDUP(currentSliceOffset, 8);
         if (roundedUpSize == preSlicePointBits)
             sliceLocations[slice].second = -1;
-        LOG5("\t\t  I. Setting pre slice " << slice << " co-ordinates to: " <<
+        LOG6("\t\t  I. Setting pre slice " << slice << " co-ordinates to: " <<
              get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
         sliceToSliceLists[slice] = preSliceSlices;
         alreadyProcessedSlices.insert(slice);
@@ -1807,7 +1890,7 @@ int PHV::SlicingIterator::processSliceListBefore(
         auto roundedUpSize = 8 * ROUNDUP(currentSliceOffset, 8);
         if (roundedUpSize == postSlicePointBits)
             sliceLocations[slice].second = -1;
-        LOG5("\t\t  J. Setting post slice " << slice << " co-ordinates to: " <<
+        LOG6("\t\t  J. Setting post slice " << slice << " co-ordinates to: " <<
              get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
         sliceToSliceLists[slice] = postSliceSlices;
     }
@@ -1820,10 +1903,10 @@ void PHV::SlicingIterator::break_24b_slice_lists(
         ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         const ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
         const ordered_map<FieldSlice, std::vector<FieldSlice>>& replaceSlicesMap) {
-    LOG5("Breaking 24b slice lists");
+    LOG6("Breaking 24b slice lists");
     for (auto kv : exactSliceListSize) {
         if (kv.second != 24) continue;
-        LOG5("\t\tNeed to break slice " << kv.first << " (" <<
+        LOG6("\t\tNeed to break slice " << kv.first << " (" <<
              get_slice_coordinates(exactSliceListSize.at(kv.first), sliceLocations.at(kv.first))
              << ")");
         auto& slice_lists = sc_i->slice_list(kv.first);
@@ -1852,7 +1935,7 @@ void PHV::SlicingIterator::break_24b_slice_lists(
         if (exactSliceListSize.count(*slice))
             sliceListSize = exactSliceListSize.at(*slice);
 
-        LOG5("\t\t  Slice list size: " << sliceListSize);
+        LOG6("\t\t  Slice list size: " << sliceListSize);
 
         // Right now, we only slice lists whose original size was 24b. We do not process slice lists
         // which become 24b in width as a result of slicing itself.
@@ -1878,7 +1961,7 @@ void PHV::SlicingIterator::break_24b_slice_list(
         ordered_map<FieldSlice, int>& exactSliceListSize,
         ordered_map<FieldSlice, std::pair<int, int>>& sliceLocations,
         const std::vector<FieldSlice>& sliceListToProcess) {
-    LOG5("\t\tInside break 24b slice list");
+    LOG6("\t\tInside break 24b slice list");
     int offset = 0;
     std::vector<FieldSlice> seenSlices;
     int sliceOffset = -1;
@@ -1890,13 +1973,13 @@ void PHV::SlicingIterator::break_24b_slice_list(
     for (auto& slice : sliceListToProcess) {
         offset += slice.size();
         seenSlices.push_back(slice);
-        LOG5("\t\t  Offset for slice " << slice << " : " << offset);
+        LOG6("\t\t  Offset for slice " << slice << " : " << offset);
         if (offset != 8 && offset != 16) continue;
         sliceOffset = offset;
         slicePoint = sliceLocations[slice].second;
         break;
     }
-    LOG5("\t\tSlice at offset " << sliceOffset << " within slice list");
+    LOG6("\t\tSlice at offset " << sliceOffset << " within slice list");
     // If the slice offset is not 8 or 16, then we will not break slice list here and instead will
     // rely on enforce_container_sizes to break the 24b slice list.
     if (sliceOffset != 8 && sliceOffset != 16) return;
@@ -1913,7 +1996,7 @@ void PHV::SlicingIterator::break_24b_slice_list(
         int right = 8 * ROUNDUP(offset, 8);
         if (right == sliceOffset)
             sliceLocations[slice].second = slicePoint;
-        LOG5("\t\t  K. Setting " << slice << " co-ordinates to: " <<
+        LOG6("\t\t  K. Setting " << slice << " co-ordinates to: " <<
                 get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
         preSlicePoint.push_back(slice);
     }
@@ -1930,7 +2013,7 @@ void PHV::SlicingIterator::break_24b_slice_list(
         exactSliceListSize[slice] = remainingSliceListSize;
         if ((8 * (offset / 8)) == sliceOffset)
             sliceLocations[slice].first = -1;
-        LOG5("\t\t  L. Setting " << slice << " co-ordinates to: " <<
+        LOG6("\t\t  L. Setting " << slice << " co-ordinates to: " <<
                 get_slice_coordinates(exactSliceListSize[slice], sliceLocations[slice]));
         offset += slice.size();
         postSlicePoint.push_back(slice);
@@ -2001,14 +2084,14 @@ void PHV::SlicingIterator::enforce_container_size_pragmas(
                     field_offset += size;
                 }
             }
-            LOG5("  Slice " << slice << " has an associated pa_container_size pragma");
+            LOG6("  Slice " << slice << " has an associated pa_container_size pragma");
             for (auto sz : it->second)
-                LOG5("    Size: " << sz);
+                LOG6("    Size: " << sz);
             if (slicingPoints.size() > 0) {
                 std::stringstream ss;
                 for (auto limit : slicingPoints)
                     ss << limit << " ";
-                LOG5("      Slice at: " << ss.str());
+                LOG6("      Slice at: " << ss.str());
             }
             for (auto limit : slicingPoints) {
                 // Byte range for the slicing point.
@@ -2016,13 +2099,13 @@ void PHV::SlicingIterator::enforce_container_size_pragmas(
                 // If the current slice includes the slicing point, then set the corresponding bit
                 // in the required_slices bitvec to force a slice at the required slicing point.
                 if (slice.range().overlaps(sliceRange)) {
-                    LOG5("      Slice at bit position " << limit << " within this slice");
+                    LOG6("      Slice at bit position " << limit << " within this slice");
                     // Starting index of the field slice.
                     int field_lo = slice.range().lo;
                     // bitvec is indexed at 0, so the -1 is necessary.
                     int slice_pos = slice_list_offset - 1 +
                         ((slice_offset + (limit - field_lo)) / 8);
-                    LOG5("      Slice at byte " << slice_pos << " within this slice list");
+                    LOG6("      Slice at byte " << slice_pos << " within this slice list");
                     // XXX(Deep): What if the field is not at the end of the slice list?
                     if (slice_pos >= 0 && slice_pos < listDetails.at(list).first)
                         required_slices_i.setbit(slice_pos);
@@ -2165,18 +2248,7 @@ PHV::SlicingIterator::merge_wide_arith_super_clusters(
 boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::split_super_cluster(
         const PHV::SuperCluster* sc,
         ordered_map<PHV::SuperCluster::SliceList*, bitvec> split_schemas) {
-    if (LOGGING(6)) {
-        LOG6("Split schema:");
-        for (auto& kv : split_schemas) {
-            int size = 0;
-            for (auto slice : *kv.first)
-                size += slice.size();
-            std::stringstream ss;
-            for (int idx = 0; idx < size; ++idx)
-                ss << (kv.second[idx] ? "1" : "-");
-            LOG6("    " << ss.str());
-            LOG6("    " << kv.first); }
-        LOG6(""); }
+    LOG6(log_bit_schema(split_schemas));
 
     std::list<PHV::SuperCluster*> rv;
     // Deep copy all slice lists, so they can be updated without mutating sc.
@@ -2546,7 +2618,7 @@ boost::optional<std::list<PHV::SuperCluster*>> PHV::SlicingIterator::get_slices(
             auto further_splitted = std::list<PHV::SuperCluster*>{};
             for (auto* s : *res) {
                 PHV::Error err;
-                if (PHV::SuperCluster::is_well_formed(s, &err)) {
+                if (PHV::SuperCluster::is_well_formed(s, &err) && is_allocable(s)) {
                     further_splitted.push_back(s);
                     continue;
                 }
@@ -2626,10 +2698,10 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
             exp_split_enabled_i = true;
             compressed_schemas_i = required_slices_i;
         }
+
         // Increment the bitvec...
-        PHV::inc(compressed_schemas_i, &required_slices_i);
-        // Increment the counter for number of slicings.
-        ++num_slicings_i;
+        auto invisible = required_slices_i | no_splits_i;
+        PHV::inc(compressed_schemas_i, &invisible);
         // and set the required slices...
         compressed_schemas_i |= required_slices_i;
         // and set the least significant bits necessary to ensure that
@@ -2638,12 +2710,23 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
                                      sentinel_idx_i,
                                      boundaries_i,
                                      required_slices_i,
-                                     exact_containers_i);
+                                     exact_containers_i,
+                                     no_splits_i);
+
+        // reaches the end.
+        if (compressed_schemas_i[sentinel_idx_i]) {
+            break;
+        }
+
+        // Increment the counter for number of slicings.
+        ++num_slicings_i;
 
         // Stop if we find a valid slicing.
         if (auto res = get_slices()) {
             cached_i = *res;
-            break; } }
+            break;
+        }
+    }
 
     if (compressed_schemas_i[sentinel_idx_i])
         done_i = true;
@@ -2660,13 +2743,6 @@ bool PHV::SlicingIterator::operator==(const SlicingIterator& other) const {
 boost::optional<std::list<PHV::SuperCluster*>>
 PHV::SlicingIterator::exp_further_split(PHV::SuperCluster* sc) {
     std::map<int, std::vector<SuperCluster::SliceList*>> sz_slicelists;
-    auto get_sz = [] (SuperCluster::SliceList* sl) {
-        int sz = 0;
-        for (auto& fs : *sl) {
-            sz += fs.size();
-        }
-        return sz;
-    };
     for (auto* sl : sc->slice_lists()) {
         int sz = get_sz(sl);
         sz_slicelists[sz].push_back(sl);
@@ -2681,24 +2757,11 @@ PHV::SlicingIterator::exp_further_split(PHV::SuperCluster* sc) {
             return split_schemas;
         };
 
-    auto is_valid_sc =
-        [get_sz] (PHV::SuperCluster* cluster) {
-            for (auto* sl : cluster->slice_lists()) {
-                if ((*sl->begin()).field()->exact_containers()) {
-                    int sz = get_sz(sl);
-                    if (sz != 8 && sz != 16 && sz != 32) {
-                        return false;
-                    }
-                }
-            }
-            return PHV::SuperCluster::is_well_formed(cluster);
-        };
-
     int max_sz = sz_slicelists.rbegin()->first;
     for (int at : std::vector<int>{16, 8}) {
         if (max_sz > at) {
             auto after = split_super_cluster(sc, make_schema(sz_slicelists[max_sz], at));
-            if (after && std::all_of(after->begin(), after->end(), is_valid_sc)) {
+            if (after && std::all_of(after->begin(), after->end(), is_allocable)) {
                 return after;
             }
         }
@@ -2715,7 +2778,8 @@ inline void enforce_container_sizes(
         int sentinel,
         const bitvec& boundaries,
         const bitvec& required,
-        const bitvec& exact_containers) {
+        const bitvec& exact_containers,
+        const bitvec& no_splits) {
     // Eagerly break invalid sequences of zeroes.  See comment in utils.h.
     // NB: Because we're walking backwards, boundaries[i] is true for the last
     // bit of each range, eg. boundaries[i] implies that the *next* bit (i-1)
@@ -2761,24 +2825,26 @@ inline void enforce_container_sizes(
                 zeroes = 0; }
         }
     }
+    // this may introduce wrong schema that split on no_split.
+    // adjust them by adding.
+    while (bv.intersects(no_splits) && !bv[sentinel]) {
+        bitvec errs = (bv & no_splits);
+        bitvec_add(bv, errs);
+    }
 }
 
 void inc(bitvec& bv, const bitvec* invisible) {
-    if (bv.empty()) {
-        bv.setbit(0);
-        return; }
-
-    int max = *bv.max();
     int i = 0;
-    for (; i <= max; ++i) {
+    for (; i <= (1<<30); ++i) {
         if (invisible != nullptr && invisible->getbit(i)) {
             continue;
         }
         if (bv.getbit(i)) {
             bv.clrbit(i);
         } else {
-            break; } }
-
+            break;
+        }
+    }
     bv.setbit(i);
 }
 

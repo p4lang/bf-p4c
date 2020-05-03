@@ -56,29 +56,29 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
 
     // 0 --> 0
     rv = bitvec();
-    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec(), bitvec(0, 1));
+    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec(), bitvec(0, 1), bitvec());
     EXPECT_EQ(rv, bitvec());
 
     // 00 --> 01
     rv = bitvec();
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2));
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2), bitvec());
     EXPECT_EQ(rv, bitvec(0, 1));
 
     // 01 --> 01
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2));
+    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2), bitvec());
     EXPECT_EQ(rv, bitvec(0, 1));
 
     // 001 --> 010
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(), bitvec(0, 3));
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(), bitvec(0, 3), bitvec());
     EXPECT_EQ(rv, bitvec(1, 1));
 
     // 001 | 001 --> 010 | 010
     rv = bitvec();
     rv.setbit(0);
     rv.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), bitvec(), bitvec(0, 6));
+    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), bitvec(), bitvec(0, 6), bitvec());
 
     bv = bitvec();
     bv.setbit(1);
@@ -87,7 +87,7 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
 
     // 00R --> 01R
     rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1), bitvec(0, 3));
+    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1), bitvec(0, 3), bitvec());
     EXPECT_EQ(rv, bitvec(0, 2));
 
     // 00R | 00R --> 01R | 01R
@@ -97,7 +97,7 @@ TEST_F(TofinoPhvCrush, enforce_container_sizes) {
     auto req = bitvec();
     req.setbit(0);
     req.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), req, bitvec(0, 6));
+    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), req, bitvec(0, 6), bitvec());
 
     bv = bitvec();
     bv.setbit(0);

@@ -64,7 +64,8 @@ void enforce_container_sizes(
     int sentinel,
     const bitvec& boundaries,
     const bitvec& required,
-    const bitvec& exact_containers);
+    const bitvec& exact_containers,
+    const bitvec& no_splits);
 
 /** A custom forward iterator that walks through all possible slicings of a
  * SuperCluster.
@@ -115,6 +116,7 @@ class SlicingIterator {
     bitvec compressed_schemas_i;
     bitvec boundaries_i;
     bitvec required_slices_i;
+    bitvec no_splits_i;
     ordered_map<PHV::SuperCluster::SliceList*, le_bitrange> ranges_i;
     bitvec exact_containers_i;
     int sentinel_idx_i;
