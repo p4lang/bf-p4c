@@ -70,7 +70,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
     explicit DefaultNext(bool lbd, std::set<cstring> *errs = nullptr)
     : long_branch_disabled(lbd), errors(errs),
       possible_nexts(* new std::remove_reference<decltype(possible_nexts)>::type) {
-        joinFlows = true; visitDagOnce = false; }
+        joinFlows = false; visitDagOnce = false; }
     const IR::MAU::Table *next(const IR::MAU::Table *t) const {
         if (possible_nexts.count(t)) {
             BUG_CHECK(!possible_nexts.at(t).empty(), "unexpected empty set");

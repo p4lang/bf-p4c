@@ -30,6 +30,70 @@ Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Nod
     return result;
 }
 
+/**
+ * This multiple apply optimization is rooted from JIRA tickets: P4C-2686, SWI-2941
+ *
+ * The program to support looks something like this:
+ *
+ *   if (A.apply().hit) {
+ *       if (condition-1) {
+ *           B.apply();
+ *           if (condition-2)
+ *               C.apply();
+ *       } else if (condition-2) {
+ *           C.apply();
+ *       }
+ *   } else {
+ *       if (condition-3)
+ *           B.apply();
+ *       if (condition-2)
+ *           C.apply();
+ *   }
+ *
+ * The conditions here are equivalent.  However, similar to standard match tables, out of
+ * extract_maupipe, all of the individual tables are unique.
+ *
+ * In order for the program to be supportable on Tofino, B's default next table must the same
+ * on all applications.  In this case, B's default_next would be condition-2, which if all
+ * condition-2 gateways are the same IR node, then this is supportable.  Without this function,
+ * the algorithm only verifies that match tables that have identical static control flow.
+ * Previously, all applications of condition-2 will never be combined.
+ *
+ * This currently will mark any two gateways as duplicates, if their condition is equivalent, and
+ * their static control flow are equivalent.  The argument is that if a program is supportable
+ * without merging two equivalent conditions, that program will still be supportable with all
+ * equivalent conditions merged:
+ *
+ *     You cannot write a P4 program that is supportable on Tofino with non-merged equivalent
+ *     conditions but not supportable with merged equivalent conditions.
+ *
+ * This is rooted from the default next constraint for Tofino.  Would it be possible to break
+ * the default next constraint if this gateway was merged.  My argument is no:
+ *
+ * if (condition-equiv-1) { controlA.apply(); }
+ * if (condition-equiv-2) { controlA.apply(); }
+ *
+ * Because the conditions are equivalent, the control flow under them must be equivalent.
+ * The default next table of those separate control flows also must be equivalent (if it is a
+ * valid P4 program).  By then de-duplicating the condition, this has no affect on the default
+ * next able of controlA, meaning that the de-duplication was safe. 
+ */
+void MultipleApply::CheckStaticNextTable::check_all_gws(const IR::MAU::Table *tbl) {
+    // Do nothing if we've encountered tis gateway already
+    if (all_gateways.count(tbl)) return;
+
+    all_gateways.insert(tbl);
+    for (auto gw : all_gateways) {
+        // As Jed has noted, before marking sub-children as equivalent, verify if the gateways
+        // themselves are equivalent
+        if (gw != tbl && check_equiv(gw, tbl, false)) {
+            // Found an equivalent gateway.  Mark it and its children as being equivalent
+            check_equiv(gw, tbl);
+            return;
+        }
+    }
+}
+
 void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
     // Mark duplicate tables and check that tables that are supposed to be duplicates really are
     // equivalent.
@@ -38,7 +102,10 @@ void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
     self.duplicate_tables.insert(tbl);
 
     // Only proceed if the current table corresponds to an actual table at the P4 source level.
-    if (tbl->match_table == nullptr) return;
+    if (tbl->match_table == nullptr) {
+        check_all_gws(tbl);
+        return;
+    }
 
     BUG_CHECK(!tbl->gateway_only(),
               "A Table object corresponding to a table at the P4 source level is unexpectedly "
@@ -106,9 +173,8 @@ void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
     self.duplicate_tables.makeUnion(tbl, canon_tbl);
 }
 
-bool MultipleApply::CheckStaticNextTable::check_equiv(
-    const IR::MAU::Table* table1, const IR::MAU::Table* table2
-) {
+bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::Table* table1,
+        const IR::MAU::Table* table2, bool makeUnion) {
     if (table1 == table2) return true;
     if (!table1 || !table2) return false;
 
@@ -145,18 +211,18 @@ bool MultipleApply::CheckStaticNextTable::check_equiv(
         if (!table2->next.count(next_name)) return false;
         auto next_table2 = table2->next.at(next_name);
 
-        if (!check_equiv(next_table1, next_table2)) return false;
+        if (!check_equiv(next_table1, next_table2, makeUnion)) return false;
     }
 
     // Mark the tables as duplicates.
-    self.duplicate_tables.makeUnion(table1, table2);
+    if (makeUnion)
+        self.duplicate_tables.makeUnion(table1, table2);
 
     return true;
 }
 
-bool MultipleApply::CheckStaticNextTable::check_equiv(
-    const IR::MAU::TableSeq* seq1, const IR::MAU::TableSeq* seq2
-) {
+bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::TableSeq* seq1,
+        const IR::MAU::TableSeq* seq2, bool makeUnion) {
     if (seq1 == seq2) return true;
     if (!seq1 || !seq2) return false;
 
@@ -164,7 +230,7 @@ bool MultipleApply::CheckStaticNextTable::check_equiv(
     for (size_t idx = 0; idx < seq1->tables.size(); ++idx) {
         auto table1 = seq1->tables.at(idx);
         auto table2 = seq2->tables.at(idx);
-        if (!check_equiv(table1, table2)) return false;
+        if (!check_equiv(table1, table2, makeUnion)) return false;
     }
 
     return true;
@@ -288,7 +354,8 @@ bool MultipleApply::CheckTopologicalTables::preorder(const IR::MAU::TableSeq* th
 MultipleApply::MultipleApply(
     const BFN_Options& options,
     boost::optional<gress_t> gress,
-    bool dedup_only
+    bool dedup_only,
+    bool run_default_next
 ) {
     auto longBranchDisabled = Device::numLongBranchTags() == 0 || options.disable_long_branch;
     addPasses({
@@ -297,7 +364,8 @@ MultipleApply::MultipleApply(
         new CheckStaticNextTable(*this),
         new DeduplicateTables(*this, gress),
         dedup_only ? nullptr : new CheckTopologicalTables(topological_errors),
-        dedup_only ? nullptr : new DefaultNext(longBranchDisabled, &default_next_errors),
+        dedup_only || !run_default_next ? nullptr
+            : new DefaultNext(longBranchDisabled, &default_next_errors),
     });
 }
 

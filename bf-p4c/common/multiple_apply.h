@@ -84,17 +84,24 @@ class MultipleApply : public PassManager {
         /// Gives the canonical Table object for each P4Table.
         ordered_map<const IR::P4Table*, const IR::MAU::Table*> canon_table;
 
+        /// A set of all gateways
+        ordered_set<const IR::MAU::Table *> all_gateways;
+
         /// Marks two Tables as being duplicates and determines whether they are equivalent.
-        bool check_equiv(const IR::MAU::Table* table1, const IR::MAU::Table* table2);
+        bool check_equiv(const IR::MAU::Table* table1, const IR::MAU::Table* table2,
+            bool makeUnion = true);
 
         /// Marks the Tables in two TableSeqs as being duplicates and determines whether they are
         /// equivalent.
-        bool check_equiv(const IR::MAU::TableSeq* seq1, const IR::MAU::TableSeq* seq2);
+        bool check_equiv(const IR::MAU::TableSeq* seq1, const IR::MAU::TableSeq* seq2,
+            bool makeUnion = true);
 
         /// Determines whether two gateway conditions are equivalent.
         bool equiv_gateway(const IR::Expression* expr1, const IR::Expression* expr2);
 
         Visitor::profile_t init_apply(const IR::Node *root) override;
+
+        void check_all_gws(const IR::MAU::Table *);
         void postorder(const IR::MAU::Table *) override;
 
      public:
@@ -168,10 +175,11 @@ class MultipleApply : public PassManager {
 
     // For gtests, allow doing just the passes for de-duplicating tables and allow specifying which
     // gress is being visited.
-    explicit MultipleApply(
+    MultipleApply(
         const BFN_Options& options,
         boost::optional<gress_t> gress = boost::none,
-        bool dedup_only = false);
+        bool dedup_only = false,
+        bool run_default_next = true);
 };
 
 
