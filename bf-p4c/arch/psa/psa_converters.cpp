@@ -38,6 +38,20 @@ const IR::Node* RandomConverter::postorder(IR::MethodCallExpression* node) {
     return new IR::MethodCallExpression(node->srcInfo, method, args);
 }
 
+// Convert meter.execute(idx) to meter.execute(idx), discard inferred psa type.
+const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
+    auto member = node->method->to<IR::Member>();
+    if (auto path = member->expr->to<IR::PathExpression>()) {
+        auto pathExpr = new IR::PathExpression(path->path->name);
+        auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
+        auto args = new IR::Vector<IR::Argument>();
+        args->push_back(node->arguments->at(0));
+        return new IR::MethodCallExpression(node->srcInfo, method, args);
+    }
+    BUG("Unhandled case");
+    return nullptr;
+}
+
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
     return substitute<IR::Declaration_Instance>(node); }
 
@@ -506,6 +520,17 @@ const IR::Node* TypeNameExpressionConverter::postorder(IR::TypeNameExpression* n
         return retval;
     }
     return node;
+}
+
+const IR::Node* TypeNameExpressionConverter::postorder(IR::Member* member) {
+    if (!member->expr->type->is<IR::Type_SerEnum>())
+        return member;
+    auto type = member->expr->type->to<IR::Type_SerEnum>();
+    if (serEnumWidth.count(type->name.name)) {
+        auto width = serEnumWidth.at(type->name.name);
+        return new IR::Cast(IR::Type_Bits::get(width), member);
+    }
+    return member;
 }
 
 const IR::Node* TypeNameConverter::postorder(IR::Type_Name* node) {

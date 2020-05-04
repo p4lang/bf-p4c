@@ -65,6 +65,13 @@ class RandomConverter : public ExternConverter {
     const IR::Node* postorder(IR::MethodCallExpression* node) override;
 };
 
+class MeterConverter : public ExternConverter {
+ public:
+     explicit MeterConverter(ProgramStructure* structure)
+            : ExternConverter(structure) { CHECK_NULL(structure); }
+     const IR::Node* postorder(IR::MethodCallExpression* node) override;
+};
+
 class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;
@@ -156,12 +163,15 @@ class TypeNameExpressionConverter : public ExpressionConverter {
              {"PSA_MeterType_t", std::make_pair("MeterType_t", false)},
              {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
 
+    ordered_map<cstring, int> serEnumWidth = {{"MeterColor_t", 8}};
+
  public:
     explicit TypeNameExpressionConverter(ProgramStructure* structure)
         : ExpressionConverter(structure) {
         CHECK_NULL(structure);
     }
     const IR::Node* postorder(IR::TypeNameExpression* node) override;
+    const IR::Node* postorder(IR::Member* mem) override;
 };
 
 class TypeNameConverter : public Transform {

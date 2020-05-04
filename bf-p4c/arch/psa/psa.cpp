@@ -575,6 +575,9 @@ class TranslateProgram : public Inspector {
             } else if (name == "Random") {
                 RandomConverter conv(structure);
                 structure->_map.emplace(node, node->apply(conv));
+            } else if (name == "Meter") {
+                MeterConverter conv(structure);
+                structure->_map.emplace(node, node->apply(conv));
             }
             addExternMethodCall(name, node);
         } else if (mi->is<P4::ExternFunction>()) {
@@ -743,7 +746,7 @@ struct ConvertNames : public PassManager {
     explicit ConvertNames(ProgramStructure *structure, P4::ReferenceMap *refMap,
             P4::TypeMap *typeMap) {
         addPasses({new BFN::PSA::PathExpressionConverter(structure),
-                   new BFN::PSA::TypeNameConverter(structure),
+                   new BFN::PSA::TypeNameExpressionConverter(structure),
                    new P4::ClearTypeMap(typeMap),
                    new P4::TypeChecking(refMap, typeMap, true),
                    new P4::EliminateSerEnums(refMap, typeMap)});

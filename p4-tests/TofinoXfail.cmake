@@ -736,12 +736,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-meter1.p4
 )
 
-# psa.p4 bug, cannot test equal with bits and PSA_Meter_Color_t
-p4c_add_xfail_reason("tofino"
-  "==: not defined on bit<8> and MeterColor_t"
-  testdata/p4_16_samples/psa-meter3.p4
-)
-
 # p4c_add_xfail_reason("tofino"
 #   "Maximum width for byte counter ingress.per_prefix_pkt_byte_count is 64 bits"
 #   testdata/p4_16_samples/psa-example-counters-bmv2.p4
