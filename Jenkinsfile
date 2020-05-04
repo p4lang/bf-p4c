@@ -104,6 +104,7 @@ node ('compiler-travis') {
         passwordVariable: "DOCKER_PASSWORD"
     )]) {
         sh "docker pull barefootnetworks/bf-p4c-compilers:${image_tag}"
+        sh "docker pull barefootnetworks/p4v:latest"
     }
     parallel (
         generate_metrics_switch_compile_only: {
@@ -211,6 +212,36 @@ node ('compiler-travis') {
                 timestamps {
                     sh "echo 'Running tofino3 tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL=4 -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino3' -LE 'ptf'"
+                }
+            }
+        },
+        p4o: {
+            ansiColor('xterm') {
+                timestamps {
+                    sh "echo 'Running p4 obfuscator tests'"
+                    sh "mkdir -p p4o_regression"
+                    def bf_p4c_cid = ""
+                    bf_p4c_cid = sh (
+                        script: "docker run --privileged --rm -t -d -w /bfn/bf-p4c-compilers/build/p4c --entrypoint bash barefootnetworks/bf-p4c-compilers:${image_tag}",
+                        returnStdout: true
+                    ).trim()
+                    sh "echo 'bf_p4c_cid: ' $bf_p4c_cid"
+                    sh "docker cp ${bf_p4c_cid}:/bfn/bf-p4c-compilers/build p4o_regression/"
+                    sh "docker tag barefootnetworks/p4v:latest barefootnetworks/p4v:p4o_regression"
+                    try {
+                        def p4o_pwd = pwd()
+                        def p4v_cid = ""
+		        p4v_cid = sh (
+                            script: "docker run --privileged --rm -t -d -v ${p4o_pwd}/p4o_regression:/bfn/bf-p4c-compilers/build -w /bfn/p4v/mutine/scramble/bin/scripts --entrypoint bash barefootnetworks/p4v:p4o_regression",
+                            returnStdout: true
+                        ).trim()
+                        sh "echo 'p4v_cid : ' $p4v_cid"
+                        sh "docker exec ${p4v_cid} python3 -u main.py"
+                        sh "docker container stop ${bf_p4c_cid}"
+                        sh "docker container stop ${p4v_cid}"
+                    } catch (err) {
+                        sh "echo 'p4o regression has failed'"
+                    }
                 }
             }
         }
