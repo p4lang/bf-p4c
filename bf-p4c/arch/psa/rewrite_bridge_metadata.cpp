@@ -16,60 +16,37 @@
 
 namespace BFN {
 
-namespace {
-
 struct PsaBridgeIngressToEgress : public Transform {
     PsaBridgeIngressToEgress(P4::ReferenceMap* refMap,
                              P4::TypeMap* typeMap,
                              PSA::ProgramStructure* structure)
         : structure(structure), refMap(refMap), typeMap(typeMap) {}
-
+    IR::IndexedVector<IR::StructField> fields;
     profile_t init_apply(const IR::Node* root) override {
         // Construct the bridged metadata header type.
-        IR::IndexedVector<IR::StructField> fields;
-
         // We always need to bridge at least one byte of metadata; it's used to
         // indicate to the egress parser that it's dealing with bridged metadata
         // rather than mirrored data. (We could pack more information in there,
         // too, but we don't right now.)
         fields.push_back(new IR::StructField(BRIDGED_MD_INDICATOR,
-                                             IR::Type::Bits::get(8)));
+                         IR::Type::Bits::get(8)));
 
         // The rest of the fields come from CollectBridgedFields.
-        unsigned padFieldId = 0;
         for (auto& bridgedField : structure->bridgedType->to<IR::Type_StructLike>()->fields) {
-            const int nextByteBoundary = 8 * ((bridgedField->type->width_bits() + 7) / 8);
-            const int alignment = nextByteBoundary - bridgedField->type->width_bits();
-            if (alignment != 0) {
-                cstring padFieldName = "__pad_";
-                padFieldName += cstring::to_cstring(padFieldId++);
-                auto* fieldAnnotations = new IR::Annotations({
-                    new IR::Annotation(IR::ID("padding"), { }) });
-                fields.push_back(new IR::StructField(padFieldName,
-                    fieldAnnotations, IR::Type::Bits::get(alignment)));
-            }
-
-            fields.push_back(bridgedField);
+            auto *fieldAnnotations = new IR::Annotations();
+            fieldAnnotations->annotations.push_back(
+                            new IR::Annotation(IR::ID("flexible"), {}));
+            fields.push_back(new IR::StructField(bridgedField->name, fieldAnnotations,
+                                                 bridgedField->type));
         }
-
-        auto* layoutKind = new IR::StringLiteral(IR::ID("bridged_header"));
-        bridgedHeaderType =
-            new IR::Type_Header(BRIDGED_MD_HEADER, new IR::Annotations({
-                 new IR::Annotation(IR::ID("layout"), {layoutKind})}), fields);
-
         return Transform::init_apply(root);
     }
 
-    IR::Type_StructLike* preorder(IR::Type_StructLike* type) override {
+    IR::Type_StructLike* postorder(IR::Type_StructLike* type) override {
         prune();
-        if (type->name != "compiler_generated_metadata_t") return type;
-
-        LOG1("Will inject the new field");
-
-        // Inject the new field. This will give us access to the bridged
-        // metadata type everywhere in the program.
-        type->fields.push_back(new IR::StructField(BRIDGED_MD,
-                                                   new IR::Type_Name(BRIDGED_MD_HEADER)));
+        if (type->name == structure->bridgedType->to<IR::Type_StructLike>()->name) {
+           type->fields = fields;
+        }
         return type;
     }
 
@@ -132,7 +109,21 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* callExpr = new IR::MethodCallExpression(method, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
-
+        // add assignment
+        auto pathname = structure->egress_parser.psaParams.at("metadata");
+        auto path = new IR::PathExpression(pathname);
+        auto mdType = typeMap->getTypeType(structure->metadataType, true);
+        for (auto& bridgedField : structure->bridgedType->to<IR::Type_StructLike>()->fields) {
+            auto leftMember = new IR::Member(path, bridgedField->name);
+            for (auto f : mdType->to<IR::Type_StructLike>()->fields) {
+                if (f->name == bridgedField->name) {
+                    auto rightMember = new IR::Member(member, bridgedField->name);
+                    auto setMetadata = new IR::AssignmentStatement(leftMember, rightMember);
+                    state->components.push_back(setMetadata);
+                    break;
+                }
+            }
+        }
         return state;
     }
 
@@ -166,24 +157,17 @@ struct PsaBridgeIngressToEgress : public Transform {
         return control;
     }
 
-    const IR::P4Program* postorder(IR::P4Program *program) override {
-        LOG4("Injecting declaration for bridge metadata type: " << bridgedHeaderType);
-        program->objects.insert(program->objects.begin(), bridgedHeaderType);
-        return program;
-    }
-
     PSA::ProgramStructure* structure;
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
-
-    const IR::Type_Header* bridgedHeaderType = nullptr;
 };
 
 // Find the assignment to bridged metadata from ingress deparser
 // and move them to the end of ingress.
 struct FindBridgeMetadataAssignment : public Transform {
-    FindBridgeMetadataAssignment(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-        : refMap(refMap), typeMap(typeMap) { }
+    FindBridgeMetadataAssignment(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                                 PSA::ProgramStructure* structure)
+        : refMap(refMap), typeMap(typeMap), structure(structure) { }
 
     const IR::Parameter* getContainingParameter(const LinearPath& path,
                                                 P4::ReferenceMap* refMap) {
@@ -209,7 +193,9 @@ struct FindBridgeMetadataAssignment : public Transform {
             return false;
         auto headerType = type->to<IR::Type_Header>();
         LOG1("header type " << headerType);
-        return headerType->name == BRIDGED_MD_HEADER;
+        if (auto bridgeHeader = structure->bridgedType->to<IR::Type_StructLike>())
+            return headerType->name == bridgeHeader->name;
+        return false;
     }
 
     bool isCompilerGeneratedType(const IR::Type* type) {
@@ -274,6 +260,7 @@ struct FindBridgeMetadataAssignment : public Transform {
 
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
+    PSA::ProgramStructure* structure;
     IR::IndexedVector<IR::StatOrDecl> bridgedFieldAssignments;
 };
 
@@ -304,12 +291,11 @@ struct MoveBridgeMetadataAssignment : public Transform {
     IR::IndexedVector<IR::StatOrDecl>* bridgedFieldAssignments;
 };
 
-}  // namespace
-
 AddPsaBridgeMetadata::AddPsaBridgeMetadata(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                            PSA::ProgramStructure* structure) {
     auto* bridgeIngressToEgress = new PsaBridgeIngressToEgress(refMap, typeMap, structure);
-    auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap);
+    auto* findBridgedMetaAssignments = new FindBridgeMetadataAssignment(refMap, typeMap,
+                                                                                structure);
     addPasses({
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
