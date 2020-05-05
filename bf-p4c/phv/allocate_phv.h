@@ -2,6 +2,7 @@
 #define BF_P4C_PHV_ALLOCATE_PHV_H_
 
 #include <boost/optional.hpp>
+#include <functional>
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -85,39 +86,21 @@ class FieldPackingOpportunity {
  */
 struct AllocScore {
     using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
-    static constexpr int DARK_TO_PHV_DISTANCE = 2;
-    struct ScoreByKind {
-        int n_set_gress = 0;
-        int n_set_parser_group_gress = 0;
-        int n_set_deparser_group_gress = 0;
-        int n_overlay_bits = 0;
-        int n_packing_bits = 0;  // how many wasted bits in partial container get used.
-        int n_packing_priority = 0;  // smaller, better.
-        int n_inc_containers = 0;
-        int n_wasted_bits = 0;  // if solitary but taking a container larger than it.
 
-        // The number of CLOT-eligible bits that have been allocated to PHV
-        // (JBay only).
-        int n_clot_bits = 0;
+    /// IsBetterFunc returns true if left is better than right.
+    using IsBetterFunc =
+        std::function<bool(const AllocScore& left, const AllocScore& right)>;
 
-        // The number of containers in a deparser group allocated to
-        // non-deparsed fields of a different gress than the deparser group.
-        int n_mismatched_deparser_gress = 0;
-    };
+    /// type of the name of a metric.
+    typedef cstring MetricName;
 
-    ordered_map<PHV::Kind, ScoreByKind> score;
-    int n_tphv_on_phv_bits = 0;
-    int n_mocha_on_phv_bits = 0;
-    int n_dark_on_phv_bits = 0;
-    int n_dark_on_mocha_bits = 0;
-    /// Number of bitmasked-set operations introduced by this transaction.
-    int n_num_bitmasked_set = 0;
-    /// Number of container bits wasted because POV slice lists/slices do not fill the container
-    /// wholly.
-    int n_pov_bits_wasted = 0;
+    /// general metrics
+    static const MetricName g_general_metrics[];
+    ordered_map<MetricName, int> general;
 
-    int parser_extractor_balance = 0;
-    int n_inc_tphv_collections = 0;
+    /// container-kind-specific scores.
+    static const MetricName g_by_kind_metrics[];
+    ordered_map<PHV::Kind, ordered_map<MetricName, int>> by_kind;
 
     AllocScore() { }
 
@@ -133,15 +116,13 @@ struct AllocScore {
             const PhvUse& uses,
             const MapFieldToParserStates& field_to_parser_states,
             const CalcParserCriticalPath& parser_critical_path,
-            const int bitmasks = 0);
+            FieldPackingOpportunity* packing,
+            const int bitmasks);
 
     AllocScore& operator=(const AllocScore& other) = default;
-    bool operator>(const AllocScore& other) const;
+    AllocScore operator-(const AllocScore& other) const;
     static AllocScore make_lowest() { return AllocScore(); }
-
-    /* stateful variables for AllocScore. */
-    /// Opportunities for packing if allocated in some order.
-    static FieldPackingOpportunity* g_packing_opportunities;
+    static ordered_map<MetricName, int> weighted_sum(const AllocScore& s);
 
  private:
     bitvec calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices);
@@ -156,6 +137,41 @@ struct AllocScore {
 };
 
 std::ostream& operator<<(std::ostream& s, const AllocScore& score);
+
+/// AllocContext will will create alloc scores.
+class AllocContext {
+ private:
+    cstring name_i;
+
+    /// Opportunities for packing if allocated in some order.
+    FieldPackingOpportunity* packing_opportunities_i = nullptr;
+
+    /// comparison function
+    AllocScore::IsBetterFunc is_better_i;
+
+ public:
+    AllocContext(cstring name, AllocScore::IsBetterFunc is_better)
+        : name_i(name), is_better_i(is_better) { }
+
+    AllocScore make_score(
+        const PHV::Transaction& alloc,
+        const PhvInfo& phv,
+        const ClotInfo& clot,
+        const PhvUse& uses,
+        const MapFieldToParserStates& field_to_parser_states,
+        const CalcParserCriticalPath& parser_critical_path,
+        const int bitmasks = 0) const;
+
+    bool is_better(const AllocScore& left, const AllocScore& right) const {
+        return is_better_i(left, right);
+    }
+
+    AllocContext with(FieldPackingOpportunity* packing) {
+        auto cloned = *this;
+        cloned.packing_opportunities_i = packing;
+        return cloned;
+    }
+};
 
 /// AllocAlignment has two maps used by tryAllocSliceList
 struct AllocAlignment {
@@ -199,7 +215,8 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster,
-        const AllocAlignment& alignment) const;
+        const AllocAlignment& alignment,
+        const AllocContext& score_ctx) const;
 
     /// returns @p max_n possible alloc alignments for a super cluster vs a container group
     std::vector<AllocAlignment> build_alignments(
@@ -298,7 +315,8 @@ class CoreAllocation {
     boost::optional<PHV::Transaction> tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        PHV::SuperCluster& cluster) const;
+        PHV::SuperCluster& cluster,
+        const AllocContext& score_ctx) const;
 
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
       * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
@@ -343,7 +361,8 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
-        const PHV::Allocation::ConditionalConstraint& start_positions) const;
+        const PHV::Allocation::ConditionalConstraint& start_positions,
+        const AllocContext& score_ctx) const;
 
     /// Convenience method that transforms start_positions map into a map of ConditionalConstraint,
     /// which is passed to `tryAllocSliceList` above.
@@ -352,7 +371,8 @@ class CoreAllocation {
         const PHV::ContainerGroup& group,
         const PHV::SuperCluster& super_cluster,
         const PHV::SuperCluster::SliceList& slice_list,
-        const ordered_map<PHV::FieldSlice, int>& start_positions) const;
+        const ordered_map<PHV::FieldSlice, int>& start_positions,
+        const AllocContext& score_ctx) const;
 
     void generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
@@ -373,7 +393,6 @@ class CoreAllocation {
     const CalcParserCriticalPath& parser_critical_path() const { return parser_critical_path_i; }
 };
 
-// TODO(yumin) extends this to include all possible cases.
 enum class AllocResultCode {
     SUCCESS,        // All fields allocated
     FAIL,           // Some fields unallocated
@@ -404,17 +423,16 @@ struct AllocResult {
   * 2. transaction: allocations had been made.
   * 3. remaining_clusters: the remaining cluster;
   *
-  * TODO(yumin): Introduce a way to control whether we want to use vertex coloring
-  * result for overlaying.
  */
 class AllocationStrategy {
  protected:
+    const cstring name;
     const CoreAllocation& core_alloc_i;
     std::ostream& report_i;
 
  public:
-    AllocationStrategy(const CoreAllocation& alloc, std::ostream& out)
-        : core_alloc_i(alloc), report_i(out) {}
+    AllocationStrategy(cstring name, const CoreAllocation& alloc, std::ostream& out)
+        : name(name), core_alloc_i(alloc), report_i(out) {}
 
     /** Run this strategy
      * Returns: a AllocResult that
@@ -426,7 +444,7 @@ class AllocationStrategy {
     virtual AllocResult
     tryAllocation(const PHV::Allocation& alloc,
                   const std::list<PHV::SuperCluster *>& cluster_groups_input,
-                  std::list<PHV::ContainerGroup *>& container_groups) = 0;
+                  const std::list<PHV::ContainerGroup *>& container_groups) = 0;
 
     /// Write summary of this strategy to report_i.
     void writeTransactionSummary(
@@ -441,27 +459,37 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const ClotInfo& clot_i;
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
+    AllocScore::IsBetterFunc is_better_i;
 
  public:
     BruteForceAllocationStrategy(
+        const cstring name,
         const CoreAllocation& alloc,
         std::ostream& out,
         const CalcParserCriticalPath& ccp,
         const CalcCriticalPathClusters& cpc,
         const ClotInfo& clot,
         const CollectStridedHeaders& hs,
-        const PhvUse& uses)
-        : AllocationStrategy(alloc, out), parser_critical_path_i(ccp),
+        const PhvUse& uses,
+        AllocScore::IsBetterFunc is_better)
+        : AllocationStrategy(name, alloc, out), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
           strided_headers_i(hs),
-          uses_i(uses) { }
+          uses_i(uses),
+          is_better_i(is_better) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
                   const std::list<PHV::SuperCluster*>& cluster_groups_input,
-                  std::list<PHV::ContainerGroup *>& container_groups) override;
+                  const std::list<PHV::ContainerGroup *>& container_groups) override;
 
  protected:
+    AllocResult
+    tryAllocationFailuresFirst(const PHV::Allocation &alloc,
+                  const std::list<PHV::SuperCluster*>& cluster_groups_input,
+                  const std::list<PHV::ContainerGroup *>& container_groups,
+                  const ordered_set<const PHV::Field*>& failures);
+
     /// remove singleton unreferenced fields.
     std::list<PHV::SuperCluster*> remove_unreferenced_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups_input) const;
@@ -478,7 +506,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
             const std::list<PHV::SuperCluster*>& cluster_groups);
 
     /// slice clusters into clusters with container-sized chunks.
-    std::list<PHV::SuperCluster*> slice_clusters(
+    std::list<PHV::SuperCluster*> preslice_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups,
             std::list<PHV::SuperCluster*>& unsliceable);
 
@@ -490,27 +518,33 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     /// Sort list of superclusters into the order in which they should be allocated.
     void sortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
 
-    bool tryAllocSlicing(const std::list<PHV::SuperCluster*>& slicing,
-                    const std::list<PHV::ContainerGroup *>& container_groups,
-                    PHV::Transaction& slicing_alloc);
+    bool tryAllocSlicing(
+        const std::list<PHV::SuperCluster*>& slicing,
+        const std::list<PHV::ContainerGroup *>& container_groups,
+        PHV::Transaction& slicing_alloc,
+        const AllocContext& score_ctx);
 
     bool tryAllocStride(const std::list<PHV::SuperCluster*>& stride,
                         const std::list<PHV::ContainerGroup *>& container_groups,
-                        PHV::Transaction& stride_alloc);
+                        PHV::Transaction& stride_alloc,
+                        const AllocContext& score_ctx);
 
     bool tryAllocStrideWithLeaderAllocated(
-            const std::list<PHV::SuperCluster*>& stride,
-            PHV::Transaction& leader_alloc);
+        const std::list<PHV::SuperCluster*>& stride,
+        PHV::Transaction& leader_alloc,
+        const AllocContext& score_ctx);
 
     bool tryAllocSlicingStrided(unsigned num_strides,
-                    const std::list<PHV::SuperCluster*>& slicing,
-                    const std::list<PHV::ContainerGroup *>& container_groups,
-                    PHV::Transaction& slicing_alloc);
+                                const std::list<PHV::SuperCluster*>& slicing,
+                                const std::list<PHV::ContainerGroup *>& container_groups,
+                                PHV::Transaction& slicing_alloc,
+                                const AllocContext& score_ctx);
 
     std::list<PHV::SuperCluster*>
     allocLoop(PHV::Transaction& rst,
               std::list<PHV::SuperCluster*>& cluster_groups,
-              const std::list<PHV::ContainerGroup *>& container_groups);
+              const std::list<PHV::ContainerGroup *>& container_groups,
+              const AllocContext& score_ctx);
 
     /// Allocate deparser zero fields to zero-initialized containers. B0 for ingress and B16 for
     /// egress.
