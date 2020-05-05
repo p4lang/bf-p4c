@@ -1144,6 +1144,10 @@ struct AllocateParserState : public ParserTransform {
             }
 
             stall->transitions = new_transitions;
+
+            stall->selects = state->selects;
+            state->selects = {};
+
             auto to_stall = new IR::BFN::Transition(match_t(), stall_amt, stall);
             state->transitions = {to_stall};
 
