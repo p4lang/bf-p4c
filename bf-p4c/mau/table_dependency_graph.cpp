@@ -1106,12 +1106,12 @@ bool DependencyGraph::is_anti_edge(DependencyGraph::dependencies_t dep) const {
      || (dep == DependencyGraph::ANTI_TABLE_READ)
      || (dep == DependencyGraph::ANTI_ACTION_READ)
      || (dep == DependencyGraph::ANTI_NEXT_TABLE_DATA)
-     || (dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA));
+     || (dep == DependencyGraph::ANTI_NEXT_TABLE_METADATA)
+     || (dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL));
 }
 
 bool DependencyGraph::is_ctrl_edge(DependencyGraph::dependencies_t dep) const {
-    return ((dep == DependencyGraph::ANTI_NEXT_TABLE_CONTROL)
-     || (dep == DependencyGraph::CONTROL_ACTION)
+    return ((dep == DependencyGraph::CONTROL_ACTION)
      || (dep == DependencyGraph::CONTROL_COND_TRUE)
      || (dep == DependencyGraph::CONTROL_COND_FALSE)
      || (dep == DependencyGraph::CONTROL_TABLE_HIT)

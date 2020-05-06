@@ -203,7 +203,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     EXPECT_NE(t3, nullptr);
     EXPECT_NE(t4, nullptr);
 
-    const int NUM_CHECKS_EXPECTED = 3;
+    const int NUM_CHECKS_EXPECTED = 5;
     int num_checks = 0;
 
     DependencyGraph::Graph::edge_iterator edges, edges_end;
@@ -215,7 +215,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         DependencyGraph::dependencies_t edge_type = dg.g[*edges];
         if (src == t2 && dst == t3) {
             num_checks++;
-            EXPECT_EQ(dg.is_ctrl_edge(edge_type), true);
+            EXPECT_EQ(dg.is_anti_edge(edge_type), true);
         }
         if (src == t3 && dst == t4) {
             num_checks++;
@@ -2832,6 +2832,164 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges3) {
     EXPECT_FALSE(pbce.edge(e, g));
 
     EXPECT_TRUE(pbce.edge(f, g));
+}
+
+TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
+    auto test = createTableDependencyGraphTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+                action a(bit<8> v) {
+                    headers.h1.f1 = v;
+                }
+
+                action b() {
+                    headers.h1.f1 = 0;
+                }
+
+                action c() {
+                    headers.h1.f1 = 1;
+                }
+
+                action noop() { }
+
+                table node_a {
+                    actions = { a; b; c; noop; }
+                    key = { headers.h1.f1 : exact; }
+                }
+
+
+                table node_b {
+                    key = { headers.h1.f2 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_c {
+                    key = { headers.h1.f3 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_d {
+                    key = { headers.h1.f4 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_e {
+                    key = { headers.h1.f5 : exact; }
+                    actions = { noop; }
+                }
+
+                table node_f {
+                    key = { headers.h1.f6 : exact; }
+                    actions = { noop; }
+                }
+
+                apply {
+                    switch (node_a.apply().action_run) {
+                        a : {
+                            if (node_b.apply().hit) {
+                                node_c.apply();
+                                node_d.apply();
+                            }
+                            node_f.apply();
+                        }
+                        b : {
+                            node_e.apply();
+                            node_f.apply();
+                        }
+                    }
+                }
+            )"));
+
+    // In this example, node_f has to follow node_e and node_b due to predication-based edges
+    // node_f, because of logical_deps through control_deps, also must follow node_c and node_d
+    // node_f was not found logically after node_c and node_d without the fix for P4C-2716
+
+    ASSERT_TRUE(test);
+    SymBitMatrix mutex;
+    PhvInfo phv(mutex);
+    FieldDefUse defuse(phv);
+    DependencyGraph dg;
+
+    test->pipe = runMockPasses(test->pipe, phv, defuse);
+    auto *find_dg = new FindDependencyGraph(phv, dg);
+    test->pipe->apply(*find_dg);
+    const IR::MAU::Table *a = dg.name_to_table.at("igrs.node_a");
+    const IR::MAU::Table *b = dg.name_to_table.at("igrs.node_b");
+    const IR::MAU::Table *c = dg.name_to_table.at("igrs.node_c");
+    const IR::MAU::Table *d = dg.name_to_table.at("igrs.node_d");
+    const IR::MAU::Table *e = dg.name_to_table.at("igrs.node_e");
+    const IR::MAU::Table *f = dg.name_to_table.at("igrs.node_f");
+
+    EXPECT_TRUE(dg.happens_logi_before(a, b));
+    EXPECT_TRUE(dg.happens_logi_before(a, c));
+    EXPECT_TRUE(dg.happens_logi_before(a, d));
+    EXPECT_TRUE(dg.happens_logi_before(a, e));
+    EXPECT_TRUE(dg.happens_logi_before(a, f));
+
+    EXPECT_FALSE(dg.happens_logi_before(b, a));
+    EXPECT_TRUE(dg.happens_logi_before(b, c));
+    EXPECT_TRUE(dg.happens_logi_before(b, d));
+    EXPECT_FALSE(dg.happens_logi_before(b, e));
+    EXPECT_TRUE(dg.happens_logi_before(b, f));
+
+    EXPECT_FALSE(dg.happens_logi_before(c, a));
+    EXPECT_FALSE(dg.happens_logi_before(c, b));
+    EXPECT_FALSE(dg.happens_logi_before(c, d));
+    EXPECT_FALSE(dg.happens_logi_before(c, e));
+    EXPECT_TRUE(dg.happens_logi_before(c, f));
+
+    EXPECT_FALSE(dg.happens_logi_before(d, a));
+    EXPECT_FALSE(dg.happens_logi_before(d, b));
+    EXPECT_FALSE(dg.happens_logi_before(d, c));
+    EXPECT_FALSE(dg.happens_logi_before(d, e));
+    EXPECT_TRUE(dg.happens_logi_before(d, f));
+
+    EXPECT_FALSE(dg.happens_logi_before(e, a));
+    EXPECT_FALSE(dg.happens_logi_before(e, b));
+    EXPECT_FALSE(dg.happens_logi_before(e, c));
+    EXPECT_FALSE(dg.happens_logi_before(e, d));
+    EXPECT_TRUE(dg.happens_logi_before(e, f));
+
+    EXPECT_FALSE(dg.happens_logi_before(f, a));
+    EXPECT_FALSE(dg.happens_logi_before(f, b));
+    EXPECT_FALSE(dg.happens_logi_before(f, c));
+    EXPECT_FALSE(dg.happens_logi_before(f, d));
+    EXPECT_FALSE(dg.happens_logi_before(f, e));
+
+    EXPECT_FALSE(dg.happens_logi_after(a, b));
+    EXPECT_FALSE(dg.happens_logi_after(a, c));
+    EXPECT_FALSE(dg.happens_logi_after(a, d));
+    EXPECT_FALSE(dg.happens_logi_after(a, e));
+    EXPECT_FALSE(dg.happens_logi_after(a, f));
+
+    EXPECT_TRUE(dg.happens_logi_after(b, a));
+    EXPECT_FALSE(dg.happens_logi_after(b, c));
+    EXPECT_FALSE(dg.happens_logi_after(b, d));
+    EXPECT_FALSE(dg.happens_logi_after(b, e));
+    EXPECT_FALSE(dg.happens_logi_after(b, f));
+
+    EXPECT_TRUE(dg.happens_logi_after(c, a));
+    EXPECT_TRUE(dg.happens_logi_after(c, b));
+    EXPECT_FALSE(dg.happens_logi_after(c, d));
+    EXPECT_FALSE(dg.happens_logi_after(c, e));
+    EXPECT_FALSE(dg.happens_logi_after(c, f));
+
+    EXPECT_TRUE(dg.happens_logi_after(d, a));
+    EXPECT_TRUE(dg.happens_logi_after(d, b));
+    EXPECT_FALSE(dg.happens_logi_after(d, c));
+    EXPECT_FALSE(dg.happens_logi_after(d, e));
+    EXPECT_FALSE(dg.happens_logi_after(d, f));
+
+    EXPECT_TRUE(dg.happens_logi_after(e, a));
+    EXPECT_FALSE(dg.happens_logi_after(e, b));
+    EXPECT_FALSE(dg.happens_logi_after(e, c));
+    EXPECT_FALSE(dg.happens_logi_after(e, d));
+    EXPECT_FALSE(dg.happens_logi_after(e, f));
+
+    EXPECT_TRUE(dg.happens_logi_after(f, a));
+    EXPECT_TRUE(dg.happens_logi_after(f, b));
+    EXPECT_TRUE(dg.happens_logi_after(f, c));
+    EXPECT_TRUE(dg.happens_logi_after(f, d));
+    EXPECT_TRUE(dg.happens_logi_after(f, e));
 }
 
 }  // namespace Test
