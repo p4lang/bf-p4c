@@ -1133,7 +1133,7 @@ struct AllocateParserState : public ParserTransform {
             auto stall = new IR::BFN::ParserState(state->p4State, name, state->gress);
 
             auto stall_amt = Device::pardeSpec().byteInputBufferSize();
-            auto new_shift = shift - Device::pardeSpec().byteInputBufferSize();
+            auto new_shift = shift - stall_amt;
 
             IR::Vector<IR::BFN::Transition> new_transitions;
 
@@ -1145,7 +1145,7 @@ struct AllocateParserState : public ParserTransform {
 
             stall->transitions = new_transitions;
 
-            stall->selects = state->selects;
+            stall->selects = *(state->selects.apply(ShiftPacketRVal(stall_amt * 8, true)));
             state->selects = {};
 
             auto to_stall = new IR::BFN::Transition(match_t(), stall_amt, stall);
