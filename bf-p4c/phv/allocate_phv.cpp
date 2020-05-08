@@ -141,6 +141,26 @@ std::pair<bool, cstring> prioritized_cmp(std::vector<AllocScoreCmpCond> conds) {
     return {false, "equal"};
 }
 
+ordered_map<MetricName, int> default_weighted_sum(const AllocScore& delta) {
+    ordered_map<MetricName, int> weighted_delta;
+    for (auto kind : Device::phvSpec().containerKinds()) {
+        // Exclude dark PHVs from score because we want to use them as a spill space.
+        if (kind == PHV::Kind::dark) continue;
+        const int weight = (kind == PHV::Kind::normal || kind == PHV::Kind::mocha) ? 3 : 1;
+        // Add this score.
+        if (delta.by_kind.count(kind)) {
+            const auto& ks = delta.by_kind.at(kind);
+            for (const auto& m : AllocScore::g_by_kind_metrics) {
+                if (!ks.count(m)) {
+                    continue;
+                }
+                weighted_delta[m] += weight * ks.at(m);
+            }
+        }
+    }
+    return weighted_delta;
+}
+
 /** default_alloc_score_is_better
  * As of 04/07/2020, followings is the same heuristic set as the current master .
  */
@@ -152,7 +172,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
         + delta.general[n_mocha_on_phv_bits]
         + delta.general[n_dark_on_mocha_bits];
 
-    auto weighted_delta = AllocScore::weighted_sum(delta);
+    auto weighted_delta = default_weighted_sum(delta);
     std::vector<AllocScoreCmpCond> conds;
     if (Device::currentDevice() != Device::TOFINO) {
         conds = {
@@ -204,46 +224,50 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
     return rst.first;
 }
 
-/** packing_alloc_score_is_better
+/** tofino_only_alloc_score_is_better
  */
-bool packing_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
+bool tofino_only_alloc_score_is_better(const AllocScore& left, const AllocScore& right) {
     AllocScore delta = left - right;
-    const int DARK_TO_PHV_DISTANCE = 2;
-    int container_type_score = delta.general[n_tphv_on_phv_bits]
-        + DARK_TO_PHV_DISTANCE * delta.general[n_dark_on_phv_bits]
-        + delta.general[n_mocha_on_phv_bits]
-        + delta.general[n_dark_on_mocha_bits];
+    ordered_map<MetricName, int> weighted_delta;
+    for (auto kind : Device::phvSpec().containerKinds()) {
+        int weight = (kind == PHV::Kind::normal) ? 3 : 1;
+        if (delta.by_kind.count(kind)) {
+            const auto& ks = delta.by_kind.at(kind);
+            for (const auto& m : AllocScore::g_by_kind_metrics) {
+                if (!ks.count(m)) {
+                    continue;
+                }
+                weighted_delta[m] += weight * ks.at(m);
+            }
+        }
+    }
 
-    auto weighted_delta = AllocScore::weighted_sum(delta);
     std::vector<AllocScoreCmpCond> conds = {
-        {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
-        {n_clot_bits, weighted_delta[n_clot_bits], false},
-        {"container_type_score", container_type_score, false},
+        {n_tphv_on_phv_bits, delta.general[n_tphv_on_phv_bits], false},
         {n_wasted_bits, weighted_delta[n_wasted_bits], false},
-        {n_packing_bits, weighted_delta[n_packing_bits], true},
-        {n_overlay_bits, weighted_delta[n_overlay_bits], true},
-        {n_wasted_pov_bits, delta.general[n_wasted_pov_bits], false},
-        // {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
-        {n_bitmasked_set, delta.general[n_bitmasked_set], false},
+        {n_inc_small_containers, weighted_delta[n_inc_small_containers], false},
+        {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
         {n_inc_containers, weighted_delta[n_inc_containers], false},
+        {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if tofino
+        {n_packing_bits, weighted_delta[n_packing_bits], true},
         {n_packing_priority, weighted_delta[n_packing_priority], false},
+        {n_bitmasked_set, delta.general[n_bitmasked_set], false},
+        {parser_extractor_balance, delta.general[parser_extractor_balance], true},
         {n_set_gress, weighted_delta[n_set_gress], false},
         {n_set_deparser_group_gress, weighted_delta[n_set_deparser_group_gress], false},
         {n_set_parser_group_gress, weighted_delta[n_set_parser_group_gress], false},
-        {parser_extractor_balance, delta.general[parser_extractor_balance], true},
         {n_mismatched_deparser_gress, weighted_delta[n_mismatched_deparser_gress], false},
     };
     auto rst = prioritized_cmp(conds);
     if (rst.second != "equal") {
         LOG6("better because: " << rst.second);
     }
-
     return rst.first;
 }
 
 }  // namespace
 
-const MetricName AllocScore::g_general_metrics[] = {
+const std::vector<MetricName> AllocScore::g_general_metrics = {
     n_tphv_on_phv_bits,
     n_mocha_on_phv_bits,
     n_dark_on_phv_bits,
@@ -254,7 +278,7 @@ const MetricName AllocScore::g_general_metrics[] = {
     n_inc_tphv_collections,
 };
 
-const MetricName AllocScore::g_by_kind_metrics[] = {
+const std::vector<MetricName> AllocScore::g_by_kind_metrics = {
     n_set_gress,
     n_set_parser_group_gress,
     n_set_deparser_group_gress,
@@ -267,35 +291,6 @@ const MetricName AllocScore::g_by_kind_metrics[] = {
     n_clot_bits,
     n_mismatched_deparser_gress,
 };
-
-ordered_map<MetricName, int> AllocScore::weighted_sum(const AllocScore& delta) {
-    const int weight_factor = 2;
-    ordered_map<MetricName, int> weighted_delta;
-    for (auto kind : Device::phvSpec().containerKinds()) {
-        // Exclude dark PHVs from score because we want to use them as a spill space.
-        if (kind == PHV::Kind::dark) continue;
-
-        // XXX(yumin): seems suspicious as bonus on tagalong have higher weight.
-        int penalty = (kind == PHV::Kind::normal || kind == PHV::Kind::mocha) ? weight_factor : 1;
-        int bonus = kind == PHV::Kind::tagalong ? weight_factor : 1;
-
-        // Add this score.
-        if (delta.by_kind.count(kind)) {
-            const auto& ks = delta.by_kind.at(kind);
-            for (const auto& m : AllocScore::g_by_kind_metrics) {
-                int weight = penalty;
-                if (m == n_mismatched_deparser_gress || m == n_packing_bits) {
-                    weight = bonus;
-                }
-                if (!ks.count(m)) {
-                    continue;
-                }
-                weighted_delta[m] += weight * ks.at(m);
-            }
-        }
-    }
-    return weighted_delta;
-}
 
 AllocScore AllocScore::operator-(const AllocScore& right) const {
     AllocScore rst = *this;  // copy
@@ -1955,6 +1950,7 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
         PHV::SuperCluster& super_cluster,
+        int max_alignment_tries,
         const AllocContext& score_ctx) const {
     if (isClotSuperCluster(clot_i, super_cluster)) {
         LOG5("Skipping CLOT-allocated super cluster: " << super_cluster);
@@ -1965,15 +1961,12 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
         return boost::none;
 
     LOG5("build alignments");
-    // build alignments.
-    int max_alignment_tries = 1;
     std::vector<AllocAlignment> alignments = build_alignments(
         max_alignment_tries, container_group, super_cluster);
     if (alignments.empty()) {
         LOG5("SuperCluster is not allocate-able due to alignment: " << super_cluster);
         return boost::none;
     }
-
     LOG5("found " << alignments.size() << " valid alignemtns");
 
     // try different alignments.
@@ -2217,23 +2210,44 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         LOG4("  ...Skipping CLOT-allocated super cluster: " << sc);
     }
 
-    std::vector<std::pair<cstring, AllocScore::IsBetterFunc>> heuristics = {
-        {"default", default_alloc_score_is_better},
-        {"packing_first", packing_alloc_score_is_better},
+    BruteForceStrategyConfig default_config {
+        /*.name:*/                   "default",
+        /*.is_better:*/              default_alloc_score_is_better,
+        /*.max_failure_retry:*/      0,
+        /*.max_slicing:*/            256,
+        /*.max_sl_alignment_try:*/   1,
+        /*.tofino_only:*/            false,
+    };
+    BruteForceStrategyConfig tofino_only_backup_config {
+        /*.name:*/                   "tofino_only_backup",
+        /*.is_better:*/              tofino_only_alloc_score_is_better,
+        /*.max_failure_retry:*/      1,
+        /*.max_slicing:*/            2048,
+        /*.max_sl_alignment_try:*/   5,
+        /*.tofino_only:*/            true,
+    };
+
+    std::vector<BruteForceStrategyConfig> configs = {
+        default_config, tofino_only_backup_config,
     };
 
     AllocResult result(
         AllocResultCode::FAIL_UNSAT, alloc.makeTransaction(), {});
-    for (const auto& h : heuristics) {
+    for (const auto& config : configs) {
+        if (config.tofino_only && Device::currentDevice() != Device::TOFINO) {
+            continue;
+        }
         AllocationStrategy *strategy =
             new BruteForceAllocationStrategy(
-                h.first, core_alloc_i, report, parser_critical_path_i,
+                config.name, core_alloc_i, report, parser_critical_path_i,
                 critical_path_clusters_i, clot_i,
                 strided_headers_i, uses_i,
-                h.second);
+                config);
         result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
         if (result.status == AllocResultCode::SUCCESS) {
             break;
+        } else {
+            LOG1("phv allocation with " << config.name << " config failed.");
         }
     }
     alloc.commit(result.transaction);
@@ -2782,7 +2796,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     if (Device::currentDevice() != Device::TOFINO) {
         return { }; }
 
-    auto score_ctx = AllocContext(name, is_better_i);
+    auto score_ctx = AllocContext(name, config_i.is_better);
     std::list<PHV::SuperCluster*> allocated_sc;
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     for (auto* sc : cluster_groups) {
@@ -3086,7 +3100,7 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
             core_alloc_i.uses(), core_alloc_i.defuse(), core_alloc_i.mutex());
     log_packing_opportunities(packing_opportunities, cluster_groups);
 
-    auto score_ctx = AllocContext(name, is_better_i);
+    auto score_ctx = AllocContext(name, config_i.is_better);
     score_ctx = score_ctx.with(packing_opportunities);
     auto allocated_clusters = allocLoop(rst, cluster_groups, container_groups, score_ctx);
 
@@ -3117,14 +3131,20 @@ BruteForceAllocationStrategy::tryAllocation(
     const PHV::Allocation &alloc,
     const std::list<PHV::SuperCluster*>& cluster_groups_input,
     const std::list<PHV::ContainerGroup *>& container_groups) {
-    int max_try = 1;
     ordered_set<const PHV::Field*> failed;
     AllocResult rst(
         AllocResultCode::FAIL_UNSAT, alloc.makeTransaction(), {});
     cstring log_prefix = "allocation(" + name + "): ";
     bool succ = false;
+    int max_try = config_i.max_failure_retry + 1;
     for (int i = 0; i < max_try; i++) {
         LOG1(log_prefix << " try allocation for the " << i + 1 << "th time");
+        if (failed.size() > 0) {
+            LOG1(log_prefix << "Try again with failures prioritized");
+            for (const auto& fs : failed) {
+                LOG1("\t.. " << fs);
+            }
+        }
         rst = tryAllocationFailuresFirst(
             alloc, cluster_groups_input, container_groups, failed);
         if (rst.status != AllocResultCode::SUCCESS) {
@@ -3133,14 +3153,6 @@ BruteForceAllocationStrategy::tryAllocation(
                     [&] (const PHV::FieldSlice& fs) {
                         failed.insert(fs.field());
                     });
-            }
-            if (i == max_try - 1) {
-                return rst;
-            }
-            // try again.
-            LOG1(log_prefix << "Try again with failures prioritized");
-            for (const auto& fs : failed) {
-                LOG1("\t.. " << fs);
             }
         } else {
             LOG1(log_prefix << "succeeded");
@@ -3430,7 +3442,8 @@ BruteForceAllocationStrategy::tryAllocSlicing(
             LOG4("Try container group: " << container_group);
 
             if (auto partial_alloc =
-                    core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc, score_ctx)) {
+                core_alloc_i.tryAlloc(slicing_alloc, *container_group, *sc,
+                                      config_i.max_sl_alignment, score_ctx)) {
                 AllocScore score = score_ctx.make_score(*partial_alloc,
                         core_alloc_i.phv(), clot_i, core_alloc_i.uses(),
                         core_alloc_i.field_to_parser_states(),
@@ -3505,7 +3518,7 @@ BruteForceAllocationStrategy::tryAllocStride(
         LOG4("Try container group: " << container_group);
 
         auto leader_alloc = core_alloc_i.tryAlloc(
-            stride_alloc, *container_group, *leader, score_ctx);
+            stride_alloc, *container_group, *leader, config_i.max_sl_alignment, score_ctx);
         if (leader_alloc) {
             // alloc rest
             if (tryAllocStrideWithLeaderAllocated(stride, *leader_alloc, score_ctx)) {
@@ -3568,7 +3581,8 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
 
         PHV::ContainerGroup cg(curr.type().size(), {curr});
 
-        auto sc_alloc = core_alloc_i.tryAlloc(leader_alloc, cg, *sc, score_ctx);
+        auto sc_alloc = core_alloc_i.tryAlloc(leader_alloc, cg, *sc,
+                                              config_i.max_sl_alignment, score_ctx);
 
         if (!sc_alloc) {
             LOG4("failed to alloc next stride slice in " << curr);
@@ -3635,7 +3649,7 @@ BruteForceAllocationStrategy::allocLoop(
             LOG4("    ...but there are no valid slicings");
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
 
-        int MAX_SLICING_TRY = 65535;
+        int MAX_SLICING_TRY = config_i.max_slicing;
 
         /// XXX(zma) strided cluster can have many slices in the supercluster
         /// and the number of slicing can blow up (need a better way to stop

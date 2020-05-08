@@ -95,11 +95,11 @@ struct AllocScore {
     typedef cstring MetricName;
 
     /// general metrics
-    static const MetricName g_general_metrics[];
+    static const std::vector<MetricName> g_general_metrics;
     ordered_map<MetricName, int> general;
 
     /// container-kind-specific scores.
-    static const MetricName g_by_kind_metrics[];
+    static const std::vector<MetricName> g_by_kind_metrics;
     ordered_map<PHV::Kind, ordered_map<MetricName, int>> by_kind;
 
     AllocScore() { }
@@ -122,7 +122,6 @@ struct AllocScore {
     AllocScore& operator=(const AllocScore& other) = default;
     AllocScore operator-(const AllocScore& other) const;
     static AllocScore make_lowest() { return AllocScore(); }
-    static ordered_map<MetricName, int> weighted_sum(const AllocScore& s);
 
  private:
     bitvec calcContainerAllocVec(const ordered_set<PHV::AllocSlice>& slices);
@@ -316,6 +315,7 @@ class CoreAllocation {
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
         PHV::SuperCluster& cluster,
+        int max_alignment_tries,
         const AllocContext& score_ctx) const;
 
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
@@ -452,6 +452,23 @@ class AllocationStrategy {
             const std::list<PHV::SuperCluster *>& allocated);
 };
 
+struct BruteForceStrategyConfig {
+    cstring name;
+    // heristic set of alloc score:
+    AllocScore::IsBetterFunc is_better;
+    // if max_failure_retry > 1, will retry (n-1) times by allocating
+    // previsouly failed fields at the beginning of the allocation.
+    int max_failure_retry;
+    // try to split a supercluster for max_slicing_try times then allocate
+    // for best score.
+    int max_slicing;
+    // the number of alignments of slicelists generated.
+    // XXX(yumin): currently stopped at the first alloc-able alignment.
+    int max_sl_alignment;
+    // whether this score is tofino only.
+    bool tofino_only;
+};
+
 class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
     const CalcParserCriticalPath& parser_critical_path_i;
@@ -459,7 +476,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const ClotInfo& clot_i;
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
-    AllocScore::IsBetterFunc is_better_i;
+    const BruteForceStrategyConfig& config_i;
 
  public:
     BruteForceAllocationStrategy(
@@ -471,12 +488,12 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
         const ClotInfo& clot,
         const CollectStridedHeaders& hs,
         const PhvUse& uses,
-        AllocScore::IsBetterFunc is_better)
+        const BruteForceStrategyConfig& config)
         : AllocationStrategy(name, alloc, out), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
           strided_headers_i(hs),
           uses_i(uses),
-          is_better_i(is_better) { }
+          config_i(config) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,

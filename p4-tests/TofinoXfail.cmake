@@ -1688,7 +1688,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )
 
