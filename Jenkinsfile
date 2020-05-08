@@ -232,11 +232,11 @@ node ('compiler-travis') {
                         def p4o_pwd = pwd()
                         def p4v_cid = ""
 		        p4v_cid = sh (
-                            script: "docker run --privileged --rm -t -d -v ${p4o_pwd}/p4o_regression:/bfn/bf-p4c-compilers/build -w /bfn/p4v/mutine/scramble/bin/scripts --entrypoint bash barefootnetworks/p4v:p4o_regression",
+                            script: "docker run --privileged --rm -t -d -v ${p4o_pwd}/p4o_regression/build:/bfn/bf-p4c-compilers/build -w /bfn/p4v/mutine/scramble/bin/scripts --entrypoint bash barefootnetworks/p4v:p4o_regression",
                             returnStdout: true
                         ).trim()
                         sh "echo 'p4v_cid : ' $p4v_cid"
-                        sh "docker exec ${p4v_cid} python3 -u main.py"
+                        sh "docker exec ${p4v_cid} python3 -u main.py -t compiler"
                         sh "docker container stop ${bf_p4c_cid}"
                         sh "docker container stop ${p4v_cid}"
                     } catch (err) {
