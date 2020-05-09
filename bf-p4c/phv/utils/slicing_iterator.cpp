@@ -412,6 +412,14 @@ PHV::SlicingIterator::SlicingIterator(
         auto next_schema_bit = mask.begin();
         auto fs_itr = SuperClusterSliceListOrderItr(sc);
         boost::optional<FieldSlice> last = boost::none;
+        // XXX(yumin): the reason we have this is because that pa_container_size does not
+        // set no_split on the PHV::field. It's recorded in the the noSplitSlices states.
+        // So you may have pa_container_size f1<32> => 32, while f1.no_split() is false,
+        // even though it cannot be split due to the pragma.
+        const auto is_no_split_field = [&] (const PHV::Field* f) {
+            return f->no_split() || noSplitSlices.count(
+                PHV::FieldSlice(f, StartLen(0, f->size)));
+        };
         while (!fs_itr.done()) {
             const auto fs_offset = fs_itr.val();
             const auto fs = fs_offset.first;
@@ -428,11 +436,11 @@ PHV::SlicingIterator::SlicingIterator(
                     // only if the field is no_split, not the fieldslice,
                     // could we infer that it's no_split at the point.
                     if (last != boost::none && (*last).field() == fs.field()
-                        && fs.field()->no_split()) {
+                        && is_no_split_field(fs.field())) {
                         LOG5("no split is true (case 1) on " << next_schema_bit->second);
                         no_splits_i.setbit(next_schema_bit->second);
                     }
-                } else if (fs.field()->no_split() || noSplitSlices.count(fs)) {
+                } else if (is_no_split_field(fs.field()) || noSplitSlices.count(fs)) {
                     LOG5("no split is true (case 2) on " << next_schema_bit->second);
                     no_splits_i.setbit(next_schema_bit->second);
                 }
@@ -484,11 +492,9 @@ PHV::SlicingIterator::SlicingIterator(
                                      no_splits_i);
 
         if (LOGGING(5)) {
-            std::stringstream ss;
-            for (int i = 0; i < sentinel_idx_i; ++i)
-                ss << (compressed_schemas_i[i] ? "1" : "-");
-            LOG5("Initial compressed schemas after enforcing containers: " << ss.str()); }
-
+            LOG5("Initial compressed schemas after enforcing containers: " <<
+                 log_bit_schema(compressed_to_schema(ranges_i, compressed_schemas_i)));
+        }
     } else {
         // In this case, there are no slice lists, and the SuperCluster
         // contains a single RotationalCluster.  We will try all slicings of
@@ -534,6 +540,13 @@ int PHV::SlicingIterator::populate_initial_maps(
         ordered_map<const PHV::SuperCluster::SliceList*, std::pair<int, int>>& sliceListDetails,
         ordered_map<FieldSlice, std::pair<int, int>>& originalSliceOffset,
         const ordered_map<const PHV::Field*, std::vector<PHV::Size>>& pr_size) {
+    // XXX(yumin):
+    // noSplitSlices might still be incomplete, as no_split introduced by pa_container_size
+    // are not included correctly.
+    // Assuming we have a slice list [f1[0:1], f1[2,31]], and f1-> [16, 16]
+    // marking no_split on f1[0:15] and f1[16:31] is useless as we check no_split on different
+    // fieldslice, i.e. f1[0:1], f1[2,31], which will return false on no_split.
+    // we will leave it like this for now and take care of it when refactoring.
     ordered_set<const PHV::Field*> allFields;
     sc_i->forall_fieldslices([&](const PHV::FieldSlice& fs) {
             allFields.insert(fs.field());
@@ -570,8 +583,10 @@ int PHV::SlicingIterator::populate_initial_maps(
         }
         for (auto sz : sizes)
             LOG5("\t\tSize specification for " << field->name << " : " << sz);
+        // XXX(yumin): it's wired that we do not handle the case the sizes are not equal.
+        // pa_container_size f1<20> => W is valid, and we should mark f1 as no_split in
+        // this case.
         if (totalSize == field->size) {
-            LOG5("\t\tExact pragma specification found for " << field->name);
             int start = 0;
             for (auto sz : sizes) {
                 noSplitSlices.insert(PHV::FieldSlice(field, StartLen(start, sz)));
@@ -599,25 +614,47 @@ int PHV::SlicingIterator::populate_initial_maps(
             sliceListSize += slice.size();
             auto it = pr_size.find(slice.field());
             if (it == pr_size.end()) continue;
+
+            const auto* field = it->first;
+            const auto& sizes = it->second;
+
             // Note down pa_container_size pragmas for all fields in this slice list (if
             // specified). Then add the same pragmas for all fields in the rotational cluster
             // with that field.
-            pa_container_sizes_i[it->first] = it->second;
-            LOG6("  Adding pa_container_size for field: " << it->first);
-            for (auto sz : it->second)
-                LOG6("    " << sz);
+            pa_container_sizes_i[field] = sizes;
+            if (LOGGING(6)) {
+                LOG6("  Adding pa_container_size for field: " << field);
+                for (auto sz : sizes) LOG6("    " << sz);
+            }
             auto& rot_cluster = sc_i->cluster(slice);
             for (auto& rot_slice : rot_cluster.slices()) {
                 if (slice == rot_slice) continue;
-                if (pa_container_sizes_i.count(rot_slice.field())) {
+                const auto* rot_field = rot_slice.field();
+                if (pa_container_sizes_i.count(rot_field)) {
                     LOG6("    Both original field and rotational cluster field have "
                             "container size pragmas!");
+                    // TODO(yumin): why not compared here?
                     // XXX(Deep): Compare the two specifications of size.
                 }
-                pa_container_sizes_i[rot_slice.field()] = it->second;
-                LOG6("  Adding pa_container_size for field: " << rot_slice);
-                for (auto sz : it->second)
-                    LOG6("    " << sz); } }
+                pa_container_sizes_i[rot_field] = sizes;
+                const int total_size = std::accumulate(
+                    sizes.begin(), sizes.end(), 0,
+                    [] (int s, PHV::Size v) { return s + static_cast<int>(v); });
+                if (total_size == rot_field->size) {
+                    int start = 0;
+                    for (const auto sz : sizes) {
+                        noSplitSlices.insert(
+                            PHV::FieldSlice(rot_field, StartLen(start, static_cast<int>(sz))));
+                        start += static_cast<int>(sz);
+                    }
+                }
+
+                if (LOGGING(6)) {
+                    LOG6("  Adding pa_container_size for field: " << rot_slice);
+                    for (auto sz : it->second) LOG6("    " << sz);
+                }
+            }
+        }
 
         // Set to true, if all slices in the slice list are of the same field AND there is a
         // no-split constraint on the field.

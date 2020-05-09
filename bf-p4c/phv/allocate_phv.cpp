@@ -2232,7 +2232,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     };
 
     AllocResult result(
-        AllocResultCode::FAIL_UNSAT, alloc.makeTransaction(), {});
+        AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
     for (const auto& config : configs) {
         if (config.tofino_only && Device::currentDevice() != Device::TOFINO) {
             continue;
@@ -2245,6 +2245,9 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
                 config);
         result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
         if (result.status == AllocResultCode::SUCCESS) {
+            break;
+        } else if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
+            LOG1("unsat constraints, stopped");
             break;
         } else {
             LOG1("phv allocation with " << config.name << " config failed.");
@@ -2284,7 +2287,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
                                       false /* metaInitDisable */);
         }
         bindSlices(alloc, phv_i);
-        if (result.status == AllocResultCode::FAIL_UNSAT) {
+        if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
             formatAndThrowError(alloc, result.remaining_clusters);
             formatAndThrowUnsat(result.remaining_clusters);
         } else if (!failure_diagnosed) {
@@ -2897,7 +2900,9 @@ BruteForceAllocationStrategy::preslice_clusters(
             // TODO(2) is allocate-able, because we do not take action constraints into account
             // in slicing iterator.
             bool found = false;
+            int n_tried = 0;
             while (!it.done()) {
+                n_tried++;
                 pa_container_sizes.adjust_requirements(*it);
                 auto unsatisfiable_fields = pa_container_sizes.unsatisfiable_fields(*it);
                 if (unsatisfiable_fields.size() > 0) {
@@ -2917,6 +2922,7 @@ BruteForceAllocationStrategy::preslice_clusters(
                     rst.push_back(new_sc);
                 }
             } else {
+                LOG5("slicing tried " << n_tried << " but still failed");
                 throw_failure(sc, { sc });
             }
         } catch (const Util::CompilerBug& e) {
@@ -3055,7 +3061,7 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
 
     // fail early if some clusters have unsatisfiable constraints.
     if (unsliceable.size()) {
-        return AllocResult(AllocResultCode::FAIL_UNSAT,
+        return AllocResult(AllocResultCode::FAIL_UNSAT_SLICING,
                            alloc.makeTransaction(),
                            std::move(unsliceable)); }
 
@@ -3133,7 +3139,7 @@ BruteForceAllocationStrategy::tryAllocation(
     const std::list<PHV::ContainerGroup *>& container_groups) {
     ordered_set<const PHV::Field*> failed;
     AllocResult rst(
-        AllocResultCode::FAIL_UNSAT, alloc.makeTransaction(), {});
+        AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
     cstring log_prefix = "allocation(" + name + "): ";
     bool succ = false;
     int max_try = config_i.max_failure_retry + 1;
@@ -3148,11 +3154,15 @@ BruteForceAllocationStrategy::tryAllocation(
         rst = tryAllocationFailuresFirst(
             alloc, cluster_groups_input, container_groups, failed);
         if (rst.status != AllocResultCode::SUCCESS) {
-            for (const auto& sc : rst.remaining_clusters) {
-                sc->forall_fieldslices(
-                    [&] (const PHV::FieldSlice& fs) {
-                        failed.insert(fs.field());
-                    });
+            if (rst.status == AllocResultCode::FAIL) {
+                for (const auto& sc : rst.remaining_clusters) {
+                    sc->forall_fieldslices(
+                        [&] (const PHV::FieldSlice& fs) {
+                            failed.insert(fs.field());
+                        });
+                }
+            } else {
+                break;
             }
         } else {
             LOG1(log_prefix << "succeeded");
@@ -3161,7 +3171,8 @@ BruteForceAllocationStrategy::tryAllocation(
         }
     }
     if (!succ) {
-        LOG1(log_prefix << "failed after " << max_try << " tries");
+        LOG1(log_prefix << "failed after " << max_try << " tries, "
+             << "failure code " << int(rst.status));
     }
     return rst;
 }

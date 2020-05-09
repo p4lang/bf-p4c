@@ -394,10 +394,10 @@ class CoreAllocation {
 };
 
 enum class AllocResultCode {
-    SUCCESS,        // All fields allocated
-    FAIL,           // Some fields unallocated
-    FAIL_UNSAT      // Some fields CANNOT be allocated due to unsatisfiable
-                    // constraints
+    UNKNOWN,            // default value
+    SUCCESS,            // All fields allocated
+    FAIL,               // Some fields unallocated
+    FAIL_UNSAT_SLICING   // Some fields CANNOT be allocated due to slicing
 };
 
 struct AllocResult {
