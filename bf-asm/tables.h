@@ -531,7 +531,6 @@ public:
         virtual void write_regs, (mau_regs &), = 0)
 
     virtual void gen_tbl_cfg(json::vector &out) const = 0;
-    virtual void gen_name_lookup(json::map &out) {}
     virtual json::map *base_tbl_cfg(json::vector &out, const char *type, int size) const;
     virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const;
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
@@ -860,7 +859,6 @@ public:
         return rv; }
     Format::Field *find_address_field(const AttachedTable *tbl) const override {
         return attached.find_address_field(tbl); }
-    void gen_name_lookup(json::map &out) override;
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") const override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }

@@ -476,9 +476,6 @@ template<> void Parser::write_config(Target::Cloudbreak::parser_regs &regs, json
     }
     TopLevel::regs<Target::Cloudbreak>()->reg_pipe.pardereg.pgstnreg.pmergereg
         .set("regs.parse_merge", &regs.merge);
-    for (auto st : all)
-        TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
-                ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
 }
 
 template<>

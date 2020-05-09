@@ -10,8 +10,6 @@ class TopLevel {
 protected:
     TopLevel();
 public:
-    json::map                           name_lookup;
-
     static TopLevel *all;
     virtual ~TopLevel();
     virtual void output(json::map &) = 0;

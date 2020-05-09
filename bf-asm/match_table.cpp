@@ -448,18 +448,6 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             TABLE_HIT, 3 * (logical_id%8U), 3); }
 }
 
-void MatchTable::gen_name_lookup(json::map &out) {
-    if (p4_table && p4_table->p4_name()) {
-        out["table_name"] = p4_table->p4_name();
-    } else {
-        out["table_name"] = name(); }
-    json::map &actions_map = out["actions"] = json::map();
-    if (auto acts = get_actions()) {
-        for (auto &a : *acts) {
-            json::map &action_map = actions_map[a.name] = json::map();
-            action_map["direction"] = logical_id; } }
-}
-
 int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     BUG_CHECK(huffman_ones < 7);

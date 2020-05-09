@@ -198,7 +198,6 @@ public:
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }
-    static void output_names(int, json::map &);
     static std::string db_regset(const bitvec &s);
     static unsigned mau_groupsize();
 };

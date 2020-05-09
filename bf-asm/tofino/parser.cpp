@@ -736,9 +736,6 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     }
     // all parsers share the same parser_merge configuration.
     TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg.set("regs.all.parse_merge", &regs.merge);
-    for (auto st : all)
-        TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
-                ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
 }
 
 template<>

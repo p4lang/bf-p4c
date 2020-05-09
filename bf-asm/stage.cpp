@@ -581,17 +581,12 @@ template<class TARGET>
 void Stage::output(json::map &ctxt_json) {
     auto *regs = new typename TARGET::mau_regs();
     declare_registers(regs, stageno);
-    json::map &names = TopLevel::all->name_lookup["stages"][std::to_string(stageno)];
-    Phv::output_names(stageno, names["containers"]);
-    json::map &table_names = names["logical_tables"];
     json::vector &ctxt_tables = ctxt_json["tables"];
     for (auto table : tables) {
         table->write_regs(*regs);
         table->gen_tbl_cfg(ctxt_tables);
         if (auto gw = table->get_gateway())
-            gw->gen_tbl_cfg(ctxt_tables);
-        if (table->logical_id >= 0)
-            table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
+            gw->gen_tbl_cfg(ctxt_tables); }
     write_regs(*regs);
     if (options.condense_json) {
         regs->disable_if_reset_value();

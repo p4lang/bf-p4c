@@ -143,12 +143,6 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
                     addreg(GHOST, kv.key.s, kv.value); } } }
 }
 
-void Phv::output_names(int stageno, json::map &out) {
-    for (auto &slot : phv.user_defined)
-        out[std::to_string(slot.first->mau_id())] = std::string(1, "IE"[slot.second.first])
-                + " [" + join(slot.second.second[stageno], ", ") + "]";
-}
-
 Phv::Ref::Ref(gress_t g, int stage, const value_t &n)
 : gress_(g), stage(stage), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "phv or register reference or slice")) {
