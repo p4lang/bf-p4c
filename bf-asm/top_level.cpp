@@ -75,6 +75,7 @@ void TopLevelRegs<TARGET>::output(json::map &ctxt_json) {
             if (ctxt_json["program_name"])
                 header["program_name"] = ctxt_json["program_name"]->clone();
             header["target"] = Target::name();
+            header["stages"] = Target::NUM_MAU_STAGES();
             *binfile << binout::tag('H') << json::binary(header);
             if (options.binary != ONE_PIPE) {
                 this->mem_top.emit_binary(*binfile, 0);

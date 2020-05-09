@@ -9,6 +9,7 @@
 
 #include "ir/ir.h"
 #include "simple_power_graph.h"
+#include "lib/map.h"
 
 namespace MauPower {
 
@@ -314,8 +315,8 @@ double SimplePowerGraph::visit_node_power(Node* n,
     }
     double edge_power = 0.0;
     for (auto uid : edge_worst_path) {
-      auto pma = tma.at(uid);
-      edge_power += pma.compute_table_power(Device::numPipes());
+      if (auto pma = ::getref(tma, uid))
+        edge_power += pma->compute_table_power(Device::numPipes());
     }
 
     if (edge_power > worst_power) {
@@ -329,10 +330,8 @@ double SimplePowerGraph::visit_node_power(Node* n,
         LOG4("  " << c->unique_id_); }
     }
   }
-  if (tma.find(n->unique_id_) != tma.end()) {
-    auto pma = tma.at(n->unique_id_);
-    worst_power += pma.compute_table_power(Device::numPipes());
-  }
+  if (auto pma = ::getref(tma, n->unique_id_))
+    worst_power += pma->compute_table_power(Device::numPipes());
   computed_power_.emplace(n->id_, worst_power);
   worst_path.insert(n->unique_id_);
   for (auto uid : local_worst_path) {
