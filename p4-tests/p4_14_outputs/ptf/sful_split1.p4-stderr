@@ -1,0 +1,9 @@
+stateful_alu_blackbox.p4(20): [--Wwarn=unsupported] warning: stateful_alu: P4_14 extern type not fully supported
+blackbox_type stateful_alu {
+^
+sful_split1.p4(56): [--Wwarn=unsupported] warning: b1: P4_14 extern not fully supported
+blackbox stateful_alu b1 {
+                      ^^
+sful_split1.p4(72): [--Wwarn=unsupported] warning: b2: P4_14 extern not fully supported
+blackbox stateful_alu b2 {
+                      ^^
