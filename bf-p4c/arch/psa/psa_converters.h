@@ -119,6 +119,7 @@ class ControlConverter : public Transform {
     const IR::Node* postorder(IR::MethodCallExpression* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
     const IR::Node* postorder(IR::IfStatement* node) override;
+    const IR::Node* postorder(IR::Property* node) override;
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Control>();

@@ -781,8 +781,9 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     auto structure = new PSA::ProgramStructure;
 
     addPasses({
-        new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
-                                         "psa_direct_meters", "idle_timeout"}),
+        new P4::ValidateTableProperties({"psa_implementation", "psa_direct_counter",
+                                         "psa_direct_meter", "psa_idle_timeout",
+                                         "psa_empty_group_action"}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

@@ -61,6 +61,23 @@ const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
 const IR::Node* ControlConverter::postorder(IR::IfStatement* node) {
     return substitute<IR::IfStatement>(node); }
 
+const IR::Node* ControlConverter::postorder(IR::Property* p) {
+    boost::optional<cstring> newName = boost::none;
+    if (p->name.name == "psa_implementation")
+        newName = "implementation";
+    else if (p->name.name == "psa_direct_counter")
+        newName = "counters";
+    else if (p->name.name == "psa_direct_meter")
+        newName = "meters";
+    else if (p->name.name == "psa_idle_timeout")
+        newName = "idle_timeout";
+    else if (p->name.name == "psa_empty_group_action")
+        ERROR("psa_empty_group_action is not supported");
+    if (newName != boost::none)
+        return new IR::Property(p->srcInfo, *newName, p->annotations, p->value, p->isConstant);
+    return p;
+}
+
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();

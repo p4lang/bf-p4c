@@ -397,7 +397,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Both .* require the .* address hardware, and cannot be on the same table"
   testdata/p4_14_samples/counter.p4
-  testdata/p4_16_samples/psa-counter2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -736,10 +735,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-meter1.p4
 )
 
-# p4c_add_xfail_reason("tofino"
-#   "Maximum width for byte counter ingress.per_prefix_pkt_byte_count is 64 bits"
-#   testdata/p4_16_samples/psa-example-counters-bmv2.p4
-# )
+p4c_add_xfail_reason("tofino"
+  "Maximum width for byte counter .* is 64 bits"
+  testdata/p4_16_samples/psa-example-counters-bmv2.p4
+)
 
 # p4c_add_xfail_reason("tofino"
 #   "direct attached objects must be enabled in all hit actions"
@@ -749,7 +748,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1499
 p4c_add_xfail_reason("tofino"
   "Direct Extern .* of type .* is used in action .*"
-  testdata/p4_16_samples/psa-example-counters-bmv2.p4
   testdata/p4_16_samples/psa-meter6.p4
 )
 
@@ -1390,7 +1388,26 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
   extensions/p4_tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4
+)
+
+# Tna cannot support same direct counter on multiple tables
+p4c_add_xfail_reason("tofino"
+  "Name 'MyIC.counter0' is used for multiple direct counter objects in the P4Info message"
   testdata/p4_16_samples/psa-counter6.p4
+)
+
+# program error
+p4c_add_xfail_reason("tofino"
+  "Attached object .* in table .* is executed in some actions and not executed in others."
+  testdata/p4_16_samples/psa-counter4.p4
+  testdata/p4_16_samples/psa-meter5.p4
+  testdata/p4_16_samples/psa-meter4.p4
+)
+
+# program error
+p4c_add_xfail_reason("tofino"
+  "Both Counter .* and .* require the stats address hardware"
+  testdata/p4_16_samples/psa-counter2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1424,6 +1441,20 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
   testdata/p4_16_samples/psa-action-selector1.p4
   testdata/p4_16_samples/psa-action-selector2.p4
+)
+
+# Tna does not support action profile without action data?
+p4c_add_xfail_reason("tofino"
+  "Action profile ActionProfile .* on table .* does not have any action data"
+  testdata/p4_16_samples/psa-action-profile1.p4
+  testdata/p4_16_samples/psa-action-profile3.p4
+  testdata/p4_16_samples/psa-action-profile4.p4
+)
+
+# Tna does not support more than one action_profile?
+p4c_add_xfail_reason("tofino"
+  "Expected implementation property value for table MyIC.tbl to resolve to an extern instance: implementation"
+  testdata/p4_16_samples/psa-action-profile2.p4
 )
 
 p4c_add_xfail_reason("tofino"
