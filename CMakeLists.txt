@@ -124,6 +124,11 @@ if (CMAKE_COMPILER_IS_GNUCC)
     unset(LD_VERSION)
 endif ()
 
+# TODO is this wanted in p4c/CMakeList.txt along side googletest?
+include_directories (
+  ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include
+)
+
 add_subdirectory(bf-asm)
 add_subdirectory(p4c)
 

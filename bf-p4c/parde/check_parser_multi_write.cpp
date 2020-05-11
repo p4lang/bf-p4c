@@ -309,7 +309,7 @@ struct InferWriteMode : public ParserTransform {
             // Mark all other writes as dead to be elim'd later.
 
             if (kv.second.size() > 1) {
-                int i = 0;
+                ordered_set<const IR::BFN::Extract*>::size_type i = 0;
                 for (auto e : kv.second) {
                     if (i == kv.second.size() - 1)
                         break;

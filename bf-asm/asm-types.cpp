@@ -1,4 +1,5 @@
 #include "asm-types.h"
+#include "misc.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdlib.h>
@@ -95,7 +96,7 @@ bool get_bool(const value_t &v) {
 }
 
 static int chkmask(const match_t &m, int maskbits) {
-    uint64_t mask = (UINT64_C(1) << maskbits) - 1;
+    uint64_t mask = bitMask(maskbits);
     int shift = 0;
     while (mask && ((m.word0|m.word1) >> shift)) {
         if ((mask & m.word0 & m.word1) && (mask & m.word0 & m.word1) != mask)
@@ -115,7 +116,7 @@ std::ostream &operator<<(std::ostream &out, match_t m) {
         out << "0b";
     else
         assert(0);
-    uint64_t mask = ((UINT64_C(1) << bits) - 1) << shift;
+    uint64_t mask = bitMask(bits) << shift;
     for (; mask; shift -= bits, mask >>= bits)
         if (mask & m.word0 & m.word1)
             out << '*';

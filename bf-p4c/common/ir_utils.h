@@ -16,4 +16,7 @@ template <class T> inline T *clone_update(const T* &ptr) {
     ptr = rv;
     return rv; }
 
+uint64_t bitMask(unsigned size);
+big_int bigBitMask(int size);
+
 #endif /* EXTENSIONS_BF_P4C_COMMON_IR_UTILS_H_ */

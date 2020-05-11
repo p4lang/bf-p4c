@@ -126,8 +126,8 @@ void runTest(
     // Check that the result conforms to IR invariants.
     MultipleApply ma(BackendOptions());
     result->apply(ma);
-    EXPECT_EQ(ma.num_mutex_errors(), 0);
-    EXPECT_EQ(ma.num_topological_errors(), 0);
+    EXPECT_EQ(ma.num_mutex_errors(), 0UL);
+    EXPECT_EQ(ma.num_topological_errors(), 0UL);
 
     // Build flow graphs for the result.
     ordered_map<gress_t, FlowGraph> graphs;

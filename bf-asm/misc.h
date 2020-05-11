@@ -75,4 +75,6 @@ template<class T> struct ptrless {
         { return b ? a ? *a < *b : true : false; }
 };
 
+uint64_t bitMask(unsigned size);
+
 #endif /* _misc_h_ */

@@ -1,4 +1,11 @@
 #include "slice.h"
+#include "bf-p4c/common/ir_utils.h"
+
+static IR::Constant* sliceConstant(const IR::Constant* k, int lo, int hi) {
+    int size = hi-lo+1;
+    big_int value = (k->value >> lo) & bigBitMask(size);
+    return new IR::Constant(IR::Type::Bits::get(size), value);
+}
 
 std::pair<int, int> getSliceLoHi(const IR::Expression *e) {
     if (auto sl = e->to<IR::Slice>())
@@ -15,8 +22,7 @@ const IR::Expression *MakeSliceDestination(const IR::Expression *e, int lo, int 
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {
-        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
-        rv->type = IR::Type::Bits::get(hi-lo+1);
+        auto rv = sliceConstant(k, lo, hi);
         LOG6("\tReturning a constant: " << rv);
         return rv;
     }
@@ -49,8 +55,7 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
     if (read->is<IR::MAU::MultiOperand>())
         return new IR::Slice(read, hi, lo);
     if (auto k = read->to<IR::Constant>()) {
-        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
-        rv->type = IR::Type::Bits::get(hi-lo+1);
+        auto rv = sliceConstant(k, lo, hi);
         LOG6("\tReturning a constant" << rv);
         return rv;
     }
@@ -90,9 +95,9 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {
-        auto rv = ((*k >> lo) & IR::Constant((UINT64_C(1) << (hi-lo+1)) - 1)).clone();
-        rv->type = IR::Type::Bits::get(hi-lo+1);
-        return rv; }
+        auto rv = sliceConstant(k, lo, hi);
+        return rv;
+    }
     if (auto a = e->to<IR::BAnd>())
         return new IR::BAnd(e->srcInfo, MakeSlice(a->left, lo, hi), MakeSlice(a->right, lo, hi));
     if (auto o = e->to<IR::BOr>())

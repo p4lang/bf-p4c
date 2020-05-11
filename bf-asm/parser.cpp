@@ -9,6 +9,7 @@
 #include "target.h"
 #include "top_level.h"
 #include "vector.h"
+#include "misc.h"
 
 #include "tofino/parser.cpp"            // tofino template specializations
 #if HAVE_JBAY
@@ -1311,7 +1312,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         pa->phv_use[state->gress][s->where->reg.uid] = 1;
     }
     if (value_set_size == 0) {
-        uint64_t match_mask = (UINT64_C(1) << state->key.width) - 1;
+        uint64_t match_mask = bitMask(state->key.width);
         uint64_t not_covered = match_mask & ~(match.word0 | match.word1);
         if (not_covered != 0) {
             warning(lineno, "Match pattern does not cover all bits of match key, "

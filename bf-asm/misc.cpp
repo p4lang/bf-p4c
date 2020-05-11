@@ -1,4 +1,5 @@
 #include "misc.h"
+#include "bfas.h"
 #include <regex>
 #include <sstream>
 #include <string>
@@ -57,3 +58,9 @@ void gen_instfield_name(const std::string &fullname, std::string &instname,
     }
 }
 
+uint64_t bitMask(unsigned size) {
+    BUG_CHECK(size <= 64 && "bitMask(size), maximum size is 64");
+    if (size==64)
+        return ~UINT64_C(0);
+    return (UINT64_C(1) << size) - 1;
+}

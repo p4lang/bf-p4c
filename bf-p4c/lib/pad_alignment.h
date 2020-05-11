@@ -3,7 +3,7 @@
 
 #include "lib/algorithm.h"
 
-static int getAlignment(int bitSize) {
+static inline int getAlignment(int bitSize) {
     int nextByteBoundary = 8 * ROUNDUP(bitSize, 8);
     return (nextByteBoundary - bitSize);
 }

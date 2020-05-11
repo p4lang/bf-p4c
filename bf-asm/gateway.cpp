@@ -6,6 +6,7 @@
 #include "tables.h"
 #include "hashexpr.h"
 #include "hex.h"
+#include "misc.h"
 
 DEFINE_TABLE_TYPE(GatewayTable)
 
@@ -271,7 +272,7 @@ void GatewayTable::pass1() {
     for (auto &r : match) {
         if (range_match && r.offset >= 32) {
             continue; }
-        ignore ^= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
+        ignore ^= bitMask(r.val->size()) << r.offset;
         if (shift < 0 || shift > r.offset) shift = r.offset; }
     if (shift < 0) shift = 0;
     LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
@@ -484,7 +485,7 @@ void GatewayTable::write_regs(REGS &regs) {
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = timing_thread(gress);
     for (auto &r : xor_match)
-        gw_reg.gateway_table_matchdata_xor_en |= ((UINT64_C(1) << r.val->size()) - 1) << r.offset;
+        gw_reg.gateway_table_matchdata_xor_en |= bitMask(r.val->size()) << r.offset;
     int idx = 3;
     gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {

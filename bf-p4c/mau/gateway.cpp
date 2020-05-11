@@ -805,7 +805,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     } else {
         LOG4("  xor_field = " << field->name << ' ' << bits);
         size_t size = std::max(static_cast<int>(bits.size()), match_field.size());
-        uint64_t mask = (UINT64_C(1) << size) - 1, donemask = 0;
+        uint64_t mask = bitMask(size), donemask = 0;
         uint64_t val = cmplmask & mask;
         mask &= andmask & ~ormask;
         mask <<= match_field.range().lo;
@@ -821,7 +821,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             if (off.first < it->first) continue;
             if (it->first != off.first || it->second.size() != off.second.size()) {
                 BUG("field equality comparison misaligned in gateway"); }
-            uint64_t elmask = ((UINT64_C(1) << off.second.size()) - 1) << off.second.lo;
+            uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);
@@ -854,7 +854,7 @@ void BuildGatewayMatch::constant(uint64_t c) {
         ormask = c;
         LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
-        uint64_t mask = (UINT64_C(1) << match_field.size()) - 1;
+        uint64_t mask = bitMask(match_field.size());
         uint64_t val = (c ^ cmplmask) & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             warning("%smasked comparison in gateway can never match", ctxt->node->srcInfo);
@@ -865,7 +865,7 @@ void BuildGatewayMatch::constant(uint64_t c) {
         LOG4("  match_info = " << match_info << ", val=" << val << " mask=0x" << hex(mask) <<
              " shift=" << shift);
         for (auto &off : match_info.offsets) {
-            uint64_t elmask = ((UINT64_C(1) << off.second.size()) - 1) << off.second.lo;
+            uint64_t elmask = bitMask(off.second.size()) << off.second.lo;
             if ((elmask &= mask) == 0) continue;
             int shft = off.first - off.second.lo - shift;
             LOG6("    elmask=0x" << hex(elmask) << " shft=" << shft);

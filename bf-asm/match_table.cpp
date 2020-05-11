@@ -7,6 +7,7 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
+#include "misc.h"
 
 #include <unordered_map>
 
@@ -389,8 +390,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
             if (row.result_bus < 0)
                 continue;
             int r_bus = row.row*2 | (row.result_bus & 1);
-            merge.mau_immediate_data_mask[type][r_bus] =
-                (UINT64_C(1) << result->format->immed_size)-1;
+            merge.mau_immediate_data_mask[type][r_bus] = bitMask(result->format->immed_size);
             if (result->format->immed_size > 0)
                 merge.mau_payload_shifter_enable[type][r_bus]
                     .immediate_data_payload_shifter_en = 1; } }
