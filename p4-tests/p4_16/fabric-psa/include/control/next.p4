@@ -81,7 +81,7 @@ control Next (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = next_vlan_counter;
+        psa_direct_counter = next_vlan_counter;
     }
 
 #ifdef WITH_XCONNECT
@@ -111,7 +111,7 @@ control Next (inout parsed_headers_t hdr,
             set_next_id_xconnect;
             @defaultonly nop;
         }
-        counters = xconnect_counter;
+        psa_direct_counter = xconnect_counter;
         const default_action = nop();
     }
 #endif // WITH_XCONNECT
@@ -150,7 +150,7 @@ control Next (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = simple_counter;
+        psa_direct_counter = simple_counter;
     }
 #endif // WITH_SIMPLE_NEXT
 
@@ -193,8 +193,8 @@ control Next (inout parsed_headers_t hdr,
             mpls_routing_hashed;
             @defaultonly nop;
         }
-        implementation = hashed_selector;
-        counters = hashed_counter;
+        psa_implementation = hashed_selector;
+        psa_direct_counter = hashed_counter;
         const default_action = nop();
     }
 #endif // WITH_HASHED_NEXT
@@ -219,7 +219,7 @@ control Next (inout parsed_headers_t hdr,
             set_mcast_group_id;
             @defaultonly nop;
         }
-        counters = multicast_counter;
+        psa_direct_counter = multicast_counter;
         const default_action = nop();
     }
 
@@ -296,7 +296,7 @@ control EgressNextControl (
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = egress_vlan_counter;
+        psa_direct_counter = egress_vlan_counter;
     }
 
     apply {

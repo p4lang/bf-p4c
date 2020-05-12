@@ -51,7 +51,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = bridging_counter;
+        psa_direct_counter = bridging_counter;
     }
 
     /*
@@ -74,7 +74,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = mpls_counter;
+        psa_direct_counter = mpls_counter;
     }
 
     /*
@@ -101,7 +101,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = routing_v4_counter;
+        psa_direct_counter = routing_v4_counter;
     }
 
 #ifdef WITH_IPV6
@@ -124,7 +124,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = routing_v6_counter;
+        psa_direct_counter = routing_v6_counter;
     }
 #endif // WITH_IPV6
 

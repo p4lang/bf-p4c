@@ -61,7 +61,7 @@ control Filtering (inout parsed_headers_t hdr,
             permit_with_internal_vlan();
         }
         const default_action = deny();
-        counters = ingress_port_vlan_counter;
+        psa_direct_counter = ingress_port_vlan_counter;
     }
 
     /*
@@ -94,7 +94,7 @@ control Filtering (inout parsed_headers_t hdr,
             set_forwarding_type;
         }
         const default_action = set_forwarding_type(FWD_BRIDGING);
-        counters = fwd_classifier_counter;
+        psa_direct_counter = fwd_classifier_counter;
     }
 
     apply {
