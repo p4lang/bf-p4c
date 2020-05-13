@@ -21,17 +21,6 @@
   * - If the field is less than 32b, the field is made no_split.
   * - Depending on the size of field (for fields less than 32b in size), pa_container_size pragmas
   *   are inserted to occupy the smallest size of containers possible.
-  *
-  * A second constraint implemented here is related to the use of constant extractors in the parser.
-  * If a field is written to using a constant extractor, that field can be allocated to a 16b
-  * container only if the constant is expressible in less than 4 consecutive bits (all other bits
-  * can be zero, and these 4 bits can be rotated in to form the 16b value to be copied).
-  * Additionally, the field can be allocated to a 32b container only if the constant is expressible
-  * in less than 3 consecutive bits. Therefore, this pass constraints fields in constant extractors
-  * requiring more than 3b for the expression of the source constant to 8b containers only.
-  * XXX(Deep): Add ability to distinguish between the 3b limit for 32b containers and 4b
-  * limit for 16b containers. This requires the implementation of a
-  * `do-not-allocate-to-a-particular-container-size` constraint in PHV.
  */
 class PardePhvConstraints : public Inspector {
  private:
@@ -45,7 +34,6 @@ class PardePhvConstraints : public Inspector {
 
      profile_t init_apply(const IR::Node* root) override;
      bool preorder(const IR::BFN::Digest* digest) override;
-     bool preorder(const IR::BFN::Extract* extract) override;
  public:
      explicit PardePhvConstraints(PhvInfo &p, PragmaContainerSize& pa) : phv(p), sizePragmas(pa) {
          // Set the threshold for setting restrictions of unused bits in digest fields to 90% of the

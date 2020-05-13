@@ -1015,8 +1015,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/deparse-zero-clustering.p4
   testdata/p4_16_samples/issue983-bmv2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-548/case3011.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-628/case3431.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
   )
 
 # Valid XFAIL
