@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-typedef bit<9> port_t;
-
 #include <core.p4>
 #include <tna.p4>
 
@@ -206,7 +204,7 @@ control ingress_mau(
         inout ingress_intrinsic_metadata_for_tm_t
             ingress_intrinsic_metadata_for_tm)
 {
-    action send_to(port_t port) {
+    action send_to(PortId_t port) {
         ingress_intrinsic_metadata_for_tm.ucast_egress_port = port;
     }
 

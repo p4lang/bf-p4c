@@ -19,24 +19,32 @@
  * written agreement with Barefoot Networks, Inc.
  *
  *
- * Soumyadeep Ghosh
+ * Soumyadeep Ghosh (dghosh@barefootnetworks.com)
  *
- * This test is designed to test the initialization at strict dominators, when all strict dominators
- * write to the initialized field in some of their actions (but not all actions).
+ * This test checks if the can_pack() method in ActionPhvConstraints correctly inteprets the case of
+ * metadata fields being overlayed vs metadata fields being packed together. Two metadata fields
+ * meta.m1 and meta.m2 are overlayable because of disjoint live ranges. However, in this case,
+ * because of the allocation of their respective cluster fields (data.f1 and data.f2) to a 32-bit
+ * container, one of the checks performed will be whether meta.m1 and meta.m2 must be packed in the
+ * same container.
  *
+ * The right answer to this can_pack() question is that they cannot be packed together because of
+ * the XOR operation in action set5, which would overwrite the entire container. This right answer
+ * is only produced by can_pack() if AllocatePHV recognizes that the metadata fields in this case
+ * are being packed together, despite being overlayable due to disjoint live ranges.
  *
  **************************************************************************************************/
 
 #include <tna.p4>
 
 header data_h {
-    bit<8>      f1;
-    bit<8>      f2;
+    bit<16>      f1;
+    bit<16>      f2;
 }
 
 struct metadata {
-    bit<8>      m1;
-    bit<8>      m2;
+    bit<16>      m1;
+    bit<16>      m2;
 }
 
 struct packet_t {
@@ -67,43 +75,34 @@ control ingress(
         in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprs_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
-    action set1(bit<9> port, bit<8> val) {
+    action set1(PortId_t port, bit<16> val) {
         meta.m1 = val;
         ig_intr_tm_md.ucast_egress_port = port;
     }
 
-    action set2() {
-        hdrs.data.f1 = meta.m1;
-    }
-
-    action set3(bit<8> val) {
-        hdrs.data.f2 = val;
-    }
-
-    action set4(bit<8> val) {
-        hdrs.data.f1 = val + hdrs.data.f1;
-    }
-
-    action set5_1(bit<9> port) {
+    action set2(PortId_t port) {
+        hdrs.data.f2 = meta.m1;
         ig_intr_tm_md.ucast_egress_port = port;
-        hdrs.data.f1 = meta.m2;
     }
 
-    action set5_2(bit<8> val) {
-        meta.m2 = val;
-    }
-
-    action set6_1(bit<9> port) {
+    action set3(PortId_t port) {
+        hdrs.data.f1 = hdrs.data.f2;
         ig_intr_tm_md.ucast_egress_port = port;
+    }
+
+    action set4(PortId_t port) {
+        hdrs.data.f2 = hdrs.data.f1;
+        ig_intr_tm_md.ucast_egress_port = port;
+    }
+
+    action set5(PortId_t port, bit<16> val) {
+        meta.m2 = hdrs.data.f1 ^ val;
+        ig_intr_tm_md.ucast_egress_port = port;
+    }
+
+    action set6(PortId_t port) {
         hdrs.data.f1 = meta.m2;
-    }
-
-    action set6_2(bit<8> val) {
-        meta.m2 = 3;
-    }
-
-    action set7() {
-        hdrs.data.f2 = meta.m2;
+        ig_intr_tm_md.ucast_egress_port = port;
     }
 
     table test1 {
@@ -140,7 +139,6 @@ control ingress(
         actions = {
             set4;
         }
-        default_action = set4(0x1);
     }
 
     table test5 {
@@ -148,10 +146,9 @@ control ingress(
             hdrs.data.f1 : exact;
         }
         actions = {
-            set5_1;
-            set5_2;
+            set5;
         }
-        default_action = set5_1(6);
+        default_action = set5(3, 0x1234);
     }
 
     table test6 {
@@ -159,32 +156,18 @@ control ingress(
             hdrs.data.f2 : exact;
         }
         actions = {
-            set6_1;
-            set6_2;
+            set6;
         }
-        default_action = set6_1(7);
-    }
-
-    table test7 {
-        key = {
-            meta.m2 : exact;
-        }
-        actions = {
-            set7;
-        }
-        default_action = set7();
     }
 
     apply {
+        meta.m1 = 1;
         test1.apply();
         test2.apply();
         test3.apply();
         test4.apply();
-        if (hdrs.data.f1 == 0x09)
-            test5.apply();
-        else
-            test6.apply();
-        test7.apply();
+        test5.apply();
+        test6.apply();
     }
 }
 
