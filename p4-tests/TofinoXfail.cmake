@@ -482,9 +482,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
   ../glass/testsuite/p4_tests/kpn/COMPILER-896/case5546.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-464/scrab.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna-v2.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-465/tridacna.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
