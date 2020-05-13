@@ -159,25 +159,37 @@ node ('compiler-travis') {
                 }
             }
         },
-        switch_16_tofino_tests: {
+        switch_16_tofino_tests_part_1: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running bf-switch bfrt tests for Tofino for X1 Profile'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16_Tests_x1'"
+                }
+            }
+        },
+        switch_16_tofino_tests_part_2: {
+            ansiColor('xterm') {
+                timestamps {
                     sh "echo 'Running bf-switch bfrt tests for Tofino for X2 Profile'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino/.*smoketest_switch_16_Tests_x2'"
                 }
             }
         },
-        switch_16_tofino2_tests_and_basic_ipv4: {
+        switch_16_tofino2_tests_part_1: {
             ansiColor('xterm') {
                 timestamps {
                     sh "echo 'Running bf-switch bfrt tests for Tofino2 for Y1 Profile'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2/.*smoketest_switch_16_Tests_y1'"
-                    sh "echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'"
-                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
                     sh "echo 'Running bf-switch compile_only for Tofino2 not covered in PTF'"
                     sh "docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2/.*smoketest_switch_16_compile' -LE 'PR_REG_PTF'"
+                }
+            }
+        },
+        switch_16_tofino2_tests_part_2_and_basic_ipv4: {
+            ansiColor('xterm') {
+                timestamps {
+                    sh "echo 'Running bf-switch bfrt tests for Tofino2 for Y2 Profile'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R '^tofino2/.*smoketest_switch_16_Tests_y2'"
                     sh "echo 'Running basic_ipv4 tests'"
                     sh "docker run --privileged -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE='true' barefootnetworks/bf-p4c-compilers:${image_tag} ctest -R 'smoketest_programs_basic_ipv4'"
                 }
