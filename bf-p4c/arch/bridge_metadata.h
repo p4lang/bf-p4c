@@ -2,7 +2,14 @@
 #define BF_P4C_ARCH_BRIDGE_METADATA_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/arch/psa/programStructure.h"
+#include "ir/namemap.h"
+#include "lib/ordered_set.h"
+#include "bf-p4c/arch/program_structure.h"
+#include "bf-p4c/ir/gress.h"
+#include "bf-p4c/midend/path_linearizer.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/evaluator/evaluator.h"
+#include "midend/eliminateSerEnums.h"
 
 namespace BFN {
 

@@ -7,14 +7,15 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "ir/ir.h"
 #include "bf-p4c/arch/program_structure.h"
-#include "programStructure.h"
+#include "bf-p4c/arch/psa/programStructure.h"
 
 namespace BFN {
 
 namespace PSA {
 
 struct RewritePacketPath : public PassManager {
-    explicit RewritePacketPath(ProgramStructure *structure);
+    explicit RewritePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+        PSA::ProgramStructure* structure);
 };
 
 }  // namespace PSA

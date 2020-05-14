@@ -7,7 +7,6 @@
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
 #include "midend/validateProperties.h"
-#include "programStructure.h"
 #include "psa_converters.h"
 #include "bf-p4c/midend/type_checker.h"
 #include "bf-p4c/arch/bridge_metadata.h"
@@ -111,6 +110,8 @@ class AnalyzeProgram : public Inspector {
         // add bridge metadata
         cgm->fields.push_back(new IR::StructField(BFN::BRIDGED_MD,
                                                   structure->bridge.p4Type));
+        cgm->fields.push_back(new IR::StructField("__recirculate_data",
+                                                  structure->recirculate.p4Type));
 
         cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
         cgm->fields.push_back(new IR::StructField("resubmit", IR::Type::Boolean::get()));
@@ -136,14 +137,14 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_parser.psaParams.emplace("resubmit_metadata", param->name);
             param = node->getApplyParameters()->getParameter(5);
             structure->recirculate.paramNameInParser = param->name;
-            structure->recirculate.p4Type = param->type;
+            create_metadata_header(param, "__recirculate_data", INGRESS, structure->recirculate);
             structure->ingress_parser.psaParams.emplace("recirc_metadata", param->name);
         } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
             structure->egress_parser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(2);
             structure->egress_parser.psaParams.emplace("metadata", param->name);
-            structure->metadataType = param->type;
+            structure->metadataType = typeMap->getTypeType(param->type, true);;
             param = node->getApplyParameters()->getParameter(3);
             structure->egress_parser.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(4);
@@ -152,25 +153,7 @@ class AnalyzeProgram : public Inspector {
             // add translation for bridged metadata
             // In PSA, bridge structure can be a struct or header or empty. Creating
             // a new header for bridged fields no matter what the original structure is
-            auto bridge_md_type = typeMap->getTypeType(param->type, true);
-            const IR::Type_Header* bridgeHeader = nullptr;
-            if (structure->type_declarations.count("__bridge_metadata_t")) {
-                auto bridge = structure->type_declarations.at("__bridge_metadata_t");
-                bridgeHeader = bridge->to<IR::Type_Header>();
-            } else {
-                bridgeHeader = new IR::Type_Header("__bridge_metadata_t",
-                                bridge_md_type->to<IR::Type_StructLike>()->fields);
-                structure->type_declarations.emplace("__bridge_metadata_t", bridgeHeader);
-            }
-            structure->bridgedType = bridgeHeader;
-            auto path = new IR::Path("__bridge_metadata_t");
-            structure->bridge.p4Type = new IR::Type_Name(path);
-            for (auto f : bridgeHeader->to<IR::Type_StructLike>()->fields) {
-                structure->addMetadata(EGRESS,
-                    MetadataField{param->name, f->name, f->type->width_bits()},
-                    MetadataField{BFN::BRIDGED_MD, f->name,
-                        f->type->width_bits(), true});
-            }
+            create_metadata_header(param, BFN::BRIDGED_MD, EGRESS, structure->bridge);
             param = node->getApplyParameters()->getParameter(5);
             structure->clone_i2e.paramNameInParser = param->name;
             structure->clone_i2e.p4Type = param->type;
@@ -180,6 +163,25 @@ class AnalyzeProgram : public Inspector {
             structure->clone_e2e.p4Type = param->type;
             structure->egress_parser.psaParams.emplace("clone_e2e_metadata", param->name);
         }
+    }
+
+    void create_metadata_header(const IR::Parameter* param, cstring headername,
+                                gress_t gress, PacketPathInfo& packetStructure) {
+        auto md_type = typeMap->getTypeType(param->type, true);
+        if (auto t = md_type->to<IR::Type_StructLike>()) {
+            cstring typeName = headername == BFN::BRIDGED_MD ? "__bridge_metadata_t" : t->name;
+            auto header = new IR::Type_Header(typeName, t->annotations, t->fields);
+            structure->type_declarations[typeName] = header;
+            for (auto f : header->to<IR::Type_StructLike>()->fields) {
+                    structure->addMetadata(gress,
+                        MetadataField{param->name, f->name, f->type->width_bits()},
+                        MetadataField{headername, f->name,
+                                  f->type->width_bits(), true});
+            }
+            packetStructure.p4Type = new IR::Type_Name(new IR::Path(typeName));
+            packetStructure.structType = header;
+        }
+        return;
     }
 
     void analyzeIfStatement(const IR::IfStatement* ifStatement) {
@@ -225,26 +227,7 @@ class AnalyzeProgram : public Inspector {
             structure->resubmit.p4Type = param->type;
             param = node->getApplyParameters()->getParameter(3);
             structure->bridge.paramNameInDeparser = param->name;
-            // add translation for bridged metadata
-            auto bridge_md_type = typeMap->getTypeType(param->type, true);
-            const IR::Type_Header* bridgeHeader = nullptr;
-            if (structure->type_declarations.count("__bridge_metadata_t")) {
-                auto bridge = structure->type_declarations.at("__bridge_metadata_t");
-                bridgeHeader = bridge->to<IR::Type_Header>();
-            } else {
-                bridgeHeader = new IR::Type_Header("__bridge_metadata_t",
-                                bridge_md_type->to<IR::Type_StructLike>()->fields);
-                structure->type_declarations.emplace("__bridge_metadata_t", bridgeHeader);
-            }
-            structure->bridgedType = bridgeHeader;
-            auto path = new IR::Path("__bridge_metadata_t");
-            structure->bridge.p4Type = new IR::Type_Name(path);
-            for (auto f : bridgeHeader->to<IR::Type_StructLike>()->fields) {
-                structure->addMetadata(INGRESS,
-                    MetadataField{param->name, f->name, f->type->width_bits()},
-                    MetadataField{BFN::BRIDGED_MD, f->name,
-                                  f->type->width_bits(), true});
-            }
+            create_metadata_header(param, BFN::BRIDGED_MD, INGRESS, structure->bridge);
             param = node->getApplyParameters()->getParameter(4);
             structure->ingress_deparser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(5);
@@ -259,7 +242,7 @@ class AnalyzeProgram : public Inspector {
             structure->clone_e2e.p4Type = param->type;
             param = node->getApplyParameters()->getParameter(2);
             structure->recirculate.paramNameInDeparser = param->name;
-            structure->recirculate.p4Type = param->type;
+            create_metadata_header(param, "__recirculate_data", EGRESS, structure->recirculate);
             param = node->getApplyParameters()->getParameter(3);
             structure->egress_deparser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(4);
@@ -797,7 +780,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new GenerateTofinoProgram(structure),
         new PSA::ConvertNames(structure, refMap, typeMap),
         new AddIntrinsicMetadata(refMap, typeMap),
-        new PSA::RewritePacketPath(structure),
+        new PSA::RewritePacketPath(refMap, typeMap, structure),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
