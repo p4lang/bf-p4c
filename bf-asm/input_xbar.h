@@ -27,6 +27,7 @@ struct HashCol {
 
 inline std::ostream &operator<<(std::ostream &out, HashCol &col) {
     col.dbprint(out);
+    return out;
 }
 
 class InputXbar {

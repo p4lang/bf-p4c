@@ -111,7 +111,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         return rv;
     }
 
-    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const {
+    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const override {
         if (what == "$miss" && tbl->next.count("$try_next_stage"))
             what = "$try_next_stage";
         if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction)
@@ -125,7 +125,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         return {};
     }
 
-    void dbprint(std::ostream &out) const {
+    void dbprint(std::ostream &out) const override {
         out << "DefaultNext:" << IndentCtl::indent;
         for (auto &pn : possible_nexts) {
             out << Log::endl << pn.first << ": {";

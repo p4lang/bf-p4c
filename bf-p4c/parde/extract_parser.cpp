@@ -401,7 +401,7 @@ class GetBackendParser {
 
     cstring
     getStateName(cstring p4Name) {
-        if (BackendOptions().arch == "v1model") {
+        if (BackendOptions().arch == "v1model" && p4StateNameToStateName.count(p4Name)) {
             return p4StateNameToStateName.at(p4Name);
         } else {
             return p4Name;

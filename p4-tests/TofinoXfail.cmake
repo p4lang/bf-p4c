@@ -329,6 +329,7 @@ p4c_add_xfail_reason("tofino"
   "Conditions in an action must be simple comparisons of an action data parameter"
   testdata/p4_16_samples/issue1412-bmv2.p4
   testdata/p4_16_samples/issue420.p4
+  testdata/p4_16_samples/issue2248.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -350,6 +351,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Static entries are not supported for lpm-match"
   testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+  testdata/p4_16_samples/v1model-const-entries-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -454,6 +456,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_16_samples/issue1713-bmv2.p4
+  testdata/p4_16_samples/strength6.p4
 
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
@@ -1247,6 +1250,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/checksum1-bmv2.p4
   testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue2176-bmv2.p4
+  testdata/p4_16_samples/issue2225-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1746,6 +1750,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: expected a method call"
   testdata/p4_16_samples/issue2221-bmv2.p4
+  testdata/p4_16_samples/issue2343-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1778,6 +1783,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*expected a method call"
   testdata/p4_16_samples/issue2287-bmv2.p4
+  testdata/p4_16_samples/issue2205-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1788,6 +1794,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*unexpected statement with call"
   testdata/p4_16_samples/issue2291-bmv2.p4
+  testdata/p4_16_samples/issue2205-1-bmv2.p4
+  testdata/p4_16_samples/issue2355.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: .*visitor returned non-Statement type"
+  testdata/p4_16_samples/issue2359.p4
 )
 
 # old p4c test that now fails with our backend -- why?
