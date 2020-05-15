@@ -60,12 +60,12 @@ control cIngress(inout headers_t hdr,
                  inout metadata_t user_meta,
                  in    psa_ingress_input_metadata_t  istd,
                  inout psa_ingress_output_metadata_t ostd)
-{   
+{
     apply {
         if (hdr.ethernet.etherType == 0x88cc)
-            ostd.egress_port = 68;
+            ostd.egress_port = (PortId_t) 68;
         else if (user_meta.a == 1)
-            ostd.egress_port = 7;
+            ostd.egress_port = (PortId_t) 7;
     }
 }
 

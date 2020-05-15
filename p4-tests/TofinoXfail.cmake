@@ -401,13 +401,27 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected IDENTIFIER"
-  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
-  testdata/p4_16_samples/psa-multicast-basic-corrected-bmv2.p4
-  testdata/p4_16_samples/psa-resubmit-bmv2.p4
+  "condition too complex"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+  testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Unknown command mc_mgrp_create"
+  testdata/p4_16_samples/psa-multicast-basic-corrected-bmv2.p4
+  testdata/p4_16_samples/psa-multicast-basic-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "1 expected packet on port 4 not seen"
+  testdata/p4_16_samples/psa-resubmit-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "SelectExpression: Cannot unify type int with PortIdUint_t"
+  extensions/p4_tests/p4_16/stf/onlab_packet_io.p4
+  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
+)
 
 # unsupported p4c tests
 p4c_add_xfail_reason("tofino"
@@ -1407,10 +1421,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected IDENTIFIER"
-  testdata/p4_16_samples/psa-basic-counter-bmv2.p4
+  "PHV allocation was not successful"
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
-  testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
 )
 
 # no support for runtime-variable indexing
@@ -1434,7 +1446,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Null e"
-  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
   testdata/p4_16_samples/psa-action-selector1.p4
   testdata/p4_16_samples/psa-action-selector2.p4
 )
