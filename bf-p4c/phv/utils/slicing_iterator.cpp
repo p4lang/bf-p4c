@@ -406,6 +406,48 @@ PHV::SlicingIterator::SlicingIterator(
             print_slicing_state(sliceLocations, exactSliceListSize);
         } while (change_i && iterations_i < 5);
 
+        // XXX(yumin): an cornor case.
+        // [ f1[0:13], f1[14:19], f1[20:31]]
+        // [ f2[0:13], f2[14:19]], and f2 is no_split.
+        // rot: [f1[0:13], f1[0:13]], [f1[14:19], f2[14:19]].
+        // -------
+        // The above imples that f1 should have no_split, because
+        // f2 must go to 32-bit container, so does f1, then f1 can be marked
+        // as no_split. The logic chain:
+        // (1) field(X) > 16 bits, no_split =>  must be allocated to 32
+        // (2) => other fields in rot_cluster of X must be allocated to 32
+        // (3) if other fields > 16 bits, then other fields should be marked as no_split.
+        // we leverage the above by simply record the reason of no_split on a fieldslice.
+        // if two field slices of the same field A, and their no_split_reason containers
+        // the same field, then no_split between these two field slices.
+        ordered_map<PHV::FieldSlice, ordered_set<const PHV::Field*>> no_split_reasons;
+        sc_i->forall_fieldslices(
+            [&] (const PHV::FieldSlice& fs) {
+                if (!fs.field()->no_split()) return;
+                no_split_reasons[fs].insert(fs.field());
+                auto& rot_cluster = sc_i->cluster(fs);
+                for (auto& rot_slice : rot_cluster.slices()) {
+                    no_split_reasons[rot_slice].insert(fs.field());
+                }
+            });
+        auto adjacent_no_split =
+            [&no_split_reasons, this] (const PHV::FieldSlice& a, const PHV::FieldSlice& b) {
+                bool possible = intersects(no_split_reasons[a], no_split_reasons[b]);
+                if (!possible) {
+                    return false;
+                }
+                for (auto& fs_a : sc_i->cluster(a).slices()) {
+                    for (auto& fs_b : sc_i->cluster(b).slices()) {
+                        // adjacent fieldslice + no_split
+                        if (fs_a.field()->no_split() && fs_a.field() == fs_b.field()
+                            && fs_a.range().hi + 1 == fs_b.range().lo) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
         // mark no_split fields
         LOG5("calc no_splits points in compressed_schema");
         const auto mask = build_offsets_to_compress_schema(sc, bitvec(0, sentinel_idx_i + 1));
@@ -436,7 +478,7 @@ PHV::SlicingIterator::SlicingIterator(
                     // only if the field is no_split, not the fieldslice,
                     // could we infer that it's no_split at the point.
                     if (last != boost::none && (*last).field() == fs.field()
-                        && is_no_split_field(fs.field())) {
+                        && (is_no_split_field(fs.field()) || adjacent_no_split(*last, fs))) {
                         LOG5("no split is true (case 1) on " << next_schema_bit->second);
                         no_splits_i.setbit(next_schema_bit->second);
                     }

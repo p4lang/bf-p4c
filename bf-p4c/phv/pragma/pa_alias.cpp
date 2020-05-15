@@ -115,9 +115,9 @@ boost::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::ma
             "aliasSrc");
     if (aliasSrc->size > aliasDest->size) {
         WARN_CHECK(suppressWarning,
-                "@pragma pa_alias ignored because metadata field %1% is larger than the "
-                "packet field %2%",
-                aliasSrc->size, aliasDest->size);
+                "@pragma pa_alias ignored because metadata field %1%<%2%> is larger than the "
+                "packet field %3%<%4%>",
+                   aliasSrc->name, aliasSrc->size, aliasDest->name, aliasDest->size);
         return boost::none;
     }
     // If the field to be replaced has an alignment that is different from the field replacing it,

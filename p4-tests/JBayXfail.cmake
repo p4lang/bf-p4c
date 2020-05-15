@@ -381,3 +381,11 @@ p4c_add_xfail_reason("tofino2"
   "InvalidDevportMgrOperation: InvalidDevportMgrOperation"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
+
+# P4C-2724
+p4c_add_xfail_reason("tofino2"
+  "Extracted range .* with size .* doesn't match destination container"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
+  p4c_2527
+)

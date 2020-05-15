@@ -533,7 +533,7 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // XXX(cole): This should work for bridged metadata extracted in Phase
         // 0, but needs more thought for extracted header fields.  See
         // BRIG-301.
-        break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
+        // break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
 
         if (accumulator_bits && (field->is_solitary()) && !lastPadding) {
             // Break off the existing slice list if this field has a solitary and

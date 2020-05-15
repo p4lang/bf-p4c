@@ -172,6 +172,7 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4
@@ -1711,11 +1712,6 @@ p4c_add_xfail_reason("tofino"
   "Assignment to a header field in the deparser is only allowed when the source is checksum update, mirror, resubmit or learning digest"
   extensions/p4_tests/p4_16/compile_only/p4c-1858_neg.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1867.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
 )
 
 # @override_phase0_table_name( ".blah" )
