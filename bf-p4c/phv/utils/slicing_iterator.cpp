@@ -1137,8 +1137,12 @@ void PHV::SlicingIterator::impose_MAU_constraints(
                     LOG6("\t\t\tCurrent slice: " << slice << " " << slice.size() <<
                             "b, offset within original slice list: " << offsetWithinSliceList);
                     offsetWithinSliceList += slice.size();
-                    offsetWithinOriginalSliceList += slice.size(); }
-                BUG_CHECK(firstSliceInCurrentSliceList != nullptr, "No slice in slice list?");
+                    offsetWithinOriginalSliceList += slice.size();
+                }
+                if (firstSliceInCurrentSliceList == nullptr) {
+                    LOG6("\tFirst slice in slice list not found. Continuing...");
+                    continue;
+                }
                 LOG6("\t\tFirst slice in current slice's slice list is: " <<
                         *firstSliceInCurrentSliceList);
                 bool foundFirstSliceInCurrentSliceList = false;
