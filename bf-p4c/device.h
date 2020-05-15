@@ -207,7 +207,7 @@ class CloudbreakDevice : public Device {
 #endif
 
  public:
-    CloudbreakDevice() : Device("Tofino3"), parde_() {}
+    CloudbreakDevice() : Device("Tofino3"), phv_(), parde_() {}
     Device::Device_t device_type() const override { return Device::CLOUDBREAK; }
     cstring get_name() const override { return "Tofino3"; }
     int getNumPipes() const override { return 16; }
