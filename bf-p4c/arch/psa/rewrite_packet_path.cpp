@@ -1,10 +1,10 @@
 #include "p4/methodInstance.h"
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/arch/bridge_metadata.h"
+#include "bf-p4c/midend/type_checker.h"
 #include "rewrite_packet_path.h"
 
 namespace BFN {
