@@ -3816,7 +3816,8 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
     hash_seed.hash_seed_used = 0ULL;
 
     safe_vector<ixbar_input_t> hash_inputs;
-    for (auto &entry : field_list) {
+    for (auto it = field_list.rbegin(); it != field_list.rend(); it++) {
+        auto &entry = *it;
         ixbar_input_t hash_input;
         if (entry->is<IR::Constant>()) {
             hash_input.type = ixbar_input_type::tCONST;
@@ -3828,7 +3829,8 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
             hash_input.type = ixbar_input_type::tPHV;
             hash_input.u.valid = true;
         }
-        hash_input.ixbar_bit_position = PHV::AbstractField::create(phv, entry)->range().lo;
+        // This is completely irrelevant for any seed calculation.  All field inputs are invalid
+        hash_input.ixbar_bit_position = 0;
         hash_input.bit_size = entry->type->width_bits();
         hash_inputs.push_back(hash_input);
     }
