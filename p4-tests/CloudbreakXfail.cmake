@@ -438,3 +438,9 @@ p4c_add_xfail_reason("tofino3"
   "error: Use of uninitialized parser value"
   testdata/p4_14_samples/issue2196.p4
 )
+
+# STF bug with inserting default action with wide+deep action data table
+p4c_add_xfail_reason("tofino3"
+  "cb_test_harness CRASH"
+  extensions/p4_tests/p4_16/stf/p4c-2738.p4
+)

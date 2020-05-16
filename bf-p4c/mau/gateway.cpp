@@ -620,8 +620,8 @@ bool CollectGatewayFields::compute_offsets() {
         info_t &info = it->second;
         if (!info.need_range && !info.const_eq) continue;
         int size = field.is_unallocated() ? (field.size() + 7)/8U : field.container_bytes();
+        bitvec field_bits(field.range().lo, field.size());  // bits of the field needed
         if (ixbar) {
-            bool done = false;
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field.field()->name && field.range().overlaps(f.lo, f.hi())) {
                     // Portions of the field could be in the hash vs in the search bus, and
@@ -633,23 +633,36 @@ bool CollectGatewayFields::compute_offsets() {
                     le_bitrange b = *boost_sl;
                     info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
                     LOG5("  bit " << f.bit + b.lo - f.lo + 32 << " " << field);
-                    done = true;
+                    field_bits.clrrange(b.lo, b.size());
                     if (f.bit + b.hi - f.lo >= bits)
                         bits = f.bit + b.hi - f.lo + 1; } }
-            if (done) continue; }
+            if (field_bits.empty()) continue; }
         if ((bytes+size > 4 && size == 1) || info.need_range) {
+            BUG_CHECK(field_bits.ffz(field.range().lo) == size_t(field.range().hi + 1),
+                      "field only partly in hash needed all in hash");
             info.offsets.emplace_back(bits + 32, field.range());
+            field_bits.clrrange(field.range().lo, field.size());
             LOG5("  bit " << bits + 32 << " " << field);
             bits += field.size();
         } else {
             field.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
+                if (size_t(field_bits.ffs(sl.field_bit)) > size_t(sl.field_hi())) {
+                    LOG5(DBPrint::Brief << sl << " already done via hash" << DBPrint::Reset);
+                    return; }
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                field_bits.clrrange(sl.field_bit, sl.width);
                 LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << ' ' << sl <<
                      DBPrint::Reset);
                 if (bytes == 4 && bits == 0) {
                     bits += 8;
                 } else {
-                    ++bytes; } }); } }
+                    ++bytes; } }); }
+#if 0
+        // FIXME -- should check this, but sometimes this gets run when PHV allocation has failed
+        // to allocate this field, in which case we don't want to crash here.
+        BUG_CHECK(field_bits.empty(), "failed to cover all of %s in gateway", field);
+#endif
+    }
     LOG6("CollectGatewayFields::compute_offsets finished" << *this << DBPrint::Reset);
     if (bytes > 4) return false;
     return bits <= IXBar::get_hash_single_bits();
