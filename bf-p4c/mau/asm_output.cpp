@@ -1870,7 +1870,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
      *     - next_table_miss: The next table to be run when the table misses.
      *
      * If the table behavior is identical on hit or miss, then the next_table_miss is not
-     * output.  If the table is miss_action_only, then no next_table node is output.
+     * output.  If the table is miss_only(), then no next_table node is output.
      */
     void next_table(const IR::MAU::Action *act, int mem_code) {
         if (table->hit_miss_p4()) {
@@ -1879,12 +1879,12 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                 out << "END" << std::endl;
             else
                 out << self.next_for(table, "$miss") << std::endl;
-            if (act->miss_action_only)
+            if (act->miss_only())
                 return;
         }
 
         if (table->action_chain()) {
-            if (act->miss_action_only) {
+            if (act->miss_only()) {
                 out << indent << "- next_table_miss: "
                     << self.next_for(table, act->name.originalName) << std::endl;
                 return;
@@ -2002,7 +2002,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         if (!act->hit_allowed)
             out << ", reason: " << act->hit_disallowed_reason;
         out << " }" << std::endl;
-        out << indent << "- default_" << (act->miss_action_only ? "only_" : "") << "action: {"
+        out << indent << "- default_" << (act->miss_only() ? "only_" : "") << "action: {"
             << " allowed: " << std::boolalpha << (act->default_allowed || act->hit_path_imp_only);
         if (!act->default_allowed || act->hit_path_imp_only)
             out << ", reason: " << act->disallowed_reason;
@@ -3008,7 +3008,7 @@ void MauAsmOutput::next_table_non_action_map(const IR::MAU::Table *tbl,
          safe_vector<NextTableSet> &next_table_map) const {
      ordered_set<NextTableSet> possible_next_tables;
      for (auto act : Values(tbl->actions)) {
-         if (act->miss_action_only) continue;
+         if (act->miss_only()) continue;
          possible_next_tables.insert(next_for(tbl, act->name.originalName));
      }
      for (auto &nt : possible_next_tables) {
@@ -3220,7 +3220,7 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
             reserved_entry_0 = tbl->uses_gateway();
             next_table_map.resize(ntm_size);
             for (auto act : Values(tbl->actions)) {
-                if (act->miss_action_only) continue;
+                if (act->miss_only()) continue;
                 auto &instr_mem = tbl->resources->instr_mem;
                 auto &vliw_instr = instr_mem.all_instrs.at(act->name.name);
                 BUG_CHECK(vliw_instr.mem_code >= 0 && vliw_instr.mem_code < ntm_size,
@@ -3667,7 +3667,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto act : Values(tbl->actions)) {
             if (!act->init_default) continue;
             found_def_act = true;
-            out << indent << "default_" << (act->miss_action_only ? "only_" : "") << "action: "
+            out << indent << "default_" << (act->miss_only() ? "only_" : "") << "action: "
                 << canon_name(act->externalName()) << std::endl;
             if (act->default_params.size() == 0)
                 break;

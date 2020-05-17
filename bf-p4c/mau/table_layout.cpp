@@ -965,6 +965,18 @@ bool DoTableLayout::preorder(IR::MAU::Action *act) {
         }
     }
 
+    if (act->miss_only()) {
+        if (tbl->layout.no_match_rams()) {
+            act->hit_allowed = true;
+            act->default_allowed = false;
+        } else {
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "The table %2% cannot have action %1% marked as defaultonly, as this action "
+                "can only run on hit because of its use of %3%", act, tbl->externalName(),
+                ghdr.is_hash_dist_needed() ? "hash" : "rng");
+        }
+    }
+
     ERROR_CHECK(!tbl->layout.no_match_miss_path(), ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "This table with no key cannot have the action %1% as an action here, "
                 "because it requires %2%, which utilizes the hit path in Tofino, while the "

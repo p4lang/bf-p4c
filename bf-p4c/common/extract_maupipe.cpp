@@ -276,7 +276,7 @@ class SetupActionProperties : public MauModifier {
             act->default_params = *args;
         }
         if (default_only_annot) {
-          act->miss_action_only = true;
+          act->hit_allowed = false;
           if (has_constant_default_action && !is_const_default_action)
             error("%s: Action %s cannot be default only when there is another "
                   "constant default action.", elem->srcInfo, elem);

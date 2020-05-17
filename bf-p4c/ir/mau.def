@@ -767,7 +767,6 @@ class Action : VLIWInstruction, IAnnotated {
     inline Vector<Primitive>    action = {};
     safe_vector<ActionArg>      args = {};
     optional Annotations        annotations = Annotations::empty;
-    bool miss_action_only = false;
     bool init_default = false;
     bool hit_allowed = true;  // action is allowed to be used with table hit
     bool default_allowed = false;  // action is allowed to be used with table miss
@@ -796,8 +795,8 @@ class Action : VLIWInstruction, IAnnotated {
         return nullptr; }
 
     cstring externalName() const;
-    bool hit_only() const { return hit_allowed && !default_allowed; }
-    bool miss_only() const { return miss_action_only == true; }
+    bool hit_only() const { return !default_allowed; }
+    bool miss_only() const { return !hit_allowed; }
 
     Annotations getAnnotations() const override { return annotations; }
 

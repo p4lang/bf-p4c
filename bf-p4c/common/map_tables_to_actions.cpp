@@ -36,7 +36,7 @@ bool MapTablesToActions::preorder(const IR::MAU::Table* t) {
         tableToActionsMap[t].insert(action);
         actionMap[action] = t;
         LOG6("\tAdd action " << action->name << " in table " << t->name);
-        if (action->miss_action_only || action->init_default)
+        if (action->miss_only() || action->init_default)
             defaultActions[t].insert(kv.second);
     }
     return true;

@@ -1,0 +1,4 @@
+add set_port 0 data.f1:0x******** act(port:0x1)
+
+expect 1 abcdef12 aaaabbbb ccccdddd 4858 33 44
+packet 0 abcdef12 aaaabbbb ccccdddd 0000 33 44

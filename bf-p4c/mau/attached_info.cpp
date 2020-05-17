@@ -371,7 +371,7 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
         return rv;
-    rv->miss_action_only = false;
+    rv->hit_allowed = true;
     rv->default_allowed = true;
     rv->init_default = true;
     rv->hit_path_imp_only = true;

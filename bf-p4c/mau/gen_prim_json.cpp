@@ -397,7 +397,7 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     auto _table = new Util::JsonObject();
     auto _actions = new Util::JsonArray();
     for (auto act : Values(tbl->actions)) {
-        if (act->miss_action_only) continue;
+        if (act->miss_only()) continue;
         auto _action = new Util::JsonObject();
         _action->emplace("name", canon_name(act->name));
         gen_action_json(act, _action);
