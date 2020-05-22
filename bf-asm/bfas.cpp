@@ -47,6 +47,9 @@ option_t options = {
 };
 
 std::string asmfile_name;
+std::string gfm_log_file_name = "mau.gfm.log";
+
+std::unique_ptr<std::ostream> gfm_out;
 
 int log_error = 0;
 extern char *program_name;
@@ -335,6 +338,11 @@ int main(int ac, char **av) {
         error_count++; }
     if (error_count > 0)
         std::cerr << usage(av[0]) << std::endl;
+
+    if (Log::verbosity() > 0) {
+        gfm_out = open_output("mau.gfm.log");
+    }
+
     if (error_count == 0) {
         // Check if file has no sections
         no_sections_error_exit();

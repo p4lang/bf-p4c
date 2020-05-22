@@ -542,15 +542,6 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     return ref;
 }
 
-int parity(unsigned v) {
-    v ^= v >> 16;
-    v ^= v >> 8;
-    v ^= v >> 4;
-    v ^= v >> 2;
-    v ^= v >> 1;
-    return v&1;
-}
-
 struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;

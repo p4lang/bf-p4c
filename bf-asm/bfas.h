@@ -47,6 +47,7 @@ extern unsigned unique_action_handle;
 struct value_t;
 
 extern std::string asmfile_name;
+extern std::unique_ptr<std::ostream> gfm_out;
 
 int asm_parse_file(const char *name, FILE *in);
 

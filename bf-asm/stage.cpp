@@ -588,6 +588,60 @@ void Stage::output(json::map &ctxt_json) {
         if (auto gw = table->get_gateway())
             gw->gen_tbl_cfg(ctxt_tables); }
     write_regs(*regs);
+
+    // Output GFM 
+    if (gfm_out) {
+        auto &hash = regs->dp.xbar_hash.hash;
+        auto &gfm  = hash.galois_field_matrix;
+        *gfm_out << &gfm << "\n";
+        *gfm_out << "Col  :    ";
+        for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+            *gfm_out << std::setw(3) << c ;
+        }
+        *gfm_out << " | Row Parity \n";
+        for (auto r = 0; r < gfm.size(); r++) {
+            *gfm_out << "Row " << std::dec << r << ": \n";
+            *gfm_out << "  Byte 0 :";
+            unsigned byte0_parity = 0;
+            unsigned byte1_parity = 0;
+            for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte0; 
+                byte0_parity ^= gfm[r][c].byte0;
+            }
+            *gfm_out << " | " << std::setw(3) << parity(byte0_parity) << "\n";
+            *gfm_out << "  Byte 1 :";
+            for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
+                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte1; 
+                byte1_parity ^= gfm[r][c].byte0;
+            }
+            *gfm_out << " | " << std::setw(3) << parity(byte1_parity) << "\n";
+        }
+        
+        *gfm_out << "\n";
+        auto &grp_enable = regs->dp.hashout_ctl.hash_parity_check_enable;
+        for (int grp = 0; grp < 8; grp++) {
+
+            *gfm_out << "Hash Group : " << grp << "\n";
+            *gfm_out << "Hash Seed : ";
+            int seed_parity = 0;
+            bitvec hash_seed;
+            for (int bit = 51; bit >= 0; bit--) {
+                auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
+                hash_seed[bit] = seed_bit;
+                *gfm_out << seed_bit; 
+                seed_parity ^= seed_bit;
+            }
+            *gfm_out << " (" << hash_seed << ")";
+            *gfm_out << "\n";
+            auto seed_parity_enable = ((grp_enable >> grp) & 0x1) ? "True" : "False";
+            *gfm_out << "Hash Seed Parity Enable : " << seed_parity_enable;
+            *gfm_out << "\n";
+            *gfm_out << "Hash Seed Parity : " << (seed_parity ? "Odd" : "Even");
+            *gfm_out << "\n";
+            *gfm_out << "\n";
+        }
+    }
+
     if (options.condense_json) {
         regs->disable_if_reset_value();
         // if any part of the gf matrix is enabled, we can't elide any part of it when

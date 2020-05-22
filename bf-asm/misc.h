@@ -77,4 +77,6 @@ template<class T> struct ptrless {
 
 uint64_t bitMask(unsigned size);
 
+int parity(unsigned v);
+
 #endif /* _misc_h_ */

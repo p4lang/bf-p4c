@@ -166,10 +166,13 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                 if (tbl) {
                     for (auto &v : *tbl) {
                         if (!CHECKTYPE(v, tINT)) continue;
-                        if (v.i < 0 || v.i >= HASH_TABLES)
+                        if (v.i < 0 || v.i >= HASH_TABLES) {
                             error(v.lineno, "invalid hash group descriptor");
-                        else
-                            hash_groups[index].tables |= 1U << v.i; } }
+                        } else {
+                            hash_groups[index].tables |= 1U << v.i; 
+                        } 
+                    }
+                }
                 continue; }
             if (index >= HASH_TABLES) {
                 error(kv.key.lineno, "invalid hash descriptor");
@@ -293,7 +296,14 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
         for (InputXbar *other : table->stage->hash_table_use[i]) {
             if (both & mask) both_cols |= other->hash_columns_used(i);
             if (a.tables & mask) a_cols |= other->hash_columns_used(i);
-            if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }
+            if (b.tables & mask) b_cols |= other->hash_columns_used(i); 
+            for (auto htp : hash_table_parity) {
+                if (other->hash_table_parity.count(htp.first) 
+                 && other->hash_table_parity.at(htp.first) != htp.second) 
+                    return false; 
+            }
+        } 
+    }
     a_cols &= ~both_cols;
     b_cols &= ~both_cols;
     if (a_cols & b_cols)
@@ -711,8 +721,7 @@ void InputXbar::write_regs(REGS &regs) {
             int parity_bit = -1;
             for (int index : bitvec(hg.second.tables)) {
                 if (!hash_table_parity.count(index)) {
-                    parity_bit = -1;
-                    break; 
+                    continue;
                 } else {
                     if (parity_bit == -1) {
                         parity_bit = hash_table_parity[index];
