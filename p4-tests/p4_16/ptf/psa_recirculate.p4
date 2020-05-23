@@ -126,8 +126,10 @@ control EgressDeparserImpl(packet_out buffer,
                            in psa_egress_deparser_input_metadata_t edstd)
 {
     apply {
-      recirculate_meta.a = meta.a;
-      recirculate_meta.b = meta.b;
+      if (psa_recirculate(istd, edstd)) {
+          recirculate_meta.a = meta.a;
+          recirculate_meta.b = meta.b;
+      }
       buffer.emit(hdr.ethernet);
     }
 }

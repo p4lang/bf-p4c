@@ -112,6 +112,9 @@ class AnalyzeProgram : public Inspector {
                                                   structure->bridge.p4Type));
         cgm->fields.push_back(new IR::StructField("__recirculate_data",
                                                   structure->recirculate.p4Type));
+        cgm->fields.push_back(new IR::StructField("__resubmit_data",
+                                                  structure->resubmit.p4Type));
+
 
         cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
         cgm->fields.push_back(new IR::StructField("resubmit", IR::Type::Boolean::get()));
@@ -133,7 +136,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_parser.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->resubmit.paramNameInParser = param->name;
-            structure->resubmit.p4Type = param->type;
+            create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
             structure->ingress_parser.psaParams.emplace("resubmit_metadata", param->name);
             param = node->getApplyParameters()->getParameter(5);
             structure->recirculate.paramNameInParser = param->name;
@@ -194,16 +197,17 @@ class AnalyzeProgram : public Inspector {
         auto mi = P4::MethodInstance::resolve(mce, refMap, typeMap);
         if (auto ef = mi->to<P4::ExternFunction>()) {
             auto name = ef->method->name;
+            structure->_map.emplace(ifStatement, nullptr);
             if (name == "psa_resubmit") {
-                structure->resubmit.ifStatements.push_back(ifStatement);
+                structure->resubmit.ifStatement = ifStatement;
             } else if (name == "psa_clone_i2e") {
-                structure->clone_i2e.ifStatements.push_back(ifStatement);
+                structure->clone_i2e.ifStatement = ifStatement;
             } else if (name == "psa_clone_e2e") {
-                structure->clone_e2e.ifStatements.push_back(ifStatement);
+                structure->clone_e2e.ifStatement = ifStatement;
             } else if (name == "psa_recirculate") {
-                structure->recirculate.ifStatements.push_back(ifStatement);
+                structure->recirculate.ifStatement = ifStatement;
             } else if (name == "psa_normal") {
-                structure->bridge.ifStatements.push_back(ifStatement);
+                structure->bridge.ifStatement = ifStatement;
             }
         }
     }
@@ -224,7 +228,7 @@ class AnalyzeProgram : public Inspector {
             structure->clone_i2e.p4Type = param->type;
             param = node->getApplyParameters()->getParameter(2);
             structure->resubmit.paramNameInDeparser = param->name;
-            structure->resubmit.p4Type = param->type;
+            create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
             param = node->getApplyParameters()->getParameter(3);
             structure->bridge.paramNameInDeparser = param->name;
             create_metadata_header(param, BFN::BRIDGED_MD, INGRESS, structure->bridge);
@@ -277,108 +281,6 @@ class AnalyzeProgram : public Inspector {
     PSA::ProgramStructure* structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-};
-
-struct TranslatePacketPathIfStatement : public Transform {
-    TranslatePacketPathIfStatement(const PacketPathInfo& info, PSA::ProgramStructure* structure,
-                                   gress_t gress)
-        : info(info), structure(structure), gress(gress)
-    { setName("TranslatePacketPathIfStatement"); }
-
-    const IR::Expression *preorder(IR::MethodCallExpression *mce) override {
-        if (auto expr = mce->method->to<IR::PathExpression>()) {
-            if (auto path = expr->path->to<IR::Path>()) {
-                if (path->name == "psa_resubmit") {
-                    generated_metadata = "__resubmit_data";
-                    auto expr = new IR::LAnd(
-                        new IR::Member(
-                            new IR::PathExpression(COMPILER_META), IR::ID("drop")),
-                        new IR::Member(
-                            new IR::PathExpression(COMPILER_META), IR::ID("resubmit")));
-                    return expr;
-                } else if (path->name == "psa_clone_i2e") {
-                    generated_metadata = "__clone_i2e_data";
-                    auto expr = new IR::Member(
-                        new IR::PathExpression(COMPILER_META), IR::ID("clone_i2e"));
-                    return expr;
-                } else if (path->name == "psa_clone_e2e") {
-                    generated_metadata = "__clone_e2e_data";
-                    auto expr = new IR::Member(
-                        new IR::PathExpression(COMPILER_META), IR::ID("clone_e2e"));
-                    return expr;
-                } else if (path->name == "psa_recirculate") {
-                    generated_metadata = "__recirculate_data";
-                    // FIXME: !istd.drop && (edstd.egress_port == PORT_RECIRCULATE)
-                    auto expr = new IR::LNot(new IR::Member(
-                        new IR::PathExpression(COMPILER_META), IR::ID("drop")));
-                    return expr;
-                } else if (path->name == "psa_normal") {
-                    auto expr = new IR::LAnd(
-                        new IR::LNot(new IR::Member(
-                            new IR::PathExpression(COMPILER_META), IR::ID("drop"))),
-                        new IR::LNot(new IR::Member(
-                            new IR::PathExpression(COMPILER_META),
-                            IR::ID("resubmit"))));
-                    return expr;
-                }
-            }
-        }
-        return mce;
-    }
-
-    const IR::Member *preorder(IR::Member *node) override {
-        auto membername = node->member.name;
-        auto expr = node->expr->to<IR::PathExpression>();
-        if (!expr) return node;
-        auto pathname = expr->path->name;
-
-        if (pathname == info.paramNameInParser) {
-            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
-                                       IR::ID(generated_metadata));
-            auto member = new IR::Member(path, membername);
-            return member;
-        }
-
-        if (pathname == info.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
-                                       IR::ID(generated_metadata));
-            auto member = new IR::Member(path, membername);
-            return member;
-        }
-
-        if (gress == INGRESS) {
-            if (pathname == structure->ingress_deparser.psaParams.at("metadata")) {
-                auto path = new IR::PathExpression(structure->ingress.psaParams.at("metadata"));
-                auto member = new IR::Member(path, membername);
-                return member;
-            } else if (pathname == structure->ingress_deparser.psaParams.at("hdr")) {
-                auto path = new IR::PathExpression(structure->ingress.psaParams.at("hdr"));
-                auto member = new IR::Member(path, membername);
-                return member;
-            }
-        } else if (gress == EGRESS) {
-             if (pathname == structure->egress_deparser.psaParams.at("metadata")) {
-                auto path = new IR::PathExpression(structure->egress.psaParams.at("metadata"));
-                auto member = new IR::Member(path, membername);
-                return member;
-            } else if (pathname == structure->egress_deparser.psaParams.at("hdr")) {
-                auto path = new IR::PathExpression(structure->egress.psaParams.at("hdr"));
-                auto member = new IR::Member(path, membername);
-                return member;
-            }
-        }
-        return node;
-    }
-
-    const IR::StatOrDecl* convert(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::StatOrDecl>();
-    }
-
-    const PacketPathInfo& info;
-    PSA::ProgramStructure* structure;
-    gress_t gress;
-    cstring generated_metadata;
 };
 
 class TranslateProgram : public Inspector {
@@ -584,30 +486,6 @@ class TranslateProgram : public Inspector {
         } else if (mi->is<P4::ExternFunction>()) {
             WARNING("extern function translation is not supported");
         }
-    }
-
-    profile_t init_apply(const IR::Node* root) override {
-        TranslatePacketPathIfStatement cvt_resubmit(structure->resubmit, structure, INGRESS);
-        for (auto stmt : structure->resubmit.ifStatements) {
-            structure->ingressStatements.push_back(cvt_resubmit.convert(stmt));
-            structure->_map.emplace(stmt, nullptr);
-        }
-        TranslatePacketPathIfStatement cvt_ci2e(structure->clone_i2e, structure, INGRESS);
-        for (auto stmt : structure->clone_i2e.ifStatements) {
-            structure->ingressStatements.push_back(cvt_ci2e.convert(stmt));
-            structure->_map.emplace(stmt, nullptr);
-        }
-        TranslatePacketPathIfStatement cvt_ce2e(structure->clone_e2e, structure, EGRESS);
-        for (auto stmt : structure->clone_e2e.ifStatements) {
-            structure->egressStatements.push_back(cvt_ce2e.convert(stmt));
-            structure->_map.emplace(stmt, nullptr);
-        }
-        TranslatePacketPathIfStatement cvt_recirc(structure->recirculate, structure, EGRESS);
-        for (auto stmt : structure->recirculate.ifStatements) {
-            structure->egressStatements.push_back(cvt_recirc.convert(stmt));
-            structure->_map.emplace(stmt, nullptr);
-        }
-        return Inspector::init_apply(root);
     }
 };
 

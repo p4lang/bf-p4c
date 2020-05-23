@@ -43,7 +43,7 @@ struct PacketPathInfo {
     // if (psa_resubmit(istd)) {
     //    resub_meta = user_meta.resub_meta;
     // }
-    std::vector<const IR::IfStatement*> ifStatements;
+    const IR::IfStatement* ifStatement = nullptr;
 
     ordered_map<const IR::StatOrDecl*, std::vector<const IR::Node*>> fieldLists;
 };
@@ -133,7 +133,6 @@ static bool isCompilerGeneratedType(const IR::Type* type) {
     auto* intrinsicMetadata = annotated->getAnnotation("__compiler_generated");
     return bool(intrinsicMetadata);
 }
-
 }  // namespace BFN
 
 #endif  /* EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_ */

@@ -415,11 +415,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "1 expected packet on port 4 not seen"
-  testdata/p4_16_samples/psa-resubmit-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "SelectExpression: Cannot unify type int with PortIdUint_t"
   extensions/p4_tests/p4_16/stf/onlab_packet_io.p4
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4

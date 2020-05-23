@@ -3,8 +3,8 @@
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 #include "rewrite_packet_path.h"
 
 namespace BFN {
@@ -24,66 +24,58 @@ namespace PSA {
 // if (resubmit_idx == 3w2)
 //    resubmit.emit({});
 
-struct RewriteResubmit : public Transform {
-    explicit RewriteResubmit(const PacketPathInfo& resubmit)
-        : resubmit(resubmit) {
-        setName("RewriteResubmit");
-    }
+struct TranslatePacketPathIfStatement : public Transform {
+    TranslatePacketPathIfStatement(const PacketPathInfo& info, PSA::ProgramStructure* structure,
+                                   gress_t gress)
+        : info(info), structure(structure), gress(gress)
+    { setName("TranslatePacketPathIfStatement"); }
 
-    const IR::Type_StructLike *preorder(IR::Type_StructLike *type) override {
-        prune();
-
-        if (type->name == "compiler_generated_metadata_t") {
-            // Inject a new field to hold the extract resubmit data
-            LOG4("Injecting field for resubmit data into: " << type);
-            CHECK_NULL(resubmit.p4Type);
-            type->fields.push_back(new IR::StructField("__resubmit_data", resubmit.p4Type));
-        } else {
-            // XXX(hanw): resubmit metadata to be extracted as a header
-            auto rt = resubmit.p4Type;
-            if (auto t = rt->to<IR::Type_Name>()) {
-                if (type->name == t->path->name) {
-                    auto nt = new IR::Type_Header(type->name, type->annotations, type->fields);
-                    return nt;
+    const IR::Expression *preorder(IR::MethodCallExpression *mce) override {
+        if (auto expr = mce->method->to<IR::PathExpression>()) {
+            if (auto path = expr->path->to<IR::Path>()) {
+                if (path->name == "psa_resubmit") {
+                    generated_metadata = "__resubmit_data";
+                    condition = create_condition(path->name);
+                    return condition;
+                } else if (path->name == "psa_clone_i2e") {
+                    generated_metadata = "__clone_i2e_data";
+                    condition = create_condition(path->name);
+                    return condition;
+                } else if (path->name == "psa_clone_e2e") {
+                    generated_metadata = "__clone_e2e_data";
+                    condition = create_condition(path->name);
+                    return condition;
+                } else if (path->name == "psa_recirculate") {
+                    generated_metadata = "__recirculate_data";
+                    condition = create_condition(path->name);
+                    return condition;
                 }
             }
         }
-        return type;
+        return mce;
     }
 
-    const IR::BFN::TnaParser *preorder(IR::BFN::TnaParser *parser) override {
-        if (parser->thread != INGRESS || parser->name != "ingressParserImpl") {
-            prune();
-            return parser;
+    IR::Expression* create_condition(cstring packetPath) {
+        IR::Expression* expr = nullptr;
+        if (packetPath == "psa_resubmit") {
+            expr = new IR::LAnd(new IR::LNot(
+                        new IR::Member(new IR::PathExpression(COMPILER_META), IR::ID("drop"))),
+                        new IR::Member(new IR::PathExpression(COMPILER_META), IR::ID("resubmit")));
+        } else if (packetPath == "psa_clone_i2e") {
+            expr = new IR::Member(
+                         new IR::PathExpression(COMPILER_META), IR::ID("clone_i2e"));
+        } else if (packetPath == "psa_clone_e2e") {
+            expr = new IR::Member(
+                         new IR::PathExpression(COMPILER_META), IR::ID("clone_e2e"));
+        } else if (packetPath == "psa_recirculate") {
+            auto drop = new IR::LNot(new IR::Member(
+                         new IR::PathExpression(COMPILER_META), IR::ID("drop")));
+            auto recircPort = new IR::Equ(new IR::Member(new IR::PathExpression(
+                                                  IR::ID("eg_intr_md")), "egress_port"),
+                                                  new IR::Constant(IR::Type::Bits::get(9), 68));
+            expr = new IR::LAnd(drop, recircPort);
         }
-        return parser;
-    }
-
-    // replace the resubmit extract call with extract() to resubmit md
-    const IR::ParserState *preorder(IR::ParserState *state) override {
-        if (state->name != "__resubmit") return state;
-        prune();
-
-        auto *tnaContext = findContext<IR::BFN::TnaParser>();
-        BUG_CHECK(tnaContext, "resubmit state not within translated parser?");
-        BUG_CHECK(tnaContext->thread == INGRESS, "resubmit state not in ingress?");
-
-        // clear existing statements
-        state->components.clear();
-
-        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
-                                      IR::ID("__resubmit_data"));
-        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        auto *extract = new IR::MethodCallStatement(callExpr);
-        LOG4("Generated extract for resubmit data: " << extract);
-        state->components.push_back(extract);
-
-        return state;
+        return expr;
     }
 
     const IR::Member *preorder(IR::Member *node) override {
@@ -92,68 +84,112 @@ struct RewriteResubmit : public Transform {
         if (!expr) return node;
         auto pathname = expr->path->name;
 
-        if (auto *parser = findContext<IR::BFN::TnaParser>()) {
-            if (parser->thread != INGRESS) {
-                return node; }
-        } else if (auto *control = findContext<IR::BFN::TnaDeparser>()) {
-            if (control->thread != INGRESS) {
-                return node; }
-        } else {
-            return node;
-        }
-
-        if (pathname == resubmit.paramNameInParser) {
-            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
-                                       IR::ID("__resubmit_data"));
+        if (pathname == info.paramNameInParser) {
+            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
+                                       IR::ID(generated_metadata));
             auto member = new IR::Member(path, membername);
             return member;
         }
 
-        if (pathname == resubmit.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
-                                       IR::ID("__resubmit_data"));
+        if (pathname == info.paramNameInDeparser) {
+            auto path = new IR::Member(new IR::PathExpression(COMPILER_META),
+                                       IR::ID(generated_metadata));
             auto member = new IR::Member(path, membername);
             return member;
         }
 
+        if (gress == INGRESS) {
+            if (pathname == structure->ingress_deparser.psaParams.at("metadata")) {
+                auto path = new IR::PathExpression(structure->ingress.psaParams.at("metadata"));
+                auto member = new IR::Member(path, membername);
+                return member;
+            } else if (pathname == structure->ingress_deparser.psaParams.at("hdr")) {
+                auto path = new IR::PathExpression(structure->ingress.psaParams.at("hdr"));
+                auto member = new IR::Member(path, membername);
+                return member;
+            }
+        } else if (gress == EGRESS) {
+             if (pathname == structure->egress_deparser.psaParams.at("metadata")) {
+                auto path = new IR::PathExpression(structure->egress.psaParams.at("metadata"));
+                auto member = new IR::Member(path, membername);
+                return member;
+            } else if (pathname == structure->egress_deparser.psaParams.at("hdr")) {
+                auto path = new IR::PathExpression(structure->egress.psaParams.at("hdr"));
+                auto member = new IR::Member(path, membername);
+                return member;
+            }
+        }
         return node;
     }
 
- private:
-    const PacketPathInfo& resubmit;
+    const IR::IfStatement* convert(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::IfStatement>();
+    }
+
+    const PacketPathInfo& info;
+    PSA::ProgramStructure* structure;
+    IR::Expression* condition = nullptr;
+    gress_t gress;
+    cstring generated_metadata;
 };
 
-struct RewriteRecirculate : public Transform {
+struct FindPacketPath : public Inspector {
+    PSA::ProgramStructure* structure;
+    bool resubmit = false;
+    bool clone_i2e = false;
+    bool clone_e2e = false;
+    explicit FindPacketPath(PSA::ProgramStructure* structure): structure(structure) { }
+    bool preorder(const IR::AssignmentStatement* stmt) override {
+        auto ctxt = findContext<IR::BFN::TnaControl>();
+        if (ctxt && ctxt->thread == INGRESS) {
+            auto leftMember = stmt->left->to<IR::Member>();
+            if (!leftMember) return false;
+            auto leftPathEx = leftMember->expr->to<IR::PathExpression>();
+            if (!leftPathEx) return false;
+            auto leftPath = leftPathEx->path->to<IR::Path>();
+            if (!leftPath) return false;
+            auto rightBool = stmt->right->to<IR::BoolLiteral>();
+            if (leftPath && rightBool &&
+                leftPath->name == COMPILER_META && leftMember->member == "resubmit" &&
+                rightBool->value == true) {
+                resubmit |= true;
+            }
+        }
+        return false;
+    }
+};
+
+struct PacketPath : public Transform {
     PSA::ProgramStructure* structure;
     P4::TypeMap* typeMap;
     P4::ReferenceMap* refMap;
-    IR::IndexedVector<IR::StatOrDecl>* recircAssignments;
-    explicit RewriteRecirculate(PSA::ProgramStructure* structure, P4::TypeMap* typeMap,
+    FindPacketPath* fpa;
+    explicit PacketPath(PSA::ProgramStructure* structure, P4::TypeMap* typeMap,
                                 P4::ReferenceMap* refMap,
-                                IR::IndexedVector<IR::StatOrDecl>* recircAssignments)
-    : structure(structure), typeMap(typeMap), refMap(refMap),
-      recircAssignments(recircAssignments) {
-        setName("RewriteRecirculate");
+                                FindPacketPath* fpa)
+    : structure(structure), typeMap(typeMap), refMap(refMap), fpa(fpa) {
+        setName("PacketPath");
     }
-    IR::IndexedVector<IR::StructField> fields;
 
-    // Add flexible annotation to recirculate header
-    profile_t init_apply(const IR::Node* root) override {
-        for (auto& recircField :
-                structure->recirculate.structType->to<IR::Type_StructLike>()->fields) {
+    void addFlexibleAnnot(IR::Type_StructLike* type) {
+        IR::IndexedVector<IR::StructField> fields;
+        for (auto& f : type->fields) {
             auto *fieldAnnotations = new IR::Annotations();
             fieldAnnotations->annotations.push_back(
                             new IR::Annotation(IR::ID("flexible"), {}));
-            fields.push_back(new IR::StructField(recircField->name, fieldAnnotations,
-                                                 recircField->type));
+            fields.push_back(new IR::StructField(f->name, fieldAnnotations, f->type));
         }
-        return Transform::init_apply(root);
+        type->fields = fields;
+        return;
     }
 
     IR::Type_StructLike* postorder(IR::Type_StructLike* type) override {
         prune();
-        if (type->name == structure->recirculate.structType->to<IR::Type_StructLike>()->name) {
-           type->fields = fields;
+        IR::IndexedVector<IR::StructField> fields;
+        if (type->name == structure->recirculate.structType->to<IR::Type_StructLike>()->name ||
+            type->name == structure->resubmit.structType->to<IR::Type_StructLike>()->name) {
+            addFlexibleAnnot(type);
         }
         return type;
     }
@@ -234,15 +270,33 @@ struct RewriteRecirculate : public Transform {
 
         auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+        if (structure->resubmit.structType->to<IR::Type_StructLike>()->fields.size()) {
+            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
-        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
+            auto *member = new IR::Member(new IR::PathExpression(cgMeta),
                                       IR::ID("__resubmit_data"));
-        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        auto *extract = new IR::MethodCallStatement(callExpr);
-        LOG4("Generated extract for resubmit data: " << extract);
-        state->components.push_back(extract);
+            auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
+            auto *callExpr = new IR::MethodCallExpression(method, args);
+            auto *extract = new IR::MethodCallStatement(callExpr);
+            LOG4("Generated extract for resubmit data: " << extract);
+            state->components.push_back(extract);
+        } else {
+            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("advance"));
+            auto constant = new IR::Constant(IR::Type::Bits::get(32), 64);
+            auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(constant) });
+            auto *callExpr = new IR::MethodCallExpression(method, args);
+            auto *advance = new IR::MethodCallStatement(callExpr);
+            state->components.push_back(advance);
+        }
+        // Add assignment statement for packet path
+        auto packetPath = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("packet_path"));
+        auto packetPathStmt = new IR::AssignmentStatement(packetPath,
+                                                new IR::Constant(IR::Type::Bits::get(8), 5));
+        state->components.push_back(packetPathStmt);
+        auto resubmitEn =  new IR::Member(new IR::PathExpression(cgMeta), IR::ID("resubmit"));
+        state->components.push_back(new IR::AssignmentStatement(resubmitEn,
+                                                                new IR::BoolLiteral(false)));
         return;
     }
 
@@ -250,6 +304,7 @@ struct RewriteRecirculate : public Transform {
         if (state->name == "__phase0") {
             addRecirculateState(state);
         } else if (state->name == "__resubmit") {
+            updateResubmitState(state);
             addRecirculateState(state);
         }
         return state;
@@ -265,7 +320,7 @@ struct RewriteRecirculate : public Transform {
     // Add "pkt.emit(md.__recirculate_data);" as the first statement in the
     // egress deparser.
     IR::BFN::TnaDeparser*
-    updateEgressDeparser(IR::BFN::TnaDeparser* control) {
+    deparseRecirculate(IR::BFN::TnaDeparser* control) {
         auto packetOutParam = control->tnaParams.at("pkt");
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
@@ -283,148 +338,104 @@ struct RewriteRecirculate : public Transform {
         return control;
     }
 
-    const IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* control) override {
-        if (control->thread == gress_t::EGRESS && recircAssignments->size())
-            return updateEgressDeparser(control);
+    IR::BFN::TnaDeparser*
+    deparserResubmit(IR::BFN::TnaDeparser* control) {
+        auto declArgs = new IR::Vector<IR::Argument>({});
+        auto declType = new IR::Type_Name("Resubmit");
+        auto decl = new IR::Declaration_Instance("resubmit", declType, declArgs);
+        IR::IndexedVector<IR::Declaration> parameters;
+        parameters.push_back(decl);
+        for (auto p : control->controlLocals) {
+             parameters.push_back(p);
+        }
+        control->controlLocals = parameters;
+        auto* method = new IR::Member(new IR::PathExpression("resubmit"),
+                                      IR::ID("emit"));
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                      IR::ID("__resubmit_data"));
+        auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
+        auto typeArgs = new IR::Vector<IR::Type>({structure->resubmit.p4Type});
+        auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
+        // Add if(resubmit_type == 0) to emit
+        auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr");
+        IR::IndexedVector<IR::StatOrDecl> components;
+        components.push_back(new IR::MethodCallStatement(callExpr));
+        auto resubmit = new IR::Member(new IR::PathExpression(ig_dprsr), "resubmit_type");
+        auto condition = new IR::Equ(resubmit, new IR::Constant(IR::Type::Bits::get(3), 0));
+        auto block = new IR::BlockStatement(components);
+        auto ifStmt = new IR::IfStatement(condition, block, nullptr);
+        auto* body = control->body->clone();
+        body->components.insert(body->components.begin(), ifStmt);
+        control->body = body;
         return control;
     }
-};
 
-
-// Remove and collect the assignment statements in Egress deparser
-struct RemoveDeparserAssignment : public Transform {
-    PSA::ProgramStructure* structure;
-    P4::TypeMap* typeMap;
-    P4::ReferenceMap* refMap;
-    IR::Type_Header* recirculateHeader;
-    IR::IndexedVector<IR::StatOrDecl> recircAssignments;
-    explicit RemoveDeparserAssignment(PSA::ProgramStructure* structure, P4::TypeMap* typeMap,
-                                P4::ReferenceMap* refMap)
-    : structure(structure), typeMap(typeMap), refMap(refMap) {
-        setName("RemoveDeparserAssignment");
-    }
-
-    IR::Node* postorder(IR::AssignmentStatement* assignment) override {
-        auto ctxt = findOrigCtxt<IR::BFN::TnaDeparser>();
-        if (!ctxt) {
-            return assignment;
+    const IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* control) override {
+        if (control->thread == EGRESS && structure->recirculate.ifStatement) {
+            return deparseRecirculate(control);
+        } else if (control->thread == INGRESS && fpa->resubmit) {
+            return deparserResubmit(control);
         }
-        PathLinearizer linearizer;
-        assignment->left->apply(linearizer);
-        if (!checkIfStatementNeedToMove(assignment)) return assignment;
-        auto& path = *linearizer.linearPath;
-        auto* nextToLastComponent = path.components[path.components.size() - 2];
-        auto* nextToLastComponentType = typeMap->getType(nextToLastComponent);
-        if (ctxt->thread == EGRESS &&
-            isSameHeaderType(nextToLastComponentType, structure->recirculate.structType)) {
-            recircAssignments.push_back(assignment);
-            return nullptr;
-        }
-        return assignment;
-    }
-
-    // Check if the assignment statement given in deparser should be moved to control
-    bool checkIfStatementNeedToMove(IR::AssignmentStatement* assignment) {
-        PathLinearizer linearizer;
-        assignment->left->apply(linearizer);
-
-        // If the destination of the write isn't a path-like expression, or if it's
-        // too complex to analyze, err on the side of caution and don't remove it.
-        if (!linearizer.linearPath) {
-            LOG4("Won't remove egress deparser assignment to complex object: "
-                     << assignment);
-            return false;
-        }
-
-        auto& path = *linearizer.linearPath;
-        auto* param = getContainingParameter(path, refMap);
-        if (!param) {
-            LOG4("Won't remove egress deparser assignment to local object: "
-                     << assignment);
-            return false;
-        }
-        auto* paramType = typeMap->getType(param);
-        BUG_CHECK(paramType, "No type for param: %1%", param);
-        LOG4("param type " << paramType);
-        if (!isCompilerGeneratedType(paramType)) {
-            LOG4("Won't remove egress deparser assignment to non compiler-generated object: "
-                     << assignment);
-            return false;
-        }
-        if (path.components.size() < 2)
-            return false;
-        return true;
+        return control;
     }
 };
 
 // Use the collected assignment statements, recreate new assignment statement using egress
 // control paramters and add them in egress control
 struct MoveAssignment : public Transform {
-    explicit MoveAssignment(PSA::ProgramStructure* structure,
-         IR::IndexedVector<IR::StatOrDecl>* recircAssignments)
-    : structure(structure), recircAssignments(recircAssignments) { }
+    PSA::ProgramStructure* structure;
+    const FindPacketPath* fpa;
+    MoveAssignment(PSA::ProgramStructure* structure,
+                   const FindPacketPath* fpa)
+    : structure(structure), fpa(fpa) { }
 
     IR::BFN::TnaControl*
     preorder(IR::BFN::TnaControl* control) override {
         prune();
         auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
-        if (control->thread == EGRESS && recircAssignments->size()) {
+        if (control->thread == EGRESS && structure->recirculate.ifStatement) {
             auto* compilerRecirculateHeader = new IR::Member(
                                       new IR::PathExpression(cgMetadataParam),
                                       IR::ID("__recirculate_data"));
-            auto components = rewriteAssignmentStatements(compilerRecirculateHeader,
-                                                            recircAssignments);
-            // Add if condition : assign the the recirculate data only when egress port is 68
-            auto eg_intr_md = control->tnaParams.at("eg_intr_md");
-            auto path = new IR::PathExpression(eg_intr_md);
-            auto egress_port = new IR::Member(path, "egress_port");
-            auto condition = new IR::Equ(egress_port, new IR::Constant(IR::Type::Bits::get(9), 68));
+            TranslatePacketPathIfStatement cvt_recirc(structure->recirculate, structure, EGRESS);
+            auto ifStmt = cvt_recirc.convert(structure->recirculate.ifStatement);
+            auto* method = new IR::Member(compilerRecirculateHeader, IR::ID("setValid"));
+            auto* args = new IR::Vector<IR::Argument>;
+            auto* callExpr = new IR::MethodCallExpression(method, args);
+            IR::IndexedVector<IR::StatOrDecl> components;
+            components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
+            components.push_back(new IR::MethodCallStatement(callExpr));
             auto block = new IR::BlockStatement(components);
-            auto ifStmt = new IR::IfStatement(condition, block, nullptr);
+            auto newifStmt = new IR::IfStatement(ifStmt->condition, block, nullptr);
             auto* body = control->body->clone();
-            body->components.push_back(ifStmt);
+            body->components.push_back(newifStmt);
+            control->body = body;
+        } else if (control->thread == INGRESS && fpa->resubmit) {
+            IR::IndexedVector<IR::StatOrDecl> components;
+            auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr");
+            auto resubmitType = new IR::Member(new IR::PathExpression(ig_dprsr),
+                                               IR::ID("resubmit_type"));
+            components.push_back(new IR::AssignmentStatement(resubmitType,
+                                 new IR::Constant(IR::Type::Bits::get(3), 0)));
+            // If resubmit is set then create an if statement with condition (!drop && resubmit)
+            // This if statement will be used to assign resubmit type
+            // Also add the "ifTrue" statements of psa_resubmit in the same if statement
+            TranslatePacketPathIfStatement cvt_resubmit(structure->resubmit, structure, INGRESS);
+            if (structure->resubmit.ifStatement) {
+                auto ifStmt = cvt_resubmit.convert(structure->resubmit.ifStatement);
+                components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
+            }
+            auto block = new IR::BlockStatement(components);
+            auto newifStmt = new IR::IfStatement(cvt_resubmit.create_condition("psa_resubmit"),
+                                                 block, nullptr);
+            auto* body = control->body->clone();
+            body->components.push_back(newifStmt);
             control->body = body;
         }
         return control;
     }
-
-    // Rewrite assignment statements using local parameters
-    IR::IndexedVector<IR::StatOrDecl>
-    rewriteAssignmentStatements(IR::Member* typeMember,
-                        IR::IndexedVector<IR::StatOrDecl>* assignments) {
-        // First create assignment members that uses egress pipeline params
-        IR::IndexedVector<IR::StatOrDecl> block;
-        auto metdataParam = structure->egress.psaParams.at("metadata");
-        auto metadataPath = new IR::PathExpression(metdataParam);
-        // create a setvalid statement
-        auto* method = new IR::Member(typeMember, IR::ID("setValid"));
-        auto* args = new IR::Vector<IR::Argument>;
-        auto* callExpr = new IR::MethodCallExpression(method, args);
-        block.push_back(new IR::MethodCallStatement(callExpr));
-        for (auto s : *assignments) {
-            auto stmt = s->to<IR::AssignmentStatement>();
-            IR::Member* newLeftMember = nullptr;
-            IR::Member* newRightMember = nullptr;
-            if (auto leftMember = stmt->left->to<IR::Member>()) {
-                newLeftMember = new IR::Member(typeMember, leftMember->member);
-            }
-            if (auto rightMember = stmt->right->to<IR::Member>()) {
-                newRightMember = new IR::Member(metadataPath, rightMember->member);
-            }
-            if (newLeftMember && newRightMember) {
-                block.push_back(new IR::AssignmentStatement(newLeftMember,
-                                                             newRightMember));
-            } else {
-                ::error("Assignment in Deparser do not have metadata"
-                         " fields as operands %1%", stmt);
-            }
-        }
-        return block;
-    }
-    PSA::ProgramStructure* structure;
-    IR::IndexedVector<IR::StatOrDecl>* recircAssignments;
 };
-
 
 struct RewriteClone : public Transform {
     explicit RewriteClone(
@@ -504,28 +515,16 @@ struct RewriteClone : public Transform {
     cstring metadata;
 };
 
-struct RecirculatePacket : public PassManager {
-    RecirculatePacket(PSA::ProgramStructure* structure, P4::TypeMap* typeMap,
-                       P4::ReferenceMap* refMap) {
-        auto* removeDeparserAssignments = new RemoveDeparserAssignment(structure,
-                                                                       typeMap, refMap);
-        addPasses({
-            removeDeparserAssignments,
-            new RewriteRecirculate(structure, typeMap, refMap,
-                                  &removeDeparserAssignments->recircAssignments),
-            new P4::ClearTypeMap(typeMap),
-            new BFN::TypeChecking(refMap, typeMap, true),
-            new MoveAssignment(structure, &removeDeparserAssignments->recircAssignments),
-        });
-    }
-};
-
 RewritePacketPath::RewritePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                           PSA::ProgramStructure* structure) {
+                                     PSA::ProgramStructure* structure) {
     setName("RewritePacketPath");
+    auto* findPacketPath = new FindPacketPath(structure);
     addPasses({
-        new RecirculatePacket(structure, typeMap, refMap),
-        new RewriteResubmit(structure->resubmit),
+        findPacketPath,
+        new PacketPath(structure, typeMap, refMap, findPacketPath),
+        new P4::ClearTypeMap(typeMap),
+        new BFN::TypeChecking(refMap, typeMap, true),
+        new MoveAssignment(structure, findPacketPath),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
         new RewriteClone(structure->clone_i2e, INGRESS),
