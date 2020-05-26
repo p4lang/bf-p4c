@@ -114,8 +114,10 @@ class AnalyzeProgram : public Inspector {
                                                   structure->recirculate.p4Type));
         cgm->fields.push_back(new IR::StructField("__resubmit_data",
                                                   structure->resubmit.p4Type));
-
-
+        cgm->fields.push_back(new IR::StructField("__clone_i2e_data",
+                                                  structure->clone_i2e.p4Type));
+        cgm->fields.push_back(new IR::StructField("__clone_e2e_data",
+                                                  structure->clone_e2e.p4Type));
         cgm->fields.push_back(new IR::StructField("drop", IR::Type::Boolean::get()));
         cgm->fields.push_back(new IR::StructField("resubmit", IR::Type::Boolean::get()));
         cgm->fields.push_back(new IR::StructField("clone_i2e", IR::Type::Boolean::get()));
@@ -159,11 +161,11 @@ class AnalyzeProgram : public Inspector {
             create_metadata_header(param, BFN::BRIDGED_MD, EGRESS, structure->bridge);
             param = node->getApplyParameters()->getParameter(5);
             structure->clone_i2e.paramNameInParser = param->name;
-            structure->clone_i2e.p4Type = param->type;
+            create_metadata_header(param, "__clone_i2e_data", EGRESS, structure->clone_i2e);
             structure->egress_parser.psaParams.emplace("clone_i2e_metadata", param->name);
             param = node->getApplyParameters()->getParameter(6);
             structure->clone_e2e.paramNameInParser = param->name;
-            structure->clone_e2e.p4Type = param->type;
+            create_metadata_header(param, "__clone_e2e_data", EGRESS, structure->clone_e2e);
             structure->egress_parser.psaParams.emplace("clone_e2e_metadata", param->name);
         }
     }
@@ -225,7 +227,7 @@ class AnalyzeProgram : public Inspector {
         if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
             structure->clone_i2e.paramNameInDeparser = param->name;
-            structure->clone_i2e.p4Type = param->type;
+            create_metadata_header(param, "__clone_i2e_data", INGRESS, structure->clone_i2e);
             param = node->getApplyParameters()->getParameter(2);
             structure->resubmit.paramNameInDeparser = param->name;
             create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
@@ -243,7 +245,7 @@ class AnalyzeProgram : public Inspector {
         } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
             structure->clone_e2e.paramNameInDeparser = param->name;
-            structure->clone_e2e.p4Type = param->type;
+            create_metadata_header(param, "__clone_e2e_data", EGRESS, structure->clone_e2e);
             param = node->getApplyParameters()->getParameter(2);
             structure->recirculate.paramNameInDeparser = param->name;
             create_metadata_header(param, "__recirculate_data", EGRESS, structure->recirculate);

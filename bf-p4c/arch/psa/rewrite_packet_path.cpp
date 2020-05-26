@@ -142,7 +142,7 @@ struct FindPacketPath : public Inspector {
     explicit FindPacketPath(PSA::ProgramStructure* structure): structure(structure) { }
     bool preorder(const IR::AssignmentStatement* stmt) override {
         auto ctxt = findContext<IR::BFN::TnaControl>();
-        if (ctxt && ctxt->thread == INGRESS) {
+        if (ctxt) {
             auto leftMember = stmt->left->to<IR::Member>();
             if (!leftMember) return false;
             auto leftPathEx = leftMember->expr->to<IR::PathExpression>();
@@ -150,10 +150,22 @@ struct FindPacketPath : public Inspector {
             auto leftPath = leftPathEx->path->to<IR::Path>();
             if (!leftPath) return false;
             auto rightBool = stmt->right->to<IR::BoolLiteral>();
-            if (leftPath && rightBool &&
-                leftPath->name == COMPILER_META && leftMember->member == "resubmit" &&
-                rightBool->value == true) {
-                resubmit |= true;
+            if (ctxt->thread == INGRESS) {
+                if (leftPath && rightBool &&
+                    leftPath->name == COMPILER_META && leftMember->member == "resubmit" &&
+                    rightBool->value == true) {
+                    resubmit |= true;
+                } else if (leftPath && rightBool &&
+                    leftPath->name == COMPILER_META && leftMember->member == "clone_i2e" &&
+                    rightBool->value == true) {
+                    clone_i2e |= true;
+                }
+            } else {
+                if (leftPath && rightBool &&
+                    leftPath->name == COMPILER_META && leftMember->member == "clone_e2e" &&
+                    rightBool->value == true) {
+                    clone_e2e |= true;
+                }
             }
         }
         return false;
@@ -172,12 +184,17 @@ struct PacketPath : public Transform {
         setName("PacketPath");
     }
 
-    void addFlexibleAnnot(IR::Type_StructLike* type) {
+    void updateFields(IR::Type_StructLike* type) {
         IR::IndexedVector<IR::StructField> fields;
-        for (auto& f : type->fields) {
-            auto *fieldAnnotations = new IR::Annotations();
-            fieldAnnotations->annotations.push_back(
+        auto *fieldAnnotations = new IR::Annotations();
+        fieldAnnotations->annotations.push_back(
                             new IR::Annotation(IR::ID("flexible"), {}));
+        if ((fpa->clone_i2e && structure->clone_i2e.structType->to<IR::Type_StructLike>()->name) ||
+           (fpa->clone_e2e && structure->clone_e2e.structType->to<IR::Type_StructLike>()->name)) {
+            fields.push_back(new IR::StructField("mirror_source", fieldAnnotations,
+                                                                  IR::Type::Bits::get(8)));
+        }
+        for (auto& f : type->fields) {
             fields.push_back(new IR::StructField(f->name, fieldAnnotations, f->type));
         }
         type->fields = fields;
@@ -186,48 +203,58 @@ struct PacketPath : public Transform {
 
     IR::Type_StructLike* postorder(IR::Type_StructLike* type) override {
         prune();
-        IR::IndexedVector<IR::StructField> fields;
         if (type->name == structure->recirculate.structType->to<IR::Type_StructLike>()->name ||
-            type->name == structure->resubmit.structType->to<IR::Type_StructLike>()->name) {
-            addFlexibleAnnot(type);
+            type->name == structure->resubmit.structType->to<IR::Type_StructLike>()->name ||
+            type->name == structure->clone_i2e.structType->to<IR::Type_StructLike>()->name ||
+            type->name == structure->clone_e2e.structType->to<IR::Type_StructLike>()->name) {
+            updateFields(type);
         }
         return type;
+    }
+
+    // Add assignment statement to copy packet data to metadata
+    void copyToMetadata(IR::ParserState* state, const PacketPathInfo& packetPath,
+                        const IR::Member* packetMeta) {
+        auto pathname = structure->egress_parser.psaParams.at("metadata");
+        auto path = new IR::PathExpression(pathname);
+        auto mdType = typeMap->getTypeType(structure->metadataType, true);
+        for (auto& pf : packetPath.structType->to<IR::Type_StructLike>()->fields) {
+            auto leftMember = new IR::Member(path, pf->name);
+            for (auto f : mdType->to<IR::Type_StructLike>()->fields) {
+                if (f->name == pf->name) {
+                    auto rightMember = new IR::Member(packetMeta, f->name);
+                    auto setMetadata = new IR::AssignmentStatement(leftMember, rightMember);
+                    state->components.push_back(setMetadata);
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
+    void addExtract(IR::ParserState* state, const IR::Member* extractMember,
+                    const IR::BFN::TnaParser* parser) {
+        auto packetInParam = parser->tnaParams.at("pkt");
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("extract"));
+        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(extractMember) });
+        auto *callExpr = new IR::MethodCallExpression(method, args);
+        auto *extract = new IR::MethodCallStatement(callExpr);
+        state->components.push_back(extract);
+        return;
     }
 
     // Create a state to extract recirculated data and assign them to metadata
     IR::ParserState* create_recirculate_state(const IR::BFN::TnaParser* tnaContext) {
         auto statements = new IR::IndexedVector<IR::StatOrDecl>();
-        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
-                                      IR::ID("__recirculate_data"));
-        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        auto *extract = new IR::MethodCallStatement(callExpr);
-        LOG4("Generated extract for recirculate data: " << extract);
-        statements->push_back(extract);
-        // add assignment
-        auto pathname = structure->egress_parser.psaParams.at("metadata");
-        auto path = new IR::PathExpression(pathname);
-        auto mdType = typeMap->getTypeType(structure->metadataType, true);
-        for (auto& recircField:
-                structure->recirculate.structType->to<IR::Type_StructLike>()->fields) {
-            auto leftMember = new IR::Member(path, recircField->name);
-            for (auto f : mdType->to<IR::Type_StructLike>()->fields) {
-                if (f->name == recircField->name) {
-                    auto rightMember = new IR::Member(member, recircField->name);
-                    auto setMetadata = new IR::AssignmentStatement(leftMember, rightMember);
-                    statements->push_back(setMetadata);
-                    break;
-                }
-            }
-        }
-
         auto select = new IR::PathExpression(IR::ID("__skip_to_packet"));
         auto newStateName = IR::ID(cstring("__recirculate"));
         auto *newState = new IR::ParserState(newStateName, *statements, select);
+        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
+        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
+                                      IR::ID("__recirculate_data"));
+        addExtract(newState, member, tnaContext);
+        copyToMetadata(newState, structure->recirculate, member);
         newState->annotations = newState->annotations
             ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
                                  new IR::StringLiteral(cstring("$__recirculate")));
@@ -270,16 +297,10 @@ struct PacketPath : public Transform {
 
         auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto packetInParam = tnaContext->tnaParams.at("pkt");
-        if (structure->resubmit.structType->to<IR::Type_StructLike>()->fields.size()) {
-            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
-            auto *member = new IR::Member(new IR::PathExpression(cgMeta),
+        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
                                       IR::ID("__resubmit_data"));
-            auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-            auto *callExpr = new IR::MethodCallExpression(method, args);
-            auto *extract = new IR::MethodCallStatement(callExpr);
-            LOG4("Generated extract for resubmit data: " << extract);
-            state->components.push_back(extract);
+        if (structure->resubmit.ifStatement) {
+            addExtract(state, member, tnaContext);
         } else {
             auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
@@ -289,14 +310,54 @@ struct PacketPath : public Transform {
             auto *advance = new IR::MethodCallStatement(callExpr);
             state->components.push_back(advance);
         }
-        // Add assignment statement for packet path
-        auto packetPath = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("packet_path"));
-        auto packetPathStmt = new IR::AssignmentStatement(packetPath,
-                                                new IR::Constant(IR::Type::Bits::get(8), 5));
-        state->components.push_back(packetPathStmt);
-        auto resubmitEn =  new IR::Member(new IR::PathExpression(cgMeta), IR::ID("resubmit"));
-        state->components.push_back(new IR::AssignmentStatement(resubmitEn,
+        // If resubmit is enabled then add assignment statements
+        if (fpa->resubmit) {
+            copyToMetadata(state, structure->resubmit, member);
+            // Add assignment statement for packet path
+            auto packetPath = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("packet_path"));
+            auto packetPathStmt = new IR::AssignmentStatement(packetPath,
+                                                    new IR::Constant(IR::Type::Bits::get(8), 5));
+            state->components.push_back(packetPathStmt);
+            auto resubmitEn =  new IR::Member(new IR::PathExpression(cgMeta), IR::ID("resubmit"));
+            state->components.push_back(new IR::AssignmentStatement(resubmitEn,
                                                                 new IR::BoolLiteral(false)));
+        }
+        return;
+    }
+
+    void updateMirrorState(IR::ParserState* state) {
+        auto *tnaContext = findContext<IR::BFN::TnaParser>();
+        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        if (!fpa->clone_i2e && !fpa->clone_e2e) {
+            auto *method = new IR::Member(new IR::PathExpression(packetInParam),
+                                      IR::ID("advance"));
+            auto constant = new IR::Constant(IR::Type::Bits::get(32), 0);
+            auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(constant) });
+            auto *callExpr = new IR::MethodCallExpression(method, args);
+            auto *advance = new IR::MethodCallStatement(callExpr);
+            state->components.push_back(advance);
+            return;
+        }
+        auto selectCases = new IR::Vector<IR::SelectCase>();
+        if (fpa->clone_e2e) {
+            selectCases->push_back(new IR::SelectCase(new IR::Mask(
+                                                  new IR::Constant(IR::Type::Bits::get(8), 31),
+                               new IR::Constant(IR::Type::Bits::get(8), 25)),
+                               new IR::PathExpression("__mirror_egress")));
+        }
+        if (fpa->clone_i2e) {
+            selectCases->push_back(new IR::SelectCase(new IR::Mask(
+                                                   new IR::Constant(IR::Type::Bits::get(8), 31),
+                                   new IR::Constant(IR::Type::Bits::get(8), 8)),
+                                     new IR::PathExpression("__mirror_ingress")));
+        }
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("lookahead"));
+        auto *typeArgs = new IR::Vector<IR::Type>({ IR::Type::Bits::get(8) });
+        auto *lookaheadExpr = new IR::MethodCallExpression(method, typeArgs,
+                                                       new IR::Vector<IR::Argument>);
+        auto selectOn = new IR::ListExpression({lookaheadExpr});
+        auto selectExpression = new IR::SelectExpression(selectOn, *selectCases);
+        state->selectExpression = selectExpression;
         return;
     }
 
@@ -306,14 +367,51 @@ struct PacketPath : public Transform {
         } else if (state->name == "__resubmit") {
             updateResubmitState(state);
             addRecirculateState(state);
+        } else if (state->name == "__mirrored") {
+            updateMirrorState(state);
         }
         return state;
     }
 
+    IR::ParserState* create_mirror_state(IR::BFN::TnaParser* tnaContext, gress_t gress) {
+        cstring gress_str = gress ? "egress" : "ingress";
+        auto statements = new IR::IndexedVector<IR::StatOrDecl>();
+        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
+        auto *member = new IR::Member(new IR::PathExpression(cgMeta),
+                                      IR::ID(gress ? "__clone_e2e_data" : "__clone_i2e_data"));
+        auto select = new IR::PathExpression(IR::ID("__egress_p4_entry_point"));
+        auto newStateName = IR::ID(cstring("__mirror_" + gress_str));
+        auto *newState = new IR::ParserState(newStateName, *statements, select);
+        newState->annotations = newState->annotations
+            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                 new IR::StringLiteral(cstring("$__mirror_" + gress_str)));
+        addExtract(newState, member, tnaContext);
+        // Add assignment statement for packet path
+        auto cloneType = gress ? structure->clone_e2e : structure->clone_i2e;
+        copyToMetadata(newState, cloneType, member);
+        auto packetPath = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("packet_path"));
+        auto packetPathStmt = new IR::AssignmentStatement(packetPath,
+                                                new IR::Constant(IR::Type::Bits::get(8),
+                                                     gress ? 4 : 3));
+        newState->components.push_back(packetPathStmt);
+        auto cloneEn =  new IR::Member(new IR::PathExpression(cgMeta),
+                                            IR::ID(gress ? "clone_e2e" : "clone_i2e"));
+        newState->components.push_back(new IR::AssignmentStatement(cloneEn,
+                                                                new IR::BoolLiteral(false)));
+        return newState;
+    }
+
     // Include __recirculate state in ingress parser
     const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* node) override {
-        if (node->thread == gress_t::INGRESS)
+        if (node->thread == gress_t::INGRESS) {
             node->states.push_back(create_recirculate_state(node));
+        } else {
+            if (fpa->clone_i2e) {
+                node->states.push_back(create_mirror_state(node, INGRESS));
+            } else if (fpa->clone_e2e) {
+                node->states.push_back(create_mirror_state(node, EGRESS));
+            }
+        }
         return node;
     }
 
@@ -371,11 +469,57 @@ struct PacketPath : public Transform {
         return control;
     }
 
+    IR::BFN::TnaDeparser*
+    deparserMirror(IR::BFN::TnaDeparser* control) {
+        auto declArgs = new IR::Vector<IR::Argument>({});
+        auto declType = new IR::Type_Name("Mirror");
+        auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
+        IR::IndexedVector<IR::Declaration> parameters;
+        parameters.push_back(decl);
+        for (auto p : control->controlLocals) {
+             parameters.push_back(p);
+        }
+        control->controlLocals = parameters;
+        auto* method = new IR::Member(new IR::PathExpression("mirror"),
+                                      IR::ID("emit"));
+        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
+        auto* args = new IR::Vector<IR::Argument>();
+        auto typeArgs = new IR::Vector<IR::Type>();
+        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                         IR::ID(control->thread ? "__clone_e2e_data" : "__clone_i2e_data"));
+        auto mirror_id = new IR::Member(new IR::PathExpression(cgMetadataParam),
+                                        IR::ID("mirror_id"));
+        args->push_back(new IR::Argument(mirror_id));
+        args->push_back(new IR::Argument(member));
+        auto cloneMetaType = control->thread ? structure->clone_e2e.p4Type :
+                                               structure->clone_i2e.p4Type;
+        typeArgs->push_back(cloneMetaType);
+        auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
+        // Add if(mirror_type == 0) to emit
+        auto ig_dprsr = control->tnaParams.at(control->thread ? "eg_intr_md_for_dprsr"
+                                              : "ig_intr_md_for_dprsr");
+        IR::IndexedVector<IR::StatOrDecl> components;
+        components.push_back(new IR::MethodCallStatement(callExpr));
+        auto mirror  = new IR::Member(new IR::PathExpression(ig_dprsr), "mirror_type");
+        auto condition = new IR::Equ(mirror, new IR::Constant(IR::Type::Bits::get(3),
+                                      control->thread ? 1 : 0));
+        auto block = new IR::BlockStatement(components);
+        auto ifStmt = new IR::IfStatement(condition, block, nullptr);
+        auto* body = control->body->clone();
+        body->components.insert(body->components.begin(), ifStmt);
+        control->body = body;
+        return control;
+    }
+
     const IR::BFN::TnaDeparser* preorder(IR::BFN::TnaDeparser* control) override {
         if (control->thread == EGRESS && structure->recirculate.ifStatement) {
             return deparseRecirculate(control);
         } else if (control->thread == INGRESS && fpa->resubmit) {
             return deparserResubmit(control);
+        } else if (control->thread == INGRESS && fpa->clone_i2e) {
+            deparserMirror(control);
+        } else if (control->thread == EGRESS && fpa->clone_e2e) {
+            deparserMirror(control);
         }
         return control;
     }
@@ -389,6 +533,44 @@ struct MoveAssignment : public Transform {
     MoveAssignment(PSA::ProgramStructure* structure,
                    const FindPacketPath* fpa)
     : structure(structure), fpa(fpa) { }
+
+    void add_clone_data(cstring clone, cstring compilerMeta, IR::BFN::TnaControl* control) {
+        auto* compilerCloneHeader = new IR::Member(new IR::PathExpression(compilerMeta),
+                     IR::ID(clone == "clone_i2e" ? "__clone_i2e_data" : "__clone_e2e_data"));
+        auto intr_dprsr = control->tnaParams.at(clone == "clone_i2e" ? "ig_intr_md_for_dprsr" :
+                                                "eg_intr_md_for_dprsr");
+        auto mirrorType = new IR::Member(new IR::PathExpression(intr_dprsr),
+                                           IR::ID("mirror_type"));
+        IR::IndexedVector<IR::StatOrDecl> components;
+        components.push_back(new IR::AssignmentStatement(mirrorType,
+                        new IR::Constant(IR::Type::Bits::get(3), clone == "clone_i2e" ? 0 : 1)));
+        components.push_back(new IR::AssignmentStatement(
+                         new IR::Member(compilerCloneHeader, IR::ID("mirror_source")),
+                         new IR::Constant(IR::Type::Bits::get(8), clone == "clone_i2e" ? 8 : 25)));
+        IR::IfStatement* newifStmt = nullptr;
+        if (clone == "clone_i2e") {
+            TranslatePacketPathIfStatement cvt_clone_i2e(structure->clone_i2e, structure, INGRESS);
+            if (structure->clone_i2e.ifStatement) {
+                auto ifStmt = cvt_clone_i2e.convert(structure->clone_i2e.ifStatement);
+                components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
+            }
+            auto block = new IR::BlockStatement(components);
+            newifStmt = new IR::IfStatement(cvt_clone_i2e.create_condition("psa_clone_i2e"),
+                                             block, nullptr);
+        } else {
+            TranslatePacketPathIfStatement cvt_clone_e2e(structure->clone_e2e, structure, EGRESS);
+            if (structure->clone_e2e.ifStatement) {
+                auto ifStmt = cvt_clone_e2e.convert(structure->clone_e2e.ifStatement);
+                components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
+            }
+            auto block = new IR::BlockStatement(components);
+            newifStmt = new IR::IfStatement(cvt_clone_e2e.create_condition("psa_clone_e2e"),
+                                             block, nullptr);
+        }
+        auto* body = control->body->clone();
+        body->components.push_back(newifStmt);
+        control->body = body;
+    }
 
     IR::BFN::TnaControl*
     preorder(IR::BFN::TnaControl* control) override {
@@ -432,87 +614,13 @@ struct MoveAssignment : public Transform {
             auto* body = control->body->clone();
             body->components.push_back(newifStmt);
             control->body = body;
+        } else if (control->thread == EGRESS && fpa->clone_e2e) {
+            add_clone_data("clone_e2e", cgMetadataParam, control);
+        } else if (control->thread == INGRESS && fpa->clone_i2e) {
+            add_clone_data("clone_i2e", cgMetadataParam, control);
         }
         return control;
     }
-};
-
-struct RewriteClone : public Transform {
-    explicit RewriteClone(
-        const PacketPathInfo& clone, gress_t gress) : clone(clone) {
-        setName("RewriteClone");
-        metadata = (gress == INGRESS) ? "__clone_i2e_data" : "__clone_e2e_data";
-    }
-
-    const IR::Type_StructLike *preorder(IR::Type_StructLike *type) override {
-        prune();
-        if (type->name == "compiler_generated_metadata_t") {
-            // Inject a new field to hold the extract resubmit data
-            LOG4("Injecting field for recirculate data into: " << type);
-            type->fields.push_back(new IR::StructField(metadata, clone.p4Type));
-        } else {
-            auto rt = clone.p4Type;
-            if (auto t = rt->to<IR::Type_Name>()) {
-                if (type->name == t->path->name) {
-                    auto nt = new IR::Type_Header(type->name, type->annotations, type->fields);
-                    return nt;
-                }
-            }
-        }
-        return type;
-    }
-
-    // given data to be cloned, generate deparser and parser state.
-    // replace the clone extract call with extract() to clone metadata
-    const IR::ParserState *preorder(IR::ParserState *state) override {
-        if (state->name != "__mirrored") return state;
-        prune();
-
-        auto *tnaContext = findContext<IR::BFN::TnaParser>();
-        BUG_CHECK(tnaContext, "clone state not within translated parser?");
-        BUG_CHECK(tnaContext->thread == EGRESS, "clone state not in ingress?");
-
-        // clear existing statements
-        state->components.clear();
-
-        auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
-        auto *method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
-        auto *member = new IR::Member(new IR::PathExpression(cgMeta), IR::ID(metadata));
-        auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-        auto *callExpr = new IR::MethodCallExpression(method, args);
-        auto *extract = new IR::MethodCallStatement(callExpr);
-        LOG4("Generated extract for clone data: " << extract);
-        state->components.push_back(extract);
-
-        return state;
-    }
-
-    // only process egress parser
-    const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* node) override {
-        if (node->thread != gress_t::EGRESS)
-            prune();
-        return node;
-    }
-
-    // do not process control block
-    const IR::BFN::TnaControl* preorder(IR::BFN::TnaControl* node) override {
-        prune();
-        return node;
-    }
-
-    const IR::Node* preorder(IR::PathExpression* node) override {
-        if (node->path->name == clone.paramNameInDeparser) {
-            auto path = new IR::Member(new IR::PathExpression(BFN::COMPILER_META),
-                    IR::ID(metadata));
-            return path;
-        }
-        return node;
-    }
-
- private:
-    const PacketPathInfo& clone;
-    cstring metadata;
 };
 
 RewritePacketPath::RewritePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
@@ -527,8 +635,6 @@ RewritePacketPath::RewritePacketPath(P4::ReferenceMap* refMap, P4::TypeMap* type
         new MoveAssignment(structure, findPacketPath),
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),
-        new RewriteClone(structure->clone_i2e, INGRESS),
-        new RewriteClone(structure->clone_e2e, EGRESS),
     });
 }
 
