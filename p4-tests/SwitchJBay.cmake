@@ -32,8 +32,11 @@ p4c_add_test_label("tofino2" "PR_REG_PTF" "smoketest_switch_16_compile_y2_profil
 p4c_add_ptf_test_with_ptfdir ("tofino2" "smoketest_switch_16_Tests_y1" ${SWITCH_P4_16_Y1}
   "${testExtraArgs} -tofino2 -arch t2na -bfrt -profile y1_tofino2 -to 7200" ${SWITCH_P4_16_PTF})
 # Cannot run some of the tests as they access ports outside the range of the set ports using veth_setup.sh
+# ^switch_l2.StatsTest and ^switch_l2.L2FloodTest fails due to P4C-2766
 bfn_set_ptf_test_spec("tofino2" "smoketest_switch_16_Tests_y1"
         "all
+	^switch_l2.L2FloodTest
+	^switch_l2.StatsTest
         ^switch_l3.L3SVITest
         ^switch_l2.L2LagTest
         ^switch_l3.L3ECMPTest

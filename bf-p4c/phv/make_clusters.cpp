@@ -373,6 +373,7 @@ Visitor::profile_t Clustering::MakeSuperClusters::init_apply(const IR::Node* roo
     auto rv = Inspector::init_apply(root);
     headers_i.clear();
     slice_lists_i.clear();
+    bridged_extracted_together_i.clear();
     return rv;
 }
 
@@ -716,6 +717,85 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         slice_lists_i.insert(accumulator);
 }
 
+// Preorder on egress parser states and pack adjacent fields together if they
+// are are_bridged_extracted_together.
+// The reason we do this is:
+// 1. phv.are_bridged_extracted_together() allows two fields to be packed into
+//    one container, even if they are extracted.
+// 2. however, are_bridged_extracted_together does not take the relative position
+//    of two fields into account. So a field may be allocated to the wrong bits
+//    that makes parser extraction impossible.
+// So we pack them into a slice list to force this constraint.
+// See P4C-2754 for more details.
+bool Clustering::MakeSuperClusters::preorder(const IR::BFN::ParserState* state) {
+    if (state->gress == INGRESS) {
+        return false;
+    }
+
+    // sort fields by extract source.
+    std::map<nw_bitrange, const PHV::Field*> sorted;
+    for (const auto* prim : state->statements) {
+        if (const auto* extract = prim->to<IR::BFN::Extract>()) {
+            auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
+            if (!bufferSource) continue;
+
+            auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+            if (!lval) continue;
+
+            const auto* field = phv_i.field(lval->field);
+            if (!field) {
+                continue;
+            }
+            sorted.insert({bufferSource->range, field});
+        }
+    }
+
+    boost::optional<std::pair<nw_bitrange, const PHV::Field*>> last = boost::none;
+    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
+    auto start_new_slicelist = [&] () {
+        if (accumulator->size() > 1) {
+            const int sz = std::accumulate(
+                accumulator->begin(), accumulator->end(), 0,
+                [] (int s, const PHV::FieldSlice& fs) { return s + fs.size(); });
+            const bool has_ec = std::any_of(
+                accumulator->begin(), accumulator->end(),
+                [] (const PHV::FieldSlice& fs) { return fs.field()->exact_containers(); });
+            if (sz % 8 != 0 && has_ec) {
+                // XXX(yumin): alternatively, we can add some dummy_padding fields.
+                // but conservatively, we do not do it here.
+                LOG3("CANNOT build bridged extracted together "
+                     "slice list because of exact container: " << *accumulator);
+            } else {
+                LOG1("Build bridged extracted together slice list: " << *accumulator);
+                for (const auto& fs : *accumulator) {
+                    self.slices_used_in_slice_lists_i.insert(fs);
+                }
+                bridged_extracted_together_i.insert(accumulator);
+            }
+        }
+        last = boost::none;
+        accumulator = new PHV::SuperCluster::SliceList();
+    };
+
+    for (const auto& kv : boost::adaptors::reverse(sorted)) {
+        const nw_bitrange range = kv.first;
+        const auto* field = kv.second;
+        if (last && phv_i.are_bridged_extracted_together((*last).second, field)
+                   && (*last).first.lo == range.hi + 1) {
+            LOG3("bridged extracted together: " << (*last).second << " , " << field);
+        } else {
+            start_new_slicelist();
+        }
+        BUG_CHECK(self.fields_to_slices_i.count(field),
+                  "Field not in fields_to_slices_i: %1%", cstring::to_cstring(field));
+        for (const auto& fs : self.fields_to_slices_i.at(field)) {
+            accumulator->push_back(fs);
+        }
+        last = std::make_pair(range, field);
+    }
+    return true;
+}
+
 bool Clustering::MakeSuperClusters::preorder(const IR::ConcreteHeaderRef* hr) {
     visitHeaderRef(hr);
     return false;
@@ -973,6 +1053,32 @@ void Clustering::MakeSuperClusters::end_apply() {
             slice_lists_i.insert(list); } }
 
     pack_pov_bits();
+
+    // add valid bridged_extracted_together_i to slice_lists_i
+    // must happen after all other slice list makings are done.
+    {
+        ordered_set<PHV::FieldSlice> showed;
+        for (const auto* sl : slice_lists_i) {
+            for (const auto& fs : *sl) {
+                showed.insert(fs);
+            }
+        }
+
+        for (auto* sl : bridged_extracted_together_i) {
+            bool ok = true;
+            for (const auto& fs : *sl) {
+                if (showed.count(fs)) {
+                    ok = false;
+                    break;
+                }
+                showed.insert(fs);
+            }
+            if (ok) {
+                LOG3("Adding a bridged extracted slice lists " << sl);
+                slice_lists_i.insert(sl);
+            }
+        }
+    }
 
     UnionFind<const PHV::RotationalCluster*> cluster_union_find;
     ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;

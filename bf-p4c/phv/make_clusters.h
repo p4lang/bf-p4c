@@ -232,6 +232,10 @@ class Clustering : public PassManager {
         /// be placed, in order, in the same container.
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists_i;
 
+        /// Collection of candidate slice lists that introduced by bridged_extracted_together_i.
+        /// They will be added to slice_lists_i is there is no conflict.
+        ordered_set<PHV::SuperCluster::SliceList*> bridged_extracted_together_i;
+
         /// Helper function for visiting HeaderRefs.
         void visitHeaderRef(const IR::HeaderRef* hr);
 
@@ -249,6 +253,10 @@ class Clustering : public PassManager {
 
         /// Create lists of slices that need to be allocated in the same container.
         bool preorder(const IR::BFN::Digest*) override;
+
+        /// Create lists of slices that need to be allocated in the same container,
+        /// because adjacent fields are egress bridged extracted together.
+        bool preorder(const IR::BFN::ParserState* state) override;
 
         /// Create cluster groups by taking the union of clusters of slices
         /// that appear in the same list.

@@ -1784,7 +1784,7 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
     auto valid_list_starts = satisfies_constraints(
         container_group, super_cluster.aligned_cluster(slice_list->front()));
     if (valid_list_starts == boost::none) {
-        LOG5("    ...but there are no valid slice list starting position"
+        LOG5("    ...but there are no valid slice list starting position: "
              << slice_list->front());
         return rst;
     }
