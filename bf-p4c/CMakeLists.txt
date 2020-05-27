@@ -131,6 +131,7 @@ set (BF_P4C_MIDEND_SRCS
   midend/normalize_params.cpp
   midend/param_binding.cpp
   midend/parser_graph.cpp
+  midend/register_read_write.cpp
   midend/simplify_args.cpp
   midend/simplifyIfStatement.cpp
   midend/simplify_nested_if.cpp
@@ -154,6 +155,7 @@ set (BF_P4C_BACKEND_MIDEND_HDRS
   midend/normalize_params.h
   midend/param_binding.h
   midend/parser_graph.h
+  midend/register_read_write.h
   midend/rewrite_egress_intrinsic_metadata_header.h
   midend/simplify_args.h
   midend/simplifyIfStatement.h

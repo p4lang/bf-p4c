@@ -546,9 +546,13 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
     if (info.utype) {
         LOG2("Creating apply function for RegisterAction " << ext->name);
         LOG6(ext);
+        auto reg_index_width = 32;
+        // P4C-2771 : Frontend fix required before using correct index width
+        // auto reg_index_width = info.reg->index_width();
         auto ratype = new IR::Type_Specialized(
             new IR::Type_Name("RegisterAction"),
-            new IR::Vector<IR::Type>({info.rtype, IR::Type::Bits::get(32), info.utype}));
+            new IR::Vector<IR::Type>({info.rtype,
+                IR::Type::Bits::get(reg_index_width), info.utype}));
         if (info.reg->instance_count == -1) {
             ratype = new IR::Type_Specialized(
                 new IR::Type_Name("DirectRegisterAction"),
@@ -584,11 +588,15 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     const IR::Attached *target = getSelectorProfile(structure, ext);
     auto rtype = IR::Type::Bits::get(1);
     bool direct = false;
+    auto reg_index_width = 32;
     if (!target) {
         auto info = getRegInfo(structure, ext, structure->declarations);
         rtype = info.utype;
         target = info.reg;
-        direct = info.reg->instance_count < 0; }
+        direct = info.reg->instance_count < 0;
+        // P4C-2771 : Frontend fix required before using correct index width
+        // reg_index_width = info.reg->index_width();
+    }
     if (!rtype) {
         BUG_CHECK(errorCount() > 0, "Failed to find rtype for %s", ext);
         return new IR::EmptyStatement(); }
@@ -619,7 +627,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp");
         block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
-        args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
+        args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(reg_index_width),
                         new IR::PathExpression(new IR::Path(temp)))));
     } else if (prim->name == "execute_stateful_log") {
         BUG_CHECK(prim->operands.size() == 1, "Wrong number of operands to %s", prim->name);

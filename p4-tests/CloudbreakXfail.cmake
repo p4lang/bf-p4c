@@ -162,8 +162,8 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "The method call of read and write on a Register is currently not supported in p4c"
-  testdata/p4_14_samples/register.p4
+    "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
+    extensions/p4_tests/p4_14/stf/stateful5-psa.p4
 )
 
 p4c_add_xfail_reason("tofino3"

@@ -609,33 +609,39 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/meter1.p4
   )
 
+# Register read/write support
 p4c_add_xfail_reason("tofino"
-  "The method call of read and write on a Register is currently not supported in p4c|error: Tofino does not support nested checksum updates"
+  "error: : expression too complex for register action"
+  testdata/p4_16_samples/issue907-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .*: Duplicates declaration .*"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
+  testdata/p4_16_samples/psa-example-register2-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
 )
 
 p4c_add_xfail_reason("tofino"
-  "The method call of read and write on a Register is currently not supported in p4c"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
-  testdata/p4_14_samples/register.p4
-  testdata/p4_16_samples/issue1097-bmv2.p4
-  testdata/p4_16_samples/issue1520-bmv2.p4
-  testdata/p4_16_samples/issue1814-1-bmv2.p4
-  testdata/p4_16_samples/issue1814-bmv2.p4
-  testdata/p4_16_samples/issue298-bmv2.p4
-  testdata/p4_16_samples/issue907-bmv2.p4
-  testdata/p4_16_samples/psa-example-register2-bmv2.p4
-  testdata/p4_16_samples/psa-register1.p4
-  testdata/p4_16_samples/psa-register2.p4
-  testdata/p4_16_samples/psa-register3.p4
+  "error: : Currently the field .* in action .* is assigned in a way too complex for the compiler to currently handle.  Please consider simplifying this action around this parameter"
   testdata/p4_16_samples/slice-def-use1.p4
 )
 
 p4c_add_xfail_reason("tofino"
+    "error: : Currently in p4c, the table sucker_0 cannot perform a range match on key ingress::suitably.litheness as the key does not fit in under 5 PHV nibbles"
+  extensions/p4_tests/p4_14/compile_only/p4smith_regression/licensee_0.p4
+)
+
+p4c_add_xfail_reason("tofino"
+    "the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
+    extensions/p4_tests/p4_14/stf/stateful5-psa.p4
+)
+
+# Register read/write support
+
+p4c_add_xfail_reason("tofino"
   "Unsupported Register element type"
   testdata/p4_16_samples/psa-register1.p4
-  testdata/p4_16_samples/psa-example-register2-bmv2.p4
 )
 
 # p4smith and p4testgen regression XFAILs
