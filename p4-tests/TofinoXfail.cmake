@@ -1389,7 +1389,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Slicing the following supercluster is taking too long...|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-568/case3026dce.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-575/case3041.p4

@@ -281,8 +281,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
+# P4C-2604
 p4c_add_xfail_reason("tofino2"
-  "Slicing the following supercluster is taking too long"
+  "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
 )
 
