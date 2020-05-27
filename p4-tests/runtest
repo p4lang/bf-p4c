@@ -270,16 +270,16 @@ while [ $# -gt 1 ]; do
         testdir=tofino
         ;;
     -tofino2)
-        target="tofino2"
-        device="tofino2"
+        target="tofino2${TOFINO2_VARIANT}"
+        device="tofino2${TOFINO2_VARIANT}"
         toolsdevice="jbay"
-        testdir=tofino2
+        testdir="tofino2${TOFINO2_VARIANT}"
         ;;
     -tofino3)
-        target="tofino3"
-        device="tofino3"
+        target="tofino3${TOFINO3_VARIANT}"
+        device="tofino3${TOFINO3_VARIANT}"
         toolsdevice="cb"
-        testdir=tofino3
+        testdir="tofino3${TOFINO3_VARIANT}"
         ;;
     -arch)
         arch=$2

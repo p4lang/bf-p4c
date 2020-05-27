@@ -44,17 +44,7 @@ void Stage::gen_configuration_cache(Target::Cloudbreak::mau_regs &regs, json::ve
             + std::to_string(i) + "]"
             + ".meter.meter_ctl";
         reg_name = "stage_" + std::to_string(stageno) + "_meter_ctl_" + std::to_string(i);
-        reg_value = (meter_ctl[i].meter.meter_ctl.meter_bytecount_adjust       & 0x00003FFF)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_byte                   & 0x00000001) << 14)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_enable                 & 0x00000001) << 15)
-                 | ((meter_ctl[i].meter.meter_ctl.lpf_enable                   & 0x00000001) << 16)
-                 | ((meter_ctl[i].meter.meter_ctl.red_enable                   & 0x00000001) << 17)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_alu_egress             & 0x00000001) << 18)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_rng_enable             & 0x00000001) << 19)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_time_scale             & 0x0000000F) << 20)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_lpf_sat_ctl            & 0x0000000F) << 24)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_lpf_virtual_access_ctl & 0x0000000F) << 25);
-
+        reg_value = meter_ctl[i].meter.meter_ctl;
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }

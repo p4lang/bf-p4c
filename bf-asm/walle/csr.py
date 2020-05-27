@@ -247,6 +247,8 @@ class csr_object (object):
         return False
     def singleton_obj(self):
         return self
+    def contains_reference(self):
+        return False
 
 class csr_composite_object (csr_object):
     """
@@ -257,6 +259,19 @@ class csr_composite_object (csr_object):
         csr_object.__init__(self, name, count)
     def children(self):
         raise CsrException("Unimplemented abstract method for " + type(self))
+
+    def contains_reference(self):
+        """
+        return true if this object (directly or indirectly) contains a reference to
+        a top_level object
+        """
+        if not hasattr(self, 'contains_reference_cache'):
+            self.contains_reference_cache = False
+            for a in self.children():
+                if a.top_level() or a.contains_reference():
+                    self.contains_reference_cache = True
+                    break
+        return self.contains_reference_cache
 
     def gen_method_declarator(self, outfile, args, rtype, classname, name, argdecls, suffix):
         outfile.write("%s " % rtype)
@@ -389,6 +404,9 @@ class csr_composite_object (csr_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_uint_conversion(self, outfile, args, classname, indent):
+        pass
+
     def gen_emit_binary_method(self, outfile, args, classname, indent):
         def child_name(child):
             name = child.name
@@ -499,6 +517,97 @@ class csr_composite_object (csr_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_binary_offset_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "uint64_t", classname, "binary_offset",
+                ["const void *addr", ("int *bit_offset", "0")], "const"):
+            return
+        root_parent = self.parent
+        while type(root_parent) is not str:
+            root_parent = root_parent.parent
+        if root_parent=="memories":
+            width_unit = 128
+            address_unit = 16
+        else:
+            width_unit = 32
+            address_unit = 1
+        indent += "  "
+        outfile.write("%suint64_t offset = 0;\n" % indent)
+        outfile.write("%sif (bit_offset) *bit_offset = 0;\n" %indent)
+        outfile.write("%sif (addr < this || addr >= this+1) " % indent)
+        if (self.contains_reference()):
+            outfile.write("{\n")
+            indent += "  "
+            for a in self.children():
+                if a.disabled(): continue
+                if not (a.top_level() or a.contains_reference()): continue
+                field_name = a.name
+                if field_name in args.cpp_reserved:
+                    field_name += '_'
+                if a.count != (1,):
+                    for i, idx in enumerate(a.count):
+                        outfile.write('%sfor (int i%d = 0; i%d < %d; i%d++) { \n' %
+                                      (indent, i, i, idx, i))
+                        indent += '  '
+                        field_name += "[i%d]" % i
+                outfile.write("%sif ((offset = %s%sbinary_offset(addr, bit_offset)) != -1)\n" %
+                              (indent, field_name, "->" if a.top_level() else "."))
+                outfile.write("%s  return offset + 0x%x" % (indent, a.offset//address_unit))
+                if a.count != (1,):
+                    for i, idx in enumerate(a.count):
+                        stride = a.address_stride()//address_unit
+                        for cnt in a.count[i+1:]:
+                            stride = stride * cnt
+                        outfile.write(" + i%d*0x%x" % (i, stride))
+                outfile.write(";\n")
+                if a.count != (1,):
+                    for i, idx in enumerate(a.count):
+                        indent = indent[2:]
+                        outfile.write("%s}\n" % indent)
+
+            indent = indent[2:]
+            outfile.write("%s}\n" % indent)
+        else:
+            outfile.write("return -1;\n")
+
+        first = True
+        for a in sorted(self.children(), key=lambda a: a.name, reverse=True):
+            if a.disabled(): continue
+            if a.top_level(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            outfile.write(indent)
+            if first: first = False
+            else: outfile.write("} else ")
+            outfile.write("if (addr >= &%s) {\n" % field_name)
+            indent += "  "
+            outfile.write("%soffset = 0x%x;\n" % (indent, a.offset//address_unit))
+            if a.count != (1,):
+                for i, idx in enumerate(a.count):
+                    outfile.write("%sif (addr < &%s[0]) return offset;\n" % (indent, field_name))
+                    outfile.write("%sauto i%d = ((char *)addr - (char *)&%s[0])/sizeof(%s[0]);\n" %
+                                  (indent, i, field_name, field_name))
+                    stride = a.address_stride()//address_unit
+                    for cnt in a.count[i+1:]:
+                        stride = stride * cnt
+                    outfile.write("%soffset += i%d * 0x%x;\n" % (indent, i, stride))
+                    field_name += "[i%d]" % i
+            single = a.singleton_obj()
+            if not single.is_field() and not single.top_level():
+                outfile.write("%soffset += %s.binary_offset(addr, bit_offset);\n" %
+                              (indent, field_name))
+            indent = indent[2:]
+        if first:
+            outfile.write("%sreturn -1;\n" % indent)
+        else:
+            outfile.write("%s} else {\n" % indent)
+            outfile.write("%s  return -1;\n" % indent)
+            outfile.write("%s}\n" % indent)
+            outfile.write("%sreturn offset;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
     def gen_fieldname_method(self, outfile, args, classname, indent):
         outfile.write(indent)
         if self.gen_method_declarator(outfile, args, "void", classname, "emit_fieldname",
@@ -521,27 +630,17 @@ class csr_composite_object (csr_object):
             outfile.write('%sout << ".%s";\n' % (indent, a.name))
             if a.count != (1,):
                 for i, idx in enumerate(a.count):
-                    outfile.write("%sint i%d = (addr - (char *)&%s" % (indent, i, field_name))
-                    for j in range(0, i):
-                        outfile.write("[i%d]" % j)
-                    outfile.write("[0])/(int)sizeof(%s" % field_name)
-                    for j in range(0, i+1):
-                        outfile.write("[0]")
-                    outfile.write(");\n")
+                    outfile.write("%sint i%d = (addr - (char *)&%s[0])/(int)sizeof(%s[0]);\n" % (
+                                  indent, i, field_name, field_name))
                     if idx > 1:
-                        outfile.write("%sif (i%d < 0 || (i%d == 0 && 1 + &%s" %
-                                      (indent, i, i, field_name))
-                        for j in range(0, i):
-                            outfile.write("[i%d]" % j)
+                        outfile.write("%sif (i%d < 0 || (i%d == 0 && 1 + &%s" % (
+                                      indent, i, i, field_name))
                         outfile.write(" == end)) return;\n")
                     outfile.write("%sout << '[' << i%d << ']';\n" % (indent, i))
+                    field_name += "[i%d]" % i
             single = a.singleton_obj()
             if not single.is_field() and not single.top_level():
-                outfile.write("%s%s" % (indent, field_name))
-                if a.count != (1,):
-                    for i in range(0, len(a.count)):
-                        outfile.write("[i%d]" % i)
-                outfile.write(".emit_fieldname(out, addr, end);\n")
+                outfile.write("%s%s.emit_fieldname(out, addr, end);\n" % (indent, field_name))
             indent = indent[2:]
         if not first:
             outfile.write("%s}\n" % indent)
@@ -1044,7 +1143,10 @@ class csr_composite_object (csr_object):
         if args.emit_json:
             self.gen_emit_method(outfile, args, schema, classname, name, nameargs, indent)
         if args.emit_binary:
+            self.gen_uint_conversion(outfile, args, classname, indent)
             self.gen_emit_binary_method(outfile, args, classname, indent)
+        if args.binary_offset:
+            self.gen_binary_offset_method(outfile, args, classname, indent)
         if args.emit_fieldname:
             self.gen_fieldname_method(outfile, args, classname, indent)
         if args.unpack_json:
@@ -1575,22 +1677,14 @@ class reg(csr_composite_object):
     def top_level(self):
         return False
 
-    def gen_emit_binary_method(self, outfile, args, classname, indent):
-        outfile.write(indent)
-        if self.gen_method_declarator(outfile, args, "void", classname, "emit_binary",
-                ["std::ostream &out", "uint64_t a"], "const"):
-            return
-        indent += "  "
-        if self.count != (1,):
-            pass
+    def gen_word_expressions(self, args):
+        """
+        generate expressions to calculate the value of each word of the register
+        """
         class context:
             shift = 0
             words = []
         context.words = [None] * (self.width // 32)
-        indirect = ((self.parent.parent=="memories") or (self.name in args.write_dma))
-        if not indirect:
-            outfile.write("%sif (!disabled_) {\n" % indent);
-            indent += "  "
         for a in self.fields:
             field_name = a.name
             if field_name in args.cpp_reserved:
@@ -1638,7 +1732,32 @@ class reg(csr_composite_object):
                     emit_widereg_field(None)
                 else:
                     emit_ubits_field(None)
-        pairs = enumerate(context.words)
+        return context.words
+
+    def gen_uint_conversion(self, outfile, args, classname, indent):
+        if self.width > 32:
+            return
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "", classname, "operator uint32_t",
+                [], "const"):
+            return
+        outfile.write("%s  return " % indent);
+        outfile.write("%s;\n" % self.gen_word_expressions(args)[0])
+        outfile.write("%s}\n" % indent)
+
+    def gen_emit_binary_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "emit_binary",
+                ["std::ostream &out", "uint64_t a"], "const"):
+            return
+        indent += "  "
+        if self.count != (1,):
+            pass
+        indirect = ((self.parent.parent=="memories") or (self.name in args.write_dma))
+        if not indirect:
+            outfile.write("%sif (!disabled_) {\n" % indent);
+            indent += "  "
+        pairs = enumerate(self.gen_word_expressions(args))
         if not indirect and args.reverse_write:
             # DANGER -- certain registers must be written in reverse order (higher
             # address then lower), so we reverse the order of register writes here.
@@ -1658,12 +1777,26 @@ class reg(csr_composite_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_binary_offset_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "uint64_t", classname, "binary_offset",
+                ["const void *addr", ("int *bit_offset", "0")], "const"):
+            return
+        indent += "  "
+        outfile.write("%sif (bit_offset) {" %indent)
+        indent += "  "
+        outfile.write("%s/* TDB */\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+        outfile.write("%sreturn 0;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
     def print_as_text(self, indent):
         print("%sreg %s%s: offset=0x%x width=%d" % (
             indent, self.name, str(self.count), self.offset, self.width))
         for ch in self.fields:
             ch.print_as_text(indent+"  ")
-
 
 class field(csr_object):
     """

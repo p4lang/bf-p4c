@@ -44,21 +44,76 @@ void Stage::gen_configuration_cache(Target::JBay::mau_regs &regs, json::vector &
             + std::to_string(i) + "]"
             + ".meter.meter_ctl";
         reg_name = "stage_" + std::to_string(stageno) + "_meter_ctl_" + std::to_string(i);
-        reg_value = (meter_ctl[i].meter.meter_ctl.meter_bytecount_adjust       & 0x00003FFF)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_byte                   & 0x00000001) << 14)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_enable                 & 0x00000001) << 15)
-                 | ((meter_ctl[i].meter.meter_ctl.lpf_enable                   & 0x00000001) << 16)
-                 | ((meter_ctl[i].meter.meter_ctl.red_enable                   & 0x00000001) << 17)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_alu_egress             & 0x00000001) << 18)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_rng_enable             & 0x00000001) << 19)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_time_scale             & 0x0000000F) << 20)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_lpf_sat_ctl            & 0x0000000F) << 24)
-                 | ((meter_ctl[i].meter.meter_ctl.meter_lpf_virtual_access_ctl & 0x0000000F) << 25);
-
+        reg_value = meter_ctl[i].meter.meter_ctl;
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
     }
+}
+
+static void addvec(json::vector &vec, ubits_base &val, uint32_t extra = 0) {
+    vec.push_back(val | extra);
+}
+static void addvec(json::vector &vec, uint32_t val, uint32_t extra = 0) {
+    vec.push_back(val | extra);
+}
+
+template<class T>
+static void addvec(json::vector &vec, checked_array_base<T> &array, uint32_t extra = 0) {
+    for (auto &el :array)
+        addvec(vec, el, extra);
+}
+
+template<class REGS, class REG>
+static json::map make_reg_vec(REGS &regs, REG &reg, const char *name,
+                              uint32_t mask0, uint32_t mask1, uint32_t mask2,
+                              uint32_t extra = 0) {
+    json::map rv;
+    rv["name"] = name;
+    rv["offset"] = regs.binary_offset(&reg);
+    addvec(rv["value"], reg, extra);
+    rv["mask"] = json::vector { json::number(mask0), json::number(mask1), json::number(mask2) };
+    return rv;
+}
+
+/* common for JBay and Cloudbreak -- may need to replicate this id that changes */
+template<class REGS>
+void Stage::gen_mau_stage_extension(REGS &regs, json::map &extend) {
+    extend["last_programmed_stage"] = Target::NUM_MAU_STAGES() - 1;
+    json::vector &registers = extend["registers"] = json::vector();
+    registers.push_back(make_reg_vec(regs, regs.dp.phv_ingress_thread, "regs.dp.phv_ingress_thread",
+                                     0, 0x3ff, 0x3ff));
+    registers.push_back(make_reg_vec(regs, regs.dp.phv_egress_thread, "regs.dp.phv_egress_thread",
+                                     0, 0x3ff, 0x3ff));
+    registers.push_back(make_reg_vec(regs, regs.rams.match.adrdist.adr_dist_pipe_delay,
+                                     "regs.rams.match.adrdist.adr_dist_pipe_delay",
+                                     0, 0xf, 0xf));
+    typename std::remove_reference<decltype(regs.rams.match.adrdist.deferred_eop_bus_delay[0])>::
+        type mask0, mask1;
+    mask0.eop_delay_fifo_en = mask1.eop_delay_fifo_en = 1;
+    mask0.eop_internal_delay_fifo = mask1.eop_internal_delay_fifo = 0x1f;
+    mask0.eop_output_delay_fifo = 0x1;
+    mask1.eop_output_delay_fifo = 0x1f;
+    BUG_CHECK(regs.rams.match.adrdist.deferred_eop_bus_delay[0].eop_output_delay_fifo &
+              regs.rams.match.adrdist.deferred_eop_bus_delay[1].eop_output_delay_fifo & 1);
+    registers.push_back(make_reg_vec(regs, regs.rams.match.adrdist.deferred_eop_bus_delay,
+                                     "regs.rams.match.adrdist.deferred_eop_bus_delay",
+                                     mask0, mask0, mask1));
+    registers.push_back(make_reg_vec(regs, regs.dp.cur_stage_dependency_on_prev,
+                                     "regs.dp.cur_stage_dependency_on_prev",
+                                     0, 0x3, 0x3, 0x1));
+    registers.push_back(make_reg_vec(regs, regs.dp.next_stage_dependency_on_cur,
+                                     "regs.dp.next_stage_dependency_on_cur",
+                                     0x3, 0x3, 0, 0x1));
+    registers.push_back(make_reg_vec(regs, regs.rams.match.merge.mpr_bus_dep,
+                                     "regs.rams.match.merge.mpr_bus_dep",
+                                     0x3, 0x3, 0, 0x3));
+    registers.push_back(make_reg_vec(regs, regs.dp.pipelength_added_stages,
+                                     "regs.dp.pipelength_added_stages",
+                                     0, 0xf, 0xf));
+    registers.push_back(make_reg_vec(regs, regs.rams.match.merge.exact_match_delay_thread,
+                                     "regs.rams.match.merge.exact_match_delay_thread",
+                                     0, 0x3, 0x3));
 }
 
 /* disable power gating configuration for specific MAU regs to weedout delay programming

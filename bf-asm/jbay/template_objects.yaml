@@ -1,5 +1,6 @@
 global:
   - namespace=JBay
+  - binary_offset
   - emit_binary
   - emit_fieldname
   - emit_json

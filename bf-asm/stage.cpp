@@ -666,6 +666,8 @@ void Stage::output(json::map &ctxt_json) {
         TopLevel::all->set_mau_stage(stageno, buf, regs);
     gen_mau_stage_characteristics(*regs, ctxt_json["mau_stage_characteristics"]);
     gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
+    if (stageno == Target::NUM_MAU_STAGES()-1 && Target::OUTPUT_STAGE_EXTENSION())
+        gen_mau_stage_extension(*regs, ctxt_json["mau_stage_extension"]);
 }
 
 template<class REGS>
@@ -685,6 +687,7 @@ void Stage::gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characte
 
 template<class REGS>
 void Stage::gen_configuration_cache(REGS &regs, json::vector &cfg_cache) {
+    BUG();  // Must be specialized for target -- no generic implementation
 }
 
 template<class REGS>

@@ -129,6 +129,7 @@ def parse_template_args(args, params):
     def set_defn(args, attr, val): args.gen_decl = 'defn'
 
     options = {
+        'binary_offset': (False, bool_arg),
         'checked_array': (True, bool_arg),
         'decl': (None, set_decl),
         'delete_copy': (False, bool_arg),

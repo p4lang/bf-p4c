@@ -96,6 +96,8 @@ public:
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
     template<class REGS>
         void gen_mau_stage_characteristics(REGS &regs, json::vector &stg_characteristics);
+    template<class REGS>
+        void gen_mau_stage_extension(REGS &regs, json::map &extend);
     template<class REGS> void write_regs(REGS &regs);
     template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     int adr_dist_delay(gress_t gress);

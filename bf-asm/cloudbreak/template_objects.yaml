@@ -1,5 +1,6 @@
 global:
   - namespace=Cloudbreak
+  - binary_offset
   - emit_binary
   - emit_fieldname
   - emit_json
