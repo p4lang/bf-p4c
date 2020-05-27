@@ -462,6 +462,9 @@ TofinoPhvSpec::TofinoPhvSpec() {
 
     numTagalongCollections = 8*phv_scale_factor;
 
+    if (BackendOptions().no_tagalong)
+        numTagalongCollections = 0;
+
     deparserGroupSize = {
         { PHV::Type::B, 8*phv_scale_factor },
         { PHV::Type::H, 8*phv_scale_factor },

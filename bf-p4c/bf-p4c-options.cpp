@@ -105,6 +105,11 @@ BFN_Options::BFN_Options() {
             use_clot = false;
             return true;
         }, "Do not use clots in Tofino2");
+    registerOption("--no-tagalong", nullptr,
+        [this](const char *) {
+            no_tagalong = true;
+            return true;
+        }, "Do not use tagalong PHV containers in Tofino");
     registerOption("--phv_scale_factor", "arg",
         [this](const char* arg) {
             float temp = std::atof(arg);

@@ -12,6 +12,7 @@ class BFN_Options : public CompilerOptions {
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
     bool use_clot = true;
+    bool no_tagalong = false;
     float phv_scale_factor = 1;
     bool create_graphs = false;
     bool privatization = false;
