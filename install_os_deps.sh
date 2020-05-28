@@ -544,10 +544,10 @@ function install_z3() {
     unzip "${Z3_ZIP}"
 
     cd "${Z3}"
-    cp bin/libz3.a /usr/local/lib/
-    cp bin/libz3.so /usr/local/lib/
-    cp bin/z3 /usr/local/bin/
-    cp include/*.h /usr/local/include/
+    $SUDO cp bin/libz3.a /usr/local/lib/
+    $SUDO cp bin/libz3.so /usr/local/lib/
+    $SUDO cp bin/z3 /usr/local/bin/
+    $SUDO cp include/*.h /usr/local/include/
 
     cd /tmp
     rm -rf "${Z3}" "${Z3_ZIP}"
