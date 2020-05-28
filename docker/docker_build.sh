@@ -106,7 +106,9 @@ export PYTHON3_DEPS="Cython \
 export DEV_PKGS="vim \
                  gdb \
                  telnet \
-                 distcc"
+                 distcc \
+                 ninja \
+                 tmux"
 
 # Packages for release image
 export REL_PKGS="wget"
@@ -322,6 +324,10 @@ if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
 
   # Configure distcc hosts.
   install -D -o root -g root -m 0644 docker/distcc_hosts.conf /etc/distcc/hosts
+
+  # Configure default profile.
+  install -D -o root -g root -m 0644 \
+    docker/99-environment.sh /etc/profile.d/99-environment.sh
 fi
 
 # Clean up git history.
