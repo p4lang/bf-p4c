@@ -354,7 +354,7 @@ function install_rapidjson() {
         build_rapidjson_from_source ${rj_ver} $install_it
 	if [[ $linux_distro == "Ubuntu" || $linux_distro == "Debian" ]]; then
             $SUDO apt-get remove -y rapidjson-dev
-  	    $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
+	    $SUDO dpkg -i /tmp/RapidJSON-dev-${rj_ver}-Linux.deb || \
             die "failed to install rapidjson"
         fi
     fi
@@ -535,6 +535,23 @@ EOF
     rm -rf $tmpdir
 }
 
+function install_z3() {
+    Z3='z3-4.8.7-x64-ubuntu-16.04'
+    Z3_ZIP="${Z3}.zip"
+    cd /tmp
+    curl -L --noproxy "*" \
+      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3_ZIP}" -o "${Z3_ZIP}"
+    unzip "${Z3_ZIP}"
+
+    cd "${Z3}"
+    cp bin/libz3.a /usr/local/lib/
+    cp bin/libz3.so /usr/local/lib/
+    cp bin/z3 /usr/local/bin/
+    cp include/*.h /usr/local/include/
+
+    cd /tmp
+    rm -rf "${Z3}" "${Z3_ZIP}"
+}
 
 # the main routine
 case $os in
@@ -556,10 +573,12 @@ case $os in
         fi
         install_linux_packages
         install_protobuf
+        install_z3
     ;;
     Darwin)
         install_macos_packages
         install_protobuf
+        install_z3
     ;;
     *)
         echo "Unsuported OS $os"
