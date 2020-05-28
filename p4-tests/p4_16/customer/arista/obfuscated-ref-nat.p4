@@ -7,13 +7,13 @@
 
 @pa_auto_init_metadata
 
-@pa_container_size("ingress" , "McCracken.Shirley.$valid" , 16) @pa_container_size("ingress" , "McCracken.Paulding.$valid" , 16) @pa_atomic("ingress" , "LaMoille.Naubinway.Heppner") @pa_container_size("egress" , "LaMoille.Tiburon.Pinole" , 8) @pa_solitary("ingress" , "LaMoille.Cutten.Redden") @pa_no_overlay("ingress" , "LaMoille.Cutten.TroutRun") @pa_no_overlay("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("ingress" , "LaMoille.Mausdale.Pachuta" , 16) @pa_container_size("ingress" , "LaMoille.Mausdale.Whitefish" , 16) @pa_no_overlay("ingress" , "LaMoille.Cutten.Suttle") @pa_no_overlay("ingress" , "LaMoille.Cutten.Alamosa") @pa_no_overlay("ingress" , "LaMoille.Cutten.Boerne") @pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu") @pa_no_overlay("ingress" , "LaMoille.Naubinway.Dyess") @pa_container_size("ingress" , "McCracken.Brookneal.Kaluaaha" , 32) @pa_container_size("ingress" , "McCracken.Brookneal.Calcasieu" , 32) @pa_container_size("ingress" , "LaMoille.Cutten.Suttle" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Boerne" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Alamosa" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Merrill" , 16) @pa_atomic("ingress" , "LaMoille.Cutten.Fabens") @pa_atomic("ingress" , "LaMoille.Cutten.Merrill") @pa_solitary("ingress" , "LaMoille.Cutten.Suttle") @pa_solitary("ingress" , "LaMoille.Cutten.Boerne") @pa_container_size("ingress" , "LaMoille.Cutten.Algoa" , 32) @pa_solitary("ingress" , "LaMoille.Cutten.Thayne") @pa_no_overlay("egress" , "LaMoille.Tiburon.Pinole") @pa_no_overlay("ingress" , "LaMoille.Cutten.Charco") @pa_no_overlay("ingress" , "LaMoille.Cutten.Daphne") @pa_container_size("ingress" , "LaMoille.Moose.Kaluaaha" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Calcasieu" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Chevak" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Mendocino" , 16) @pa_atomic("ingress" , "LaMoille.Moose.LasVegas") @pa_container_size("ingress" , "McCracken.Brookneal.Norwood" , 8) @pa_no_overlay("ingress" , "LaMoille.Cutten.Uvalde") @pa_no_init("ingress" , "LaMoille.Naubinway.Piqua") @pa_container_size("ingress" , "LaMoille.Bessie.Grassflat" , 8) @pa_atomic("ingress" , "LaMoille.Salix.Calcasieu") @pa_atomic("ingress" , "LaMoille.Salix.Pierceton") @pa_atomic("ingress" , "LaMoille.Salix.Kaluaaha") @pa_atomic("ingress" , "LaMoille.Salix.Vergennes") @pa_atomic("ingress" , "LaMoille.Salix.Chevak") @pa_atomic("ingress" , "LaMoille.Stennett.Satolah") @pa_atomic("ingress" , "LaMoille.Cutten.Crozet") @pa_container_size("ingress" , "LaMoille.Cutten.Uvalde" , 32) @pa_container_size("ingress" , "LaMoille.Naubinway.Chatmoss" , 32) @pa_container_size("ingress" , "LaMoille.Stennett.Satolah" , 16) @pa_no_overlay("ingress" , "McCracken.Maumee.Allgood") @pa_no_overlay("ingress" , "LaMoille.Naubinway.Gasport") @pa_no_overlay("ingress" , "LaMoille.McCaskill.Pajaros") @pa_no_overlay("ingress" , "LaMoille.McGonigle.Pajaros") @pa_no_overlay("ingress" , "LaMoille.Cutten.Almedia") @pa_no_overlay("ingress" , "LaMoille.Cutten.Redden") @pa_no_overlay("ingress" , "LaMoille.Cutten.Hulbert") @pa_no_overlay("ingress" , "LaMoille.Cutten.Thayne") @pa_no_overlay("ingress" , "LaMoille.Cutten.Algoa") @pa_alias("ingress" , "LaMoille.Burwell.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "LaMoille.Burwell.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") header Sagerton {
+@pa_container_size("ingress" , "McCracken.Shirley.$valid" , 16) @pa_container_size("ingress" , "McCracken.Paulding.$valid" , 16) @pa_atomic("ingress" , "LaMoille.Naubinway.Heppner") @pa_container_size("egress" , "LaMoille.Tiburon.Pinole" , 8) @pa_solitary("ingress" , "LaMoille.Cutten.Redden") @pa_no_overlay("ingress" , "LaMoille.Cutten.TroutRun") @pa_no_overlay("ingress" , "ig_intr_md_for_dprsr.drop_ctl") @pa_container_size("ingress" , "LaMoille.Mausdale.Pachuta" , 16) @pa_container_size("ingress" , "LaMoille.Mausdale.Whitefish" , 16) @pa_no_overlay("ingress" , "LaMoille.Cutten.Suttle") @pa_no_overlay("ingress" , "LaMoille.Cutten.Alamosa") @pa_no_overlay("ingress" , "LaMoille.Cutten.Boerne") @pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu") @pa_no_overlay("ingress" , "LaMoille.Naubinway.Dyess") @pa_container_size("ingress" , "McCracken.Brookneal.Kaluaaha" , 32) @pa_container_size("ingress" , "McCracken.Brookneal.Calcasieu" , 32) @pa_container_size("ingress" , "LaMoille.Cutten.Suttle" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Boerne" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Alamosa" , 8) @pa_container_size("ingress" , "LaMoille.Cutten.Merrill" , 16) @pa_atomic("ingress" , "LaMoille.Cutten.Fabens") @pa_atomic("ingress" , "LaMoille.Cutten.Merrill") @pa_solitary("ingress" , "LaMoille.Cutten.Suttle") @pa_solitary("ingress" , "LaMoille.Cutten.Boerne") @pa_container_size("ingress" , "LaMoille.Cutten.Algoa" , 32) @pa_solitary("ingress" , "LaMoille.Cutten.Thayne") @pa_no_overlay("egress" , "LaMoille.Tiburon.Pinole") @pa_no_overlay("ingress" , "LaMoille.Cutten.Charco") @pa_no_overlay("ingress" , "LaMoille.Cutten.Daphne") @pa_container_size("ingress" , "LaMoille.Moose.Kaluaaha" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Calcasieu" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Chevak" , 16) @pa_container_size("ingress" , "LaMoille.Moose.Mendocino" , 16) @pa_container_size("ingress", "LaMoille.Moose.Exton", 8) @pa_atomic("ingress" , "LaMoille.Moose.LasVegas") @pa_container_size("ingress" , "McCracken.Brookneal.Norwood" , 8) @pa_no_overlay("ingress" , "LaMoille.Cutten.Uvalde") @pa_no_init("ingress" , "LaMoille.Naubinway.Piqua") @pa_container_size("ingress" , "LaMoille.Bessie.Grassflat" , 8) @pa_atomic("ingress" , "LaMoille.Salix.Calcasieu") @pa_atomic("ingress" , "LaMoille.Salix.Pierceton") @pa_atomic("ingress" , "LaMoille.Salix.Kaluaaha") @pa_atomic("ingress" , "LaMoille.Salix.Vergennes") @pa_atomic("ingress" , "LaMoille.Salix.Chevak") @pa_atomic("ingress" , "LaMoille.Stennett.Satolah") @pa_atomic("ingress" , "LaMoille.Cutten.Crozet") @pa_container_size("ingress" , "LaMoille.Cutten.Uvalde" , 32) @pa_container_size("ingress" , "LaMoille.Naubinway.Chatmoss" , 32) @pa_container_size("ingress" , "LaMoille.Stennett.Satolah" , 16) @pa_no_overlay("ingress" , "McCracken.Maumee.Allgood") @pa_no_overlay("ingress" , "LaMoille.Naubinway.Gasport") @pa_no_overlay("ingress" , "LaMoille.McCaskill.Pajaros") @pa_no_overlay("ingress" , "LaMoille.McGonigle.Pajaros") @pa_no_overlay("ingress" , "LaMoille.Cutten.Almedia") @pa_no_overlay("ingress" , "LaMoille.Cutten.Redden") @pa_no_overlay("ingress" , "LaMoille.Cutten.Hulbert") @pa_no_overlay("ingress" , "LaMoille.Cutten.Thayne") @pa_no_overlay("ingress" , "LaMoille.Cutten.Algoa") @pa_alias("ingress" , "LaMoille.Burwell.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "LaMoille.Burwell.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") header Sagerton {
     bit<8> Exell;
 }
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -64,45 +64,45 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<1>  Anacortes;
-    @flexible 
+    @flexible
     bit<16> Corinth;
-    @flexible 
+    @flexible
     bit<3>  Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<12> Florien;
-    @flexible 
+    @flexible
     bit<1>  Freeburg;
-    @flexible 
+    @flexible
     bit<6>  Matheson;
 }
 
@@ -4771,7 +4771,7 @@ control Ickesburg(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_in
     @name(".Nordland") action Nordland() {
         LaMoille.Naubinway.Bowden = LaMoille.Naubinway.NewMelle;
     }
-    @disable_atomic_modify(1) @ways(2) @name(".Upalco") table Upalco {
+    @disable_atomic_modify(1) @ways(2) @stage(2) @name(".Upalco") table Upalco {
         actions = {
             Tulalip();
             Olivet();

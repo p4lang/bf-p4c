@@ -4,7 +4,6 @@
 #include "ir/ir.h"
 #include "bf-p4c-options.h"
 
-#include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
 #include "bf-p4c/mau/jbay_next_table.h"
@@ -32,7 +31,6 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     DeparserCopyOpt decaf;
-    CollectBridgedFields bridged_fields;
     /// Class that represents the backtracking point from table placement to PHV allocation.
     MauBacktracker table_alloc;
     TableSummary table_summary;

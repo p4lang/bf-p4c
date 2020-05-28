@@ -13,6 +13,7 @@
 
 namespace BFN {
 
+static const cstring META = "meta";
 static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta";
 static const cstring BRIDGED_MD = "__bfp4c_bridged_metadata";
 static const cstring BRIDGED_MD_HEADER = "__bfp4c_bridged_metadata_header";

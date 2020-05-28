@@ -2972,7 +2972,7 @@ control Bains(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrinsi
     @name(".Mayview") action Mayview() {
         Doddridge.Mausdale.Bennet = (bit<2>)2w2;
     }
-    @disable_atomic_modify(1) @name(".Swandale") table Swandale {
+    @disable_atomic_modify(1) @name(".Swandale") @stage(5) table Swandale {
         actions = {
             Willette();
             Mayview();
@@ -4529,7 +4529,7 @@ control Angeles(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrin
     @name(".Edinburgh") action Edinburgh() {
         Doddridge.Norma.Cabot = Doddridge.Norma.Colona;
     }
-    @disable_atomic_modify(1) @name(".Chalco") table Chalco {
+    @disable_atomic_modify(1) @name(".Chalco") @stage(5) table Chalco {
         actions = {
             Ammon();
             Wells();
@@ -4701,7 +4701,7 @@ control Osakis(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
         Doddridge.Komatke.Arvada = Lauada;
         Doddridge.Daleville.Bonney[31:0] = Emida.global_tstamp[31:0];
     }
-    @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
+    @disable_atomic_modify(1) @name(".Nicollet") @placement_priority(".Swandale", ".Centre") table Nicollet {
         actions = {
             Corum();
             @defaultonly NoAction();
@@ -5387,7 +5387,7 @@ control Decorah(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrin
     @name(".Blunt") action Blunt() {
         Dateland.Wondervu.Bushland[7:7] = (bit<1>)1w0;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Wakita") table Wakita {
+    @ternary(1) @disable_atomic_modify(1) @stage(2) @name(".Wakita") table Wakita {
         actions = {
             Stout();
             Blunt();

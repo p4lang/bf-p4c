@@ -7,18 +7,9 @@ header codel_h {
     bit<32> time_now;
     bit<32> queue_st_delay;
     bit<32> sojourn_remainder;
-
-    bit<7> _pad1;
     bool sojourn_violation;
-
-    bit<7> _pad2;
     bool first_sojourn_violation;
-
-    bit<4> _pad3;
-    // bit<4> predicate;
     bool predicate;
-
-    bit<7> _pad4;
     bool drop;
 }
 
@@ -55,9 +46,9 @@ control CodelIngress (inout codel_h codel_hdr,
 control CodelEgress (inout codel_h codel_hdr,
                      in bit<18> enq_tstamp,
                      in bit<18> deq_timedelta,
-                     in bit<32> global_tstamp) 
+                     in bit<32> global_tstamp)
                      (bit<32> control_interval){
-    
+
     DirectRegister<pair_bool>() test_reg_dir;
     DirectRegisterAction<pair_bool, bool>(test_reg_dir) codel_drop_state = {
         void apply(inout pair_bool value, out bool first_sojourn_violation){
@@ -86,18 +77,18 @@ control CodelEgress (inout codel_h codel_hdr,
                 value.first = codel_hdr.time_now + control_interval;
             }
 
-            if (value.second < codel_hdr.time_now 
+            if (value.second < codel_hdr.time_now
                 && codel_hdr.first_sojourn_violation) {
                 value.second = value.second + 1;
             } else {
                 value.second = minus_square.execute(value.first);
             }
 
-            predicate = (value.second < codel_hdr.time_now 
+            predicate = (value.second < codel_hdr.time_now
                          && codel_hdr.first_sojourn_violation);
         }
     };
-    
+
     apply {
         codel_hdr.time_now = global_tstamp[31:0];
         codel_hdr.queue_st_delay = (codel_hdr.ingress_st_time - global_tstamp)[31:0];
@@ -148,7 +139,7 @@ header internal_h {
 
 /* Example bridge metadata */
 
-struct metadata_t { 
+struct metadata_t {
     internal_h internal_hdr;
     codel_h codel_hdr;
 }
@@ -196,7 +187,7 @@ parser SwitchIngressParser(
 }
 
 // ---------------------------------------------------------------------------
-// Ingress 
+// Ingress
 // ---------------------------------------------------------------------------
 control SwitchIngress(
         inout header_t hdr,
@@ -232,7 +223,7 @@ control SwitchIngress(
 control SwitchIngressDeparser(packet_out pkt,
                               inout header_t hdr,
                               in metadata_t ig_md,
-                              in ingress_intrinsic_metadata_for_deparser_t 
+                              in ingress_intrinsic_metadata_for_deparser_t
                                 ig_intr_dprsr_md
                               ) {
     apply {
@@ -279,7 +270,7 @@ parser SwitchEgressParser(
 
 
 // ---------------------------------------------------------------------------
-// Egress 
+// Egress
 // ---------------------------------------------------------------------------
 control SwitchEgress(
         inout header_t hdr,
@@ -292,11 +283,11 @@ control SwitchEgress(
     CodelEgress(control_interval = CONTROL_INTERVAL) codel_egress;
 
     apply {
-        codel_egress.apply(codel_hdr = eg_md.codel_hdr, 
+        codel_egress.apply(codel_hdr = eg_md.codel_hdr,
                            enq_tstamp = (bit<18>)eg_intr_md.enq_tstamp,
                            deq_timedelta = (bit<18>)eg_intr_md.deq_timedelta,
                            global_tstamp = (bit<32>)eg_intr_from_prsr.global_tstamp);
-        
+
         eg_intr_md_for_dprsr.drop_ctl = 2w0 ++ (bit<1>) eg_md.codel_hdr.drop;
         // Debug
         hdr.ethernet.src_addr[31:0] = eg_md.codel_hdr.queue_st_delay;
@@ -309,7 +300,7 @@ control SwitchEgress(
 control SwitchEgressDeparser(packet_out pkt,
                               inout header_t hdr,
                               in metadata_t eg_md,
-                              in egress_intrinsic_metadata_for_deparser_t 
+                              in egress_intrinsic_metadata_for_deparser_t
                                 eg_intr_dprsr_md
                               ) {
 

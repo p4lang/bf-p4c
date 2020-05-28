@@ -933,7 +933,10 @@ bool CoreAllocation::satisfies_constraints(
 
     bool hasExtractedTogether = std::all_of(
             liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {
-        return phv_i.are_bridged_extracted_together(slice.field(), s.field());
+        auto extracted_together = phv_i.are_bridged_extracted_together(slice.field(), s.field());
+        LOG1("check if " << slice.field() << " and " << s.field()
+                << " are extracted together " << extracted_together);
+        return extracted_together;
     });
 
     if (hasExtracted && !hasExtractedTogether &&

@@ -79,26 +79,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
     // xxx(Deep): Can we calculate a better threshold?
     // If the total size then exceeds the match key size threshold defined for ternary tables,
     // introduce a bit in byte alignment for all metadata fields
-
-    // *OFF* if (totalRoundedUpBytes <  TERNARY_MATCH_KEY_BITS_THRESHOLD)
-
     return;
-
-    // *OFF* for (auto* f : fields) {
-    // *OFF*     // Extract the non-const version of the field
-    // *OFF*     le_bitrange range = StartLen(0, f->size - 1);
-    // *OFF*     FieldAlignment alignment(range);
-    // *OFF*     bool updateAlignment = true;
-    // *OFF*     if (f->alignment)
-    // *OFF*         if (alignment != *(f->alignment))
-    // *OFF*             updateAlignment = false;
-    // *OFF*     if (updateAlignment) {
-    // *OFF*         f->updateAlignment(alignment);
-    // *OFF*         LOG4("\tSetting alignment for field " << f->name << " to " << alignment);
-    // *OFF*     } else {
-    // *OFF*         ::warning("Could not set bit in byte alignment for field %1%", f->name);
-    // *OFF*     }
-    // *OFF* }
 }
 
 bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {

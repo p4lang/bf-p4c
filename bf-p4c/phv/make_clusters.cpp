@@ -529,13 +529,6 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         // safe place to slice clusters.
         bool is_tphv = field->is_tphv_candidate(self.uses_i) || field->privatizable();
 
-        // Break off, if field is extracted in Phase 0, i.e. if field is
-        // bridged and also extracted in INGRESS.
-        // XXX(cole): This should work for bridged metadata extracted in Phase
-        // 0, but needs more thought for extracted header fields.  See
-        // BRIG-301.
-        // break_at_next_byte_boundary |= self.uses_i.is_extracted(field) && field->bridged;
-
         if (accumulator_bits && (field->is_solitary()) && !lastPadding) {
             // Break off the existing slice list if this field has a solitary and
             // the previous fields are not padding fields.
@@ -1200,7 +1193,10 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
             if (max_slice_list_size == sum_bits) {
                 continue; }
 
-            auto* padding = phv_i.create_dummy_padding(max_slice_list_size - sum_bits,
+            auto padding_size = ROUNDUP(sum_bits, 8) * 8 - sum_bits;
+            if (padding_size == 0)
+                continue;
+            auto* padding = phv_i.create_dummy_padding(padding_size,
                                                        slice_list->front().gress());
             padding->set_exact_containers(true);
             auto padding_fs = PHV::FieldSlice(padding);

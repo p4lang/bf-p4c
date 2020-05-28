@@ -81,8 +81,12 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
-  extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
   testdata/p4_14_samples/source_routing.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Could not place table .udf_vlist_mac_ip_tbl: Can't split this table across stages and it's too big for one stage"
+  extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -316,6 +320,17 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
+p4c_add_xfail_reason("tofino2"
+  "Extracted range.*doesn't match destination container"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
+)
+
+# bridge packing induced phv failure
+p4c_add_xfail_reason("tofino2"
+  "PHV allocation was not successful"
+  p4c_1585_b
+)
+
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino2"
   "you must introduce padding fields around the above slice"
@@ -367,7 +382,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-2555
 p4c_add_xfail_reason("tofino2"
-  "Ran out of chunks in field dictionary"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
@@ -383,10 +398,3 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
 
-# P4C-2724
-p4c_add_xfail_reason("tofino2"
-  "Extracted range .* with size .* doesn't match destination container"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
-  p4c_2527
-)

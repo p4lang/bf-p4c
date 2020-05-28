@@ -955,12 +955,15 @@ bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
         !field_i->is_digest() && (!field_i->metadata || uses.is_used_parde(field_i));
 }
 
-void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
+void PHV::Field::updateAlignment(PHV::AlignmentReason reason, const FieldAlignment& newAlignment) {
     LOG3("Inferred alignment " << newAlignment << " for field " << name);
 
     // If there's no existing alignment for this field, just take this one.
     if (!alignment) {
         alignment = newAlignment;
+
+        // used by bridged packing
+        alignment_i.addConstraint(reason, newAlignment.align);
         return;
     }
 
@@ -971,7 +974,17 @@ void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
                       " %2% != %3% (little endian)",
                       name, cstring::to_cstring(newAlignment),
                       cstring::to_cstring(*alignment));
+    } else {
+        alignment_i.updateConstraint(reason);
     }
+}
+
+void PHV::Field::eraseAlignment() {
+    LOG3("Clearn alignment for field " << name);
+    // used by phv allocation
+    alignment = boost::none;
+    // used by bridged packing
+    alignment_i.eraseConstraint();
 }
 
 void PHV::Field::setStartBits(PHV::Size size, bitvec startPositions) {
@@ -1215,6 +1228,8 @@ class CollectPhvFields : public Inspector {
         if (seen.find(h->name) != seen.end()) return false;
         seen.insert(h->name);
 
+        LOG1("add header " << h);
+
         int start = phv.by_id.size();
         phv.add_hdr(h->name.name, h->type, getGress(), false);
         int end = phv.by_id.size();
@@ -1258,6 +1273,7 @@ class CollectPhvFields : public Inspector {
         if (seen.find(h->name) != seen.end()) return false;
         seen.insert(h->name);
 
+        LOG1("add meta " << h);
         phv.add_hdr(h->name.name, h->type, getGress(), true);
         return false;
     }
@@ -1369,7 +1385,7 @@ struct ComputeFieldAlignments : public Inspector {
         LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
         LOG3("Extract: " << extract << ", parser state: " <<
                 findContext<IR::BFN::ParserState>()->name);
-        fieldInfo->updateAlignment(alignment);
+        fieldInfo->updateAlignment(PHV::AlignmentReason::PARSER, alignment);
 
         // If a parsed field starts at a container bit index larger than the bit
         // index at which it's located in the input buffer, we won't be able to
@@ -1416,7 +1432,7 @@ struct ComputeFieldAlignments : public Inspector {
                         const auto alignment = FieldAlignment(le_bitrange(
                                     StartLen((source->offset + f->size), f->size)));
                         LOG3("B. Updating alignment of " << f->name << " to " << alignment);
-                        f->updateAlignment(alignment);
+                        f->updateAlignment(PHV::AlignmentReason::DEPARSER, alignment);
                     }
                 }
             }
@@ -1440,7 +1456,7 @@ struct ComputeFieldAlignments : public Inspector {
             nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
             LOG3("C. Updating alignment of " << fieldInfo->name << " to " << emittedBits);
             LOG3("Emit primitive: " << emitPrimitive);
-            fieldInfo->updateAlignment(FieldAlignment(emittedBits));
+            fieldInfo->updateAlignment(PHV::AlignmentReason::DEPARSER, FieldAlignment(emittedBits));
             currentBit += fieldInfo->size;
         }
 
@@ -1713,7 +1729,8 @@ class CollectPardeConstraints : public Inspector {
             if (f_name.find(meta) != std::string::npos) {
                 LOG3("D. Updating alignment of " << f->name << " to " <<
                         FieldAlignment(le_bitrange(StartLen(0, f->size))));
-                f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
+                f->updateAlignment(PHV::AlignmentReason::DEPARSER,
+                        FieldAlignment(le_bitrange(StartLen(0, f->size))));
                 f->set_deparsed_bottom_bits(true);
             }
         }
@@ -1740,6 +1757,7 @@ class CollectPardeConstraints : public Inspector {
         f->set_no_split(true);
         f->set_solitary(PHV::SolitaryReason::DIGEST);
 
+        LOG1("Visit digest " << digest);
         for (auto fieldList : digest->fieldLists) {
             for (auto flval : fieldList->sources) {
                 if (auto f = phv.field(flval->field)) {
@@ -1751,6 +1769,7 @@ class CollectPardeConstraints : public Inspector {
                         f->set_digest(PHV::DigestType::RESUBMIT);
                     else if (digest->name == "pktgen")
                         f->set_digest(PHV::DigestType::PKTGEN);
+                    LOG1("\tf " << f);
                 }
             }
         }
@@ -1791,6 +1810,7 @@ class CollectPardeConstraints : public Inspector {
                         LOG3("E. Updating alignment of metadata field " << fieldInfo->name << " to "
                                 << FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         fieldInfo->updateAlignment(
+                                PHV::AlignmentReason::DIGEST,
                                 FieldAlignment(le_bitrange(StartLen(0, fieldInfo->size))));
                         LOG3(fieldInfo << " is marked to be byte_aligned "
                              "because it's in a field_list and digested.");

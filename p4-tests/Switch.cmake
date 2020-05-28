@@ -24,7 +24,7 @@ p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
     "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs}" "-arch v1model -DENT_FIN_POSTCARD_PROFILE")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
-    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch v1model --disable-pragmas=pa_solitary -DENT_DC_GENERAL_PROFILE -to 1200")
+    "switch_ent_dc_general" ${switchtest} "${testExtraArgs}" "-arch v1model -DENT_DC_GENERAL_PROFILE -to 1200")
 p4c_add_test_label("tofino" "METRICS" "switch_ent_dc_general")
 
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE

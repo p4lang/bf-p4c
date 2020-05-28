@@ -217,7 +217,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2257.p4
 )
 
@@ -231,8 +230,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-706/terminate_parsing.p4
 )
 
+# timeout
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
 )
 
@@ -476,7 +476,6 @@ p4c_add_xfail_reason("tofino"
 
   # P4C-1778
   # fit if
-  ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1168/comp_1168.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1169/case8847.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-1189/case9294.p4
@@ -492,7 +491,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-818/case4954.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-823/pipeline2-failing.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-883/case5521.p4
-  ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
   ../glass/testsuite/p4_tests/kpn/COMPILER-896/case5546.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
@@ -737,12 +735,21 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Field is extracted in the parser.*incompatible alignment"
   ../glass/testsuite/p4_tests/mau/COMPILER-702/comp_702.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
   ../glass/testsuite/p4_tests/mau/COMPILER-710/comp_710.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from .* which has type .*"
   testdata/p4_16_samples/issue1210.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Number of fields .* in initializer different than number of fields"
+  testdata/p4_16_samples/issue2303.p4
 )
 
 # psa.p4 bug, frontend failure
@@ -852,6 +859,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
+  ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1136,10 +1145,17 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-475/case2600.p4
   )
 
+# Failed after bridged packing, fix with a follow-up PR
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
-  )
+)
+
+# Failed after bridged packing, fix with a follow-up PR
+p4c_add_xfail_reason("tofino"
+  "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
+  extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
+)
 
 # P4C-1396
 p4c_add_xfail_reason("tofino"
@@ -1300,10 +1316,14 @@ p4c_add_xfail_reason("tofino"
   "Varbit field size expression evaluates to non byte-aligned value"
   # unbounded varbit expr
   extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
-  testdata/p4_16_samples/issue1879-bmv2.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unsupported type header_union prot_host_addr_t"
+  testdata/p4_16_samples/issue1879-bmv2.p4
 )
 
 # P4C-2133
@@ -1355,15 +1375,6 @@ p4c_add_xfail_reason("tofino"
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
-)
-
-# P4C-2367: failed due to the removal of hack in phv_fields.cpp:1393
-# where the alignment constraint on padding and bridging fields are
-# ignored. Removing the hack helped to fit switch-16, but failed this test.
-# Need to looking into a better solution.
-p4c_add_xfail_reason("tofino"
-  "This program violates action constraints imposed by Tofino"
-  extensions/p4_tests/p4_14/compile_only/bridged_packing_1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1701,12 +1712,29 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-b.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
+)
+
+# p4c-2581
+p4c_add_xfail_reason("tofino"
+  "PHV allocation requires the following field slices to be packed together"
+  extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
+)
+
+# P4C-2749
+p4c_add_xfail_reason("tofino"
+  "Ran out of phv output extractor slots"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1730,9 +1758,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 # @override_phase0_table_name( ".blah" )
-# p4c_add_xfail_reason("tofino"
-#   "error: syntax error, unexpected '.'"
-# )
+# missing constraint when packing?
+p4c_add_xfail_reason("tofino"
+  "Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
@@ -1807,6 +1837,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: StructExpression: Expected a bit<> or int<> value"
   testdata/p4_16_samples/issue232-bmv2.p4
+)
+
+# error in flattening nested header
+p4c_add_xfail_reason("tofino"
+  "Field __bfp4c_fields is not a member of structure header __bfp4c_bridged_metadata_header"
+  testdata/p4_16_samples/issue1879-bmv2.p4
 )
 
 # Test that fails due to extra sanity checking in fronend def_use pass

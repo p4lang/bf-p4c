@@ -4,7 +4,6 @@
 #include "lib/indent.h"
 
 #include "bf-p4c/common/alias.h"
-#include "bf-p4c/common/bridged_metadata_replacement.h"
 #include "bf-p4c/common/check_for_unimplemented_features.h"
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/extract_maupipe.h"
@@ -95,7 +94,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
     uses(phv),
     defuse(phv),
     decaf(phv, uses, defuse, deps),
-    bridged_fields(phv),
     table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
     flexibleLogging = new LogFlexiblePacking(phv);
@@ -117,6 +115,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
     addPasses({
+        flexibleLogging,
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
         new CreateThreadLocalInstances,
@@ -165,10 +164,6 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new Alias(phv),
         new CollectPhvInfo(phv),
         new DumpPipe("After Alias"),
-        // Repacking of flexible headers (including bridged metadata) in the backend.
-        // Needs to be run after InstructionSelection but before deadcode elimination.
-        flexibleLogging,
-        new DumpPipe("After packing"),
         // This is the backtracking point from table placement to PHV allocation. Based on a
         // container conflict-free PHV allocation, we generate a number of no-pack conflicts between
         // fields (these are fields written in different nonmutually exclusive actions in the same

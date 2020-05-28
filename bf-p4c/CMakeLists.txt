@@ -69,12 +69,12 @@ endif()
 
 include_directories(${BFN_P4C_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}
-  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} )
+  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${LIBDYNHASH_INCLUDE_DIR} ${Z3_INCLUDE_DIR} )
 # The generated code for protobuf has an excessive number of warnings so we
 # include the build directory as a system directory
 include_directories(SYSTEM ${P4C_BINARY_DIR}/control-plane)
 set (HAVE_LIBBOOST_GRAPH 1)
-set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}")
+set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY};${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY};${Z3_LIBRARY}")
 set (P4C_LIB_DEPS ${P4C_LIB_DEPS} PARENT_SCOPE)
 
 add_subdirectory(logging)
@@ -101,6 +101,8 @@ set (BF_P4C_IR_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
 set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
   COMPILE_FLAGS "-I${LIBDYNHASH_INCLUDE_DIR}")
+set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
+  COMPILE_FLAGS "-I${Z3_INCLUDE_DIR}")
 
 set (BF_P4C_IR_HDRS
   midend/path_linearizer.h
@@ -199,7 +201,6 @@ set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_BF_P4C_IR_SR
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
   common/asm_output.cpp
-  common/bridged_metadata_replacement.cpp
   common/check_for_unimplemented_features.cpp
   common/pragma/collect_global_pragma.cpp
   common/elim_unused.cpp
@@ -207,6 +208,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/extract_maupipe.cpp
   common/field_defuse.cpp
   common/flexible_packing.cpp
+  common/bridged_packing.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
   common/map_tables_to_actions.cpp
@@ -222,7 +224,6 @@ build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_COMMON_HDRS
   common/alias.h
   common/autoindent.h
-  common/bridged_metadata_replacement.h
   common/check_for_unimplemented_features.h
   common/check_header_refs.h
   common/pragma/collect_global_pragma.h
@@ -232,6 +233,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/extract_maupipe.h
   common/field_defuse.h
   common/flexible_packing.h
+  common/bridged_packing.h
   common/header_stack.h
   common/ir_utils.h
   common/map_tables_to_actions.h

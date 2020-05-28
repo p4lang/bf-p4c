@@ -31,6 +31,7 @@ if (ENABLE_STATIC_LIBS)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
 
+
 set(BOOST_MIN_VERSION "1.58.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
 # Look for the dynamic hash library
@@ -46,6 +47,9 @@ else()
   find_package(LibDynHash REQUIRED)
 endif()
 include_directories(${LIBDYNHASH_INCLUDE_DIR})
+
+set(Z3_MIN_VERSION "4.8.7")
+find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
 
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
 # from p4factory when configuring bf-p4c-compilers to specify certain predefined

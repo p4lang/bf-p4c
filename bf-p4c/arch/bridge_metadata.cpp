@@ -114,8 +114,8 @@ struct BridgeIngressToEgress : public Transform {
         // struct. Figure out which type that is.
         forAllMatching<IR::BFN::TnaControl>(root,
                       [&](const IR::BFN::TnaControl* control) {
-            if (!cgMetadataStructName.isNullOrEmpty()) return;
-            auto p4ParamName = control->tnaParams.at(COMPILER_META);
+            if (!metaStructName.isNullOrEmpty()) return;
+            cstring p4ParamName = control->tnaParams.at("md");
             auto* params = control->type->getApplyParameters();
             auto* param = params->getParameter(p4ParamName);
             BUG_CHECK(param, "Couldn't find param %1% on control: %2%",
@@ -125,10 +125,10 @@ struct BridgeIngressToEgress : public Transform {
             BUG_CHECK(paramType->is<IR::Type_StructLike>(),
                       "User metadata parameter type isn't structlike %2%: %1%",
                       paramType, typeid(*paramType).name());
-            cgMetadataStructName = paramType->to<IR::Type_StructLike>()->name;
+            metaStructName = paramType->to<IR::Type_StructLike>()->name;
         });
 
-        BUG_CHECK(!cgMetadataStructName.isNullOrEmpty(),
+        BUG_CHECK(!metaStructName.isNullOrEmpty(),
                   "Couldn't determine the P4 name of the TNA compiler generated  metadata "
                   "struct parameter 'md'");
 
@@ -137,14 +137,14 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::Type_StructLike* preorder(IR::Type_StructLike* type) override {
         prune();
-        if (type->name != cgMetadataStructName) return type;
+        if (type->name != metaStructName) return type;
 
         LOG1("Will inject the new field " << BRIDGED_MD_HEADER);
 
         // Inject the new field. This will give us access to the bridged
         // metadata type everywhere in the program.
         type->fields.push_back(new IR::StructField(BRIDGED_MD,
-                                                   new IR::Type_Name(BRIDGED_MD_HEADER)));
+                               new IR::Type_Name(BRIDGED_MD_HEADER)));
         return type;
     }
 
@@ -163,12 +163,12 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
 
-        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
+        auto metaParam = tnaContext->tnaParams.at("md");
 
-        // Add "compiler_generated_meta.^bridged_metadata.^bridged_metadata_indicator = 0;".
+        // Add "metadata.^bridged_metadata.^bridged_metadata_indicator = 0;".
         if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
             state->components.push_back(
-                    createSetMetadata(cgMetadataParam, BRIDGED_MD, BRIDGED_MD_INDICATOR, 8, 0));
+                    createSetMetadata(metaParam, BRIDGED_MD, BRIDGED_MD_INDICATOR, 8, 0));
         }
         return state;
     }
@@ -190,8 +190,8 @@ struct BridgeIngressToEgress : public Transform {
         }
 
         // Add "pkt.extract(md.^bridged_metadata);"
-        auto cgMetadataParam = tnaContext->tnaParams.at(COMPILER_META);
-        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+        auto metaParam = tnaContext->tnaParams.at("md");
+        auto* member = new IR::Member(new IR::PathExpression(metaParam),
                 IR::ID(BRIDGED_MD));
         auto extractCall = createExtractCall(packetInParam, BRIDGED_MD_HEADER, member);
         state->components.push_back(extractCall);
@@ -199,7 +199,7 @@ struct BridgeIngressToEgress : public Transform {
         // Copy all of the bridged fields to their final locations.
         for (auto& bridgedField : fieldsToBridge) {
             auto* member = new IR::Member(
-                    new IR::Member(new IR::PathExpression(cgMetadataParam),
+                    new IR::Member(new IR::PathExpression(metaParam),
                             IR::ID(BRIDGED_MD)), BRIDGED_MD_FIELD);
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
@@ -247,7 +247,7 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::IndexedVector<IR::StatOrDecl>*
     updateIngressControl(const IR::BFN::TnaControl* control) {
-        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
+        auto metaParam = control->tnaParams.at("md");
 
         // if (ig_intr_md_for_tm.egress == 1) {
         //    add_bridge_metadata;
@@ -255,15 +255,17 @@ struct BridgeIngressToEgress : public Transform {
         auto stmt = new IR::IndexedVector<IR::StatOrDecl>();
         if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
             // Add "md.^bridged_metadata.setValid();"
-            stmt->push_back(createSetValid(control->srcInfo, cgMetadataParam, BRIDGED_MD)); }
+            stmt->push_back(createSetValid(control->srcInfo, metaParam, BRIDGED_MD)); }
 
         for (auto& bridgedField : fieldsToBridge) {
             auto* member = new IR::Member(
-                    new IR::Member(new IR::PathExpression(cgMetadataParam),
+                    new IR::Member(new IR::PathExpression(metaParam),
                             IR::ID(BRIDGED_MD)), IR::ID(BRIDGED_MD_FIELD));
             auto* fieldMember =
               new IR::Member(member, bridgedHeaderFieldNames.at(bridgedField));
 
+            BUG_CHECK(control->tnaParams.count(bridgedField.first) != 0,
+                    "nable to find %1%", bridgedField.first);
             auto bridgedFieldParam = control->tnaParams.at(bridgedField.first);
             auto* bridgedMember =
               transformAllMatching<IR::PathExpression>(fieldInfo.at(bridgedField).refTemplate,
@@ -308,8 +310,8 @@ struct BridgeIngressToEgress : public Transform {
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
-        auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
-        auto* member = new IR::Member(new IR::PathExpression(cgMetadataParam),
+        auto metaParam = control->tnaParams.at("md");
+        auto* member = new IR::Member(new IR::PathExpression(metaParam),
                         IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
         auto* typeArgs = new IR::Vector<IR::Type>();
@@ -357,7 +359,7 @@ struct BridgeIngressToEgress : public Transform {
 
     ordered_map<FieldRef, cstring> bridgedHeaderFieldNames;
     const IR::Type_Header* bridgedHeaderType = nullptr;
-    cstring cgMetadataStructName;
+    cstring metaStructName;
 };
 
 }  // namespace

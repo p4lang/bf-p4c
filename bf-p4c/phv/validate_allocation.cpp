@@ -642,6 +642,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             return;
         }
 
+        // XXX(hanw) extract to metadata is only possible with bridged
+        // metadata. Do we really need to check for container alignment
+        // for metadata field?
+        if (!field->isPacketField())
+            return;
+
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         auto mergedFieldSlices = field->get_combined_alloc_slices(bits,
                 PHV::AllocContext::PARSER, &use);

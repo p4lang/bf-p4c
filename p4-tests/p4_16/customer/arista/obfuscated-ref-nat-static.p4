@@ -13,7 +13,7 @@
 
 header Toccopola {
     bit<8> Roachdale;
-    @flexible 
+    @flexible
     bit<9> Miller;
 }
 
@@ -64,45 +64,45 @@ header Dixboro {
     bit<3>  Rugby;
     bit<1>  Davie;
     bit<4>  Cacao;
-    @flexible 
+    @flexible
     bit<8>  Mankato;
-    @flexible 
+    @flexible
     bit<1>  Rockport;
-    @flexible 
+    @flexible
     bit<3>  Union;
-    @flexible 
+    @flexible
     bit<24> Virgil;
-    @flexible 
+    @flexible
     bit<24> Florin;
-    @flexible 
+    @flexible
     bit<12> Requa;
-    @flexible 
+    @flexible
     bit<6>  Sudbury;
-    @flexible 
+    @flexible
     bit<3>  Allgood;
-    @flexible 
+    @flexible
     bit<9>  Chaska;
-    @flexible 
+    @flexible
     bit<2>  Selawik;
-    @flexible 
+    @flexible
     bit<1>  Waipahu;
-    @flexible 
+    @flexible
     bit<1>  Shabbona;
-    @flexible 
+    @flexible
     bit<32> Ronan;
-    @flexible 
+    @flexible
     bit<1>  Anacortes;
-    @flexible 
+    @flexible
     bit<16> Corinth;
-    @flexible 
+    @flexible
     bit<3>  Willard;
-    @flexible 
+    @flexible
     bit<12> Bayshore;
-    @flexible 
+    @flexible
     bit<12> Florien;
-    @flexible 
+    @flexible
     bit<1>  Freeburg;
-    @flexible 
+    @flexible
     bit<6>  Matheson;
 }
 
@@ -3123,7 +3123,7 @@ control Barnsboro(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_i
         size = 512;
         requires_versioning = false;
         default_action = NoAction();
-        meters = Oregon; 
+        meters = Oregon;
     }
     @disable_atomic_modify(1) @name(".Ravenwood") table Ravenwood {
         actions = {
@@ -5065,7 +5065,7 @@ control Keltys(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intri
         Arial = Claypool.get<tuple<bit<9>, bit<5>>>({ Wondervu.egress_port, Wondervu.egress_qid });
         Maupin.count((bit<12>)Arial);
     }
-    @disable_atomic_modify(1) @name(".Manville") table Manville {
+    @disable_atomic_modify(1) @placement_priority(1) @name(".Manville") table Manville {
         actions = {
             Mapleton();
         }

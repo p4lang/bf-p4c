@@ -42,6 +42,7 @@ namespace PHV {
 
 using SolitaryReason = Constraints::SolitaryConstraint::SolitaryReason;
 using DigestType = Constraints::DigestConstraint::DigestType;
+using AlignmentReason = Constraints::AlignmentConstraint::AlignmentReason;
 
 class FieldSlice;
 
@@ -338,6 +339,9 @@ class Field : public LiftLess<Field> {
     // digest this field is used in.
     Constraints::DigestConstraint digest_i;
 
+    // Alignment Constraint: This field must be aligned at given offset within a container.
+    Constraints::AlignmentConstraint alignment_i;
+
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
@@ -404,6 +408,12 @@ class Field : public LiftLess<Field> {
      **/
     bool            is_marshaled_i = false;
 
+    // Maximum field size in the same SuperCluster with no_split constraint.
+    // Used by bridged metadata packing to insert padding after the 'no_split'
+    // bridged field, if the bridged field is smaller than the related
+    // 'no_split' field.
+    int             no_split_container_size_i = -1;
+
     /// MAU operations performed on this field.
     safe_vector<FieldOperation> operations_i;
 
@@ -462,6 +472,13 @@ class Field : public LiftLess<Field> {
     const Constraints::DigestConstraint&
          getDigestConstraint() const                       { return digest_i; }
 
+    // only update the alignment constraint used by bridged packing
+    void set_alignment(Constraints::AlignmentConstraint& c) { alignment_i = c; }
+    void set_alignment(unsigned r, unsigned v)             { alignment_i.addConstraint(r, v); }
+    void erase_alignment()                                 { alignment_i.eraseConstraint(); }
+    const Constraints::AlignmentConstraint&
+         getAlignmentConstraint() const                    { return alignment_i; }
+
     bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
     void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
     bool exact_containers() const                          { return exact_containers_i; }
@@ -469,11 +486,14 @@ class Field : public LiftLess<Field> {
     void set_written_in_force_immediate(bool b)            { write_force_immediate_i = b; }
     bool written_in_force_immediate_table() const          { return write_force_immediate_i; }
 
+    void set_no_split_container_size(int size)             { no_split_container_size_i = size; }
+    int no_split_container_size() const                    { return no_split_container_size_i; }
     bool no_split() const;
     void set_no_split(bool b);
     bool no_split_at(int pos) const;
     bool has_no_split_at_pos() const;
     void set_no_split_at(le_bitrange range);  // The indicated slice cannot be split.
+
     bool used_in_wide_arith() const { return wide_arith_start_bit_.size() > 0; }
 
     bool bit_used_in_wide_arith(int slice_bit) const {
@@ -759,7 +779,10 @@ class Field : public LiftLess<Field> {
 
     /// Update the alignment requirement for this field. Reports an error if
     /// conflicting requirements render the alignment unsatisfiable.
-    void updateAlignment(const FieldAlignment& newAlignment);
+    void updateAlignment(PHV::AlignmentReason, const FieldAlignment& newAlignment);
+
+    /// Erase the alignment requirement for this field.
+    void eraseAlignment();
 
     /**
      * Update the valid range of container positions for this field.
@@ -1156,6 +1179,18 @@ class PhvInfo {
         return bridged_extracted_together_i(f1->id, f2->id);
     }
 
+    SymBitMatrix& getMutuallyAligned() { return mutually_aligned_i; }
+    const SymBitMatrix& getMutuallyAligned() const { return mutually_aligned_i; }
+    bool are_mutually_aligned(const PHV::Field* f1, const PHV::Field* f2) const {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        return mutually_aligned_i(f1->id, f2->id);
+    }
+
+    void addMutuallyAligned(const PHV::Field* f1, const PHV::Field* f2) {
+        BUG_CHECK(f1 && f2, "No PHV field");
+        mutually_aligned_i(f1->id, f2->id) = true;
+    }
+
     void addDeparserNoPack(const PHV::Field* f1, const PHV::Field* f2) {
         BUG_CHECK(f1 && f2, "No PHV field");
         deparser_no_pack_i(f1->id, f2->id) = true;
@@ -1340,6 +1375,10 @@ class PhvInfo {
     /// bridged_extracted_together(f1->id, f2->id) is true if f1 and f2 are both bridged fields and
     /// they are extracted as part of the same byte.
     SymBitMatrix                             bridged_extracted_together_i;
+
+    /// mutually_aligned(f1->id, f2->id) is true if f1 and f2 must be allocated to container
+    /// with same alignment constraint.
+    SymBitMatrix                             mutually_aligned_i;
 
     /// Mapping of all the fields to the TempVars created. This is needed by the Alias
     /// transformation to automatically add initializations of validity bits for alias sources.

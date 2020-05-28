@@ -1,6 +1,6 @@
 # p4,p4_path,include_path,p4_opts,target,language,arch,skip_opt
 switch_msdc,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_PROFILE -DP4_WRED_DEBUG --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
-switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,-DENT_DC_GENERAL_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
+switch_ent_dc_general,p4-tests/p4_14/switch/p4src/switch.p4,,-DENT_DC_GENERAL_PROFILE,tofino,p4-14,v1model,skip_Glass
 switch_dc_basic,p4-tests/p4_14/switch/p4src/switch.p4,,-DDC_BASIC_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
 # switch_msdc_ipv4,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_IPV4_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass
 switch_msdc_spine_int,p4-tests/p4_14/switch/p4src/switch.p4,,-DMSDC_SPINE_DTEL_INT_PROFILE --disable-pragma=pa_solitary,tofino,p4-14,v1model,skip_Glass

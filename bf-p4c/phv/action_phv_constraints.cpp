@@ -543,7 +543,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
                         slice.field_slice());
             }
 
-            LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
+            LOG1("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
                     rangeRead.hi << "] into copacking_constraints for action " << action->name);
             packing_constraints[action].insert(*operand.phv_used);
 
@@ -1031,7 +1031,7 @@ bool ActionPhvConstraints::pack_slices_together(
                     continue; }
 
             // Insert the slices to be packed together into the UnionFind structure
-            LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
+            LOG1("\t\t\t\t\tInserting " << fieldRead->name << " [" << rangeRead.lo << ", " <<
                     rangeRead.hi << "] into copacking_constraints for action " << action->name);
             if (fieldRead->is_solitary() &&
                (no_pack_source_field == nullptr || fieldRead == no_pack_source_field)) {
@@ -1047,6 +1047,7 @@ bool ActionPhvConstraints::pack_slices_together(
                     pack_together_fields.insert(fieldRead);
                     pack_together_has_no_pack = true;
                 }
+                LOG1("pack together " << fieldRead);
                 pack_together.insert(PHV::FieldSlice(fieldRead, rangeRead));
             }
         }
@@ -1752,6 +1753,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         } else if (operationType[action] != OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
             BUG("Operation type other than BITWISE and MOVE encountered."); } }
 
+    LOG1("copacking constraint " << copacking_constraints.size());
 
     LOG5("\t\t\tChecking rotational alignment");
     ordered_map<const IR::MAU::Action*, bool> hasSingleUnallocatedPHVSource;
