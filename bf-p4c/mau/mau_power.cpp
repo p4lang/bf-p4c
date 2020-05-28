@@ -54,7 +54,8 @@ bool MauFeatures::stage_has_feature(gress_t gress, int stage, stage_feature_t fe
 std::ostream& MauFeatures::emit_dep_asm(std::ostream& out, gress_t g, int stage) const {
   // The ghost thread uses the same dependency as ingress, so if tables in
   // the ghost thread induce a dependency, it has already been merged into ingress.
-  if (g != GHOST) {
+  // Skip stage dependency for stage 0 as it has no previous stage
+  if ((g != GHOST) && (stage > 0)) {
     mau_dep_t dep = get_dependency_for_gress_stage(g, stage);
     out << "  dependency: " << dep << std::endl;
   }
