@@ -40,9 +40,11 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::BOr *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
     // helper functions
+    using GWRow_t = std::pair<const IR::Expression *, cstring>;
     void removeUnusedRows(IR::MAU::Table *, bool isCanon);
-    void splitGatewayRows(safe_vector<std::pair<const IR::Expression *, cstring>> &gateway_rows);
-    void removeNotEquals(safe_vector<std::pair<const IR::Expression *, cstring>> &gateway_rows);
+    void sortGatewayRows(safe_vector<GWRow_t> &gateway_rows);
+    void splitGatewayRows(safe_vector<GWRow_t> &gateway_rows);
+    void removeNotEquals(safe_vector<GWRow_t> &gateway_rows);
     class NeedNegate;
 
  private:

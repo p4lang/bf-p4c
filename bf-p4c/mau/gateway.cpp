@@ -17,7 +17,7 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
         rv = true; return false; }
  public:
     explicit NeedNegate(const IR::Expression *e) { e->apply(*this); }
-    explicit NeedNegate(safe_vector<std::pair<const IR::Expression *, cstring>> &rows) {
+    explicit NeedNegate(safe_vector<GWRow_t> &rows) {
         for (auto &row : rows) {
             row.first->apply(*this);
             if (rv) break; } }
@@ -135,10 +135,12 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         e->right = MakeSlice(e->right, slice_at, width-1);
         clone->left = MakeSlice(clone->left, 0, slice_at-1);
         clone->right = MakeSlice(clone->right, 0, slice_at-1);
+        LOG5(_debugIndent << "  Split wide to: " << clone <<
+             (e->is<IR::Equ>() ? " && " : " || ") << e);
         if (e->is<IR::Equ>())
-            return new IR::LAnd(clone, e);
+            return new IR::LAnd(postorder(e), postorder(clone));
         else
-            return new IR::LOr(clone, e); }
+            return new IR::LOr(postorder(e), postorder(clone)); }
     return e;
 }
 
@@ -181,7 +183,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
             } else {
                 return new IR::BoolLiteral(false); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
-            return new IR::Equ(e->left, new IR::Constant(0)); }
+            return postorder(new IR::Equ(e->left, new IR::Constant(0))); }
     return e;
 }
 
@@ -202,7 +204,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
             } else {
                 return new IR::BoolLiteral(true); } }
         if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
-            return new IR::Neq(e->left, new IR::Constant(0)); }
+            return postorder(new IR::Neq(e->left, new IR::Constant(0))); }
     return e;
 }
 
@@ -271,7 +273,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
     if (auto k = e->right->to<IR::BoolLiteral>())
         return k->value ? e->left : k;
     while (auto r = e->right->to<IR::LAnd>()) {
-        e->left = new IR::LAnd(e->left, r->left);
+        e->left = postorder(new IR::LAnd(e->left, r->left));
         e->right = r->right; }
     if (auto l = e->left->to<IR::LOr>()) {
         if (auto r = e->right->to<IR::LOr>()) {
@@ -371,6 +373,62 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
     return e;
 }
 
+/* return true if two boolean expressions are contradictory (cannot both be true) */
+static bool contradictory(const IR::Expression *a_, const IR::Expression *b_) {
+    auto a = a_->to<IR::Operation::Relation>();
+    auto b = b_->to<IR::Operation::Relation>();
+    if (!a || !b) return false;
+    // FIXME -- should we check for a->left is a slice of b->left or vice versa?
+    if (!a->left->equiv(*b->left)) return false;
+    if (a->right->equiv(*b->right)) {
+        /* a and be are both 'x relop y' for two different relops */
+        if (a->is<IR::Equ>() && (b->is<IR::Neq>() || b->is<IR::Lss>())) return true;
+        if (b->is<IR::Equ>() && (a->is<IR::Neq>() || a->is<IR::Lss>())) return true;
+        return false; }
+    auto ak = a->right->to<IR::Constant>();
+    auto bk = b->right->to<IR::Constant>();
+    if (!ak || !bk) return false;
+    BUG_CHECK(ak->value != bk->value, "equal constants %1% and %2% are not equivalent?", ak, bk);
+    if (ak->value < bk->value) {
+        if ((a->is<IR::Equ>() || a->is<IR::Lss>()) && (b->is<IR::Equ>() || b->is<IR::Geq>()))
+            return true;
+    } else {
+        if ((a->is<IR::Equ>() || a->is<IR::Geq>()) && (b->is<IR::Equ>() || b->is<IR::Lss>()))
+            return true; }
+    return false;
+}
+
+/* simplify a canonical row by removing duplicate conjuncts and making the entire row
+ * false if it contains contradictory conjuncts */
+static const IR::Expression *simplifyRow(const IR::Expression *e) {
+    std::vector<const IR::Expression *> terms;
+    bool delta = false;
+    auto *rest = e;
+    auto *conj = rest->to<IR::LAnd>();
+    while (auto *t = conj ? conj->right : rest) {
+        bool remove = false;
+        for (auto p : terms) {
+            if (t->equiv(*p))
+                remove = true;
+            else if (contradictory(t, p))
+                return new IR::BoolLiteral(e->srcInfo, false); }
+        if (remove) {
+            delta = true;
+        } else {
+            terms.push_back(t); }
+        rest = nullptr;
+        if (conj) {
+            rest = conj->left;
+            conj = rest->to<IR::LAnd>(); } }
+    if (delta) {
+        e = terms.back();
+        terms.pop_back();
+        while (!terms.empty()) {
+            e = new IR::LAnd(e, terms.back());
+            terms.pop_back(); } }
+    return e;
+}
+
 /* break apart the terms of a conjunction into a set of conjuncts */
 static std::set<const IR::Expression *> rowConjuncts(const IR::Expression *e) {
     std::set<const IR::Expression *> rv;
@@ -419,36 +477,40 @@ void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
         if (erase_rest) {
             removed.insert(row->second);
             row = rows.erase(row);
-        } else if (!row->first) {
+            continue; }
+        if (!row->first) {
             erase_rest = true;
             present.insert(row->second);
             ++row;
-        } else if (auto k = row->first->to<IR::Constant>()) {
+            continue; }
+        row->first = simplifyRow(row->first);
+        if (auto k = row->first->to<IR::Constant>()) {
             if (k->value == 0) {
                 removed.insert(row->second);
                 row = rows.erase(row);
             } else {
                 row->first = nullptr; }
-        } else if (auto k = row->first->to<IR::BoolLiteral>()) {
+            continue; }
+        if (auto k = row->first->to<IR::BoolLiteral>()) {
             if (k->value == 0) {
                 removed.insert(row->second);
                 row = rows.erase(row);
             } else {
                 row->first = nullptr; }
+            continue; }
+        bool remove_row = false;
+        for (auto &prev : prevRowTerms) {
+            if (rowDominates(prev, row->first)) {
+                remove_row = true;
+                break; } }
+        if (remove_row) {
+            removed.insert(row->second);
+            row = rows.erase(row);
         } else {
-            bool remove_row = false;
-            for (auto &prev : prevRowTerms) {
-                if (rowDominates(prev, row->first)) {
-                    remove_row = true;
-                    break; } }
-            if (remove_row) {
-                removed.insert(row->second);
-                row = rows.erase(row);
-            } else {
-                if (isCanon)
-                    prevRowTerms.push_back(rowConjuncts(row->first));
-                present.insert(row->second);
-                ++row; } } }
+            if (isCanon)
+                prevRowTerms.push_back(rowConjuncts(row->first));
+            present.insert(row->second);
+            ++row; } }
     // If we removed ALL gateway rows that refer to a next tag, remove that tag from
     // next, as it's unreachable.  This relies on the fact that gateway next tags and
     // action next tags are always disjoint.
@@ -457,9 +519,31 @@ void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
             tbl->next.erase(next_tag);
 }
 
-void CanonGatewayExpr::splitGatewayRows(
-        safe_vector<std::pair<const IR::Expression *, cstring>> &rows
-) {
+/* return the number of conjunct terms in a gateway row expression */
+static int conjuncts(const IR::Expression *e) {
+    if (e == nullptr) return 0;
+    int rv = 1;
+    while (auto cj = e->to<IR::LAnd>()) {
+        rv += conjuncts(cj->right);  // should always be 1 if canonicalized
+        e = cj->left; }
+    return rv;
+}
+
+/* reorder gateway rows such that other optimizations are more effective.  When a sequence
+ * of rows all have the same action, we can freely reorder them without affecting the result of
+ * the program, so we sort them to have those with the fewest conjuncts first, as that is more
+ * likely to allow removing redundant rows.
+ */
+void CanonGatewayExpr::sortGatewayRows(safe_vector<GWRow_t> &rows) {
+    auto s = rows.begin(), e = rows.begin();
+    while (s != rows.end()) {
+        while (e != rows.end() && e->second == s->second) ++e;
+        std::stable_sort(s, e, [](const GWRow_t &a, const GWRow_t &b) {
+            return conjuncts(a.first) < conjuncts(b.first); });
+        s = e; }
+}
+
+void CanonGatewayExpr::splitGatewayRows(safe_vector<GWRow_t> &rows) {
     /* split logical-OR operations across rows */
     for (auto it = rows.begin(); it != rows.end(); ++it) {
         LOG3("    " << it->first << " -> " << it->second);
@@ -472,16 +556,14 @@ void CanonGatewayExpr::splitGatewayRows(
         rows.emplace_back(nullptr, cstring());
 }
 
-void CanonGatewayExpr::removeNotEquals(
-        safe_vector<std::pair<const IR::Expression *, cstring>> &rows
-) {
+void CanonGatewayExpr::removeNotEquals(safe_vector<GWRow_t> &rows) {
     /* This function does not actuall remove != operations -- it just rearranges the rows
      * and inserts ! operations such that recanonicalization should remove (or at least
      * reduce) the number of != operations.
      * @returns 'true' if it made some changes and the code needs to be recanonicalized
      * @returns 'false' if there were no != that need to be removed
      */
-    std::deque<std::pair<const IR::Expression *, cstring>> need_negate;
+    std::deque<GWRow_t> need_negate;
     /* move things that need negation to the end and negate them */
     for (auto it = rows.begin(); it != rows.end()-1;) {
         if (NeedNegate(it->first)) {
@@ -527,13 +609,14 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
      * things repeatedly without actually making any progress */
     for (int trial = 0;; ++trial) {
         splitGatewayRows(rows);
+        sortGatewayRows(rows);
         removeUnusedRows(tbl, true);
         if (LOGGING(4)) {
             LOG4("gateway " << tbl->name << " after canonicalization trial=" << trial);
             for (auto &r : rows) LOG4("  " << r.first << " -> " << r.second); }
         if (!NeedNegate(rows))
             return tbl;
-        if (trial >= 2) {
+        if (trial >= 2 || rows.size() > 32) {
             error("%sgateway condition too complex", rows.front().first->srcInfo);
             return tbl; }
         removeNotEquals(rows);
