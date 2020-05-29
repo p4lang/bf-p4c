@@ -607,12 +607,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/meter1.p4
   )
 
-# Register read/write support
-p4c_add_xfail_reason("tofino"
-  "error: : expression too complex for register action"
-  testdata/p4_16_samples/issue907-bmv2.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "error: .*: Duplicates declaration .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4

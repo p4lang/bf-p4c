@@ -544,6 +544,15 @@ bool CreateSaluInstruction::preorder(const IR::Member *mem) {
     return false;
 }
 
+bool CreateSaluInstruction::preorder(const IR::StructExpression *se) {
+    IR::Vector<IR::Expression> copy = operands;
+    for (auto el : se->components) {
+        operands = copy;
+        visit(el->expression, "expression");
+        doAssignment(el->srcInfo); }
+    return false;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Constant *c) {
     if (etype == IF && c->value == 0)
         return false;

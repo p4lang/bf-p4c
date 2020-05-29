@@ -116,6 +116,8 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR:
 //      ig_intr_md_for_tm.ucast_egress_port = port;
 //      accum_register_action.execute(idx);
 //   }
+// FIXME -- really should factor out common code between createRegisterAction and
+//          createRegisterExecute
 IR::MethodCallExpression*
 RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
                                         IR::MethodCallExpression *reg_execute,
@@ -168,7 +170,17 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
 
     auto reg_args = reg_decl->type->to<IR::Type_Specialized>()->arguments;
     auto rtype = reg_args->at(0);
-    auto utype = call->type->to<IR::Type_Void>() ? rtype : call->type;
+    auto utype = call->type;
+    if (utype->is<IR::Type_Void>()) {
+        auto tmp = self.typeMap->getType(rtype);
+        if (auto tt = tmp->to<IR::Type_Type>())
+            tmp = tt->type;
+        if (auto stype = tmp->to<IR::Type_StructLike>()) {
+            // currently only support structs with 1 or 2 identical fields in registers;
+            // backend will flag an error if it is not.
+            utype = stype->fields.front()->type;
+        } else {
+            utype = rtype; } }
 
     auto apply_name = reg_path->name + "_register_action";
 
@@ -240,7 +252,17 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     auto reg_args = reg_decl->type->to<IR::Type_Specialized>()->arguments;
     auto rtype = reg_args->at(0);
     auto itype = reg_args->at(1);
-    auto utype = call->type->to<IR::Type_Void>() ? rtype : call->type;
+    auto utype = call->type;
+    if (utype->is<IR::Type_Void>()) {
+        auto tmp = self.typeMap->getType(rtype);
+        if (auto tt = tmp->to<IR::Type_Type>())
+            tmp = tt->type;
+        if (auto stype = tmp->to<IR::Type_StructLike>()) {
+            // currently only support structs with 1 or 2 identical fields in registers;
+            // backend will flag an error if it is not.
+            utype = stype->fields.front()->type;
+        } else {
+            utype = rtype; } }
     auto ratype = new IR::Type_Specialized(
         new IR::Type_Name("RegisterAction"),
         new IR::Vector<IR::Type>({rtype, itype, utype}));

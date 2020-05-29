@@ -130,6 +130,7 @@ class CreateSaluInstruction : public Inspector {
     void doPrimary(const IR::Expression *, const IR::PathExpression *, cstring);
     bool preorder(const IR::PathExpression *pe) override;
     bool preorder(const IR::Member *m) override;
+    bool preorder(const IR::StructExpression *m) override;
 
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::BoolLiteral *) override;
