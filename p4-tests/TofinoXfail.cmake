@@ -269,6 +269,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   testdata/p4_16_samples/issue692-bmv2.p4
+  testdata/p4_16_samples/parser-if.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -296,6 +297,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/13-Counters1and2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-235/vag1662.p4
+  testdata/p4_16_samples/psa-action-profile3.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -936,6 +938,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, any table using an action profile is required to use the same actions, and the following actions don't appear in all table using the action profile"
   ../glass/testsuite/p4_tests/mau/COMPILER-445/comp_445.p4
+  testdata/p4_16_samples/psa-action-profile4.p4
   )
 
 # P4C-1165
@@ -1051,8 +1054,9 @@ p4c_add_xfail_reason("tofino"
 
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
-  "Unexpected type for constant varbit"
+  "Unexpected type for constant"
   ../glass/testsuite/p4_tests/mau/COMPILER-556/variable.p4
+  testdata/p4_16_samples/issue2261.p4
   )
 
 # P4C-539
@@ -1250,18 +1254,15 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot find declaration for"
-  testdata/p4_14_samples/issue576.p4
-  testdata/p4_14_samples/TLV_parsing.p4
-)
-
-p4c_add_xfail_reason("tofino"
   ".* expected packet.* on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/checksum1-bmv2.p4
   testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue2176-bmv2.p4
   testdata/p4_16_samples/issue2225-bmv2.p4
+  testdata/p4_16_samples/issue2383-bmv2.p4
+  testdata/p4_16_samples/issue2375-1-bmv2.p4
+  testdata/p4_16_samples/issue2375-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1304,6 +1305,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "multiple varbit fields in a parser state is currently unsupported"
   testdata/p4_16_samples/issue447-1-bmv2.p4
+  testdata/p4_14_samples/issue576.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Assignment source cannot be evaluated in the parser"
+  testdata/p4_14_samples/TLV_parsing.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1451,20 +1458,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Invalid select case expression"
   testdata/p4_16_samples/pvs-struct-3-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Null e"
-  testdata/p4_16_samples/psa-action-selector1.p4
-  testdata/p4_16_samples/psa-action-selector2.p4
-)
-
-# Tna does not support action profile without action data?
-p4c_add_xfail_reason("tofino"
-  "Action profile ActionProfile .* on table .* does not have any action data"
-  testdata/p4_16_samples/psa-action-profile1.p4
-  testdata/p4_16_samples/psa-action-profile3.p4
-  testdata/p4_16_samples/psa-action-profile4.p4
 )
 
 # Tna does not support more than one action_profile?
@@ -1825,12 +1818,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*visitor returned non-Statement type"
   testdata/p4_16_samples/issue2359.p4
-)
-
-# old p4c test that now fails with our backend -- why?
-p4c_add_xfail_reason("tofino"
-  "error: StructExpression: Expected a bit<> or int<> value"
-  testdata/p4_16_samples/issue232-bmv2.p4
 )
 
 # error in flattening nested header

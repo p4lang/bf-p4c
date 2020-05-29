@@ -147,9 +147,13 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Compiler Bug.*: .*: Cannot find declaration for"
-  testdata/p4_14_samples/TLV_parsing.p4
+  "multiple varbit fields in a parser state is currently unsupported"
   testdata/p4_14_samples/issue576.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Assignment source cannot be evaluated in the parser"
+  testdata/p4_14_samples/TLV_parsing.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -390,3 +394,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
 
+p4c_add_xfail_reason("tofino2"
+  "Cannot unify bit<8> to MeterColor_t"
+  p4_16_internal_p4_16_t2na_static_entry
+)

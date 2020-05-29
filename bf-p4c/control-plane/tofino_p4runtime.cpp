@@ -2060,12 +2060,15 @@ void generateP4Runtime(const IR::P4Program* program,
     P4::TypeMap         typeMap;
     refMap.setIsV1(true);
     program = program->apply(P4::EliminateTypedef(&refMap, &typeMap));
-    // Following ActionSelector API has been retired, we convert them
-    // to the new syntax before generating BFRT json.
-    // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
-    // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
-    // NOTE: this can be removed when we remove old syntax from tofino.p4.
-    program = program->apply(BFN::RewriteActionSelector(&refMap, &typeMap));
+
+    if (arch != "psa") {
+        // Following ActionSelector API has been retired, we convert them
+        // to the new syntax before generating BFRT json.
+        // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
+        // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode, Register<bit<1>, _> reg);
+        // NOTE: this can be removed when we remove old syntax from tofino.p4.
+        program = program->apply(BFN::RewriteActionSelector(&refMap, &typeMap));
+    }
 
     auto p4Runtime = p4RuntimeSerializer->generateP4Runtime(program, arch);
 

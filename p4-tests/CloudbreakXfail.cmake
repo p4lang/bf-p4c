@@ -147,9 +147,13 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "Compiler Bug.*: .*: Cannot find declaration for"
-  testdata/p4_14_samples/TLV_parsing.p4
+  "multiple varbit fields in a parser state is currently unsupported"
   testdata/p4_14_samples/issue576.p4
+)
+
+p4c_add_xfail_reason("tofino3"
+  "Assignment source cannot be evaluated in the parser"
+  testdata/p4_14_samples/TLV_parsing.p4
 )
 
 p4c_add_xfail_reason("tofino3"
