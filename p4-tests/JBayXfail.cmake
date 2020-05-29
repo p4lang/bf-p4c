@@ -39,9 +39,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
-
-    # header in loop state cannot be in CLOT (no static ordering)
-    # extensions/p4_tests/p4_16/stf/parser_counter_12.p4
     )
 
   p4c_add_xfail_reason("tofino2"
@@ -368,11 +365,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
   p4c_1585_a
-)
-
-p4c_add_xfail_reason("tofino2"
-  "jbay_test_harness CRASH with signal 6"
-  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
 )
 
 p4c_add_xfail_reason("tofino2"

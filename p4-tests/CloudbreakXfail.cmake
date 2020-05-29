@@ -48,9 +48,6 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
     # Need some work with CLOT allocation
     extensions/p4_tests/p4_14/stf/update_checksum_8.p4
-
-    # header in loop state cannot be in CLOT (no static ordering)
-    extensions/p4_tests/p4_16/stf/parser_counter_12.p4
     )
 
   p4c_add_xfail_reason("tofino3"
@@ -416,11 +413,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1308-d.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1314.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-a.p4
-)
-
-p4c_add_xfail_reason("tofino3"
-  "cb_test_harness CRASH with signal 6"
-  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
 )
 
 p4c_add_xfail_reason("tofino3"
