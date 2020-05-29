@@ -1045,6 +1045,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_flow_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

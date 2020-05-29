@@ -53,8 +53,9 @@ class StaticEntriesConstProp : public MauModifier {
     bool equiv(const IR::MethodCallExpression* mc, const IR::MAU::Action* ac) {
         if (mc && ac) {
             if (auto path = mc->method->to<IR::PathExpression>()) {
-                if (path->path->name == ac->name)
+                if (path->path->name == ac->name) {
                     return true;
+                }
             }
         }
         return false;
@@ -79,24 +80,39 @@ class StaticEntriesConstProp : public MauModifier {
 
                 auto key = phv.field(table->match_key[j]->expr);
                 if (op == key) {
+                    bool can_const_prop = false;
+                    const IR::Expression * match = nullptr;
+                    // Check if constant values for one same action in multi-entries are unique.
+                    // Don't do constant propagation if not unique or it's a default action.
                     for (auto& ent : table->entries_list->entries) {
-                        if (equiv(ent->action->to<IR::MethodCallExpression>(), action)) {
-                            auto match = ent->keys->components.at(j);
-
-                            LOG4("rewrite " << instr);
-
-                            if (auto b = match->to<IR::BoolLiteral>()) {
-                                instr->operands[i] =
-                                    new IR::Constant(IR::Type::Bits::get(1), b->value);
-                            } else if (auto c = match->to<IR::Constant>()) {
-                                instr->operands[i] = c;
+                        if (equiv(ent->action->to<IR::MethodCallExpression>(), action) &&
+                            (action->init_default == false)) {
+                            if (can_const_prop == false) {
+                                // Assume can constant propagtion for the first entry.
+                                match = ent->keys->components.at(j);
+                                can_const_prop = true;
                             } else {
-                                LOG4("unknown static entry match type");
+                                // Need to check if more than 1 entry with the same action.
+                                auto cval = ent->keys->components.at(j);
+                                if (!match->equiv(*cval)) {
+                                    can_const_prop = false;
+                                    break;
+                                }
                             }
-
-                            LOG4("as " << instr);
-                            break;
                         }
+                    }
+
+                    if (can_const_prop) {
+                        LOG4("rewrite " << instr);
+                        if (auto b = match->to<IR::BoolLiteral>()) {
+                            instr->operands[i] =
+                                new IR::Constant(IR::Type::Bits::get(1), b->value);
+                        } else if (auto c = match->to<IR::Constant>()) {
+                            instr->operands[i] = c;
+                        } else {
+                            LOG4("unknown static entry match type");
+                        }
+                        LOG4("as " << instr);
                     }
                 }
             }
