@@ -1,0 +1,17 @@
+
+add MyIC.test1 f1:0x01010101 a1(port:2, idx:1023)
+add MyIC.test1 f1:0x02020202 a1(port:3, idx:101)
+add MyIC.test1 f1:0x03030303 a1(port:4, idx:0)
+add MyIC.test1 f1:0x04040404 a1(port:5, idx:1)
+
+#           f1      f2      h1  b1 b2
+packet 0 01010101 00000202 0303 05 66 77 88
+expect 2 01010101 00000202 0303 05 66 77 88
+wait
+check_register r(1023) lo = 05
+
+packet 0 02020202 00000202 0303 10 66 77 88
+expect 3 02020202 00000202 0303 10 66 77 88
+wait
+check_register r(101) lo = 05
+
