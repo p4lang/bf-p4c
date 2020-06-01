@@ -76,12 +76,13 @@ struct CollectInvalidatedHeaders : public Inspector {
     }
 
     bool preorder(const IR::BFN::EmitChecksum* checksum) override {
+        auto csum_dest = phv.field(checksum->dest->field);
         for (auto source : checksum->sources) {
             auto field = phv.field(source->field->field);
 
             if (invalidated_field_to_pov_bit.count(field)) {
                 auto pov_bit = invalidated_field_to_pov_bit.at(field);
-
+                if (pov_bit->header() == csum_dest->header()) continue;
                 auto checksum_pov_bit = phv.field(checksum->povBit->field);
                 if (pov_bit != checksum_pov_bit) {
                     pov_bit_to_invalidated_checksum_fields[pov_bit].insert(field);
