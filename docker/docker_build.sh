@@ -325,9 +325,13 @@ if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
   # Configure distcc hosts.
   install -D -o root -g root -m 0644 docker/distcc_hosts.conf /etc/distcc/hosts
 
-  # Configure default profile.
+  # Configure system-wide bashrc.
   install -D -o root -g root -m 0644 \
-    docker/99-environment.sh /etc/profile.d/99-environment.sh
+    docker/jarvis_bashrc.sh "${BFN}/jarvis_bashrc.sh"
+  cat >>/etc/bash.bashrc <<EOF
+
+. '${BFN}/jarvis_bashrc.sh'
+EOF
 fi
 
 # Clean up git history.
