@@ -3648,8 +3648,13 @@ BruteForceAllocationStrategy::allocLoop(
     std::list<PHV::SuperCluster*>& cluster_groups,
     const std::list<PHV::ContainerGroup *>& container_groups,
     const AllocContext& score_ctx) {
+    // allocation history
+    std::stringstream alloc_history;
+    int n = 0;
     std::list<PHV::SuperCluster*> allocated;
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
+        n++;
+        alloc_history << n << ": " << "TRYING to allocate " << cluster_group;
         LOG4("TRYING to allocate " << cluster_group);
         auto best_score = AllocScore::make_lowest();
         boost::optional<PHV::Transaction> best_alloc = boost::none;
@@ -3747,21 +3752,44 @@ BruteForceAllocationStrategy::allocLoop(
 
         // If any allocation was found, commit it.
         if (best_alloc) {
-            cstring mod_containers = rst.commit(*best_alloc);
-            allocated.push_back(cluster_group);
-
-            if (LOGGING(4)) {
-                LOG4("SUCCESSFULLY allocated " << cluster_group);
-                LOG4("... into containers:" << mod_containers);
-                LOG4("by slicing it into the following superclusters:");
-                for (auto* sc : *best_slicing)
-                    LOG5(sc);
-                LOG4("SCORE: " << best_score);
+            LOG4("SUCCESSFULLY allocated " << cluster_group);
+            std::set<PHV::FieldSlice> fs_allocated;
+            for (auto* sc : *best_slicing) {
+                for (const auto& fs : sc->slices()) {
+                    fs_allocated.insert(fs);
+                }
             }
+            alloc_history << "Successfully Allocated\n";
+            alloc_history << "By slicing into the following superclusters:\n";
+            for (auto* sc : *best_slicing) {
+                alloc_history << sc << "\n";
+            }
+            alloc_history << "Best Score: " << best_score << "\n";
+            alloc_history << "Allocation Decisions:" << "\n";
+            for (const auto& container_status : (*best_alloc).getTransactionStatus()) {
+                // const auto& c = container_status.first;
+                const auto& status = container_status.second;
+                if (status.slices.empty()) {
+                    continue;
+                }
+                for (const auto& a : status.slices) {
+                    auto fs = PHV::FieldSlice(a.field(), a.field_slice());
+                    if (fs_allocated.count(fs)) {
+                        alloc_history << "allocate: " << a.container() <<
+                            "[" << a.container_slice().lo << ":"
+                                      << a.container_slice().hi <<"] <- "
+                                      << fs << "\n";
+                    }
+                }
+            }
+            // must log before commit, because commit will clear this tx.
+            rst.commit(*best_alloc);
+            allocated.push_back(cluster_group);
         } else {
             LOG4("FAILED to allocate " << cluster_group);
-            LOG4("when the things are like: ");
-            LOG4(rst.getTransactionSummary());
+            alloc_history << "FAILED to allocate " << cluster_group << "\n";
+            alloc_history << "when the things are like: " << "\n";
+            alloc_history << rst.getTransactionSummary() << "\n";
         }
     }
 
@@ -3769,6 +3797,10 @@ BruteForceAllocationStrategy::allocLoop(
     // while iterating, but `it = clusters_i.erase(it)` skips elements.
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
+
+    LOG4("Allocation history of config " << config_i.name);
+    LOG4(alloc_history.str());
+    LOG4("Allocation history Ends Here");
     return allocated;
 }
 
