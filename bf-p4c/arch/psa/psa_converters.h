@@ -76,10 +76,19 @@ class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
+    template<typename T> const IR::Node* substitute(T* s) {
+        auto* orig = getOriginal<T>();
+        if (structure->_map.count(orig)) {
+            auto result = structure->_map.at(orig);
+            return result; }
+        return s; }
 
  public:
     explicit ParserConverter(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Declaration_Instance* decl) override;
+    const IR::Node* postorder(IR::StatOrDecl* node) override;
+    const IR::Node* postorder(IR::MethodCallExpression* node) override;
     const IR::P4Parser* convert(const IR::Node* node) {
         auto conv = node->apply(*this);
         auto result = conv->to<IR::P4Parser>();
@@ -119,6 +128,7 @@ class ControlConverter : public Transform {
     const IR::Node* postorder(IR::MethodCallExpression* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
     const IR::Node* postorder(IR::IfStatement* node) override;
+    const IR::Node* postorder(IR::StatOrDecl* node) override;
     const IR::Node* postorder(IR::Property* node) override;
     const IR::P4Control* convert(const IR::Node* node) {
         auto conv = node->apply(*this);

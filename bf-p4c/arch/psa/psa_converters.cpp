@@ -53,13 +53,16 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
 }
 
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
-    return substitute<IR::Declaration_Instance>(node); }
+    return substitute<IR::Declaration_Instance>(node);}
 
 const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
     return substitute<IR::MethodCallExpression>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::IfStatement* node) {
     return substitute<IR::IfStatement>(node); }
+
+const IR::Node* ControlConverter::postorder(IR::StatOrDecl* node) {
+    return substitute<IR::StatOrDecl>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::Property* p) {
     boost::optional<cstring> newName = boost::none;
@@ -133,13 +136,29 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parserLocals = new IR::IndexedVector<IR::Declaration>();
     parserLocals->append(structure->ingressParserDeclarations);
     parserLocals->append(node->parserLocals);
-
+    for (auto* state : parser->states) {
+        auto it = structure->ingressParserStatements.find(state->name);
+        if (it != structure->ingressParserStatements.end()) {
+            auto* s = const_cast<IR::ParserState*>(state);
+            for (auto* stmt : it->second)
+                s->components.push_back(stmt);
+        }
+    }
     auto result = new IR::BFN::TnaParser(parser->srcInfo, "ingressParserImpl",
                                                   parser_type, parser->constructorParams,
                                                   *parserLocals, parser->states,
                                                   tnaParams, INGRESS);
     return result;
 }
+
+const IR::Node* ParserConverter::postorder(IR::Declaration_Instance* decl) {
+    return substitute<IR::Declaration_Instance>(decl); }
+
+const IR::Node* ParserConverter::postorder(IR::StatOrDecl* node) {
+    return substitute<IR::StatOrDecl>(node); }
+
+const IR::Node* ParserConverter::postorder(IR::MethodCallExpression* node) {
+    return substitute<IR::MethodCallExpression>(node); }
 
 const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     auto parser = node->apply(cloner);
@@ -200,6 +219,14 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
+    for (auto* state : parser->states) {
+        auto it = structure->egressParserStatements.find(state->name);
+        if (it != structure->egressParserStatements.end()) {
+            auto* s = const_cast<IR::ParserState*>(state);
+            for (auto* stmt : it->second)
+                s->components.push_back(stmt);
+        }
+    }
     auto result = new IR::BFN::TnaParser(parser->srcInfo, "egressParserImpl",
                                                   parser_type, parser->constructorParams,
                                                   parser->parserLocals, parser->states,

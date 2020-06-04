@@ -298,6 +298,186 @@ class TranslateProgram : public Inspector {
     }
 
 
+    void InternetChecksumTranslation(const IR::StatOrDecl* stmt,
+                                     const P4::ExternMethod* em) {
+        auto declName = em->object->to<IR::Declaration_Instance>()->name;
+        auto decl = new IR::Declaration_Instance(declName,
+                           new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
+        structure->_map.emplace(em->object->to<IR::Declaration_Instance>(), decl);
+        if (em->method->name == "add" || em->method->name == "subtract") {
+            auto sourceList = (*em->expr->arguments)[0]->
+                                   expression->to<IR::ListExpression>();
+            auto args = new IR::Vector<IR::Argument>();
+            args->push_back(new IR::Argument(sourceList));
+            auto mce = new IR::MethodCallExpression(
+                new IR::Member(new IR::PathExpression(declName), em->method->name), args);
+            auto csumCall = new IR::MethodCallStatement(mce);
+            structure->_map.emplace(stmt, csumCall);
+        }
+        return;
+    }
+
+    void evaluateVerifyEnd(const IR::StatOrDecl* stmt,
+                           const P4::ExternFunction* em,
+                           gress_t gress,
+                           cstring stateName) {
+        auto equ = (*em->expr->arguments)[0]->expression->to<IR::Equ>();
+        Pattern::Match<IR::Expression> member;
+        Pattern::Match<IR::MethodCallExpression> expr;
+        if (!(expr == member).match(equ)) return;
+        auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
+        if (auto emExpr = miExpr->to<P4::ExternMethod>()) {
+            cstring nameExpr = emExpr->actualExternType->name;
+            if (nameExpr == "InternetChecksum" && emExpr->method->name == "get") {
+                auto declName = emExpr->object->to<IR::Declaration_Instance>()->name;
+                auto list = new IR::ListExpression({member});
+                auto args = new IR::Vector<IR::Argument>();
+                args->push_back(new IR::Argument(list));
+                auto mce = new IR::MethodCallExpression(
+                           new IR::Member(new IR::PathExpression(declName), "add"), args);
+                auto addCall = new IR::MethodCallStatement(mce);
+                structure->_map.emplace(stmt, addCall);
+                auto verify = new IR::MethodCallExpression(new IR::Member(
+                              new IR::PathExpression(declName), "verify"));
+                auto rhs = new IR::Cast(IR::Type::Bits::get(1), verify);
+                cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
+                                                       "eg_intr_md_from_prsr";
+                auto parser_err = new IR::Member(
+                                      new IR::PathExpression(metaParam),
+                                      "parser_err");
+                auto lhs = new IR::Slice(parser_err, 12, 12);
+                auto verifyEnd = new IR::AssignmentStatement(lhs, rhs);
+                if (gress == INGRESS) {
+                    structure->ingressParserStatements[stateName].push_back(verifyEnd);
+                } else {
+                    structure->egressParserStatements[stateName].push_back(verifyEnd);
+                }
+            } else {
+                ::error("Verify statement %1% not supported", stmt);
+            }
+        }
+    }
+
+    void translateResidualGet(const IR::Member* member, const P4::ExternMethod* emExpr,
+                              const IR::StatOrDecl* stmt,
+                              gress_t gress) {
+        auto declName = emExpr->object->to<IR::Declaration_Instance>()->name;
+        auto mce = new IR::MethodCallExpression(
+                      new IR::Member(new IR::PathExpression(declName), "get"));
+        if (gress == INGRESS) {
+              auto metaparam = structure->ingress_parser.psaParams.at("metadata");
+              auto residual = new IR::Member(new IR::PathExpression(metaparam), member->member);
+              auto get = new IR::AssignmentStatement(residual, mce);
+              structure->_map.emplace(stmt, get);
+        } else if (gress == EGRESS) {
+             auto metaparam = structure->egress_parser.psaParams.at("metadata");
+             auto residual = new IR::Member(new IR::PathExpression(metaparam), member->member);
+             auto get = new IR::AssignmentStatement(residual, mce);
+             structure->_map.emplace(stmt, get);
+        }
+        return;
+    }
+
+    void postorder(const IR::ParserState* state) {
+        auto ctxt = findContext<IR::P4Parser>();
+        for (auto stmt : state->components) {
+            if (auto mc = stmt->to<IR::MethodCallStatement>()) {
+                auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap);
+                if (auto em = mi->to<P4::ExternMethod>()) {
+                    cstring name = em->actualExternType->name;
+                    if (name == "InternetChecksum" && em->method->name == "add") {
+                        InternetChecksumTranslation(stmt, em);
+                    } else if (name == "InternetChecksum" && em->method->name == "subtract") {
+                        InternetChecksumTranslation(stmt, em);
+                    }
+                } else if (auto em = mi->to<P4::ExternFunction>()) {
+                    cstring name = em->method->name;
+                    if (name == "verify") {
+                        if (ctxt->name ==
+                                 structure->getBlockName(PSA::ProgramStructure::INGRESS_PARSER)) {
+                            evaluateVerifyEnd(stmt, em, INGRESS, state->name);
+                        } else if (ctxt->name ==
+                                  structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
+                            evaluateVerifyEnd(stmt, em, EGRESS, state->name);
+                        }
+                    }
+                }
+            } else if (auto mc = stmt->to<IR::AssignmentStatement>()) {
+                auto member = mc->left->to<IR::Member>();
+                auto expr = mc->right->to<IR::MethodCallExpression>();
+                if (!expr || !member) continue;
+                auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
+                if (auto emExpr = miExpr->to<P4::ExternMethod>()) {
+                    cstring nameExpr = emExpr->actualExternType->name;
+                    if (nameExpr == "InternetChecksum" && emExpr->method->name == "get") {
+                        if (ctxt->name ==
+                                structure->getBlockName(PSA::ProgramStructure::INGRESS_PARSER)) {
+                            translateResidualGet(member, emExpr, stmt, INGRESS);
+                        } else if (ctxt->name ==
+                                structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
+                            translateResidualGet(member, emExpr, stmt, EGRESS);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void postorder(const IR::P4Control* control) {
+        gress_t gress;
+        if (control->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
+            gress = INGRESS;
+        } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
+            gress = EGRESS;
+        } else {
+            return;
+        }
+        auto body = control->body->to<IR::BlockStatement>();
+        std::map<cstring, IR::Vector<IR::Expression>> fieldListMap;
+        for (auto comp : body->components) {
+            if (auto methodStmt = comp->to<IR::MethodCallStatement>()) {
+                auto mi = P4::MethodInstance::resolve(methodStmt, refMap, typeMap);
+                if (auto em = mi->to<P4::ExternMethod>()) {
+                    cstring name = em->actualExternType->name;
+                    if (name == "InternetChecksum" && em->method->name == "add") {
+                        auto declName = em->object->to<IR::Declaration_Instance>()->name;
+                        structure->_map.emplace(methodStmt, nullptr);
+                        auto sourceList = (*em->expr->arguments)[0]->
+                                           expression->to<IR::ListExpression>();
+                        for (auto source : sourceList->components) {
+                            fieldListMap[declName].push_back(source);
+                        }
+                    }
+                }
+            } else if (auto assignStmt = comp->to<IR::AssignmentStatement>()) {
+                auto member = assignStmt->left->to<IR::Member>();
+                auto expr = assignStmt->right->to<IR::MethodCallExpression>();
+                if (!member || !expr) continue;
+                auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
+                if (auto em = mi->to<P4::ExternMethod>()) {
+                    cstring name = em->actualExternType->name;
+                    if (name == "InternetChecksum" && em->method->name == "get") {
+                        auto declName = em->object->to<IR::Declaration_Instance>()->name;
+                        if (fieldListMap.count(declName)) {
+                            auto decl = new IR::Declaration_Instance(declName,
+                                   new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
+                            auto list = new IR::ListExpression(fieldListMap.at(declName));
+                            auto args = new IR::Vector<IR::Argument>();
+                            structure->_map.emplace(em->object->to<IR::Declaration_Instance>(),
+                                                                                        decl);
+                            args->push_back(new IR::Argument(list));
+                            auto update = new IR::MethodCallExpression(new IR::Member(
+                                           new IR::PathExpression(declName), "update"), args);
+                            auto assignUpdate = new IR::AssignmentStatement(member, update);
+                            structure->_map.emplace(assignStmt, assignUpdate);
+                        }
+                    }
+                }
+            }
+        }
+        return;
+    }
+
     void postorder(const IR::Member* node) override {
         ordered_set<cstring> toTranslateInControl = {"istd", "ostd"};
         ordered_set<cstring> toTranslateInParser = {"istd", "ostd"};
@@ -315,6 +495,9 @@ class TranslateProgram : public Inspector {
                     } else if (gress->name == structure->getBlockName(
                             PSA::ProgramStructure::EGRESS)) {
                         structure->pathsThread.emplace(node, EGRESS);
+
+
+
                         structure->pathsToDo.emplace(node, node);
                     } else {
                         WARNING("path " << node << " in "
