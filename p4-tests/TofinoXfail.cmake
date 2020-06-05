@@ -1730,6 +1730,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
+  extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
+)
+
 # power.p4 PTF failure
 # hw team uses it to do some manual testing
 # to measure the SRAM and TCAM power draw

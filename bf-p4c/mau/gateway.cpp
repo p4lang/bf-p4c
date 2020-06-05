@@ -25,6 +25,7 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
 };
 
 static big_int SliceReduce(IR::Operation::Relation *rel, big_int val) {
+    if (val <= 0) return val;
     int slice = ffs(val);
     if (slice > 0) {
         val >>= slice;
