@@ -1712,8 +1712,6 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     CollectGlobalPragma collect_pragma;
     program->apply(collect_pragma);
 
-    CollectBridgedFieldsUse collectBridgedFields(refMap, typeMap, collect_pragma);
-
     auto npipe = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
@@ -1737,13 +1735,11 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
             for (auto p : thread->parsers) {
                 if (auto parser = p->to<IR::BFN::TnaParser>()) {
                     parser->apply(ExtractParser(refMap, typeMap, rv, arch));
-                    parser->apply(collectBridgedFields);
                 }
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
                 dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
                 dprsr->apply(ExtractChecksum(rv));
-                dprsr->apply(collectBridgedFields);
             }
         }
         if (arch->threads.count(std::make_pair(npipe, GHOST))) {
@@ -1757,19 +1753,16 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
         }
 
         rv->global_pragmas = collect_pragma.global_pragmas();
+
         ProcessBackendPipe processBackendPipe(refMap, typeMap, rv, converted,
                                               stateful_selectors, bindings);
+
         auto p = rv->apply(processBackendPipe);
-        collectBridgedFields.updatePipeInfo(p);
 
         pipe.push_back(p);
+        pipes.emplace(npipe, p);
         npipe++;
     }
-
-
-    auto bridge_pipes = collectBridgedFields.getPipes();
-    top = new IR::BFN::Toplevel(program, &pipe, bridge_pipes);
-
     return false;
 }
 

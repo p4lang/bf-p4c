@@ -500,6 +500,8 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
 
+  ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
+  ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 
   testdata/p4_14_samples/source_routing.p4
   )
@@ -857,8 +859,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/mau/COMPILER-970/comp_970.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_with_nop.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-466/case2563_without_nop.p4
-  ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
-  ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 )
 
 p4c_add_xfail_reason("tofino"

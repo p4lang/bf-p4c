@@ -7,6 +7,17 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/extract_maupipe.h"
+#include "bf-p4c/common/flexible_packing.h"
+#include "bf-p4c/midend/blockmap.h"
+#include "bf-p4c/midend/normalize_params.h"
+#include "bf-p4c/midend/param_binding.h"
+#include "bf-p4c/midend/simplify_references.h"
+#include "bf-p4c/midend/type_checker.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/methodInstance.h"
+
 namespace BFN {
 
 // A Tna program specifies the packet processing logic on individual pipe in
@@ -31,47 +42,121 @@ namespace BFN {
 // automatically optimize the layout of bridge header to save bandwidth.
 using PipeAndGress = std::pair<std::pair<cstring, gress_t>, std::pair<cstring, gress_t>>;
 
+using BridgeLocs = ordered_map<std::pair<cstring, gress_t>, IR::HeaderRef*>;
+
 class CollectBridgedFieldsUse : public Inspector {
  public:
-    struct Use {
-        const IR::IDeclaration* object;
-        const IR::Type* bridgedType;
-        const IR::BFN::Pipe* pipe;
-        cstring method;
-        unsigned access;
-        boost::optional<gress_t> thread;
-
-        cstring getName() { return object->getName().name; }
-    };
-
-    static constexpr unsigned READ = PHV::FieldUse::READ;
-    static constexpr unsigned WRITE = PHV::FieldUse::WRITE;
-
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-    CollectGlobalPragma& collect_pragma;
 
-    // set of sequences of pipelines that use the same bridge header
-    std::vector<const IR::BFN::Pipe *> pipelines;
+    struct Use {
+        const IR::Type* type;
+        cstring name;
+        cstring method;
+        gress_t thread;
 
-    std::vector<Use> bridge_use_single_pipe;
-    std::vector<Use> bridge_use_all;
+        bool operator<(const Use& other) const {
+            if (name != other.name)
+                return name < other.name;
+            if (type != other.type)
+                return type < other.type;
+            if (method != other.method)
+                return method < other.method;
+            return thread < other.thread;
+        }
 
-    ordered_map<cstring, std::vector<Use>> read_set;
-    ordered_map<cstring, std::vector<Use>> write_set;
+        bool operator==(const Use& other) const {
+            return name == other.name &&
+                type == other.type &&
+                method == other.method &&
+                thread == other.thread;
+        }
+    };
 
+    ordered_set<Use> bridge_uses;
+
+    friend std::ostream& operator<<(std::ostream&, const Use& u);
 
  public:
-    CollectBridgedFieldsUse(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-            CollectGlobalPragma& p) :
-    refMap(refMap), typeMap(typeMap), collect_pragma(p) {}
+    CollectBridgedFieldsUse(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
+    refMap(refMap), typeMap(typeMap) {}
 
-    bool preorder(const IR::MethodCallExpression* mc) override;
-
-    IR::Vector<IR::BFN::BridgePipe>* getPipes();
-    void updatePipeInfo(const IR::BFN::Pipe* p);
-    PipeAndGress toPipeAndGress(const IR::BFN::Pipe*, gress_t, const IR::BFN::Pipe*, gress_t);
+    void postorder(const IR::MethodCallExpression* mc) override;
 };
+
+struct BridgeContext {
+    int pipe_id;
+    BFN::CollectBridgedFieldsUse::Use use;
+    IR::BFN::Pipe::thread_t thread;
+};
+
+class ExtractBridgeInfo : public Inspector {
+    const BFN_Options& options;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    BackendConverter *conv;
+    ParamBinding* bindings;
+    RepackedHeaderTypes &map;
+    CollectGlobalPragma collect_pragma;
+
+ public:
+    ordered_map<int, ordered_set<CollectBridgedFieldsUse::Use>> all_uses;
+
+    ExtractBridgeInfo(BFN_Options& options,
+            P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+            BackendConverter* conv, ParamBinding* bindings,
+            RepackedHeaderTypes& ht) :
+        options(options), refMap(refMap), typeMap(typeMap), conv(conv),
+        bindings(bindings), map(ht) {}
+
+    std::vector<const IR::BFN::Pipe*>*
+        generate_bridge_pairs(std::vector<BridgeContext>&);
+
+    bool preorder(const IR::P4Program* program) override;
+    void end_apply(const IR::Node*) override;
+};
+
+// Apply this pass manager to IR::P4Program after midend processing.
+// Returns IR::P4Program after flexible metadata packing.
+class BridgedPacking : public PassManager {
+    ParamBinding* bindings;
+    ApplyEvaluator *evaluator;
+    BackendConverter *conv;
+    RepackedHeaderTypes &map;
+    ExtractBridgeInfo* extractBridgeInfo;
+
+ public:
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+
+ public:
+    BridgedPacking(BFN_Options& options, RepackedHeaderTypes& repackMap);
+
+    IR::Vector<IR::BFN::Pipe> pipe;
+    ordered_map<int, const IR::BFN::Pipe*> pipes;
+};
+
+/**
+ * Replace @flexible type definition with packed version
+ */
+class SubstitutePackedHeaders : public PassManager {
+    ParamBinding* bindings;
+    ApplyEvaluator *evaluator;
+    BackendConverter *conv;
+    RepackedHeaderTypes &map;
+
+ public:
+    P4::ReferenceMap refMap;
+    P4::TypeMap typeMap;
+    IR::Vector<IR::BFN::Pipe> pipe;
+    ordered_map<int, const IR::BFN::Pipe*> pipes;
+
+ public:
+    SubstitutePackedHeaders(BFN_Options& options, RepackedHeaderTypes& repackedMap);
+    const ProgramThreads &getThreads() const { return conv->getThreads(); }
+    const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
+};
+
 
 }  // namespace BFN
 

@@ -11,7 +11,7 @@
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/midend.h"
-#include "bf-p4c/post_midend.h"
+#include "bf-p4c/arch/bridge.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 
 namespace Test {
@@ -59,7 +59,9 @@ TofinoPipeTestCase::create(const std::string& source) {
                   << " errors while executing midend" << std::endl;
         return boost::none;
     }
-    BFN::PostMidEnd postmid(options, nullptr, false);
+    // no-op
+    ordered_map<cstring, const IR::Type_StructLike*> empty;
+    BFN::SubstitutePackedHeaders postmid(options, empty);
     midendProgram->apply(postmid);
     if (postmid.pipe.size() == 0) {
         std::cerr << "backend converter failed" << std::endl;

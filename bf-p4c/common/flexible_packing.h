@@ -14,8 +14,6 @@
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/common/bridged_packing.h"
 
-using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
-
 bool findFlexibleAnnotation(const IR::Type_StructLike*);
 
 /// This class gathers all the bridged metadata fields also used as deparser parameters. The
@@ -133,32 +131,43 @@ class FlexiblePacking : public PassManager {
     ActionMutuallyExclusive                             aMutex;
     ordered_set<const PHV::Field*>                      noPackFields;
     ordered_set<const PHV::Field*>                      deparserParams;
-    RepackedHeaderTypes                                 repackedTypes;
     /* constraint that multiple field must be packed to the same container */
     ordered_set<Constraints::CopackConstraint>          copackConstraints;
 
     // used by solver-based packing
     ordered_set<const PHV::Field*>                      fieldsToPack;
-    PackWithConstraintSolver                            packWithConstraintSolver;
+    PackWithConstraintSolver&                           packWithConstraintSolver;
+
+    RepackedHeaderTypes& repackedTypes;
 
  public:
     explicit FlexiblePacking(
             PhvInfo& p,
             const PhvUse& u,
             DependencyGraph& dg,
-            const BFN_Options &o);
+            const BFN_Options &o,
+            PackWithConstraintSolver& sol,
+            RepackedHeaderTypes& map);
 
     // Return a Json representation of flexible headers to be saved in .bfa/context.json
     // must be called after the pass is applied
     std::string asm_output() const;
 
-    RepackedHeaderTypes getRepackedTypes() { return repackedTypes; }
+    void solve() { packWithConstraintSolver.solve(); }
 };
 
 using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
 
-// A collection of passes that rewrite the program optimize bridge metadata packing.
-// Both input and output are a vector of IR::BFN::Pipe.
+// PackFlexibleHeader manages the global context for packing bridge metadata
+// The global context includes:
+// - instance of z3 solver and its context
+//
+// We need to manage the global context at this level is because bridge
+// metadata can be used across multiple pipelines in folded pipeline. To
+// support folded pipeline, we first collect bridge metadata constraints across
+// each pair of ingress/egress, and run z3 solver over the global set of
+// constraints over all pairs of ingress&egress pipelines. Therefore, it
+// is necessary to maintain z3 context as this level.
 class PackFlexibleHeaders : public PassManager {
     std::vector<const IR::BFN::Pipe*> pipe;
     SymBitMatrix mutually_exclusive_field_ids;
@@ -166,12 +175,19 @@ class PackFlexibleHeaders : public PassManager {
     PhvUse uses;
     FieldDefUse defuse;
     DependencyGraph deps;
+
+    z3::context context;
+    z3::optimize solver;
+    ConstraintSolver constraint_solver;
+    PackWithConstraintSolver packWithConstraintSolver;
+
     FlexiblePacking *flexiblePacking;
 
  public:
-    explicit PackFlexibleHeaders(const BFN_Options& options);
+    explicit PackFlexibleHeaders(const BFN_Options& options, ordered_set<cstring>&,
+            RepackedHeaderTypes& repackedTypes);
 
-    RepackedHeaderTypes getPackedHeaders() { return flexiblePacking->getRepackedTypes(); }
+    void solve() { flexiblePacking->solve(); }
 };
 
 

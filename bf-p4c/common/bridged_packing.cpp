@@ -1142,6 +1142,8 @@ const PHV::Field* ConstraintSolver::create_padding(int size) {
 
 // initialize solver with collected constraints
 void ConstraintSolver::add_constraints(ordered_set<const PHV::Field*>& fields) {
+    for (auto f : fields)
+        LOG1("add constraints for " << f);
     // compute upper bound assuming each field is padded to next byte boundary
     int upper_bound = 0;
     for (auto f : fields) {
@@ -1288,12 +1290,26 @@ ConstraintSolver::solve(
 }
 
 Visitor::profile_t PackWithConstraintSolver::init_apply(const IR::Node* root) {
-    // invoke constraint solver
-
+    // PHV::Field* from previous CollectPhvInfo are invalidated by now.
+    // Must clear these maps.
+    nonByteAlignedFieldsMap.clear();
+    byteAlignedFieldsMap.clear();
+    phvFieldToStructFieldMap.clear();
     return Inspector::init_apply(root);
 }
 
 bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
+    // if we choose to only pack 'candidates' and
+    // current header type is not one of the 'candidates', skip.
+    for (auto c : candidates)
+        LOG3("with candidate " << c);
+
+    LOG3(" checking " << hdr->type->name);
+    if (candidates.size() != 0 && !candidates.count(hdr->type->name)) {
+        LOG3("  skip " << hdr);
+        return false;
+    }
+
     ordered_set<const PHV::Field*> nonByteAlignedFields;
     ordered_map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
     auto isNonByteAlignedFlexibleField = [&](const IR::StructField* f) {
@@ -1336,8 +1352,16 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
 
 bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     if (!d->type)
-        return d;
-    LOG1("Packing " << d->type << " fieldlist " << d);
+        return false;
+
+    // if we choose to only pack 'candidates' and
+    // current header type is not one of the 'candidates', skip.
+    if (candidates.size() != 0 && !candidates.count(d->type->name)) {
+        LOG3("skip " << d);
+        return false;
+    }
+
+    LOG3("Packing " << d->type << " fieldlist " << d);
     std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>> sources;
     // XXX(HanW): mirror digest has 'session_id' in the first element, which is not
     // part of the mirror field list.
@@ -1392,6 +1416,8 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
 }
 
 void PackWithConstraintSolver::optimize() {
+    for (auto f : nonByteAlignedFieldsMap)
+        LOG1("k: " << f.first << " " << f.second);
     // add constraints related to a single field list
     for (auto v : nonByteAlignedFieldsMap)
         solver.add_constraints(v.second);
@@ -1403,7 +1429,14 @@ void PackWithConstraintSolver::optimize() {
     solver.add_mutually_aligned_constraints(allNonByteAlignedFields);
 
     solver.print_assertions();
+}
 
+void PackWithConstraintSolver::end_apply() {
+    // run optimizer.
+    optimize();
+}
+
+void PackWithConstraintSolver::solve() {
     auto optimizedPackings = solver.solve(nonByteAlignedFieldsMap);
 
     auto create_repacked_type = [&](cstring name, std::vector<const PHV::Field*>& optimized) {
@@ -1463,11 +1496,6 @@ void PackWithConstraintSolver::optimize() {
     for (auto op : optimizedPackings) {
         create_repacked_type(op.first, op.second);
     }
-}
-
-void PackWithConstraintSolver::end_apply() {
-    // run optimizer.
-    optimize();
 }
 
 const IR::Node* ReplaceFlexibleType::postorder(IR::HeaderOrMetadata* h) {

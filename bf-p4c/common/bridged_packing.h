@@ -7,6 +7,8 @@
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
+
 /**
  * Todo list for future improvements
  *
@@ -21,7 +23,6 @@
  * if the alignment requirement is bit 6 with a field size of 6, then the
  * no_split constraint is 1 and no_split_container_size is round_up(6 + 6).
  */
-
 
 /**
  * Gather ingress bridge to original field map
@@ -273,18 +274,18 @@ class GatherAlignmentConstraints : public PassManager {
     }
 };
 
-using MapHeaderTypeToFieldSet =
 /**
  * Class to generate packing for a set of phv fields given a set of constraints
  */
 class ConstraintSolver {
     const PhvInfo& phv;
     ordered_map<cstring, size_t> hash;
-    z3::context context;
-    z3::optimize solver;
+    z3::context& context;
+    z3::optimize& solver;
 
  public:
-    explicit ConstraintSolver(const PhvInfo& p) : phv(p), solver(context) {}
+    explicit ConstraintSolver(const PhvInfo& p, z3::context& context,
+            z3::optimize& solver) : phv(p), context(context), solver(solver) {}
 
     void add_field_alignment_constraints(const PHV::Field*, int);
     void add_non_overlap_constraints(ordered_set<const PHV::Field*>&);
@@ -317,7 +318,8 @@ class ConstraintSolver {
 // constraints scales at O(n^2) with respect to the number of fields.
 class PackWithConstraintSolver : public Inspector {
     const PhvInfo& phv;
-    ConstraintSolver solver;
+    ConstraintSolver& solver;
+    ordered_set<cstring>& candidates;
     ordered_set<const Constraints::GroupConstraint*> group_constraints;
     ordered_set<const Constraints::BooleanConstraint*> boolean_constraints;
 
@@ -333,8 +335,10 @@ class PackWithConstraintSolver : public Inspector {
 
  public:
     explicit PackWithConstraintSolver(const PhvInfo& p,
+            ConstraintSolver& solver,
+            ordered_set<cstring>& c,
             ordered_map<cstring, const IR::Type_StructLike*>& r):
-        phv(p), solver(p), repackedTypes(r) {}
+        phv(p), solver(solver), candidates(c), repackedTypes(r) {}
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::HeaderOrMetadata* hdr) override;
@@ -342,6 +346,7 @@ class PackWithConstraintSolver : public Inspector {
     void end_apply() override;
 
     void optimize();
+    void solve();
 };
 
 // Pad phase0 and resubmit header to hardware-defined sizes.

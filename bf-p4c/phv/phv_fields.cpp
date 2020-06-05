@@ -2143,7 +2143,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << " deparsed-zero";
     else if (field.deparsed())
         out << " deparsed";
-    if (field.is_solitary()) out << " solitary";
+    if (field.is_solitary()) out << " solitary" << field.getSolitaryConstraint();
     if (field.is_flexible()) out << " flexible";
     if (field.padding) out << " padding";
     if (field.overlayable) out << " overlayable";

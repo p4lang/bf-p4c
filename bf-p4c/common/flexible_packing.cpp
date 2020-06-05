@@ -300,14 +300,17 @@ FlexiblePacking::FlexiblePacking(
         PhvInfo& p,
         const PhvUse& u,
         DependencyGraph& dg,
-        const BFN_Options &o) :
+        const BFN_Options &o,
+        PackWithConstraintSolver& sol,
+        RepackedHeaderTypes& map) :
           options(o),
           ingressBridgedFields(p),
           egressBridgedFields(p),
           table_alloc(p.field_mutex()),
           packConflicts(p, dg, tMutex, table_alloc, aMutex),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
-          packWithConstraintSolver(p, repackedTypes) {
+          packWithConstraintSolver(sol),
+          repackedTypes(map) {
               addPasses({
                       &ingressBridgedFields,
                       &egressBridgedFields,
@@ -325,8 +328,6 @@ FlexiblePacking::FlexiblePacking(
                       new GatherPhase0Fields(p, noPackFields),
                       new GatherAlignmentConstraints(p, actionConstraints),
                       &packWithConstraintSolver,
-                      new PadFixedSizeHeaders(repackedTypes),
-                      // new ReplaceFlexibleType(repackedTypes),
               });
 }
 
@@ -373,17 +374,26 @@ std::string LogRepackedHeaders::asm_output() const {
     return out.str();
 }
 
-PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options) :
+/**
+ * candidates: if non-empty, indicate the set of header types to pack.
+ *             if empty, all eligible header types are packed.
+ */
+PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
+        ordered_set<cstring>& candidates, RepackedHeaderTypes& map) :
     phv(mutually_exclusive_field_ids),
     uses(phv),
-    defuse(phv) {
-    flexiblePacking = new FlexiblePacking(phv, uses, deps, options);
+    defuse(phv),
+    solver(context),
+    constraint_solver(phv, context, solver),
+    packWithConstraintSolver(phv, constraint_solver, candidates, map) {
+    flexiblePacking = new FlexiblePacking(phv, uses, deps, options,
+            packWithConstraintSolver, map);
     flexiblePacking->addDebugHook(options.getDebugHook(), true);
     addPasses({
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,
-        new MultipleApply(options, boost::none, false, false),
+        // new MultipleApply(options, boost::none, false, false),
         new AddSelectorSalu,
         new FixupStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.

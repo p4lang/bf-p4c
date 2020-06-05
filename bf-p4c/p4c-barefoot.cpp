@@ -34,6 +34,7 @@
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "arch/fromv1.0/programStructure.h"
+#include "arch/bridge.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
@@ -44,7 +45,6 @@
 #include "lib/nullstream.h"
 #include "logging/manifest.h"
 #include "midend.h"
-#include "post_midend.h"
 #include "version.h"
 
 #if !defined(BAREFOOT_INTERNAL) || defined(NDEBUG)
@@ -334,22 +334,22 @@ int main(int ac, char **av) {
     /* save the pre-packing p4 program */
     // return IR::P4Program with @flexible header packed
     auto map = new RepackedHeaderTypes;
-    BFN::PostMidEnd bridgePacking(options, map, true);
+    BFN::BridgedPacking bridgePacking(options, *map);
     bridgePacking.addDebugHook(hook, true);
 
     program->apply(bridgePacking);
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
 
-    BFN::PostMidEnd postmid(options, map, false);
-    postmid.addDebugHook(hook, true);
+    BFN::SubstitutePackedHeaders substitute(options, *map);
+    substitute.addDebugHook(hook, true);
 
-    program = program->apply(postmid);
-    log_dump(program, "After postmid");
+    program = program->apply(substitute);
+    log_dump(program, "After flexiblePacking");
     if (!program)
         return PROGRAM_ERROR;  // still did not reach the backend for fitting issues
 
-    if (!postmid.getToplevelBlock())
+    if (!substitute.getToplevelBlock())
         return PROGRAM_ERROR;
 
 #if !BAREFOOT_INTERNAL
@@ -362,9 +362,9 @@ int main(int ac, char **av) {
 
     // setup the pipes and the architecture config early, so that the manifest is
     // correct even if there are errors in the backend.
-    for (auto& pipe : postmid.pipe)
+    for (auto& pipe : substitute.pipe)
         manifest.setPipe(pipe->id, pipe->name.name);
-    manifest.addArchitecture(postmid.getThreads());
+    manifest.addArchitecture(substitute.getThreads());
 
     if (options.dumpJsonFile) {
         // We just want to produce an IR for mutine (p4v & friends), so running
@@ -372,24 +372,25 @@ int main(int ac, char **av) {
         auto &fileStr = options.dumpJsonFile != "-" ?
             *openFile(options.dumpJsonFile, false) : std::cout;
         LOG3("Output to " << options.dumpJsonFile);
-        for (auto& pipe : postmid.pipe)
+        for (auto& pipe : substitute.pipe)
              JSONGenerator(fileStr, true) << pipe << std::endl;
         return ::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS;
     }
 
-    for (auto& pipe : postmid.pipe) {
+    for (auto& kv : substitute.pipes) {
+        auto pipe = kv.second;
         manifest.setPipe(pipe->id, pipe->name.name);
         // generate graphs
         // In principle this should not fail, so we call it before the backend
         if (options.create_graphs) {
             auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe->id);
             // set the pipe for the visitors to compute the output dir
-            manifest.setRefAndTypeMap(&postmid.refMap, &postmid.typeMap);
-            auto toplevel = postmid.getToplevelBlock();
+            manifest.setRefAndTypeMap(&substitute.refMap, &substitute.typeMap);
+            auto toplevel = substitute.getToplevelBlock();
             if (toplevel != nullptr) {
                 LOG2("Generating control graphs");
                 // FIXME(cc): this should move to the manifest graph generation to work per-pipe
-                graphs::ControlGraphs cgen(&postmid.refMap, &postmid.typeMap, graphsDir);
+                graphs::ControlGraphs cgen(&substitute.refMap, &substitute.typeMap, graphsDir);
                 toplevel->getMain()->apply(cgen);
                 toplevel->getMain()->apply(manifest);  // generate entries for controls in manifest
             }

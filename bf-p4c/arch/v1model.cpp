@@ -1291,7 +1291,7 @@ class ConstructSymbolTable : public Inspector {
                         auto header_type = convertTupleTypeToHeaderType(
                                 generatedCloneHeaderTypeName, components, true);
                         structure->type_declarations.emplace(header_type->name, header_type);
-                        LOG3("create header " << header_type->name);
+                        LOG3("create header " << header_type->name.name);
                         cloneHeaderName = header_type->name;
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
@@ -1590,7 +1590,7 @@ class ConstructSymbolTable : public Inspector {
                         auto header_type = convertTupleTypeToHeaderType(
                                 generatedResubmitHeaderTypeName, components, true);
                         structure->type_declarations.emplace(header_type->name, header_type);
-                        LOG3("create header " << header_type->name << " " << header_type);
+                        LOG3("create header " << header_type->name.name << " " << header_type);
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
                         for (auto elem : list->components) {
@@ -1892,7 +1892,7 @@ class ConstructSymbolTable : public Inspector {
         auto size = node->arguments->at(0)->expression->to<IR::Constant>()->asInt();
         auto* args = new IR::Vector<IR::Argument>();
         if (size == 0) {
-            WARNING("action_profile " << node->name << "is specified with size 0, "
+            WARNING("action_profile " << node->name.name << "is specified with size 0, "
                                                        "default to 1024.");
             size = 1024;  // default size is set to 1024, to be consistent with glass
             args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
@@ -1973,7 +1973,7 @@ class ConstructSymbolTable : public Inspector {
         args = new IR::Vector<IR::Argument>();
         auto size = node->arguments->at(1)->expression->to<IR::Constant>()->asInt();
         if (size == 0) {
-            WARNING("action_profile " << node->name << "is specified with size 0, "
+            WARNING("action_profile " << node->name.name << "is specified with size 0, "
                                                        "default to 1024.");
             size = 1024;  // default size is set to 1024, to be consistent with glass
             args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
@@ -2186,17 +2186,18 @@ class ConstructSymbolTable : public Inspector {
                 if (!d->is<IR::P4Table>())
                     return false;
                 auto t = d->to<IR::P4Table>();
-                LOG3("Searching for " << action->getName() << " in table " << t->getName());
+                LOG3("Searching for " << action->getName().name << " in table "
+                        << t->getName().name);
                 return t->getActionList()->getDeclaration(action->getName()) != nullptr;
             });
         try {
             auto t = tables->single();
-            LOG3("found " << t->getName() << " as table candidate");
+            LOG3("found " << t->getName().name << " as table candidate");
             return t->to<IR::P4Table>();
         } catch (...) {
             tables->reset();  // Enumerators are weird!!
             if (tables->count() > 1)
-                P4C_UNIMPLEMENTED("action %1% present in multiple tables", action->getName());
+                P4C_UNIMPLEMENTED("action %1% present in multiple tables", action->getName().name);
             return nullptr;
         }
         return nullptr;

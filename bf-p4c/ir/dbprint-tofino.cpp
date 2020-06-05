@@ -409,3 +409,15 @@ void IR::BFN::SignExtend::dbprint(std::ostream &out) const {
     if (prec == 0) out << ';';
 }
 
+void IR::BFN::BridgePath::dbprint(std::ostream &out) const {
+    for (auto &th : this->threads.at(INGRESS)) {
+        out << th.parsers << std::endl;
+        out << th.mau << std::endl;
+        out << th.deparser << std::endl;
+    }
+    for (auto &th : this->threads.at(EGRESS)) {
+        out << th.parsers << std::endl;
+        out << th.mau << std::endl;
+        out << th.deparser << std::endl;
+    }
+}

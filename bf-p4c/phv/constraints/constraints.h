@@ -2,9 +2,15 @@
 #define BF_P4C_PHV_CONSTRAINTS_CONSTRAINTS_H_
 
 #include <cstdint>
+#include <ostream>
+#include "lib/ordered_set.h"
 
 /// This is the file in which we will document all PHV constraints.
 /// XXX(Deep): Integrate all constraints into this class format.
+
+namespace PHV {
+class Field;
+};
 
 namespace Constraints {
 
@@ -48,6 +54,8 @@ class SolitaryConstraint : BooleanConstraint {
     bool isPragmaSolitary() const { return reason & PRAGMA_SOLITARY; }
     bool isPragmaContainerSize() const { return reason & PRAGMA_CONTAINER_SIZE; }
 };
+
+std::ostream &operator<<(std::ostream &out, const SolitaryConstraint& cons);
 
 /// This class represents the digest constraint, which implies that the field is used in a digest.
 /// Additionally, it also stores the type of digest in which the field is used.

@@ -87,20 +87,33 @@ class BFN::Pipe {
             v.visit(ghost_thread, "ghost_thread"); } }
 }
 
-// BridgePipe stores ingress and egress that share the same bridge header.
-// Bridge metadata packing operates on BridgePipe to optimize the bridge header
-// layout. Ingress and egress may come from different BFN::Pipe, therefore
-// BridgePipe has additional fields to remember which BFN::Pipe ingress/egress
-// belong to.
-class BFN::BridgePipe : BFN::Pipe {
-    ID[2] pipe = {};   // pipe name specified in P4, may be different for ingress/egress.
+// A path that may span more than two pipeline gresses, depending on how the
+// bridged header is used. For instance, a bridged header in folded pipeline
+// program may be used in the following path:
+//
+// IA -> EB -> IB -> EA
+//
+// In a foldedn pipeline configuration, a bridged header can be used in more
+// than two threads.
+class BFN::BridgePath : BFN::Pipe {
+    ordered_map<gress_t, std::vector<thread_t>> threads;
+
 #noconstructor
-    BridgePipe() = default;
-    BridgePipe(cstring ingress, cstring egress) {
-        pipe[INGRESS] = ingress;
-        pipe[EGRESS] = egress;
-    }
-#nodbprint
+    BridgePath() = default;
+    visit_children {
+        // does not have support for ghost thread yet.
+        for (auto &th : threads.at(INGRESS)) {
+            th.parsers.parallel_visit_children(v);
+            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
+            v.visit(th.mau, "mau");
+            v.flow_merge_global_from("-EXIT-");
+            v.visit(th.deparser, "deparser"); }
+        for (auto &th : threads.at(EGRESS)) {
+            th.parsers.parallel_visit_children(v);
+            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
+            v.visit(th.mau, "mau");
+            v.flow_merge_global_from("-EXIT-");
+            v.visit(th.deparser, "deparser"); } }
 }
 
 // BFN::Toplevel stores the midend and backend representation of a P4Program.
@@ -119,7 +132,7 @@ class BFN::Toplevel {
 
     // Pairs of ingress & egress threads that has bridge metadata
     // by default, not visited
-    IR::Vector<IR::BFN::BridgePipe> bridge_pipes;
+    std::vector<IR::BFN::BridgePath> bridge_pipes;
 
 #nodbprint
 
