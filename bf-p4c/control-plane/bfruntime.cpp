@@ -604,10 +604,20 @@ class TypeSpecParser {
                 auto* type = makeTypeBytes(member.type_spec().bit().bitwidth());
                 fields.push_back({prefix + member.name() + suffix, id++, type});
             }
+        } else if (typeSpec.has_serializable_enum()) {
+            auto enumName = typeSpec.serializable_enum().name();
+            auto p_it = typeInfo.serializable_enums().find(enumName);
+            BUG_CHECK(p_it != typeInfo.serializable_enums().end(),
+                      "Serializable name '%1%' not found in P4Info map", enumName);
+            P4Id id = idOffset;
+            for (const auto& member : p_it->second.members()) {
+                auto* type = makeTypeBytes(p_it->second.underlying_type().bitwidth());
+                fields.push_back({prefix + member.name() + suffix, id++, type});
+            }
         } else {
             ::error("Error when generating BF-RT info for '%1%' '%2%': "
-                    "only structs, headers, tuples and bitstrings are "
-                    "currently supported for packed type",
+                    "only structs, headers, tuples, bitstrings and "
+                    "serializable enums are currently supported types",
                     instanceType, instanceName);
         }
 

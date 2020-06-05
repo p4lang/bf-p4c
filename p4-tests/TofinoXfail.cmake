@@ -613,6 +613,7 @@ p4c_add_xfail_reason("tofino"
   "error: .*: Duplicates declaration .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
+  testdata/p4_16_samples/psa-register-read-write-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
 )
 
