@@ -20,6 +20,27 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::Table* tbl) {
     return true;
 }
 
+ordered_set<PHV::FieldSlice> CollectPhvLoggingInfo::getSlices(
+                            const IR::Expression* fieldExpr,
+                            const IR::MAU::Table* tbl) {
+    // Set of FieldSlices matching the field uses specified by
+    // the fieldExpr (action writes/action reads/input xbar uses)
+    ordered_set<PHV::FieldSlice> slices;
+    le_bitrange rng;
+    auto* f = phv.field(fieldExpr, &rng);
+    if (f == nullptr) return slices;
+    PHV::FieldSlice fs(f, rng);
+    slices.insert(fs);
+    // See if there are field slice allocations for this field
+    // and add those which intersect the field range
+    f->foreach_alloc(rng, tbl, nullptr,
+        [&](const PHV::Field::alloc_slice as) {
+        PHV::FieldSlice fs(as.field, as.field_bits());
+        slices.insert(fs);
+    });
+    return slices;
+}
+
 bool CollectPhvLoggingInfo::preorder(const IR::MAU::Action* act) {
     const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
     if (actionsToTables.count(act) != 0)
@@ -34,20 +55,13 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::Action* act) {
     act->apply(aa);
 
     for (auto& fieldAction : Values(fieldActionsMap)) {
-        le_bitrange writeRange;
-        auto* writeField = phv.field(fieldAction.write.expr, &writeRange);
-        if (writeField == nullptr) continue;
-        PHV::FieldSlice write(writeField, writeRange);
-        sliceWriteToActions[write].insert(act);
-        LOG4("Action " << act->name << " writes slice " << write);
+        auto writeSlices = getSlices(fieldAction.write.expr, tbl);
+        for (auto sl : writeSlices) sliceWriteToActions[sl].insert(act);
         for (auto& readAction : fieldAction.reads) {
             if (readAction.type != ActionAnalysis::ActionParam::PHV)
                 continue;
-            le_bitrange readRange;
-            auto* readField = phv.field(readAction.expr, &readRange);
-            if (readField == nullptr) continue;
-            PHV::FieldSlice read(readField, readRange);
-            sliceReadToActions[read].insert(act);
+            auto readSlices = getSlices(readAction.expr, tbl);
+            for (auto sl : readSlices) sliceReadToActions[sl].insert(act);
         }
     }
     return true;
@@ -55,11 +69,10 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::Action* act) {
 
 bool CollectPhvLoggingInfo::preorder(const IR::MAU::TableKey* read) {
     const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
-    le_bitrange range;
-    auto* field = phv.field(read->expr, &range);
-    PHV::FieldSlice slice(field, range);
     if (tableNames.count(tbl->name) == 0) return true;
-    sliceXbarToTables[slice].insert(tableNames.at(tbl->name));
+    auto xbarSlices = getSlices(read->expr, tbl);
+    for (auto sl : xbarSlices)
+        sliceXbarToTables[sl].insert(tableNames.at(tbl->name));
     return true;
 }
 

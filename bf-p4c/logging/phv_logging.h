@@ -57,6 +57,11 @@ struct CollectPhvLoggingInfo : public MauInspector {
     bool preorder(const IR::MAU::TableKey* read) override;
 
     explicit CollectPhvLoggingInfo(const PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+
+ private:
+    /// Get a set of FieldSlices matching the field uses for writes/reads in actions and
+    /// input xbar uses based on the Field expression
+    ordered_set<PHV::FieldSlice> getSlices(const IR::Expression*, const IR::MAU::Table*);
 };
 
 /** This class is meant to generate logging information about PHV allocation and usage and output it
