@@ -17,6 +17,8 @@
 #include "bf-p4c/arch/fromv1.0/v1_program_structure.h"
 #include "bf-p4c/arch/fromv1.0/v1_converters.h"
 #include "bf-p4c/arch/arch.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
 
 namespace BFN {
 

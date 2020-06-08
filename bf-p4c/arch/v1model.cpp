@@ -836,12 +836,15 @@ class ConstructSymbolTable : public Inspector {
     using DigestFieldInfo =
         std::tuple<cstring /* name */, const IR::Type*, const IR::Expression*>;
 
+    const CollectGlobalPragma &collect_pragma;
+
  public:
     ConstructSymbolTable(ProgramStructure *structure,
                          P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                         const V1::TranslateParserChecksums* parserChecksums)
+                         const V1::TranslateParserChecksums* parserChecksums,
+                         const CollectGlobalPragma &collect_pragma)
             : structure(structure), refMap(refMap), typeMap(typeMap),
-              parserChecksums(parserChecksums) {
+              parserChecksums(parserChecksums), collect_pragma(collect_pragma) {
         CHECK_NULL(structure);
         setName("ConstructSymbolTable");
     }
@@ -1173,7 +1176,10 @@ class ConstructSymbolTable : public Inspector {
         // COMPILER-914: In Tofino, Disable clone id - 0 which is reserved in
         // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
         // clone id's 0 - 7 are valid for e2e
-        if ((Device::currentDevice() == Device::TOFINO) && (gress == INGRESS)) {
+        // P4C-2661: Using @disable_reserved_i2e_drop_implementation pragma overrides
+        // reserving clone id 0. This pragma is supported by Glass.
+        if ((Device::currentDevice() == Device::TOFINO) && (gress == INGRESS)
+                && !collect_pragma.exists(PragmaDisableI2EReservedDropImplementation::name)) {
             cloneId++;
         }
 
@@ -2331,7 +2337,9 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     if (options.backward_compatible)
         structure->backward_compatible = true;
     auto parserChecksums = new V1::TranslateParserChecksums(structure, refMap, typeMap);
+    auto collect_pragma = new CollectGlobalPragma();
     addPasses({
+        collect_pragma,
         new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
                                          "support_timeout"}),
         new P4::LocalCopyPropagation(refMap, typeMap, typeChecking, V1::skipCond),
@@ -2346,7 +2354,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new V1::RemoveNodesWithNoMapping(),
         new V1::AnalyzeProgram(structure),
         parserChecksums,
-        new V1::ConstructSymbolTable(structure, refMap, typeMap, parserChecksums),
+        new V1::ConstructSymbolTable(structure, refMap, typeMap, parserChecksums, *collect_pragma),
         new GenerateTofinoProgram(structure),
         new TranslationLast(),
         new V1::LoweringType(),

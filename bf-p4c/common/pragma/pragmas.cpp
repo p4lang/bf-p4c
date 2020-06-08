@@ -153,6 +153,16 @@ const char *PragmaDisableAtomicModify::help = "@disable_atomic_modify(1)\n"
     " the compiler and the driver to not reserve such entries. A 0 indicates\n"
     "to enable reserving entries.  All other values are ignored.";
 
+const char *PragmaDisableI2EReservedDropImplementation::name =
+    "disable_reserved_i2e_drop_implementation";
+const char *PragmaDisableI2EReservedDropImplementation::description =
+    "Disabling reserving an ingress-to-egress clone to implement drop in the ingress MAU pipeline.";
+const char *PragmaDisableI2EReservedDropImplementation::help =
+    "@disable_reserved_i2e_drop_implementation\n"
+    "By default, id 0 is reserved during clone in Tofino. Valid ids are 1 to 7. "
+    "This is applicable only to ingress. Egress has all ids from 0 to 7 as valid. "
+    "Using pragma will overridde this behavior and allow id 0 to be used";
+
 const char *PragmaDontTranslateExternMethod::name = "dont_translate_extern_method";  // FIXME
 const char *PragmaDontTranslateExternMethod::description = "To be documented";
 const char *PragmaDontTranslateExternMethod::help = "To be documented";

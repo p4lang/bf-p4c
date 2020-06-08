@@ -1738,7 +1738,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
                 }
             }
             if (auto dprsr = thread->deparser->to<IR::BFN::TnaDeparser>()) {
-                dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
+                dprsr->apply(ExtractDeparser(refMap, typeMap, rv, collect_pragma));
                 dprsr->apply(ExtractChecksum(rv));
             }
         }

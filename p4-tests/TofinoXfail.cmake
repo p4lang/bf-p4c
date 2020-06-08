@@ -851,6 +851,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
   extensions/p4_tests/p4_14/customer/arista/obfuscated-1.p4
+  extensions/p4_tests/p4_14/customer/arista/p4c-2661.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
   extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
   extensions/p4_tests/p4_16/compile_only/multi-constraint.p4

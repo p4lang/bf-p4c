@@ -9,6 +9,8 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -33,6 +35,7 @@ class ExtractDeparser : public DeparserInspector {
     const IR::Expression                        *pred = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
     ordered_map<cstring, cstring>               nameMap;
+    const CollectGlobalPragma                   &collect_pragma;
 
     ordered_map<cstring, std::vector<const IR::BFN::EmitField*>> headerToEmits;
 
@@ -57,8 +60,11 @@ class ExtractDeparser : public DeparserInspector {
     void end_apply() override;
 
  public:
-    explicit ExtractDeparser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::BFN::Pipe *rv) :
-            typeMap(typeMap), refMap(refMap), rv(rv) { setName("ExtractDeparser"); }
+    explicit ExtractDeparser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                            IR::BFN::Pipe *rv, CollectGlobalPragma &collect_pragma) :
+            typeMap(typeMap), refMap(refMap), rv(rv), collect_pragma(collect_pragma) {
+        setName("ExtractDeparser");
+    }
 
     bool preorder(const IR::BFN::TnaDeparser* deparser) override {
         gress_t thread = deparser->thread;
@@ -96,8 +102,11 @@ class ExtractDeparser : public DeparserInspector {
             auto mirror = digests["mirror"];
             if (mirror) {
                 for (auto fieldList : mirror->fieldLists) {
-                    if (fieldList->idx == 0)
+                    bool disableI2eDropImpl =
+                        collect_pragma.exists(PragmaDisableI2EReservedDropImplementation::name);
+                    if ((fieldList->idx == 0) && !disableI2eDropImpl) {
                         ::error("Invalid mirror index 0, valid i2e mirror indices are 1-7");
+                    }
                 }
             } else {
                 auto deparserMetadataHdr =

@@ -10,11 +10,12 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
     PragmaAutoInitMetadata::name,
     PragmaContainerSize::name,
     PragmaContainerType::name,
+    PragmaDisableI2EReservedDropImplementation::name,
     PragmaGFMParityEnable::name,
     PragmaMutuallyExclusive::name,
+    PragmaNoInit::name,
     PragmaNoOverlay::name,
     PragmaSolitary::name,
-    PragmaNoInit::name,
     PHV::pragma::DISABLE_DEPARSE_ZERO
 };
 
@@ -72,4 +73,15 @@ bool CollectGlobalPragma::preorder(const IR::Annotation *annotation) {
     if (is_global_pragma) {
         global_pragmas_.push_back(annotation); }
     return false;
+}
+
+const IR::Annotation *CollectGlobalPragma::exists(const char *pragma_name) const {
+    const IR::Annotation * pragma = nullptr;
+    for (auto p : global_pragmas()) {
+        if (p->name == pragma_name) {
+            pragma = p;
+            break;
+        }
+    }
+    return pragma;
 }
