@@ -25,7 +25,7 @@ parser IgParser(packet_in packet,
         packet.advance(PORT_METADATA_SIZE);
         packet.extract(hdr.sample1);
         sample_checksum.subtract({hdr.sample1.a ++ hdr.sample1.b, (bit<24>)hdr.sample1.c});
-        meta.meta_csum = sample_checksum.get(); 
+        sample_checksum.subtract_all_and_deposit(meta.meta_csum);
         transition accept;
     }
 }

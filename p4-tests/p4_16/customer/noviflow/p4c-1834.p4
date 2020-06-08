@@ -639,7 +639,7 @@ parser ingress_parser( packet_in packet,
             hdr.pkt.udp.srcPort,
             hdr.pkt.udp.dstPort,
             hdr.pkt.udp.hdr_length});
-        hdr.bridged_meta.l4_checksum = udpv4_checksum.get();
+        udpv4_checksum.subtract_all_and_deposit(hdr.bridged_meta.l4_checksum);
 
         ig_md.l4_srcport = hdr.pkt.udp.srcPort;
         ig_md.l4_dstport = hdr.pkt.udp.dstPort;
@@ -671,7 +671,7 @@ parser ingress_parser( packet_in packet,
                 hdr.pkt.tcp.ctrl,
                 hdr.pkt.tcp.window,
                 hdr.pkt.tcpv4_cksum.urgentPtr});
-        hdr.bridged_meta.l4_checksum = tcpv4_checksum.get();
+        tcpv4_checksum.subtract_all_and_deposit(hdr.bridged_meta.l4_checksum);
 
         ig_md.l4_srcport = hdr.pkt.tcp.srcPort;
         ig_md.l4_dstport = hdr.pkt.tcp.dstPort;
@@ -738,7 +738,7 @@ parser ingress_parser( packet_in packet,
                 hdr.pkt.tcp.ctrl,
                 hdr.pkt.tcp.window,
                 hdr.pkt.tcpv6_cksum.urgentPtr});
-        hdr.bridged_meta.l4_checksum = tcpv6_checksum.get();
+        tcpv6_checksum.subtract_all_and_deposit(hdr.bridged_meta.l4_checksum);
 
         ig_md.l4_srcport = hdr.pkt.tcp.srcPort;
         ig_md.l4_dstport = hdr.pkt.tcp.dstPort;
@@ -754,7 +754,7 @@ parser ingress_parser( packet_in packet,
                 hdr.pkt.udp.srcPort,
                 hdr.pkt.udp.dstPort,
                 hdr.pkt.udp.hdr_length});
-        hdr.bridged_meta.l4_checksum = udpv6_checksum.get();
+        udpv6_checksum.subtract_all_and_deposit(hdr.bridged_meta.l4_checksum);
 
         ig_md.l4_srcport = hdr.pkt.udp.srcPort;
         ig_md.l4_dstport = hdr.pkt.udp.dstPort;

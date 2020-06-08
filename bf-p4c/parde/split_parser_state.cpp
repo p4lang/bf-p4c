@@ -737,7 +737,8 @@ struct AllocateParserState : public ParserTransform {
                                 current.push_back(c);
                             }
                         } else if (out_of_buffer(c) ||
-                                (c->is<IR::BFN::ChecksumGet>() && straddles_buffer(c))) {
+                                (c->is<IR::BFN::ChecksumResidualDeposit>() &&
+                                 straddles_buffer(c))) {
                             spilled.push_back(c);
                             LOG3("spill " << c << " (out of buffer)");
                             oob = true;
@@ -938,7 +939,7 @@ struct AllocateParserState : public ParserTransform {
             // shift amount for residual checksum. See MODEL-542.
             std::vector<const IR::BFN::ParserPrimitive*> to_spill;
             for (auto s : current_statements) {
-                if (auto get = s->to<IR::BFN::ChecksumGet>()) {
+                if (auto get = s->to<IR::BFN::ChecksumResidualDeposit>()) {
                     if (get->header_end_byte->range.lo >= compute_max_shift_in_bits()) {
                         spilled_statements.push_back(s);
                         to_spill.push_back(s);

@@ -547,7 +547,7 @@ parser IngressParserImpl(packet_in pkt, out headers hdr, out metadata meta, out 
         checksum_11.subtract(hdr.tcp.window);
         checksum_10.subtract(hdr.tcp_checksum_v4.urgentPtr);
         checksum_10.subtract(hdr.tcp_checksum_v4.checksum);
-        meta.bridged_header.residual_checksum_0 = checksum_10.get();
+        checksum_10.subtract_all_and_deposit(meta.bridged_header.residual_checksum_0);
         transition parse_first_fragment;
     }
     @name(".parse_tcp_v6") state parse_tcp_v6 {
@@ -571,7 +571,7 @@ parser IngressParserImpl(packet_in pkt, out headers hdr, out metadata meta, out 
         checksum_11.subtract(hdr.tcp.window);
         checksum_11.subtract(hdr.tcp_checksum_v6.urgentPtr);
         checksum_11.subtract(hdr.tcp_checksum_v6.checksum);
-        meta.bridged_header.residual_checksum_1 = checksum_11.get();
+        checksum_11.subtract_all_and_deposit(meta.bridged_header.residual_checksum_1);
         transition parse_first_fragment;
     }
     @name(".parse_udp_v4") state parse_udp_v4 {
@@ -582,7 +582,7 @@ parser IngressParserImpl(packet_in pkt, out headers hdr, out metadata meta, out 
         checksum_13.subtract(hdr.udp.srcPort);
         checksum_13.subtract(hdr.udp.dstPort);
         checksum_12.subtract(hdr.udp_checksum_v4.checksum);
-        meta.bridged_header.residual_checksum_2 = checksum_12.get();
+        checksum_12.subtract_all_and_deposit(meta.bridged_header.residual_checksum_2);
         transition parse_first_fragment;
     }
     @name(".parse_udp_v6") state parse_udp_v6 {
@@ -593,7 +593,7 @@ parser IngressParserImpl(packet_in pkt, out headers hdr, out metadata meta, out 
         checksum_13.subtract(hdr.udp.srcPort);
         checksum_13.subtract(hdr.udp.dstPort);
         checksum_13.subtract(hdr.udp_checksum_v6.checksum);
-        meta.bridged_header.residual_checksum_3 = checksum_13.get();
+        checksum_13.subtract_all_and_deposit(meta.bridged_header.residual_checksum_3);
         transition parse_first_fragment;
     }
     @name(".parse_vlan_tag") state parse_vlan_tag {

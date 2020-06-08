@@ -48,7 +48,7 @@ class ComputeDeadParserChecksums : public ParserInspector {
 
     // Does cp have its terminal primitive in this state?
     // For ChecksumAdd, the terminal type is ChecksumVerify.
-    // For ChecksumSub, the terminal type is ChecksumGet.
+    // For ChecksumSub, the terminal type is ChecksumResidualDeposit.
     bool has_terminal(const IR::BFN::ParserState* state, cstring decl,
                       const IR::BFN::ParserChecksumPrimitive* cp,
                       bool aftercp = false) {
@@ -70,14 +70,14 @@ class ComputeDeadParserChecksums : public ParserInspector {
             if (cp->is<IR::BFN::ChecksumAdd>() && p->is<IR::BFN::ChecksumVerify>())
                 return true;
 
-            if (cp->is<IR::BFN::ChecksumSubtract>() && p->is<IR::BFN::ChecksumGet>())
+            if (cp->is<IR::BFN::ChecksumSubtract>() && p->is<IR::BFN::ChecksumResidualDeposit>())
                 return true;
         }
         return false;
     }
 
     bool is_dead(cstring decl, const IR::BFN::ParserChecksumPrimitive* p) {
-        if (p->is<IR::BFN::ChecksumGet>() || p->is<IR::BFN::ChecksumVerify>())
+        if (p->is<IR::BFN::ChecksumResidualDeposit>() || p->is<IR::BFN::ChecksumVerify>())
             return false;
 
         // Look for terminal primitive of p in its state and all descendant states.
@@ -85,7 +85,7 @@ class ComputeDeadParserChecksums : public ParserInspector {
 
         auto state = checksum_info.prim_to_state.at(p);
 
-        if (has_terminal(state, decl, p, true))
+        if (has_terminal(state, decl, p))
             return false;
 
         auto descendants = state_to_descendants.at(state);
@@ -181,7 +181,7 @@ struct ParserChecksumAllocator : public Visitor {
 
     bool is_equiv_dest(const IR::BFN::ParserChecksumPrimitive* a,
                        const IR::BFN::ParserChecksumPrimitive* b) {
-        COMPARE_DST(a, b, IR::BFN::ChecksumGet);
+        COMPARE_DST(a, b, IR::BFN::ChecksumResidualDeposit);
         COMPARE_DST(a, b, IR::BFN::ChecksumVerify);
         return false;
     }
@@ -205,7 +205,7 @@ struct ParserChecksumAllocator : public Visitor {
             auto a = primsA[i];
             auto b = primsB[i];
 
-            if (OF_TYPE(a, b, IR::BFN::ChecksumGet) ||
+            if (OF_TYPE(a, b, IR::BFN::ChecksumResidualDeposit) ||
                 OF_TYPE(a, b, IR::BFN::ChecksumVerify)) {
                 if (!is_equiv_dest(a, b))
                     return false;

@@ -124,7 +124,7 @@ parser SwitchIngressParser(
         pkt.extract(hdr.ptp);
         pkt.extract(hdr.ptp_correction_field);
         udp_checksum.subtract(hdr.ptp_correction_field.correction_field);
-        ig_md.udp_checksum = udp_checksum.get();
+        udp_checksum.subtract_all_and_deposit(ig_md.udp_checksum);
         transition accept;
     }
 }

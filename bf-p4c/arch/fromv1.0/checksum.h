@@ -26,6 +26,8 @@ class TranslateParserChecksums : public PassManager {
     std::set<const IR::Expression*> needBridging;
     std::map<const IR::Expression*, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
     std::map<const IR::Expression*, std::map<gress_t, const IR::ParserState*>> destToGressToState;
+    std::map<gress_t,
+          std::map<cstring, IR::Statement*>> checksumDepositToHeader;
     DeclToStates ingressVerifyDeclToStates;
     P4ParserGraphs parserGraphs;
 
@@ -439,23 +441,23 @@ class InsertParserChecksums : public Inspector {
                                                               { new IR::Argument(destfield) });
 
                     parserStatements->push_back(subtractCall);
-
-                    auto* getCall = new IR::MethodCallExpression(
-                            mc->srcInfo,
-                            new IR::Member(new IR::PathExpression(decl->name), "get"),
-                            { });
-
                     auto* residualChecksum = translate->residualChecksums.at(destfield);
-                    IR::Statement* stmt = new IR::AssignmentStatement(residualChecksum, getCall);
+
+                    auto* deposit = new IR::MethodCallStatement(
+                            mc->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name),
+                                                          "subtract_all_and_deposit"),
+                            {new IR::Argument(residualChecksum)});
+
+                    translate->checksumDepositToHeader[location][extract->member] = deposit;
                     if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {
                         if (!boolLiteral->value) {
                             // Do not add the if-statement if the condition is always true.
-                            stmt = nullptr;
+                            deposit = nullptr;
                         }
                     }
 
-                    if (stmt) {
-                        parserStatements->push_back(stmt);
+                    if (deposit) {
                         auto payloadFields = collectResidualChecksumPayloadFields(state);
                         translate->residualChecksumPayloadFields[destfield] = payloadFields;
                     }
@@ -476,6 +478,43 @@ class InsertParserChecksums : public Inspector {
                                             collect->parserUpdateLocations.at(rc),
                                             collect->deparserUpdateLocations.at(rc));
         }
+    }
+};
+
+class InsertChecksumDeposit : public Transform {
+ public:
+    const V1::TranslateParserChecksums* translate;
+    explicit InsertChecksumDeposit(const V1::TranslateParserChecksums* translate) :
+                                   translate(translate) { }
+    const IR::Node* preorder(IR::ParserState* state) override {
+        auto parser = findContext<IR::BFN::TnaParser>();
+        if (!translate->checksumDepositToHeader.count(parser->thread)) return state;
+        auto components = new IR::IndexedVector<IR::StatOrDecl>();
+        auto &checksumDeposit = translate->checksumDepositToHeader.at(parser->thread);
+        for (auto component : state->components) {
+            components->push_back(component);
+            auto methodCall = component->to<IR::MethodCallStatement>();
+            if (!methodCall) continue;
+            auto call = methodCall->methodCall->to<IR::MethodCallExpression>();
+            if (!call) continue;
+            if (auto method = call->method->to<IR::Member>()) {
+                if (method->member == "extract") {
+                    for (auto arg : *call->arguments) {
+                        const IR::Member* member = nullptr;
+                        if (auto index = arg->expression->to<IR::ArrayIndex>()) {
+                            member = index->left->to<IR::Member>();
+                        } else if (arg->expression->is<IR::Member>()) {
+                            member = arg->expression->to<IR::Member>();
+                        }
+                        if (member && checksumDeposit.count(member->member)) {
+                            components->push_back(checksumDeposit.at(member->member));
+                        }
+                    }
+                }
+            }
+        }
+        state->components = *components;
+        return state;
     }
 };
 

@@ -33,7 +33,7 @@ class AddSpecialConstraints : public Inspector {
     /// pa_container_size pragmas. Therefore, we are just allocating these fields to 16-bit
     /// containers.
     bool preorder(const IR::BFN::ChecksumVerify* verify) override;
-    bool preorder(const IR::BFN::ChecksumGet* get) override;
+    bool preorder(const IR::BFN::ChecksumResidualDeposit* get) override;
 
     bool preorder(const IR::BFN::DeparserParameter* param) override;
 

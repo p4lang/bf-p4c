@@ -141,7 +141,7 @@ parser SwitchIngressParser(
                                hdr.udp.length,
                                hdr.udp.length,
                                hdr.udp.checksum});
-        ig_md.ig_brid_md.udp_checksum_b_md = udp_checksum.get();
+        udp_checksum.subtract_all_and_deposit(ig_md.ig_brid_md.udp_checksum_b_md);
         transition accept;
     }
 }

@@ -114,7 +114,7 @@ parser IngressParser(
 
         udp_csum.subtract({hdr.udp.checksum});
         udp_csum.subtract({hdr.udp.src_port, hdr.udp.dst_port});
-        ig_md.udp_csum = udp_csum.get();
+        udp_csum.subtract_all_and_deposit(ig_md.udp_csum);
 
         transition accept;
     }
@@ -123,7 +123,7 @@ parser IngressParser(
         pkt.extract(hdr.tcp);
         tcp_csum.subtract({hdr.tcp.checksum});
         tcp_csum.subtract({hdr.tcp.src_port, hdr.tcp.dst_port});
-        ig_md.tcp_csum = tcp_csum.get();
+        tcp_csum.subtract_all_and_deposit(ig_md.tcp_csum);
 
         transition accept;
     }

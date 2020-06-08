@@ -2726,6 +2726,7 @@ FixChecksum::FixChecksum(TnaProgramStructure* structure) {
             parserGraphs,
             new ModifyParserForChecksum(&refMap, &typeMap, structure, parserGraphs),
             new InsertChecksumError(structure, parserGraphs),
+            new InsertChecksumDeposit(structure),
             new P4::ClearTypeMap(&typeMap),
             new P4::TypeChecking(&refMap, &typeMap),  // useful to infer type on phase0 table
             new BFN::TranslatePhase0(&refMap, &typeMap, structure),

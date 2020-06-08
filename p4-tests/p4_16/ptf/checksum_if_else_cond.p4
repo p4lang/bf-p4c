@@ -274,7 +274,7 @@ parser IngressParser(packet_in        pkt,
                 hdr.tcp_ipv4_checksum.urgent_ptr
             });
 
-        meta.l4_payload_checksum = tcp_ipv4_checksum.get();
+        tcp_ipv4_checksum.subtract_all_and_deposit(meta.l4_payload_checksum);
         transition accept;
     }
 
@@ -291,7 +291,7 @@ parser IngressParser(packet_in        pkt,
                 hdr.udp_ipv4_checksum.checksum
             });
 
-        meta.l4_payload_checksum = udp_ipv4_checksum.get();
+        udp_ipv4_checksum.subtract_all_and_deposit(meta.l4_payload_checksum);
         transition accept;
         }
 

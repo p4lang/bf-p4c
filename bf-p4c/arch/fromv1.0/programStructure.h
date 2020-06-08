@@ -218,6 +218,9 @@ class TnaProgramStructure : public ProgramStructure {
 
     std::map<cstring, std::set<cstring>> ingressVerifyChecksumToStates;
 
+    std::map<gress_t,
+          std::map<cstring, IR::Statement*>> checksumDepositToHeader;
+
     static ProgramStructure *create() { return new TnaProgramStructure(); }
 
     template <typename Func>
@@ -1024,19 +1027,20 @@ class ModifyParserForChecksum : public Modifier {
                 auto subtractCall = new IR::MethodCallStatement(mce);
                 statements->push_back(subtractCall);
 
-                auto getCall = new IR::MethodCallExpression(
-                        new IR::Member(new IR::PathExpression(checksum.at(path)), "get"), { });
-
                 IR::Statement* assign = nullptr;
                 if (csum.with_payload) {
                     BUG_CHECK(csum.residulChecksumName != boost::none,
                             "residual checksum field name cannot be empty");
-                    auto* member = new IR::Member(
+                    auto* rmember = new IR::Member(
                             new IR::Member(new IR::PathExpression("meta"),
                                 IR::ID("bridged_header")), IR::ID(*csum.residulChecksumName));
-                    assign = new IR::AssignmentStatement(member, getCall);
-                } else {
-                    assign = new IR::AssignmentStatement(destField, getCall);
+                    auto* mce = new IR::MethodCallExpression(
+                            new IR::Member(new IR::PathExpression(checksum.at(path)),
+                                                          "subtract_all_and_deposit"),
+                            {rmember});
+                    auto* deposit = new IR::MethodCallStatement(mce);
+                    std::cout << member->member << std::endl;
+                    structure->checksumDepositToHeader[gress][member->member] = deposit;
                 }
                 if (csum.cond) {
                     if (auto boolean = csum.cond->to<IR::BoolLiteral>()) {
@@ -1205,6 +1209,41 @@ createChecksumError(cstring decl, gress_t gress) {
      auto lhs = new IR::Slice(parser_err, 12, 12);
      return new IR::AssignmentStatement(lhs, rhs);
 }
+
+class InsertChecksumDeposit : public Transform {
+ public:
+    TnaProgramStructure* structure;
+    explicit InsertChecksumDeposit(TnaProgramStructure* structure) :
+                                    structure(structure) { }
+    const IR::Node* preorder(IR::ParserState* state) override {
+        auto parser = findContext<IR::P4Parser>();
+        auto gress = parser->name == "IngressParserImpl" ? INGRESS : EGRESS;
+        if (!structure->checksumDepositToHeader.count(gress)) return state;
+        auto components = new IR::IndexedVector<IR::StatOrDecl>();
+        auto &checksumDeposit = structure->checksumDepositToHeader.at(gress);
+        for (auto component : state->components) {
+            components->push_back(component);
+            if (auto methodCall = component->to<IR::MethodCallStatement>()) {
+                if (auto call = methodCall->methodCall->to<IR::MethodCallExpression>()) {
+                    if (auto method = call->method->to<IR::Member>()) {
+                        if (method->member == "extract") {
+                            for (auto arg : *call->arguments) {
+                                auto member = arg->expression->to<IR::Member>();
+                                if (!member) continue;
+                                if (checksumDeposit.count(member->member)) {
+                                    components->push_back(checksumDeposit.at(member->member));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        state->components = *components;
+        return state;
+    }
+};
+
 
 class InsertChecksumError : public PassManager {
  public:

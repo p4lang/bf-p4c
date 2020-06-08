@@ -59,7 +59,7 @@ parser EgParser(packet_in packet,
         packet.extract(eg_intr_md);
         packet.extract(hdr.sample1);
         sample_checksum.subtract(hdr.sample1.a);
-        md.meta_csum = sample_checksum.get();
+        sample_checksum.subtract_all_and_deposit(md.meta_csum);
         transition accept;
     }
 }

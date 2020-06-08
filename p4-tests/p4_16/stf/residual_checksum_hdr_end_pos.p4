@@ -30,9 +30,9 @@ parser IgParser(packet_in packet, out headers_t hdr, out metadata_t meta,
         packet.extract(ig_intr_md);
         packet.extract(skip);
         packet.extract(hdr.sample1);
-        packet.extract(hdr.sample2);
         sample1_checksum.subtract({hdr.sample1.a, hdr.sample1.b});
-        meta.sample1_checksum = sample1_checksum.get();    
+        sample1_checksum.subtract_all_and_deposit(meta.sample1_checksum);
+        packet.extract(hdr.sample2);
         transition accept;
     }
 }

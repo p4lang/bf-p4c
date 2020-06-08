@@ -997,7 +997,6 @@ struct RewriteParserStatements : public Transform {
                                                                swap, isChecksum);
                 lastChecksumSubtract = subtract;
                 lastSubtractField = member;
-
                 rv->push_back(subtract);
             }
         }
@@ -1016,12 +1015,29 @@ struct RewriteParserStatements : public Transform {
     }
 
     const IR::Vector<IR::BFN::ParserPrimitive>*
+    rewriteSubtractAllAndDeposit(const IR::MethodCallExpression* call) {
+        auto* method = call->method->to<IR::Member>();
+        auto* path = method->expr->to<IR::PathExpression>()->path;
+        cstring declName = path->name;
+        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto deposit = (*call->arguments)[0]->expression;
+        auto mem = deposit->to<IR::Member>();
+        auto endByte = new IR::BFN::PacketRVal(StartLen(currentBit - 8, 8));
+        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
+                                              new IR::BFN::FieldLVal(mem), endByte);
+        rv->push_back(get);
+        return rv;
+    }
+
+    const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteChecksumCall(IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
         auto* method = call->method->to<IR::Member>();
 
         if (method->member == "add" || method->member == "subtract") {
             return rewriteChecksumAddOrSubtract(call);
+        } else if (method->member == "subtract_all_and_deposit") {
+            return rewriteSubtractAllAndDeposit(call);
         } else if (method->member == "verify") {
             return rewriteChecksumVerify(call);
         } else {
@@ -1281,6 +1297,8 @@ struct RewriteParserStatements : public Transform {
                             verify->dest = new IR::BFN::FieldLVal(sl);
                         return verify;
                     } else if (method->member == "get") {
+                        ::warning("checksum.get() will deprecate in future versions. Please use"
+                                  " void subtract_all_and_deposit(bit<16>) instead");
                         auto mem = lhs->to<IR::Member>();
                         if (!lastChecksumSubtract || !lastSubtractField) {
                             ::fatal_error("Checksum \"get\" must have preceding \"subtract\""
@@ -1288,7 +1306,7 @@ struct RewriteParserStatements : public Transform {
                         }
                         auto endPos = getHeaderEndPos(lastChecksumSubtract, lastSubtractField);
                         auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
-                        auto get = new IR::BFN::ChecksumGet(declName,
+                        auto get = new IR::BFN::ChecksumResidualDeposit(declName,
                                               new IR::BFN::FieldLVal(mem), endByte);
                         return get;
                     }
@@ -1353,8 +1371,7 @@ struct RewriteParserStatements : public Transform {
 
     // A bit offset counter for each checksum operation
     std::map<cstring, int> declNameToOffset;
-    std::map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
-
+    ordered_map<const IR::Member*, const IR::BFN::PacketRVal*> extractedFields;
     const IR::Member* lastSubtractField = nullptr;
     const IR::BFN::ChecksumSubtract* lastChecksumSubtract = nullptr;
 };

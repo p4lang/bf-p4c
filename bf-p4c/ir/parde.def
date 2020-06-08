@@ -254,8 +254,8 @@ class ChecksumVerify : ParserChecksumPrimitive {
     optional NullOK FieldLVal dest;
 }
 
-class ChecksumGet : ParserChecksumPrimitive {
-    dbprint { out << "get checksum " << declName; }
+class ChecksumResidualDeposit : ParserChecksumPrimitive {
+    dbprint { out << "subtract and deposit checksum " << declName; }
     FieldLVal dest;
     // header end position relative to current state's input buffer
     PacketRVal header_end_byte;

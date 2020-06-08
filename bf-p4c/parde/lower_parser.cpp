@@ -731,7 +731,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
                 }
             } else if (auto verify = c->to<IR::BFN::ChecksumVerify>()) {
                 dest = verify->dest;
-            } else if (auto get = c->to<IR::BFN::ChecksumGet>()) {
+            } else if (auto get = c->to<IR::BFN::ChecksumResidualDeposit>()) {
                 dest = get->dest;
             }
             // swap or mul_2 register is 17 bit long
@@ -739,12 +739,12 @@ struct ComputeLoweredParserIR : public ParserInspector {
             BUG_CHECK(mul2 <= ((1 << 17) - 1), "checksum mul_2 byte is out of input buffer");
         }
 
-        auto last = checksums.back();
-
         int end_pos = 0;
         if (end) {
-            if (auto get = last->to<IR::BFN::ChecksumGet>())
-                end_pos = get->header_end_byte->range.toUnit<RangeUnit::Byte>().lo;
+            for (auto csum : checksums) {
+                if (auto get = csum->to<IR::BFN::ChecksumResidualDeposit>())
+                    end_pos = get->header_end_byte->range.toUnit<RangeUnit::Byte>().lo;
+            }
         }
 
         auto csum = new IR::BFN::LoweredParserChecksum(
@@ -775,6 +775,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
             csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
         } else if (type == IR::BFN::ChecksumMode::CLOT && end) {
+            auto last = checksums.back();
             auto deposit = last->to<IR::BFN::ChecksumDepositToClot>();
             BUG_CHECK(deposit, "clot checksum does not end with a deposit?");
             csum->clot_dest = *deposit->clot;

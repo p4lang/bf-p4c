@@ -556,6 +556,13 @@ extern Checksum {
     /// @return : The calculated checksum value for added fields.
     bit<16> get();
 
+    /// Subtract all header fields after the current state and
+    /// return the calculated checksum value.
+    /// Marks the end position for residual checksum header.
+    /// All header fields extracted after will be automatically subtracted.
+    /// @param residual : The calculated checksum value for added fields.
+    void subtract_all_and_deposit<T>(out T residual);
+
     /// Calculate the checksum for a  given list of fields.
     /// @param data : List of fields contributing to the checksum value.
     /// @param zeros_as_ones : encode all-zeros value as all-ones.
@@ -1964,7 +1971,7 @@ parser PacketParserEgress(packet_in pkt,
       pkt.extract(hdr.first_payload);
       tcp_checksum.subtract({hdr.tcp.checksum});
       tcp_checksum.subtract({hdr.first_payload});
-      eg_md.tcp_checksum_tmp = tcp_checksum.get();
+      tcp_checksum.subtract_all_and_deposit(eg_md.tcp_checksum_tmp);
       transition accept;
     }
 
@@ -1974,7 +1981,7 @@ parser PacketParserEgress(packet_in pkt,
       pkt.extract(hdr.first_payload);
       udp_checksum.subtract({hdr.udp.checksum});
       udp_checksum.subtract({hdr.first_payload});
-      eg_md.udp_checksum_tmp = udp_checksum.get();
+      udp_checksum.subtract_all_and_deposit(eg_md.udp_checksum_tmp);
       transition accept;
     }
 

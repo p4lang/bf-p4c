@@ -308,6 +308,8 @@ const IR::Node* RewriteTypeArguments::preorder(IR::MethodCallExpression* mc) {
 const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
     auto mc = findContext<IR::MethodCallExpression>();
     if (!mc) return arg;
+    auto method = mc->method->to<IR::Member>();
+    if (!method || method->member == "subtract_all_and_deposit") return arg;
     auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
     auto em = mi->to<P4::ExternMethod>();
     if (!em) return arg;

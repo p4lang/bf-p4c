@@ -566,14 +566,21 @@ extern Checksum {
     /// data must be byte aligned.
     void subtract<T>(in T data);
 
-    /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
-    /// @return : Boolean flag indicating whether the checksum is valid or not.
-    bool verify();
-
     /// Get the calculated checksum value.
     /// @return : The calculated checksum value for added fields.
     bit<16> get();
 
+    /// Subtract all header fields after the current state and
+    /// return the calculated checksum value.
+    /// Marks the end position for residual checksum header.
+    /// All header fields extracted after will be automatically subtracted.
+    /// @param residual : The calculated checksum value for added fields.
+    void subtract_all_and_deposit<T>(out T residual);
+
+    /// Verify whether the complemented sum is zero, i.e. the checksum is valid.
+    /// @return : Boolean flag indicating whether the checksum is valid or not.
+    bool verify();
+ 
     /// Calculate the checksum for a  given list of fields.
     /// @param data : List of fields contributing to the checksum value.
     /// @param zeros_as_ones : encode all-zeros value as all-ones.

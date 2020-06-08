@@ -82,7 +82,7 @@ struct CollectParserChecksums : public ParserInspector {
 
     bool is_residual(const IR::BFN::Parser* parser, cstring decl) const {
         for (auto p : decl_name_to_prims.at(parser).at(decl)) {
-            if (!p->is<IR::BFN::ChecksumSubtract>() && !p->is<IR::BFN::ChecksumGet>())
+            if (!p->is<IR::BFN::ChecksumSubtract>() && !p->is<IR::BFN::ChecksumResidualDeposit>())
                 return false;
         }
         return true;

@@ -104,7 +104,7 @@ parser SwitchIngressParser(packet_in pkt,
                                      hdr.outer_udp.length, 
                                      hdr.outer_udp.checksum
                     });
-        ig_md.ig_brid_md.outer_udp_checksum_b_md = outer_udp_checksum.get();
+        outer_udp_checksum.subtract_all_and_deposit(ig_md.ig_brid_md.outer_udp_checksum_b_md);
         transition select(hdr.outer_udp.dst_port) {
             UDP_PORT_VXLAN : parse_vxlan;
             default : accept;

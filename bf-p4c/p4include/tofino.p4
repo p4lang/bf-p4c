@@ -414,6 +414,13 @@ extern Checksum {
     /// @return : Boolean flag indicating whether the checksum is valid or not.
     bool verify();
 
+    /// Subtract all header fields after the current state and
+    /// return the calculated checksum value.
+    /// Marks the end position for residual checksum header.
+    /// All header fields extracted after will be automatically subtracted.
+    /// @param residual: The calculated checksum value for added fields.
+    void subtract_all_and_deposit<T>(out T residual);
+
     /// Get the calculated checksum value.
     /// @return : The calculated checksum value for added fields.
     bit<16> get();
