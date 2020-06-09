@@ -321,9 +321,15 @@ if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
   install -D -o root -g root -m 0644 docker/ccache.conf /etc/ccache.conf
   install -D -o root -g root -m 0644 \
     docker/ccache.conf /usr/local/etc/ccache.conf
+fi
 
-  # Configure distcc hosts.
+# Configure distcc hosts.
+if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
+  WORKDIR "${BF_P4C_COMPILERS}"
   install -D -o root -g root -m 0644 docker/distcc_hosts.conf /etc/distcc/hosts
+else
+  # Just use localhost for non-jarvis images.
+  echo localhost > /etc/distcc/hosts
 fi
 
 # Clean up git history.
