@@ -48,6 +48,7 @@ export P4C_DEPS="autoconf \
                  bison \
                  build-essential \
                  curl \
+                 distcc \
                  flex \
                  g++-6 \
                  libboost1.67-dev \
@@ -106,7 +107,6 @@ export PYTHON3_DEPS="Cython \
 export DEV_PKGS="vim \
                  gdb \
                  telnet \
-                 distcc \
                  ninja \
                  tmux"
 
@@ -324,14 +324,6 @@ if [[ "${BUILD_FOR}" == "jarvis" ]] ; then
 
   # Configure distcc hosts.
   install -D -o root -g root -m 0644 docker/distcc_hosts.conf /etc/distcc/hosts
-
-  # Configure system-wide bashrc.
-  install -D -o root -g root -m 0644 \
-    docker/jarvis_bashrc.sh "${BFN}/jarvis_bashrc.sh"
-  cat >>/etc/bash.bashrc <<EOF
-
-. '${BFN}/jarvis_bashrc.sh'
-EOF
 fi
 
 # Clean up git history.

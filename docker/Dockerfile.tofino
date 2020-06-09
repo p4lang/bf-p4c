@@ -14,8 +14,7 @@ ARG BFN_P4C_GIT_SHA="UNKNOWN"
 # Use 'jarvis' to build a jarvis image
 #     'release' to build a release image
 #     'glass' to build a base image for glass
-ARG BUILD_FOR
-ENV BUILD_FOR="${BUILD_FOR:-tofino}"
+ARG BUILD_FOR="tofino"
 
 # Use 'release' if you don't wish to keep the build artifacts
 ARG IMAGE_TYPE=test
@@ -24,10 +23,24 @@ ARG BUILD_GLASS=false
 # Use 'true' if you wish to generate ref outputs for p4i
 ARG GEN_REF_OUTPUTS=false
 
-# Force /usr/bin to be before /usr/local/bin because bf-driver
-# installs a version of python3 in /usr/local and that version is not
-# picking up modules installed with pip3
-ENV PATH="/usr/bin:${PATH}"
+# Set up environment variables.
+
+  # Force /usr/bin to be before /usr/local/bin because bf-driver
+  # installs a version of python3 in /usr/local and that version is not
+  # picking up modules installed with pip3
+  ENV PATH="/usr/bin:${PATH}"
+
+  # Set things up for distcc.
+  ENV CC="distcc gcc"
+  ENV CXX="distcc g++"
+
+  # Set up Intel proxies.
+  ENV http_proxy='http://proxy-dmz.intel.com:911'
+  ENV https_proxy='http://proxy-dmz.intel.com:912'
+  ENV ftp_proxy='http://proxy-dmz.intel.com:21'
+  ENV socks_proxy='proxy-dmz.intel.com:1080'
+  ENV no_proxy='intel.com,*.intel.com,localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12'
+  ENV ALL_PROXY='socks5://proxy-us.intel.com'
 
 COPY . /bfn/bf-p4c-compilers/
 
