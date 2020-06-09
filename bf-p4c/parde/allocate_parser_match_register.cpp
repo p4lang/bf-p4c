@@ -1,5 +1,6 @@
 #include <boost/range/adaptors.hpp>
 
+#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/parde/allocate_parser_match_register.h"
@@ -1237,6 +1238,7 @@ struct AdjustMatchValue : public ParserModifier {
                 source = sl->e0;
 
             cstring field_name = stripThreadPrefix(source->toString());
+            field_name = canon_name(field_name);
             int field_start = 0;
 
             if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
