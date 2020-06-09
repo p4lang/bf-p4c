@@ -1,0 +1,72 @@
+
+ghost run 0:0xffff 2:10 3:15 4:20 5:25 6:30 7:35
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0001ff 11223344
+expect 7 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0001ff 11223344
+wait
+ghost run 7:27
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0002ff 11223344
+expect 6 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0002ff 11223344
+wait
+ghost run 6:22
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0003ff 11223344
+expect 7 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0003ff 11223344
+wait
+ghost run 7:19
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0004ff 11223344
+expect 5 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0004ff 11223344
+wait
+ghost run 5:17
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0005ff 11223344
+expect 6 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0005ff 11223344
+wait
+ghost run 6:14
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0006ff 11223344
+expect 4 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0006ff 11223344
+wait
+ghost run 4:12
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0007ff 11223344
+expect 7 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0007ff 11223344
+wait
+ghost run 7:11
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0008ff 11223344
+expect 5 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0008ff 11223344
+wait
+ghost run 5:9
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0009ff 11223344
+expect 3 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff0009ff 11223344
+wait
+ghost run 3:7
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000aff 11223344
+expect 6 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000aff 11223344
+wait
+ghost run 6:6
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000bff 11223344
+expect 4 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000bff 11223344
+wait
+ghost run 4:4
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000cff 11223344
+expect 7 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000cff 11223344
+wait
+ghost run 7:3
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000dff 11223344
+expect 2 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000dff 11223344
+wait
+ghost run 2:2
+
+packet 0 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000eff 11223344
+expect 5 0a0a0a0a0a0a 0b0b0b0b0b0b dead ff000eff 11223344
+wait
+ghost run 5:1
