@@ -3026,6 +3026,7 @@ BruteForceAllocationStrategy::remove_singleton_slicelist_metadata(
         auto fs = slice_list->front();
         if (fs.size() != int(super_cluster->aggregate_size())
             || !fs.field()->metadata
+            || fs.field()->exact_containers()
             || fs.field()->pov
             || fs.field()->is_checksummed()
             || fs.field()->deparsed_bottom_bits()
