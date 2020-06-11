@@ -212,6 +212,7 @@ class CollectConstraints : public Inspector {
 
     bool preorder(const IR::HeaderOrMetadata*) override;
     bool preorder(const IR::BFN::DigestFieldList*) override;
+    profile_t init_apply(const IR::Node* root) override;
     void end_apply() override;
 
     /**

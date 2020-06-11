@@ -868,6 +868,12 @@ void CollectConstraints::computeNoPackIfDigestUse(
     }
 }
 
+Visitor::profile_t CollectConstraints::init_apply(const IR::Node* root) {
+    alignmentConstraints.clear();
+    mutualAlignmentConstraints.clear();
+    return Inspector::init_apply(root);
+}
+
 // Update alignment constraint in PhvInfo
 void CollectConstraints::end_apply() {
     if (LOGGING(4)) {
