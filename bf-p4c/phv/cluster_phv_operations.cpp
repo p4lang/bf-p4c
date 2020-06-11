@@ -170,6 +170,13 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                 field_bits.size(), inst);
 
         if (field_bits.size() > 32) {
+            if (field->exact_containers() && field->size % 32 != 0) {
+                fatal_error(
+                    "header fields cannot be used in wide arithmetic ops, "
+                    "if field.size *mod* 32 != 0. "
+                    "But field %1% with %2% bits is involved in: %3%", field->name,
+                    field_bits.size(), inst);
+            }
             bool success = field->add_wide_arith_start_bit(field_bits.lo);
             if (!success) {
               fatal_error(

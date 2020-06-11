@@ -1440,7 +1440,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "header fields cannot be used in wide arithmetic ops"
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
 )
 
