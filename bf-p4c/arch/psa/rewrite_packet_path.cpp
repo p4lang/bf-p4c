@@ -217,10 +217,9 @@ struct PacketPath : public Transform {
                         const IR::Member* packetMeta) {
         auto pathname = structure->egress_parser.psaParams.at("metadata");
         auto path = new IR::PathExpression(pathname);
-        auto mdType = typeMap->getTypeType(structure->metadataType, true);
         for (auto& pf : packetPath.structType->to<IR::Type_StructLike>()->fields) {
             auto leftMember = new IR::Member(path, pf->name);
-            for (auto f : mdType->to<IR::Type_StructLike>()->fields) {
+            for (auto f : structure->metadataType->to<IR::Type_StructLike>()->fields) {
                 if (f->name == pf->name) {
                     auto rightMember = new IR::Member(packetMeta, f->name);
                     auto setMetadata = new IR::AssignmentStatement(leftMember, rightMember);

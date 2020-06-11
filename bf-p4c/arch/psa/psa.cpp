@@ -134,6 +134,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_parser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(2);
             structure->ingress_parser.psaParams.emplace("metadata", param->name);
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
             structure->ingress_parser.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(4);
@@ -149,7 +150,7 @@ class AnalyzeProgram : public Inspector {
             structure->egress_parser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(2);
             structure->egress_parser.psaParams.emplace("metadata", param->name);
-            structure->metadataType = typeMap->getTypeType(param->type, true);;
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
             structure->egress_parser.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(4);
@@ -238,7 +239,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress_deparser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(5);
             structure->ingress_deparser.psaParams.emplace("metadata", param->name);
-            structure->metadataType = param->type;
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(6);
             structure->ingress_deparser.psaParams.emplace("istd", param->name);
             collectPacketPathInfo(node);
@@ -253,6 +254,7 @@ class AnalyzeProgram : public Inspector {
             structure->egress_deparser.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->egress_deparser.psaParams.emplace("metadata", param->name);
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(5);
             structure->egress_deparser.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(6);
@@ -263,6 +265,7 @@ class AnalyzeProgram : public Inspector {
             structure->ingress.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(1);
             structure->ingress.psaParams.emplace("metadata", param->name);
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
             structure->ingress.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(3);
@@ -272,6 +275,7 @@ class AnalyzeProgram : public Inspector {
             structure->egress.psaParams.emplace("hdr", param->name);
             param = node->getApplyParameters()->getParameter(1);
             structure->egress.psaParams.emplace("metadata", param->name);
+            structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
             structure->egress.psaParams.emplace("istd", param->name);
             param = node->getApplyParameters()->getParameter(3);
