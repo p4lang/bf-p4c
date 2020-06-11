@@ -1632,16 +1632,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-608/case3263.p4
 )
 
-# P4C-1538
-p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
-  ../glass/testsuite/p4_tests/rdp/COMPILER-400/case2314.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-401/case2308_bugged.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-408/case2364.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-420/case2433.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-426/case2475.p4
-)
-
 # P4C-1957
 # Compiler Bug: Extracted range byte[4..24) with size 160 doesn't match destination container TH7 with size 16
 p4c_add_xfail_reason("tofino"
@@ -1719,12 +1709,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
-)
-
-# P4C-2749
-p4c_add_xfail_reason("tofino"
-  "Ran out of phv output extractor slots"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
 )
 
 p4c_add_xfail_reason("tofino"

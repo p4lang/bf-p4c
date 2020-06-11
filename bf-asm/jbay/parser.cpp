@@ -190,9 +190,13 @@ static void write_output_const_slot(
     BUG_CHECK((src & ~((0xffff00ff >> (8*(bytemask-1))) & 0xffff)) == 0);
     // FIXME -- should be able to treat this as 4x8-bit rather than 2x16-bit slots, as long
     // as the ROTATE flag is consistent for each half.
-    int cslot = 0;
-    for (; cslot < 2; cslot++)
-        if (0 == (used & (bytemask << (2*cslot + 24)))) break;
+    int cslot = -1;
+    // see if const already allocated and reuse
+    for (cslot = 0; cslot < 2; cslot++)
+        if (row->val_const[cslot] == src && (used & (bytemask << (2*cslot + 24)))) break;
+    if (cslot >= 2) {
+        for (cslot = 0; cslot < 2; cslot++)
+            if (0 == (used & (bytemask << (2*cslot + 24)))) break; }
     if (cslot >= 2) {
         error(lineno, "Ran out of constant output slots");
         return; }

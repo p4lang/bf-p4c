@@ -1405,11 +1405,34 @@ Parser::State::OutputUse Parser::State::Match::output_use() const {
     return rv;
 }
 void Parser::State::Match::merge_outputs(OutputUse use) {
-    if (options.target != TOFINO) return;
+    if (options.target != TOFINO) return;  // this is tofino specific
     // In a loop, do not merge the extracts since the offset inc count is tied to the container.
     if (offset_inc) return;
-    // FIXME -- this is tofino specific
     use += output_use();
+
+    // Compiler may over allocate each extractor size and take advantage of the narrow-to-wide
+    // feature. Need to account for these before combining adjacent extracts.
+    while (use.b32 > 4) {
+        if (use.b16 + 2 <= 4) {
+            use.b32--;
+            use.b16 += 2;
+        } else if (use.b8 + 4 <= 4) {
+            use.b32--;
+            use.b8 + 4;
+        } else {
+            break;
+        }
+    }
+
+    while (use.b16 > 4) {
+        if (use.b8 + 2 <= 4) {
+            use.b16--;
+            use.b8 + 2;
+        } else {
+            break;
+        }
+    }
+
     if (use.b32 >= 4 && use.b16 >= 4) return;
     std::sort(save.begin(), save.end(), [](const Save* a, const Save* b)->bool {
         return a->lo < b->lo; });
