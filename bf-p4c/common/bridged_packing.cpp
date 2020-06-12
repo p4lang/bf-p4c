@@ -969,7 +969,8 @@ void CollectConstraints::end_apply() {
 
 // compute do_not_pack constraints
 
-void ConstraintSolver::add_field_alignment_constraints(const PHV::Field* f, int upper_bound) {
+void ConstraintSolver::add_field_alignment_constraints(
+        cstring hdr, const PHV::Field* f, int upper_bound) {
     z3::expr v = context.bv_const(f->name, 16);
 
     // lower bound for variable
@@ -984,13 +985,22 @@ void ConstraintSolver::add_field_alignment_constraints(const PHV::Field* f, int 
         LOG1("Alignment constraint: " << align.getAlignment() << " for " << f->name);
         // solver.add(vec[0] % 8 == static_cast<int>(align.getAlignment()));
         solver.add(v % 8 == static_cast<int>(align.getAlignment()));
+
+        std::stringstream str;
+        str << "(";
+        str << f->name;
+        str << " ";
+        str << align.getAlignment();
+        str << ")";
+        debug_info[hdr]["alignment"].insert(str.str());
     }
 
     // optimization goal, pack everything as close to 0 as possible
     solver.minimize(v);
 }
 
-void ConstraintSolver::add_non_overlap_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_non_overlap_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     if (!fields.size()) return;
 
     // no overlap constraint
@@ -999,10 +1009,21 @@ void ConstraintSolver::add_non_overlap_constraints(ordered_set<const PHV::Field*
         for (const_iterator it2 = it; ++it2 != fields.end(); ) {
             z3::expr v1 = context.bv_const((*it)->name, 16);
             z3::expr v2 = context.bv_const((*it2)->name, 16);
-            solver.add((v2 - v1 >= (*it)->size) || (v1 - v2 >= (*it2)->size)); } }
+            solver.add((v2 - v1 >= (*it)->size) || (v1 - v2 >= (*it2)->size));
+
+            std::stringstream str;
+            str << "(";
+            str << (*it)->name;
+            str << " ";
+            str << (*it2)->name;
+            str << ")";
+            debug_info[hdr]["no_overlap"].insert(str.str());
+        }
+    }
 }
 
-void ConstraintSolver::add_extract_together_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_extract_together_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     if (!fields.size()) return;
 
     // extract_together constraint
@@ -1013,7 +1034,18 @@ void ConstraintSolver::add_extract_together_constraints(ordered_set<const PHV::F
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
                 LOG1("Copack constraint: " << v1 << " and " << v2);
-                solver.add(v1 / 8 == v2 / 8); } } }
+                solver.add(v1 / 8 == v2 / 8);
+
+                std::stringstream str;
+                str << "(";
+                str << (*it)->name;
+                str << " ";
+                str << (*it2)->name;
+                str << ")";
+                debug_info[hdr]["copack"].insert(str.str());
+            }
+        }
+    }
 }
 
 void ConstraintSolver::add_mutually_aligned_constraints(ordered_set<const PHV::Field*>& fields) {
@@ -1027,10 +1059,22 @@ void ConstraintSolver::add_mutually_aligned_constraints(ordered_set<const PHV::F
                 z3::expr v1 = context.bv_const((*it)->name, 16);
                 z3::expr v2 = context.bv_const((*it2)->name, 16);
                 LOG1("Mutually aligned constraint: " << v1 << " and " << v2);
-                solver.add(v1 % 8 == v2 % 8); } } }
+                solver.add(v1 % 8 == v2 % 8);
+
+                std::stringstream str;
+                str << "(";
+                str << (*it)->name;
+                str << " ";
+                str << (*it2)->name;
+                str << ")";
+                debug_info["_"]["mutual_align"].insert(str.str());
+            }
+        }
+    }
 }
 
-void ConstraintSolver::add_solitary_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_solitary_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f1 : fields) {
         if (!f1->is_solitary()) continue;
         for (auto f2 : fields) {
@@ -1054,6 +1098,12 @@ void ConstraintSolver::add_solitary_constraints(ordered_set<const PHV::Field*>& 
             LOG1("Solitary constraint: " << v1 << " and " << v2);
             solver.add(upperBound || lowerBound);
         }
+
+        std::stringstream str;
+        str << "(";
+        str << f1->name;
+        str << ")";
+        debug_info[hdr]["solitary"].insert(str.str());
     }
 }
 
@@ -1061,7 +1111,8 @@ void ConstraintSolver::add_solitary_constraints(ordered_set<const PHV::Field*>& 
 // byte of a container. Within the byte, the valid start bit is 0 to (8 - size_of(f)).
 // This fields are: qid, icos, meter_color, deflect_on_drop, copy_to_cpu_cos, bypass_egr,
 // ct_disable, ct_mcast.
-void ConstraintSolver::add_deparsed_to_tm_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_deparsed_to_tm_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f : fields) {
         if (f->size > 8) continue;
         if (!f->deparsed_to_tm()) continue;
@@ -1071,11 +1122,18 @@ void ConstraintSolver::add_deparsed_to_tm_constraints(ordered_set<const PHV::Fie
             ((v / 8) * 8) == (((v + f->size - 1) / 8) * 8);
         LOG1("NoSplit constraint: " << f);
         solver.add(mustFitSingleByte);
+
+        std::stringstream str;
+        str << "(";
+        str << f->name;
+        str << ")";
+        debug_info[hdr]["fit_one_byte"].insert(str.str());
     }
 }
 
 // add no_split if related fields has no_split flag set.
-void ConstraintSolver::add_no_split_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_no_split_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f : fields) {
         if (!f->no_split()) continue;
         z3::expr v = context.bv_const(f->name, 16);
@@ -1084,11 +1142,23 @@ void ConstraintSolver::add_no_split_constraints(ordered_set<const PHV::Field*>& 
                 ((v / 8) * 8) == (((v + f->size - 1) / 8) * 8);
             LOG1("NoSplit constraint: " << f);
             solver.add(mustFitSingleByte);
+
+            std::stringstream str;
+            str << "(";
+            str << f->name;
+            str << ")";
+            debug_info[hdr]["fit_one_byte"].insert(str.str());
         } else if (f->size <= 16) {
             z3::expr mustFitTwoBytes =
                 ((v / 8 + 1) * 8) == (((v + f->size - 1) / 8) * 8);
             LOG1("NoSplit constraint: " << f);
             solver.add(mustFitTwoBytes);
+
+            std::stringstream str;
+            str << "(";
+            str << f->name;
+            str << ")";
+            debug_info[hdr]["fit_two_bytes"].insert(str.str());
         }
     }
 
@@ -1119,10 +1189,17 @@ void ConstraintSolver::add_no_split_constraints(ordered_set<const PHV::Field*>& 
                     f1->no_split_container_size() << " " << v1 << " and " << v2);
             solver.add(upperBound || lowerBound);
         }
+
+        std::stringstream str;
+        str << "(";
+        str << f1->name;
+        str << ")";
+        debug_info[hdr]["solitary"].insert(str.str());
     }
 }
 
-void ConstraintSolver::add_no_pack_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_no_pack_constraints(
+        cstring hdr, ordered_set<const PHV::Field*>& fields) {
     if (!fields.size()) return;
 
     // no_pack constraint
@@ -1136,7 +1213,18 @@ void ConstraintSolver::add_no_pack_constraints(ordered_set<const PHV::Field*>& f
                 z3::expr noPack =
                     (((v1 + (*it)->size) / 8) * 8) < ((v2 / 8) * 8) ||
                     (((v2 + (*it2)->size) / 8) * 8) < ((v1 / 8) * 8);
-                solver.add(noPack); } } }
+                solver.add(noPack);
+
+                std::stringstream str;
+                str << "(";
+                str << (*it)->name;
+                str << " ";
+                str << (*it2)->name;
+                str << ")";
+                debug_info[hdr]["copack"].insert(str.str());
+            }
+        }
+    }
 }
 
 const PHV::Field* ConstraintSolver::create_padding(int size) {
@@ -1147,7 +1235,7 @@ const PHV::Field* ConstraintSolver::create_padding(int size) {
 }
 
 // initialize solver with collected constraints
-void ConstraintSolver::add_constraints(ordered_set<const PHV::Field*>& fields) {
+void ConstraintSolver::add_constraints(cstring hdr, ordered_set<const PHV::Field*>& fields) {
     for (auto f : fields)
         LOG1("add constraints for " << f);
     // compute upper bound assuming each field is padded to next byte boundary
@@ -1156,13 +1244,13 @@ void ConstraintSolver::add_constraints(ordered_set<const PHV::Field*>& fields) {
         upper_bound += f->size + (8 - f->size % 8); }
 
     for (auto f : fields)
-        add_field_alignment_constraints(f, upper_bound);
-    add_non_overlap_constraints(fields);
-    add_solitary_constraints(fields);
-    add_extract_together_constraints(fields);
-    add_deparsed_to_tm_constraints(fields);
-    add_no_pack_constraints(fields);
-    add_no_split_constraints(fields);
+        add_field_alignment_constraints(hdr, f, upper_bound);
+    add_non_overlap_constraints(hdr, fields);
+    add_solitary_constraints(hdr, fields);
+    add_extract_together_constraints(hdr, fields);
+    add_deparsed_to_tm_constraints(hdr, fields);
+    add_no_pack_constraints(hdr, fields);
+    add_no_split_constraints(hdr, fields);
 }
 
 void ConstraintSolver::print_assertions() {
@@ -1425,8 +1513,9 @@ void PackWithConstraintSolver::optimize() {
     for (auto f : nonByteAlignedFieldsMap)
         LOG1("k: " << f.first << " " << f.second);
     // add constraints related to a single field list
-    for (auto v : nonByteAlignedFieldsMap)
-        solver.add_constraints(v.second);
+    for (auto v : nonByteAlignedFieldsMap) {
+        solver.add_constraints(v.first, v.second);
+    }
 
     // add constraints between multiple field lists
     ordered_set<const PHV::Field*> allNonByteAlignedFields;

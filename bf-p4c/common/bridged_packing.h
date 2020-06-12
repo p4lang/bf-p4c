@@ -275,6 +275,9 @@ class GatherAlignmentConstraints : public PassManager {
     }
 };
 
+// header -> constraint type -> constraint
+using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>>>;
+
 /**
  * Class to generate packing for a set of phv fields given a set of constraints
  */
@@ -283,25 +286,26 @@ class ConstraintSolver {
     ordered_map<cstring, size_t> hash;
     z3::context& context;
     z3::optimize& solver;
+    DebugInfo& debug_info;
 
  public:
     explicit ConstraintSolver(const PhvInfo& p, z3::context& context,
-            z3::optimize& solver) : phv(p), context(context), solver(solver) {}
+            z3::optimize& solver, DebugInfo& dbg) :
+        phv(p), context(context), solver(solver), debug_info(dbg) {}
 
-    void add_field_alignment_constraints(const PHV::Field*, int);
-    void add_non_overlap_constraints(ordered_set<const PHV::Field*>&);
-    void add_extract_together_constraints(ordered_set<const PHV::Field*>&);
+    void add_field_alignment_constraints(cstring, const PHV::Field*, int);
+    void add_non_overlap_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_extract_together_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_solitary_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_deparsed_to_tm_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_no_pack_constraints(cstring, ordered_set<const PHV::Field*>&);
+    void add_no_split_constraints(cstring, ordered_set<const PHV::Field*>&);
     void add_mutually_aligned_constraints(ordered_set<const PHV::Field*>&);
-    void add_solitary_constraints(ordered_set<const PHV::Field*>&);
-    void add_deparsed_to_tm_constraints(ordered_set<const PHV::Field*>&);
-    void add_no_pack_constraints(ordered_set<const PHV::Field*>&);
-    void add_no_split_constraints(ordered_set<const PHV::Field*>&);
-    void add_alignment_constraint();
 
     void print_assertions();
     void dump_unsat_core();
     const PHV::Field* create_padding(int size);
-    void add_constraints(ordered_set<const PHV::Field*>&);
+    void add_constraints(cstring, ordered_set<const PHV::Field*>&);
     ordered_map<cstring, std::vector<const PHV::Field*>> solve(
             ordered_map<cstring, ordered_set<const PHV::Field*>>&);
     std::vector<const PHV::Field*> insert_padding(

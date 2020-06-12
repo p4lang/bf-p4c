@@ -380,11 +380,12 @@ std::string LogRepackedHeaders::asm_output() const {
  */
 PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         ordered_set<cstring>& candidates, RepackedHeaderTypes& map) :
+    Logging::PassManager("flexible_packing", Logging::Mode::AUTO),
     phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv),
     solver(context),
-    constraint_solver(phv, context, solver),
+    constraint_solver(phv, context, solver, debug_info),
     packWithConstraintSolver(phv, constraint_solver, candidates, map) {
     flexiblePacking = new FlexiblePacking(phv, uses, deps, options,
             packWithConstraintSolver, map);
@@ -420,4 +421,19 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
     });
 }
 
+void PackFlexibleHeaders::end_apply() {
+    if (LOGGING(1)) {
+        for (auto hdr : debug_info) {
+            LOG1("(header " << hdr.first);
+            for (auto constr = hdr.second.begin();
+                    constr != hdr.second.end(); ++constr) {
+                LOG1("  (constraint " << (*constr).first);
+                for (auto iter = (*constr).second.begin();
+                        iter != (*constr).second.end(); ++iter) {
+                    LOG1("    " << *iter
+                            << ((std::next(iter) != (*constr).second.end()) ? "" : ")")
+                            << ((std::next(constr) != hdr.second.end()) ? "" : ")"));
+                } }
+        } }
+}
 
