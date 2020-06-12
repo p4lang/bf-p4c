@@ -21,6 +21,14 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %s", &use);
     if (slices.size() <= 1) return inst;  // nothing to split
 
+    // Special handling for merged AlwaysRunAction tables with multiple min Stages
+    // *ALEX* This should be properly fixed in PHV::Field::checkContext() called from
+    // field->foreach_alloc() by correlating the use with the table uses of the corresponding field
+    auto * ctxt_tbl = findContext<IR::MAU::Table>();
+    if (ctxt_tbl && ctxt_tbl->is_always_run_action() && (PhvInfo::minStage(ctxt_tbl).size() > 1))
+        return inst;
+
+
     auto split = new IR::Vector<IR::Primitive>();
     cstring opcode = inst->name;
     bool check_pairing = false;

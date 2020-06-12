@@ -53,7 +53,11 @@ void TableSummary::end_apply() {
 }
 
 bool TableSummary::preorder(const IR::MAU::Table *t) {
-    if (!t->global_id()) {
+    if (t->is_always_run_action()) {
+        if (t->stage() == -1 && no_errors_before_summary)
+            addPlacementError(t->toString() + " not placed");
+        return true;
+    } else if (!t->global_id()) {
         if (no_errors_before_summary)
             addPlacementError(t->toString() + " not placed");
         return true; }

@@ -310,6 +310,37 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
     }
 }
 
+bool InjectDarkAntiDependencies::preorder(const IR::MAU::Table *tbl) {
+    placed |= tbl->is_placed();
+    if (placed)
+        return false;
+    id_to_table[tbl->pp_unique_id()] = tbl;
+    return true;
+}
+
+void InjectDarkAntiDependencies::end_apply() {
+    if (placed) return;
+
+    for (auto & per_gress_map : Values(phv.getARAConstraints())) {
+        for (auto pair : per_gress_map) {
+            auto orig_ar_id = pair.first->pp_unique_id();
+            auto curr_ar_table = id_to_table.at(orig_ar_id);
+            for (auto orig_id : pair.second.first) {
+                auto curr_table = id_to_table.at(orig_id);
+                dg.add_edge(curr_table, curr_ar_table,
+                            DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+            }
+
+            for (auto orig_id : pair.second.second) {
+                auto curr_table = id_to_table.at(orig_id);
+                dg.add_edge(curr_ar_table, curr_table,
+                            DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+            }
+        }
+    }
+}
+
+
 TableFindInjectedDependencies
         ::TableFindInjectedDependencies(const PhvInfo &p, DependencyGraph& d,
                                         FlowGraph& f, const BFN_Options *options)
@@ -327,7 +358,8 @@ TableFindInjectedDependencies
              ? new PredicationBasedControlEdges(&dg, ctrl_paths) : nullptr,
         new InjectMetadataControlDependencies(phv, dg, fg, ctrl_paths),
         &cntp,
-        new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths)
+        new InjectActionExitAntiDependencies(dg, cntp, ctrl_paths),
+        new InjectDarkAntiDependencies(phv, dg, ctrl_paths)
     });
 }
 

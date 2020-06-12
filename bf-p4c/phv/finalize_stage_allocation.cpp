@@ -25,8 +25,10 @@ void FinalizeStageAllocation::summarizeUseDefs(
         bool usePhysicalStages) {
     for (auto& ref : refs) {
         if (ref.first->is<IR::BFN::Parser>() || ref.first->is<IR::BFN::ParserState>()) {
-            if (!ref.second->is<ImplicitParserInit>())
+            if (!ref.second->is<ImplicitParserInit>()) {
                 usedInParser = true;
+                LOG5("\tUsed in parser");
+            }
         } else if (ref.first->is<IR::BFN::Deparser>()) {
             usedInDeparser = true;
             LOG5("\tUsed in deparser");
@@ -34,8 +36,12 @@ void FinalizeStageAllocation::summarizeUseDefs(
             auto* t = ref.first->to<IR::MAU::Table>();
             le_bitrange bits;
             auto* f = phv.field(ref.second, &bits);
+            // *ALEX* The stage info stored into PhvInfo::table_to_min_stage is still not physical.
+            // So this if else clause is meaningless because in both cases we use dg generated
+            // stage info
             if (usePhysicalStages) {
-                BUG_CHECK(t->global_id(), "Table %1% is unallocated", t->name);
+                BUG_CHECK(t->global_id() || t->is_always_run_action() && t->stage() >= 0,
+                          "Table %1% is unallocated", t->name);
                 auto minStages = phv.minStage(t);
                 for (auto stage : minStages) {
                     stageToTables[stage][t].insert(bits);
@@ -56,7 +62,6 @@ void FinalizeStageAllocation::summarizeUseDefs(
 void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     static PHV::FieldUse read(PHV::FieldUse::READ);
     static PHV::FieldUse write(PHV::FieldUse::WRITE);
-    ordered_map<PHV::Container, std::vector<PHV::Field::alloc_slice>> containerToSlicesMap;
     FinalizeStageAllocation::StageFieldEntry readTables;
     FinalizeStageAllocation::StageFieldEntry writeTables;
     bool usedInParser = false, usedInDeparser = false;
@@ -100,6 +105,8 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             ss << kv1.first->name << " ";
         ss << std::endl;
     }
+    LOG5("PHV Allocation stage info for field: \n" << ss.str());
+
     ordered_map<le_bitrange, PHV::StageAndAccess> minStageAccount;
     for (auto& alloc : f->get_alloc()) {
         le_bitrange range = alloc.field_bits();
@@ -140,14 +147,14 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             LOG5("\t\t  used in deparser");
             LOG5("\t\t  Alloc: " << alloc);
             LOG5("\t\t  empty: " << alloc.init_i.empty << ", always init: " <<
-                    alloc.init_i.alwaysInitInLastMAUStage);
+                 alloc.init_i.alwaysInitInLastMAUStage << ", shadow always init: " <<
+                 alloc.shadowAlwaysRun);
             if ((!alloc.init_i.empty && (alloc.init_i.alwaysInitInLastMAUStage)) ||
                     alloc.shadowAlwaysRun) {
                 alwaysRunLastStageSlice = true;
-                LOG4("\t\tDetected slice for always run in last stage");
+                LOG4("\t\tDetected slice for always run write-back from dark prior to deparsing");
             }
         }
-        containerToSlicesMap[alloc.container].push_back(alloc);
         int minStageRead = (alloc.min_stage.second == read) ?
                             alloc.min_stage.first : (alloc.min_stage.first + 1);
         int maxStageRead = alloc.max_stage.first;
@@ -206,6 +213,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                         maxPhysicalWrite = stage;
                         continue;
                     }
+
                     if (stage < minPhysicalWrite) minPhysicalWrite = stage;
                     if (stage > maxPhysicalWrite) maxPhysicalWrite = stage;
                 }
@@ -231,7 +239,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         }
         // Make sure that there is some physical stage during which this slice is alive.
         // No need to check parser, because there will be at least one use from the parser extract.
-        BUG_CHECK(!readAbsent || !writeAbsent || alwaysRunLastStageSlice,
+        BUG_CHECK(!readAbsent || !writeAbsent || alwaysRunLastStageSlice ,
                 "No read or write detected for allocated slice %1%", alloc);
 
         if (readAbsent) {
@@ -255,9 +263,16 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                 new_min_stage = minPhysicalWrite;
                 new_min_use = write;
             }
-            if (maxPhysicalWrite >= maxPhysicalRead) {
+            if (maxPhysicalWrite > maxPhysicalRead) {
                 new_max_stage = maxPhysicalWrite;
                 new_max_use = write;
+            } else if (maxPhysicalWrite == maxPhysicalRead) {
+                new_max_stage = maxPhysicalWrite;
+                // *ALEX* special case for merged AlwaysRunAction tables
+                if (alloc.container.is(PHV::Kind::dark))
+                    new_max_use = read;
+                else
+                    new_max_use = write;
             } else {
                 new_max_stage = maxPhysicalRead;
                 new_max_use = read;
@@ -274,7 +289,6 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             BUG_CHECK(dep_stage >= 0, "No tables detected in the program while finalizing "
                     "PHV allocation");
             LOG5("Found deparser stage " << dep_stage << " for gress " << f->gress);
-            new_min_stage = dep_stage - 1;
             new_max_stage = dep_stage;
         }
         alloc.min_stage = std::make_pair(new_min_stage, new_min_use);

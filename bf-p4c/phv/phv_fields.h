@@ -263,13 +263,18 @@ class Field : public LiftLess<Field> {
             bool nop = false;
             alloc_slice* source = nullptr;
             bool alwaysInitInLastMAUStage = false;
+            bool alwaysRunActionPrim = false;
             ordered_set<const IR::MAU::Action*> init_actions;
+            ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
+            ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
+
 
             bool operator==(const init_primitive& other) const {
                 return assignZeroToDestination == other.assignZeroToDestination &&
                        source == other.source &&
                        nop == other.nop &&
                        alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage &&
+                       alwaysRunActionPrim == other.alwaysRunActionPrim &&
                        init_actions == other.init_actions;
             }
         };
@@ -1087,6 +1092,15 @@ std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &
 
 }  // namespace PHV
 
+/// Expresses the constraints for inserting a table into the IR. The first element of the pair
+/// is the set of tables that must come before the inserted table; the second element
+/// identifies tables that must come after. Here, UniqueIds (as returned by
+/// IR::MAU::Table::pp_unique_id) are used to identify tables in the pipeline.
+using InsertionConstraints = std::pair<std::set<UniqueId>, std::set<UniqueId>>;
+
+/// Maps tables to their corresponding constraints for insertion into the IR.
+using ConstraintMap = ordered_map<const IR::MAU::Table*, InsertionConstraints>;
+
 /**
  * PhvInfo stores information about the PHV-backed storage in the program -
  * fields of header and metadata instances, header stacks, TempVars, and POV
@@ -1302,6 +1316,24 @@ class PhvInfo {
         return constantExtractedInSameState[f->id];
     }
 
+    // Return the insertion constraints for the AlwaysRunAction tables
+    const ordered_map<gress_t, ConstraintMap>& getARAConstraints() const {
+        return alwaysRunTables; }
+
+    // Add insertion constraints for table @tbl in gress @grs
+    bool add_table_constraints(gress_t grs, IR::MAU::Table* tbl, InsertionConstraints cnstrs) {
+        bool has_constrs = (alwaysRunTables.count(grs) ?
+                            (alwaysRunTables[grs].count(tbl) ? true : false) : false);
+
+        if (!has_constrs)
+            (alwaysRunTables[grs]) [tbl] = cnstrs;
+
+        return !has_constrs;
+    }
+
+    // Clear insertion constraints
+    void clearARAconstraints() { alwaysRunTables.clear(); }
+
     static void clearMinStageInfo() { PhvInfo::table_to_min_stage.clear(); }
 
     static void resetDeparserStage() { PhvInfo::deparser_stage = -1; }
@@ -1313,6 +1345,8 @@ class PhvInfo {
     static std::set<int> minStage(const IR::MAU::Table *tbl);
 
     static void addMinStageEntry(const IR::MAU::Table *tbl, int stage);
+
+    static cstring reportMinStages();
 
     // When a gateway and a table is merged together, we need to make sure that the slices used in
     // the gateway are alive at the table with which it is merged. @returns true if the liveness
@@ -1345,6 +1379,9 @@ class PhvInfo {
     /// Mapping of external name to Field pointers, for fields that have a different external
     /// name.
     ordered_map<cstring, PHV::Field*> externalNameMap;
+
+    /// Mapping of gress to map of AlwaysRun tables to tableSeq  placement constraints
+    ordered_map<gress_t, ConstraintMap> alwaysRunTables;
 
  private:
     bool                                alloc_done_ = false;

@@ -84,6 +84,7 @@ void PhvInfo::clear() {
     reverseMetadataDeps.clear();
     metadataDeps.clear();
     metadataDepFields.clear();
+    alwaysRunTables.clear();
     deparser_no_pack_i.clear();
     field_no_pack_i.clear();
     digest_no_pack_i.clear();
@@ -599,14 +600,36 @@ boost::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) con
 }
 
 std::set<int> PhvInfo::minStage(const IR::MAU::Table *table) {
+    if (LOGGING(6)) {
+        std::stringstream ss;
+        ss << " Reading stage(s) for table " << table->name << " = ";
+        for (auto stg : ::get(table_to_min_stage, TableSummary::getTableName(table)))
+            ss << stg << " ";
+        LOG6(ss.str());
+    }
+
     return ::get(table_to_min_stage, TableSummary::getTableName(table));
 }
 
 void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage) {
     auto tableName = TableSummary::getTableName(table);
     table_to_min_stage[tableName].insert(stage);
-    if (table->gateway_name && table->gateway_name != tableName)
+    LOG6("Adding stage " << stage << " to table " << tableName);
+    if (table->gateway_name && table->gateway_name != tableName) {
         table_to_min_stage[table->gateway_name].insert(stage);
+        LOG6("Adding stage " << stage << " to gateway " << table->gateway_name);
+    }
+}
+
+cstring PhvInfo::reportMinStages() {
+    std::stringstream ss;
+    ss << "  TABLES MIN STAGES:";
+    for (auto entry : table_to_min_stage) {
+        ss << "\n\t " << entry.first  << " stages: ";
+        for (auto stg : entry.second) ss << " " << stg;
+    }
+    ss << std::endl;
+    return ss.str();
 }
 
 bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
@@ -928,9 +951,13 @@ void PHV::Field::foreach_alloc(
         }
     }
     // candidate_slices contains all the slices that are in @range.
-    for (auto& slice : candidate_slices)
-        if (checkContext(slice, ctxt, use))
+    for (auto& slice : candidate_slices) {
+        LOG7("\tforeach_alloc slice: " << slice << " stages: " << slice.min_stage <<
+             " - " << slice.max_stage);
+        if (checkContext(slice, ctxt, use)) {
             fn(slice);
+        }
+    }
 }
 
 //
@@ -2097,7 +2124,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &
             if (slice.init_i.nop)
                 out << " { NOP }";
             else if (slice.init_i.alwaysInitInLastMAUStage)
-                out << " { always_run }";
+                out << " { always_run; " << slice.init_i.init_actions.size() << " actions }";
             else if (slice.init_i.init_actions.size() > 0)
                 out << " { " << slice.init_i.init_actions.size() << " actions }";
         }

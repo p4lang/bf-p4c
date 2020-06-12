@@ -274,6 +274,8 @@ bool FindInitializationNode::mayViolatePackConflict(
                      "conflict.");
                 return true;
             }
+            // *ALEX* Why do we need to check dependency graph when we
+            // *have table placement information?
             if (dg.min_stage(initTable) == dg.min_stage(t) && !tableMutex(initTable, t)) {
                 LOG4("\t\tInitialization table " << initTable->name << " and def table " << t->name
                      << " of " << slice << " have the same potential stage in the dependency graph."
@@ -496,6 +498,9 @@ FindInitializationNode::getInitializationCandidates(
 
     for (const auto* tbl : candidateTables) {
         // Find the first table where initialization is possible.
+        // *ALEX* What if the first table found is control flow mutex
+        // with dominator and uses of field f? Is this possible?
+        // (maybe issue for p4c-2678?)
         LOG3("\t\t  Checking whether initialization is possible at table " << tbl->name);
         bool reachCondition = false;
         for (auto kv : g_units) {
@@ -526,7 +531,8 @@ inline bool liveRangesOverlap(
     return false;
 }
 
-bool FindInitializationNode::identifyFieldsToInitialize(
+// *ALEX* Used to be named identifyFieldsToInitialize but name was misleading
+bool FindInitializationNode::filterOutMutexFields(
         std::vector<const PHV::Field*>& fields,
         const ordered_map<int, std::pair<int, int>>& livemap) const {
     ordered_set<const PHV::Field*> fieldsToErase;
@@ -602,8 +608,9 @@ FindInitializationNode::findInitializationNodes(
     for (const auto* f : fieldsInOrder)
         if (idx++ != 0)
             LOG3("\t\t" << f->name);
-    if (!identifyFieldsToInitialize(fieldsInOrder, livemap))
-        return boost::none;
+
+    filterOutMutexFields(fieldsInOrder, livemap);
+
     LOG3("\t  Candidate fields for initialization, and their live ranges:");
     for (const auto* f : fieldsInOrder)
         LOG3("\t\t" << f->name << " -- " << livemap.at(f->id).first << " to " <<
@@ -884,11 +891,8 @@ FindInitializationNode::findInitializationNodes(
                     LOG3("\t\t\tChoose not to initialize at " << groupDominator->name << " to "
                          "avoid increasing critical path length");
                     return boost::none;
-                } else if (*newDominator == groupDominator) {
-                    LOG3("\t\t\tReached the beginning of the flow graph. No more initialization "
-                         "points available.");
-                    return boost::none;
                 }
+
                 if (groupDominator == *newDominator) {
                     LOG3("\t\t\tReached the source node in the table flow graph");
                     return boost::none;

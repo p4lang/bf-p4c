@@ -106,6 +106,7 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
         Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
                                                   INGRESS);  // this should be both really!
     }
+    LOG7(PhvInfo::reportMinStages());
     return rv;
 }
 
@@ -383,22 +384,27 @@ struct TablePlacement::Placed {
             resources.meter_format = *mf; }
 
     void setup_logical_id() {
+        LOG7("\t\tSetting logical id for table " << table->externalName());
         if (table->is_always_run_action()) {
             logical_id = -1;
             return;
         }
 
         auto curr = prev;
-        while (curr && curr->table->is_always_run_action())
+        while (curr && curr->table->is_always_run_action()) {
             curr = curr->prev;
+        }
+
         if (curr && curr->stage == stage) {
-            if (curr->table->gateway_only())
-                logical_id = prev->logical_id + 1;
-            else
-                logical_id = curr->logical_id + prev->use.preferred()->logical_tables();
+            if (curr->table->gateway_only()) {
+                logical_id = curr->logical_id + 1;
+            } else {
+                logical_id = curr->logical_id + curr->use.preferred()->logical_tables();
+            }
         } else {
             logical_id = stage * StageUse::MAX_LOGICAL_IDS;
         }
+        LOG7("\t\t\tLogical ID: " << logical_id);
     }
 
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
@@ -556,6 +562,8 @@ TablePlacement::GatewayMergeChoices
             if (should_skip) continue;
             // If this table also uses gateways
             if (t->uses_gateway()) continue;
+            // Always Run Instructions are not logical tables
+            if (t->is_always_run_action()) continue;
             // Currently would potentially require multiple gateways if split into
             // multiple tables.  Not supported yet during allocation
             if (t->for_dleft()) continue;
@@ -624,7 +632,7 @@ bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
             return false; }
-        if (!next->table->gateway_only()) {
+        if (!next->table->gateway_only() && !next->table->is_always_run_action()) {
             table_format = try_alloc_format(next, next->gw);
         }
 
@@ -721,11 +729,11 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
     auto *table = next->table;
-    if (next->entries == 0 && !table->gateway_only()) {
+    if (next->entries == 0 && !table->gateway_only() && !table->is_always_run_action()) {
         // detached attached table -- need to rewrite it as a hash_action gateway that
         // tests the enable bit it drives the attached table with the saved index
         // FIXME -- should we memoize this rather than recreating it each time?
-        BUG_CHECK(!next->attached_entries.empty(),  "detaching atatched from %s, no "
+        BUG_CHECK(!next->attached_entries.empty(),  "detaching attached from %s, no "
                   "attached entries?", next->name);
         BUG_CHECK(!next->gw, "Have a gateway merged with a detached attached table?");
         table = table->apply(RewriteForSplitAttached(*this, next));
@@ -1112,7 +1120,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             }
         }
     }
-    if (rv->entries <= 0 && !t->gateway_only()) {
+    if (rv->entries <= 0 && !t->gateway_only() && !t->is_always_run_action()) {
         rv->entries = 0;
         if (repeated_stage) return false;
         // FIXME -- should use std::any_of, but pre C++-17 is too hard to use and verbose
@@ -1121,7 +1129,8 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             if (ate.second > 0) {
                 have_attached = true;
                 break; } }
-        if (!have_attached) return false; }
+        if (!have_attached) return false;
+    }
 
     auto stage_pragma = t->get_provided_stage(&rv->stage, &rv->requested_stage_entries);
     if (rv->requested_stage_entries > 0)
@@ -1377,7 +1386,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
     rv->setup_logical_id();
 
-    assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
+    if (!rv->table->is_always_run_action())
+       BUG_CHECK((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage, "Table %s is not "
+                 "assigned to the same stage (%d) at its logical id (%d)",
+                 rv->table->externalName(), rv->stage, rv->logical_id);
     LOG2("  try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage <<
          (rv->need_more_match ? " (need more match)" : rv->need_more ? " (need more)" : ""));
@@ -2648,7 +2660,10 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         return tbl; }
     if (tbl->is_placed())
         return tbl;
-    tbl->set_global_id(it->second->logical_id);
+    if (tbl->is_always_run_action())
+        tbl->stage_ = it->second->stage;
+    else
+        tbl->set_global_id(it->second->logical_id);
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     IR::MAU::Table::Layout gw_layout;
@@ -2869,8 +2884,8 @@ IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
                 bool a_always_run = a->is_always_run_action();
                 bool b_always_run = b->is_always_run_action();
                 if (!a_always_run && !b_always_run)
-                    return a->global_id() < b->global_id();
-                if (a->stage() < b->stage())
+                    return *(a->global_id()) < *(b->global_id());
+                if (a->stage() != b->stage())
                     return a->stage() < b->stage();
                 if (!a_always_run || !b_always_run)
                     return !a_always_run;
@@ -2907,12 +2922,16 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
 
 void MergeAlwaysRunActions::Scan::end_apply() {
     for (auto entry : self.ar_tables_per_stage) {
-        cstring name = "$always_run_post_place_" + std::to_string(entry.first.stage);
-        IR::MAU::Table *merged_table = new IR::MAU::Table(name, entry.first.gress);
+        IR::MAU::Table *merged_table = new IR::MAU::Table(cstring(), entry.first.gress);
         merged_table->stage_ = entry.first.stage;
         merged_table->always_run = IR::MAU::AlwaysRun::ACTION;
         IR::MAU::Action *act = new IR::MAU::Action("$always_run_act");
         TableResourceAlloc *resources = new TableResourceAlloc();
+        int ar_row = Device::alwaysRunIMemAddr() / 2;
+        int ar_color = Device::alwaysRunIMemAddr() % 2;
+        InstructionMemory::Use::VLIW_Instruction single_instr(bitvec(), ar_row, ar_color);
+        resources->instr_mem.all_instrs.emplace("$always_run", single_instr);
+        std::set<int> minDgStages;
         // Should really only be an Action and an instr_mem allocation
         for (auto tbl : entry.second) {
             BUG_CHECK(tbl->actions.size() == 1, "Always run tables can only have one action");
@@ -2920,7 +2939,15 @@ void MergeAlwaysRunActions::Scan::end_apply() {
             for (auto instr : local_act->action)
                 act->action.push_back(instr);
             resources->merge_instr(tbl->resources);
+            for (auto stg : PhvInfo::minStage(tbl)) minDgStages.insert(stg);
         }
+
+        auto tbl_to_replace = self.ar_replacement(entry.first.stage, entry.first.gress);
+        merged_table->name = tbl_to_replace->name;
+        merged_table->actions.emplace("$always_run_act", act);
+        merged_table->resources = resources;
+        self.merge_per_stage.emplace(entry.first, merged_table);
+        self.merged_ar_minStages[entry.first] = minDgStages;
     }
 }
 
@@ -2931,6 +2958,8 @@ const IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(IR::MAU::Table *tb
     AlwaysRunKey ark(tbl->stage(), tbl->gress);
     auto tbl_to_replace = self.ar_replacement(ark.stage, ark.gress);
     if (tbl_to_replace == orig_tbl) {
+        for (auto stg : self.merged_ar_minStages.at(ark))
+            PhvInfo::addMinStageEntry(self.merge_per_stage.at(ark), stg);
         return self.merge_per_stage.at(ark);
     } else {
         return nullptr;

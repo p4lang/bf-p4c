@@ -8,6 +8,7 @@
 #include "bf-p4c/phv/analysis/meta_live_range.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/add_always_run.h"
 
 /** A helper class that maps PHV::Field to an IR::Expression.
   * It also provides a helper function to generate an IR::MAU::Instruction* to initialize a field to
@@ -88,15 +89,21 @@ class ComputeFieldsRequiringInit : public Inspector {
 
 class ComputeDarkInitialization : public Inspector {
  private:
-    const PhvInfo&              phv;
+    PhvInfo&                    phv;
     const MapTablesToActions&   tableActionsMap;
     const MapFieldToExpr&       fieldToExpr;
+    const DependencyGraph&      dg;
 
     ordered_map<cstring, ordered_set<const IR::Primitive*>> actionToInsertedInsts;
 
     void computeInitInstruction(
         const MapFieldToExpr::AllocSlice& slice,
         const IR::MAU::Action* act);
+
+    // Create new MOVE instruction and place it into new Action which
+    // is added into new AlwaysRunAction Table. Use prior and post
+    // Tables from @alloc_sl to set the minStage for the new AlwaysRunAction Table
+    void createAlwaysRunTable(PHV::Field::alloc_slice alloc_sl);
 
     cstring getKey(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const {
         return (tbl->name + "." + act->name);
@@ -106,11 +113,15 @@ class ComputeDarkInitialization : public Inspector {
     void end_apply() override;
 
  public:
+    // Increasing integer value used in AlwaysRunAction Table name
+    static int ARA_table_id;
     explicit ComputeDarkInitialization(
-            const PhvInfo& p,
+            PhvInfo& p,
             const MapTablesToActions& m,
-            const MapFieldToExpr& e)
-        : phv(p), tableActionsMap(m), fieldToExpr(e) { }
+            const MapFieldToExpr& e,
+            const DependencyGraph& g
+        )
+        : phv(p), tableActionsMap(m), fieldToExpr(e), dg(g) { }
 
     const ordered_set<const IR::Primitive*>
     getInitializationInstructions(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const;

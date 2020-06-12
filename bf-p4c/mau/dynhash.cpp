@@ -56,6 +56,7 @@ unsigned algoHandle = 0x0;
 bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
     all_placed &= tbl->is_placed();
     if (tbl->gateway_only()) return true;
+    if (tbl->is_always_run_action()) return true;
     if (auto res = tbl->resources) {
         Util::JsonObject *_dynHashCalc = new Util::JsonObject();
         if (auto match_table = tbl->match_table->to<IR::P4Table>()) {

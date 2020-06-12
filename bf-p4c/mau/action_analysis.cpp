@@ -605,7 +605,13 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
         write_bits = alloc.container_bits();
     });
 
-    BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
+    // Special handling for merged always run action tables
+    bool is_merged_ara_table = (cont_action.table_context != nullptr)
+        && cont_action.table_context->is_always_run_action()
+        && (PhvInfo::minStage(cont_action.table_context).size() > 1);
+
+    BUG_CHECK(is_merged_ara_table || (count == 1),
+              "ActionAnalysis did not split up container by container");
 
     bool initialized;
     if (read.is_conditional)

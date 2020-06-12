@@ -163,26 +163,33 @@ class DarkInitPrimitive {
      bool nop;
      boost::optional<AllocSlice> sourceSlice;
      bool alwaysInitInLastMAUStage;
+     bool alwaysRunActionPrim;
      ActionSet actions;
+     ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
+     ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
+
 
  public:
      DarkInitPrimitive(void)
          : assignZeroToDestination(false), nop(false), sourceSlice(boost::none),
-         alwaysInitInLastMAUStage(false) { }
+         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
 
      explicit DarkInitPrimitive(ActionSet initPoints)
          : assignZeroToDestination(true), nop(false), sourceSlice(boost::none),
-         alwaysInitInLastMAUStage(false), actions(initPoints) { }
+         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
      explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
          : assignZeroToDestination(false), nop(false), sourceSlice(src),
-         alwaysInitInLastMAUStage(false), actions(initPoints) { }
+         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
      explicit DarkInitPrimitive(const DarkInitPrimitive& other)
          : assignZeroToDestination(other.assignZeroToDestination),
          nop(other.nop),
          sourceSlice(other.getSourceSlice()),
          alwaysInitInLastMAUStage(other.alwaysInitInLastMAUStage),
+         alwaysRunActionPrim(other.alwaysRunActionPrim),
+          priorUnits(other.priorUnits),
+          postUnits(other.postUnits),
          actions(other.actions) { }
 
      bool operator==(const DarkInitPrimitive& other) const {
@@ -190,6 +197,7 @@ class DarkInitPrimitive {
                 nop == other.nop &&
                 sourceSlice == other.sourceSlice &&
                 alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage &&
+                alwaysRunActionPrim == other.alwaysRunActionPrim &&
                 actions == other.actions;
      }
 
@@ -210,12 +218,28 @@ class DarkInitPrimitive {
          assignZeroToDestination = false;
      }
 
-     void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = true; }
+    void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true)  {
+        if (!append) {
+            priorUnits.clear();
+        }
+        priorUnits.insert(units.begin(), units.end());
+    }
+    void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+        if (!append) {
+            postUnits.clear();
+        }
+        postUnits.insert(units.begin(), units.end());
+    }
+
+    void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
      bool isNOP() const { return nop; }
      bool destAssignedToZero() const { return assignZeroToDestination; }
      bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }
+     bool isAlwaysRunActionPrim() const { return alwaysRunActionPrim; }
      boost::optional<AllocSlice> getSourceSlice() const { return sourceSlice; }
      const ActionSet& getInitPoints() const { return actions; }
+     const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
+     const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
 };
 
 class DarkInitEntry {
@@ -237,9 +261,12 @@ class DarkInitEntry {
      bool destAssignedToZero() const { return initInfo.destAssignedToZero(); }
      bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }
      boost::optional<AllocSlice> getSourceSlice() { return initInfo.getSourceSlice(); }
-     void setDestinationMaxLiveness(const StageAndAccess& max) {
-         destinationSlice.setLatestLiveness(max);
-     }
+    void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+        initInfo.addPriorUnits(units, append);
+    }
+     void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
+         initInfo.addPostUnits(units, append);
+    }
      const ActionSet& getInitPoints() const { return initInfo.getInitPoints(); }
      const AllocSlice getDestinationSlice() const { return destinationSlice; }
      AllocSlice getDestinationSlice() { return destinationSlice; }

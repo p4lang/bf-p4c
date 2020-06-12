@@ -131,7 +131,8 @@ class FindInitializationNode : public Inspector {
     /// @returns true if the fields can be initialized, and @false if they cannot. @fields may be
     /// mutated to remove all but one mutual exclusive field (only the field with the largest live
     /// range will remain).
-    bool identifyFieldsToInitialize(
+    /// *ALEX* Description is inacurrate (obsolete?)
+    bool filterOutMutexFields(
             std::vector<const PHV::Field*>& fields,
             const ordered_map<int, std::pair<int, int>>& livemap) const;
 

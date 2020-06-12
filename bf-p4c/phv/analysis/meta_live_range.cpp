@@ -256,6 +256,7 @@ void MetadataLiveRange::end_apply() {
 }
 
 void MetadataLiveRange::printLiveRanges() const {
+    LOG1("LIVERANGE REPORT");
     std::stringstream dashes;
     const int DEPARSER = dg.max_min_stage + 1;
     auto numStages = DEPARSER;

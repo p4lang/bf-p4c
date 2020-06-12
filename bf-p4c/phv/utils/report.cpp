@@ -69,6 +69,13 @@ format_alloc_slice(const PHV::AllocSlice& slice) {
     if (slice.field_slice().size() != slice.field()->size)
         field_slice << format_bit_slice(slice.field_slice().lo,
                                         slice.field_slice().hi);
+    if (LOGGING(4)) {
+        field_slice << " {" << slice.getEarliestLiveness().first <<
+            slice.getEarliestLiveness().second;
+        field_slice << ", " << slice.getLatestLiveness().first <<
+            slice.getLatestLiveness().second << "}";
+    }
+
     return {container_slice.str(), field_slice.str()};
 }
 

@@ -799,6 +799,7 @@ size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {
 
 bool ValidateActions::preorder(const IR::MAU::Action *act) {
     auto tbl = findContext<IR::MAU::Table>();
+    LOG4("ValidateActions for table: " << tbl->externalName());
     ActionAnalysis::FieldActionsMap field_actions_map;
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ActionAnalysis aa(phv, phv_alloc, ad_alloc, tbl);

@@ -86,9 +86,6 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
             mauasm.power_and_mpr->emit_stage_asm(out, stage.first.first, stage.first.second);
         }
-        if (Device::currentDevice() != Device::TOFINO &&
-            stage.first.second == maxStages[stage.first.first])
-            mauasm.emit_always_init_action(out, indent, stage.first);
         for (auto &tbl : stage.second) {
             switch (tbl.tableInfo->always_run) {
             case IR::MAU::AlwaysRun::NONE:
@@ -2352,9 +2349,10 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
 /// Behaves mostly the same as EmitAction, except all the preamble before the action's instructions
 /// is replaced with an always_run_action header.
 class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
-    bool preorder(const IR::MAU::Action*) override {
+    bool preorder(const IR::MAU::Action *act) override {
         out << indent++ << "always_run_action:" << std::endl;
         is_empty = true;
+        act->visit_children(*this);
         return false;
     }
 
@@ -4110,64 +4108,4 @@ bool MauAsmOutput::emit_idletime(std::ostream &out, indent_t indent, const IR::M
     out << indent << "notification: " << id->two_way_notification << std::endl;
     out << indent << "per_flow_enable: " << (id->per_flow_idletime ? "true" : "false") << std::endl;
     return false;
-}
-
-void MauAsmOutput::emit_always_init_action(std::ostream &out, indent_t indent,
-                                           const std::pair<gress_t, int>& stageGress) const {
-    std::vector<PHV::Field::alloc_slice> slicesToAlwaysInit;
-    std::map<PHV::Container, std::vector<PHV::Field::alloc_slice>> containerToAllocSlices;
-    // Collect all the instructions needed for always_run.
-    for (const auto& f : phv) {
-        if (f.gress != stageGress.first) continue;
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            if (alloc.init_i.empty) return;
-            if (!alloc.init_i.alwaysInitInLastMAUStage) return;
-            slicesToAlwaysInit.push_back(alloc);
-            containerToAllocSlices[alloc.container].push_back(alloc);
-        });
-    }
-    if (slicesToAlwaysInit.size() == 0) return;
-    std::map<PHV::Container, PHV::Container> combinedInsts;
-    std::map<PHV::Container, bitvec> containerToCoverage;
-    std::vector<PHV::Field::alloc_slice> ignoreSet;
-    for (auto& kv : containerToAllocSlices) {
-        if (kv.second.size() == 1) continue;
-        for (auto& alloc : kv.second) {
-            LOG3("Alloc for container " << alloc.container << " : " << alloc);
-            const auto* src_alloc = alloc.init_i.source;
-            containerToCoverage[alloc.container] |= bitvec(alloc.container_bit, alloc.width);
-            if (combinedInsts.count(alloc.container)) {
-                if (combinedInsts.at(alloc.container) != src_alloc->container)
-                    LOG3("Cannot allocate always_run init block for field " << alloc <<", The two "
-                         "source containers are " << combinedInsts.at(alloc.container) << " and " <<
-                         src_alloc->container);
-            } else {
-                combinedInsts[alloc.container] = src_alloc->container;
-            }
-            ignoreSet.push_back(alloc);
-        }
-    }
-    // Make sure the entire container is moved in the always run instruction.
-    for (auto& kv : containerToCoverage)
-        LOG3(kv.first << " : " << kv.second);
-
-    out << indent++ << "always_run_action:" << std::endl;
-    for (auto& alloc : slicesToAlwaysInit) {
-        if (std::find(ignoreSet.begin(), ignoreSet.end(), alloc) != ignoreSet.end())
-            continue;
-        const PHV::Field* field = alloc.field;
-        out << indent << "- set " << canon_name(field->externalName());
-        if (alloc.width != field->size)
-            out << "." << alloc.field_bit << "-" << alloc.field_hi();
-        out << ", ";
-        const auto* src_alloc = alloc.init_i.source;
-        const PHV::Field* src_field = src_alloc->field;
-        out << canon_name(src_field->externalName());
-        if (src_alloc->width != src_field->size)
-            out << "." << src_alloc->field_bit << "-" << src_alloc->field_hi();
-        out << std::endl;
-    }
-    for (auto& kv : combinedInsts) {
-        out << indent << "- set " << kv.first << ", " << kv.second << std::endl;
-    }
 }

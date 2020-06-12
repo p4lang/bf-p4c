@@ -247,13 +247,15 @@ void DarkLiveRange::end_apply() {
     }
 }
 
+// Returns pair of {READ, WRITE} accesses per stage for the slices in @fields
+// If more than one slice have the same access in the same stage, return
+// boost::none
+// ---
 boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStage(
         const ordered_set<PHV::AllocSlice>& fields,
         const int stage) const {
     const PHV::AllocSlice* readField = nullptr;
     const PHV::AllocSlice* writtenField = nullptr;
-    bool readDarkOk = false;
-    bool writeDarkOk = false;
     for (auto& sl : fields) {
         if (livemap.hasAccess(sl.field(), stage, READ)) {
             if (readField != nullptr) {
@@ -262,7 +264,6 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
                 return boost::none;
             }
             readField = &sl;
-            readDarkOk = livemap.canBeDark(sl.field(), stage, READ);
         }
         if (livemap.hasAccess(sl.field(), stage, WRITE)) {
             if (writtenField != nullptr) {
@@ -271,15 +272,12 @@ boost::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStag
                 return boost::none;
             }
             writtenField = &sl;
-            writeDarkOk = livemap.canBeDark(sl.field(), stage, WRITE);
         }
     }
     if (readField)
-        LOG5("\t\t  Adding slice " << *readField << " READ in stage " << stage << ", dark " <<
-             (readDarkOk ? "OK" : "NOT OK"));
+        LOG5("\t\t  Adding slice " << *readField << " READ in stage " << stage);
     if (writtenField)
-        LOG5("\t\t  Adding slice " << *writtenField << " WRITE in stage " << stage << ", dark "
-             << (writeDarkOk ? "OK" : "NOT OK"));
+        LOG5("\t\t  Adding slice " << *writtenField << " WRITE in stage " << stage);
     return std::make_pair(readField, writtenField);
 }
 
@@ -357,6 +355,11 @@ boost::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFields
     return rv;
 }
 
+
+// Ignore reach conflicts if they are due to PARSER/DEPARSER units or if
+// they are on the same table with lastField doing a WRITE and
+// currentField doing a READ (Each stage has a READ->WRITE ordering)
+// ---
 bool DarkLiveRange::ignoreReachCondition(
         const OrderedFieldInfo& currentField,
         const OrderedFieldInfo& lastField,
@@ -367,7 +370,7 @@ bool DarkLiveRange::ignoreReachCondition(
         const auto* t2 = conflict.second->to<IR::MAU::Table>();
         if (!t1 || !t2 || t1 != t2) return false;
         // Here both the conflicting units are the same.
-        LOG6("\t\t\t\tt1: " << t1->name << ", " << t2->name);
+        LOG6("\t\t\t\tt1: " << t1->name << ",  t2:" << t2->name);
         bool currentAccessAtTable = livemap.hasAccess(currentField.field.field(), dg.min_stage(t1),
                 WRITE);
         bool lastAccessAtTable = livemap.hasAccess(lastField.field.field(), dg.min_stage(t1), READ);
@@ -539,8 +542,8 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 }
             }
         }
-        bool moveCurrentToDark = mustMoveToDark(*lastField, *fieldsInOrder);
-        if (moveCurrentToDark)
+        bool movePreviousToDark = mustMoveToDark(*lastField, *fieldsInOrder);
+        if (movePreviousToDark)
             LOG2("\t\tMove the previous field " << lastField->field << " into a dark container "
                  "after stage " << lastField->maxStage.first << lastField->maxStage.second);
         else
@@ -566,7 +569,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                  lastField->maxStage.second);
 
         if (onlyDeparserUse && initializeCurrentField && initializeFromDark) {
-            auto init = generateInitForLastStageAlwaysInit(info, rv);
+            auto init = generateInitForLastStageAlwaysInit(info, lastField, rv);
             if (!init) return boost::none;
             rv.push_back(*init);
             continue;
@@ -654,7 +657,7 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 LOG2("\t\tTrying to initialize at table " << groupDominator->name << " (Stage " <<
                         dg.min_stage(groupDominator) << ")");
                 auto darkInitPoints = getInitPointsForTable(group, c, groupDominator, *lastField,
-                        info, rv, moveCurrentToDark, initializeCurrentField, initializeFromDark,
+                        info, rv, movePreviousToDark, initializeCurrentField, initializeFromDark,
                         alloc);
                 if (!groupDominatorBeforeFirstUseCurrentField) {
                     // TODO: Relax by accounting for valid uses directly from dark containers.
@@ -691,9 +694,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
         if (idx == 1 && firstDarkInitEntry != nullptr) {
             LOG3("Need to push the first dark init primitive corresponding to " <<
                     *firstDarkInitEntry);
-            if (moveCurrentToDark) {
+            if (movePreviousToDark) {
                 LOG3("  Live range must extend to the initialization point");
-                firstDarkInitEntry->setDestinationMaxLiveness(
+                firstDarkInitEntry->setDestinationLatestLiveness(
                         std::make_pair(dg.min_stage(groupDominator), PHV::FieldUse(READ)));
                 LOG3("  New dark primitive: " << *firstDarkInitEntry);
                 rv.insert(rv.begin(), *firstDarkInitEntry);
@@ -746,10 +749,12 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
 
     // Check if moving lastField to dark container (if required) is possible.
     if (moveLastFieldToDark) {
-        auto lastFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc);
+        auto lastFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
+                                                       currentField.maxStage);
         if (!lastFieldInit) return boost::none;
         LOG3("\t\t\tA. Creating dark init primitive for moving last field to dark : " <<
              *lastFieldInit);
+
         rv.push_back(*lastFieldInit);
         auto srcSlice = lastFieldInit->getSourceSlice();
         if (srcSlice) {
@@ -850,7 +855,8 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
         const PHV::ContainerGroup& group,
         const IR::MAU::Table* t,
         const OrderedFieldInfo& field,
-        const PHV::Transaction& alloc) const {
+        const PHV::Transaction& alloc,
+        const PHV::StageAndAccess nxtFieldMaxStage) const {
     // Find out all the actions in table t, where we need to insert moves into the dark container.
     // DXm[a...b] = Xn[a...b]
     auto moveActions = getInitActions(c, field, t, alloc);
@@ -877,10 +883,12 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
     PHV::AllocSlice dstSlice(field.field.field(), darkCandidate, field.field.field_slice(),
             field.field.container_slice());
     // Set maximum liveness for this slice.
+    int darkStage = nxtFieldMaxStage.second == PHV::FieldUse(READ) ? nxtFieldMaxStage.first :
+        nxtFieldMaxStage.first + 1;
     dstSlice.setLiveness(std::make_pair(dg.min_stage(t), PHV::FieldUse(WRITE)),
-            std::make_pair(dg.max_min_stage, PHV::FieldUse(WRITE)));
+            std::make_pair(darkStage, PHV::FieldUse(READ)));
     LOG5("\t\t\t\tCreated destination slice " << dstSlice << " live between [" << dg.min_stage(t) <<
-         PHV::FieldUse(WRITE) << ", " << dg.max_min_stage << PHV::FieldUse(WRITE) << "]");
+         PHV::FieldUse(WRITE) << ", " << darkStage << PHV::FieldUse(READ) << "]");
     PHV::DarkInitEntry rv(dstSlice, srcSlice, *moveActions);
     return rv;
 }
@@ -910,12 +918,25 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldWithZer
     return rv;
 }
 
+const ordered_set<const IR::BFN::Unit*>&
+DarkLiveRange::getPostDomUnits(const OrderedFieldInfo* field) {
+    // Get access units for @field
+    ordered_set<const IR::BFN::Unit*> nodes;
+    nodes.insert(field->units.begin(), field->units.end());
+
+    return nodes;
+}
+
+
 boost::optional<PHV::DarkInitEntry>
 DarkLiveRange::generateInitForLastStageAlwaysInit(
         const OrderedFieldInfo& field,
+        const OrderedFieldInfo* prvField,
         const PHV::DarkInitMap& darkInitMap) const {
     PHV::AllocSlice dstSlice(field.field);
-    dstSlice.setLiveness(std::make_pair(livemap.getDeparserStageValue() - 1, PHV::FieldUse(WRITE)),
+    int fromDarkStage = prvField->maxStage.second == PHV::FieldUse(READ) ? prvField->maxStage.first
+        : (prvField->maxStage.first + 1);
+    dstSlice.setLiveness(std::make_pair(fromDarkStage, PHV::FieldUse(WRITE)),
             field.maxStage);
     PHV::DarkInitEntry rv(dstSlice);
     for (auto it = darkInitMap.rbegin(); it != darkInitMap.rend(); ++it) {
@@ -928,6 +949,7 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
             rv.addSource(dest);
             rv.setLastStageAlwaysInit();
             LOG3("\t\t\tAdding initialization from dark in last stage: " << rv);
+            rv.addPriorUnits(prvField->units);
             return rv;
         }
     }

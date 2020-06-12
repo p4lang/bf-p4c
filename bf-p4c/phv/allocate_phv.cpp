@@ -1171,7 +1171,7 @@ CoreAllocation::tryAllocSliceList(
             LOG6("      Dark overlay: " << can_overlay(phv_i.dark_mutex(), slice.field(),
                         alloced_slices));
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
-                LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices);
+                LOG5("    ...and can overlay " << slice << " on " << alloced_slices);
                 new_candidate_slices.push_back(slice);
             } else if (alloced_slices.size() > 0) {
                 // If there are slices already allocated for these container bits, then check if
@@ -1194,7 +1194,7 @@ CoreAllocation::tryAllocSliceList(
                         break;
                     }
 
-                    LOG5("    ...and can overlay " << slice.field() << " on " << alloced_slices <<
+                    LOG5("    ...and can overlay " << slice << " on " << alloced_slices <<
                          " with metadata initialization.");
                     PHV::Allocation::MutuallyLiveSlices container_state =
                         perContainerAlloc.slicesByLiveness(c, candidate_slices);
@@ -1268,6 +1268,10 @@ CoreAllocation::tryAllocSliceList(
                         // Create initialization points for the dark container.
                         generateNewAllocSlices(slice, alloced_slices, *darkInitNodes,
                                 new_candidate_slices, perContainerAlloc);
+
+                        // XXX(ALEX) We should  populate InitNodes with darkInitNodes to later
+                        // properly populate initActions
+                        // TODO(ALEX)
                     }
                 } else {
                     LOG5("    ...but " << c << " already contains slices at this position");
@@ -1345,6 +1349,9 @@ CoreAllocation::tryAllocSliceList(
             }
         }
 
+        // -  Populate actual_container_state with allocated slices that
+        //    do not have overlap with any of the candidate_slices
+        // - Also update initActions with the actions of the slices in actual_container_state
         PHV::Allocation::MutuallyLiveSlices container_state = perContainerAlloc.slicesByLiveness(c,
                 candidate_slices);
         // Actual slices in the container, after accounting for metadata overlay.
@@ -1664,7 +1671,7 @@ CoreAllocation::tryAllocSliceList(
 
 
 // Used for dark overlays - Replaces original slice allocation with
-// new slice allocation and spilt slice allocation in dark and normal
+// new slice allocation and spilled slice allocation in dark and normal
 // ---
 void CoreAllocation::generateNewAllocSlices(
         const PHV::AllocSlice& origSlice,
@@ -2039,18 +2046,6 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
     // Translate AllocSlice to alloc_slice, and attach alloc_slice to
     // PHV::Field.
     for (auto container_and_slices : alloc) {
-        std::vector<PHV::AllocSlice> slices;
-        for (PHV::AllocSlice slice : container_and_slices.second.slices)
-            slices.push_back(slice);
-        // Sort the slices vector according to live range of the constituent slices.
-        std::sort(slices.begin(), slices.end(),
-                [](const PHV::AllocSlice& a, const PHV::AllocSlice& b) {
-            auto aMinStage = a.getEarliestLiveness();
-            auto bMinStage = b.getEarliestLiveness();
-            if (aMinStage.first != bMinStage.first) return aMinStage.first < bMinStage.first;
-            if (aMinStage.second != bMinStage.second) return aMinStage.second < bMinStage.second;
-            return a < b;
-        });
         // TODO: Do we need to ensure that the live ranges of the constituent slices, put together,
         // completely cover the entire pipeline (plus parser and deparser).
 
@@ -2084,6 +2079,7 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
             allocated_slice->init_i.assignZeroToDestination = initPrimitive->destAssignedToZero();
             allocated_slice->init_i.alwaysInitInLastMAUStage =
                 initPrimitive->mustInitInLastMAUStage();
+            allocated_slice->init_i.alwaysRunActionPrim = initPrimitive->isAlwaysRunActionPrim();
             LOG5("\tAllocating slice " << slice);
             LOG5("\t  Setting dark initialization information for " << slice);
             LOG5("\t    Primitive: " << *initPrimitive);
@@ -2104,6 +2100,17 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
             auto darkPrimActions = initPrimitive->getInitPoints();
             allocated_slice->init_i.init_actions.insert(darkPrimActions.begin(),
                     darkPrimActions.end());
+
+            // Get the prior & post units that constrain the ARA table placement
+            if (initPrimitive->isAlwaysRunActionPrim()) {
+                const auto priorARAunits = initPrimitive->getARApriorUnits();
+                const auto postARAunits = initPrimitive->getARApostUnits();
+                allocated_slice->init_i.priorUnits.insert(priorARAunits.begin(),
+                                                          priorARAunits.end());
+                allocated_slice->init_i.postUnits.insert(postARAunits.begin(),
+                                                         postARAunits.end());
+            }
+
             if (initPrimitive->mustInitInLastMAUStage() && sourceSlice)
                 LOG5("\t\t  Source slice: " << *(allocated_slice->init_i.source));
         }

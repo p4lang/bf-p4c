@@ -119,6 +119,28 @@ class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
         : AbstractDependencyInjector(g, cp), cntp(cntp) { }
 };
 
+
+class InjectDarkAntiDependencies : public AbstractDependencyInjector {
+    const PhvInfo &phv;
+    bool placed = false;
+    std::map<UniqueId, const IR::MAU::Table *> id_to_table;
+
+    profile_t init_apply(const IR::Node *node) override {
+        auto rv = AbstractDependencyInjector::init_apply(node);
+        placed = false;
+        id_to_table.clear();
+        return rv;
+    }
+
+    bool preorder(const IR::MAU::Table *) override;
+    void end_apply() override;
+
+ public:
+    InjectDarkAntiDependencies(const PhvInfo &p, DependencyGraph &g,
+            const ControlPathwaysToTable &cp)
+        : AbstractDependencyInjector(g, cp), phv(p) { }
+};
+
 class TableFindInjectedDependencies : public PassManager {
     const PhvInfo &phv;
     DependencyGraph &dg;

@@ -201,6 +201,7 @@ class MergeAlwaysRunActions : public PassManager {
 
     std::map<AlwaysRunKey, ordered_set<const IR::MAU::Table *>> ar_tables_per_stage;
     std::map<AlwaysRunKey, const IR::MAU::Table *> merge_per_stage;
+    std::map<AlwaysRunKey, std::set<int>> merged_ar_minStages;
 
     profile_t init_apply(const IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
@@ -221,6 +222,7 @@ class MergeAlwaysRunActions : public PassManager {
     class Update : public MauTransform {
         MergeAlwaysRunActions &self;
         const IR::MAU::Table *preorder(IR::MAU::Table *) override;
+        void end_apply() override { LOG7(PhvInfo::reportMinStages()); }
 
      public:
         explicit Update(MergeAlwaysRunActions &s) : self(s) {}

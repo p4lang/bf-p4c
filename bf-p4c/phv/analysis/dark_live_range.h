@@ -98,12 +98,6 @@ class DarkLiveRange : public Inspector {
             if (!livemap.at(f).count(key)) return false;
             return true;
         }
-
-        bool canBeDark(const PHV::Field* f, int stage, unsigned access) const {
-            if (!hasAccess(f, stage, access)) return false;
-            StageAndAccess key = std::make_pair(stage, PHV::FieldUse(access));
-            return livemap.at(f).at(key).second;
-        }
     };
 
     struct OrderedFieldInfo {
@@ -277,7 +271,8 @@ class DarkLiveRange : public Inspector {
             const PHV::ContainerGroup& group,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
-            const PHV::Transaction& alloc) const;
+            const PHV::Transaction& alloc,
+            const PHV::StageAndAccess nxtFieldMaxStage) const;
 
     boost::optional<PHV::DarkInitEntry> getInitForCurrentFieldFromDark(
             const PHV::Container& c,
@@ -303,8 +298,11 @@ class DarkLiveRange : public Inspector {
             const ordered_set<const IR::BFN::Unit*>& doms,
             const IR::MAU::Table* groupDominator) const;
 
+    const ordered_set<const IR::BFN::Unit*>& getPostDomUnits(const OrderedFieldInfo* field);
+
     boost::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
             const OrderedFieldInfo& field,
+            const OrderedFieldInfo* previousField,
             const PHV::DarkInitMap& darkInitMap) const;
 
  public:

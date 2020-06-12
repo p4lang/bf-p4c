@@ -5,8 +5,6 @@ void AddEmptyTableSeqs::postorder(IR::BFN::Pipe* pipe) {
     for (auto& thread : pipe->thread) {
         if (!thread.mau) thread.mau = new IR::MAU::TableSeq();
     }
-
-    if (!pipe->ghost_thread) pipe->ghost_thread = new IR::MAU::TableSeq();
 }
 
 void AddEmptyTableSeqs::postorder(IR::MAU::Table* tbl) {

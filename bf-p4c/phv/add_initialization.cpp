@@ -151,6 +151,7 @@ class AddMetadataInitialization : public Transform {
 
 Visitor::profile_t ComputeDarkInitialization::init_apply(const IR::Node* root) {
     actionToInsertedInsts.clear();
+    phv.clearARAconstraints();
     return Inspector::init_apply(root);
 }
 
@@ -176,15 +177,78 @@ void ComputeDarkInitialization::computeInitInstruction(
     actionToInsertedInsts[key].insert(prim);
 }
 
+
+int ComputeDarkInitialization::ARA_table_id = 0;
+
+void ComputeDarkInitialization::createAlwaysRunTable(PHV::Field::alloc_slice alloc_sl) {
+    // 1. Create UniqueId sets for ARA table constraints
+    std::set<UniqueId> prior_tables;
+    std::set<UniqueId> post_tables;
+
+    int prior_max_stage = -1;
+    for (auto node : alloc_sl.init_i.priorUnits) {
+        const auto* tbl = node->to<IR::MAU::Table>();
+        if (!tbl) continue;
+        LOG6("Prior Table: " << tbl->externalName() << ", stage: " << phv.minStage(tbl));
+        prior_tables.insert(tbl->pp_unique_id());
+        for (auto ms : phv.minStage(tbl))
+            prior_max_stage = std::max(prior_max_stage, ms);
+    }
+
+
+    for (auto node : alloc_sl.init_i.postUnits) {
+        const auto* tbl = node->to<IR::MAU::Table>();
+        if (!tbl) continue;
+        post_tables.insert(tbl->pp_unique_id());
+    }
+
+    auto constraints = std::make_pair(prior_tables, post_tables);
+
+    // 2. Create new ARA Table
+    std::stringstream ara_name;
+    ara_name << "ara_table_" << ARA_table_id++;
+    gress_t ara_gress = alloc_sl.field->gress;
+
+    auto ara_tbl = new IR::MAU::Table(ara_name, ara_gress);
+    ara_tbl->always_run = IR::MAU::AlwaysRun::ACTION;
+    ara_name << "_action";
+    auto act = new IR::MAU::Action(cstring(ara_name.str()));
+
+    BUG_CHECK(alloc_sl.init_i.source != nullptr,
+              "No source slice defined for allocated slice %1%", alloc_sl);
+    LOG4("\tAdd ARA initialization in action " << act->name << " for: " << alloc_sl);
+    LOG4("\t  Initialize from: " << *(alloc_sl.init_i.source));
+    auto prim = fieldToExpr.generateInitInstruction(alloc_sl, *(alloc_sl.init_i.source));
+    LOG4("\t\tAdded initialization: " << prim);
+    act->action.push_back(prim);
+
+    ara_tbl->actions.emplace(cstring(ara_name.str()), act);
+
+    // Update phvInfo::table_to_min_stage (required during ActionAnalysis)
+    phv.addMinStageEntry(ara_tbl, prior_max_stage);
+
+    // 3. Insert ARA table and constraints into alwaysRunTables
+    bool no_existing_cnstrs = phv.add_table_constraints(ara_gress, ara_tbl, constraints);
+    BUG_CHECK(no_existing_cnstrs, "Table %1% has existing constraints", ara_tbl->externalName());
+}
+
+
 void ComputeDarkInitialization::end_apply() {
     for (const auto& f : phv) {
         for (const auto& slice : f.get_alloc()) {
             // Ignore NOP initializations
             if (slice.init_i.nop) continue;
+
             // Initialization in last MAU stage will be handled directly by another pass.
-            if (slice.init_i.alwaysInitInLastMAUStage) continue;
-            for (const IR::MAU::Action* initAction : slice.init_i.init_actions)
-                computeInitInstruction(slice, initAction);
+            // Here we create AlwaysRunAction tables with related placement constraints
+            if (slice.init_i.alwaysInitInLastMAUStage) {
+                if (slice.init_i.priorUnits.size() || slice.init_i.postUnits.size()) {
+                    createAlwaysRunTable(slice);
+                }
+            } else {
+                for (const IR::MAU::Action* initAction : slice.init_i.init_actions)
+                    computeInitInstruction(slice, initAction);
+            }
         }
     }
 
@@ -195,6 +259,8 @@ void ComputeDarkInitialization::end_apply() {
     }
 }
 
+// Retrieve primitives for @tbl/@act hash key
+// -----
 const ordered_set<const IR::Primitive*>
 ComputeDarkInitialization::getInitializationInstructions(
         const IR::MAU::Table* tbl,
@@ -205,6 +271,8 @@ ComputeDarkInitialization::getInitializationInstructions(
     return actionToInsertedInsts.at(key);
 }
 
+// Add dark initialization primitives into actions
+// -----
 class AddDarkInitialization : public Transform {
  private:
     const PhvInfo& phv;
@@ -241,6 +309,7 @@ class AddDarkInitialization : public Transform {
     explicit AddDarkInitialization(const PhvInfo& p, const ComputeDarkInitialization& d)
         : phv(p), initReqs(d) { }
 };
+
 
 void ComputeDependencies::noteDependencies(
         const ordered_map<PHV::AllocSlice, ordered_set<PHV::AllocSlice>>& slices,
@@ -303,7 +372,7 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
     if (!phv.alloc_done())
         BUG("ComputeDependencies pass must be called after PHV allocation is complete.");
 
-    // Generate the initFieldsToOverlappingFields map.
+    // Generate the initSlicesToOverlappingSlices map.
     // The key here is a field that must be initialized as part of live range shrinking; the values
     // are the set of fields that overlap with the key field, and so there must be dependencies
     // inserted from the reads of the value fields to the initializations inserted.
@@ -383,22 +452,28 @@ void ComputeDependencies::summarizeDarkInits(
         f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
             if (alloc.init_i.init_actions.size() == 0) return;
             if (alloc.init_i.nop) return;
-            if (alloc.init_i.alwaysInitInLastMAUStage) return;
+            // if (alloc.init_i.alwaysInitInLastMAUStage) return;
             ordered_set<const IR::MAU::Table*> initTables;
+            LOG5("DarkInits for slice " << alloc << " in tables:");
             for (const auto* action : alloc.init_i.init_actions) {
                 auto t = actionsMap.getTableForAction(action);
                 BUG_CHECK(t, "No table corresponding to action %1%", action->name);
                 initTables.insert(*t);
                 initTableNames.insert((*t)->name);
+                LOG5("\t" << (*t)->name);
             }
             if (alloc.init_i.assignZeroToDestination) {
-                for (const auto* t : initTables)
+                for (const auto* t : initTables) {
                     fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_bits());
+                    LOG5("\t\t insering zero write for table " << t->name);
+                }
             }
             if (alloc.init_i.source != nullptr) {
                 const PHV::Field* src = alloc.init_i.source->field;
-                for (const auto* t : initTables)
+                for (const auto* t : initTables) {
                     fieldReads[src][dg.min_stage(t)][t].insert(alloc.field_bits());
+                    LOG5("\t\t inserting read for table " << t->name << " of " << *src);
+                }
             }
         });
     }
@@ -598,7 +673,7 @@ AddSliceInitialization::AddSliceInitialization(
         const DependencyGraph& g,
         const MetadataLiveRange& r)
     : fieldToExpr(p), init(p), dep(p, g, actionsMap, init, d, r, tableMutex),
-      computeDarkInit(p, actionsMap, fieldToExpr) {
+      computeDarkInit(p, actionsMap, fieldToExpr, g) {
     addPasses({
         &tableMutex,
         &actionsMap,
@@ -608,6 +683,8 @@ AddSliceInitialization::AddSliceInitialization(
         Device::phvSpec().hasContainerKind(PHV::Kind::dark) ? &computeDarkInit : nullptr,
         Device::phvSpec().hasContainerKind(PHV::Kind::dark)
             ? new AddDarkInitialization(p, computeDarkInit) : nullptr,
+        Device::phvSpec().hasContainerKind(PHV::Kind::dark)
+            ? new AddAlwaysRun(p.getARAConstraints()) : nullptr,
         &dep,
         new MarkDarkInitTables(dep)
     });
