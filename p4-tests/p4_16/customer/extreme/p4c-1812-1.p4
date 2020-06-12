@@ -645,7 +645,9 @@ header switch_port_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     bit<48> timestamp;
+#if __TARGET_TOFINO__ == 1
     bit<6> _pad;
+#endif
     switch_mirror_session_t session_id;
 }
 header switch_cpu_mirror_metadata_h {
@@ -685,13 +687,18 @@ struct switch_dtel_metadata_t {
     switch_dtel_report_type_t report_type;
     bit<32> latency;
     switch_mirror_session_t session_id;
+#if __TARGET_TOFINO__ >= 2
+    bit<2> _pad;
+#endif
     bit<32> hash;
 }
 header switch_dtel_switch_local_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     bit<48> timestamp;
+#if __TARGET_TOFINO__ == 1
     bit<6> _pad;
+#endif
     switch_mirror_session_t session_id;
     bit<32> hash;
     bit<5> _pad1;
@@ -710,7 +717,9 @@ header switch_dtel_drop_mirror_metadata_h {
     switch_pkt_src_t src;
     switch_mirror_type_t type;
     bit<48> timestamp;
+#if __TARGET_TOFINO__ == 1
     bit<6> _pad;
+#endif
     switch_mirror_session_t session_id;
     bit<32> hash;
     bit<13> _pad1;
@@ -1112,12 +1121,20 @@ action set_ig_intr_md(in switch_ingress_metadata_t ig_md,
                       inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
                       inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     ig_intr_md_for_tm.mcast_grp_b = ig_md.multicast.id;
+#if __TARGET_TOFINO__ == 1
     ig_intr_md_for_dprsr.mirror_type = (bit<3>) ig_md.mirror.type;
+#elif __TARGET_TOFINO__ >= 2
+    ig_intr_md_for_dprsr.mirror_type = (bit<4>) ig_md.mirror.type;
+#endif
 }
 action set_eg_intr_md(in switch_egress_metadata_t eg_md,
                       inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
                       inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport) {
+#if __TARGET_TOFINO__ == 1    
     eg_intr_md_for_dprsr.mirror_type = (bit<3>) eg_md.mirror.type;
+#elif __TARGET_TOFINO__ >= 2
+    eg_intr_md_for_dprsr.mirror_type = (bit<4>) eg_md.mirror.type;
+#endif
 }
 action acl_deny(inout switch_ingress_metadata_t ig_md,
                 inout switch_stats_index_t index,

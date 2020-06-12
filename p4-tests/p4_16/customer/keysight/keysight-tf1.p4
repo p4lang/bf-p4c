@@ -679,7 +679,11 @@ control SwitchIngressDeparser(
     Mirror() mirror;
 
     apply {
+    #if __TARGET_TOFINO__ == 1
         if (ig_dprsr_md.mirror_type == MIRROR_TYPE_I2E) {
+    #elif __TARGET_TOFINO__ >= 2
+        if (ig_dprsr_md.mirror_type == (bit<4>) MIRROR_TYPE_I2E) {
+    #endif
           // clone pkt with CPU fabr hdr info
 
 
@@ -2704,7 +2708,11 @@ control process_to_cpu_port_forwarding(inout header_t hdr,
         ig_md.mirror_id = cpu_mirror_id;
         ig_md.is_mirror = 1;
         ig_dprsr_md.drop_ctl = 0x1;
+    #if __TARGET_TOFINO__ == 1
         ig_dprsr_md.mirror_type = MIRROR_TYPE_I2E;
+    #elif __TARGET_TOFINO__ >= 2
+        ig_dprsr_md.mirror_type = (bit<4>) MIRROR_TYPE_I2E;
+    #endif
 
 
 

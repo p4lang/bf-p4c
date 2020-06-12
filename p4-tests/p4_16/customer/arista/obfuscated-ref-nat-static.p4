@@ -2,7 +2,6 @@
 // p4c 9.1.0-pr.18 (SHA: 9fbc9cd)
 
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -447,7 +446,7 @@ struct Sheldahl {
 }
 
 struct Quinhagak {
-    bit<10> Scarville;
+    MirrorId_t Scarville;
     bit<10> Ivyland;
     bit<2>  Edgemoor;
 }
@@ -1054,7 +1053,7 @@ control Hallwood(packet_out Elvaston, inout GlenAvon McCracken, in Sublett LaMoi
     apply {
         McCracken.Bergton.SoapLake = Earling.update<tuple<bit<32>, bit<16>>>({ LaMoille.Cutten.Bucktown, McCracken.Bergton.SoapLake }, false);
         {
-            if (ElkNeck.mirror_type == 3w1) {
+            if (ElkNeck.mirror_type == 1) {
                 Toccopola Udall;
                 Udall.Roachdale = LaMoille.Burwell.Roachdale;
                 Udall.Miller = LaMoille.Hayfield.Arnold;
@@ -3278,7 +3277,7 @@ control Maxwelton(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_i
 }
 
 control Swandale(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intrinsic_metadata_t Hayfield, in ingress_intrinsic_metadata_from_parser_t Guion, inout ingress_intrinsic_metadata_for_deparser_t ElkNeck, inout ingress_intrinsic_metadata_for_tm_t Calabash) {
-    @name(".Neosho") action Neosho(bit<3> Vichy, bit<5> Islen) {
+    @name(".Neosho") action Neosho(bit<3> Vichy, QueueId_t Islen) {
         LaMoille.Calabash.Dunedin = Vichy;
         Calabash.qid = Islen;
     }
@@ -3296,7 +3295,7 @@ control Swandale(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_in
             McCracken.Broadwell.AquaPark: ternary @name("Broadwell.AquaPark") ;
             McCracken.Broadwell.Vichy   : ternary @name("Broadwell.Vichy") ;
         }
-        default_action = Neosho(3w0, 5w0);
+        default_action = Neosho(3w0, 0);
         size = 306;
         requires_versioning = false;
     }
@@ -3522,7 +3521,7 @@ control Barnwell(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_in
     @name(".Level") action Level() {
         LaMoille.Cutten.Level = (bit<1>)1w1;
     }
-    @name(".Tulsa") action Tulsa(bit<10> Darien) {
+    @name(".Tulsa") action Tulsa(MirrorId_t Darien) {
         LaMoille.Sherack.Scarville = Darien;
         LaMoille.Cutten.Provo = (bit<32>)32w0xdeadbeef;
     }
@@ -3607,8 +3606,8 @@ control Ozark(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intri
 
 control Palco(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intrinsic_metadata_t Hayfield, in ingress_intrinsic_metadata_from_parser_t Guion, inout ingress_intrinsic_metadata_for_deparser_t ElkNeck, inout ingress_intrinsic_metadata_for_tm_t Calabash) {
     @name(".Melder") action Melder(bit<32> Scarville) {
-        ElkNeck.mirror_type = (bit<3>)3w1;
-        LaMoille.Sherack.Scarville = (bit<10>)Scarville;
+        ElkNeck.mirror_type = 1;
+        LaMoille.Sherack.Scarville = (MirrorId_t)Scarville;
         ;
     }
     @disable_atomic_modify(1) @name(".FourTown") table FourTown {
@@ -3630,7 +3629,7 @@ control Palco(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intri
 }
 
 control Hyrum(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intrinsic_metadata_t Hayfield, in ingress_intrinsic_metadata_from_parser_t Guion, inout ingress_intrinsic_metadata_for_deparser_t ElkNeck, inout ingress_intrinsic_metadata_for_tm_t Calabash) {
-    @name(".Farner") action Farner(bit<10> Mondovi) {
+    @name(".Farner") action Farner(MirrorId_t Mondovi) {
         LaMoille.Sherack.Scarville = LaMoille.Sherack.Scarville | Mondovi;
     }
     @name(".Lynne") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Lynne;
@@ -3642,7 +3641,7 @@ control Hyrum(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intri
             @defaultonly NoAction();
         }
         key = {
-            LaMoille.Sherack.Scarville & 10w0x7f: exact @name("Sherack.Scarville") ;
+            LaMoille.Sherack.Scarville & 0x7f: exact @name("Sherack.Scarville") ;
             LaMoille.Murphy.Sardinia            : selector @name("Murphy.Sardinia") ;
         }
         size = 128;
@@ -3780,7 +3779,7 @@ control Berlin(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intri
 
 control Scotland(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intrinsic_metadata_t Wondervu, in egress_intrinsic_metadata_from_parser_t Ossining, inout egress_intrinsic_metadata_for_deparser_t Nason, inout egress_intrinsic_metadata_for_output_port_t Marquand) {
     @name(".Addicks") action Addicks() {
-        Nason.mirror_type = (bit<3>)3w2;
+        Nason.mirror_type = 2;
         LaMoille.Plains.Scarville = (bit<10>)LaMoille.Plains.Scarville;
         ;
     }
@@ -3887,12 +3886,12 @@ control Gowanda(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_int
 }
 
 control Verdery(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_intrinsic_metadata_t Hayfield, in ingress_intrinsic_metadata_from_parser_t Guion, inout ingress_intrinsic_metadata_for_deparser_t ElkNeck, inout ingress_intrinsic_metadata_for_tm_t Calabash) {
-    @name(".Onamia") action Onamia(bit<9> Brule, bit<5> Durant) {
+    @name(".Onamia") action Onamia(bit<9> Brule, QueueId_t Durant) {
         LaMoille.Naubinway.Miller = LaMoille.Hayfield.Arnold;
         Calabash.ucast_egress_port = Brule;
         Calabash.qid = Durant;
     }
-    @name(".Kingsdale") action Kingsdale(bit<9> Brule, bit<5> Durant) {
+    @name(".Kingsdale") action Kingsdale(bit<9> Brule, QueueId_t Durant) {
         Onamia(Brule, Durant);
         LaMoille.Naubinway.Eastwood = (bit<1>)1w0;
     }
@@ -3904,7 +3903,7 @@ control Verdery(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_int
         Tekonsha(Clermont);
         LaMoille.Naubinway.Eastwood = (bit<1>)1w0;
     }
-    @name(".Ocilla") action Ocilla(bit<9> Brule, bit<5> Durant) {
+    @name(".Ocilla") action Ocilla(bit<9> Brule, QueueId_t Durant) {
         Onamia(Brule, Durant);
         LaMoille.Naubinway.Eastwood = (bit<1>)1w1;
     }
@@ -3912,7 +3911,7 @@ control Verdery(inout GlenAvon McCracken, inout Sublett LaMoille, in ingress_int
         Tekonsha(Clermont);
         LaMoille.Naubinway.Eastwood = (bit<1>)1w1;
     }
-    @name(".Chambers") action Chambers(bit<9> Brule, bit<5> Durant) {
+    @name(".Chambers") action Chambers(bit<9> Brule, QueueId_t Durant) {
         Ocilla(Brule, Durant);
         LaMoille.Cutten.CeeVee = McCracken.Gotham[0].Bowden;
     }
@@ -5062,7 +5061,7 @@ control Keltys(inout GlenAvon McCracken, inout Sublett LaMoille, in egress_intri
     @name(".Claypool") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Claypool;
     @name(".Mapleton") action Mapleton() {
         bit<12> Arial;
-        Arial = Claypool.get<tuple<bit<9>, bit<5>>>({ Wondervu.egress_port, Wondervu.egress_qid });
+        Arial = Claypool.get<tuple<bit<9>, QueueId_t>>({ Wondervu.egress_port, Wondervu.egress_qid });
         Maupin.count((bit<12>)Arial);
     }
     @disable_atomic_modify(1) @placement_priority(1) @name(".Manville") table Manville {
@@ -6145,11 +6144,11 @@ control Poynette(packet_out Elvaston, inout GlenAvon McCracken, in Sublett LaMoi
     apply {
         {
             McCracken.Bergton.SoapLake = Earling.update<tuple<bit<32>, bit<16>>>({ LaMoille.Cutten.Bucktown, McCracken.Bergton.SoapLake }, false);
-            if (Nason.mirror_type == 3w2) {
+            if (Nason.mirror_type == 2) {
                 Toccopola Udall;
                 Udall.Roachdale = LaMoille.Burwell.Roachdale;
                 Udall.Miller = LaMoille.Wondervu.Sawyer;
-                Empire.emit<Toccopola>(LaMoille.Plains.Scarville, Udall);
+                Empire.emit<Toccopola>((MirrorId_t)LaMoille.Plains.Scarville, Udall);
             }
             McCracken.Osyka.Hackett = Wyanet.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ McCracken.Osyka.Fayette, McCracken.Osyka.Osterdock, McCracken.Osyka.PineCity, McCracken.Osyka.Alameda, McCracken.Osyka.Rexville, McCracken.Osyka.Quinwood, McCracken.Osyka.Marfa, McCracken.Osyka.Palatine, McCracken.Osyka.Mabelle, McCracken.Osyka.Hoagland, McCracken.Osyka.Exton, McCracken.Osyka.Ocoee, McCracken.Osyka.Kaluaaha, McCracken.Osyka.Calcasieu }, false);
             McCracken.Buckhorn.Hackett = Chunchula.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ McCracken.Buckhorn.Fayette, McCracken.Buckhorn.Osterdock, McCracken.Buckhorn.PineCity, McCracken.Buckhorn.Alameda, McCracken.Buckhorn.Rexville, McCracken.Buckhorn.Quinwood, McCracken.Buckhorn.Marfa, McCracken.Buckhorn.Palatine, McCracken.Buckhorn.Mabelle, McCracken.Buckhorn.Hoagland, McCracken.Buckhorn.Exton, McCracken.Buckhorn.Ocoee, McCracken.Buckhorn.Kaluaaha, McCracken.Buckhorn.Calcasieu }, false);

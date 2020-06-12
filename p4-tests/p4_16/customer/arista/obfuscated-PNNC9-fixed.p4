@@ -2,7 +2,6 @@
 // p4c 9.1.0-pr.21 (SHA: Unknown)
 
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -439,7 +438,7 @@ struct Rocklin {
 }
 
 struct Placedo {
-    bit<10> Onycha;
+    MirrorId_t Onycha;
     bit<10> Delavan;
     bit<2>  Bennet;
 }
@@ -1049,7 +1048,7 @@ control Baudette(packet_out LaMoille, inout Amenia Dateland, in McAllen Doddridg
     @name(".Sequim") Digest<Boquillas>() Sequim;
     apply {
         {
-            if (Sopris.mirror_type == 3w1) {
+            if (Sopris.mirror_type == 1) {
                 Toccopola Hallwood;
                 Hallwood.Roachdale = Doddridge.Salix.Roachdale;
                 Hallwood.Miller = Doddridge.Stennett.Arnold;
@@ -2488,7 +2487,7 @@ control Exeter(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
 }
 
 control McIntyre(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrinsic_metadata_t Stennett, in ingress_intrinsic_metadata_from_parser_t Emida, inout ingress_intrinsic_metadata_for_deparser_t Sopris, inout ingress_intrinsic_metadata_for_tm_t McGonigle) {
-    @name(".Millikin") action Millikin(bit<3> Lathrop, bit<5> Meyers) {
+    @name(".Millikin") action Millikin(bit<3> Lathrop, QueueId_t Meyers) {
         Doddridge.McGonigle.Dunedin = Lathrop;
         McGonigle.qid = Meyers;
     }
@@ -2506,7 +2505,7 @@ control McIntyre(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intr
             Dateland.Freeny.Vichy     : ternary @name("Freeny.Vichy") ;
             Dateland.Freeny.Lathrop   : ternary @name("Freeny.Lathrop") ;
         }
-        default_action = Millikin(3w0, 5w0);
+        default_action = Millikin(3w0, 0);
         size = 306;
         requires_versioning = false;
     }
@@ -2732,7 +2731,7 @@ control Timnath(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intri
         Doddridge.Daleville.Daphne = (bit<1>)1w1;
     }
     @name(".Woodsboro") Random<bit<32>>() Woodsboro;
-    @name(".Amherst") action Amherst(bit<10> Belview) {
+    @name(".Amherst") action Amherst(MirrorId_t Belview) {
         Doddridge.Edwards.Onycha = Belview;
         Doddridge.Daleville.Ankeny = Woodsboro.get();
     }
@@ -2817,8 +2816,8 @@ control Bellmead(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intr
 
 control Oregon(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrinsic_metadata_t Stennett, in ingress_intrinsic_metadata_from_parser_t Emida, inout ingress_intrinsic_metadata_for_deparser_t Sopris, inout ingress_intrinsic_metadata_for_tm_t McGonigle) {
     @name(".Ranburne") action Ranburne(bit<32> Onycha) {
-        Sopris.mirror_type = (bit<3>)3w1;
-        Doddridge.Edwards.Onycha = (bit<10>)Onycha;
+        Sopris.mirror_type = 1;
+        Doddridge.Edwards.Onycha = (MirrorId_t)Onycha;
         ;
     }
     @disable_atomic_modify(1) @name(".Barnsboro") table Barnsboro {
@@ -2840,7 +2839,7 @@ control Oregon(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
 }
 
 control Standard(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrinsic_metadata_t Stennett, in ingress_intrinsic_metadata_from_parser_t Emida, inout ingress_intrinsic_metadata_for_deparser_t Sopris, inout ingress_intrinsic_metadata_for_tm_t McGonigle) {
-    @name(".Wolverine") action Wolverine(bit<10> Wentworth) {
+    @name(".Wolverine") action Wolverine(MirrorId_t Wentworth) {
         Doddridge.Edwards.Onycha = Doddridge.Edwards.Onycha | Wentworth;
     }
     @name(".ElkMills") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) ElkMills;
@@ -2852,7 +2851,7 @@ control Standard(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intr
             @defaultonly NoAction();
         }
         key = {
-            Doddridge.Edwards.Onycha & 10w0x7f: exact @name("Edwards.Onycha") ;
+            Doddridge.Edwards.Onycha & 0x7f: exact @name("Edwards.Onycha") ;
             Doddridge.Juneau.Traverse         : selector @name("Juneau.Traverse") ;
         }
         size = 128;
@@ -2990,7 +2989,7 @@ control Bains(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrinsi
 
 control Neosho(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrinsic_metadata_t Sherack, in egress_intrinsic_metadata_from_parser_t Florahome, inout egress_intrinsic_metadata_for_deparser_t Newtonia, inout egress_intrinsic_metadata_for_output_port_t Waterman) {
     @name(".Islen") action Islen() {
-        Newtonia.mirror_type = (bit<3>)3w2;
+        Newtonia.mirror_type = 2;
         Doddridge.Mausdale.Onycha = (bit<10>)Doddridge.Mausdale.Onycha;
         ;
     }
@@ -3097,12 +3096,12 @@ control Aptos(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrins
 }
 
 control Kingsland(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrinsic_metadata_t Stennett, in ingress_intrinsic_metadata_from_parser_t Emida, inout ingress_intrinsic_metadata_for_deparser_t Sopris, inout ingress_intrinsic_metadata_for_tm_t McGonigle) {
-    @name(".Eaton") action Eaton(bit<9> Trevorton, bit<5> Fordyce) {
+    @name(".Eaton") action Eaton(bit<9> Trevorton, QueueId_t Fordyce) {
         Doddridge.Norma.Miller = Doddridge.Stennett.Arnold;
         McGonigle.ucast_egress_port = Trevorton;
         McGonigle.qid = Fordyce;
     }
-    @name(".Ugashik") action Ugashik(bit<9> Trevorton, bit<5> Fordyce) {
+    @name(".Ugashik") action Ugashik(bit<9> Trevorton, QueueId_t Fordyce) {
         Eaton(Trevorton, Fordyce);
         Doddridge.Norma.Wartburg = (bit<1>)1w0;
     }
@@ -3114,7 +3113,7 @@ control Kingsland(inout Amenia Dateland, inout McAllen Doddridge, in ingress_int
         Rhodell(Heizer);
         Doddridge.Norma.Wartburg = (bit<1>)1w0;
     }
-    @name(".Hector") action Hector(bit<9> Trevorton, bit<5> Fordyce) {
+    @name(".Hector") action Hector(bit<9> Trevorton, QueueId_t Fordyce) {
         Eaton(Trevorton, Fordyce);
         Doddridge.Norma.Wartburg = (bit<1>)1w1;
     }
@@ -3122,7 +3121,7 @@ control Kingsland(inout Amenia Dateland, inout McAllen Doddridge, in ingress_int
         Rhodell(Heizer);
         Doddridge.Norma.Wartburg = (bit<1>)1w1;
     }
-    @name(".Miltona") action Miltona(bit<9> Trevorton, bit<5> Fordyce) {
+    @name(".Miltona") action Miltona(bit<9> Trevorton, QueueId_t Fordyce) {
         Hector(Trevorton, Fordyce);
         Doddridge.Daleville.Haugan = Dateland.Hayfield[0].Cabot;
     }
@@ -4503,7 +4502,7 @@ control Eudora(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrins
     @name(".Mantee") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Mantee;
     @name(".Walland") action Walland() {
         bit<12> Sneads;
-        Sneads = Mantee.get<tuple<bit<9>, bit<5>>>({ Sherack.egress_port, Sherack.egress_qid });
+        Sneads = Mantee.get<tuple<bit<9>, QueueId_t>>({ Sherack.egress_port, Sherack.egress_qid });
         Buras.count((bit<12>)Sneads);
     }
     @disable_atomic_modify(1) @name(".Melrose") table Melrose {
@@ -5827,11 +5826,11 @@ control Albin(packet_out LaMoille, inout Amenia Dateland, in McAllen Doddridge, 
     @name(".Ekron") Mirror() Ekron;
     apply {
         {
-            if (Newtonia.mirror_type == 3w2) {
+            if (Newtonia.mirror_type == 2) {
                 Toccopola Hallwood;
                 Hallwood.Roachdale = Doddridge.Salix.Roachdale;
                 Hallwood.Miller = Doddridge.Sherack.Sawyer;
-                Ekron.emit<Toccopola>(Doddridge.Mausdale.Onycha, Hallwood);
+                Ekron.emit<Toccopola>((MirrorId_t)Doddridge.Mausdale.Onycha, Hallwood);
             }
             Dateland.Calabash.Kaluaaha = Folcroft.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Dateland.Calabash.Osterdock, Dateland.Calabash.PineCity, Dateland.Calabash.Alameda, Dateland.Calabash.Rexville, Dateland.Calabash.Quinwood, Dateland.Calabash.Marfa, Dateland.Calabash.Palatine, Dateland.Calabash.Mabelle, Dateland.Calabash.Hoagland, Dateland.Calabash.Ocoee, Dateland.Calabash.Floyd, Dateland.Calabash.Hackett, Dateland.Calabash.Calcasieu, Dateland.Calabash.Levittown }, false);
             Dateland.Shirley.Kaluaaha = Elliston.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Dateland.Shirley.Osterdock, Dateland.Shirley.PineCity, Dateland.Shirley.Alameda, Dateland.Shirley.Rexville, Dateland.Shirley.Quinwood, Dateland.Shirley.Marfa, Dateland.Shirley.Palatine, Dateland.Shirley.Mabelle, Dateland.Shirley.Hoagland, Dateland.Shirley.Ocoee, Dateland.Shirley.Floyd, Dateland.Shirley.Hackett, Dateland.Shirley.Calcasieu, Dateland.Shirley.Levittown }, false);

@@ -1,5 +1,4 @@
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -240,7 +239,7 @@ header Parkville {
 }
 
 struct Kearns {
-    bit<10> Malinta;
+    MirrorId_t Malinta;
     bit<10> Blakeley;
     bit<2>  Poulan;
 }
@@ -815,7 +814,7 @@ control Heuvelton(packet_out Ralls, inout Grassflat Standish, in Provo Blairsden
     Digest<ElVerano>() Peebles;
     Digest<Alamosa>() Wellton;
     apply {
-        if (Chavies.mirror_type == 3w1) {
+        if (Chavies.mirror_type == 1) {
             Miranda.emit<Parkville>(Blairsden.Uvalde.Malinta, Blairsden.Tenino);
         }
         if (Chavies.digest_type == 3w2) {
@@ -2600,7 +2599,7 @@ control Ruffin(inout Grassflat Standish, inout Provo Blairsden) {
 }
 
 control Lindy(inout Grassflat Standish, inout Provo Blairsden, inout ingress_intrinsic_metadata_for_tm_t Earling) {
-    action Brady(bit<3> Caroleen, bit<5> Emden) {
+    action Brady(bit<3> Caroleen, QueueId_t Emden) {
         Earling.ingress_cos = Caroleen;
         Earling.qid = Emden;
     }
@@ -2619,7 +2618,7 @@ control Lindy(inout Grassflat Standish, inout Provo Blairsden, inout ingress_int
             Standish.Tilton.Caroleen  : ternary;
         }
         size = 306;
-        default_action = Brady(3w0, 5w0);
+        default_action = Brady(3w0, 0);
     }
     apply {
         Skillman.apply();
@@ -2630,7 +2629,7 @@ control Olcott(inout Grassflat Standish, inout Provo Blairsden, in ingress_intri
     action Sudbury() {
         Blairsden.Joslin.Sudbury = (bit<1>)1w1;
     }
-    action Westoak(bit<10> Lefor) {
+    action Westoak(MirrorId_t Lefor) {
         Blairsden.Uvalde.Malinta = Lefor;
     }
     table Starkey {
@@ -2651,7 +2650,7 @@ control Olcott(inout Grassflat Standish, inout Provo Blairsden, in ingress_intri
             Blairsden.Algoa.Solomon   : ternary;
         }
         size = 1024;
-        default_action = Westoak(10w0);
+        default_action = Westoak(0);
     }
     apply {
         Starkey.apply();
@@ -2740,7 +2739,9 @@ control RockHill(inout Grassflat Standish, inout Provo Blairsden) {
 
 control Fishers(inout Grassflat Standish, inout Provo Blairsden) {
     action Philip(bit<3> Levasy) {
+    #if __TARGET_TOFINO__ == 1
         Blairsden.Uvalde.Malinta[9:7] = Levasy;
+    #endif
     }
     Hash<bit<51>>(HashAlgorithm_t.IDENTITY) Wabbaseka;
     ActionSelector(32w128, Wabbaseka, SelectorMode_t.RESILIENT) Indios;
@@ -2750,7 +2751,7 @@ control Fishers(inout Grassflat Standish, inout Provo Blairsden) {
             @defaultonly NoAction();
         }
         key = {
-            Blairsden.Uvalde.Malinta & 10w0x7f: exact;
+            Blairsden.Uvalde.Malinta & 0x7f: exact;
             Blairsden.Lowes.Garibaldi         : selector;
         }
         size = 128;
@@ -3142,12 +3143,12 @@ control Chewalla(inout Grassflat Standish, inout Provo Blairsden, in ingress_int
 }
 
 control Owanka(inout Grassflat Standish, inout Provo Blairsden, in ingress_intrinsic_metadata_t Clover, inout ingress_intrinsic_metadata_for_tm_t Earling) {
-    action Natalia(bit<9> Sunman, bit<5> FairOaks) {
+    action Natalia(bit<9> Sunman, QueueId_t FairOaks) {
         Blairsden.Welcome.Dassel = Clover.ingress_port;
         Earling.ucast_egress_port = Sunman;
         Earling.qid = FairOaks;
     }
-    action Baranof(bit<9> Sunman, bit<5> FairOaks) {
+    action Baranof(bit<9> Sunman, QueueId_t FairOaks) {
         Natalia(Sunman, FairOaks);
         Blairsden.Welcome.Dugger = (bit<1>)1w0;
     }
@@ -3159,7 +3160,7 @@ control Owanka(inout Grassflat Standish, inout Provo Blairsden, in ingress_intri
         Anita(Cairo);
         Blairsden.Welcome.Dugger = (bit<1>)1w0;
     }
-    action Yulee(bit<9> Sunman, bit<5> FairOaks) {
+    action Yulee(bit<9> Sunman, QueueId_t FairOaks) {
         Natalia(Sunman, FairOaks);
         Blairsden.Welcome.Dugger = (bit<1>)1w1;
     }
@@ -3167,7 +3168,7 @@ control Owanka(inout Grassflat Standish, inout Provo Blairsden, in ingress_intri
         Anita(Cairo);
         Blairsden.Welcome.Dugger = (bit<1>)1w1;
     }
-    action Salitpa(bit<9> Sunman, bit<5> FairOaks) {
+    action Salitpa(bit<9> Sunman, QueueId_t FairOaks) {
         Yulee(Sunman, FairOaks);
         Blairsden.Joslin.Quebrada = Standish.Lecompte[0].Marfa;
     }
@@ -3230,7 +3231,7 @@ control Andrade(inout Grassflat Standish) {
 
 control Leland(inout Provo Blairsden, in ingress_intrinsic_metadata_t Clover, inout ingress_intrinsic_metadata_for_deparser_t Chavies) {
     action Aynor() {
-        Chavies.mirror_type = (bit<3>)3w1;
+        Chavies.mirror_type = 1;
         Blairsden.Tenino.Mystic = Blairsden.Joslin.Quebrada;
         Blairsden.Tenino.Dassel = Clover.ingress_port;
     }
@@ -3246,7 +3247,7 @@ control Leland(inout Provo Blairsden, in ingress_intrinsic_metadata_t Clover, in
         default_action = NoAction();
     }
     apply {
-        if (Blairsden.Uvalde.Malinta != 10w0) {
+        if (Blairsden.Uvalde.Malinta != 0) {
             McIntyre.apply();
         }
     }
@@ -3813,7 +3814,7 @@ control Bechyn(inout Grassflat Standish, inout Provo Blairsden, in egress_intrin
     action Tulsa() {
         {
             bit<12> Cropper;
-            Cropper = Barnwell.get<tuple<bit<9>, bit<5>>>({ Duchesne.egress_port, Duchesne.egress_qid });
+            Cropper = Barnwell.get<tuple<bit<9>, QueueId_t>>({ Duchesne.egress_port, Duchesne.egress_qid });
             Pocopson.count(Cropper);
         }
         Blairsden.Welcome.Algodones[15:0] = ((bit<16>)Centre.global_tstamp)[15:0];
@@ -4641,7 +4642,7 @@ control Moorman(inout Grassflat Standish, inout Provo Blairsden, in egress_intri
     action Parmelee() {
         Blairsden.Welcome.Dassel = Duchesne.egress_port;
         Blairsden.Joslin.Quebrada = Blairsden.Welcome.PineCity;
-        Agawam.mirror_type = (bit<3>)3w1;
+        Agawam.mirror_type = 1;
     }
     table Bagwell {
         actions = {

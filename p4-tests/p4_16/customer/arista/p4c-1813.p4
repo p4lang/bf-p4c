@@ -1,5 +1,4 @@
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -247,7 +246,7 @@ header Welcome {
 }
 
 struct Chugwater {
-    bit<10> Charco;
+    MirrorId_t Charco;
     bit<10> Sutherlin;
     bit<2>  Daphne;
 }
@@ -845,7 +844,11 @@ control Rainelle(packet_out Paulding, inout Belview Millston, in Beaverdam HillT
     Digest<Skyway>() Emida;
     Digest<Colona>() Sopris;
     apply {
+    #if __TARGET_TOFINO__ == 1
         if (Dateland.mirror_type == 3w1) {
+    #elif __TARGET_TOFINO__ >= 2
+        if (Dateland.mirror_type == 4w1) {
+    #endif
             Doddridge.emit<Welcome>(HillTop.Devers.Charco, HillTop.Crozet);
         }
         if (Dateland.digest_type == 3w2) {
@@ -2679,7 +2682,7 @@ control DeBeque(inout Belview Truro, inout Beaverdam Plush) {
 }
 
 control Natalbany(inout Belview Lignite, inout Beaverdam Clarkdale, inout ingress_intrinsic_metadata_for_tm_t Talbert) {
-    action Brunson(bit<3> Catlin, bit<5> Antoine) {
+    action Brunson(bit<3> Catlin, QueueId_t Antoine) {
         Talbert.ingress_cos = Catlin;
         Talbert.qid = Antoine;
     }
@@ -2698,7 +2701,7 @@ control Natalbany(inout Belview Lignite, inout Beaverdam Clarkdale, inout ingres
             Lignite.Arvada.Ambrose    : ternary;
         }
         size = 306;
-        default_action = Brunson(3w0, 5w0);
+        default_action = Brunson(3w0, 0);
     }
     apply {
         Romeo.apply();
@@ -2709,7 +2712,7 @@ control Caspian(inout Belview Norridge, inout Beaverdam Lowemont, in ingress_int
     action CassCity() {
         Lowemont.Brinkman.Allgood = 1w1;
     }
-    action Sanborn(bit<10> Kerby) {
+    action Sanborn(MirrorId_t Kerby) {
         Lowemont.Devers.Charco = Kerby;
     }
     table Saxis {
@@ -2730,7 +2733,7 @@ control Caspian(inout Belview Norridge, inout Beaverdam Lowemont, in ingress_int
             Lowemont.Sewaren.Kearns    : ternary;
         }
         size = 1024;
-        default_action = Sanborn(10w0);
+        default_action = Sanborn(0);
     }
     apply {
         Saxis.apply();
@@ -2819,7 +2822,9 @@ control Sully(inout Belview Ragley, inout Beaverdam Dunkerton) {
 
 control Amsterdam(inout Belview Gwynn, inout Beaverdam Rolla) {
     action Brookwood(bit<3> Granville) {
+    #if __TARGET_TOFINO__ == 1
         Rolla.Devers.Charco[9:7] = Granville;
+    #endif
     }
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) Council;
     ActionSelector(32w128, Council, SelectorMode_t.RESILIENT) Capitola;
@@ -3221,12 +3226,12 @@ control Brush(inout Belview Ceiba, inout Beaverdam Dresden, in ingress_intrinsic
 }
 
 control Kinard(inout Belview Kahaluu, inout Beaverdam Pendleton, in ingress_intrinsic_metadata_t Turney, inout ingress_intrinsic_metadata_for_tm_t Sodaville) {
-    action Fittstown(bit<9> English, bit<5> Rotonda) {
+    action Fittstown(bit<9> English, QueueId_t Rotonda) {
         Pendleton.Elderon.LaPalma = Turney.ingress_port;
         Sodaville.ucast_egress_port = English;
         Sodaville.qid = Rotonda;
     }
-    action Newcomb(bit<9> Macungie, bit<5> Kiron) {
+    action Newcomb(bit<9> Macungie, QueueId_t Kiron) {
         Fittstown(Macungie, Kiron);
         Pendleton.Elderon.Albemarle = 1w0;
     }
@@ -3238,7 +3243,7 @@ control Kinard(inout Belview Kahaluu, inout Beaverdam Pendleton, in ingress_intr
         DewyRose(Kinston);
         Pendleton.Elderon.Albemarle = 1w0;
     }
-    action Chandalar(bit<9> Bosco, bit<5> Almeria) {
+    action Chandalar(bit<9> Bosco, QueueId_t Almeria) {
         Fittstown(Bosco, Almeria);
         Pendleton.Elderon.Albemarle = 1w1;
     }
@@ -3246,7 +3251,7 @@ control Kinard(inout Belview Kahaluu, inout Beaverdam Pendleton, in ingress_intr
         DewyRose(Idylside);
         Pendleton.Elderon.Albemarle = 1w1;
     }
-    action Stovall(bit<9> Haworth, bit<5> BigArm) {
+    action Stovall(bit<9> Haworth, QueueId_t BigArm) {
         Chandalar(Haworth, BigArm);
         Pendleton.Brinkman.Haugan = Kahaluu.Newfolden[0].Hueytown;
     }
@@ -3309,7 +3314,7 @@ control Holyoke(inout Belview Skiatook) {
 
 control Telegraph(inout Beaverdam Veradale, in ingress_intrinsic_metadata_t Parole, inout ingress_intrinsic_metadata_for_deparser_t Picacho) {
     action Reading() {
-        Picacho.mirror_type = 3w1;
+        Picacho.mirror_type = 1;
         Veradale.Crozet.Teigen = Veradale.Brinkman.Haugan;
         Veradale.Crozet.Lowes = Parole.ingress_port;
     }
@@ -3325,7 +3330,7 @@ control Telegraph(inout Beaverdam Veradale, in ingress_intrinsic_metadata_t Paro
         default_action = NoAction();
     }
     apply {
-        if (Veradale.Devers.Charco != 10w0) {
+        if (Veradale.Devers.Charco != 0) {
             Morgana.apply();
         }
     }
@@ -3912,7 +3917,7 @@ control Switzer(inout Belview Patchogue, inout Beaverdam BigBay, in egress_intri
     action Sturgeon() {
         {
             bit<12> Putnam;
-            Putnam = Hawthorne.get<tuple<bit<9>, bit<5>>>({ Flats.egress_port, Flats.egress_qid });
+            Putnam = Hawthorne.get<tuple<bit<9>, QueueId_t>>({ Flats.egress_port, Flats.egress_qid });
             Sigsbee.count(Putnam);
         }
         BigBay.Elderon.Chloride[15:0] = ((bit<16>)Kenyon.global_tstamp)[15:0];
@@ -4740,7 +4745,7 @@ control Hercules(inout Belview Hanamaulu, inout Beaverdam Donna, in egress_intri
     action Nathalie() {
         Donna.Elderon.LaPalma = Westland.egress_port;
         Donna.Brinkman.Haugan = Donna.Elderon.Hoagland;
-        Lenwood.mirror_type = 3w1;
+        Lenwood.mirror_type = 1;
     }
     table Shongaloo {
         actions = {

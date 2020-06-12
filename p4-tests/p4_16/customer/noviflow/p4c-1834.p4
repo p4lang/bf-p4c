@@ -72,7 +72,7 @@ struct egress_metadata_t
     bit<1> do_clone;
     bit<3> clone_dst;
     bit<8> group_type;
-    bit<10> mirror_id;
+    MirrorId_t mirror_id;
 
     bit<1> tunnel_drop;
 
@@ -1134,7 +1134,7 @@ control control_dataplane_packet( inout headers_t hdr,
                                     in ingress_intrinsic_metadata_from_parser_t ig_prsr_md,
                                     inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
-    action flowentry_common(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta)
+    action flowentry_common(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta)
     {
         ig_md.do_ACTION_RECIRCULATE = do_ACTION_RECIRCULATE | ig_md.do_ACTION_RECIRCULATE;
         hdr.bridged_meta.do_ACTION_SET_OUTPUT_PORT = do_ACTION_SET_OUTPUT_PORT | hdr.bridged_meta.do_ACTION_SET_OUTPUT_PORT;
@@ -1165,13 +1165,13 @@ control control_dataplane_packet( inout headers_t hdr,
             value = value + 1;
         }
     };
-    action flowentry_instr0(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr0(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[0].setValid();
         hdr.pkt.eg_control_id[0].entry_id = entry_id;
         table0_stats.count();
     }
-    action flowentry_simple0(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta) {
+    action flowentry_simple0(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table0_stats.count();
     }
@@ -1283,13 +1283,13 @@ hdr.bridged_meta.ingress_port:ternary;
             value = value + 1;
         }
     };
-    action flowentry_instr1(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr1(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[1].setValid();
         hdr.pkt.eg_control_id[1].entry_id = entry_id;
         table1_stats.count();
     }
-    action flowentry_simple1(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple1(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table1_stats.count();
     }
@@ -1350,13 +1350,13 @@ hdr.bridged_meta.ingress_phy_port:ternary;
             value = value + 1;
         }
     };
-    action flowentry_instr2(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr2(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[2].setValid();
         hdr.pkt.eg_control_id[2].entry_id = entry_id;
         table2_stats.count();
     }
-    action flowentry_simple2(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple2(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table2_stats.count();
     }
@@ -1430,13 +1430,13 @@ hdr.bridged_meta.ingress_port:ternary;
             value = value + 1;
         }
     };
-    action flowentry_instr3(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr3(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[3].setValid();
         hdr.pkt.eg_control_id[3].entry_id = entry_id;
         table3_stats.count();
     }
-    action flowentry_simple3(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple3(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table3_stats.count();
     }
@@ -1548,13 +1548,13 @@ hdr.bridged_meta.ingress_port:ternary;
             value = value + 1;
         }
     };
-    action flowentry_instr4(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr4(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[4].setValid();
         hdr.pkt.eg_control_id[4].entry_id = entry_id;
         table4_stats.count();
     }
-    action flowentry_simple4(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple4(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table4_stats.count();
     }
@@ -1666,13 +1666,13 @@ hdr.bridged_meta.ingress_port:exact;
             value = value + 1;
         }
     };
-    action flowentry_instr5(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr5(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[5].setValid();
         hdr.pkt.eg_control_id[5].entry_id = entry_id;
         table5_stats.count();
     }
-    action flowentry_simple5(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple5(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table5_stats.count();
     }
@@ -1784,13 +1784,13 @@ hdr.pkt.ethernet.dstAddr:exact;
             value = value + 1;
         }
     };
-    action flowentry_instr6(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr6(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[6].setValid();
         hdr.pkt.eg_control_id[6].entry_id = entry_id;
         table6_stats.count();
     }
-    action flowentry_simple6(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple6(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table6_stats.count();
     }
@@ -1903,13 +1903,13 @@ hdr.pkt.ethernet.srcAddr:exact;
             value = value + 1;
         }
     };
-    action flowentry_instr7(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
+    action flowentry_instr7(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> entry_id) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         hdr.pkt.eg_control_id[7].setValid();
         hdr.pkt.eg_control_id[7].entry_id = entry_id;
         table7_stats.count();
     }
-    action flowentry_simple7(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, bit<5> queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
+    action flowentry_simple7(bit<1> do_apply_actions, bit<1> do_ACTION_RECIRCULATE, bit<8> do_ACTION_SET_OUTPUT_PORT, bit<8> do_ACTION_SET_OUTPUT_INPORT, bit<8> do_ACTION_SET_OUTPUT_LAG, bit<16> egress_port, bool do_mcast_group, bit<16> mcast_group, QueueId_t queue_id, bit<16> meter_id, bit<8> next_table_id, bool do_write_metadata, bit<32> meta, bit<17> index) {
         flowentry_common(do_apply_actions, do_ACTION_RECIRCULATE, do_ACTION_SET_OUTPUT_PORT, do_ACTION_SET_OUTPUT_INPORT, do_ACTION_SET_OUTPUT_LAG, egress_port, do_mcast_group, mcast_group, queue_id, meter_id, next_table_id, do_write_metadata, meta);
         table7_stats.count();
     }
@@ -3630,7 +3630,7 @@ control control_group( inout headers_t hdr,
     Hash<bit<16>>(HashAlgorithm_t.CRC16) sel_hash;
     ActionSelector(1000, sel_hash, SelectorMode_t.FAIR) action_selector;
 
-    action group( bit<10> clone_id, bit<9> port, bit<8> group_type, bit<17> bucket_instr_id )
+    action group( MirrorId_t clone_id, bit<9> port, bit<8> group_type, bit<17> bucket_instr_id )
     {
         hdr.internal.type = 0xfe;
         hdr.mirror.do_ACTION_SET_OUTPUT_PORT = 0;
@@ -3915,7 +3915,7 @@ control control_if_do_clone_e2e(inout headers_t hdr,
                                 inout egress_metadata_t eg_md,
                                 in egress_intrinsic_metadata_t eg_intr_md)
 {
-    action do_clone_e2e_same_port(bit<10> mirr_session){
+    action do_clone_e2e_same_port(MirrorId_t mirr_session){
         hdr.mirror.do_ACTION_SET_OUTPUT_PORT = 1;
         hdr.mirror.step_id = eg_md.step_id;
         hdr.mirror.chain_id = eg_md.chain_id;
@@ -3924,7 +3924,7 @@ control control_if_do_clone_e2e(inout headers_t hdr,
         eg_md.do_clone = 1;
         hdr.mirror.type = 0xfe;
     }
-    action do_clone_e2e_inport(bit<10> mirr_session){
+    action do_clone_e2e_inport(MirrorId_t mirr_session){
         hdr.mirror.do_ACTION_SET_OUTPUT_PORT = 1;
 
 
@@ -3937,7 +3937,7 @@ control control_if_do_clone_e2e(inout headers_t hdr,
         eg_md.do_clone = 1;
         hdr.mirror.type = 0xfe;
     }
-    action do_clone_e2e_cpu(bit<10> cpu_mirror_session){
+    action do_clone_e2e_cpu(MirrorId_t cpu_mirror_session){
         hdr.mirror.do_ACTION_SET_OUTPUT_PORT = 1;
         hdr.mirror.step_id = 0x1FE;
         hdr.mirror.chain_id = eg_md.chain_id;
@@ -3946,7 +3946,7 @@ control control_if_do_clone_e2e(inout headers_t hdr,
         eg_md.do_clone = 1;
         hdr.mirror.type = 0xfe;
     }
-    action do_clone_e2e_broadcast(bit<10> broadcast_session){
+    action do_clone_e2e_broadcast(MirrorId_t broadcast_session){
         hdr.mirror.do_ACTION_SET_OUTPUT_PORT = 1;
         hdr.mirror.step_id = 0x1FE;
         hdr.mirror.chain_id = eg_md.chain_id;

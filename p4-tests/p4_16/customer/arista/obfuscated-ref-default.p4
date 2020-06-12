@@ -2,7 +2,6 @@
 // p4c 9.1.0-pr.18 (SHA: 9fbc9cd)
 
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
@@ -423,7 +422,7 @@ struct Chaffee {
 }
 
 struct Lakehills {
-    bit<10> Sledge;
+    MirrorId_t Sledge;
     bit<10> Ambrose;
     bit<2>  Billings;
 }
@@ -1030,7 +1029,7 @@ control Shingler(packet_out Bergton, inout Murphy Gotham, in Fredonia Osyka, in 
     @name(".Westbury") Digest<Haugan>() Westbury;
     apply {
         {
-            if (Hoven.mirror_type == 3w1) {
+            if (Hoven.mirror_type == 1) {
                 Toccopola Makawao;
                 Makawao.Roachdale = Osyka.Cutten.Roachdale;
                 Makawao.Miller = Osyka.Lamona.Arnold;
@@ -2474,7 +2473,7 @@ control Chewalla(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
 }
 
 control Baranof(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_metadata_t Lamona, in ingress_intrinsic_metadata_from_parser_t Brookneal, inout ingress_intrinsic_metadata_for_deparser_t Hoven, inout ingress_intrinsic_metadata_for_tm_t Naubinway) {
-    @name(".Anita") action Anita(bit<3> AquaPark, bit<5> Cairo) {
+    @name(".Anita") action Anita(bit<3> AquaPark, QueueId_t Cairo) {
         Osyka.Naubinway.Dunedin = AquaPark;
         Naubinway.qid = Cairo;
     }
@@ -2492,7 +2491,7 @@ control Baranof(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
             Gotham.Mausdale.Blencoe  : ternary @name("Mausdale.Blencoe") ;
             Gotham.Mausdale.AquaPark : ternary @name("Mausdale.AquaPark") ;
         }
-        default_action = Anita(3w0, 5w0);
+        default_action = Anita(3w0, 0);
         size = 306;
         requires_versioning = false;
     }
@@ -2717,7 +2716,7 @@ control Horatio(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
     @name(".Charco") action Charco() {
         Osyka.LaUnion.Charco = (bit<1>)1w1;
     }
-    @name(".Rives") action Rives(bit<10> Peebles) {
+    @name(".Rives") action Rives(MirrorId_t Peebles) {
         Osyka.Sunflower.Sledge = Peebles;
         Osyka.LaUnion.Suttle = (bit<32>)32w0xdeadbeef;
     }
@@ -2802,8 +2801,8 @@ control WestPark(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic
 
 control Willey(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_metadata_t Lamona, in ingress_intrinsic_metadata_from_parser_t Brookneal, inout ingress_intrinsic_metadata_for_deparser_t Hoven, inout ingress_intrinsic_metadata_for_tm_t Naubinway) {
     @name(".Endicott") action Endicott(bit<32> Sledge) {
-        Hoven.mirror_type = (bit<3>)3w1;
-        Osyka.Sunflower.Sledge = (bit<10>)Sledge;
+        Hoven.mirror_type = 1;
+        Osyka.Sunflower.Sledge = (MirrorId_t)Sledge;
         ;
     }
     @disable_atomic_modify(1) @name(".BigRock") table BigRock {
@@ -2825,7 +2824,7 @@ control Willey(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_m
 }
 
 control Timnath(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_metadata_t Lamona, in ingress_intrinsic_metadata_from_parser_t Brookneal, inout ingress_intrinsic_metadata_for_deparser_t Hoven, inout ingress_intrinsic_metadata_for_tm_t Naubinway) {
-    @name(".Woodsboro") action Woodsboro(bit<10> Amherst) {
+    @name(".Woodsboro") action Woodsboro(MirrorId_t Amherst) {
         Osyka.Sunflower.Sledge = Osyka.Sunflower.Sledge | Amherst;
     }
     @name(".Luttrell") CRCPolynomial<bit<51>>(51w0x18005, true, false, true, 51w0x0, 51w0x0) Luttrell;
@@ -2837,7 +2836,7 @@ control Timnath(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Osyka.Sunflower.Sledge & 10w0x7f: exact @name("Sunflower.Sledge") ;
+            Osyka.Sunflower.Sledge & 0x7f: exact @name("Sunflower.Sledge") ;
             Osyka.Kalkaska.Rockham          : selector @name("Kalkaska.Rockham") ;
         }
         size = 128;
@@ -2975,7 +2974,7 @@ control Poneto(inout Murphy Gotham, inout Fredonia Osyka, in egress_intrinsic_me
 
 control Kalaloch(inout Murphy Gotham, inout Fredonia Osyka, in egress_intrinsic_metadata_t Ovett, in egress_intrinsic_metadata_from_parser_t Ozona, inout egress_intrinsic_metadata_for_deparser_t Leland, inout egress_intrinsic_metadata_for_output_port_t Aynor) {
     @name(".Papeton") action Papeton() {
-        Leland.mirror_type = (bit<3>)3w2;
+        Leland.mirror_type = 2;
         Osyka.Aldan.Sledge = (bit<10>)Osyka.Aldan.Sledge;
         ;
     }
@@ -3082,12 +3081,12 @@ control Redvale(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_
 }
 
 control Franktown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsic_metadata_t Lamona, in ingress_intrinsic_metadata_from_parser_t Brookneal, inout ingress_intrinsic_metadata_for_deparser_t Hoven, inout ingress_intrinsic_metadata_for_tm_t Naubinway) {
-    @name(".Willette") action Willette(bit<9> Mayview, bit<5> Swandale) {
+    @name(".Willette") action Willette(bit<9> Mayview, QueueId_t Swandale) {
         Osyka.Broussard.Miller = Osyka.Lamona.Arnold;
         Naubinway.ucast_egress_port = Mayview;
         Naubinway.qid = Swandale;
     }
-    @name(".Neosho") action Neosho(bit<9> Mayview, bit<5> Swandale) {
+    @name(".Neosho") action Neosho(bit<9> Mayview, QueueId_t Swandale) {
         Willette(Mayview, Swandale);
         Osyka.Broussard.Guadalupe = (bit<1>)1w0;
     }
@@ -3099,7 +3098,7 @@ control Franktown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsi
         Islen(BarNunn);
         Osyka.Broussard.Guadalupe = (bit<1>)1w0;
     }
-    @name(".Pillager") action Pillager(bit<9> Mayview, bit<5> Swandale) {
+    @name(".Pillager") action Pillager(bit<9> Mayview, QueueId_t Swandale) {
         Willette(Mayview, Swandale);
         Osyka.Broussard.Guadalupe = (bit<1>)1w1;
     }
@@ -3107,7 +3106,7 @@ control Franktown(inout Murphy Gotham, inout Fredonia Osyka, in ingress_intrinsi
         Islen(BarNunn);
         Osyka.Broussard.Guadalupe = (bit<1>)1w1;
     }
-    @name(".Tullytown") action Tullytown(bit<9> Mayview, bit<5> Swandale) {
+    @name(".Tullytown") action Tullytown(bit<9> Mayview, QueueId_t Swandale) {
         Pillager(Mayview, Swandale);
         Osyka.LaUnion.CeeVee = Gotham.Komatke[0].Oriskany;
     }
@@ -4488,7 +4487,7 @@ control Hatchel(inout Murphy Gotham, inout Fredonia Osyka, in egress_intrinsic_m
     @name(".Pelican") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Pelican;
     @name(".Unionvale") action Unionvale() {
         bit<12> Boyle;
-        Boyle = Pelican.get<tuple<bit<9>, bit<5>>>({ Ovett.egress_port, Ovett.egress_qid });
+        Boyle = Pelican.get<tuple<bit<9>, QueueId_t>>({ Ovett.egress_port, Ovett.egress_qid });
         Dougherty.count((bit<12>)Boyle);
     }
     @disable_atomic_modify(1) @name(".Bigspring") table Bigspring {
@@ -5813,11 +5812,11 @@ control Brockton(packet_out Bergton, inout Murphy Gotham, in Fredonia Osyka, in 
     @name(".Gastonia") Mirror() Gastonia;
     apply {
         {
-            if (Leland.mirror_type == 3w2) {
+            if (Leland.mirror_type == 2) {
                 Toccopola Makawao;
                 Makawao.Roachdale = Osyka.Cutten.Roachdale;
                 Makawao.Miller = Osyka.Ovett.Sawyer;
-                Gastonia.emit<Toccopola>(Osyka.Aldan.Sledge, Makawao);
+                Gastonia.emit<Toccopola>((MirrorId_t)Osyka.Aldan.Sledge, Makawao);
             }
             Gotham.Salix.Ocoee = Wibaux.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Gotham.Salix.Floyd, Gotham.Salix.Fayette, Gotham.Salix.Osterdock, Gotham.Salix.PineCity, Gotham.Salix.Alameda, Gotham.Salix.Rexville, Gotham.Salix.Quinwood, Gotham.Salix.Marfa, Gotham.Salix.Palatine, Gotham.Salix.Mabelle, Gotham.Salix.Freeman, Gotham.Salix.Hoagland, Gotham.Salix.Hackett, Gotham.Salix.Kaluaaha }, false);
             Gotham.Freeny.Ocoee = Downs.update<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<1>, bit<1>, bit<1>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ Gotham.Freeny.Floyd, Gotham.Freeny.Fayette, Gotham.Freeny.Osterdock, Gotham.Freeny.PineCity, Gotham.Freeny.Alameda, Gotham.Freeny.Rexville, Gotham.Freeny.Quinwood, Gotham.Freeny.Marfa, Gotham.Freeny.Palatine, Gotham.Freeny.Mabelle, Gotham.Freeny.Freeman, Gotham.Freeny.Hoagland, Gotham.Freeny.Hackett, Gotham.Freeny.Kaluaaha }, false);

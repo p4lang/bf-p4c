@@ -113,6 +113,7 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1809-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1812-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2313.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-leaf.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4

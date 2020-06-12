@@ -1736,13 +1736,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-1867.p4
 )
 
-# @override_phase0_table_name( ".blah" )
-# missing constraint when packing?
-p4c_add_xfail_reason("tofino"
-  "Field is extracted in the parser into multiple containers, but the container slices after the first aren't byte aligned"
-  extensions/p4_tests/p4_16/customer/kaloom/p4c-1832.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   testdata/p4_16_samples/array-copy-bmv2.p4

@@ -27,6 +27,7 @@
 typedef bit<9>  PortId_t;               // Port id -- ingress or egress port
 typedef bit<16> MulticastGroupId_t;     // Multicast group id
 typedef bit<5>  QueueId_t;              // Queue id
+typedef bit<3>  MirrorType_t;           // Mirror type
 typedef bit<10> MirrorId_t;             // Mirror id
 typedef bit<16> ReplicationId_t;        // Replication id
 

@@ -34,9 +34,12 @@
 typedef bit<9>  PortId_t;               // Port id -- ingress or egress port
 typedef bit<16> MulticastGroupId_t;     // Multicast group id
 typedef bit<7>  QueueId_t;              // Queue id
-typedef bit<4>  CloneId_t;              // Clone id
+typedef bit<4>  MirrorType_t;           // Mirror type
 typedef bit<8>  MirrorId_t;             // Mirror id
 typedef bit<16> ReplicationId_t;        // Replication id
+
+// CloneId_t will be deprecated in 9.4. Adding a typedef for any old references.
+typedef MirrorType_t CloneId_t;
 
 typedef error ParserError_t;
 

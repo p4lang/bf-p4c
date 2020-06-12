@@ -7,7 +7,6 @@
 // Software.
 
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 // P4C-923: Issue with handling concatenation operation in instruction adjustment
@@ -2529,7 +2528,7 @@ control Bernstein(inout Wamesit Kingsdale, inout Almedia Lynch) {
 }
 
 control Berlin(inout Wamesit Ardsley, inout Almedia Astatula, inout ingress_intrinsic_metadata_for_tm_t Broadford) {
-    action Westhoff(bit<3> Scottdale, bit<5> Addicks) {
+    action Westhoff(bit<3> Scottdale, QueueId_t Addicks) {
         Broadford.ingress_cos = Scottdale;
         Broadford.qid = Addicks;
     }
@@ -3062,12 +3061,12 @@ control Kooskia(inout Wamesit Tillson, inout Almedia Trammel, in ingress_intrins
 }
 
 control Tularosa(inout Wamesit Olmitz, inout Almedia Norfork, in ingress_intrinsic_metadata_t Upland, inout ingress_intrinsic_metadata_for_tm_t Alnwick) {
-    action Oshoto(bit<9> Rankin, bit<5> Hartwick) {
+    action Oshoto(bit<9> Rankin, QueueId_t Hartwick) {
         Norfork.Levittown.Ronneby = Upland.ingress_port;
         Alnwick.ucast_egress_port = Rankin;
         Alnwick.qid = Hartwick;
     }
-    action Corvallis(bit<9> Nighthawk, bit<5> Foster) {
+    action Corvallis(bit<9> Nighthawk, QueueId_t Foster) {
         Oshoto(Nighthawk, Foster);
         Norfork.Levittown.Ladelle = 0;
     }
@@ -3079,7 +3078,7 @@ control Tularosa(inout Wamesit Olmitz, inout Almedia Norfork, in ingress_intrins
         Newtok(Harriston);
         Norfork.Levittown.Ladelle = 0;
     }
-    action Cimarron(bit<9> GlenRock, bit<5> Moorcroft) {
+    action Cimarron(bit<9> GlenRock, QueueId_t Moorcroft) {
         Oshoto(GlenRock, Moorcroft);
         Norfork.Levittown.Ladelle = 1;
     }
@@ -3087,7 +3086,7 @@ control Tularosa(inout Wamesit Olmitz, inout Almedia Norfork, in ingress_intrins
         Newtok(Kelliher);
         Norfork.Levittown.Ladelle = 1;
     }
-    action Emajagua(bit<9> Chaska, bit<5> LaMoille) {
+    action Emajagua(bit<9> Chaska, QueueId_t LaMoille) {
         Cimarron(Chaska, LaMoille);
         Norfork.Chardon.Quijotoa = Olmitz.Trego[0].McCartys;
     }
