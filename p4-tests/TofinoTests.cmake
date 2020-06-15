@@ -711,6 +711,7 @@ endforeach()
 set (P4FACTORY_INTERNAL_PROGRAMS_PATH "extensions/p4_tests/p4-programs/internal_p4_14")
 bfn_add_p4factory_tests("tofino" "tofino" "v1model" "smoketest_programs_internal" P4F_PTF_TESTS_INTERNAL)
 bfn_set_p4_build_flag("tofino" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/power/power.p4" "-Xp4c=\"--no-power-check\"")
+bfn_set_pd_build_flag("tofino" "${P4FACTORY_INTERNAL_PROGRAMS_PATH}/ecc/ecc.p4" "\"--gen-md-pd --load-unavailable-resources ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/ecc/resource_fail.rf\"")
 
 # for all other p4factory internal tests, add them as compile only.
 set (P4F_INTERNAL_COMPILE_ONLY)

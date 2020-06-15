@@ -1506,7 +1506,7 @@ p4c_add_xfail_reason("tofino"
 
 # P4C-1862
 p4c_add_xfail_reason("tofino"
-  "AttributeError: Client instance has no attribute"
+  "AttributeError: 'Client' object has no attribute"
   extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
 )
 
