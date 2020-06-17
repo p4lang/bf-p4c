@@ -171,6 +171,8 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     bool equiv(const IR::Expression *a, const IR::Expression *b);
     IR::Member *genIntrinsicMetadata(gress_t gress, cstring header, cstring field);
 
+    void limitWidth(const IR::Expression *);
+
  public:
     explicit DoInstructionSelection(const PhvInfo &phv) : phv(phv) {}
 };

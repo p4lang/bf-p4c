@@ -398,3 +398,9 @@ p4c_add_xfail_reason("tofino2"
   "Cannot unify bit<8> to MeterColor_t"
   p4_16_internal_p4_16_t2na_static_entry
 )
+
+# P4C-2694 - saturating arithmetic exceeding container width
+p4c_add_xfail_reason("tofino2"
+  "Saturating arithmetic operators may not exceed maximum PHV container width"
+  extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
+)

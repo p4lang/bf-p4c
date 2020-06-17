@@ -515,6 +515,22 @@ bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression
     return false;
 }
 
+void DoInstructionSelection::limitWidth(const IR::Expression *e) {
+    // P4C-2694
+    // Verify that the operation width is less than the maximum container width.
+    // Required for instructions that can't be split without rewriting the
+    // instruction.
+    auto bits = e->type->to<IR::Type_Bits>();
+    unsigned short max_size = static_cast<unsigned short>(
+            *Device::phvSpec().containerSizes().rbegin());
+    if (bits && bits->width_bits() > max_size) {
+        ::error(ErrorType::ERR_OVERLIMIT,
+                "%1%: Saturating arithmetic operators may not exceed "
+                "maximum PHV container width (%2%b)",
+                e->srcInfo, max_size);
+    }
+}
+
 const IR::Expression *DoInstructionSelection::postorder(IR::BoolLiteral *bl) {
     if (!findContext<IR::MAU::Action>())
         return bl;
@@ -612,6 +628,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::AddSat *e) {
     auto opName = "saddu";
     if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
         opName = "sadds";
+    limitWidth(e);
     return new IR::MAU::Instruction(e->srcInfo, opName,
                                         new IR::TempVar(e->type), e->left, e->right);
 }
@@ -636,6 +653,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
             }
         }
     }
+    limitWidth(e);
 
     // P4C-1819
     // Compiler generates an invalid instruction here for saturated unsigned

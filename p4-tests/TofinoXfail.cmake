@@ -1822,3 +1822,9 @@ p4c_add_xfail_reason("tofino"
   "error: Parser state .* requires fields from an earlier state which have been lost"
   ../glass/testsuite/p4_tests/phv/COMPILER-679/case3769.p4
 )
+
+# P4C-2694 - saturating arithmetic exceeding container width
+p4c_add_xfail_reason("tofino"
+  "Saturating arithmetic operators may not exceed maximum PHV container width"
+  extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
+)

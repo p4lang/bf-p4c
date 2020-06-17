@@ -29,8 +29,13 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
         return inst;
 
 
-    auto split = new IR::Vector<IR::Primitive>();
+    // Check if this is an operator that cannot be split (see p4c-2694)
     cstring opcode = inst->name;
+    BUG_CHECK(opcode != "saddu" && opcode != "sadds" &&
+            opcode != "ssubu" && opcode != "ssubs",
+            "Saturating arithmetic operations cannot be split");
+
+    auto split = new IR::Vector<IR::Primitive>();
     bool check_pairing = false;
     for (auto slice : slices) {
         auto *n = inst->clone();
