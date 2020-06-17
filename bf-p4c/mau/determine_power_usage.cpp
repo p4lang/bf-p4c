@@ -155,9 +155,9 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
               auto field = phv_.field(fi.field);
               le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);
               bool saw_mocha = false;
-              field->foreach_alloc(range, t, &READ, [&](const PHV::Field::alloc_slice &slice) {
-                  if (slice.field_bits().overlaps(fi.lo, fi.hi)) {
-                    if (slice.container.is(PHV::Kind::mocha))
+              field->foreach_alloc(range, t, &READ, [&](const PHV::AllocSlice &slice) {
+                  if (slice.field_slice().overlaps(fi.lo, fi.hi)) {
+                    if (slice.container().is(PHV::Kind::mocha))
                       saw_mocha = true;
                   }
               });
@@ -172,9 +172,9 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
                 auto field = phv_.field(fi.field);
                 le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);
                 bool saw_mocha = false;
-                field->foreach_alloc(range, t, &READ, [&](const PHV::Field::alloc_slice &slice) {
-                    if (slice.field_bits().overlaps(fi.lo, fi.hi)) {
-                      if (slice.container.is(PHV::Kind::mocha))
+                field->foreach_alloc(range, t, &READ, [&](const PHV::AllocSlice &slice) {
+                    if (slice.field_slice().overlaps(fi.lo, fi.hi)) {
+                      if (slice.container().is(PHV::Kind::mocha))
                         saw_mocha = true;
                     }
                 });

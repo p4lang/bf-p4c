@@ -530,9 +530,9 @@ struct InsertParserClotChecksums : public PassManager {
             diffrange.setrange(clotRange.lo, clotRange.size());
             for (auto slice : field->get_alloc()) {
                 // check if phv slice in range with clot slice
-                if (clotRange.lo > slice.field_bits().hi || clotRange.hi < slice.field_bits().lo)
+                if (clotRange.lo > slice.field_slice().hi || clotRange.hi < slice.field_slice().lo)
                     continue;
-                diffrange.clrrange(slice.field_bit, slice.width);
+                diffrange.clrrange(slice.field_slice().lo, slice.width());
             }
             for (auto br : bitranges(diffrange)) {
                 clotRanges.insert(le_bitrange(br.first, br.second));

@@ -1384,21 +1384,21 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
     // If we want to move TablePlacement before PHV allocation in the future, this will have
     // to change
     BUG_CHECK(ctxt, "Context not declared");
-    field->foreach_byte(bits, ctxt, &use, [&](const PHV::Field::alloc_slice &sl) {
+    field->foreach_byte(bits, ctxt, &use, [&](const PHV::AllocSlice &sl) {
         ok = true;  // FIXME -- better sanity check?
         // FIXME: This will not work if moved before PHV allocation
-        IXBar::FieldInfo fi(field->name, sl.field_bit, sl.field_hi(), sl.container_bit % 8,
-                aliasSourceName);
+        IXBar::FieldInfo fi(field->name, sl.field_slice().lo, sl.field_slice().hi,
+                            sl.container_slice().lo % 8, aliasSourceName);
 
         // FIXME: Unclear if this is too constrained, as the bits that aren't live at the same
         // time may still be non-zero even though they aren't live.  This will always mark
         // all bits that are ever allocated
-        bitvec all_bits = phv.bits_allocated(sl.container);
-        IXBar::Use::Byte byte(sl.container.toString(), (sl.container_bit/8U) * 8U);
+        bitvec all_bits = phv.bits_allocated(sl.container());
+        IXBar::Use::Byte byte(sl.container().toString(), (sl.container_slice().lo/8U) * 8U);
 
-        byte.non_zero_bits = all_bits.getslice((sl.container_bit / 8U) * 8U, 8);
+        byte.non_zero_bits = all_bits.getslice((sl.container_slice().lo / 8U) * 8U, 8);
         byte.flags =
-            flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
+            flags | need_align_flags[sl.container().log2sz()][(sl.container_slice().lo/8U) & 3]
                   | need_align_flags[extra_align][index & 3];
         // FIXME -- for (jbay) 128-bit salu, extra_align ends up being 3, so we're not adding
         // any extra alignment here as it falls into the 'not yet allocated'.  This is either
@@ -1412,11 +1412,11 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
 
         if (byte_type == IXBar::RANGE) {
             byte.range_index = range_index;
-            if ((sl.container_bit % 8) < 4) {
+            if ((sl.container_slice().lo % 8) < 4) {
                 byte.set_spec(IXBar::RANGE_LO);
                 map_alloc[byte].push_back(fi);
             }
-            if ((sl.container_hi() % 8) > 3) {
+            if ((sl.container_slice().hi % 8) > 3) {
                 byte.clear_spec(IXBar::RANGE_LO);
                 byte.set_spec(IXBar::RANGE_HI);
                 map_alloc[byte].push_back(fi);

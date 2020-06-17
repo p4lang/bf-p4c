@@ -34,8 +34,8 @@ ordered_set<PHV::FieldSlice> CollectPhvLoggingInfo::getSlices(
     // See if there are field slice allocations for this field
     // and add those which intersect the field range
     f->foreach_alloc(rng, tbl, nullptr,
-        [&](const PHV::Field::alloc_slice as) {
-        PHV::FieldSlice fs(as.field, as.field_bits());
+        [&](const PHV::AllocSlice as) {
+        PHV::FieldSlice fs(as.field(), as.field_slice());
         slices.insert(fs);
     });
     return slices;
@@ -93,8 +93,8 @@ PHV::Field::AllocState PhvLogging::getAllocatedState(
     bitvec allocatedBits;
     bitvec phvAllocatedBits;
     bitvec clotAllocatedBits;
-    f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-        bitvec sliceBits(alloc.field_bit, alloc.width);
+    f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+        bitvec sliceBits(alloc.field_slice().lo, alloc.width());
         phvAllocatedBits |= sliceBits;
     });
 
@@ -121,7 +121,7 @@ ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
 
     /* Determine set of all allocated fields and the headers to which they belong */
     for (const auto& f : phv)
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
+        f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
             (void)alloc;
             fields[f.header()].insert(&f);
         });
@@ -159,37 +159,37 @@ PhvLogging::logFieldSlice(const PHV::Field* f, bool use_alias = false) {
 }
 
 Phv_Schema_Logger::FieldSlice*
-PhvLogging::logFieldSlice(const PHV::Field::alloc_slice& sl,
+PhvLogging::logFieldSlice(const PHV::AllocSlice& sl,
                             bool use_alias = false) {
-    auto f = sl.field;
+    auto f = sl.field();
     std::string fieldName = std::string(stripThreadPrefix(f->name));
     if (use_alias && f->aliasSource)
         fieldName = std::string(stripThreadPrefix(f->aliasSource->name));
-    auto si = new Slice(sl.field_bit, sl.field_hi());
+    auto si = new Slice(sl.field_slice().lo, sl.field_slice().hi);
     auto fs = new FieldSlice(fieldName, si);
     return fs;
 }
 
 Phv_Schema_Logger::ContainerSlice*
-PhvLogging::logContainerSlice(const PHV::Field::alloc_slice& sl,
+PhvLogging::logContainerSlice(const PHV::AllocSlice& sl,
                                 bool use_alias = false) {
     const auto& phvSpec = Device::phvSpec();
     auto fs = logFieldSlice(sl, use_alias);
-    auto ps = new Slice(sl.container_bit, sl.container_hi());
-    auto cid = phvSpec.physicalAddress(phvSpec.containerToId(sl.container),
+    auto ps = new Slice(sl.container_slice().lo, sl.container_slice().hi);
+    auto cid = phvSpec.physicalAddress(phvSpec.containerToId(sl.container()),
                                                    PhvSpec::MAU);
     auto cs = new ContainerSlice(fs, cid, ps);
 
     ordered_set<PardeInfo> parde;
     // Add all the parser/deparser writes/reads.
-    getAllParserDefs(sl.field, parde);
-    getAllDeparserUses(sl.field, parde);
+    getAllParserDefs(sl.field(), parde);
+    getAllDeparserUses(sl.field(), parde);
 
     // Add PARDE reads and writes.
-    addPardeReadsAndWrites(sl.field, parde, cs);
+    addPardeReadsAndWrites(sl.field(), parde, cs);
 
     // Add all the MAU reads/writes.
-    PHV::FieldSlice slice(sl.field, sl.field_bits());
+    PHV::FieldSlice slice(sl.field(), sl.field_slice());
     addTableKeys(slice, cs);
     addVLIWReads(slice, cs);
     addVLIWWrites(slice, cs);
@@ -247,27 +247,27 @@ void PhvLogging::logFields() {
                 }
 
                 // Solitary Constraints
-                if (sl.field->is_solitary()) {
-                    if (sl.field->deparsed_bottom_bits()) {
+                if (sl.field()->is_solitary()) {
+                    if (sl.field()->deparsed_bottom_bits()) {
                         auto sc = new SolitaryConstraint("last_byte",
                             "SOLITARY_LAST_BYTE: Can not pack field with any other field"
                             " in its non-full last byte",
                                     s_loc);
                         c->append(sc);
                     } else {
-                        if (sl.field->getSolitaryConstraint().isALU()) {
+                        if (sl.field()->getSolitaryConstraint().isALU()) {
                             auto sc = new SolitaryConstraint("alu",
                                 "SOLITARY: Can not pack field with any other field",
                                         s_loc);
                             c->append(sc);
-                        } else if (sl.field->getSolitaryConstraint().isDigest()) {
-                            if (sl.field->getDigestConstraint().isMirror()) {
+                        } else if (sl.field()->getSolitaryConstraint().isDigest()) {
+                            if (sl.field()->getDigestConstraint().isMirror()) {
                                 auto sc = new SolitaryConstraint("mirror",
                                 "SOLITARY_MIRROR: Cannot pack this field instance with"
                                 " any field that is mirrored",
                                         s_loc);
                                 c->append(sc);
-                            } else if (sl.field->getDigestConstraint().isLearning()) {
+                            } else if (sl.field()->getDigestConstraint().isLearning()) {
                                 auto sc = new SolitaryConstraint("learning_digest",
                                 "SOLITARY_EXCEPT_DIGEST: Cannot pack this field with"
                                 " any other field that does not belong to the same"
@@ -280,10 +280,10 @@ void PhvLogging::logFields() {
                 }
 
                 // Different Container Constraint
-                if (sl.field->is_solitary() && sl.field->getSolitaryConstraint().isALU()) {
+                if (sl.field()->is_solitary() && sl.field()->getSolitaryConstraint().isALU()) {
                     for (const auto* f2 : kv.second) {
-                        if (sl.field == f2) continue;
-                        if (phv.isFieldNoPack(sl.field, f2)) {
+                        if (sl.field() == f2) continue;
+                        if (phv.isFieldNoPack(sl.field(), f2)) {
                             std::string fieldNamePack(stripThreadPrefix(f2->name));
                             auto fPack = new FieldInfo(f2->size, getFieldType(f2),
                                              fieldNamePack, getGress(f2), "");
@@ -507,11 +507,11 @@ PhvLogging::addVLIWWrites(const PHV::FieldSlice& sl, Phv_Schema_Logger::Containe
     }
 }
 
-void PhvLogging::addMutexFields(const PHV::Field::alloc_slice& sl,
+void PhvLogging::addMutexFields(const PHV::AllocSlice& sl,
                            Phv_Schema_Logger::ContainerSlice *cs) const {
     LOG4("Adding mutually exclusive fields for slice: " << sl);
-    for (const auto* f2 : phv.fields_in_container(sl.container)) {
-        if (phv.isFieldMutex(sl.field, f2)) {
+    for (const auto* f2 : phv.fields_in_container(sl.container())) {
+        if (phv.isFieldMutex(sl.field(), f2)) {
             std::string fieldName(stripThreadPrefix(f2->name));
             cs->append_mutually_exclusive_with(fieldName);
         }
@@ -521,11 +521,11 @@ void PhvLogging::addMutexFields(const PHV::Field::alloc_slice& sl,
 void PhvLogging::logContainers() {
     const auto& phvSpec = Device::phvSpec();
     // Populate container structures.
-    ordered_map<const PHV::Container, ordered_set<PHV::Field::alloc_slice>> allocation;
+    ordered_map<const PHV::Container, ordered_set<PHV::AllocSlice>> allocation;
     auto aliases = getFieldAliases();
     for (auto& field : phv) {
         for (auto& slice : field.get_alloc())
-            allocation[slice.container].insert(slice); }
+            allocation[slice.container()].insert(slice); }
 
     for (auto kv : allocation) {
         auto c = kv.first;
@@ -543,17 +543,17 @@ void PhvLogging::logContainers() {
         // Get gress associated with the field slices in this container
         auto firstSlice = *kv.second.begin();
         auto containerEntry = new Container(c.size(), containerType(c),
-                                            getGress(firstSlice.field),
+                                            getGress(firstSlice.field()),
                                             deparserGroupId, mauGroupId,
                                             cid);
         for (auto sl : kv.second) {
-            bool use_alias = (aliases.count(sl.field) > 0);
-            auto f = use_alias ? aliases[sl.field] : sl.field;
-            f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-               if (alloc.container == sl.container
-                    && alloc.field_bit == sl.field_bit
-                    && alloc.container_bit == sl.container_bit
-                    && alloc.width == sl.width)
+            bool use_alias = (aliases.count(sl.field()) > 0);
+            auto f = use_alias ? aliases[sl.field()] : sl.field();
+            f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+               if (alloc.container() == sl.container()
+                    && alloc.field_slice().lo == sl.field_slice().lo
+                    && alloc.container_slice().lo == sl.container_slice().lo
+                    && alloc.width() == sl.width())
                     sl = alloc;
             });
             auto cs = logContainerSlice(sl, use_alias);

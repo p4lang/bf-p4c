@@ -14,6 +14,7 @@
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/constraints/constraints.h"
+#include "bf-p4c/phv/utils/slice_alloc.h"
 #include "ir/ir.h"
 #include "lib/algorithm.h"
 #include "lib/map.h"
@@ -242,74 +243,6 @@ class Field : public LiftLess<Field> {
     /// Associate source info to each field
     boost::optional<Util::SourceInfo> srcInfo;
 
-    /// Represents an allocation of a field slice to a container slice.
-    struct alloc_slice {
-        const Field*           field;
-        PHV::Container         container;
-        int field_bit, container_bit, width;
-        // Set of actions where this slice may need to be initialized. Set is empty if
-        // initialization is not required for this slice.
-        bool                   has_meta_init = false;
-        ordered_set<const IR::MAU::Action*> init_points;
-        StageAndAccess         min_stage;
-        StageAndAccess         max_stage;
-        // true if the alloc is copied from an alias destination alloc that requires an always run
-        // in the final stage.
-        bool shadowAlwaysRun = false;
-
-        struct init_primitive {
-            bool empty = true;
-            bool assignZeroToDestination = false;
-            bool nop = false;
-            alloc_slice* source = nullptr;
-            bool alwaysInitInLastMAUStage = false;
-            bool alwaysRunActionPrim = false;
-            ordered_set<const IR::MAU::Action*> init_actions;
-            ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
-            ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
-
-
-            bool operator==(const init_primitive& other) const {
-                return assignZeroToDestination == other.assignZeroToDestination &&
-                       source == other.source &&
-                       nop == other.nop &&
-                       alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage &&
-                       alwaysRunActionPrim == other.alwaysRunActionPrim &&
-                       init_actions == other.init_actions;
-            }
-        };
-        init_primitive         init_i;
-
-        alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w)
-            : field(f), container(c), field_bit(fb), container_bit(cb), width(w) {}
-        alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w,
-                ordered_set<const IR::MAU::Action*> a)
-            : field(f), container(c), field_bit(fb), container_bit(cb), width(w), init_points(a) {}
-        le_bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
-        le_bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
-        int field_hi() const              { return field_bit + width - 1; }
-        int container_hi() const          { return container_bit + width - 1; }
-        bool operator==(const alloc_slice& other) const {
-            return field == other.field &&
-                   container == other.container &&
-                   field_bit == other.field_bit &&
-                   container_bit == other.container_bit &&
-                   width == other.width &&
-                   min_stage == other.min_stage &&
-                   max_stage == other.max_stage; }
-        bool operator!=(const alloc_slice& other) const {
-            return !operator==(other); }
-        bool isLiveRangeDisjoint(const alloc_slice& other) const {
-            return PHV::isLiveRangeDisjoint(min_stage, max_stage, other.min_stage, other.max_stage);
-        }
-        bool isUsedDeparser() const;
-        bool isUsedParser() const;
-        /// Orders by name.
-        bool operator<(const alloc_slice& other) const {
-            return field->name < other.field->name;
-        }
-    };
-
     /// Sets the valid starting bit positions (little Endian) for this field.
     /// For example, setStartBits(PHV::Size::b8, bitvec(0,1)) means that the least
     /// significant bit of this field must start at bit 0 in 8b containers.
@@ -424,7 +357,7 @@ class Field : public LiftLess<Field> {
 
     /// Maps slices of @this field to PHV containers.  Sorted by field MSB
     /// first.
-    safe_vector<alloc_slice> alloc_i;
+    safe_vector<PHV::AllocSlice> alloc_slice_i;
 
     friend std::ostream &operator<<(std::ostream &out, const Field &field);
 
@@ -568,7 +501,7 @@ class Field : public LiftLess<Field> {
     bool isPacketField() const { return (!metadata && !pov); }
 
     bool checkContext(
-            const alloc_slice& slice,
+            const PHV::AllocSlice& slice,
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
@@ -585,10 +518,10 @@ class Field : public LiftLess<Field> {
         foreach_byte(StartLen(0, this->size), fn);
     }
 
-    /// @returns the alloc_slice in which field @bit is allocated.  Fails
-    /// catastrophically if @bit is not allocated or not within the range of
-    /// @this field's size.
-    const alloc_slice &for_bit(int bit) const;
+    /// @returns the PHV::AllocSlice in which field @bit is allocated.  Fails
+    /// catastrophically if @bit is not allocated or not within the range of @this
+    /// field's size.
+    const PHV::AllocSlice &for_bit(int bit) const;
 
     /** For each byte-aligned container byte of each allocated slice of this
      * field, construct an alloc_slice representing that allocated byte (or
@@ -611,103 +544,103 @@ class Field : public LiftLess<Field> {
      *  C8 [3:0]    <— f [14:11]
      */
     void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
-            std::function<void(const alloc_slice&)> fn) const;
+            std::function<void(const PHV::AllocSlice&)> fn) const;
 
     void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
-            std::function<void(const alloc_slice&)> fn) const {
+            std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
-    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_byte(le_bitrange r, std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(r, (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
     void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
-            std::function<void(const alloc_slice&)> fn) const {
+            std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(StartLen(0, this->size), ctxt, use, fn);
     }
 
     void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
-            std::function<void(const alloc_slice&)> fn) const {
+            std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
      * this->size), fn)` when @r is null.
      *
-     * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
+     * @see foreach_byte(le_bitrange, std::function<void(const PHV::AllocSlice&)>).
      */
-    void foreach_byte(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_byte(const le_bitrange *r, std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(r ? *r : StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
     void foreach_byte(const le_bitrange* r, const PHV::AllocContext* ctxt,
-            const PHV::FieldUse* use, std::function<void(const alloc_slice&)> fn) const {
+            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn);
     }
 
     void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
-            const PHV::FieldUse* use, std::function<void(const alloc_slice&)> fn) const {
+            const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
     /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
      *
-     * @see foreach_byte(le_bitrange, std::function<void(const alloc_slice&)>).
+     * @see foreach_byte(le_bitrange, std::function<void(const PHV::AllocSlice&)>).
      */
-    void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
+    void foreach_byte(std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_byte(StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
-    /// @returns a vector of alloc_slices, such that multiple alloc_slices within the same byte of
-    /// the same container are combined into the same new alloc_slice. This is necessary because
-    /// input crossbar allocation combines multiple slices of the same field in the same container
-    /// into a single Use object.
-    const std::vector<PHV::Field::alloc_slice> get_combined_alloc_bytes(
+    /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
+    /// byte of the same container are combined into the same new PHV::AllocSlice.
+    /// This is necessary because input crossbar allocation combines multiple slices
+    /// of the same field in the same container into a single Use object.
+    const std::vector<PHV::AllocSlice> get_combined_alloc_bytes(
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
-    /// @returns a vector of alloc_slices, such that multiple alloc_slices within the same container
-    /// are combined into the same new alloc_slice, if the ranges of the two alloc_slices are
-    /// contiguous. This is necessary because parser validation checks has this invariant.
-    const std::vector<PHV::Field::alloc_slice> get_combined_alloc_slices(
+    /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
+    /// container are combined into the same new PHV::AllocSlice, if the ranges of the two
+    /// PHV::AllocSlice are contiguous. This is necessary because parser validation checks has this
+    /// invariant.
+    const std::vector<PHV::AllocSlice> get_combined_alloc_slices(
             le_bitrange bits,
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
-    /// Apply @fn to each alloc_slice within the specified @ctxt to
-    /// which @this has been allocated (if any).
-    /// @ctxt can be one of ParserState, Table, Deparser, or null for no filter.
-    /// @use can be READ or WRITE.
-    /// For now, the context is the entire pipeline, as PHV allocation is global.
+    /// Apply @fn to each PHV::AllocSlice within the specified @ctxt to which @this has been
+    /// allocated (if any). @ctxt can be one of ParserState, Table, Deparser, or
+    /// null for no filter. @use can be READ or WRITE. For now, the context is the
+    /// entire pipeline, as PHV allocation is global.
     void foreach_alloc(le_bitrange r, const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const;
+                       std::function<void(const PHV::AllocSlice&)> fn) const;
 
     void foreach_alloc(le_bitrange r, const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const {
+                       std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
-    void foreach_alloc(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_alloc(le_bitrange r, std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(r, (PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, fn)`.
      *
      * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *, const PHV::FieldUse&,
-     *                    std::function<void(const alloc_slice &)>).
+     *                    std::function<void(const PHV::AllocSlice&)>).
      */
     void foreach_alloc(const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const {
+                       std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(StartLen(0, this->size), ctxt, use, fn);
     }
 
     void foreach_alloc(const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const {
+                       std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
-    void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
+    void foreach_alloc(std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc((PHV::AllocContext*) nullptr, nullptr, fn);
     }
 
@@ -715,17 +648,17 @@ class Field : public LiftLess<Field> {
      * `foreach_alloc(ctxt, fn)` when @r is null.
      *
      * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *,
-     *                    std::function<void(const alloc_slice &)>).
+     *                    std::function<void(const PHV::AllocSlice&)>).
      */
     void foreach_alloc(const le_bitrange *r, const PHV::AllocContext *ctxt,
                        const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const {
+                       std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(r ? *r : StartLen(0, this->size), ctxt, use, fn);
     }
 
     void foreach_alloc(const le_bitrange *r, const IR::MAU::Table *ctxt,
                        const PHV::FieldUse* use,
-                       std::function<void(const alloc_slice &)> fn) const {
+                       std::function<void(const PHV::AllocSlice&)> fn) const {
         foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn);
     }
 
@@ -734,52 +667,53 @@ class Field : public LiftLess<Field> {
     int container_bytes(boost::optional<le_bitrange> bits = boost::none) const;
 
     /// Clear any PHV allocation for this field.
-    void clear_alloc() { alloc_i.clear(); }
+    void clear_alloc() { alloc_slice_i.clear(); }
 
     /// Allocate a slice of this field.
     void add_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
             ordered_set<const IR::MAU::Action*> a) {
-        alloc_i.emplace_back(f, c, fb, cb, w, a);
+        alloc_slice_i.emplace_back(f, c, fb, cb, w, a);
     }
 
     /// Allocate a slice of this field.
-    void add_alloc(const alloc_slice& alloc) {
-        alloc_i.push_back(alloc);
+    void add_alloc(const PHV::AllocSlice& alloc) {
+        alloc_slice_i.push_back(alloc);
     }
 
-    alloc_slice* add_and_return_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
+    PHV::AllocSlice* add_and_return_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
             ordered_set<const IR::MAU::Action*> a) {
-        alloc_i.emplace_back(f, c, fb, cb, w, a);
-        unsigned size = alloc_i.size();
-        return &(alloc_i[size - 1]);
+        alloc_slice_i.emplace_back(f, c, fb, cb, w, a);
+        unsigned size = alloc_slice_i.size();
+        return &(alloc_slice_i[size - 1]);
     }
 
     /// Set all allocated slices of this field.
-    void set_alloc(const safe_vector<PHV::Field::alloc_slice>& alloc) {
-        alloc_i = alloc;
+    void set_alloc(const safe_vector<PHV::AllocSlice>& alloc) {
+        alloc_slice_i = alloc;
     }
 
     /// @returns the PHV allocation for this field, if any.
-    const safe_vector<PHV::Field::alloc_slice>& get_alloc() const {
-        return alloc_i;
+    const safe_vector<PHV::AllocSlice>& get_alloc() const {
+        return alloc_slice_i;
     }
 
-    safe_vector<PHV::Field::alloc_slice>& get_alloc() {
-        return alloc_i;
+    safe_vector<PHV::AllocSlice>& get_alloc() {
+        return alloc_slice_i;
     }
 
     /// @returns the number of allocated slices of this field.
-    size_t alloc_size() const { return alloc_i.size(); }
+    size_t alloc_size() const { return alloc_slice_i.size(); }
 
     /// @returns true if there are no allocated slices of this field.
-    bool is_unallocated() const { return alloc_i.empty(); }
+    bool is_unallocated() const { return alloc_slice_i.empty(); }
 
     /// Sort by field MSB.
     void sort_alloc() {
-        std::sort(alloc_i.begin(), alloc_i.end(),
-            [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
-                if (l.field_bit != r.field_bit) return l.field_bit > r.field_bit;
-                return l.min_stage.first > r.min_stage.first; });
+        std::sort(alloc_slice_i.begin(), alloc_slice_i.end(),
+            [](PHV::AllocSlice l, PHV::AllocSlice r) {
+                if (l.field_slice().lo != r.field_slice().lo)
+                    return l.field_slice().lo > r.field_slice().lo;
+                return l.getEarliestLiveness().first > r.getEarliestLiveness().first; });
     }
 
     /// Update the alignment requirement for this field. Reports an error if
@@ -1087,9 +1021,6 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);
-std::ostream &operator<<(std::ostream &, const Field::alloc_slice &);
-std::ostream &operator<<(std::ostream &, const std::vector<Field::alloc_slice> &);
-
 }  // namespace PHV
 
 /// Expresses the constraints for inserting a table into the IR. The first element of the pair
@@ -1524,7 +1455,7 @@ class PhvInfo {
         return field(name);
     }
 
-    std::vector<PHV::Field::alloc_slice> get_alloc(
+    std::vector<PHV::AllocSlice> get_alloc(
             const IR::Expression* f,
             const PHV::AllocContext* ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const {
@@ -1535,14 +1466,14 @@ class PhvInfo {
         return get_alloc(phv_field, &bits, ctxt, use);
     }
 
-    std::vector<PHV::Field::alloc_slice> get_alloc(
+    std::vector<PHV::AllocSlice> get_alloc(
             const PHV::Field* phv_field,
             le_bitrange* bits = nullptr,
             const PHV::AllocContext* ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const {
-        std::vector<PHV::Field::alloc_slice> slices;
+        std::vector<PHV::AllocSlice> slices;
 
-        phv_field->foreach_alloc(bits, ctxt, use, [&](const PHV::Field::alloc_slice& alloc) {
+        phv_field->foreach_alloc(bits, ctxt, use, [&](const PHV::AllocSlice& alloc) {
             slices.push_back(alloc);
         });
 
@@ -1570,7 +1501,7 @@ class PhvInfo {
     const ordered_set<const PHV::Field *>& fields_in_container(const PHV::Container c) const;
 
     /// @returns the set of alloc slices assigned to a container @c.
-    const std::vector<PHV::Field::alloc_slice>
+    const std::vector<PHV::AllocSlice>
         get_slices_in_container(const PHV::Container c) const;
 
     /** @returns a bitvec showing all potentially allocated bits within a container,
@@ -1733,8 +1664,8 @@ class CollectExtractedTogetherFields : public Inspector {
 };
 
 /**
-  * @brief Create allocation objects (PHV::Field::alloc_slice) for alias source fields in
-  * preparation for assembly output
+  * @brief Create allocation objects (PHV::AllocSlice) for alias source
+  * fields in preparation for assembly output
   * @pre PhvAnalysis_Pass has been run so that allocation objects are available.
   */
 class AddAliasAllocation : public Inspector {
@@ -1803,7 +1734,6 @@ struct MapFieldToParserStates : public Inspector {
 void dump(const PhvInfo *);
 void dump(const PHV::Field *);
 
-std::ostream &operator<<(std::ostream &, const safe_vector<PHV::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const ordered_set<const PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);

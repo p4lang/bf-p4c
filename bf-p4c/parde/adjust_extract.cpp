@@ -140,10 +140,10 @@ AdjustExtract::calcPrePadding(const PHV::Field* field) {
     auto pre_padding = boost::make_optional<size_t>(false, 0);
     auto alloc = phv.get_alloc(field);
     for (auto& slice : alloc) {
-        if (slice.width != int(slice.container.size())) {
+        if (slice.width() != int(slice.container().size())) {
             // pre/post in nw_order, so it is opposite to container's order.
-            size_t pre = slice.container.msb() - slice.container_hi();
-            size_t post = slice.container_bit;
+            size_t pre = slice.container().msb() - slice.container_slice().hi;
+            size_t post = slice.container_slice().lo;
             if (pre != 0) {
                 BUG_CHECK(!pre_padding,
                           "More than one marshaled field slices with prepadding: %1%", field);

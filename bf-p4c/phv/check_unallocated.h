@@ -41,8 +41,8 @@ class CheckForUnallocatedTemps : public PassManager {
                 if (clot.fully_allocated(aliasDest)) continue;
 
             bitvec allocatedBits;
-            field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-                bitvec sliceBits(slice.field_bit, slice.width);
+            field.foreach_alloc([&](const PHV::AllocSlice& slice) {
+                bitvec sliceBits(slice.field_slice().lo, slice.width());
                 allocatedBits |= sliceBits;
             });
 

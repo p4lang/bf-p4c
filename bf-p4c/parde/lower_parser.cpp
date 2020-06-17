@@ -36,8 +36,6 @@
 
 namespace {
 
-using alloc_slice = PHV::Field::alloc_slice;
-
 /**
  * Construct debugging debugging information describing a slice of a field.
  *
@@ -51,7 +49,7 @@ using alloc_slice = PHV::Field::alloc_slice;
  * slice, and describing the corresponding bits in the container.
  */
 cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
-                     const alloc_slice& slice,
+                     const PHV::AllocSlice& slice,
                      bool includeContainerInfo = true) {
     std::stringstream info;
 
@@ -62,8 +60,8 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
     // (In some cases we break this down in more detail elsewhere, so we don't
     // need to repeat it.)
     if (includeContainerInfo) {
-        const le_bitrange sourceBits = slice.container_bits();
-        if (sourceBits.size() != ssize_t(slice.container.size()))
+        const le_bitrange sourceBits = slice.container_slice();
+        if (sourceBits.size() != ssize_t(slice.container().size()))
             info << sourceBits << ": ";
     }
 
@@ -74,8 +72,8 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
     // in network order, consistency with the rest of the output of the
     // assembler requires that we describe partial writes to a field in little
     // endian order.
-    const le_bitrange destFieldBits = slice.field_bits();
-    if (slice.field->size != destFieldBits.size())
+    const le_bitrange destFieldBits = slice.field_slice();
+    if (slice.field()->size != destFieldBits.size())
         info << "." << destFieldBits.lo << "-" << destFieldBits.hi;
 
     return cstring(info);
@@ -97,24 +95,24 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
  * `Extract`.
  */
 cstring debugInfoFor(const IR::BFN::Extract* extract,
-                     const alloc_slice& slice,
+                     const PHV::AllocSlice& slice,
                      const nw_bitrange& bufferRange = nw_bitrange()) {
     std::stringstream info;
 
     // Describe the value that's being written into the destination container.
     if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
         info << "value " << constantSource->constant << " -> "
-             << slice.container << " " << slice.container_bits() << ": ";
+             << slice.container() << " " << slice.container_slice() << ": ";
     } else if (extract->source->is<IR::BFN::PacketRVal>()) {
         // In the interest of brevity, don't print the range of bits being
         // extracted into the destination container if it matches the size of
         // the container exactly.
-        if (slice.container.size() != size_t(bufferRange.size()))
-            info << bufferRange << " -> " << slice.container << " "
-                 << slice.container_bits() << ": ";
+        if (slice.container().size() != size_t(bufferRange.size()))
+            info << bufferRange << " -> " << slice.container() << " "
+                 << slice.container_slice() << ": ";
     } else if (extract->source->is<IR::BFN::MetadataRVal>()) {
         info << "buffer mapped I/O: " << bufferRange << " -> "
-             << slice.container << " " << slice.container_bits() << ": ";
+             << slice.container() << " " << slice.container_slice() << ": ";
     }
 
     // Describe the field slice that we're writing to.
@@ -169,7 +167,7 @@ struct ExtractSimplifier {
 
     void add(const IR::BFN::ExtractPhv* extract) {
         PHV::FieldUse use(PHV::FieldUse::WRITE);
-        std::vector<alloc_slice> slices = phv.get_alloc(extract->dest->field,
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(extract->dest->field,
                 PHV::AllocContext::PARSER, &use);
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
@@ -179,7 +177,7 @@ struct ExtractSimplifier {
         // TODO(zma) we should have single slice at this point
 
         for (const auto& slice : slices)
-            BUG_CHECK(bool(slice.container),
+            BUG_CHECK(bool(slice.container()),
                       "Parser extracts into invalid PHV container: %1%", extract);
 
         if (auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>()) {
@@ -197,14 +195,14 @@ struct ExtractSimplifier {
                 // one.
 
                 const nw_bitrange containerRange =
-                  slice.container_bits().toOrder<Endian::Network>(slice.container.size());
+                  slice.container_slice().toOrder<Endian::Network>(slice.container().size());
 
                 const nw_bitrange finalBufferRange =
                   bufferRange.shiftedByBits(-containerRange.lo)
-                             .resizedToBits(slice.container.size());
+                             .resizedToBits(slice.container().size());
 
                 LOG4("mapping input buffer field slice " << bufferRange
-                      << " into " << slice.container << " " << containerRange
+                      << " into " << slice.container() << " " << containerRange
                       << " named " << extract->dest
                       << ". Final buffer range: " << finalBufferRange);
 
@@ -218,16 +216,16 @@ struct ExtractSimplifier {
                 else
                     newSource = new IR::BFN::LoweredMetadataRVal(byteFinalBufferRange);
 
-                auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+                auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container(), newSource);
 
                 newExtract->write_mode = extract->write_mode;
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
                                                               bufferRange));
 
                 if (bufferSource->is<IR::BFN::PacketRVal>())
-                    extractFromPacketByContainer[slice.container].push_back(newExtract);
+                    extractFromPacketByContainer[slice.container()].push_back(newExtract);
                 else
-                    extractFromBufferByContainer[slice.container].push_back(newExtract);
+                    extractFromBufferByContainer[slice.container()].push_back(newExtract);
             }
         } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
             for (auto& slice : boost::adaptors::reverse(slices)) {
@@ -236,24 +234,24 @@ struct ExtractSimplifier {
                 // within each container.
 
                 auto constSlice = *(constantSource->constant);
-                constSlice = constSlice & IR::Constant::GetMask(slice.width);
+                constSlice = constSlice & IR::Constant::GetMask(slice.width());
 
                 // Place those bits at their offset within the container.
-                constSlice = constSlice << slice.container_bits().lo;
+                constSlice = constSlice << slice.container_slice().lo;
 
                 BUG_CHECK(constSlice.fitsUint(), "Constant slice larger than 32-bit?");
 
                 // Create an extract that writes just those bits.
-                LOG4("extract " << constSlice << " into " << slice.container);
+                LOG4("extract " << constSlice << " into " << slice.container());
 
                 auto* newSource =
                   new IR::BFN::LoweredConstantRVal(constSlice.asUnsigned());
                 auto* newExtract =
-                  new IR::BFN::LoweredExtractPhv(slice.container, newSource);
+                  new IR::BFN::LoweredExtractPhv(slice.container(), newSource);
 
                 newExtract->write_mode = extract->write_mode;
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice));
-                extractConstantByContainer[slice.container].push_back(newExtract);
+                extractConstantByContainer[slice.container()].push_back(newExtract);
             }
         } else {
             BUG("Unexpected parser primitive (most likely something that should "
@@ -483,7 +481,7 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             continue;
 
         PHV::FieldUse use(PHV::FieldUse::READ);
-        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field,
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(fieldRef->field,
                 PHV::AllocContext::DEPARSER, &use);
 
         BUG_CHECK(!slices.empty(),
@@ -491,13 +489,13 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
                   fieldRef->field);
 
         for (auto& slice : boost::adaptors::reverse(slices)) {
-            BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
+            BUG_CHECK(bool(slice.container()), "Emitted field was allocated to "
                       "an invalid PHV container: %1%", fieldRef->field);
 
-            const nw_bitrange containerRange = slice.container_bits()
-                .toOrder<Endian::Network>(slice.container.size());
+            const nw_bitrange containerRange = slice.container_slice()
+                .toOrder<Endian::Network>(slice.container().size());
 
-            if (last && last->container == slice.container) {
+            if (last && last->container == slice.container()) {
                 auto lastRange = *(last->range);
                     if (lastRange.hi < containerRange.lo) {
                     LOG5(" - Merging in " << fieldRef->field);
@@ -508,18 +506,18 @@ lowerFields(const PhvInfo& phv, const ClotInfo& clotInfo,
             }
 
             LOG5("Deparser: lowering field " << fieldRef->field
-                  << " to " << slice.container);
+                  << " to " << slice.container());
 
-            last = new IR::BFN::ContainerRef(slice.container);
+            last = new IR::BFN::ContainerRef(slice.container());
             last->range = containerRange;
             last->debug.info.push_back(debugInfoFor(fieldRef, slice));
             containers.push_back(last);
 
-            if (slice.field->is_checksummed() && slice.field->is_solitary()) {
+            if (slice.field()->is_checksummed() && slice.field()->is_solitary()) {
                 // Since the field has a solitary constraint, its is safe to
                 // extend the range till the end of container
                 last->range = containerRange.unionWith(nw_bitrange(
-                               StartLen(0, slice.container.size())));
+                               StartLen(0, slice.container().size())));
             }
         }
     }
@@ -535,8 +533,8 @@ lowerSingleBit(const PhvInfo& phv,
     le_bitrange range;
     auto* field = phv.field(fieldRef->field, &range);
 
-    std::vector<alloc_slice> slices;
-    field->foreach_alloc(&range, ctxt, nullptr, [&](const PHV::Field::alloc_slice& alloc) {
+    std::vector<PHV::AllocSlice> slices;
+    field->foreach_alloc(&range, ctxt, nullptr, [&](const PHV::AllocSlice& alloc) {
         slices.push_back(alloc);
     });
 
@@ -545,8 +543,8 @@ lowerSingleBit(const PhvInfo& phv,
     BUG_CHECK(slices.size() == 1, "bit %1% is somehow split across "
               "multiple containers?", fieldRef->field);
 
-    auto container = new IR::BFN::ContainerRef(slices.back().container);
-    auto containerRange = slices.back().container_bits();
+    auto container = new IR::BFN::ContainerRef(slices.back().container());
+    auto containerRange = slices.back().container_slice();
     BUG_CHECK(containerRange.size() == 1, "bit %1% is multiple bits?",
               fieldRef->field);
 
@@ -752,7 +750,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         if (mul2) {
             csum->multiply_2 = mul2;
         }
-        std::vector<alloc_slice> slices;
+        std::vector<PHV::AllocSlice> slices;
 
         // FIXME(zma) this code could use some cleanup, what a mess ...
         if (dest) {
@@ -767,13 +765,13 @@ struct ComputeLoweredParserIR : public ParserInspector {
             if (auto sl = dest->field->to<IR::Slice>()) {
                 BUG_CHECK(sl->getL() == sl->getH(), "checksum error must write to single bit");
                 csum->csum_err = new IR::BFN::ContainerBitRef(
-                                     new IR::BFN::ContainerRef(slices.back().container),
+                                     new IR::BFN::ContainerRef(slices.back().container()),
                                      (unsigned)sl->getL());
             } else {
                 csum->csum_err = lowerSingleBit(phv, dest, PHV::AllocContext::PARSER);
             }
         } else if (type == IR::BFN::ChecksumMode::RESIDUAL && dest) {
-            csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container);
+            csum->phv_dest = new IR::BFN::ContainerRef(slices.back().container());
         } else if (type == IR::BFN::ChecksumMode::CLOT && end) {
             auto last = checksums.back();
             auto deposit = last->to<IR::BFN::ChecksumDepositToClot>();
@@ -946,14 +944,14 @@ struct ComputeLoweredParserIR : public ParserInspector {
         for (const auto& f : phv) {
             auto ctxt = PHV::AllocContext::PARSER;
             if (f.name == "ingress::ig_intr_md_from_prsr.parser_err") {
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
                     BUG_CHECK(!igParserError, "parser error allocated to multiple containers?");
-                    igParserError = new IR::BFN::ContainerRef(alloc.container);
+                    igParserError = new IR::BFN::ContainerRef(alloc.container());
                 });
             } else if (f.name == "egress::eg_intr_md_from_prsr.parser_err") {
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
                     BUG_CHECK(!egParserError, "parser error allocated to multiple containers?");
-                    egParserError = new IR::BFN::ContainerRef(alloc.container);
+                    egParserError = new IR::BFN::ContainerRef(alloc.container());
                 });
             }
         }
@@ -1295,7 +1293,7 @@ computeControlPlaneFormat(const PhvInfo& phv,
     // necessary to reflect gaps between the fields.
     for (auto* fieldRef : fields) {
         PHV::FieldUse use(PHV::FieldUse::READ);
-        std::vector<alloc_slice> slices = phv.get_alloc(fieldRef->field,
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(fieldRef->field,
                 PHV::AllocContext::DEPARSER, &use);
 
         // padding in digest list does not need phv allocation
@@ -1312,10 +1310,10 @@ computeControlPlaneFormat(const PhvInfo& phv,
         // enumerates the slices in increasing order of their little endian
         // offset, which means that in terms of network order it walks the
         // slices backwards.
-        for (std::vector<alloc_slice>::reverse_iterator slice = slices.rbegin();
+        for (std::vector<PHV::AllocSlice>::reverse_iterator slice = slices.rbegin();
                 slice != slices.rend(); slice++) {
-            const nw_bitrange sliceContainerRange = slice->container_bits()
-                        .toOrder<Endian::Network>(slice->container.size());
+            const nw_bitrange sliceContainerRange = slice->container_slice()
+                        .toOrder<Endian::Network>(slice->container().size());
 
             // unsigned startByte = totalWidth / 8;
             unsigned startByte = 0;
@@ -1324,25 +1322,25 @@ computeControlPlaneFormat(const PhvInfo& phv,
             // appending padding equivalent to the bits at the end of the previous
             // container and the beginning of the new container that aren't
             // occupied.
-            if (last && last->container != slice->container) {
+            if (last && last->container != slice->container()) {
                 totalWidth += last->remainingBitsInContainer;
                 totalWidth += sliceContainerRange.lo;
             } else if (!last) {
                 totalWidth += sliceContainerRange.lo;
             }
             startByte = totalWidth / 8;
-            totalWidth += slice->width;
+            totalWidth += slice->width();
 
             // Place the field slice in the packing format. The field name is
             // used in assembly generation; hence, we use its external name.
             packing->emplace_back(
-                    slice->field->externalName(), startByte,
-                    slice->field_hi() % 8, slice->width, slice->field_bit);
+                    slice->field()->externalName(), startByte,
+                    slice->field_slice().hi % 8, slice->width(), slice->field_slice().lo);
 
             // Remember information about the container placement of the last slice
             // in network order (the first one in `slices`) so we can add any
             // necessary padding on the next pass around the loop.
-            last = LastContainerInfo{ slice->container, slice->container_bits().lo };
+            last = LastContainerInfo{ slice->container(), slice->container_slice().lo };
         }
     }
 
@@ -1566,7 +1564,7 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
     for (auto source : emitChecksum->sources) {
         auto* phv_field = phv.field(source->field->field);
         PHV::FieldUse use(PHV::FieldUse::READ);
-        std::vector<alloc_slice> slices = phv.get_alloc(phv_field, nullptr,
+        std::vector<PHV::AllocSlice> slices = phv.get_alloc(phv_field, nullptr,
                 PHV::AllocContext::DEPARSER, &use);
         int offset = source->offset;
         for (auto& slice : boost::adaptors::reverse(slices)) {
@@ -1581,12 +1579,12 @@ std::map<PHV::Container, unsigned> getChecksumPhvSwap(const PhvInfo& phv,
             // Offset : offset of the field slice is offset of the field + difference between
             // field.hi and slice.hi
             if (!isResidualChecksum &&
-                ((offset + phv_field->size - slice.field_bits().hi -1)/8) % 2 ==
-                 (slice.container_bits().hi/8) % 2) {
-                swap = (1 << slice.container_bits().hi/16U) |
-                             (1 << slice.container_bits().lo/16U);
+                ((offset + phv_field->size - slice.field_slice().hi -1)/8) % 2 ==
+                 (slice.container_slice().hi/8) % 2) {
+                swap = (1 << slice.container_slice().hi/16U) |
+                             (1 << slice.container_slice().lo/16U);
             }
-            containerToSwap[slice.container] |= swap;
+            containerToSwap[slice.container()] |= swap;
         }
     }
     return containerToSwap;
@@ -2097,8 +2095,8 @@ class ComputeMultiWriteContainers : public ParserModifier {
 
             if (f.name.endsWith("$stkvalid")) {
                 auto ctxt = PHV::AllocContext::PARSER;
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
-                    bitwise_or_containers.insert(alloc.container);
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
+                    bitwise_or_containers.insert(alloc.container());
                 });
             }
         }
@@ -2184,10 +2182,10 @@ class ComputeInitZeroContainers : public ParserModifier {
 
             // POV bits are treated as metadata
             if (f.pov || f.metadata) {
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
                     bool hasHeaderField = false;
 
-                    for (auto fc : phv.fields_in_container(alloc.container)) {
+                    for (auto fc : phv.fields_in_container(alloc.container())) {
                         if (!fc->metadata && !fc->pov) {
                             hasHeaderField = true;
                             break;
@@ -2195,15 +2193,15 @@ class ComputeInitZeroContainers : public ParserModifier {
                     }
 
                     if (!hasHeaderField)
-                        zero_init_containers.insert(alloc.container);
+                        zero_init_containers.insert(alloc.container());
                 });
             }
 
             if (f.is_invalidate_from_arch()) {
                 // Track the allocated containers for fields that are invalidate_from_arch
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
-                    intrinsic_invalidate_containers.insert(alloc.container);
-                    LOG3(alloc.container << " contains intrinsic invalidate fields");
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
+                    intrinsic_invalidate_containers.insert(alloc.container());
+                    LOG3(alloc.container() << " contains intrinsic invalidate fields");
                 });
                 continue;
             }
@@ -2212,8 +2210,8 @@ class ComputeInitZeroContainers : public ParserModifier {
                 // If pa_no_init specified, then the field does not have to rely on parser zero
                 // initialization.
                 if (no_init_fields.count(&f)) continue;
-                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::Field::alloc_slice& alloc) {
-                    zero_init_containers.insert(alloc.container);
+                f.foreach_alloc(ctxt, nullptr, [&] (const PHV::AllocSlice& alloc) {
+                    zero_init_containers.insert(alloc.container());
                 });
             }
         }

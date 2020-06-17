@@ -48,7 +48,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     const auto& phvSpec = Device::phvSpec();
 
     // A mapping from PHV containers to the field slices that they contain.
-    std::map<PHV::Container, std::vector<Slice>> allocations;
+    std::map<PHV::Container, std::vector<PHV::AllocSlice>> allocations;
 
     // The set of reserved container ids for each thread.
     bitvec threadAssignments[2] = {
@@ -106,7 +106,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // *field*; we check overlapping with respect to the *container*
         // below.)
         for (auto& slice : field.get_alloc()) {
-            bitvec sliceBits(slice.field_bit, slice.width);
+            bitvec sliceBits(slice.field_slice().lo, slice.width());
             if (!sliceBits.intersects(allocatedBits)) {
                 ++outer_idx;
                 allocatedBits |= sliceBits;
@@ -117,10 +117,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             for (auto& slice2 : field.get_alloc()) {
                 // Replace by if (slice1 == slice2) continue;
                 if (inner_idx++ == outer_idx) continue;
-                bitvec slice2Bits(slice2.field_bit, slice2.width);
+                bitvec slice2Bits(slice2.field_slice().lo, slice2.width());
                 if (!slice2Bits.intersects(sliceBits)) continue;
                 // TODO: Include dark containers too when we aggressively reduce their live range.
-                if (slice2.container.is(PHV::Kind::dark) || slice.container.is(PHV::Kind::dark))
+                if (slice2.container().is(PHV::Kind::dark) || slice.container().is(PHV::Kind::dark))
                     continue;
                 std::stringstream ss;
                 ss << "\n  " << slice << "\n  " << slice2;
@@ -142,49 +142,49 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // probably just a bug.
             if (!field.is_deparser_zero_candidate()) {
                 bool alreadyAssignedContainer =
-                    assignedContainers[phvSpec.containerToId(slice.container)];
+                    assignedContainers[phvSpec.containerToId(slice.container())];
                 bool foundOverlappingSlices = false;
                 if (!field.metadata && alreadyAssignedContainer)
-                    for (auto& slice2 : allocations[slice.container])
-                        if (slice2.container_bits().overlaps(slice.container_bits()) &&
+                    for (auto& slice2 : allocations[slice.container()])
+                        if (slice2.container_slice().overlaps(slice.container_slice()) &&
                                 !slice2.isLiveRangeDisjoint(slice) &&
-                                !phv.isFieldMutex(slice.field, slice2.field) &&
-                                !phv.isMetadataMutex(slice.field, slice2.field))
+                                !phv.isFieldMutex(slice.field(), slice2.field()) &&
+                                !phv.isMetadataMutex(slice.field(), slice2.field()))
                             foundOverlappingSlices = true;
                 ERROR_CHECK(!foundOverlappingSlices,
                             "Multiple slices in the same container %2% are allocated "
-                            "to field %1%", cstring::to_cstring(field), slice.container);
+                            "to field %1%", cstring::to_cstring(field), slice.container());
             }
 
-            assignedContainers[phvSpec.containerToId(slice.container)] = true;
-            allocations[slice.container].emplace_back(slice);
+            assignedContainers[phvSpec.containerToId(slice.container())] = true;
+            allocations[slice.container()].emplace_back(slice);
 
-            threadAssignments[field.gress].setbit(phvSpec.containerToId(slice.container));
+            threadAssignments[field.gress].setbit(phvSpec.containerToId(slice.container()));
 
             // Verify that each slice is within the bounds of the field.
-            ERROR_CHECK(le_bitrange(StartLen(0, slice.field->size)).contains(slice.field_bits()),
+            ERROR_CHECK(le_bitrange(StartLen(0, slice.field()->size)).contains(slice.field_slice()),
                         "Field %1% contains slice %2% that falls outside the size of the field",
                         cstring::to_cstring(field), cstring::to_cstring(slice));
 
             // Verify that slices point to their parent fields.
-            ERROR_CHECK(slice.field == &field, "Field %1% contains slice %2% of field %3%",
+            ERROR_CHECK(slice.field() == &field, "Field %1% contains slice %2% of field %3%",
                         cstring::to_cstring(field), cstring::to_cstring(slice),
-                        cstring::to_cstring(slice.field));
+                        cstring::to_cstring(slice.field()));
         }
 
         // Verify that slices are sorted in descending MSB order.
         int last_msb_idx = -1;
-        const Slice* lastSlice = nullptr;
+        const PHV::AllocSlice* lastSlice = nullptr;
         for (auto& slice : boost::adaptors::reverse(field.get_alloc())) {
-            if (lastSlice && lastSlice->container == slice.container) {
+            if (lastSlice && lastSlice->container() == slice.container()) {
                 bool disjointSlices = slice.isLiveRangeDisjoint(*lastSlice);
                 ERROR_CHECK(disjointSlices ||
-                            (!disjointSlices && last_msb_idx < slice.field_bits().hi),
+                            (!disjointSlices && last_msb_idx < slice.field_slice().hi),
                             "Field %1% has allocated slices out of order.  Slice %2% is the first "
                             " out of order slice.",
                             cstring::to_cstring(field), cstring::to_cstring(slice));
             }
-            last_msb_idx = slice.field_bits().hi;
+            last_msb_idx = slice.field_slice().hi;
             lastSlice = &slice;
         }
 
@@ -210,7 +210,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         std::set<const PHV::Field*> fields[2];
         if (allocations.count(container))
             for (auto& slice : allocations[container])
-                fields[slice.field->gress].insert(slice.field);
+                fields[slice.field()->gress].insert(slice.field());
 
         std::stringstream message;
         for (gress_t gress : { INGRESS, EGRESS }) {
@@ -232,7 +232,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         if (!uses.is_referenced(&field) || clot.whole_field_clot(&field)) continue;
         if (!field.deparsed()) continue;
         for (auto& slice : field.get_alloc()) {
-            auto this_cid = phvSpec.containerToId(slice.container);
+            auto this_cid = phvSpec.containerToId(slice.container());
             if (visitedCIDs.count(this_cid)) continue;
 
             auto deparserGroup = phvSpec.deparserGroup(this_cid);
@@ -246,9 +246,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
                 bool hasDeparsed = false;
                 for (auto slice : allocations[container]) {
-                    if (!slice.field->deparsed()) continue;
+                    if (!slice.field()->deparsed()) continue;
                     hasDeparsed = true;
-                    hasGress[slice.field->gress] = true; }
+                    hasGress[slice.field()->gress] = true; }
                 if (!hasDeparsed)
                     writtenDeparserGroup.clrbit(cid); }
 
@@ -261,7 +261,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             << (phvSpec.egressOnly()[cid] ? "(hardwired EGRESS)" : "")
                             << " with field slices" << std::endl;
                     for (auto slice : allocations[container])
-                        message << "        " << slice.field << " " << slice.field_bits()
+                        message << "        " << slice.field() << " " << slice.field_slice()
                                 << std::endl; }
                 ::error("Containers are in the same deparser group but assigned fields of "
                         "both INGRESS and EGRESS:\n%1%", message.str()); } } }
@@ -292,7 +292,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // Verify that every source field for this computed checksum is
             // allocated, and collect all of the allocations used in this
             // computed checksum.
-            std::map<PHV::Container, std::vector<Slice>> checksumAllocations;
+            std::map<PHV::Container, std::vector<PHV::AllocSlice>> checksumAllocations;
             for (auto* source : emitChecksum->sources) {
                 le_bitrange sourceFieldBits;
                 auto* sourceField = phv.field(source->field->field, &sourceFieldBits);
@@ -309,8 +309,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
                 // FIXME(cc): deparser context??
                 sourceField->foreach_alloc(sourceFieldBits,
-                             [&](const PHV::Field::alloc_slice& alloc) {
-                    checksumAllocations[alloc.container].push_back(alloc);
+                             [&](const PHV::AllocSlice& alloc) {
+                    checksumAllocations[alloc.container()].push_back(alloc);
                 });
             }
 
@@ -325,7 +325,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
                 bitvec allocatedBits;
                 for (auto& slice : slices)
-                    allocatedBits.setrange(slice.container_bit, slice.width);
+                    allocatedBits.setrange(slice.container_slice().lo, slice.width());
                 for (auto byte : { 0, 1, 2, 3}) {
                     auto bitsInByte = allocatedBits.getslice(byte * 8, 8);
                     auto numSetBits = bitsInByte.popcount();
@@ -361,8 +361,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that POV bit are not be placed in TPHV.
         povField->foreach_alloc(povFieldBits,
-                  [&](const PHV::Field::alloc_slice& alloc) {
-            ERROR_CHECK(!alloc.container.is(PHV::Kind::tagalong), "POV bit field was placed "
+                  [&](const PHV::AllocSlice& alloc) {
+            ERROR_CHECK(!alloc.container().is(PHV::Kind::tagalong), "POV bit field was placed "
                         "in TPHV: %1%", cstring::to_cstring(povField));
         });
     });
@@ -380,9 +380,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     auto hasOverlay = [](const PHV::Field* f) {
         le_bitrange allocated;
         for (auto& slice : f->get_alloc()) {
-            if (allocated.overlaps(slice.field_bits()))
+            if (allocated.overlaps(slice.field_slice()))
                 return true;
-            allocated |= slice.field_bits(); }
+            allocated |= slice.field_slice(); }
         return false; };
     auto allMutex = [&](const ordered_set<const PHV::Field*> left,
                         const ordered_set<const PHV::Field*> right) {
@@ -433,7 +433,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Collect all the fields which are assigned to this container.
         std::set<const PHV::Field*> fields;
-        for (auto& slice : slices) fields.insert(slice.field);
+        for (auto& slice : slices) fields.insert(slice.field());
 
         // XXX(cole): Some of the deparser constraints, such as field ordering
         // within a container, are still too difficult to check in the presence
@@ -455,7 +455,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         std::set<const PHV::Field*> deparsedPaddingFields;
 
         for (auto& slice : slices) {
-            auto* field = slice.field;
+            auto* field = slice.field();
             if (!isDeparsed(field)) {
                 nonDeparsedFields.insert(field);
                 continue; }
@@ -494,23 +494,23 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         bitvec allocatedBitsForContainer;
         ordered_map<int, ordered_set<const PHV::Field*>> bits_to_fields;
         for (auto field : fields) {
-            std::vector<Slice> slicesForField;
+            std::vector<PHV::AllocSlice> slicesForField;
             for (auto& slice : slices)
-                if (slice.field == field) slicesForField.push_back(slice);
+                if (slice.field() == field) slicesForField.push_back(slice);
 
             ERROR_CHECK(!slicesForField.empty(), "No slices for field?");
 
             bitvec allocatedBitsForField;
             for (auto& slice : slicesForField) {
-                bitvec sliceBits(slice.container_bit, slice.width);
-                if (!slice.field->is_deparser_zero_candidate() &&
+                bitvec sliceBits(slice.container_slice().lo, slice.width());
+                if (!slice.field()->is_deparser_zero_candidate() &&
                     sliceBits.intersects(allocatedBitsForField)) {
                     // Check that the liveness is different for slices that are allocated to the
                     // same container bits.
                     bool foundOverlappingSlices = false;
                     for (auto& slice2 : slicesForField) {
                         if (slice == slice2) continue;
-                        bitvec slice2Bits(slice2.container_bit, slice2.width);
+                        bitvec slice2Bits(slice2.container_slice().lo, slice2.width());
                         if (!slice2Bits.intersects(sliceBits)) continue;
                         if (slice.isLiveRangeDisjoint(slice2)) continue;
                         foundOverlappingSlices = true;
@@ -530,8 +530,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 continue;
 
             for (auto& slice : slicesForField)
-                for (int idx = slice.container_bit; idx < slice.width; ++idx)
-                    bits_to_fields[idx].insert(slice.field);
+                for (int idx = slice.container_slice().lo; idx < slice.width(); ++idx)
+                    bits_to_fields[idx].insert(slice.field());
 
             allocatedBitsForContainer |= allocatedBitsForField;
         }
@@ -571,15 +571,15 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // Because we want to check that the fields in this container are
         // placed in the order in which they're emitted in the deparser, we
         // need to walk over them in network order.
-        std::vector<Slice> slicesInNetworkOrder(slices.begin(), slices.end());
+        std::vector<PHV::AllocSlice> slicesInNetworkOrder(slices.begin(), slices.end());
         std::sort(slicesInNetworkOrder.begin(), slicesInNetworkOrder.end(),
-                  [](const Slice& a, const Slice& b) {
-            return a.container_bits().toOrder<Endian::Network>(a.container.size()).lo
-                 < b.container_bits().toOrder<Endian::Network>(b.container.size()).lo;
+                  [](const PHV::AllocSlice& a, const PHV::AllocSlice& b) {
+            return a.container_slice().toOrder<Endian::Network>(a.container().size()).lo
+                 < b.container_slice().toOrder<Endian::Network>(b.container().size()).lo;
         });
 
         for (auto& slice : slicesInNetworkOrder) {
-            auto* field = slice.field;
+            auto* field = slice.field();
             if (!isDeparsed(field)) continue;
 
             // Validate that the ordering of these fields in the container
@@ -607,19 +607,19 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Check that nothing is packed in the lower order bits of containers
         // that hold sources of non-bitwise instructions.
-        std::vector<Slice> slicesInLittleEndianOrder(slices.begin(), slices.end());
+        std::vector<PHV::AllocSlice> slicesInLittleEndianOrder(slices.begin(), slices.end());
         std::sort(slicesInLittleEndianOrder.begin(), slicesInLittleEndianOrder.end(),
-                  [](const Slice& a, const Slice& b) {
-            return a.container_bits().toOrder<Endian::Little>(a.container.size()).lo
-                 < b.container_bits().toOrder<Endian::Little>(b.container.size()).lo;
+                  [](const PHV::AllocSlice& a, const PHV::AllocSlice& b) {
+            return a.container_slice().toOrder<Endian::Little>(a.container().size()).lo
+                 < b.container_slice().toOrder<Endian::Little>(b.container().size()).lo;
         });
         bool lowerBitsPacked = false;
         for (auto slice : slicesInLittleEndianOrder) {
-            for (auto op : slice.field->operations())
-                if (op.range.overlaps(slice.field_bits()) && !op.is_bitwise_op && lowerBitsPacked)
+            for (auto op : slice.field()->operations())
+                if (op.range.overlaps(slice.field_slice()) && !op.is_bitwise_op && lowerBitsPacked)
                     BUG("PHV allocation incorrectly packed other fields in the lower order bits "
                         "of the same container as %1%, which is the source of a non-bitwise "
-                        "operation: %2%", slice.field->name, op.inst);
+                        "operation: %2%", slice.field()->name, op.inst);
             lowerBitsPacked = true;
         }
     }
@@ -653,9 +653,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 PHV::AllocContext::PARSER, &use);
         for (auto& alloc : mergedFieldSlices) {
             nw_bitrange fieldSlice =
-              alloc.field_bits().toOrder<Endian::Network>(field->size);
+              alloc.field_slice().toOrder<Endian::Network>(field->size);
             nw_bitrange containerSlice =
-              alloc.container_bits().toOrder<Endian::Network>(alloc.container.size());
+              alloc.container_slice().toOrder<Endian::Network>(alloc.container().size());
 
             // The field must have the same alignment in the
             // container as it does in the input buffer, so the fieldslices must
@@ -680,7 +680,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             BUG_CHECK(id_alloc.size() == 1,
                       "%1% is splitted, but it should not.", mirror_id->name);
             if (Device::currentDevice() == Device::TOFINO) {
-                BUG_CHECK(id_alloc.front().container.size() == 16,
+                BUG_CHECK(id_alloc.front().container().size() == 16,
                           "%1% must be allocated to %2% but phv allocation does not",
                           mirror_id->name, 16); }
         }
@@ -691,7 +691,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             const auto& src_alloc = phv.get_alloc(mirror_src);
             BUG_CHECK(src_alloc.size() == 1,
                       "%1% is splitted, but it should not.", mirror_src->name);
-            BUG_CHECK(src_alloc.front().container.size() == 8,
+            BUG_CHECK(src_alloc.front().container().size() == 8,
                       "%1% must be allocated to %2% but phv allocation does not",
                       mirror_src->name, 8);
         }
@@ -735,8 +735,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     const PHV::Field* selector = phv.field(digest->selector->field);
     BUG_CHECK(selector, "Selector field not present in PhvInfo");
     size_t selectorSize = 0;
-    selector->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-        selectorSize += alloc.container.size();
+    selector->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+        selectorSize += alloc.container().size();
     });
     for (auto fieldList : digest->fieldLists) {
         size_t digestSizeInBits = selectorSize;
@@ -744,8 +744,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
             const PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
             f->foreach_alloc(PHV::AllocContext::DEPARSER, nullptr,
-                    [&](const PHV::Field::alloc_slice& alloc) {
-                digestSizeInBits += alloc.container.size();
+                    [&](const PHV::AllocSlice& alloc) {
+                digestSizeInBits += alloc.container().size();
             });
         }
         BUG_CHECK(digestSizeInBits % 8 == 0, "Digest size in bits cannot be non byte aligned.");
@@ -758,7 +758,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
 }
 
 void ValidateAllocation::checkAndThrowPrivatizeException(
-        const std::map<PHV::Container, std::vector<Slice>>& allocations) const {
+        const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const {
     // If privatized fields flout deparser requirements, raise a backtrack exception.
     bool backtrack = throwBacktrackException(allocations);
     if (backtrack) {
@@ -767,15 +767,15 @@ void ValidateAllocation::checkAndThrowPrivatizeException(
 }
 
 bool ValidateAllocation::throwBacktrackException(
-        const std::map<PHV::Container, std::vector<Slice>>& allocations) const {
+        const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const {
     bool anyFieldOverlaid = false;
     for (cstring fName : doNotPrivatize) {
         const PHV::Field* f = phv.field(fName);
         BUG_CHECK(f, "Privatized field %1% not found", fName);
-        f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            for (auto& slice : allocations.at(alloc.container)) {
-                if (slice.field == alloc.field) continue;
-                if (alloc.container_bits().overlaps(slice.container_bits()))
+        f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            for (auto& slice : allocations.at(alloc.container())) {
+                if (slice.field() == alloc.field()) continue;
+                if (alloc.container_slice().overlaps(slice.container_slice()))
                     anyFieldOverlaid = true; }
         });
     }
@@ -787,8 +787,8 @@ size_t ValidateAllocation::getPOVContainerBytes(gress_t gress) const {
     for (const auto& f : phv) {
         if (f.gress != gress) continue;
         if (!f.pov) continue;
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            containers.insert(alloc.container);
+        f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            containers.insert(alloc.container());
         });
     }
     size_t rv = 0;

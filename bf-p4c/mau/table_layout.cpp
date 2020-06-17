@@ -283,11 +283,11 @@ void DoTableLayout::determine_byte_impacts(const IR::MAU::Table *tbl,
             // If we move PHV allocation back to after Table Placement, this will need to
             // change
             PHV::FieldUse use(PHV::FieldUse::READ);
-            field->foreach_byte(bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
-                cstring name = sl.container.toString();
-                int lo = (sl.container_bit / 8) * 8;
+            field->foreach_byte(bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
+                cstring name = sl.container().toString();
+                int lo = (sl.container_slice().lo / 8) * 8;
                 MatchByteKey mbk(name, lo, ixbar_multiplier, match_multiplier);
-                byte_impacts[mbk].push_back(sl.container_bits());
+                byte_impacts[mbk].push_back(sl.container_slice());
                 bytes++;
             });
 

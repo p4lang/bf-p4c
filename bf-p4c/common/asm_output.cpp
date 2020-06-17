@@ -28,14 +28,14 @@ std::ostream &operator<<(std::ostream &out, const Slice &sl) {
     if (sl.field) {
         out << canon_name(trim_asm_name(sl.field->externalName()));
         for (auto &alloc : sl.field->get_alloc()) {
-            if (sl.lo < alloc.field_bit) continue;
-            if (sl.hi > alloc.field_hi())
+            if (sl.lo < alloc.field_slice().lo) continue;
+            if (sl.hi > alloc.field_slice().hi)
                 WARNING("Slice not contained within a single PHV container");
-            if (alloc.field_bit != 0 || alloc.width != sl.field->size)
-                out << '.' << alloc.field_bit << '-' << alloc.field_hi();
-            if (sl.lo != alloc.field_bit || sl.hi != alloc.field_hi()) {
-                out << '(' << (sl.lo - alloc.field_bit);
-                if (sl.hi > sl.lo) out << ".." << (sl.hi - alloc.field_bit);
+            if (alloc.field_slice().lo != 0 || alloc.width() != sl.field->size)
+                out << '.' << alloc.field_slice().lo << '-' << alloc.field_slice().hi;
+            if (sl.lo != alloc.field_slice().lo || sl.hi != alloc.field_slice().hi) {
+                out << '(' << (sl.lo - alloc.field_slice().lo);
+                if (sl.hi > sl.lo) out << ".." << (sl.hi - alloc.field_slice().lo);
                 out << ')'; }
             break; }
     } else {
@@ -53,8 +53,8 @@ Slice Slice::join(Slice &a) const {
         return Slice(reg, lo, a.hi);
     /* don't join if the slices were allocated to different PHV containers */
     for (auto &alloc : field->get_alloc()) {
-        if (lo < alloc.field_bit) continue;
-        if (a.hi > alloc.field_hi()) return Slice();
+        if (lo < alloc.field_slice().lo) continue;
+        if (a.hi > alloc.field_slice().hi) return Slice();
         break; }
     return Slice(field, lo, a.hi);
 }
@@ -62,7 +62,7 @@ Slice Slice::join(Slice &a) const {
 int Slice::bytealign() const {
     if (field) {
         auto &alloc = field->for_bit(lo);
-        return (lo - alloc.field_bit + alloc.container_bit) & 7; }
+        return (lo - alloc.field_slice().lo + alloc.container_slice().lo) & 7; }
     return lo & 7;
 }
 
@@ -70,8 +70,8 @@ Slice Slice::fullbyte() const {
     Slice rv;
     if (field) {
         auto &alloc = field->for_bit(lo);
-        rv.reg = alloc.container;
-        rv.lo = lo - alloc.field_bit + alloc.container_bit;
+        rv.reg = alloc.container();
+        rv.lo = lo - alloc.field_slice().lo + alloc.container_slice().lo;
         rv.hi = rv.lo + hi - lo;
     } else {
         rv = *this; }

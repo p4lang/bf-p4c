@@ -42,7 +42,7 @@ class AsmOutput : public Inspector {
     PHV::Container ghostPhvContainer() const {
         // FIXME -- need a better way of finding the ghost metadata allocation
         if (auto *field = phv.field("ghost::gh_intr_md.ping_pong"))
-            return field->for_bit(0).container;
+            return field->for_bit(0).container();
         BUG("No allocation for ghost metadata?"); }
 
  public:

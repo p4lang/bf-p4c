@@ -191,8 +191,8 @@ Visitor::profile_t LiveRangeReport::init_apply(const IR::Node* root) {
     maxStages = (maxStagesInAlloc > maxDeviceStages) ? maxStagesInAlloc : maxDeviceStages;
     for (const PHV::Field& f : phv) {
         bool only_tphv_allocation = true;
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-            if (!slice.container.is(PHV::Kind::tagalong))
+        f.foreach_alloc([&](const PHV::AllocSlice& slice) {
+            if (!slice.container().is(PHV::Kind::tagalong))
                 only_tphv_allocation = false;
         });
         if (only_tphv_allocation) continue;

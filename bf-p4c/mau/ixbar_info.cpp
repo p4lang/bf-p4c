@@ -50,9 +50,9 @@ std::string CollectIXBarInfo::print_ixbar_byte() const {
                 auto *field = phv.field(fi.field);
                 std::stringstream alloc;
                 le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);
-                field->foreach_alloc(range, ctxt, &READ, [&](const PHV::Field::alloc_slice &slice) {
-                    if (slice.field_bits().overlaps(fi.lo, fi.hi)) {
-                        alloc << slice.container << " " << slice.container_bits();
+                field->foreach_alloc(range, ctxt, &READ, [&](const PHV::AllocSlice &slice) {
+                    if (slice.field_slice().overlaps(fi.lo, fi.hi)) {
+                        alloc << slice.container() << " " << slice.container_slice();
                     }
                 });
                 tp.addRow({std::to_string(stage.first),

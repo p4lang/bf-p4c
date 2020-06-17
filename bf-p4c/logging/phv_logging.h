@@ -159,7 +159,7 @@ class PhvLogging : public MauInspector {
     void addTableKeys(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWReads(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
     void addVLIWWrites(const PHV::FieldSlice& sl, ContainerSlice *cs) const;
-    void addMutexFields(const PHV::Field::alloc_slice& sl,
+    void addMutexFields(const PHV::AllocSlice& sl,
                            ContainerSlice *cs) const;
 
     PHV::Field::AllocState getAllocatedState(const PHV::Field* f);
@@ -184,14 +184,14 @@ class PhvLogging : public MauInspector {
      * FieldSlice object to log the field slice info. Substitue the field name
      * with the one in its 'aliasSource' field if 'use_alias' is set to true.
      */
-    FieldSlice* logFieldSlice(const PHV::Field::alloc_slice& sl, bool use_alias);
+    FieldSlice* logFieldSlice(const PHV::AllocSlice& sl, bool use_alias);
 
     /** If @sl is a slice of the field's alloc slices then return a logger
      * ContainerSlice object to log the container slice info. Substitue the
      * field name with the one in its 'aliasSource' field if 'use_alias' is set
      * to true.
      */
-    ContainerSlice* logContainerSlice(const PHV::Field::alloc_slice& sl, bool use_alias);
+    ContainerSlice* logContainerSlice(const PHV::AllocSlice& sl, bool use_alias);
 
     /// Add header-specific information to the logger object.
     void logHeaders();

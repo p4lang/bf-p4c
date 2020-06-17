@@ -24,8 +24,8 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
             if (stg.first < min) min = stg.first;
             if (stg.first > max) max = stg.first;
         }
-        f->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            auto c = alloc.container;
+        f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            auto c = alloc.container();
             cstring fname = cstring::to_cstring(canon_name(f->externalName()));
             std::set<cstring> mutex_fields;
             for (const auto* f2 : phv.fields_in_container(c)) {
@@ -36,10 +36,10 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
             }
             int last_stage = PhvInfo::getDeparserStage();
 
-            int alloc_min = (alloc.min_stage.second.isWrite()) ?
-                        alloc.min_stage.first + 1 : alloc.min_stage.first;
-            int alloc_max = (alloc.max_stage.second.isWrite()) ?
-                        alloc.max_stage.first + 1 : alloc.max_stage.first;
+            int alloc_min = (alloc.getEarliestLiveness().second.isWrite()) ?
+                        alloc.getEarliestLiveness().first + 1 : alloc.getEarliestLiveness().first;
+            int alloc_max = (alloc.getLatestLiveness().second.isWrite()) ?
+                        alloc.getLatestLiveness().first + 1 : alloc.getLatestLiveness().first;
 
             int newMin = min, newMax = max;
             // Skip POV bits as they are always used in deparser
@@ -69,8 +69,8 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
             auto &fieldsInContainer = lr[f->gress][c];
             fieldsInContainer[fname].push_back(fuse);
             LOG5(" Slice : " << alloc
-                      << ", Slice min stage : " << alloc.min_stage
-                      << ", Slice max stage : " << alloc.max_stage
+                      << ", Slice min stage : " << alloc.getEarliestLiveness()
+                      << ", Slice max stage : " << alloc.getLatestLiveness()
                       << ", Parsed : " << f->parsed()
                       << ", Deparsed : " << f->deparsed()
                       << ", New min stage : " << newMin
@@ -81,16 +81,17 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
 
 void emit_alloc(
         std::ostream& out,
-        const PHV::Field::alloc_slice& alloc,
+        const PHV::AllocSlice& alloc,
         PHV::Field* f) {
     out << "  " << canon_name(f->externalName());
-    if (alloc.field_bit > 0 || alloc.width < f->size)
-        out << '.' << alloc.field_bit << '-' << alloc.field_hi();
-    out << ": " << alloc.container;
-    if (alloc.container_bit > 0 || alloc.container.size() != static_cast<size_t>(alloc.width)) {
-        out << '(' << alloc.container_bit;
-        if (alloc.width > 1)
-            out << ".." << alloc.container_hi();
+    if (alloc.field_slice().lo > 0 || alloc.width() < f->size)
+        out << '.' << alloc.field_slice().lo << '-' << alloc.field_slice().hi;
+    out << ": " << alloc.container();
+    if (alloc.container_slice().lo > 0 ||
+        alloc.container().size() != static_cast<size_t>(alloc.width())) {
+        out << '(' << alloc.container_slice().lo;
+        if (alloc.width() > 1)
+            out << ".." << alloc.container_slice().hi;
         out << ')'; }
     out << std::endl;
 }
@@ -100,11 +101,11 @@ void emit_alloc(
  */
 void emit_stage_alloc(
         std::ostream& out,
-        const PHV::Field::alloc_slice& alloc,
+        const PHV::AllocSlice& alloc,
         PHV::Field* f) {
     out << "  " << canon_name(f->externalName());
-    if (alloc.field_bit > 0 || alloc.width < f->size)
-        out << '.' << alloc.field_bit << '-' << alloc.field_hi();
+    if (alloc.field_slice().lo > 0 || alloc.width() < f->size)
+        out << '.' << alloc.field_slice().lo << '-' << alloc.field_slice().hi;
 
     std::set<int> stageset;
     std::random_device rd;
@@ -125,11 +126,12 @@ void emit_stage_alloc(
           prntc = false;
         else
           out << ',';
-        out << " stage " << first << ".." << it << ": " << alloc.container;
-        if (alloc.container_bit > 0 || alloc.container.size() != static_cast<size_t>(alloc.width)) {
-            out << '(' << alloc.container_bit;
-        if (alloc.width > 1)
-            out << ".." << alloc.container_hi();
+        out << " stage " << first << ".." << it << ": " << alloc.container();
+        if (alloc.container_slice().lo > 0 ||
+            alloc.container().size() != static_cast<size_t>(alloc.width())) {
+            out << '(' << alloc.container_slice().lo;
+        if (alloc.width() > 1)
+            out << ".." << alloc.container_slice().hi;
         out << ") "; }
         first = it + 1;
     }
@@ -139,9 +141,9 @@ void emit_stage_alloc(
 }
 
 void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
-    ordered_map<le_bitrange, std::vector<PHV::Field::alloc_slice>> fieldRangeToAllocMap;
-    field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-        fieldRangeToAllocMap[alloc.field_bits()].push_back(alloc);
+    ordered_map<le_bitrange, std::vector<PHV::AllocSlice>> fieldRangeToAllocMap;
+    field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+        fieldRangeToAllocMap[alloc.field_slice()].push_back(alloc);
     });
     // No allocation for the field.
     if (fieldRangeToAllocMap.size() == 0) return;
@@ -154,40 +156,40 @@ void emit_stage_phv_field(std::ostream& out, PHV::Field* field) {
             out << '.' << kv.first.lo << '-' << kv.first.hi;
         out << ": ";
         std::sort(kv.second.begin(), kv.second.end(),
-                [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
-            if (lhs.min_stage.first != rhs.min_stage.first)
-                return lhs.min_stage.first < rhs.min_stage.first;
-            return lhs.min_stage.second < rhs.min_stage.second;
+                [](const PHV::AllocSlice& lhs, const PHV::AllocSlice& rhs) {
+            if (lhs.getEarliestLiveness().first != rhs.getEarliestLiveness().first)
+                return lhs.getEarliestLiveness().first < rhs.getEarliestLiveness().first;
+            return lhs.getEarliestLiveness().second < rhs.getEarliestLiveness().second;
         });
         for (auto& alloc : kv.second) {
             ++alloc_num;
             int min_stage, max_stage;
-            if (alloc.min_stage.first == -1)
+            if (alloc.getEarliestLiveness().first == -1)
                 min_stage = 0;
-            else if (alloc.min_stage.second == PHV::FieldUse(PHV::FieldUse::WRITE))
-                min_stage = alloc.min_stage.first + 1;
+            else if (alloc.getEarliestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE))
+                min_stage = alloc.getEarliestLiveness().first + 1;
             else
-                min_stage = alloc.min_stage.first;
-            if (alloc.max_stage.second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
-                alloc.max_stage.first != PhvInfo::getDeparserStage())
-                max_stage = alloc.max_stage.first + 1;
+                min_stage = alloc.getEarliestLiveness().first;
+            if (alloc.getLatestLiveness().second == PHV::FieldUse(PHV::FieldUse::WRITE) &&
+                alloc.getLatestLiveness().first != PhvInfo::getDeparserStage())
+                max_stage = alloc.getLatestLiveness().first + 1;
             else
-                max_stage = alloc.max_stage.first;
+                max_stage = alloc.getLatestLiveness().first;
             if (min_stage != 0 || max_stage != PhvInfo::getDeparserStage()) {
                 stageAllocReqd = true;
                 if (alloc_num == 1) out << "{ ";
                 if (min_stage != max_stage)
-                    out << " stage " << min_stage << ".." << max_stage << ": " << alloc.container;
+                    out << " stage " << min_stage << ".." << max_stage << ": " << alloc.container();
                 else
-                    out << " stage " << min_stage << ": " << alloc.container;
+                    out << " stage " << min_stage << ": " << alloc.container();
             } else {
-                out << alloc.container;
+                out << alloc.container();
             }
-            bool containerSliceReqd = alloc.container_bit > 0 ||
-                alloc.container.size() != static_cast<size_t>(alloc.width);
+            bool containerSliceReqd = alloc.container_slice().lo > 0 ||
+                alloc.container().size() != static_cast<size_t>(alloc.width());
             if (containerSliceReqd) {
-                out << '(' << alloc.container_bit;
-                if (alloc.width > 1) out << ".." << alloc.container_hi();
+                out << '(' << alloc.container_slice().lo;
+                if (alloc.width() > 1) out << ".." << alloc.container_slice().hi;
                 out << ')';
             }
             if (alloc_num != numAllocSlices) out << ',';
@@ -207,7 +209,7 @@ void emit_phv_field(
         emit_stage_phv_field(out, field);
 #endif /* HAVE_CLOUDBREAK */
     } else if (Device::currentDevice() == Device::TOFINO) {
-        field->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+        field->foreach_alloc([&](const PHV::AllocSlice& slice) {
             emit_alloc(out, slice, field);
         });
     }

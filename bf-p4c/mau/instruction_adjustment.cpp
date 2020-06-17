@@ -15,8 +15,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     std::vector<le_bitrange> slices;
     PHV::FieldUse use(PHV::FieldUse::WRITE);
     field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                         [&](const PHV::Field::alloc_slice& alloc) {
-        slices.push_back(alloc.field_bits());
+                         [&](const PHV::AllocSlice& alloc) {
+        slices.push_back(alloc.field_slice());
     });
     BUG_CHECK(slices.size() >= 1, "No PHV slices allocated for %s", &use);
     if (slices.size() <= 1) return inst;  // nothing to split
@@ -53,8 +53,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
         BUG_CHECK(slices.size() == 2, "PHV pairing failure for wide %s", inst->name);
         auto &s1 = field->for_bit(slices[0].lo);
         auto &s2 = field->for_bit(slices[1].lo);
-        BUG_CHECK(s1.container.index() + 1 == s2.container.index() &&
-                  (s1.container.index() & 1) == 0,
+        BUG_CHECK(s1.container().index() + 1 == s2.container().index() &&
+                  (s1.container().index() & 1) == 0,
                   "PHV alloc failed to put wide %s into even/odd PHV pair", inst->name); }
     return split;
 }
@@ -144,10 +144,10 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
         PHV::Container container;
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::Field::alloc_slice &alloc) {
+                             [&](const PHV::AllocSlice &alloc) {
             write_count++;
-            container_bits = alloc.container_bits();
-            container = alloc.container;
+            container_bits = alloc.container_slice();
+            container = alloc.container();
         });
 
         if (write_count != 1)
@@ -277,10 +277,10 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
     PHV::FieldUse use(PHV::FieldUse::WRITE);
 
     int write_count = 0;
-    write_expr->foreach_alloc(bits, tbl, &use, [&](const PHV::Field::alloc_slice &alloc) {
+    write_expr->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice &alloc) {
         write_count++;
-        expr_lookup.phv_bits = alloc.container_bits();
-        expr_lookup.container = alloc.container;
+        expr_lookup.phv_bits = alloc.container_slice();
+        expr_lookup.container = alloc.container();
     });
 
     BUG_CHECK(write_count == 1, "An expression writes to more than one container position");
@@ -386,14 +386,14 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
         int split_count = 0;
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::Field::alloc_slice &) {
+                             [&](const PHV::AllocSlice &) {
             split_count++;
         });
         if (split_count != 1)
             BUG("Instruction on field %s not a single container instruction", field->name);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::Field::alloc_slice &alloc) {
-            auto container = alloc.container;
+                             [&](const PHV::AllocSlice &alloc) {
+            auto container = alloc.container();
             merged_location = merged_fields.find(container);
             write_found = true;
         });
@@ -619,14 +619,14 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
                 int split_count = 0;
                 PHV::FieldUse use(PHV::FieldUse::READ);
                 field->foreach_alloc(bits, cont_action.table_context, &use,
-                                     [&](const PHV::Field::alloc_slice &alloc) {
+                                     [&](const PHV::AllocSlice &alloc) {
                     split_count++;
-                    if (alloc.container.toString() != match_name)
+                    if (alloc.container().toString() != match_name)
                        return;
                     const IR::Expression* read_mo_expr = read.expr;
-                    if (alloc.width != read.size()) {
-                        int start = alloc.field_bit - bits.lo;
-                        read_mo_expr = MakeSlice(read.expr, start, start + alloc.width - 1);
+                    if (alloc.width() != read.size()) {
+                        int start = alloc.field_slice().lo - bits.lo;
+                        read_mo_expr = MakeSlice(read.expr, start, start + alloc.width() - 1);
                     }
                     mo->push_back(read_mo_expr);
                 });

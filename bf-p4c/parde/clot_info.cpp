@@ -783,21 +783,21 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
     auto field = slice->field();
     auto slice_range = slice->range();
     field->foreach_alloc(slice_range, PHV::AllocContext::DEPARSER, nullptr,
-            [&](const PHV::Field::alloc_slice& alloc) {
+            [&](const PHV::AllocSlice& alloc) {
         // The container overwrites the slice if the container has a modified field or is not
         // completely covered by the CLOT.
         bool container_overwrites = false;
-        auto container = alloc.container;
+        auto container = alloc.container();
         for (auto alloc_slice : phv.get_slices_in_container(container)) {
-            auto field = alloc_slice.field;
-            auto slice = new PHV::FieldSlice(field, alloc_slice.field_bits());
+            auto field = alloc_slice.field();
+            auto slice = new PHV::FieldSlice(field, alloc_slice.field_slice());
             container_overwrites = !clot_covers_slice(clot, slice) || is_modified(field);
             if (container_overwrites) break;
         }
 
         if (!container_overwrites) return;
 
-        auto overwrite_range = alloc.field_bits().intersectWith(slice_range);
+        auto overwrite_range = alloc.field_slice().intersectWith(slice_range);
         overwrite_range = overwrite_range.shiftedByBits(-slice_range.lo);
         auto normalized_overwrite_range = overwrite_range.toOrder<Order>(slice_range.size());
 
@@ -820,15 +820,15 @@ ClotInfo::get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const {
         auto range = slice->range();
         if (slice_overwritten_by_phv(phv, clot, slice)) {
             field->foreach_alloc(range, PHV::AllocContext::DEPARSER, nullptr,
-                    [&](const PHV::Field::alloc_slice &alloc) {
-                auto container = alloc.container;
+                    [&](const PHV::AllocSlice &alloc) {
+                auto container = alloc.container();
                 auto net_range = range.toOrder<Endian::Network>(field->size);
                 int field_in_clot_offset = clot->bit_offset(slice) - net_range.lo;
 
-                auto field_range = alloc.field_bits().toOrder<Endian::Network>(field->size);
+                auto field_range = alloc.field_slice().toOrder<Endian::Network>(field->size);
 
                 auto container_range =
-                    alloc.container_bits().toOrder<Endian::Network>(alloc.container.size());
+                    alloc.container_slice().toOrder<Endian::Network>(alloc.container().size());
 
                 auto container_offset = field_in_clot_offset - container_range.lo +
                                         field_range.lo;

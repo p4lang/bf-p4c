@@ -40,7 +40,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
             // So this if else clause is meaningless because in both cases we use dg generated
             // stage info
             if (usePhysicalStages) {
-                BUG_CHECK(t->global_id() || t->is_always_run_action() && t->stage() >= 0,
+                BUG_CHECK(t->global_id() || (t->is_always_run_action() && t->stage() >= 0),
                           "Table %1% is unallocated", t->name);
                 auto minStages = phv.minStage(t);
                 for (auto stage : minStages) {
@@ -109,35 +109,39 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
 
     ordered_map<le_bitrange, PHV::StageAndAccess> minStageAccount;
     for (auto& alloc : f->get_alloc()) {
-        le_bitrange range = alloc.field_bits();
+        le_bitrange range = alloc.field_slice();
         if (!minStageAccount.count(range)) {
-            minStageAccount[range] = alloc.min_stage;
+            minStageAccount[range] = alloc.getEarliestLiveness();
             continue;
         }
         auto candidate = minStageAccount.at(range);
-        if (candidate.first > alloc.min_stage.first ||
-            (candidate.first == alloc.min_stage.first && candidate.second > alloc.min_stage.second))
-            minStageAccount[range] = alloc.min_stage;
+        if (candidate.first > alloc.getEarliestLiveness().first ||
+            (candidate.first == alloc.getEarliestLiveness().first &&
+             candidate.second > alloc.getEarliestLiveness().second))
+            minStageAccount[range] = alloc.getEarliestLiveness();
     }
     for (auto& alloc : f->get_alloc()) {
-        if (parserMin == alloc.min_stage && deparserMax == alloc.max_stage) {
+        if (parserMin == alloc.getEarliestLiveness() && deparserMax == alloc.getLatestLiveness()) {
             // Change max stage to deparser in the physical stage list.
             int physDeparser = depStages.getDeparserStage();
             BUG_CHECK(physDeparser >= 0, "No tables detected while finalizing allocation of %1%",
                     alloc);
-            alloc.max_stage = std::make_pair(physDeparser, write);
+            PHV::StageAndAccess max = std::make_pair(physDeparser, write);
+            alloc.setLatestLiveness(max);
             LOG5(ss.str() << "\tIgnoring field slice: " << alloc);
             continue;
         } else {
             LOG3("\t  Slice: " << alloc);
             LOG5("\t\tNot ignoring for parserMin " << parserMin.first << parserMin.second <<
                  " and deparserMax " << deparserMax.first << deparserMax.second);
-            LOG5("\t\talloc min: " << alloc.min_stage.first << alloc.min_stage.second);
-            LOG5("\t\talloc max: " << alloc.max_stage.first << alloc.max_stage.second);
+            LOG5("\t\talloc min: " << alloc.getEarliestLiveness().first <<
+                 alloc.getEarliestLiveness().second);
+            LOG5("\t\talloc max: " << alloc.getLatestLiveness().first <<
+                 alloc.getLatestLiveness().second);
         }
         bool includeParser = false;
         if (usedInParser) {
-            if (alloc.min_stage == minStageAccount.at(alloc.field_bits())) {
+            if (alloc.getEarliestLiveness() == minStageAccount.at(alloc.field_slice())) {
                 includeParser = true;
                 LOG3("\t\tInclude parser use in this slice.");
             }
@@ -146,21 +150,25 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
         if (usedInDeparser) {
             LOG5("\t\t  used in deparser");
             LOG5("\t\t  Alloc: " << alloc);
-            LOG5("\t\t  empty: " << alloc.init_i.empty << ", always init: " <<
-                 alloc.init_i.alwaysInitInLastMAUStage << ", shadow always init: " <<
-                 alloc.shadowAlwaysRun);
-            if ((!alloc.init_i.empty && (alloc.init_i.alwaysInitInLastMAUStage)) ||
-                    alloc.shadowAlwaysRun) {
+            LOG5("\t\t  empty: " << alloc.getInitPrimitive()->isEmpty() << ", always init: " <<
+                 alloc.getInitPrimitive()->mustInitInLastMAUStage() << ", shadow always init: " <<
+                 alloc.getShadowAlwaysRun());
+            if ((!alloc.getInitPrimitive()->isEmpty() &&
+                 (alloc.getInitPrimitive()->mustInitInLastMAUStage())) ||
+                alloc.getShadowAlwaysRun()) {
                 alwaysRunLastStageSlice = true;
                 LOG4("\t\tDetected slice for always run write-back from dark prior to deparsing");
             }
         }
-        int minStageRead = (alloc.min_stage.second == read) ?
-                            alloc.min_stage.first : (alloc.min_stage.first + 1);
-        int maxStageRead = alloc.max_stage.first;
-        int minStageWritten = alloc.min_stage.first;
-        int maxStageWritten = (alloc.max_stage.second == write) ? alloc.max_stage.first
-                : (alloc.max_stage.first == 0 ? 0 : alloc.max_stage.first - 1);
+        int minStageRead = (alloc.getEarliestLiveness().second == read) ?
+                            alloc.getEarliestLiveness().first :
+                            (alloc.getEarliestLiveness().first + 1);
+        int maxStageRead = alloc.getLatestLiveness().first;
+        int minStageWritten = alloc.getEarliestLiveness().first;
+        int maxStageWritten = (alloc.getLatestLiveness().second == write) ?
+                               alloc.getLatestLiveness().first :
+                              (alloc.getLatestLiveness().first == 0 ? 0 :
+                               alloc.getLatestLiveness().first - 1);
         LOG3("\t\tRead: [" << minStageRead << ", " << maxStageRead << "], Write: [" <<
              minStageWritten << ", " << maxStageWritten << "]");
 
@@ -174,7 +182,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                 for (const auto& kv : readTables.at(stage)) {
                     bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
                             [&](le_bitrange range) {
-                        return alloc.field_bits().overlaps(range);
+                        return alloc.field_slice().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
                     int stage = kv.first->stage();
@@ -195,14 +203,15 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             if (writeTables.count(stage)) {
                 for (const auto& kv : writeTables.at(stage)) {
                     // Check that the table is part of the valid stage.
-                    if (stage == alloc.max_stage.first && alloc.max_stage.second == read) {
+                    if (stage == alloc.getLatestLiveness().first &&
+                        alloc.getLatestLiveness().second == read) {
                         LOG3("\t\t  Ignoring written table: " << kv.first->name << ", stage: " <<
                              stage);
                         continue;
                     }
                     bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
                             [&](le_bitrange range) {
-                        return alloc.field_bits().overlaps(range);
+                        return alloc.field_slice().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
                     int stage = kv.first->stage();
@@ -231,10 +240,12 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             new_min_use = read;
             new_max_use = read;
             LOG5("\t\t\tParser only setting.");
-            alloc.min_stage = std::make_pair(new_min_stage, new_min_use);
-            alloc.max_stage = std::make_pair(new_max_stage, new_max_use);
-            LOG3("\t  New min stage: " << alloc.min_stage.first << alloc.min_stage.second <<
-                    ", New max stage: " << alloc.max_stage.first << alloc.max_stage.second);
+            PHV::StageAndAccess min = std::make_pair(new_min_stage, new_min_use);
+            PHV::StageAndAccess max = std::make_pair(new_max_stage, new_max_use);
+            alloc.setLiveness(min, max);
+            LOG3("\t  New min stage: " << alloc.getEarliestLiveness().first <<
+                 alloc.getEarliestLiveness().second << ", New max stage: " <<
+                 alloc.getLatestLiveness().first << alloc.getLatestLiveness().second);
             continue;
         }
         // Make sure that there is some physical stage during which this slice is alive.
@@ -269,7 +280,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             } else if (maxPhysicalWrite == maxPhysicalRead) {
                 new_max_stage = maxPhysicalWrite;
                 // *ALEX* special case for merged AlwaysRunAction tables
-                if (alloc.container.is(PHV::Kind::dark))
+                if (alloc.container().is(PHV::Kind::dark))
                     new_max_use = read;
                 else
                     new_max_use = write;
@@ -291,10 +302,12 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
             LOG5("Found deparser stage " << dep_stage << " for gress " << f->gress);
             new_max_stage = dep_stage;
         }
-        alloc.min_stage = std::make_pair(new_min_stage, new_min_use);
-        alloc.max_stage = std::make_pair(new_max_stage, new_max_use);
-        LOG3("\t  New min stage: " << alloc.min_stage.first << alloc.min_stage.second <<
-             ", New max stage: " << alloc.max_stage.first << alloc.max_stage.second);
+        PHV::StageAndAccess min = std::make_pair(new_min_stage, new_min_use);
+        PHV::StageAndAccess max = std::make_pair(new_max_stage, new_max_use);
+        alloc.setLiveness(min, max);
+        LOG3("\t  New min stage: " << alloc.getEarliestLiveness().first <<
+             alloc.getEarliestLiveness().second << ", New max stage: " <<
+             alloc.getLatestLiveness().first << alloc.getLatestLiveness().second);
     }
 }
 

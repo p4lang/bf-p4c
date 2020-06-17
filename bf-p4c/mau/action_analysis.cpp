@@ -370,7 +370,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         auto *field = phv.field(field_action.write.expr, &bits);
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         int split_count = 0;
-        field->foreach_alloc(bits, tbl, &use, [&](const PHV::Field::alloc_slice&) {
+        field->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice&) {
             split_count++;
         });
 
@@ -379,8 +379,8 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         bool split = (split_count != 1);
 
         field->foreach_alloc(bits, tbl, &use,
-                [&](const PHV::Field::alloc_slice &alloc) {
-            auto container = alloc.container;
+                [&](const PHV::AllocSlice &alloc) {
+            auto container = alloc.container();
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action(instr->name, tbl);
                 container_actions_map->emplace(container, cont_action);
@@ -391,14 +391,14 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
                 field_action_split.requires_split = true;
-                auto *write_slice = MakeSliceDestination(field_action.write.expr, alloc.field_bit,
-                                              alloc.field_hi());
+                auto *write_slice = MakeSliceDestination(field_action.write.expr,
+                        alloc.field_slice().lo, alloc.field_slice().hi);
                 ActionParam write_split(field_action.write.type, write_slice,
                                         field_action.write.speciality);
                 field_action_split.setWrite(write_split);
                 for (auto &read : field_action.reads) {
-                    auto read_slice = MakeSliceSource(read.expr, alloc.field_bit, alloc.field_hi(),
-                            field_action.write.expr);
+                    auto read_slice = MakeSliceSource(read.expr, alloc.field_slice().lo,
+                            alloc.field_slice().hi, field_action.write.expr);
                     field_action_split.reads.emplace_back(read.type, read_slice, read.speciality);
                     field_action_split.reads.back().is_conditional = read.is_conditional;
                 }
@@ -552,10 +552,10 @@ bool ActionAnalysis::initialize_invalidate_alignment(const ActionParam &write,
     le_bitrange write_bits;
     PHV::FieldUse use(PHV::FieldUse::WRITE);
     field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::Field::alloc_slice &alloc) {
+                         [&](const PHV::AllocSlice &alloc) {
         count++;
-        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-        write_bits = alloc.container_bits();
+        BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
+        write_bits = alloc.container_slice();
     });
 
     BUG_CHECK(count == 1, "ActionAnalysis did not split up container by container");
@@ -599,10 +599,10 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
     le_bitrange write_bits;
     PHV::FieldUse use(PHV::FieldUse::WRITE);
     field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::Field::alloc_slice &alloc) {
+                         [&](const PHV::AllocSlice &alloc) {
         count++;
-        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-        write_bits = alloc.container_bits();
+        BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
+        write_bits = alloc.container_slice();
     });
 
     // Special handling for merged always run action tables
@@ -649,9 +649,9 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     int count = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);
     field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::Field::alloc_slice &alloc) {
+                         [&](const PHV::AllocSlice &alloc) {
         count++;
-        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
+        BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
     });
 
     if (count > MAX_PHV_SOURCES) {
@@ -661,12 +661,12 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     }
 
     field->foreach_alloc(range, cont_action.table_context, &use,
-                         [&](const PHV::Field::alloc_slice &alloc) {
-         le_bitrange read_bits = alloc.container_bits();
+                         [&](const PHV::AllocSlice &alloc) {
+         le_bitrange read_bits = alloc.container_slice();
          int lo;
          int hi;
          if (!cont_action.is_shift()) {
-             lo = write_bits.lo + (alloc.field_bit - range.lo);
+             lo = write_bits.lo + (alloc.field_slice().lo - range.lo);
              hi = lo + read_bits.size() - 1;
          } else {
              lo = write_bits.lo;
@@ -675,10 +675,10 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
          le_bitrange mini_write_bits(lo, hi);
 
          auto &init_phv_alignment = cont_action.initialization_phv_alignment;
-         if (init_phv_alignment.find(alloc.container) == init_phv_alignment.end()) {
-             init_phv_alignment[alloc.container].emplace_back(mini_write_bits, read_bits);
+         if (init_phv_alignment.find(alloc.container()) == init_phv_alignment.end()) {
+             init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
          } else {
-             init_phv_alignment[alloc.container].emplace_back(mini_write_bits, read_bits);
+             init_phv_alignment[alloc.container()].emplace_back(mini_write_bits, read_bits);
          }
     });
     return true;

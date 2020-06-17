@@ -863,12 +863,12 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             if (isWrite() && !non_first_write_red_or && self.phv.alloc_done()) {
                 /// FIXME(cc): Do we need to restrict the context here, or is it always the
                 /// whole pipeline?
-                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
                     // Consider actual field slices instead of entire fields when calculating
                     // container conflicts.
-                    if (!range.overlaps(sl.field_bits())) return;
-                    bitvec range(sl.container_bit, sl.width);
-                    cont_writes[sl.container] |= range;
+                    if (!range.overlaps(sl.field_slice())) return;
+                    bitvec range(sl.container_slice().lo, sl.width());
+                    cont_writes[sl.container()] |= range;
                 });
             }
         }
@@ -979,19 +979,19 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
               if (isWrite()) {
                   /// FIXME(cc): Do we need to restrict the context here, or is it always the
                   /// whole pipeline?
-                  field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
-                      bitvec range(sl.container_bit, sl.width);
-                      cont_writes[sl.container] |= range;
-                      self.dg.containers_write_[table][sl.container] = true;
+                  field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+                      bitvec range(sl.container_slice().lo, sl.width());
+                      cont_writes[sl.container()] |= range;
+                      self.dg.containers_write_[table][sl.container()] = true;
                   });
               }
               if (isIxbarRead() || gateway_context) {
-                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
-                    self.dg.containers_read_xbar_[table][sl.container] = true;
+                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+                    self.dg.containers_read_xbar_[table][sl.container()] = true;
                 });
               } else if (isRead()) {
-                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
-                    self.dg.containers_read_alu_[table][sl.container] = true;
+                field->foreach_alloc([&](const PHV::AllocSlice &sl) {
+                    self.dg.containers_read_alu_[table][sl.container()] = true;
                 });
               }
             }

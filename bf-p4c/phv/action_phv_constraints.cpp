@@ -1243,7 +1243,7 @@ bool ActionPhvConstraints::parser_constant_extract_satisfied(
         // For each slice, if it is not marked as parser constant extract, do nothing.
         if (!phv.hasParserConstantExtract(slice.field())) continue;
         bitvec range(slice.container_slice().lo, slice.width());
-        const auto* sliceSet = unionFind.setOf(slice.field());
+        const auto* sliceSet = unionFind.setOf(const_cast<PHV::Field*>(slice.field()));
         for (auto& slice1 : container_state) {
             if (slice == slice1) continue;
             // If these are different slices of the same field, then don't do anything.
@@ -1253,7 +1253,8 @@ bool ActionPhvConstraints::parser_constant_extract_satisfied(
             if (!phv.hasParserConstantExtract(slice1.field())) continue;
             // If the field is not in the same set as the parser constant extract field, then we are
             // good.
-            if (sliceSet->find(slice1.field()) == sliceSet->end()) continue;
+            if (sliceSet->find(const_cast<PHV::Field*>(slice1.field())) == sliceSet->end())
+                continue;
             // Both slice and slice1's fields are in the same set. Now we need to make sure they can
             // be allocated into the same container.
             range |= bitvec(slice1.container_slice().lo, slice1.width());

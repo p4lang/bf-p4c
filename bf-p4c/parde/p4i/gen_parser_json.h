@@ -83,8 +83,8 @@ class GenerateParserP4iJson : public ParserInspector {
                     field_alloc.num_bits_in_clots += slice->size();
                 }
 
-                field->foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-                    field_alloc.num_bits_in_phvs += alloc.width;
+                field->foreach_alloc([&](const PHV::AllocSlice& alloc) {
+                    field_alloc.num_bits_in_phvs += alloc.width();
                 });
 
                 clot_usage[field->gress].clot_eligible_fields.emplace_back(field_alloc);

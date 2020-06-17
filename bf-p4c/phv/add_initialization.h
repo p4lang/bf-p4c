@@ -15,9 +15,6 @@
   * 0.
   */
 class MapFieldToExpr : public Inspector {
- public:
-    using AllocSlice = PHV::Field::alloc_slice;
-
  private:
     const PhvInfo& phv;
     ordered_map<int, const IR::Expression*> fieldExpressions;
@@ -44,11 +41,11 @@ class MapFieldToExpr : public Inspector {
 
     /// @returns an instruction that initializes the field slice @f.
     const IR::MAU::Instruction*
-        generateInitInstruction(const AllocSlice& slice) const;
+        generateInitInstruction(const PHV::AllocSlice& slice) const;
 
     const IR::MAU::Instruction* generateInitInstruction(
-            const AllocSlice& dest,
-            const AllocSlice& source) const;
+            const PHV::AllocSlice& dest,
+            const PHV::AllocSlice& source) const;
 };
 
 class ComputeFieldsRequiringInit : public Inspector {
@@ -56,7 +53,7 @@ class ComputeFieldsRequiringInit : public Inspector {
     const PhvInfo&                  phv;
 
     // Map of action names to the set of fields that must be initialized at that action.
-    ordered_map<const IR::MAU::Action*, std::vector<MapFieldToExpr::AllocSlice>> actionInits;
+    ordered_map<const IR::MAU::Action*, std::vector<PHV::AllocSlice>> actionInits;
 
     // Map of all fields that must be initialized (across all actions).
     ordered_set<PHV::FieldSlice> fieldsForInit;
@@ -72,15 +69,15 @@ class ComputeFieldsRequiringInit : public Inspector {
     }
 
     // @returns the map of all actions and the metadata fields to be initialized in those actions.
-    const ordered_map<const IR::MAU::Action*, std::vector<MapFieldToExpr::AllocSlice>>&
+    const ordered_map<const IR::MAU::Action*, std::vector<PHV::AllocSlice>>&
     getAllActionInits() const {
         return actionInits;
     }
 
     // @returns the set of fields that must be initialized at action @act.
-    const std::vector<MapFieldToExpr::AllocSlice>
+    const std::vector<PHV::AllocSlice>
     getInitsForAction(const IR::MAU::Action* act) const {
-        std::vector<MapFieldToExpr::AllocSlice> empty;
+        std::vector<PHV::AllocSlice> empty;
         if (!actionInits.count(act))
             return empty;
         return actionInits.at(act);
@@ -97,13 +94,13 @@ class ComputeDarkInitialization : public Inspector {
     ordered_map<cstring, ordered_set<const IR::Primitive*>> actionToInsertedInsts;
 
     void computeInitInstruction(
-        const MapFieldToExpr::AllocSlice& slice,
+        const PHV::AllocSlice& slice,
         const IR::MAU::Action* act);
 
     // Create new MOVE instruction and place it into new Action which
     // is added into new AlwaysRunAction Table. Use prior and post
     // Tables from @alloc_sl to set the minStage for the new AlwaysRunAction Table
-    void createAlwaysRunTable(PHV::Field::alloc_slice alloc_sl);
+    void createAlwaysRunTable(PHV::AllocSlice alloc_sl);
 
     cstring getKey(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const {
         return (tbl->name + "." + act->name);
@@ -167,7 +164,7 @@ class ComputeDependencies : public Inspector {
 
     void addDepsForDarkInitialization();
     void addDepsForSetsOfAllocSlices(
-            const std::vector<PHV::Field::alloc_slice>& alloc_slices,
+            const std::vector<PHV::AllocSlice>& alloc_slices,
             const StageFieldUse& fieldWrites,
             const StageFieldUse& fieldReads,
             bool checkBitsOverlap = true);
@@ -175,7 +172,7 @@ class ComputeDependencies : public Inspector {
     // populate @tables with all the tables using that slice between the min and max stage
     // range.
     void accountUses(int min_stage, int max_stage,
-            const PHV::Field::alloc_slice& alloc,
+            const PHV::AllocSlice& alloc,
             const StageFieldUse& uses,
             ordered_set<const IR::MAU::Table*>& tables) const;
     void summarizeDarkInits(StageFieldUse& fieldWrites, StageFieldUse& fieldReads);

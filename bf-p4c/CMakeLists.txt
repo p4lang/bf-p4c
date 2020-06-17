@@ -483,6 +483,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/transforms/auto_alias.cpp
   phv/utils/live_range_report.cpp
   phv/utils/report.cpp
+  phv/utils/slice_alloc.cpp
   phv/utils/slicing_iterator.cpp
   phv/utils/utils.cpp
   )
@@ -545,6 +546,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/transforms/auto_alias.h
   phv/utils/live_range_report.h
   phv/utils/report.h
+  phv/utils/slice_alloc.h
   phv/utils/slicing_iterator.h
   phv/utils/tables_to_ids.h
   phv/utils/utils.h

@@ -37,19 +37,20 @@ void IXBarVerify::verify_format(const IXBar::Use &use) {
             auto slicesToProcess =
                 field->get_combined_alloc_bytes(PHV::AllocContext::of_unit(currentTable), &use);
             for (const auto& alloc : slicesToProcess) {
-                if (fi.lo < alloc.field_bit || fi.hi > alloc.field_hi())
+                if (fi.lo < alloc.field_slice().lo || fi.hi > alloc.field_slice().hi)
                     continue;
-                size_t potential_mod4_offset = alloc.container_bit / 8;
+                size_t potential_mod4_offset = alloc.container_slice().lo / 8;
                 if (!container_set) {
-                    container = alloc.container;
+                    container = alloc.container();
                     mod_4_offset = potential_mod4_offset;
-                } else if (container != alloc.container
+                } else if (container != alloc.container()
                            || mod_4_offset != potential_mod4_offset) {
                     single_byte = false;
                     continue;
                 }
 
-                int container_start = (alloc.container_bit % 8) + fi.lo - alloc.field_bit;
+                int container_start = (alloc.container_slice().lo % 8) + fi.lo -
+                                      alloc.field_slice().lo;
                 if (container_start != fi.cont_lo)
                     continue;
                 byte_found = true;

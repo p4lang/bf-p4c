@@ -1397,10 +1397,10 @@ bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
 
     int range_nibbles = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);
-    field->foreach_byte(bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
-        if ((sl.container_bit % 8) < 4)
+    field->foreach_byte(bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
+        if ((sl.container_slice().lo % 8) < 4)
             range_nibbles++;
-        if ((sl.container_hi() % 8) > 3)
+        if ((sl.container_slice().hi % 8) > 3)
             range_nibbles++;
     });
 

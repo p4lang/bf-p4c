@@ -103,11 +103,11 @@ void Format::create_alu_ops_for_action(
             int write_count = 0;
             PHV::FieldUse use(PHV::FieldUse::WRITE);
             write_field->foreach_alloc(bits, cont_action.table_context, &use,
-                                       [&](const PHV::Field::alloc_slice &alloc) {
+                                       [&](const PHV::AllocSlice &alloc) {
                 write_count++;
-                container_bits = alloc.container_bits();
+                container_bits = alloc.container_slice();
                 BUG_CHECK(container_bits.lo >= 0, "Invalid negative container bit");
-                if (!alloc.container)
+                if (!alloc.container())
                     ERROR("Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
             });

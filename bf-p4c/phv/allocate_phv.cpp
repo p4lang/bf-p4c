@@ -2043,76 +2043,23 @@ void AllocatePHV::clearSlices(PhvInfo& phv) {
 
 /* static */
 void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv) {
-    // Translate AllocSlice to alloc_slice, and attach alloc_slice to
-    // PHV::Field.
     for (auto container_and_slices : alloc) {
         // TODO: Do we need to ensure that the live ranges of the constituent slices, put together,
         // completely cover the entire pipeline (plus parser and deparser).
 
         for (PHV::AllocSlice slice : container_and_slices.second.slices) {
-            auto* f = slice.field();
+            PHV::Field* f = const_cast<PHV::Field*>(slice.field());
             auto init_points = alloc.getInitPoints(slice);
             static ordered_set<const IR::MAU::Action*> emptySet;
-            auto* allocated_slice = f->add_and_return_alloc(
-                    slice.field(),
-                    slice.container(),
-                    slice.field_slice().lo,
-                    slice.container_slice().lo,
-                    slice.field_slice().size(),
-                    init_points ? *init_points : emptySet);
-            auto minLive = slice.getEarliestLiveness();
-            auto maxLive = slice.getLatestLiveness();
-            allocated_slice->min_stage = std::make_pair(minLive.first, minLive.second);
-            allocated_slice->max_stage = std::make_pair(maxLive.first, maxLive.second);
+            slice.setInitPoints(init_points ? *init_points : emptySet);
             if (init_points) {
-                allocated_slice->has_meta_init = true;
+                slice.setMetaInit();
                 LOG5("\tAdding " << init_points->size() << " initialization points for field "
                      "slice: " << slice.field()->name << " " << slice);
                 for (const auto* a : *init_points)
                     LOG4("    Action: " << a->name); }
+            f->add_alloc(slice);
             phv.add_container_to_field_entry(slice.container(), f);
-            const auto* initPrimitive = slice.getInitPrimitive();
-            if (initPrimitive == nullptr) continue;
-            if (initPrimitive->isEmpty()) continue;
-            allocated_slice->init_i.empty = false;
-            allocated_slice->init_i.nop = initPrimitive->isNOP();
-            allocated_slice->init_i.assignZeroToDestination = initPrimitive->destAssignedToZero();
-            allocated_slice->init_i.alwaysInitInLastMAUStage =
-                initPrimitive->mustInitInLastMAUStage();
-            allocated_slice->init_i.alwaysRunActionPrim = initPrimitive->isAlwaysRunActionPrim();
-            LOG5("\tAllocating slice " << slice);
-            LOG5("\t  Setting dark initialization information for " << slice);
-            LOG5("\t    Primitive: " << *initPrimitive);
-            if (initPrimitive->mustInitInLastMAUStage())
-                LOG5("\t\t  Must initialize in the last stage always_run block");
-            auto sourceSlice = initPrimitive->getSourceSlice();
-            if (sourceSlice) {
-                allocated_slice->init_i.source = new PHV::Field::alloc_slice(sourceSlice->field(),
-                        sourceSlice->container(), sourceSlice->field_slice().lo,
-                        sourceSlice->container_slice().lo, sourceSlice->width());
-                auto earlyLiveness = sourceSlice->getEarliestLiveness();
-                auto lateLiveness = sourceSlice->getLatestLiveness();
-                allocated_slice->init_i.source->min_stage =
-                    std::make_pair(earlyLiveness.first, earlyLiveness.second);
-                allocated_slice->init_i.source->max_stage =
-                    std::make_pair(lateLiveness.first, lateLiveness.second);
-            }
-            auto darkPrimActions = initPrimitive->getInitPoints();
-            allocated_slice->init_i.init_actions.insert(darkPrimActions.begin(),
-                    darkPrimActions.end());
-
-            // Get the prior & post units that constrain the ARA table placement
-            if (initPrimitive->isAlwaysRunActionPrim()) {
-                const auto priorARAunits = initPrimitive->getARApriorUnits();
-                const auto postARAunits = initPrimitive->getARApostUnits();
-                allocated_slice->init_i.priorUnits.insert(priorARAunits.begin(),
-                                                          priorARAunits.end());
-                allocated_slice->init_i.postUnits.insert(postARAunits.begin(),
-                                                         postARAunits.end());
-            }
-
-            if (initPrimitive->mustInitInLastMAUStage() && sourceSlice)
-                LOG5("\t\t  Source slice: " << *(allocated_slice->init_i.source));
         }
     }
 
@@ -2127,44 +2074,46 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
     // "split" to match the invariants on rotational clusters, but in practice
     // to the two slices remain adjacent.
     for (auto& f : phv) {
-        boost::optional<PHV::Field::alloc_slice> last = boost::none;
-        safe_vector<PHV::Field::alloc_slice> merged_alloc;
+        boost::optional<PHV::AllocSlice> last = boost::none;
+        safe_vector<PHV::AllocSlice> merged_alloc;
         for (auto& slice : f.get_alloc()) {
             if (last == boost::none) {
                 last = slice;
                 continue; }
-            if (last->container == slice.container
-                    && last->field_bits().lo == slice.field_bits().hi + 1
-                    && last->container_bits().lo == slice.container_bits().hi + 1
-                    && last->min_stage == slice.min_stage
-                    && last->max_stage == slice.max_stage
-                    && last->init_i == slice.init_i) {
-                int new_width = last->width + slice.width;
+            if (last->container() == slice.container()
+                    && last->field_slice().lo == slice.field_slice().hi + 1
+                    && last->container_slice().lo == slice.container_slice().hi + 1
+                    && last->getEarliestLiveness() == slice.getEarliestLiveness()
+                    && last->getLatestLiveness() == slice.getLatestLiveness()
+                    && *last->getInitPrimitive() == *slice.getInitPrimitive()) {
+                int new_width = last->width() + slice.width();
                 ordered_set<const IR::MAU::Action*> new_init_points;
-                if (last->init_points.size() > 0)
-                    new_init_points.insert(last->init_points.begin(), last->init_points.end());
-                if (slice.init_points.size() > 0)
-                    new_init_points.insert(slice.init_points.begin(), slice.init_points.end());
+                if (last->hasMetaInit())
+                    new_init_points.insert(last->getInitPoints().begin(),
+                                           last->getInitPoints().end());
+                if (slice.hasMetaInit())
+                    new_init_points.insert(slice.getInitPoints().begin(),
+                                           slice.getInitPoints().end());
                 if (new_init_points.size() > 0)
                     LOG5("Merged slice contains " << new_init_points.size() << " initialization "
                          "points.");
-                PHV::Field::alloc_slice new_slice(slice.field,
-                                                  slice.container,
-                                                  slice.field_bit,
-                                                  slice.container_bit,
-                                                  new_width, new_init_points);
-                new_slice.has_meta_init = slice.has_meta_init | last->has_meta_init;
-                new_slice.min_stage = slice.min_stage;
-                new_slice.max_stage = slice.max_stage;
-                new_slice.init_i = slice.init_i;
-                BUG_CHECK(new_slice.field_bits().contains(last->field_bits()),
+                PHV::AllocSlice new_slice(slice.field(),
+                                          slice.container(),
+                                          slice.field_slice().lo,
+                                          slice.container_slice().lo,
+                                          new_width, new_init_points);
+                new_slice.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
+                if (last->hasMetaInit() || slice.hasMetaInit())
+                    new_slice.setMetaInit();
+                new_slice.setInitPrimitive(slice.getInitPrimitive());
+                BUG_CHECK(new_slice.field_slice().contains(last->field_slice()),
                           "Merged alloc slice %1% does not contain hi slice %2%",
                           cstring::to_cstring(new_slice), cstring::to_cstring(*last));
-                BUG_CHECK(new_slice.field_bits().contains(slice.field_bits()),
+                BUG_CHECK(new_slice.field_slice().contains(slice.field_slice()),
                           "Merged alloc slice %1% does not contain lo slice %2%",
                           cstring::to_cstring(new_slice), cstring::to_cstring(slice));
                 last = new_slice;
-                LOG4("MERGING " << last->field << ": " << *last << " and " << slice <<
+                LOG4("MERGING " << last->field() << ": " << *last << " and " << slice <<
                      " into " << new_slice);
             } else {
                 merged_alloc.push_back(*last);

@@ -30,8 +30,6 @@ class ValidateAllocation final : public Inspector {
         : phv(phv), clot(clot), doNotPrivatize(f) { }
 
  private:
-    using Slice = PHV::Field::alloc_slice;
-
     PhvInfo& phv;
     const ClotInfo& clot;
 
@@ -48,11 +46,11 @@ class ValidateAllocation final : public Inspector {
     /// Checks if privatization needs to be rolled back and chooses one of two mechanisms
     /// (replacement of uses of privatized fields or backtracking) to roll it back.
     void checkAndThrowPrivatizeException(
-            const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
+            const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const;
 
     /// returns true if a backtrack exception must be thrown, instead of invoking UndoPrivatization.
     bool throwBacktrackException(
-            const std::map<PHV::Container, std::vector<Slice>>& allocations) const;
+            const std::map<PHV::Container, std::vector<PHV::AllocSlice>>& allocations) const;
 
     /// returns total number of container bits used for POV bit allocation in @gress.
     size_t getPOVContainerBytes(gress_t gress) const;

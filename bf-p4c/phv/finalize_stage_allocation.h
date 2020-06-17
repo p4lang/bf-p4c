@@ -43,7 +43,7 @@ class UpdateFieldAllocation : public Inspector {
     const CalcMaxPhysicalStages& depStages;
 
     // Map of field to its allocated slices.
-    ordered_map<const PHV::Field*, std::vector<PHV::Field::alloc_slice>> fieldToSlicesMap;
+    ordered_map<const PHV::Field*, std::vector<PHV::AllocSlice>> fieldToSlicesMap;
 
     // Map of container to the stages where it is read.
     ordered_map<PHV::Container, bitvec> containerToReadStages;

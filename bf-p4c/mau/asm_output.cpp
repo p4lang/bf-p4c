@@ -515,13 +515,13 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
             le_bitrange field_bits = { fi.lo, fi.hi };
             // It is not a guarantee, especially in Tofino2 due to live ranges being different
             // that a FieldInfo is not corresponding to a single alloc_slice object
-            field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::Field::alloc_slice &sl) {
+            field->foreach_alloc(field_bits, tbl, &f_use, [&](const PHV::AllocSlice &sl) {
                 if (b.loc.byte == byte_loc && ternary) {
-                    Slice asm_sl(phv, fi.get_use_name(), sl.field_bit, sl.field_hi());
+                    Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
                     auto n = midbytes[b.loc.group/2].emplace(asm_sl.bytealign(), asm_sl);
                     BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 } else {
-                    Slice asm_sl(phv, fi.get_use_name(), sl.field_bit, sl.field_hi());
+                    Slice asm_sl(phv, fi.get_use_name(), sl.field_slice().lo, sl.field_slice().hi);
                     auto n = sort[b.loc.group].emplace(b.loc.byte*8 + asm_sl.bytealign(), asm_sl);
                     BUG_CHECK(n.second, "duplicate byte use in ixbar");
                 }
@@ -2094,19 +2094,20 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             if (auto field = self.phv.field(expr, &bits)) {
                 out << sep << canon_name(field->externalName());
                 int count = 0;
-                field->foreach_alloc(bits, table, &use, [&](const PHV::Field::alloc_slice &) {
+                field->foreach_alloc(bits, table, &use, [&](const PHV::AllocSlice &) {
                     count++;
                 });
                 if (count == 1) {
-                    field->foreach_alloc(table, &use, [&](const PHV::Field::alloc_slice &alloc) {
-                        if (!(alloc.field_bit <= bits.lo && alloc.field_hi() >= bits.hi))
+                    field->foreach_alloc(table, &use, [&](const PHV::AllocSlice &alloc) {
+                        if (!(alloc.field_slice().lo <= bits.lo &&
+                            alloc.field_slice().hi >= bits.hi))
                             return;
-                        bool single_loc = (alloc.width == field->size);
+                        bool single_loc = (alloc.width() == field->size);
                         if (!single_loc)
-                            out << "." << alloc.field_bit << "-" << alloc.field_hi();
-                        if (bits.lo > alloc.field_bit || bits.hi < alloc.field_hi())
-                            out << "(" << bits.lo - alloc.field_bit << ".." <<
-                                          bits.hi - alloc.field_bit  << ")";
+                            out << "." << alloc.field_slice().lo << "-" << alloc.field_slice().hi;
+                        if (bits.lo > alloc.field_slice().lo || bits.hi < alloc.field_slice().hi)
+                            out << "(" << bits.lo - alloc.field_slice().lo << ".." <<
+                                          bits.hi - alloc.field_slice().lo  << ")";
                     });
                 }
             } else {
@@ -2414,12 +2415,12 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             PHV::FieldUse use(PHV::FieldUse::READ);
             // It is not a guarantee, especially in Tofino2 due to live ranges being different
             // that a FieldInfo is not corresponding to a single alloc_slice object
-            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
-                int lo = sl.field_bit;
-                int hi = sl.field_hi();
-                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width);
+            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
+                int lo = sl.field_slice().lo;
+                int hi = sl.field_slice().hi;
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
                 bitvec matched_bits = layout_shifted & cont_loc;
-                bits_seen += sl.width;
+                bits_seen += sl.width();
                 // If a byte is partially ghosted, then currently the bits from the lsb are
                 // ghosted so the algorithm always shrinks from the bottom
                 if (matched_bits.empty()) {
@@ -2462,12 +2463,12 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
             // It is not a guarantee, especially in Tofino2 due to live ranges being different
             // that a FieldInfo is not corresponding to a single alloc_slice object
             PHV::FieldUse use(PHV::FieldUse::READ);
-            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::Field::alloc_slice &sl) {
-                int lo = sl.field_bit;
-                int hi = sl.field_hi();
-                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width);
+            field->foreach_alloc(field_bits, tbl, &use, [&](const PHV::AllocSlice &sl) {
+                int lo = sl.field_slice().lo;
+                int hi = sl.field_slice().hi;
+                bitvec cont_loc = total_cont_loc & bitvec(bits_seen + first_cont_bit, sl.width());
                 bitvec ghosted_bits = layout_shifted & cont_loc;
-                bits_seen += sl.width;
+                bits_seen += sl.width();
                 if (ghosted_bits.empty())
                     return;
                 else if (ghosted_bits != cont_loc)
@@ -2575,9 +2576,9 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                 have_xor = true;
             for (auto &offset : f.second.offsets) {
                 field->foreach_alloc(offset.second, tbl, &use,
-                        [&](const PHV::Field::alloc_slice &sl) {
-                    out << sep << (offset.first + (sl.field_bit - offset.second.lo));
-                    out << ": " << Slice(field, sl.field_bits());
+                        [&](const PHV::AllocSlice &sl) {
+                    out << sep << (offset.first + (sl.field_slice().lo - offset.second.lo));
+                    out << ": " << Slice(field, sl.field_slice());
                     sep = ", ";
                 });
             }
@@ -2590,9 +2591,9 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                 auto *field = f.first.field();
                 for (auto &offset : f.second.xor_offsets) {
                     field->foreach_alloc(offset.second, tbl, &use,
-                                         [&](const PHV::Field::alloc_slice &sl) {
-                        out << sep << (offset.first + (sl.field_bit - offset.second.lo));
-                        out << ": " << Slice(field, sl.field_bits());
+                                         [&](const PHV::AllocSlice &sl) {
+                        out << sep << (offset.first + (sl.field_slice().lo - offset.second.lo));
+                        out << ": " << Slice(field, sl.field_slice());
                         sep = ", ";
                     });
                 }

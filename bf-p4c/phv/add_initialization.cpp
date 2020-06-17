@@ -10,16 +10,16 @@ bool MapFieldToExpr::preorder(const IR::Expression* expr) {
 }
 
 const IR::MAU::Instruction*
-MapFieldToExpr::generateInitInstruction(const MapFieldToExpr::AllocSlice& slice) const {
-    const auto* f = slice.field;
+MapFieldToExpr::generateInitInstruction(const PHV::AllocSlice& slice) const {
+    const auto* f = slice.field();
     BUG_CHECK(f, "Field is nullptr in generateInitInstruction");
-    const IR::Expression* zeroExpr = new IR::Constant(new IR::Type_Bits(slice.width, false), 0);
+    const IR::Expression* zeroExpr = new IR::Constant(new IR::Type_Bits(slice.width(), false), 0);
     const IR::Expression* fieldExpr = getExpr(f);
-    if (slice.width == f->size) {
+    if (slice.width() == f->size) {
         auto* prim = new IR::MAU::Instruction("set", { fieldExpr, zeroExpr });
         return prim;
     } else {
-        le_bitrange range = slice.field_bits();
+        le_bitrange range = slice.field_slice();
         const IR::Expression* sliceExpr = new IR::Slice(fieldExpr, range.hi, range.lo);
         auto* prim = new IR::MAU::Instruction("set", { sliceExpr, zeroExpr });
         return prim;
@@ -28,20 +28,20 @@ MapFieldToExpr::generateInitInstruction(const MapFieldToExpr::AllocSlice& slice)
 
 const IR::MAU::Instruction*
 MapFieldToExpr::generateInitInstruction(
-        const MapFieldToExpr::AllocSlice& dest,
-        const MapFieldToExpr::AllocSlice& source) const {
-    const auto* dest_f = dest.field;
+        const PHV::AllocSlice& dest,
+        const PHV::AllocSlice& source) const {
+    const auto* dest_f = dest.field();
     BUG_CHECK(dest_f, "Field is nullptr in generateInitInstruction for dest %1%", dest);
-    const auto* source_f = source.field;
+    const auto* source_f = source.field();
     BUG_CHECK(source_f, "Field is nullptr in generateInitInstruction for source %1%", source);
     const IR::Expression* destExpr = getExpr(dest_f);
     const IR::Expression* sourceExpr = getExpr(source_f);
-    if (dest.width != dest_f->size) {
-        le_bitrange range = dest.field_bits();
+    if (dest.width() != dest_f->size) {
+        le_bitrange range = dest.field_slice();
         destExpr = new IR::Slice(destExpr, range.hi, range.lo);
     }
-    if (source.width != source_f->size) {
-        le_bitrange range = source.field_bits();
+    if (source.width() != source_f->size) {
+        le_bitrange range = source.field_slice();
         sourceExpr = new IR::Slice(sourceExpr, range.hi, range.lo);
     }
     auto* prim = new IR::MAU::Instruction("set", { destExpr, sourceExpr });
@@ -54,10 +54,10 @@ Visitor::profile_t ComputeFieldsRequiringInit::init_apply(const IR::Node* root) 
     for (auto& f : phv) {
         for (auto& slice : f.get_alloc()) {
             // For each alloc slice in the field, check if metadata initialization is required.
-            if (!slice.has_meta_init) continue;
+            if (!slice.hasMetaInit()) continue;
             LOG4("\t  Need to initialize " << f.name << " : " << slice);
-            fieldsForInit.insert(PHV::FieldSlice(slice.field, slice.field_bits()));
-            for (const auto* act : slice.init_points) {
+            fieldsForInit.insert(PHV::FieldSlice(slice.field(), slice.field_slice()));
+            for (const auto* act : slice.getInitPoints()) {
                 actionInits[act].push_back(slice);
                 LOG4("\t\tInitialize at action " << act->name);
             }
@@ -90,16 +90,16 @@ class AddMetadataInitialization : public Transform {
         // Deduplicate slices here. If they are allocated to the same container (as in the case of
         // deparsed-zero slices), then we only add one initialization to the action.
         ordered_map<PHV::Container, ordered_set<le_bitrange>> allocatedContainerBits;
-        std::vector<MapFieldToExpr::AllocSlice> dedupFieldsToBeInitialized;
+        std::vector<PHV::AllocSlice> dedupFieldsToBeInitialized;
         for (auto& slice : fieldsToBeInited) {
-            if (!allocatedContainerBits.count(slice.container)) {
-                allocatedContainerBits[slice.container].insert(slice.container_bits());
+            if (!allocatedContainerBits.count(slice.container())) {
+                allocatedContainerBits[slice.container()].insert(slice.container_slice());
                 dedupFieldsToBeInitialized.push_back(slice);
                 continue;
             }
             bool addInit = true;
-            for (auto bits : allocatedContainerBits.at(slice.container)) {
-                if (bits.contains(slice.container_bits()))
+            for (auto bits : allocatedContainerBits.at(slice.container())) {
+                if (bits.contains(slice.container_slice()))
                     addInit = false;
             }
             if (!addInit) {
@@ -117,7 +117,7 @@ class AddMetadataInitialization : public Transform {
                 continue;
             }
             act->action.push_back(prim);
-            initializedSlices[PHV::FieldSlice(slice.field, slice.field_bits())].insert(act);
+            initializedSlices[PHV::FieldSlice(slice.field(), slice.field_slice())].insert(act);
             if (LOGGING(4)) {
                 auto tbl = actionsMap.getTableForAction(act_orig);
                 if (!tbl)
@@ -156,19 +156,20 @@ Visitor::profile_t ComputeDarkInitialization::init_apply(const IR::Node* root) {
 }
 
 void ComputeDarkInitialization::computeInitInstruction(
-        const MapFieldToExpr::AllocSlice& slice,
+        const PHV::AllocSlice& slice,
         const IR::MAU::Action* action) {
     const IR::Primitive* prim;
-    if (slice.init_i.assignZeroToDestination) {
+    if (slice.getInitPrimitive()->destAssignedToZero()) {
         LOG4("\tAdd initialization from zero in action " << action->name << " for: " << slice);
         prim = fieldToExpr.generateInitInstruction(slice);
         LOG4("\t\tAdded initialization: " << prim);
     } else {
-        BUG_CHECK(slice.init_i.source != nullptr,
+        BUG_CHECK(slice.getInitPrimitive()->getSourceSlice(),
                 "No source slice defined for allocated slice %1%", slice);
         LOG4("\tAdd initialization in action " << action->name << " for: " << slice);
-        LOG4("\t  Initialize from: " << *(slice.init_i.source));
-        prim = fieldToExpr.generateInitInstruction(slice, *(slice.init_i.source));
+        LOG4("\t  Initialize from: " << *(slice.getInitPrimitive()->getSourceSlice()));
+        prim = fieldToExpr.generateInitInstruction(slice,
+                                                   *(slice.getInitPrimitive()->getSourceSlice()));
         LOG4("\t\tAdded initialization: " << prim);
     }
     auto tbl = tableActionsMap.getTableForAction(action);
@@ -180,13 +181,13 @@ void ComputeDarkInitialization::computeInitInstruction(
 
 int ComputeDarkInitialization::ARA_table_id = 0;
 
-void ComputeDarkInitialization::createAlwaysRunTable(PHV::Field::alloc_slice alloc_sl) {
+void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     // 1. Create UniqueId sets for ARA table constraints
     std::set<UniqueId> prior_tables;
     std::set<UniqueId> post_tables;
 
     int prior_max_stage = -1;
-    for (auto node : alloc_sl.init_i.priorUnits) {
+    for (auto node : alloc_sl.getInitPrimitive()->getARApriorUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         LOG6("Prior Table: " << tbl->externalName() << ", stage: " << phv.minStage(tbl));
@@ -196,7 +197,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::Field::alloc_slice all
     }
 
 
-    for (auto node : alloc_sl.init_i.postUnits) {
+    for (auto node : alloc_sl.getInitPrimitive()->getARApostUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         post_tables.insert(tbl->pp_unique_id());
@@ -207,18 +208,19 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::Field::alloc_slice all
     // 2. Create new ARA Table
     std::stringstream ara_name;
     ara_name << "ara_table_" << ARA_table_id++;
-    gress_t ara_gress = alloc_sl.field->gress;
+    gress_t ara_gress = alloc_sl.field()->gress;
 
     auto ara_tbl = new IR::MAU::Table(ara_name, ara_gress);
     ara_tbl->always_run = IR::MAU::AlwaysRun::ACTION;
     ara_name << "_action";
     auto act = new IR::MAU::Action(cstring(ara_name.str()));
 
-    BUG_CHECK(alloc_sl.init_i.source != nullptr,
+    BUG_CHECK(alloc_sl.getInitPrimitive()->getSourceSlice(),
               "No source slice defined for allocated slice %1%", alloc_sl);
     LOG4("\tAdd ARA initialization in action " << act->name << " for: " << alloc_sl);
-    LOG4("\t  Initialize from: " << *(alloc_sl.init_i.source));
-    auto prim = fieldToExpr.generateInitInstruction(alloc_sl, *(alloc_sl.init_i.source));
+    LOG4("\t  Initialize from: " << *(alloc_sl.getInitPrimitive()->getSourceSlice()));
+    auto prim = fieldToExpr.generateInitInstruction(alloc_sl,
+        *(alloc_sl.getInitPrimitive()->getSourceSlice()));
     LOG4("\t\tAdded initialization: " << prim);
     act->action.push_back(prim);
 
@@ -237,16 +239,17 @@ void ComputeDarkInitialization::end_apply() {
     for (const auto& f : phv) {
         for (const auto& slice : f.get_alloc()) {
             // Ignore NOP initializations
-            if (slice.init_i.nop) continue;
+            if (slice.getInitPrimitive()->isNOP()) continue;
 
             // Initialization in last MAU stage will be handled directly by another pass.
             // Here we create AlwaysRunAction tables with related placement constraints
-            if (slice.init_i.alwaysInitInLastMAUStage) {
-                if (slice.init_i.priorUnits.size() || slice.init_i.postUnits.size()) {
+            if (slice.getInitPrimitive()->mustInitInLastMAUStage()) {
+                if (slice.getInitPrimitive()->getARApriorUnits().size() ||
+                    slice.getInitPrimitive()->getARApostUnits().size()) {
                     createAlwaysRunTable(slice);
                 }
             } else {
-                for (const IR::MAU::Action* initAction : slice.init_i.init_actions)
+                for (const IR::MAU::Action* initAction : slice.getInitPrimitive()->getInitPoints())
                     computeInitInstruction(slice, initAction);
             }
         }
@@ -381,30 +384,30 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
         // For each field, check the other slices overlapping with that field.
         // FIXME(cc): check that this should always be the full pipeline. Or this should change
         // when we compute live ranges per stage
-        f->foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
-            if (!slice.field_bits().overlaps(sliceToInit.range())) return;
-            auto slices = phv.get_slices_in_container(slice.container);
+        f->foreach_alloc([&](const PHV::AllocSlice& slice) {
+            if (!slice.field_slice().overlaps(sliceToInit.range())) return;
+            auto slices = phv.get_slices_in_container(slice.container());
             for (auto& sl : slices) {
                 if (slice == sl) continue;
                 // If parser mutual exclusion, then we do not need to consider these fields for
                 // metadata initialization.
-                if (phv.isFieldMutex(f, sl.field)) continue;
+                if (phv.isFieldMutex(f, sl.field())) continue;
                 // If slices do not overlap, then ignore.
-                if (!slice.container_bits().overlaps(sl.container_bits()))
+                if (!slice.container_slice().overlaps(sl.container_slice()))
                     continue;
                 // Check live range here.
                 auto liverange1 = livemap.at(f->id);
-                auto liverange2 = livemap.at(sl.field->id);
+                auto liverange2 = livemap.at(sl.field()->id);
                 if (liverange1.first <= liverange2.first || liverange1.second <= liverange2.first) {
-                    LOG3("\t  Ignoring field " << sl.field->name << " (" << liverange2.first << ", "
-                         << liverange2.second << ") overlapping with " << f->name << " (" <<
+                    LOG3("\t  Ignoring field " << sl.field()->name << " (" << liverange2.first <<
+                         ", " << liverange2.second << ") overlapping with " << f->name << " (" <<
                          liverange1.first << ", " << liverange1.second << ") due to live ranges");
                     continue;
                 }
-                PHV::AllocSlice initSlice(phv.field(slice.field->id), slice.container,
-                        slice.field_bit, slice.container_bit, slice.width);
-                PHV::AllocSlice overlappingSlice(phv.field(sl.field->id), sl.container,
-                        sl.field_bit, sl.container_bit, sl.width);
+                PHV::AllocSlice initSlice(phv.field(slice.field()->id), slice.container(),
+                        slice.field_slice().lo, slice.container_slice().lo, slice.width());
+                PHV::AllocSlice overlappingSlice(phv.field(sl.field()->id), sl.container(),
+                        sl.field_slice().lo, sl.container_slice().lo, sl.width());
                 initSlicesToOverlappingSlices[initSlice].insert(overlappingSlice);
             }
         });
@@ -423,8 +426,8 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
         auto t = actionsMap.getTableForAction(kv.first);
         if (!t) BUG("Cannot find table corresponding to action %1%", kv.first->name);
         for (const auto& slice : kv.second) {
-            PHV::AllocSlice initSlice(phv.field(slice.field->name), slice.container,
-                    slice.field_bit, slice.container_bit, slice.width);
+            PHV::AllocSlice initSlice(phv.field(slice.field()->name), slice.container(),
+                    slice.field_slice().lo, slice.container_slice().lo, slice.width());
             slicesToTableInits[initSlice].insert(*t);
         }
     }
@@ -449,29 +452,29 @@ void ComputeDependencies::summarizeDarkInits(
     // Add all the initializations to be inserted for dark primitives to the fieldWrites and
     // fieldReads maps.
     for (auto& f : phv) {
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            if (alloc.init_i.init_actions.size() == 0) return;
-            if (alloc.init_i.nop) return;
-            // if (alloc.init_i.alwaysInitInLastMAUStage) return;
+        f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            if (alloc.getInitPrimitive()->getInitPoints().size() == 0) return;
+            if (alloc.getInitPrimitive()->isNOP()) return;
+            // if (alloc.getInitPrimitive()->mustInitInLastMAUStage()) return;
             ordered_set<const IR::MAU::Table*> initTables;
             LOG5("DarkInits for slice " << alloc << " in tables:");
-            for (const auto* action : alloc.init_i.init_actions) {
+            for (const auto* action : alloc.getInitPrimitive()->getInitPoints()) {
                 auto t = actionsMap.getTableForAction(action);
                 BUG_CHECK(t, "No table corresponding to action %1%", action->name);
                 initTables.insert(*t);
                 initTableNames.insert((*t)->name);
                 LOG5("\t" << (*t)->name);
             }
-            if (alloc.init_i.assignZeroToDestination) {
+            if (alloc.getInitPrimitive()->destAssignedToZero()) {
                 for (const auto* t : initTables) {
-                    fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_bits());
+                    fieldWrites[&f][dg.min_stage(t)][t].insert(alloc.field_slice());
                     LOG5("\t\t insering zero write for table " << t->name);
                 }
             }
-            if (alloc.init_i.source != nullptr) {
-                const PHV::Field* src = alloc.init_i.source->field;
+            if (alloc.getInitPrimitive()->getSourceSlice()) {
+                const PHV::Field* src = alloc.getInitPrimitive()->getSourceSlice()->field();
                 for (const auto* t : initTables) {
-                    fieldReads[src][dg.min_stage(t)][t].insert(alloc.field_bits());
+                    fieldReads[src][dg.min_stage(t)][t].insert(alloc.field_slice());
                     LOG5("\t\t inserting read for table " << t->name << " of " << *src);
                 }
             }
@@ -488,8 +491,8 @@ void ComputeDependencies::addDepsForDarkInitialization() {
     // Summarize use defs for all fields.
     StageFieldUse fieldWrites;
     StageFieldUse fieldReads;
-    ordered_map<PHV::Container, std::vector<PHV::Field::alloc_slice>> containerToSlicesMap;
-    ordered_map<const PHV::Field*, std::vector<PHV::Field::alloc_slice>> fieldToSlicesMap;
+    ordered_map<PHV::Container, std::vector<PHV::AllocSlice>> containerToSlicesMap;
+    ordered_map<const PHV::Field*, std::vector<PHV::AllocSlice>> fieldToSlicesMap;
     for (auto& f : phv) {
         LOG5("\t" << f.name);
         fieldWrites[&f] = StageFieldEntry();
@@ -507,9 +510,11 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         for (auto& kv : fieldReads.at(&f))
             for (auto& kv1 : kv.second)
                 LOG5("\t\t" << kv.first << " : " << kv1.first->name);
-        f.foreach_alloc([&](const PHV::Field::alloc_slice& alloc) {
-            if (parserMin == alloc.min_stage && deparserMax == alloc.max_stage) return;
-            containerToSlicesMap[alloc.container].push_back(alloc);
+        f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
+            if (parserMin == alloc.getEarliestLiveness() &&
+                deparserMax == alloc.getLatestLiveness())
+                    return;
+            containerToSlicesMap[alloc.container()].push_back(alloc);
             fieldToSlicesMap[&f].push_back(alloc);
         });
     }
@@ -519,10 +524,10 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         if (kv.second.size() == 1) continue;
         LOG5("\tContainer: " << kv.first);
         std::sort(kv.second.begin(), kv.second.end(),
-                [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
-            if (lhs.min_stage.first != rhs.min_stage.first)
-                return lhs.min_stage.first < rhs.min_stage.first;
-            return lhs.min_stage.second < rhs.min_stage.second;
+                [](const PHV::AllocSlice& lhs, const PHV::AllocSlice& rhs) {
+            if (lhs.getEarliestLiveness().first != rhs.getEarliestLiveness().first)
+                return lhs.getEarliestLiveness().first < rhs.getEarliestLiveness().first;
+            return lhs.getEarliestLiveness().second < rhs.getEarliestLiveness().second;
         });
         addDepsForSetsOfAllocSlices(kv.second, fieldWrites, fieldReads);
     }
@@ -530,10 +535,10 @@ void ComputeDependencies::addDepsForDarkInitialization() {
         if (kv.second.size() == 1) continue;
         LOG5("\tField: " << kv.first);
         std::sort(kv.second.begin(), kv.second.end(),
-                [](const PHV::Field::alloc_slice& lhs, const PHV::Field::alloc_slice& rhs) {
-            if (lhs.min_stage.first != rhs.min_stage.first)
-                return lhs.min_stage.first < rhs.min_stage.first;
-            return lhs.min_stage.second < rhs.min_stage.second;
+                [](const PHV::AllocSlice& lhs, const PHV::AllocSlice& rhs) {
+            if (lhs.getEarliestLiveness().first != rhs.getEarliestLiveness().first)
+                return lhs.getEarliestLiveness().first < rhs.getEarliestLiveness().first;
+            return lhs.getEarliestLiveness().second < rhs.getEarliestLiveness().second;
         });
         addDepsForSetsOfAllocSlices(kv.second, fieldWrites, fieldReads, false);
     }
@@ -542,15 +547,15 @@ void ComputeDependencies::addDepsForDarkInitialization() {
 void ComputeDependencies::accountUses(
         int min_stage,
         int max_stage,
-        const PHV::Field::alloc_slice& alloc,
+        const PHV::AllocSlice& alloc,
         const StageFieldUse& uses,
         ordered_set<const IR::MAU::Table*>& tables) const {
     for (int stage = min_stage; stage <= max_stage; ++stage) {
-        if (!uses.at(alloc.field).count(stage)) continue;
-        for (const auto& kv : uses.at(alloc.field).at(stage)) {
+        if (!uses.at(alloc.field()).count(stage)) continue;
+        for (const auto& kv : uses.at(alloc.field()).at(stage)) {
             bool foundFieldBits = std::any_of(kv.second.begin(), kv.second.end(),
                     [&](le_bitrange range) {
-                return alloc.field_bits().overlaps(range);
+                return alloc.field_slice().overlaps(range);
             });
             if (foundFieldBits) tables.insert(kv.first);
         }
@@ -558,7 +563,7 @@ void ComputeDependencies::accountUses(
 }
 
 void ComputeDependencies::addDepsForSetsOfAllocSlices(
-        const std::vector<PHV::Field::alloc_slice>& alloc_slices,
+        const std::vector<PHV::AllocSlice>& alloc_slices,
         const StageFieldUse& fieldWrites,
         const StageFieldUse& fieldReads,
         bool checkBitsOverlap) {
@@ -569,21 +574,23 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
     // C1[1] <-- f2 {1, 3}
     // C1 <-- f3 {3, 7}
     for (unsigned i = 0; i < alloc_slices.size() - 1; ++i) {
-        const PHV::Field::alloc_slice& alloc = alloc_slices.at(i);
-        if (!fieldWrites.count(alloc.field) && !fieldReads.count(alloc.field)) continue;
+        const PHV::AllocSlice& alloc = alloc_slices.at(i);
+        if (!fieldWrites.count(alloc.field()) && !fieldReads.count(alloc.field())) continue;
         ordered_set<const IR::MAU::Table*> allocUses;
         ordered_set<const IR::MAU::Table*> nextAllocUses;
         // Gather all the usedefs for alloc.
-        if (fieldReads.count(alloc.field)) {
-            int minStageRead = (alloc.min_stage.second == READ)
-                ? alloc.min_stage.first : (alloc.min_stage.first + 1);
-            accountUses(minStageRead, alloc.max_stage.first, alloc, fieldReads, allocUses);
+        if (fieldReads.count(alloc.field())) {
+            int minStageRead = (alloc.getEarliestLiveness().second == READ)
+                ? alloc.getEarliestLiveness().first : (alloc.getEarliestLiveness().first + 1);
+            accountUses(minStageRead, alloc.getLatestLiveness().first, alloc, fieldReads,
+                        allocUses);
         }
-        if (fieldWrites.count(alloc.field)) {
-            int maxStageWritten = (alloc.max_stage.second == WRITE)
-                ? alloc.max_stage.first
-                : (alloc.max_stage.first == 0 ? 0 : alloc.max_stage.first - 1);
-            accountUses(alloc.min_stage.first, maxStageWritten, alloc, fieldWrites, allocUses);
+        if (fieldWrites.count(alloc.field())) {
+            int maxStageWritten = (alloc.getLatestLiveness().second == WRITE)
+                ? alloc.getLatestLiveness().first
+                : (alloc.getLatestLiveness().first == 0 ? 0 : alloc.getLatestLiveness().first - 1);
+            accountUses(alloc.getEarliestLiveness().first, maxStageWritten, alloc, fieldWrites,
+                        allocUses);
         }
         if (allocUses.size() > 0) {
             LOG5("\t\tInsert dependencies from following usedefs of " << alloc);
@@ -592,43 +599,45 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
         }
 
         // Find the initialization point for the next alloc slice.
-        const PHV::Field::alloc_slice& nextAlloc = alloc_slices.at(i + 1);
-        if (checkBitsOverlap && !nextAlloc.container_bits().overlaps(alloc.container_bits())) {
+        const PHV::AllocSlice& nextAlloc = alloc_slices.at(i + 1);
+        if (checkBitsOverlap && !nextAlloc.container_slice().overlaps(alloc.container_slice())) {
             LOG5("\t\tIgnoring alloc because the previous alloc and this one do not "
                     "overlap in the container.");
             continue;
         }
-        if (!checkBitsOverlap && !nextAlloc.field_bits().overlaps(alloc.field_bits())) {
+        if (!checkBitsOverlap && !nextAlloc.field_slice().overlaps(alloc.field_slice())) {
             LOG5("\t\tIgnoring alloc because the previous alloc belongs to a different "
                  "slice of the field.");
             continue;
         }
-        if (nextAlloc.init_i.nop) {
+        if (nextAlloc.getInitPrimitive()->isNOP()) {
             // Add all the uses of the field to the set of fields to which the dependencies must
             // be inserted.
             LOG5("\t\tAdd dependencies to all usedefs of " << nextAlloc);
             // Gather all usedefs for nextAlloc.
-            if (fieldReads.count(nextAlloc.field)) {
-                int minStageRead = (nextAlloc.min_stage.second == READ)
-                    ? nextAlloc.min_stage.first : (nextAlloc.min_stage.first + 1);
-                accountUses(minStageRead, nextAlloc.max_stage.first, nextAlloc, fieldReads,
-                        nextAllocUses);
+            if (fieldReads.count(nextAlloc.field())) {
+                int minStageRead = (nextAlloc.getEarliestLiveness().second == READ)
+                    ? nextAlloc.getEarliestLiveness().first :
+                      (nextAlloc.getEarliestLiveness().first + 1);
+                accountUses(minStageRead, nextAlloc.getLatestLiveness().first, nextAlloc,
+                            fieldReads, nextAllocUses);
             }
-            if (fieldWrites.count(nextAlloc.field)) {
-                int maxStageWritten = (nextAlloc.max_stage.second == WRITE)
-                    ? nextAlloc.max_stage.first
-                    : (nextAlloc.max_stage.first == 0 ? 0 : nextAlloc.max_stage.first - 1);
-                accountUses(nextAlloc.min_stage.first, maxStageWritten, nextAlloc, fieldWrites,
-                        nextAllocUses);
+            if (fieldWrites.count(nextAlloc.field())) {
+                int maxStageWritten = (nextAlloc.getLatestLiveness().second == WRITE)
+                    ? nextAlloc.getLatestLiveness().first
+                    : (nextAlloc.getLatestLiveness().first == 0 ?
+                      0 : nextAlloc.getLatestLiveness().first - 1);
+                accountUses(nextAlloc.getEarliestLiveness().first, maxStageWritten, nextAlloc,
+                            fieldWrites, nextAllocUses);
             }
             for (const auto* t : nextAllocUses)
                 LOG5("\t\t\t" << t->name << " (Stage " << dg.min_stage(t) << ")");
-        } else if (nextAlloc.init_i.alwaysInitInLastMAUStage) {
+        } else if (nextAlloc.getInitPrimitive()->mustInitInLastMAUStage()) {
             // No need for any dependencies here.
             LOG5("\t\tNo need to insert dependencies to the last always_init block.");
-        } else if (nextAlloc.init_i.init_actions.size() > 0) {
+        } else if (nextAlloc.getInitPrimitive()->getInitPoints().size() > 0) {
             const IR::MAU::Table* initTable = nullptr;
-            for (const auto* action : nextAlloc.init_i.init_actions) {
+            for (const auto* action : nextAlloc.getInitPrimitive()->getInitPoints()) {
                 auto tbl = actionsMap.getTableForAction(action);
                 BUG_CHECK(tbl, "No table corresponding to action %1%", action->name);
                 if (initTable)

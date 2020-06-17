@@ -140,8 +140,8 @@ struct SliceExtracts : public ParserModifier {
 
         // Slice according to the field's PHV allocation.
         for (auto slice : phv.get_alloc(extract->dest->field, PHV::AllocContext::PARSER, &use)) {
-            auto lo = slice.field_bit;
-            auto size = slice.width;
+            auto lo = slice.field_slice().lo;
+            auto size = slice.width();
 
             if (auto sliced = make_slice<IR::BFN::ExtractPhv>(extract, lo, size)) {
                 rv.push_back(sliced);
@@ -348,7 +348,7 @@ struct AllocateParserState : public ParserTransform {
                         BUG_CHECK(alloc_slices.size() == 1,
                             "extract allocator expects dest to be individual slice");
 
-                        merged |= c->constant->asUnsigned() << alloc_slices[0].container_bit;
+                        merged |= c->constant->asUnsigned() << alloc_slices[0].container_slice().lo;
 
                         if (e->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
                             has_clr_on_write = true;
@@ -385,7 +385,7 @@ struct AllocateParserState : public ParserTransform {
                                 "extract allocator expects dest to be individual slice");
 
                             auto slice = alloc_slices[0];
-                            auto container = slice.container;
+                            auto container = slice.container();
 
                             BUG_CHECK(container.size() != 32,
                                       "checksum verification cannot be 32-bit container");
@@ -535,7 +535,7 @@ struct AllocateParserState : public ParserTransform {
                         e);
 
                     auto slice = alloc_slices[0];
-                    auto container = slice.container;
+                    auto container = slice.container();
 
                     container_to_extracts[container].insert(e);
                 }
@@ -976,11 +976,12 @@ struct AllocateParserState : public ParserTransform {
                         auto slice = alloc_slices[0];
 
                         const nw_bitrange container_range =
-                          slice.container_bits().toOrder<Endian::Network>(slice.container.size());
+                          slice.container_slice().toOrder<Endian::Network>
+                            (slice.container().size());
 
                         const nw_bitrange buffer_range =
                           rval->range.shiftedByBits(-container_range.lo)
-                                     .resizedToBits(slice.container.size());
+                                     .resizedToBits(slice.container().size());
 
                         min = std::min(min, buffer_range.lo);
                         max = std::max(max, buffer_range.hi);

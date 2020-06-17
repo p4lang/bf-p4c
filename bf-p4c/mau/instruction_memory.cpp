@@ -33,9 +33,9 @@ bool GenerateVLIWInstructions::preorder(const IR::Expression *expr) {
         // Mark which containers are to have non noop instructions
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
-                             [&](const PHV::Field::alloc_slice &alloc) {
-            if (!alloc.container) return;
-            current_vliw.setbit(Device::phvSpec().containerToId(alloc.container));
+                             [&](const PHV::AllocSlice &alloc) {
+            if (!alloc.container()) return;
+            current_vliw.setbit(Device::phvSpec().containerToId(alloc.container()));
         });
         return false;
     }

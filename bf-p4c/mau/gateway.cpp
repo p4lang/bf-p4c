@@ -691,10 +691,10 @@ bool CollectGatewayFields::compute_offsets() {
         for (auto &xor_with : info.xor_with) {
             auto &with = this->info[xor_with];
             int shift = field.range().lo - xor_with.range().lo;
-            xor_with.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
-                with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                info.xor_offsets.emplace_back(bytes*8U + sl.container_bit%8U,
-                                              sl.field_bits().shiftedByBits(shift));
+            xor_with.foreach_byte([&](const PHV::AllocSlice &sl) {
+                with.offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U, sl.field_slice());
+                info.xor_offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U,
+                                              sl.field_slice().shiftedByBits(shift));
                 LOG5("  byte " << bytes << " " << field << "(" << info.xor_offsets.back().second <<
                      ") xor " << xor_with << sl << " (" << with.offsets.back().second << ")");
                 ++bytes;
@@ -729,12 +729,12 @@ bool CollectGatewayFields::compute_offsets() {
             LOG5("  bit " << bits + 32 << " " << field);
             bits += field.size();
         } else {
-            field.foreach_byte([&](const PHV::Field::alloc_slice &sl) {
-                if (size_t(field_bits.ffs(sl.field_bit)) > size_t(sl.field_hi())) {
+            field.foreach_byte([&](const PHV::AllocSlice &sl) {
+                if (size_t(field_bits.ffs(sl.field_slice().lo)) > size_t(sl.field_slice().hi)) {
                     LOG5(DBPrint::Brief << sl << " already done via hash" << DBPrint::Reset);
                     return; }
-                info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
-                field_bits.clrrange(sl.field_bit, sl.width);
+                info.offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U, sl.field_slice());
+                field_bits.clrrange(sl.field_slice().lo, sl.width());
                 LOG5(DBPrint::Brief << "  byte " << bytes << " " << field << ' ' << sl <<
                      DBPrint::Reset);
                 if (bytes == 4 && bits == 0) {
