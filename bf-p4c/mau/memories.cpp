@@ -165,7 +165,8 @@ Memories::result_bus_info Memories::SRAM_group::build_result_bus(int width_sect)
 void Memories::SRAM_group::dbprint(std::ostream &out) const {
     out << "SRAM group: " << ta->table->name << ", type: " << sram_group_type_to_str[type]
         << ", width: " << width << ", number: " << number;
-    out << " { is placed: " << placed << ", to place: " << depth << "}";
+    out << " { is placed: " << placed << ", depth " << depth
+        << ", left to place " << left_to_place() << " }";
 }
 
 bool Memories::SRAM_group::same_wide_action(const SRAM_group &a) {
@@ -2283,8 +2284,14 @@ bool Memories::overflow_possible(const SRAM_group *candidate, const SRAM_group *
     bitvec sides;
     sides.setbit(RIGHT);
     int available_rams = open_rams_between_rows(logical_row, lowest_logical_row, sides);
-    if (curr_oflow && curr_oflow->is_synth_type())
+    if (curr_oflow && curr_oflow->is_synth_type()) {
         available_rams -= curr_oflow->left_to_place();
+        // Need to guarantee that there is enough color maprams for meters, as this will
+        // take some potential RAM space for other RAMs.  Came up in P4C-2664
+        if (curr_oflow->type == SRAM_group::METER) {
+            available_rams -= curr_oflow->cm.left_to_place();
+        }
+    }
     if (available_rams < candidate->left_to_place())
         return false;
     return true;
