@@ -2,7 +2,6 @@
 // p4c 9.1.0-pr.18 (SHA: 9fbc9cd)
 
 #include <core.p4>
-#include <tofino.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata

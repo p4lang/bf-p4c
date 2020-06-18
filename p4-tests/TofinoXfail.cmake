@@ -1707,11 +1707,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-9z4tV.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
@@ -1827,4 +1822,33 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
+)
+
+# P4C-2817
+p4c_add_xfail_reason("tofino"
+  "error: tofino supports up to 12 stages, using .*"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-media.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat_2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_3.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-qinq.p4
+)
+
+# P4C-2818
+p4c_add_xfail_reason("tofino"
+  "The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-firewall.p4
+)
+
+# P4C-2614
+p4c_add_xfail_reason("tofino"
+  "error: syntax error, unexpected '.'"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_2.p4
+)
+
+# P4C-2824
+p4c_add_xfail_reason("tofino"
+  "error: This program violates action constraints imposed by Tofino"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-l2_subintf.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-map.p4
 )

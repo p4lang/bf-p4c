@@ -121,7 +121,7 @@ header ingress_intrinsic_metadata_t {
 
     @padding bit<1> _pad2;
 
-    bit<11> ingress_port;               // Ingress physical port id.
+    PortId_t ingress_port;               // Ingress physical port id.
                                         // this field is passed to the deparser
 
     bit<48> ingress_mac_tstamp;         // Ingress IEEE 1588 timestamp (in nsec)
@@ -130,7 +130,7 @@ header ingress_intrinsic_metadata_t {
 
 @__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
-    bit<11> ucast_egress_port;          // Egress port for unicast packets. must
+    PortId_t ucast_egress_port;          // Egress port for unicast packets. must
                                         // be presented to TM for unicast.
 
     bit<1> bypass_egress;               // Request flag for the warp mode
@@ -144,7 +144,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                         // ingress admission control, PFC,
                                         // etc.
 
-    bit<7> qid;                         // Egress (logical) queue id into which
+    QueueId_t qid;                      // Egress (logical) queue id into which
                                         // this packet will be deposited.
 
     bit<3> icos_for_copy_to_cpu;        // Ingress cos for the copy to CPU. must
@@ -217,7 +217,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
 
     bit<3> resubmit_type;
 
-    bit<4> mirror_type;                 // The user-selected mirror field list
+    MirrorType_t mirror_type;           // The user-selected mirror field list
                                         // index.
 
     bit<1> mirror_io_select;            // Mirror incoming or outgoing packet
@@ -227,8 +227,8 @@ struct ingress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
-    bit<11> mirror_egress_port;         // Mirror packet egress port.
-    bit<7> mirror_qid;                  // Mirror packet qid.
+    PortId_t mirror_egress_port;         // Mirror packet egress port.
+    QueueId_t mirror_qid;               // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
     bit<32> adv_flow_ctl;               // Advanced flow control for TM
@@ -262,7 +262,7 @@ header ghost_intrinsic_metadata_t {
 header egress_intrinsic_metadata_t {
     @padding bit<5> _pad0;
 
-    bit<11> egress_port;                // Egress port id.
+    PortId_t egress_port;                // Egress port id.
                                         // this field is passed to the deparser
 
     @padding bit<5> _pad1;
@@ -305,7 +305,7 @@ header egress_intrinsic_metadata_t {
 
     @padding bit<1> _pad6;
 
-    bit<7> egress_qid;                  // Egress (physical) queue id within a MAC via which
+    QueueId_t egress_qid;               // Egress (physical) queue id within a MAC via which
                                         // this packet was served.
 
     @padding bit<5> _pad7;
@@ -344,7 +344,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
                                         //    - bit 1 disables copy-to-cpu
                                         //    - bit 2 disables mirroring
 
-    bit<4> mirror_type;
+    MirrorType_t mirror_type;
 
     bit<1> coalesce_flush;              // Flush the coalesced mirror buffer
 
@@ -359,8 +359,8 @@ struct egress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_ingress_cos;          // Mirror ingress cos for PG mapping.
     bit<1> mirror_deflect_on_drop;      // Mirror enable deflection on drop if true.
     bit<1> mirror_multicast_ctrl;       // Mirror enable multicast if true.
-    bit<11> mirror_egress_port;         // Mirror packet egress port.
-    bit<7> mirror_qid;                  // Mirror packet qid.
+    PortId_t mirror_egress_port;         // Mirror packet egress port.
+    QueueId_t mirror_qid;               // Mirror packet qid.
     bit<8> mirror_coalesce_length;      // Mirror coalesced packet max sample
                                         // length. Unit is quad bytes.
     bit<32> adv_flow_ctl;               // Advanced flow control for TM
@@ -420,7 +420,7 @@ header pktgen_port_down_header_t {
     bit<2> pipe_id;                     // Pipe id
     bit<4> app_id;                      // Application id
     @padding bit<13> _pad2;
-    bit<11> port_num;                   // Port number
+    PortId_t port_num;                   // Port number
 
     bit<16> packet_id;                  // Start at 0 and increment to a
                                         // programmed number

@@ -1,9 +1,11 @@
+/* obfuscated-9z4tV.p4 */
 // p4c-bfn -I/usr/share/p4c/p4include -DP416=1 -DPROFILE_P416_NAT_STATIC=1 -Ibf_arista_switch_p416_nat_static/includes   --display-power-budget -g -Xp4c='--disable-power-check --auto-init-metadata --create-graphs --disable-parser-state-merging -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1,clot_info:6 --verbose --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement' --target tofino-tna --o bf_arista_switch_p416_nat_static --bf-rt-schema bf_arista_switch_p416_nat_static/context/bf-rt.json
 // p4c 9.2.0-pr.1 (SHA: ac45e85)
 
 #include <core.p4>
-#include <tofino.p4>
-#include <tofino1arch.p4>
+#include <tna.p4>       /* TOFINO1_ONLY */
+
+@pa_auto_init_metadata
 
 @pa_container_size("ingress" , "Talco.Sequim.$valid" , 16) @pa_container_size("ingress" , "Talco.Aniak.$valid" , 16) @pa_container_size("egress" , "Talco.Westville.AquaPark" , 16) @pa_atomic("ingress" , "Terral.Mentone.Moorcroft") @pa_atomic("ingress" , "Terral.Corvallis.Hammond") @pa_atomic("ingress" , "Terral.Mentone.Chatmoss") @pa_atomic("ingress" , "Terral.Hapeville.Pajaros") @pa_atomic("ingress" , "Terral.Mentone.Altus") @pa_mutually_exclusive("egress" , "Terral.Corvallis.Dassel" , "Talco.Wesson.Dassel") @pa_mutually_exclusive("egress" , "Talco.Masontown.Cisco" , "Talco.Wesson.Dassel") @pa_mutually_exclusive("ingress" , "Terral.Mentone.Altus" , "Terral.Mickleton.Boerne") @pa_no_init("ingress" , "Terral.Mentone.Altus") @pa_atomic("ingress" , "Terral.Mentone.Altus") @pa_atomic("ingress" , "Terral.Mickleton.Boerne") @pa_atomic("ingress" , "Terral.Baytown.LaLuz") @pa_no_overlay("ingress" , "Terral.Mentone.Randall") @pa_container_size("ingress" , "Terral.Mentone.Sheldahl" , 16) @pa_no_overlay("ingress" , "Terral.Sanford.Lewiston") @pa_no_overlay("ingress" , "Terral.Sanford.Lamona") @pa_no_overlay("ingress" , "Terral.BealCity.Sublett") @pa_no_overlay("ingress" , "Terral.Mentone.Etter") @pa_no_overlay("ingress" , "Terral.Mentone.Rocklin") @pa_no_overlay("ingress" , "Terral.Corvallis.Wamego") @pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu") @pa_alias("ingress" , "Terral.Hohenwald.Allgood" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "Terral.Hohenwald.Allgood" , "eg_intr_md_for_dprsr.mirror_type") @pa_atomic("ingress" , "Terral.Mentone.WindGap") header Florin {
     bit<8> Requa;

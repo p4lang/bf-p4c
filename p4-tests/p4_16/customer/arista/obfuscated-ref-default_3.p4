@@ -1,12 +1,13 @@
+/* obfuscated-5PQ2c.p4 */
 // p4c-bfn -I/usr/share/p4c/p4include -DP416=1 -DPROFILE_P416_DEFAULT=1 -Ibf_arista_switch_p416_default/includes  -g -Xp4c='--disable-power-check --auto-init-metadata --create-graphs --disable-parser-state-merging -T table_summary:3,table_placement:3,input_xbar:6,live_range_report:1 --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement' --o bf_arista_switch_p416_default --bf-rt-schema bf_arista_switch_p416_default/context/bf-rt.json
-// p4c 9.1.0-pr.21 (SHA: Unknown)
+// p4c 9.1.0 (SHA: ee892e1)
 
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
 @pa_auto_init_metadata
 
-@pa_mutually_exclusive("egress" , "Doddridge.Norma.AquaPark" , "Dateland.Freeny.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Tiburon.Union" , "Dateland.Freeny.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Freeny.AquaPark" , "Doddridge.Norma.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Freeny.AquaPark" , "Dateland.Tiburon.Union") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Hackett" , "Doddridge.Dairyland.Kenbridge") @pa_no_init("ingress" , "Doddridge.Daleville.Hackett") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Galloway" , "Doddridge.Dairyland.Malinta") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Suttle" , "Doddridge.Dairyland.Kearns") @pa_no_init("ingress" , "Doddridge.Daleville.Galloway") @pa_no_init("ingress" , "Doddridge.Daleville.Suttle") @pa_atomic("ingress" , "Doddridge.Daleville.Suttle") @pa_atomic("ingress" , "Doddridge.Dairyland.Kearns") @pa_container_size("ingress", "Doddridge.Lewiston.Eldred", 16) @pa_container_size("ingress" , "Dateland.Bergton.Garibaldi" , 16) @pa_container_size("ingress" , "Dateland.Grays.Garibaldi" , 16) @pa_alias("ingress" , "Doddridge.Cutten.Floyd" , "Doddridge.Daleville.Floyd") @pa_alias("ingress" , "Doddridge.Cutten.Westboro" , "Doddridge.Daleville.Hackett") @pa_alias("ingress" , "Doddridge.Cutten.Helton" , "Doddridge.Daleville.Brinkman") @pa_container_size("egress" , "Dateland.Freeny.Avondale" , 32) @pa_container_size("egress" , "Doddridge.Norma.Guadalupe" , 16) @pa_container_size("egress" , "Dateland.Ramos.Calcasieu" , 32) @pa_atomic("ingress" , "Doddridge.Norma.Wilmore") @pa_atomic("ingress" , "Doddridge.Norma.Mayday") @pa_atomic("ingress" , "Doddridge.RossFork.DeGraff") @pa_atomic("ingress" , "Doddridge.Basalt.Edgemoor") @pa_atomic("ingress" , "Doddridge.Lewiston.Westboro") @pa_no_init("ingress" , "Doddridge.Daleville.Coulter") @pa_no_init("ingress" , "Doddridge.Sublett.Blairsden") @pa_no_init("ingress" , "Doddridge.Sublett.Clover") @pa_atomic("ingress" , "Doddridge.Komatke.Cuprum") @pa_atomic("ingress" , "Doddridge.Komatke.LaUnion") @pa_atomic("ingress" , "Doddridge.Komatke.Belview") @pa_no_init("ingress" , "Doddridge.Komatke.Cuprum") @pa_no_init("ingress" , "Doddridge.Komatke.Arvada") @pa_no_init("ingress" , "Doddridge.Komatke.Broussard") @pa_no_init("ingress" , "Doddridge.Komatke.Ackley") @pa_no_init("ingress" , "Doddridge.Komatke.Candle") @pa_container_size("ingress" , "Dateland.Wondervu.Calcasieu" , 8 , 8 , 16 , 32 , 32 , 32) @pa_container_size("ingress" , "Dateland.Freeny.Clarion" , 8) @pa_container_size("ingress" , "Doddridge.Daleville.Floyd" , 8) @pa_container_size("ingress" , "Doddridge.Aldan.Manilla" , 32) @pa_container_size("ingress" , "Doddridge.RossFork.Quinhagak" , 32) @pa_container_size("ingress" , "Doddridge.Komatke.Cuprum" , 32) @pa_solitary("ingress" , "Doddridge.Lewiston.Levittown") @pa_container_size("ingress" , "Doddridge.Lewiston.Levittown" , 16) @pa_container_size("ingress" , "Doddridge.Lewiston.Calcasieu" , 16) @pa_container_size("ingress" , "Doddridge.Lewiston.Oilmont" , 8) @pa_atomic("ingress" , "Doddridge.Aldan.Hiland") @pa_atomic("ingress" , "Doddridge.Aldan.Manilla") @pa_mutually_exclusive("ingress" , "Doddridge.Basalt.Dolores" , "Doddridge.Darien.Dolores") @pa_alias("ingress" , "Doddridge.Salix.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "Doddridge.Salix.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") header Sagerton {
+@pa_mutually_exclusive("egress" , "Doddridge.Norma.AquaPark" , "Dateland.Freeny.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Tiburon.Union" , "Dateland.Freeny.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Freeny.AquaPark" , "Doddridge.Norma.AquaPark") @pa_mutually_exclusive("egress" , "Dateland.Freeny.AquaPark" , "Dateland.Tiburon.Union") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Hackett" , "Doddridge.Dairyland.Kenbridge") @pa_no_init("ingress" , "Doddridge.Daleville.Hackett") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Galloway" , "Doddridge.Dairyland.Malinta") @pa_mutually_exclusive("ingress" , "Doddridge.Daleville.Suttle" , "Doddridge.Dairyland.Kearns") @pa_no_init("ingress" , "Doddridge.Daleville.Galloway") @pa_no_init("ingress" , "Doddridge.Daleville.Suttle") @pa_atomic("ingress" , "Doddridge.Daleville.Suttle") @pa_atomic("ingress" , "Doddridge.Dairyland.Kearns") @pa_container_size("ingress" , "Dateland.Bergton.Garibaldi" , 16) @pa_container_size("ingress" , "Dateland.Grays.Garibaldi" , 16) @pa_alias("ingress" , "Doddridge.Cutten.Floyd" , "Doddridge.Daleville.Floyd") @pa_alias("ingress" , "Doddridge.Cutten.Westboro" , "Doddridge.Daleville.Hackett") @pa_alias("ingress" , "Doddridge.Cutten.Helton" , "Doddridge.Daleville.Brinkman") @pa_container_size("egress" , "Dateland.Freeny.Avondale" , 32) @pa_container_size("egress" , "Doddridge.Norma.Guadalupe" , 16) @pa_container_size("egress" , "Dateland.Ramos.Calcasieu" , 32) @pa_atomic("ingress" , "Doddridge.Norma.Wilmore") @pa_atomic("ingress" , "Doddridge.Norma.Mayday") @pa_atomic("ingress" , "Doddridge.RossFork.DeGraff") @pa_atomic("ingress" , "Doddridge.Basalt.Edgemoor") @pa_atomic("ingress" , "Doddridge.Lewiston.Westboro") @pa_no_init("ingress" , "Doddridge.Daleville.Coulter") @pa_no_init("ingress" , "qosMd.cosRewrite") @pa_no_init("ingress" , "qosMd.dscpRewrite") @pa_atomic("ingress" , "Doddridge.Komatke.Cuprum") @pa_atomic("ingress" , "Doddridge.Komatke.LaUnion") @pa_atomic("ingress" , "Doddridge.Komatke.Belview") @pa_no_init("ingress" , "Doddridge.Komatke.Cuprum") @pa_no_init("ingress" , "Doddridge.Komatke.Arvada") @pa_no_init("ingress" , "Doddridge.Komatke.Broussard") @pa_no_init("ingress" , "Doddridge.Komatke.Ackley") @pa_no_init("ingress" , "Doddridge.Komatke.Candle") @pa_container_size("ingress" , "Dateland.Wondervu.Calcasieu" , 8 , 8 , 16 , 32 , 32 , 32) @pa_container_size("ingress" , "Dateland.Freeny.Clarion" , 8) @pa_container_size("ingress" , "Doddridge.Daleville.Floyd" , 8) @pa_container_size("ingress" , "Doddridge.Aldan.Manilla" , 32) @pa_container_size("ingress" , "Doddridge.RossFork.Quinhagak" , 32) @pa_container_size("ingress" , "Doddridge.Komatke.Cuprum" , 32) @pa_solitary("ingress" , "Doddridge.Lewiston.Levittown") @pa_container_size("ingress" , "Doddridge.Lewiston.Levittown" , 16) @pa_container_size("ingress" , "Doddridge.Lewiston.Calcasieu" , 16) @pa_container_size("ingress" , "Doddridge.Lewiston.Oilmont" , 8) @pa_atomic("ingress" , "Doddridge.Aldan.Hiland") @pa_atomic("ingress" , "Doddridge.Aldan.Manilla") @pa_mutually_exclusive("ingress" , "Doddridge.Basalt.Dolores" , "Doddridge.Darien.Dolores") @pa_alias("ingress" , "Doddridge.Salix.Roachdale" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "Doddridge.Salix.Roachdale" , "eg_intr_md_for_dprsr.mirror_type") header Sagerton {
     bit<8> Exell;
 }
 
@@ -2448,7 +2449,7 @@ control Exeter(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
     @name(".Ozona") action Ozona() {
         Doddridge.Sublett.Alameda = Doddridge.Darien.Alameda;
     }
-    @disable_atomic_modify(1) @placement_priority(".Tularosa", ".Alnwick") @name(".Leland") table Leland {
+    @disable_atomic_modify(1) @placement_priority(".Tularosa") @name(".Leland") table Leland {
         actions = {
             Yulee();
             Oconee();
@@ -2971,7 +2972,7 @@ control Bains(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrinsi
     @name(".Mayview") action Mayview() {
         Doddridge.Mausdale.Bennet = (bit<2>)2w2;
     }
-    @disable_atomic_modify(1) @name(".Swandale") table Swandale {
+    @disable_atomic_modify(1) @name(".Swandale") @stage(5) table Swandale {
         actions = {
             Willette();
             Mayview();
@@ -4267,7 +4268,7 @@ control Bedrock(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intri
     @name(".TinCity") action TinCity(bit<32> Noyes) {
         Doddridge.Wisdom.Satolah = max<bit<32>>(Doddridge.Wisdom.Satolah, Noyes);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Silvertip") table Silvertip {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority("cond-87") @name(".Silvertip") table Silvertip {
         key = {
             Doddridge.Cutten.McGrady    : exact @name("Cutten.McGrady") ;
             Doddridge.Lewiston.Calcasieu: exact @name("Lewiston.Calcasieu") ;
@@ -4360,7 +4361,7 @@ control Dougherty(inout Amenia Dateland, inout McAllen Doddridge, in ingress_int
         Doddridge.Lewiston.Helton = Doddridge.Cutten.Helton & Helton;
         Doddridge.Lewiston.Oilmont = Doddridge.Cutten.Oilmont & Oilmont;
     }
-    @disable_atomic_modify(1) @placement_priority(".Tularosa") @name(".Unionvale") table Unionvale {
+    @disable_atomic_modify(1) @name(".Unionvale") table Unionvale {
         key = {
             Doddridge.Cutten.McGrady: exact @name("Cutten.McGrady") ;
         }
@@ -4528,7 +4529,7 @@ control Angeles(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrin
     @name(".Edinburgh") action Edinburgh() {
         Doddridge.Norma.Cabot = Doddridge.Norma.Colona;
     }
-    @disable_atomic_modify(1) @name(".Chalco") table Chalco {
+    @disable_atomic_modify(1) @name(".Chalco") @stage(5) table Chalco {
         actions = {
             Ammon();
             Wells();
@@ -4700,7 +4701,7 @@ control Osakis(inout Amenia Dateland, inout McAllen Doddridge, in ingress_intrin
         Doddridge.Komatke.Arvada = Lauada;
         Doddridge.Daleville.Bonney[31:0] = Emida.global_tstamp[31:0];
     }
-    @disable_atomic_modify(1) @name(".Nicollet") table Nicollet {
+    @disable_atomic_modify(1) @name(".Nicollet") @placement_priority(".Swandale", ".Centre") table Nicollet {
         actions = {
             Corum();
             @defaultonly NoAction();
@@ -5386,7 +5387,7 @@ control Decorah(inout Amenia Dateland, inout McAllen Doddridge, in egress_intrin
     @name(".Blunt") action Blunt() {
         Dateland.Wondervu.Bushland[7:7] = (bit<1>)1w0;
     }
-    @ternary(1) @disable_atomic_modify(1) @name(".Wakita") table Wakita {
+    @ternary(1) @disable_atomic_modify(1) @stage(2) @name(".Wakita") table Wakita {
         actions = {
             Stout();
             Blunt();

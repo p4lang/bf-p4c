@@ -404,3 +404,15 @@ p4c_add_xfail_reason("tofino2"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
+
+# P4C-2799
+p4c_add_xfail_reason("tofino2"
+  "PHV not allocated for field .*"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2.p4
+)
+
+# P4C-2824
+p4c_add_xfail_reason("tofino2"
+  "error: This program violates action constraints imposed by Tofino2"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
+)
