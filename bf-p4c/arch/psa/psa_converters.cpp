@@ -53,7 +53,7 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
 }
 
 const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
-    return substitute<IR::Declaration_Instance>(node);}
+    return substitute<IR::Declaration_Instance>(node); }
 
 const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
     return substitute<IR::MethodCallExpression>(node); }
@@ -80,6 +80,9 @@ const IR::Node* ControlConverter::postorder(IR::Property* p) {
         return new IR::Property(p->srcInfo, *newName, p->annotations, p->value, p->isConstant);
     return p;
 }
+
+const IR::Node* ControlConverter::postorder(IR::Member* node) {
+    return substitute<IR::Member>(node); }
 
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
@@ -645,6 +648,14 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
             return result;
         }
     } else if (node->type->to<IR::Type_Boolean>()) {
+        auto it = nameMap.find(MetadataField{pathname, membername, 1});
+        if (it != nameMap.end()) {
+            auto expr = new IR::PathExpression(it->second.structName);
+            auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
+            LOG3("Translating " << node << " to " << result);
+            return result;
+        }
+    } else if (node->type->to<IR::Type_Error>()) {
         auto it = nameMap.find(MetadataField{pathname, membername, 1});
         if (it != nameMap.end()) {
             auto expr = new IR::PathExpression(it->second.structName);

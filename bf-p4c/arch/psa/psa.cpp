@@ -326,39 +326,43 @@ class TranslateProgram : public Inspector {
                            gress_t gress,
                            cstring stateName) {
         auto equ = (*em->expr->arguments)[0]->expression->to<IR::Equ>();
+        auto err = (*em->expr->arguments)[1]->expression->to<IR::Member>();
+        cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
+                                               "eg_intr_md_from_prsr";
         Pattern::Match<IR::Expression> member;
         Pattern::Match<IR::MethodCallExpression> expr;
-        if (!(expr == member).match(equ)) return;
-        auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
-        if (auto emExpr = miExpr->to<P4::ExternMethod>()) {
-            cstring nameExpr = emExpr->actualExternType->name;
-            if (nameExpr == "InternetChecksum" && emExpr->method->name == "get") {
-                auto declName = emExpr->object->to<IR::Declaration_Instance>()->name;
-                auto list = new IR::ListExpression({member});
-                auto args = new IR::Vector<IR::Argument>();
-                args->push_back(new IR::Argument(list));
-                auto mce = new IR::MethodCallExpression(
-                           new IR::Member(new IR::PathExpression(declName), "add"), args);
-                auto addCall = new IR::MethodCallStatement(mce);
-                structure->_map.emplace(stmt, addCall);
-                auto verify = new IR::MethodCallExpression(new IR::Member(
-                              new IR::PathExpression(declName), "verify"));
-                auto rhs = new IR::Cast(IR::Type::Bits::get(1), verify);
-                cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
-                                                       "eg_intr_md_from_prsr";
-                auto parser_err = new IR::Member(
-                                      new IR::PathExpression(metaParam),
-                                      "parser_err");
-                auto lhs = new IR::Slice(parser_err, 12, 12);
-                auto verifyEnd = new IR::AssignmentStatement(lhs, rhs);
-                if (gress == INGRESS) {
-                    structure->ingressParserStatements[stateName].push_back(verifyEnd);
-                } else {
-                    structure->egressParserStatements[stateName].push_back(verifyEnd);
+        if ((expr == member).match(equ)) {
+            auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
+            if (auto emExpr = miExpr->to<P4::ExternMethod>()) {
+                cstring nameExpr = emExpr->actualExternType->name;
+                if (nameExpr == "InternetChecksum" && emExpr->method->name == "get") {
+                    auto declName = emExpr->object->to<IR::Declaration_Instance>()->name;
+                    auto list = new IR::ListExpression({member});
+                    auto args = new IR::Vector<IR::Argument>();
+                    args->push_back(new IR::Argument(list));
+                    auto mce = new IR::MethodCallExpression(
+                               new IR::Member(new IR::PathExpression(declName), "add"), args);
+                    auto addCall = new IR::MethodCallStatement(mce);
+                    structure->_map.emplace(stmt, addCall);
+                    auto verify = new IR::MethodCallExpression(new IR::Member(
+                                  new IR::PathExpression(declName), "verify"));
+                    auto rhs = new IR::Cast(IR::Type::Bits::get(1), verify);
+                    auto parser_err = new IR::Member(
+                                          new IR::PathExpression(metaParam),
+                                          "parser_err");
+                    auto lhs = new IR::Slice(parser_err, 12, 12);
+                    structure->_map.emplace(err, new IR::Constant(IR::Type::Bits::get(16), 4096));
+                    structure->error_to_constant[err->member] = 1 << 12;
+                    auto verifyEnd = new IR::AssignmentStatement(lhs, rhs);
+                    if (gress == INGRESS) {
+                        structure->ingressParserStatements[stateName].push_back(verifyEnd);
+                    } else {
+                        structure->egressParserStatements[stateName].push_back(verifyEnd);
+                    }
                 }
-            } else {
-                ::error("Verify statement %1% not supported", stmt);
             }
+        } else {
+            ::error("Verify statement %1% not supported", stmt);
         }
     }
 
@@ -500,8 +504,6 @@ class TranslateProgram : public Inspector {
                             PSA::ProgramStructure::EGRESS)) {
                         structure->pathsThread.emplace(node, EGRESS);
 
-
-
                         structure->pathsToDo.emplace(node, node);
                     } else {
                         WARNING("path " << node << " in "
@@ -511,6 +513,29 @@ class TranslateProgram : public Inspector {
             } else if (auto expr = node->expr->to<IR::TypeNameExpression>()) {
                 auto tn = expr->typeName->to<IR::Type_Name>();
                 CHECK_NULL(tn);
+                if (tn->path->name == "error") {
+                    if (node->member == "NoError") {
+                        structure->_map.emplace(node, new IR::Constant(IR::Type::Bits::get(16), 0));
+                    } else if (node->member == "NoMatch") {
+                        // no_tcam_match_err_en
+                        structure->_map.emplace(node, new IR::Constant(IR::Type::Bits::get(16), 1));
+                    } else if (node->member == "PacketTooShort") {
+                        // partial_hdr_err_en
+                        structure->_map.emplace(node, new IR::Constant(IR::Type::Bits::get(16), 2));
+                    } else if (node->member == "StackOutOfBounds") {
+                        // ctr_range_err_en
+                        structure->_map.emplace(node, new IR::Constant(IR::Type::Bits::get(16), 4));
+                    } else if (node->member == "ParserTimeout") {
+                        // timeout_cycle_err_en
+                        structure->_map.emplace(node, new IR::Constant(
+                                                                    IR::Type::Bits::get(16), 16));
+                    } else if (structure->error_to_constant.count(node->member)) {
+                        // custom errors
+                        structure->_map.emplace(node,
+                                                new IR::Constant(IR::Type::Bits::get(16),
+                                                structure->error_to_constant.at(node->member)));
+                   }
+                }
                 structure->typeNamesToDo.emplace(node, node);
             } else {
                 WARNING("Unable to translate path " << node);
@@ -700,7 +725,7 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"ig_intr_md", "ingress_mac_tstamp", 48});
         structure->addMetadata(INGRESS,
                                MetadataField{"istd", "parser_error", 16},
-                               MetadataField{"ig_intr_md_from_prsr", "ingress_parser_err", 16});
+                               MetadataField{"ig_intr_md_from_parser", "parser_err", 16});
         structure->addMetadata(INGRESS,
                                MetadataField{"ostd", "class_of_service", 3},
                                MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
@@ -727,8 +752,8 @@ class LoadTargetArchitecture : public Inspector {
                                MetadataField{"istd", "egress_timestamp", 48},
                                MetadataField{"eg_intr_md_for_dprsr", "egress_global_tstamp", 48});
         structure->addMetadata(EGRESS,
-                               MetadataField{"istd", "parser_error", 3},
-                               MetadataField{"eg_intr_md_from_prsr", "egress_parser_err", 3});
+                               MetadataField{"istd", "parser_error", 16},
+                               MetadataField{"eg_intr_md_from_parser", "parser_err", 16});
         structure->addMetadata(EGRESS,
                                MetadataField{"ostd", "drop", 1},
                                MetadataField{COMPILER_META, "drop", 1});

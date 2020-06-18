@@ -82,6 +82,8 @@ struct ProgramStructure : BFN::ProgramStructure {
     PsaBlockInfo egress;
     PsaBlockInfo egress_deparser;
 
+    ordered_map<cstring, int> error_to_constant;
+
     void createParsers() override;
     void createControls() override;
     void createMain() override;
