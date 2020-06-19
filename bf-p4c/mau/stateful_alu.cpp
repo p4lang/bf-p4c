@@ -401,7 +401,7 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
         operands.push_back(new IR::Constant(1)); }
     BUG_CHECK(operands.size() > (etype < OUTPUT), "%1%: recursion failure", srcInfo);
     if (operands.front()->type->width_bits() > Device::statefulAluSpec().MaxSize)
-        warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Wide operations not supported in "
+        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%Wide operations not supported in "
                 "stateful alu, will only operate on bottom %2% bits", srcInfo,
                 Device::statefulAluSpec().MaxSize);
     if (dest && dest->use != LocalVar::ALUHI) {

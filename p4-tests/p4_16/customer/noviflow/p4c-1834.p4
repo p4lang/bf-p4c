@@ -1160,8 +1160,8 @@ control control_dataplane_packet( inout headers_t hdr,
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) table0_stats;
     Register<bit<32>, bit<1>>(2, 0) table0_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table0_hit_miss) table0_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table0_hit_miss) table0_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1278,8 +1278,8 @@ hdr.bridged_meta.ingress_port:ternary;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table1_stats;
     Register<bit<32>, bit<1>>(2, 0) table1_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table1_hit_miss) table1_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table1_hit_miss) table1_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1345,8 +1345,8 @@ hdr.bridged_meta.ingress_phy_port:ternary;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table2_stats;
     Register<bit<32>, bit<1>>(2, 0) table2_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table2_hit_miss) table2_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table2_hit_miss) table2_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1425,8 +1425,8 @@ hdr.bridged_meta.ingress_port:ternary;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table3_stats;
     Register<bit<32>, bit<1>>(2, 0) table3_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table3_hit_miss) table3_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table3_hit_miss) table3_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1543,8 +1543,8 @@ hdr.bridged_meta.ingress_port:ternary;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table4_stats;
     Register<bit<32>, bit<1>>(2, 0) table4_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table4_hit_miss) table4_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table4_hit_miss) table4_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1661,8 +1661,8 @@ hdr.bridged_meta.ingress_port:exact;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table5_stats;
     Register<bit<32>, bit<1>>(2, 0) table5_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table5_hit_miss) table5_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table5_hit_miss) table5_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1779,8 +1779,8 @@ hdr.pkt.ethernet.dstAddr:exact;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table6_stats;
     Register<bit<32>, bit<1>>(2, 0) table6_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table6_hit_miss) table6_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table6_hit_miss) table6_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
@@ -1898,8 +1898,8 @@ hdr.pkt.ethernet.srcAddr:exact;
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) table7_stats;
     Register<bit<32>, bit<1>>(2, 0) table7_hit_miss;
-    RegisterAction<bit<64>, bit<1>, bit<1>>(table7_hit_miss) table7_hit_miss_action = {
-        void apply(inout bit<64> value) {
+    RegisterAction<bit<32>, bit<1>, bit<1>>(table7_hit_miss) table7_hit_miss_action = {
+        void apply(inout bit<32> value) {
             value = value + 1;
         }
     };
