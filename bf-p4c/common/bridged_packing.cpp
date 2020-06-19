@@ -66,6 +66,11 @@ bool CollectEgressBridgedFields::preorder(const IR::BFN::Extract* extract) {
     return true;
 }
 
+Visitor::profile_t CollectEgressBridgedFields::init_apply(const IR::Node* root) {
+    candidateSourcesInParser.clear();
+    return Inspector::init_apply(root);
+}
+
 void CollectEgressBridgedFields::end_apply() {
     for (auto& f : candidateSourcesInParser) {
         std::stringstream ss;

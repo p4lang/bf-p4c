@@ -69,6 +69,7 @@ class CollectEgressBridgedFields : public Inspector {
     /// Key: Bridged field name, Value: Original field name.
     ordered_map<cstring, cstring> bridged_to_orig;
 
+    Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::Extract* extract) override;
     void end_apply() override;
 };
