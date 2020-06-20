@@ -1143,6 +1143,7 @@ void ConstraintSolver::add_no_split_constraints(
         if (!f->no_split()) continue;
         z3::expr v = context.bv_const(f->name, 16);
         if (f->size <= 8) {
+            if (f->no_split_container_size() != -1) continue;
             z3::expr mustFitSingleByte =
                 ((v / 8) * 8) == (((v + f->size - 1) / 8) * 8);
             LOG1("NoSplit constraint: " << f);
@@ -1167,6 +1168,7 @@ void ConstraintSolver::add_no_split_constraints(
         }
     }
 
+    // NOTE(1):
     // Sometimes, 'no_split' bridged field has to be allocated to a large
     // container. For instance, a 9-bit bridged field is marked as 'no_split',
     // and it is also used to set value in another 32-bit 'no_split' field.  We
@@ -1246,7 +1248,16 @@ void ConstraintSolver::add_constraints(cstring hdr, ordered_set<const PHV::Field
     // compute upper bound assuming each field is padded to next byte boundary
     int upper_bound = 0;
     for (auto f : fields) {
-        upper_bound += f->size + (8 - f->size % 8); }
+        // See NOTE(1):
+        // When a 'small' bridged field must be packed into a large container,
+        // we must extend the upper_bound by the size of the large container,
+        // instead of the round-up value based on the bridge field size.
+        if (f->no_split_container_size() != -1) {
+            upper_bound += f->no_split_container_size();
+        } else {
+            upper_bound += f->size + (8 - f->size % 8);
+        }
+    }
 
     for (auto f : fields)
         add_field_alignment_constraints(hdr, f, upper_bound);
@@ -1401,11 +1412,11 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     // if we choose to only pack 'candidates' and
     // current header type is not one of the 'candidates', skip.
     for (auto c : candidates)
-        LOG3("with candidate " << c);
+        LOG5("with candidate " << c);
 
-    LOG3(" checking " << hdr->type->name);
+    LOG5(" checking " << hdr->type->name);
     if (candidates.size() != 0 && !candidates.count(hdr->type->name)) {
-        LOG3("  skip " << hdr);
+        LOG5("  skip " << hdr);
         return false;
     }
 
