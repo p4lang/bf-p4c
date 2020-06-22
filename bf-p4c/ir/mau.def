@@ -1028,6 +1028,7 @@ class TableKey : Expression, IAnnotated {
     bool for_selection() const { return match_type.name == "selector"; }
     bool for_dleft() const { return match_type.name == "dleft_hash"; }
     bool for_atcam_partition_index() const { return match_type.name == "atcam_partition_index"; }
+    bool for_range() const { return match_type.name == "range"; }
     bool for_match() const { return !for_selection() && !for_dleft(); }
 
     dbprint { out << expr << ": " << match_type.name; }

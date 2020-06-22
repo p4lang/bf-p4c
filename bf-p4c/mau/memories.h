@@ -4,6 +4,8 @@
 #include <algorithm>
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/table_format.h"
+#include "bf-p4c/mau/instruction_memory.h"
+#include "bf-p4c/mau/action_format.h"
 #include "ir/ir.h"
 #include "lib/alloc.h"
 #include "lib/safe_vector.h"
@@ -281,6 +283,8 @@ struct Memories {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
         const TableFormat::Use *table_format;
+        const InstructionMemory::Use *instr_mem;
+        const ActionData::Format::Use *action_format;
         std::map<UniqueId, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
@@ -295,14 +299,14 @@ struct Memories {
         int stage_table = -1;
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
-        explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
-                             const TableFormat::Use *tf,
-                             std::map<UniqueId, Memories::Use> *mu,
-                             const LayoutOption *lo, const int e, const int st,
-                             attached_entries_t attached_entries)
-                : table(t), match_ixbar(mi), table_format(tf), memuse(mu), layout_option(lo),
-                  provided_entries(e), attached_entries(attached_entries), attached_gw_bytes(0),
-                  stage_table(st), table_link(nullptr) {}
+        table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi, const TableFormat::Use *tf,
+                    const InstructionMemory::Use *im, const ActionData::Format::Use *af,
+                    std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
+                    const int e, const int st, attached_entries_t attached_entries)
+            : table(t), match_ixbar(mi), table_format(tf), instr_mem(im), action_format(af),
+              memuse(mu), layout_option(lo), provided_entries(e),
+              attached_entries(attached_entries), attached_gw_bytes(0), stage_table(st),
+              table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
 
         UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
@@ -721,8 +725,9 @@ struct Memories {
     void remove(const std::map<UniqueId, Use> &alloc);
     void clear();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                   TableResourceAlloc *resources, const LayoutOption *lo, int entries,
-                   int stage_table, attached_entries_t attached_entries);
+                   TableResourceAlloc *resources, const LayoutOption *lo,
+                   const ActionData::Format::Use *af, int entries, int stage_table,
+                   attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };

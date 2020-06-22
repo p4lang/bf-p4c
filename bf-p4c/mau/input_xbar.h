@@ -777,7 +777,8 @@ struct IXBar {
     bool allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
         size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
         unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group);
-    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
+    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc,
+        const LayoutOption *lo, bool second_try);
     bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &phv,

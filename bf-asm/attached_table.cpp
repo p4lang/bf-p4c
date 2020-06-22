@@ -165,9 +165,9 @@ unsigned AttachedTable::determine_meter_shiftcount(Table::Call &call, int group,
         BUG_CHECK(int(f->by_group[group]->bit(0)/128U) == word);
         return f->by_group[group]->bit(0)%128U + indirect_shiftcount();
     } else if (auto f = call.args[1].field()) {
-        return f->bit(0) + METER_ADDRESS_ZERO_PAD;
+        return f->by_group[group]->bit(0)%128U + METER_ADDRESS_ZERO_PAD;
     } else if (auto f = call.args[2].field()) {
-        return f->bit(0) + METER_ADDRESS_ZERO_PAD;
+        return f->by_group[group]->bit(0)%128U + METER_ADDRESS_ZERO_PAD;
     } else {
         return 0;
     }

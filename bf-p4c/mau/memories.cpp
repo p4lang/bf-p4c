@@ -265,21 +265,26 @@ void Memories::clear_allocation() {
 
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                         TableResourceAlloc *resources, const LayoutOption *lo,
-                         int entries, int stage_table, attached_entries_t attached_entries) {
+        TableResourceAlloc *resources, const LayoutOption *lo, const ActionData::Format::Use *af,
+        int entries, int stage_table, attached_entries_t attached_entries) {
     table_alloc *ta;
-    if (!t->gateway_only())
-        ta = new table_alloc(t, &resources->match_ixbar, &resources->table_format,
+    if (!t->gateway_only()) {
+        const IXBar::Use *match_ixbar = &resources->match_ixbar;
+        if (lo->layout.gateway && lo->layout.hash_action)
+            match_ixbar = &resources->gateway_ixbar;
+        ta = new table_alloc(t, match_ixbar, &resources->table_format, &resources->instr_mem, af,
                              &resources->memuse, lo, entries, stage_table,
                              std::move(attached_entries));
-    else
-        ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, &resources->memuse, lo,
-                             entries, stage_table, std::move(attached_entries));
+    } else {
+        ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, nullptr, nullptr,
+                             &resources->memuse, lo, entries, stage_table,
+                             std::move(attached_entries));
+    }
     LOG2("Adding table " << ta->table->name << " with " << entries << " entries");
     tables.push_back(ta);
     if (gw != nullptr)  {
-        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, &resources->memuse,
-                                      lo, -1, stage_table, {});
+        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, nullptr,
+                                      nullptr, &resources->memuse, lo, -1, stage_table, {});
         LOG2("Adding gateway table " << ta_gw->table->name << " to table "
              << ta_gw->table->name);
         ta_gw->link_table(ta);
@@ -3609,10 +3614,13 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
     for (auto *ta : payload_gws) {
         safe_vector<UniqueId> u_ids;
         UniqueId unique_id;
-        if (ta->table_link)
+        if (ta->table_link) {
             u_ids = ta->table_link->allocation_units(nullptr, true);
-        else
-            BUG("Payload requiring gw has no linked table");
+        } else {
+            BUG_CHECK(ta->layout_option->layout.gateway, "Payload requiring gateway must "
+                "have been originally a match table");
+            u_ids = ta->allocation_units(nullptr, true);
+        }
 
         for (auto u_id : u_ids) {
             auto &alloc = (*ta->memuse)[u_id];
@@ -3628,9 +3636,11 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
                 gw_found = find_unit_gw(alloc, u_id.build_name(), false);
 
 
-            uint64_t payload_value = determine_payload(ta->table_link);
+            table_alloc *payload_ta = ta->table_link ? ta->table_link : ta;
+            uint64_t payload_value = determine_payload(payload_ta);
             bool result_bus_found = find_result_bus_gw(alloc, payload_value, u_id.build_name(),
-                                                       ta->table_link);
+                                                       // Change this in a little bit
+                                                       payload_ta);
             if (!(gw_found && result_bus_found))
                 return false;
             BUG_CHECK(alloc.row.size() == 1, "Help me payload");
@@ -3761,6 +3771,12 @@ bool Memories::allocate_all_gw() {
                 break;
             }
         }
+
+        if (ta_nm->layout_option->layout.gateway) {
+            payload_gws.push_back(ta_nm);
+            linked = true;
+        }
+
         if (!linked) {
             no_match_gws.push_back(ta_nm);
         }

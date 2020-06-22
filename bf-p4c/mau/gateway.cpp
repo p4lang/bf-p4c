@@ -641,6 +641,28 @@ bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
     return false;
 }
 
+bool CollectMatchFieldsAsGateway::preorder(const IR::MAU::Table *tbl) {
+    LOG5("CollectMatchFieldsAsGateway for table " << tbl->name);
+    if (tbl->uses_gateway() || !tbl->entries_list ||
+        tbl->entries_list->entries.size() > Device::uniqueGatewayShifts() + 0U ||
+        tbl->entries_list->entries.size() > 4) {
+        // FIXME -- could deal with more entries by splitting the gateway afterwards
+        // SplitComplexGateways will do that if it is run
+        fail = true;
+    } else {
+        for (auto key : tbl->match_key) {
+            if (!key->for_match()) {
+                fail = true;
+                break; }
+            if (key->for_range()) {
+                // FIXME -- could deal with this, but need update to expression code below
+                fail = true;
+                break; }
+            visit(key->expr, "match_key"); }
+    }
+    return false;
+}
+
 bool CollectGatewayFields::preorder(const IR::Expression *e) {
     boost::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;

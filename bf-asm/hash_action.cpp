@@ -77,61 +77,6 @@ void HashActionTable::pass3() {
 template<class REGS>
 void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
     attached.write_merge_regs(regs, this, type, bus);
-    /* FIXME -- factor with ExactMatch::write_merge_regs? */
-    auto &merge = regs.rams.match.merge;
-    for (auto &st : attached.stats) {
-        int shiftcount = st->determine_shiftcount(st, 0, 0, 0);
-        if (type == 0)
-            merge.mau_stats_adr_exact_shiftcount[bus][0] = shiftcount;
-        else
-            merge.mau_stats_adr_tcam_shiftcount[bus] = shiftcount;
-        break;
-    }
-
-    for (auto &m : attached.meters) {
-        int shiftcount = m->determine_shiftcount(m, 0, 0, 0);
-        if (type == 0)
-            merge.mau_meter_adr_exact_shiftcount[bus][0] = shiftcount;
-        else
-            merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
-        break;
-    }
-
-    for (auto &s : attached.statefuls) {
-        int shiftcount = s->determine_shiftcount(s, 0, 0, 0);
-        if (type == 0)
-            merge.mau_meter_adr_exact_shiftcount[bus][0] = shiftcount;
-        else
-            merge.mau_meter_adr_tcam_shiftcount[bus] = shiftcount;
-        break;
-    }
-
-    if (instruction) {
-        if (auto field = instruction.args[0].field()) {
-            int shiftcount = field->bit(0);
-            if (type == 0)
-                merge.mau_action_instruction_adr_exact_shiftcount[bus][0] = shiftcount;
-            else
-                merge.mau_action_instruction_adr_tcam_shiftcount[bus] = shiftcount;
-        }
-    }
-
-
-    merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
-    merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
-    if (stage->tcam_delay(gress))
-        merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
-    if (options.match_compiler && action_enable >= 0 && enable_action_instruction_enable)
-        /* this seems wrong */
-        merge.mau_action_instruction_adr_mask[type][bus] |= 1U << action_enable;
-
-    //merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
-    //    1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
-    //merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4);
-    if (type) {
-        merge.tind_bus_prop[bus].tcam_piped = 1;
-        merge.tind_bus_prop[bus].thread = gress;
-        merge.tind_bus_prop[bus].enabled = 1; }
 }
 
 template<class REGS>

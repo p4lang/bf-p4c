@@ -137,6 +137,16 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 payload = kv.value.i;
             /* FIXME -- should also be able to specify payload as <action name>(<args>) */
             have_payload = kv.key.lineno;
+        } else if (kv.key == "payload_map") {
+            if (kv.value.type == tVEC) {
+                if (kv.value.vec.size > Target::GATEWAY_PAYLOAD_GROUPS())
+                    error(kv.value.lineno, "payload_map too large (limit %d)",
+                          Target::GATEWAY_PAYLOAD_GROUPS());
+                for (auto &v : kv.value.vec) {
+                    if (v == "_")
+                        payload_map.push_back(-1);
+                    else if (CHECKTYPE(v, tINT))
+                        payload_map.push_back(v.i); } }
         } else if (kv.key == "match_address") {
             if (CHECKTYPE(kv.value, tINT))
                 match_address = kv.value.i;
@@ -216,6 +226,78 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
                       vec[i].val.name()); } }
 }
 
+void GatewayTable::verify_format() {
+    if (format->log2size > 6)
+        error(format->lineno, "Gateway payload format too large (max 64 bits)");
+    format->log2size = 6;
+    format->pass1(this);
+    if (format->groups() > Target::GATEWAY_PAYLOAD_GROUPS())
+        error(format->lineno, "Too many groups for gateway payload");
+    if (payload_map.empty()) {
+        if (format->groups() == 1) {
+            payload_map.push_back(0);
+        } else {
+            payload_map = std::vector<int>(Target::GATEWAY_PAYLOAD_GROUPS(), -1);
+            int i = Target::GATEWAY_PAYLOAD_GROUPS() - 2;
+            int grp = 0;
+            for (auto &row : table) {
+                if (!row.run_table && i >= 0) {
+                    if (grp >= format->groups() && format->groups() > 1) {
+                        error(format->lineno, "Not enough groups in format for payload");
+                        grp = 0; }
+                    payload_map[i--] = grp++; } }
+            if (!miss.run_table)
+                payload_map.back() = format->groups() - 1; } }
+    for (auto pme : payload_map) {
+        if (pme < -1 || pme >= int(format->groups()))
+            error(format->lineno, "Invalid format group %d in payload_map", pme); }
+    if (match_table) {
+        if (match_table->table_type() == TERNARY) {
+            if (format->groups() > 1)
+                error(format->lineno, "Can't have mulitple payload format groups when attached "
+                      "to a ternary table");
+        } else if (!match_table->format) {
+            // ok
+        } else if (auto *srm = match_table->to<SRamMatchTable>()) {
+            int groups = std::min(format->groups(), match_table->format->groups());
+            bool err = false;
+            for (auto &field : *format) {
+                if (auto match_field = match_table->format->field(field.first)) {
+                    int match_group = -1;
+                    for (auto gw_group : payload_map) {
+                        ++match_group;
+                        if (gw_group < 0) continue;
+                        int em_group = match_group;
+                        if (!srm->word_info.empty()) {
+                            if (match_group < srm->word_info[0].size())
+                                em_group = srm->word_info[0][match_group];
+                            else
+                                em_group = -1; }
+                        if (em_group < 0) continue;
+                        if (field.second.by_group[gw_group]->bits !=
+                            match_field->by_group[em_group]->bits) {
+                            if (!err) {
+                                error(format->lineno, "Gateway format inconsistent with table "
+                                      "%s it is attached to", match_table->name());
+                                error(match_table->format->lineno, "field %s inconsistent",
+                                      field.first.c_str());
+                                err = true;
+                                break; } } }
+                } else {
+                    if (!err)
+                        error(format->lineno, "Gateway format inconsistent with table %s it is "
+                              "attached to", match_table->name());
+                    error(match_table->format->lineno, "No field %s in match table format",
+                          field.first.c_str());
+                    err = true; } } }
+    } else if (layout.size() > 1) {
+        if(layout[1].result_bus < 0 || layout[1].result_bus > 3)
+            error(layout[1].lineno, "Invalid bus %d for gateway payload",  layout[1].result_bus);
+        if ((layout[1].result_bus & 2) && format->groups() > 1)
+            error(format->lineno, "Can't have mulitple payload format groups when using "
+                  "ternary indirect bus"); }
+}
+
 void GatewayTable::pass1() {
     LOG1("### Gateway table " << name() << " pass1");
     Table::pass1();
@@ -283,30 +365,8 @@ void GatewayTable::pass1() {
             warning(line.lineno, "Trying to match on bits not in match of gateway");
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
-    if (format) {
-        if (format->size > 64)
-            error(format->lineno, "Gateway payload format too large (max 64 bits)");
-        if (match_table && match_table->format) {
-            int groups = std::min(format->groups(), match_table->format->groups());
-            bool err = false;
-            for (auto &field : *format) {
-                if (auto match_field = match_table->format->field(field.first)) {
-                    for (int grp = 0; grp < groups; ++grp) {
-                        if (field.second.by_group[grp]->bits != match_field->by_group[grp]->bits) {
-                            if (!err)
-                                error(format->lineno, "Gateway format inconsistent with table %s it"
-                                      " is attached to", match_table->name());
-                            error(match_table->format->lineno, "field %s inconsistent",
-                                  field.first.c_str());
-                            err = true;
-                            break; } }
-                } else {
-                    if (!err)
-                        error(format->lineno, "Gateway format inconsistent with table %s it is "
-                              "attached to", match_table->name());
-                    error(match_table->format->lineno, "No field %s in match table format",
-                          field.first.c_str());
-                    err = true; } } } }
+    if (format)
+        verify_format();
 }
 
 static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
@@ -411,6 +471,10 @@ static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base
     return true;
 }
 
+template<class REGS> void enable_gateway_payload_exact_shift_ovr(REGS &regs, int bus) {
+    regs.rams.match.merge.gateway_payload_exact_shift_ovr[bus/8] |= 1U << bus % 8;
+}
+
 #include "tofino/gateway.cpp"
 #if HAVE_JBAY
 #include "jbay/gateway.cpp"
@@ -449,7 +513,120 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
         // if this is only a tofino A0 issue?.
         merge.gateway_payload_match_adr[row][bus][type] = 0x7ffff;
         merge.gateway_payload_match_adr[row][bus][type^1] = 0x7ffff; }
+
+    int groups = format ? format->groups() : 1;
+    if (groups > 1 || payload_map.size() > 1) {
+        BUG_CHECK(type == 0);  // only supported on exact result busses
+        enable_gateway_payload_exact_shift_ovr(regs, row*2 + bus); }
+
+    int tcam_shift = 0;
+    if (type != 0 && format) {
+        auto match_table = get_match_table();
+        if (match_table) {
+            auto ternary_table = match_table->to<TernaryMatchTable>();
+            if (ternary_table && ternary_table->has_indirect()) {
+                tcam_shift = format->log2size-2;
+            }
+        }
+    }
+
+    if (format) {
+        if (auto *attached = get_attached()) {
+            for (auto &st : attached->stats) {
+                if (type == 0) {
+                    for (unsigned i = 0; i < payload_map.size(); ++i) {
+                        auto grp = payload_map.at(i);
+                        if (grp < 0) continue;
+                        merge.mau_stats_adr_exact_shiftcount[row*2 + bus][i]
+                            = st->determine_shiftcount(st, grp, 0, 0); }
+                } else
+                    merge.mau_stats_adr_tcam_shiftcount[row*2 + bus]
+                        = st->determine_shiftcount(st, 0, 0, tcam_shift);
+                break;
+            }
+
+            for (auto &m : attached->meters) {
+                if (type == 0) {
+                    for (unsigned i = 0; i < payload_map.size(); ++i) {
+                        auto grp = payload_map.at(i);
+                        if (grp < 0) continue;
+                        merge.mau_meter_adr_exact_shiftcount[row*2 + bus][i]
+                            = m->determine_shiftcount(m, grp, 0, 0); }
+                } else
+                    merge.mau_meter_adr_tcam_shiftcount[row*2 + bus]
+                        = m->determine_shiftcount(m, 0, 0, tcam_shift);
+                break;
+            }
+
+            for (auto &s : attached->statefuls) {
+                if (type == 0) {
+                    for (unsigned i = 0; i < payload_map.size(); ++i) {
+                        auto grp = payload_map.at(i);
+                        if (grp < 0) continue;
+                        merge.mau_meter_adr_exact_shiftcount[row*2 + bus][i]
+                            = s->determine_shiftcount(s, grp, 0, 0); }
+                } else
+                    merge.mau_meter_adr_tcam_shiftcount[row*2 + bus]
+                        = s->determine_shiftcount(s, 0, 0, tcam_shift);
+                break;
+            }
+        }
+    }
+
+    if (match_table && match_table->instruction) {
+        if (auto field = match_table->instruction.args[0].field()) {
+            if (type == 0) {
+                for (unsigned i = 0; i < payload_map.size(); ++i) {
+                    auto grp = payload_map.at(i);
+                    if (grp < 0) continue;
+                    merge.mau_action_instruction_adr_exact_shiftcount[row*2 + bus][i]
+                        = field->by_group[grp]->bit(0); }
+            } else {
+                merge.mau_action_instruction_adr_tcam_shiftcount[row*2 + bus] = field->bit(0)
+                                                                                + tcam_shift;
+            }
+        }
+    } else if (auto *action = format ? format->field("action") : nullptr) {
+        if (type == 0) {
+            for (unsigned i = 0; i < payload_map.size(); ++i) {
+                auto grp = payload_map.at(i);
+                if (grp < 0) continue;
+                merge.mau_action_instruction_adr_exact_shiftcount[row*2 + bus][i]
+                    = action->by_group[grp]->bit(0); }
+        } else {
+            merge.mau_action_instruction_adr_tcam_shiftcount[row*2 + bus] = action->bit(0)
+                                                                             + tcam_shift;
+        }
+    }
+
+    if (format && format->immed) {
+        if (type == 0) {
+            for (unsigned i = 0; i < payload_map.size(); ++i) {
+                auto grp = payload_map.at(i);
+                if (grp < 0) continue;
+                merge.mau_immediate_data_exact_shiftcount[row*2 + bus][i]
+                    = format->immed->by_group[grp]->bit(0); }
+        } else {
+            merge.mau_immediate_data_tcam_shiftcount[row*2 + bus] = format->immed->bit(0)
+                                                                    + tcam_shift;
+        }
+        // FIXME -- may be redundant witehr writing this for the match table,
+        // but should always be consistent
+        merge.mau_immediate_data_mask[type][row*2 + bus] = bitMask(format->immed_size);
+        merge.mau_payload_shifter_enable[type][row*2 + bus].immediate_data_payload_shifter_en = 1;
+    }
+
+    if (type) {
+        merge.tind_bus_prop[row*2 + bus].tcam_piped = 1;
+        merge.tind_bus_prop[row*2 + bus].thread = gress;
+        merge.tind_bus_prop[row*2 + bus].enabled = 1;
+    } else {
+        merge.exact_match_phys_result_en[row/4U] |= 1U << (row%4U * 2 + bus);
+        merge.exact_match_phys_result_thread[row/4U] |= gress << (row%4U * 2 + bus);
+        if (stage->tcam_delay(gress))
+            merge.exact_match_phys_result_delay[row/4U] |= 1U << (row%4U * 2 + bus); }
 }
+
 
 template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
 

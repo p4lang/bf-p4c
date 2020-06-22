@@ -944,6 +944,7 @@ protected:
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
+    friend class GatewayTable;      /* Gateway needs to examine word group details for compat */
     bitvec version_nibble_mask;
     // Which hash groups are assigned to the hash_function_number in the hash_function json node
     // This is to coordinate with the hash_function_id in the ways
@@ -1179,6 +1180,7 @@ public:
     Call &instruction_call() override { return indirect ? indirect->instruction: instruction; }
     int memunit(const int r, const int c) const override { return r + c*12; }
     bool is_ternary() override { return true; }
+    bool has_indirect() { return indirect; }
     int hit_next_size() const override {
         if (indirect && indirect->hit_next.size() > 0)
             return indirect->hit_next.size();
@@ -1431,6 +1433,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
     uint64_t                    payload;
     int                         have_payload = -1;
+    std::vector<int>            payload_map;
     int                         match_address = -1;
     int                         gw_unit = -1;
     enum range_match_t { NONE, DC_2BIT, DC_4BIT }
@@ -1479,6 +1482,8 @@ public:
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }
     const GatewayTable *get_gateway() const override { return this; }
+    AttachedTables *get_attached() const override {
+        return match_table ? match_table->get_attached() : 0; }
     SelectionTable *get_selector() const override {
         return match_table ? match_table->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
@@ -1489,6 +1494,7 @@ public:
     unsigned input_use() const;
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
+    void verify_format();
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",

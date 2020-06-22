@@ -81,6 +81,16 @@ class CollectGatewayFields : public Inspector {
     friend std::ostream &operator<<(std::ostream &, const CollectGatewayFields &);
 };
 
+class CollectMatchFieldsAsGateway : public CollectGatewayFields {
+    bool        fail;
+    bool preorder(const IR::MAU::Table *tbl) override;
+
+ public:
+    explicit CollectMatchFieldsAsGateway(const PhvInfo &phv)
+    : CollectGatewayFields(phv), fail(false) {}
+    explicit operator bool() { return !fail; }
+};
+
 class GatewayRangeMatch : public MauModifier {
     const PhvInfo       &phv;
     void postorder(IR::MAU::Table *) override;

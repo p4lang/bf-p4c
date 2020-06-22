@@ -155,6 +155,12 @@ struct TableFormat {
         /// The byte and individual bits to be ghosted. Ghost bits should be the
         /// same for all match entries.
         std::map<IXBar::Use::Byte, bitvec> ghost_bits;
+        bitvec immed_mask;
+
+        IR::MAU::PfeLocation stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+        IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+        IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
+
 
         void clear() {
             ghost_bits.clear();
@@ -165,13 +171,11 @@ struct TableFormat {
             ixbar_group_per_width.clear();
             result_bus_needed.clear();
             avail_sb_bytes.clear();
+            immed_mask.clear();
+            stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+            meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
+            meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
         }
-
-        bitvec immed_mask;
-
-        IR::MAU::PfeLocation stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-        IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-        IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
 
         bool has_overhead() const {
             if (match_groups.empty())

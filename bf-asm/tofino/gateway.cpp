@@ -1,5 +1,10 @@
 /* mau gateway template specializations for tofino -- #included directly in gateway.cpp */
 
+template<> void enable_gateway_payload_exact_shift_ovr(Target::Tofino::mau_regs &regs, int bus) {
+    // Not supported on tofino
+    BUG();
+}
+
 template<> void GatewayTable::write_next_table_regs(Target::Tofino::mau_regs &regs) {
     auto &merge = regs.rams.match.merge;
     int idx = 3;

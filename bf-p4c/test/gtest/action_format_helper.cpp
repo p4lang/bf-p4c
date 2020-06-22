@@ -1,4 +1,5 @@
 #include "bf-p4c/mau/action_format.h"
+#include "bf-p4c/phv/phv.h"
 #include "lib/log.h"
 #include "gtest/gtest.h"
 
@@ -756,12 +757,142 @@ void RandomNumberRamSection() {
     }
 }
 
-
 TEST(ActionFormatHelper, RandomNumberTests) {
     RandomNumberSingleAction();
     RandomNumberMultipleActions();
     RandomNumberOverlaps();
     RandomNumberRamSection();
+}
+
+
+void StaticEntryStandardOperation() {
+    ActionData::ALUOperation alu_op(PHV::Container(PHV::Type::H, 0), ActionData::DEPOSIT_FIELD);
+    ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 7});
+    ActionData::ALUParameter ap1(arg1, {0, 7});
+    ActionData::Argument *arg2 = new ActionData::Argument("arg2", {0, 7});
+    ActionData::ALUParameter ap2(arg2, {8, 15});
+    alu_op.add_param(ap1);
+    alu_op.add_param(ap2);
+
+    bitvec param1_value;
+    param1_value.setrange(0, 2);
+    param1_value.setrange(3, 3);
+
+    bitvec static_op = alu_op.static_entry_of_arg(arg1, param1_value);
+    EXPECT_EQ(static_op, param1_value);
+
+    ActionData::Argument *arg1_split = new ActionData::Argument("arg1", {2, 7});
+    static_op = alu_op.static_entry_of_arg(arg1_split, param1_value);
+    EXPECT_EQ(static_op, param1_value << 2);
+
+    bitvec param2_value;
+    param2_value.setrange(1, 3);
+    param2_value.setrange(4, 1);
+
+    static_op = alu_op.static_entry_of_arg(arg2, param2_value);
+    EXPECT_EQ(static_op, param2_value << 8);
+
+    auto alu_op2 = alu_op.add_right_shift(4, nullptr);
+    static_op = alu_op2->static_entry_of_arg(arg1, param1_value);
+    EXPECT_EQ(static_op, bitvec(0xb003));
+
+    static_op = alu_op2->static_entry_of_arg(arg2, param2_value);
+    EXPECT_EQ(static_op, bitvec(0x01e0));
+
+    static_op = alu_op2->static_entry_of_arg(arg1_split, param1_value);
+    EXPECT_EQ(static_op, bitvec(0xc00e));
+}
+
+void StaticEntryOneParameterMultipleTimes() {
+    ActionData::ALUOperation alu_op(PHV::Container(PHV::Type::H, 0), ActionData::DEPOSIT_FIELD);
+    ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 2});
+    ActionData::ALUParameter ap1(arg1, {0, 2});
+    ActionData::ALUParameter ap2(arg1, {5, 7});
+    ActionData::ALUParameter ap3(arg1, {11, 13});
+    alu_op.add_param(ap1);
+    alu_op.add_param(ap2);
+    alu_op.add_param(ap3);
+
+    bitvec param1_value(0x6);
+    ActionData::Argument *arg1_split = new ActionData::Argument("arg1", {1, 1});
+    EXPECT_EQ(alu_op.static_entry_of_arg(arg1, param1_value), bitvec(0x30c6));
+    EXPECT_EQ(alu_op.static_entry_of_arg(arg1_split, bitvec(0x1)), bitvec(0x1042));
+
+    auto alu_op2 = alu_op.add_right_shift(2, nullptr);
+    EXPECT_EQ(alu_op2->static_entry_of_arg(arg1, param1_value), bitvec(0x8c31));
+    EXPECT_EQ(alu_op2->static_entry_of_arg(arg1_split, bitvec(0x1)), bitvec(0x8410));
+}
+
+void StaticEntryConstants() {
+    ActionData::ALUOperation alu_op(PHV::Container(PHV::Type::H, 0), ActionData::DEPOSIT_FIELD);
+    ActionData::Constant *con1 = new ActionData::Constant(bitvec(0x56), 8);
+    ActionData::Constant *con2 = new ActionData::Constant(bitvec(0x9), 4);
+    ActionData::Constant *con3 = new ActionData::Constant(bitvec(0xb), 4);
+    ActionData::ALUParameter ap1(con1, {4, 11});
+    ActionData::ALUParameter ap2(con2, {0, 3});
+    ActionData::ALUParameter ap3(con3, {12, 15});
+    alu_op.add_param(ap1);
+    alu_op.add_param(ap2);
+    alu_op.add_param(ap3);
+
+    EXPECT_EQ(alu_op.static_entry_of_constants(), bitvec(0xb569));
+
+    auto alu_op2 = alu_op.add_right_shift(2, nullptr);
+    EXPECT_EQ(alu_op2->static_entry_of_constants(), bitvec(0x6d5a));
+}
+
+void StaticEntryBitmaskedSet() {
+    ActionData::ALUOperation alu_op(PHV::Container(PHV::Type::H, 0), ActionData::BITMASKED_SET);
+    ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 2});
+    ActionData::Constant *con1 = new ActionData::Constant(bitvec(0xf), 4);
+    ActionData::ALUParameter ap1(arg1, {0, 2});
+    ActionData::ALUParameter ap2(con1, {5, 9});
+    ActionData::ALUParameter ap3(arg1, {11, 13});
+    alu_op.add_param(ap1);
+    alu_op.add_param(ap2);
+    alu_op.add_param(ap3);
+
+    ActionData::ALUParameter mask_param(new ActionData::Constant(bitvec(0x3be7), 16), {0, 15});
+    alu_op.add_mask_param(mask_param);
+
+    EXPECT_EQ(alu_op.static_entry_of_arg(arg1, bitvec(0x7)), bitvec(0x3807));
+    EXPECT_EQ(alu_op.static_entry_of_constants(), bitvec(0x3be701e0));
+}
+
+void StaticEntryMaskParams() {
+    ActionData::ALUOperation alu_op(PHV::Container(PHV::Type::H, 0), ActionData::BITMASKED_SET);
+    ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 2});
+    ActionData::ALUParameter ap1(arg1, {0, 2});
+    ActionData::ALUParameter ap2(arg1, {11, 13});
+
+    alu_op.add_param(ap1);
+    alu_op.add_param(ap2);
+
+    ActionData::Argument *mask_param = new ActionData::Argument("cond", {0, 0});
+    ActionData::ALUParameter mp1(mask_param, {0, 0});
+    ActionData::ALUParameter mp2(mask_param, {1, 1});
+    ActionData::ALUParameter mp3(mask_param, {2, 2});
+    ActionData::ALUParameter mp4(mask_param, {11, 11});
+    ActionData::ALUParameter mp5(mask_param, {12, 12});
+    ActionData::ALUParameter mp6(mask_param, {13, 13});
+
+    alu_op.add_mask_param(mp1);
+    alu_op.add_mask_param(mp2);
+    alu_op.add_mask_param(mp3);
+    alu_op.add_mask_param(mp4);
+    alu_op.add_mask_param(mp5);
+    alu_op.add_mask_param(mp6);
+
+    EXPECT_EQ(alu_op.static_entry_of_arg(arg1, bitvec(0x7)), bitvec(0x3807));
+    EXPECT_EQ(alu_op.static_entry_of_arg(mask_param, bitvec(0x1)), bitvec(0x38070000));
+}
+
+TEST(ActionFormatHelper, StaticEntryTests) {
+    StaticEntryStandardOperation();
+    StaticEntryOneParameterMultipleTimes();
+    StaticEntryConstants();
+    StaticEntryBitmaskedSet();
+    StaticEntryMaskParams();
 }
 
 }  // namespace Test

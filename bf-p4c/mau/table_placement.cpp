@@ -800,10 +800,12 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         // Always Run Tables cannot be counted in the logical table check
         current_mem.add_table(p->table, p->gw, &p->resources, p->use.preferred(),
-                              p->entries, p->stage_split, p->attached_entries);
+                              p->use.preferred_action_format(), p->entries, p->stage_split,
+                              p->attached_entries);
         p->resources.memuse.clear(); }
     current_mem.add_table(next->table, next->gw, &next->resources, next->use.preferred(),
-                          next->entries, next->stage_split, next->attached_entries);
+                          next->use.preferred_action_format(), next->entries, next->stage_split,
+                          next->attached_entries);
     next->resources.memuse.clear();
 
     if (!current_mem.allocate_all()) {

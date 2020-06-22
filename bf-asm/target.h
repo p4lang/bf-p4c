@@ -51,6 +51,7 @@
     M(int, MATCH_BYTE_16BIT_PAIRS) \
     M(int, DEPARSER_CHECKSUM_UNITS) M(int, DEPARSER_MAX_POV_BYTES) \
     M(int, DEPARSER_CONSTANTS) \
+    M(int, GATEWAY_PAYLOAD_GROUPS) \
     M(int, INSTR_SRC2_BITS) \
     M(int, LONG_BRANCH_TAGS) \
     M(int, MAU_BASE_DELAY) M(int, MAU_BASE_PREDICATION_DELAY) \
@@ -147,6 +148,7 @@ class Target::Tofino : public Target {
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_FD_ENTRIES = 192,
         END_OF_PIPE = 0xff,
+        GATEWAY_PAYLOAD_GROUPS = 1,
         SUPPORT_TRUE_EOP = 0,
         INSTR_SRC2_BITS = 4,
         LONG_BRANCH_TAGS = 0,
@@ -259,6 +261,7 @@ class Target::JBay : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         END_OF_PIPE = 0x1ff,
+        GATEWAY_PAYLOAD_GROUPS = 5,
         SUPPORT_TRUE_EOP = 1,
         INSTR_SRC2_BITS = 5,
         LONG_BRANCH_TAGS = 8,
@@ -404,6 +407,7 @@ class Target::Cloudbreak : public Target {
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
         END_OF_PIPE = 0x1ff,
+        GATEWAY_PAYLOAD_GROUPS = 5,
         INSTR_SRC2_BITS = 5,
         LONG_BRANCH_TAGS = 8,
         MAU_BASE_DELAY = 23,

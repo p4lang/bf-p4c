@@ -2504,18 +2504,25 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
 }
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
-                         bool second_try) {
+                         const LayoutOption *lo, bool second_try) {
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     alloc.gw_search_bus_bytes = 0;
     int hash_bus_bits = 0;
     bool xor_required = false;
-    CollectGatewayFields collect(phv);
-    tbl->apply(collect);
-    if (collect.info.empty()) return true;
+    CollectGatewayFields *collect;
+
+    if (lo && (lo->layout.hash_action && lo->layout.gateway)) {
+        collect = new CollectMatchFieldsAsGateway(phv);
+    } else {
+        collect = new CollectGatewayFields(phv);
+    }
+
+    tbl->apply(*collect);
+    if (collect->info.empty()) return true;
 
     ContByteConversion map_alloc;
 
-    for (auto &info : collect.info) {
+    for (auto &info : collect->info) {
         int flags = 0;
 
         if (!info.second.xor_with.empty()) {
@@ -2527,9 +2534,9 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             hash_bus_bits += info.first.size();
         }
         cstring aliasSourceName;
-        if (collect.info_to_uses.count(&info.second)) {
+        if (collect->info_to_uses.count(&info.second)) {
             LOG5("Found gateway alias source name");
-            aliasSourceName = collect.info_to_uses[&info.second];
+            aliasSourceName = collect->info_to_uses[&info.second];
         }
         if (aliasSourceName)
             add_use(map_alloc, info.first.field(), phv, tbl,
@@ -2555,17 +2562,17 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     if (!find_alloc(alloc.use, false, xbar_alloced, hm_reqs)) {
         alloc.clear();
         return false; }
-    if (!collect.compute_offsets()) {
+    if (!collect->compute_offsets()) {
         alloc.clear();
         LOG3("collect.compute_offsets failed?");
         return false; }
 
-    if (collect.bits) {
+    if (collect->bits) {
         alloc.gw_hash_group = true;
     }
-    if (collect.bytes > 0) {
+    if (collect->bytes > 0) {
         alloc.gw_search_bus = true;
-        alloc.gw_search_bus_bytes = collect.bytes;
+        alloc.gw_search_bus_bytes = collect->bytes;
         if (xor_required)
             alloc.gw_search_bus_bytes += GATEWAY_SEARCH_BYTES;
     }
@@ -2573,7 +2580,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     alloc.type = Use::GATEWAY;
     alloc.used_by = tbl->name;
 
-    if (collect.bits > 0) {
+    if (collect->bits > 0) {
         // Per use hash table information vs. potential shared across the hash function
         // information.  Local_hash_table_input is per use, hash_table_input is for all
         // hashtables in the group
@@ -2587,7 +2594,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         /* FIXME -- don't need use all hash tables that we're using the ixbar for -- just those
          * tables for bytes we want to put through the hash table to get into the upper gw bits */
         unsigned avail = 0;
-        unsigned need = (1U << collect.bits) - 1;
+        unsigned need = (1U << collect->bits) - 1;
         for (auto j : Range(0, IXBar::get_hash_single_bits() - 1)) {
             if ((hash_single_bit_inuse[j] & hf_hash_table_input) == 0) {
                 avail |= (1U << j);
@@ -2599,22 +2606,22 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         }
         if (((avail >> shift) & need) != need) {
             alloc.clear();
-            LOG3("failed to find " << collect.bits << " continuous nibble aligned bits in 0x" <<
+            LOG3("failed to find " << collect->bits << " continuous nibble aligned bits in 0x" <<
                  hex(avail));
             return false; }
-        for (auto &info : collect.info) {
+        for (auto &info : collect->info) {
             for (auto &offset : info.second.offsets) {
                 if (offset.first < 32) continue;
                 offset.first += shift;
                 alloc.bit_use.emplace_back(info.first.field()->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
         for (auto ht : bitvec(local_hash_table_input))
-            for (int i = 0; i < collect.bits; ++i)
+            for (int i = 0; i < collect->bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
         for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input))
-            for (int i = 0; i < collect.bits; ++i)
+            for (int i = 0; i < collect->bits; ++i)
                 hash_single_bit_use[ht][shift + i] = "$collision";
-        for (int i = 0; i < collect.bits; ++i)
+        for (int i = 0; i < collect->bits; ++i)
             hash_single_bit_inuse[shift + i] |= hf_hash_table_input;
         alloc.hash_table_inputs[hash_group] = local_hash_table_input;
         hash_group_use[hash_group] |= local_hash_table_input;
@@ -4186,8 +4193,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
                 alloc.clear_ixbar();
                 return false; } } }
 
-    if (!allocGateway(tbl, phv, alloc.gateway_ixbar, false) &&
-        !allocGateway(tbl, phv, alloc.gateway_ixbar, true)) {
+    if (!allocGateway(tbl, phv, alloc.gateway_ixbar, lo, false) &&
+        !allocGateway(tbl, phv, alloc.gateway_ixbar, lo, true)) {
         alloc.clear_ixbar();
         return false; }
 

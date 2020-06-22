@@ -544,6 +544,8 @@ class ALUOperation {
     ParameterPositions parameter_positions() const;
     std::string parameter_positions_to_string() const;
     cstring wrapped_constant() const;
+    bitvec static_entry_of_arg(const Argument *arg, bitvec value) const;
+    bitvec static_entry_of_constants() const;
 
     ///> @seealso comments on create_meter_color_RamSection
     template<typename T> bool has_param() const {

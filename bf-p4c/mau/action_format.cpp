@@ -1104,6 +1104,65 @@ cstring ALUOperation::wrapped_constant() const {
     return rv;
 }
 
+/**
+ * Given an Argument, and its corresponding static value, calculate the action data
+ * RAM value of this ALUOperation that correspond to that argument. 
+ */
+bitvec ALUOperation::static_entry_of_arg(const Argument *arg, bitvec value) const {
+    bitvec my_op;
+    for (auto param : _params) {
+        auto overlap = param.param->overlap(arg, true, nullptr, nullptr);
+        if (overlap == nullptr)
+            continue;
+
+        auto param_arg = param.param->to<Argument>();
+        le_bitrange overlap_range = overlap->to<Argument>()->param_field();
+        bitvec arg_val = value.getslice(overlap_range.lo - arg->param_field().lo,
+                                        overlap_range.size());
+        arg_val <<= param.phv_bits.lo + (overlap_range.lo - param_arg->param_field().lo);
+        my_op |= arg_val;
+        delete overlap;
+    }
+    my_op = my_op.rotate_right_copy(0, _right_shift, _container.size());
+
+    bitvec mask_op;
+    for (auto param : _mask_params) {
+        auto overlap = param.param->overlap(arg, true, nullptr, nullptr);
+        if (overlap == nullptr)
+            continue;
+        le_bitrange overlap_range = overlap->to<Argument>()->param_field();
+        bitvec arg_val = value.getslice(overlap_range.lo, overlap_range.size());
+        arg_val <<= param.phv_bits.lo;
+        mask_op |= arg_val;
+        delete overlap;
+    }
+    return my_op | (mask_op << _container.size());
+}
+
+/**
+ * Given an ALUOperation, return the action data RAM value of all of the constants saved
+ * on the RAM. 
+ */
+bitvec ALUOperation::static_entry_of_constants() const {
+    bitvec my_op;
+    for (auto param : _params) {
+        const Constant *c = param.param->to<Constant>();
+        if (c == nullptr)
+            continue;
+        my_op |= c->value() <<= param.phv_bits.lo;
+    }
+    my_op = my_op.rotate_right_copy(0, _right_shift, _container.size());
+
+    bitvec mask_op;
+    for (auto param : _mask_params) {
+        const Constant *c = param.param->to<Constant>();
+        if (c == nullptr)
+            continue;
+        mask_op |= c->value() <<= param.phv_bits.lo;
+    }
+    return my_op | (mask_op << _container.size());
+}
+
 int ALUOperation::hw_right_shift() const {
     BUG_CHECK(is_right_shift_from_hw(), "Illegal call of hw_right_shift");
         return 0;
@@ -1130,6 +1189,7 @@ int ALUOperation::hw_right_shift() const {
     }
     return calculated_right_shift;
 }
+
 
 /**
  * Meter Color is always output to bits 24..31 of immediate.  There are multiple implications
