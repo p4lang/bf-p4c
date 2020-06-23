@@ -11,6 +11,57 @@ namespace MAU {
 void Table::visit_children(Visitor& v) { visit_children(this, v); }
 void Table::visit_children(Visitor& v) const { visit_children(this, v); }
 
+/**
+ * The potential control flow(s) through an IR::MAU::Table object are quite complex, which
+ * causes its visit_children methods to be quite complex as well.
+ *
+ * An IR::MAU::Table object corresponds to a Tofino hardware table, which includes a
+ * match table (which may hit or miss) and a gateway that may override the match table
+ * or not.  After the match or gateway result, there may be an action to run which can
+ * trigger attached tables, or attached tables may be triggered unconditionally.
+ * Finally, a next table may trigger (enable) other tables.
+ *
+ * Conceptually, the match and gateway portions of the table run simultaneously.  If a
+ * gateway row matches, the highest priority (first) matching gateway_row determines the
+ * result -- either allow the match table to act normally, or override it, specifying
+ * both a payload (action to run) and a next table.  If all the gateway rows miss, the
+ * final gateway miss result controls whether the match table runs or is overridden.  A
+ * table with no gateway rows has a notional gateway with a miss action that does not
+ * override the match table (so it runs normally)
+ *
+ * note that all gateway override actions (icluding the gateway "miss" action) count as
+ * hit actions (follow the hit pathway in match central).
+ *
+ * To follow this control flow in visit_children, we first visit all the gateway expressions
+ * since they are evaluated simultaneously.  In theory, if a high priority row matches, the
+ * later rows don't actually matter, so we could visit them sequentially (treating the later
+ * ones as dead when the earlier ones match), but we currently do not (fixing this could allow
+ * more/better dead code elimination).
+ *
+ * We then find the gateway rows that override the match table and save them in the
+ * payload_info_t saved state.  We then visit the match keys (so match keys will be treated
+ * as dead on paths that involve gateway overrides -- even though the match is actually
+ * evaluated simultaneously as the gateway in the hardware, it is safe to treat as dead as
+ * the match result will be completely ignored if the gateway overrides.
+ *
+ * After the visiting the match key, we visit each action with union of state from the gateway
+ * payloads and match result that can trigger that action.  After all actions have been
+ * visited, we visit the next tables with the union of the actions that can trigger each
+ * next, which may be from gateway override, match action chain, or match hit/miss.
+ *
+ * finally, we visit all the attached tables.  This is incorrect for the flow order, so flow
+ * analysis through attached tables will not be correct (P4C-734)
+ */
+
+struct Table::payload_info_t {
+    struct info_t {
+        Visitor                 *flow_state;
+        std::set<cstring>       tags;   // gateway tags that run this action
+    };
+    std::map<cstring, info_t>   action_info;
+    Visitor                     *post_payload = nullptr;
+};
+
 template<class THIS>
 void Table::visit_children(THIS* self, Visitor& v) {
     // We visit the table in a way that reflects its control flow: at branches, we visit with
@@ -41,16 +92,21 @@ void Table::visit_children(THIS* self, Visitor& v) {
     // payload, and on whether the table has a match component.
     bool have_gateway_payload = self->uses_gateway_payload();
     bool have_match_table = !self->gateway_only();
+    payload_info_t      payload_info;
 
     if (have_gateway_payload && have_match_table) {
         auto& gateway_visitor = v.flow_clone();
-        visit_gateway_inhibited(self, gateway_visitor);
-        visit_match_table(self, v);
+        visit_gateway_inhibited(self, gateway_visitor, payload_info);
+        visit_match_table(self, v, payload_info);
         v.flow_merge(gateway_visitor);
     } else if (have_gateway_payload) {
-        visit_gateway_inhibited(self, v);
+        visit_gateway_inhibited(self, v, payload_info);
+        BUG_CHECK(payload_info.action_info.empty(),
+                  "non-empty action info on conditional_gateway_only");
+        BUG_CHECK(payload_info.post_payload == nullptr || payload_info.post_payload == &v,
+                  "inconsistent post-payload for conditional_gateway_only");
     } else if (have_match_table) {
-        visit_match_table(self, v);
+        visit_match_table(self, v, payload_info);
     } else {
         // Have neither a gateway payload nor a match table. This table is a no-op; fall through to
         // attached tables.
@@ -66,10 +122,7 @@ void Table::visit_children(THIS* self, Visitor& v) {
 }
 
 template<class THIS>
-void Table::visit_gateway_inhibited(THIS* self, Visitor& v) {
-    // Visit gateway payload.
-    v.visit(self->gateway_payload, "gateway_payload");
-
+void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payload_info) {
     // Now, visit actions for when the table is gateway-inhibited.
 
     // Save the control-flow state. We use v to visit the first execution path through the gateway
@@ -79,8 +132,11 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v) {
 
     // This is the visitor we will use to visit the various gateway actions. Initially, this is
     // v. After the first execution path, this becomes nullptr, and will be lazily instantiated
-    // with a copy of "saved", as needed.
+    // with a copy of "saved", as needed.  However, if there's a match table, we need to save
+    // v to visit the match table actions with.
     Visitor* current = &v;
+    if (!self->gateway_only())
+        current = nullptr;
 
     std::set<cstring> gw_tags_seen;
     bool fallen_through = false;
@@ -90,23 +146,50 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v) {
 
         gw_tags_seen.emplace(tag);
 
-        if (self->next.count(tag)) {
+        // Each row of the gateway may have a next table, which would inhibit the match table
+        // from running.  When a gateway inhibits, it can possibly run an action.  This is the
+        // action mapped in the gateway payload, from next to action
+        if (self->gateway_payload.count(tag)) {
+            cstring act_name = self->gateway_payload.at(tag).first;
             if (!current) current = &saved->flow_clone();
-            current->visit(self->next.at(tag), tag);
-            if (current != &v) v.flow_merge(*current);
+            for (auto &con : self->gateway_payload.at(tag).second)
+                current->visit(con, "gateway_payload");
+            if (payload_info.action_info.count(act_name))
+                payload_info.action_info.at(act_name).flow_state->flow_merge(*current);
+            else
+                payload_info.action_info[act_name].flow_state = current;
+            payload_info.action_info.at(act_name).tags.insert(tag);
             current = nullptr;
-
             continue;
         }
 
-        // No matching action, so fall through from "saved" if we haven't done so already.
+        if (self->next.count(tag)) {
+            if (!current) current = &saved->flow_clone();
+            current->visit(self->next.at(tag), tag);
+            if (payload_info.post_payload) {
+                if (current != payload_info.post_payload)
+                    payload_info.post_payload->flow_merge(*current);
+            } else {
+                payload_info.post_payload = current;
+            }
+            current = nullptr;
+            continue;
+        }
+
+        // No matching action or next, so fall through from "saved" if we haven't done so already.
         if (!fallen_through) {
             if (current) {
                 // "current" hasn't been used yet, so just consume it.
+                BUG_CHECK(self->gateway_only(), "inconsistent gateway_only");
+                BUG_CHECK(!payload_info.post_payload, "inconsitent gateway post-payload");
+                BUG_CHECK(current == &v, "inconsitent gateway current");
+                payload_info.post_payload = current;
                 current = nullptr;
             } else {
-                v.flow_merge(*saved);
-            }
+                if (payload_info.post_payload)
+                    payload_info.post_payload->flow_merge(*saved);
+                else
+                    payload_info.post_payload = &saved->flow_clone(); }
 
             fallen_through = true;
         }
@@ -114,7 +197,7 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v) {
 }
 
 template<class THIS>
-void Table::visit_match_table(THIS* self, Visitor& v) {
+void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_info) {
     // Visit match keys.
     self->match_key.visit_children(v);
 
@@ -130,11 +213,14 @@ void Table::visit_match_table(THIS* self, Visitor& v) {
 
     // Handle all exiting actions. For these actions, we don't want to merge the control-flow back
     // into v.
-    for (auto& action : Values(self->actions)) {
+    for (auto& kv : self->actions) {
+        auto action_name = kv.first;
+        auto& action = kv.second;
         if (!action->exitAction) continue;
-
         auto exit_visitor = &saved->flow_clone();
-        exit_visitor->visit(action);
+        if (payload_info.action_info.count(action_name))
+            exit_visitor->flow_merge(*payload_info.action_info.at(action_name).flow_state);
+        exit_visitor->visit(action, "actions");
         exit_visitor->flow_merge_global_to("-EXIT-");
     }
 
@@ -161,11 +247,26 @@ void Table::visit_match_table(THIS* self, Visitor& v) {
 
         if (action->exitAction) continue;
 
+        auto *pinfo = ::getref(payload_info.action_info, action_name);
+        if (!action->hit_allowed && !action->default_allowed) {
+            // can't be invoked from the match table
+            if (pinfo)
+                current = pinfo->flow_state;
+            else
+                continue;
+        } else {
+            if (!current) current = &saved->flow_clone();
+            if (pinfo)
+                current->flow_merge(*pinfo->flow_state); }
+
         // Visit the action.
-        if (!current) current = &saved->flow_clone();
-        current->visit(action);
+        current->visit(action, "actions");
 
         // Figure out which keys in the next_visitors table need updating.
+        if (pinfo) {
+            for (auto tag : pinfo->tags) {
+                BUG_CHECK(next_visitors.count(tag) == 0, "gateway tag duplication");
+                next_visitors[tag] = &current->flow_clone(); } }
 
         // Can separate table using hit/miss from tables using action chaining, as in P4
         // semantically, a table can not use both hit/miss and action chaining. Potentially if that
@@ -232,6 +333,8 @@ void Table::visit_match_table(THIS* self, Visitor& v) {
     // Handle any deferred merges.
     for (auto to_merge : unmerged_table_chain_visitors)
         v.flow_merge(*to_merge);
+    if (payload_info.post_payload && payload_info.post_payload != &v)
+        v.flow_merge(*payload_info.post_payload);
 
     // Visit $try_next_stage, if it exists.
     if (self->next.count("$try_next_stage")) {
@@ -695,7 +798,7 @@ void IR::MAU::Table::remove_gateway() {
     gateway_rows.clear();
     gateway_name = cstring();
     gateway_cond = cstring();
-    gateway_payload = nullptr;
+    gateway_payload.clear();
 }
 
 cstring IR::MAU::Action::externalName() const {

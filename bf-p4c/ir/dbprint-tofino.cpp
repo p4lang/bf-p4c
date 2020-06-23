@@ -12,6 +12,8 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         out << '[' << gress << ' ' << hex(*global_id()) << ']';
     if (dbgetflags(out) & Brief)
         return;
+    int prec = getprec(out);
+    out << setprec(Prec_Low);
     for (auto &gw : gateway_rows) {
         out << endl << "gw: ";
         if (gw.first)
@@ -19,6 +21,14 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         else
             out << "(miss)";
         out << " => " << (gw.second ? gw.second : "run table"); }
+    for (auto &payload : gateway_payload) {
+        out << endl << "payload " << payload.first << " => " << payload.second.first;
+        const char *sep = "(";
+        for (auto arg : payload.second.second) {
+            out << sep << arg;
+            sep = " ,"; }
+        if (*sep == ' ') out << ")"; }
+    out << setprec(prec);
     if (layout.match_width_bits || layout.overhead_bits) {
         out << endl << "{ " << (layout.gateway ? "G" : "")
             << (layout.ternary ? "T" : "E") << " " << layout.match_width_bits << "+"

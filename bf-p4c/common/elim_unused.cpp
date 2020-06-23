@@ -104,7 +104,11 @@ class ElimUnused::Tables : public MauTransform {
         if (!table->getAnnotation(IR::Annotation::hiddenAnnotation, val)) return table;
 
         // Don't remove the table unless its gateway payload is a no-op.
-        if (table->uses_gateway_payload() && !isNoOp(table->gateway_payload)) return table;
+        if (table->uses_gateway_payload()) {
+            for (auto payload_row : Values(table->gateway_payload)) {
+                if (!isNoOp(table->actions.at(payload_row.first))) return table;
+            }
+        }
 
         // Don't remove the table unless all its match actions are empty.
         if (!table->gateway_only()) {

@@ -32,19 +32,29 @@ class Table : BFN::Unit {
     int                                         stage_split = -1;               // ignored for ==?
     int                                         logical_split = -1;             // ignored for ==?
     int                                         logical_tables_in_stage = -1;   // ignored for ==?
-    safe_vector<std::pair<Expression, cstring>> gateway_rows;
-    /** each gateway_row is an expression for a single row of the gateway,
+    /**
+     * each gateway_row is an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
      * if the match_table should run.  The last row (only) may have a NULL
      * expression for 'always' -- corresponding to the gateway miss action
      * (taken if no gateway rows match).  If this last row NULL expression
-     * is not present, the default action is to run the table. */
-    NullOK Action                               gateway_payload;
-    /* if the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
+     * is not present, the default action is to run the table.
+     */
+    safe_vector<std::pair<Expression, cstring>> gateway_rows;
+
+    /**
+     * if the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
      * can also run an action directly, via the payload.  All rows must be the same action on
-     * tofino, but tofino2 allows different actions for different rows, so `gateway_payload`
-     * should be moved into the `gateway_rows` info (tuple, instead of pair?)  We currently never
-     * set this, so it is only needed for future optimizations */
+     * tofino, but tofino2 allows different actions for different rows.
+     *
+     * The gateway payload key value pair is:
+     *     the key corresponds and gateway_row.second which inhibits the table.  These also
+     *     appear as the keys in the next map.
+     *     the value is a pair of two items.  The first item is the key of the corresponding
+     *     action in the actions map.  The vector of Constants is the value of parameters
+     *     of the action
+     */
+    std::map<cstring, std::pair<cstring, std::vector<Constant>>> gateway_payload;
 
     // match_table never visited, keys are in match_key, default action also in action
     NullOK IR::P4Table                          match_table;
@@ -334,7 +344,7 @@ class Table : BFN::Unit {
                 "always-run action %s is ill-formed: cannot have match keys", name);
             BUG_CHECK(next.empty(),
                 "always-run action %s is ill-formed: cannot have next tables", name);
-            BUG_CHECK(gateway_payload == nullptr,
+            BUG_CHECK(gateway_payload.empty(),
                 "always-run action %s is ill-formed: cannot have gateway payloads", name);
 
             // Also ensure we just have a single action in the table.
@@ -390,17 +400,18 @@ class Table : BFN::Unit {
     template<class THIS>
     static void visit_children(THIS*, Visitor& v);
 
+    struct payload_info_t; // data to pass between the below helper methods
     /// Helper for visit_children. Visits the match table for when it is not
     /// gateway-inhibited.
     // We use a template to obtain polymorphism on the constness of `this`.
     template<class THIS>
-    static void visit_match_table(THIS* self, Visitor& v);
+    static void visit_match_table(THIS* self, Visitor& v, payload_info_t &);
 
     /// Helper for visit_children. Visits the gateway payload, for when the
     /// match table is gateway-inhibited.
     // We use a template to obtain polymorphism on the constness of `this`.
     template<class THIS>
-    static void visit_gateway_inhibited(THIS* self, Visitor& v);
+    static void visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &);
 #end
 #apply
 }

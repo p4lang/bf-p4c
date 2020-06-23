@@ -625,4 +625,74 @@ apply {
     runTest(test, tablesToAdd);
 }
 
+TEST_F(AddAlwaysRunTest, ConditionalTest) {
+    auto test = createAddAlwaysRunTestCase(
+        P4_SOURCE(P4Headers::NONE, R"(
+    action act1_1() {}
+    action act1_2() {}
+    action act1_3() {}
+    action act1_4() {}
+    action act1_5() {}
+
+    table t1 {
+        key = {
+            headers.h2.f2 : exact;
+        }
+        actions = {
+            act1_1;
+            act1_2;
+            act1_3;
+            act1_4;
+            act1_5;
+        }
+        size = 8192;
+    }
+
+    action act2() {}
+
+    table t2 {
+        key = {
+            headers.h2.b1 : exact;
+        }
+        actions  = {
+            act2;
+        }
+        size = 8192;
+    }
+
+    action act3() {}
+
+    table t3 {
+        key = {
+            headers.h2.f1 : exact;
+        }
+        actions = {
+            act3;
+        }
+        size = 65536;
+    }
+
+apply {
+    if (headers.h2.f1 == 0) {
+        switch (t1.apply().action_run) {
+            act1_1: {
+                t2.apply();
+            }
+        }
+    }
+    t3.apply();
+}
+    )"));
+
+    ASSERT_TRUE(test);
+
+    auto tables = getTables(test);
+    auto* to_insert = new IR::MAU::Table("always_run", INGRESS);
+    ordered_map<gress_t, ConstraintMap> tablesToAdd;
+    tablesToAdd[INGRESS][to_insert].first.insert(tables.at(INGRESS).at("mau.t1"));
+    tablesToAdd[INGRESS][to_insert].second.insert(tables.at(INGRESS).at("mau.t2"));
+
+    runTest(test, tablesToAdd);
+}
+
 }  // namespace Test
