@@ -168,7 +168,7 @@ using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
 // each pair of ingress/egress, and run z3 solver over the global set of
 // constraints over all pairs of ingress&egress pipelines. Therefore, it
 // is necessary to maintain z3 context as this level.
-class PackFlexibleHeaders : public Logging::PassManager {
+class PackFlexibleHeaders : public PassManager {
     std::vector<const IR::BFN::Pipe*> pipe;
     SymBitMatrix mutually_exclusive_field_ids;
     PhvInfo phv;
