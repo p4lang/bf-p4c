@@ -1148,7 +1148,7 @@ p4c_add_xfail_reason("tofino"
 
 # Failed after bridged packing, fix with a follow-up PR
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
 )
 

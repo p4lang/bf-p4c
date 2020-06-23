@@ -4356,7 +4356,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
         && hash_dist_groups[hash_dist_48_bit_unit] != -1)
         BUG("Conflicting hash distribution unit groups");
     hash_dist_groups[hash_dist_48_bit_unit] = hash_dist_alloc.hash_group();
-    hash_used_per_function[hash_dist_alloc.hash_group()] = hash_dist_alloc.galois_matrix_bits();
+    hash_used_per_function[hash_dist_alloc.hash_group()] |= hash_dist_alloc.galois_matrix_bits();
 }
 
 void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
