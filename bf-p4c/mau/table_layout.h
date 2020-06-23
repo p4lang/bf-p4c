@@ -45,45 +45,64 @@ class LayoutOption {
 };
 
 class LayoutChoices {
+    PhvInfo &phv;                       // may need to add TempVars as part of action/table
+    SplitAttachedInfo &att_info;        // rewrites for splitting
+    using key_t = std::pair<cstring, ActionData::FormatType_t>;
+    template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
+    cache_t<LayoutOption>               cache_layout_options;
+    cache_t<ActionData::Format::Use>    cache_action_formats;
+    void compute_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type);
+    void compute_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type);
+
+    void add_hash_action_option(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout,
+            ActionData::FormatType_t format_type, bool &hash_action_only);
+    void setup_exact_match(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout_proto,
+            ActionData::FormatType_t format_type, int action_data_bytes_in_table,
+            int immediate_bits, int index);
+    static void setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+            ActionData::FormatType_t format_type);
+    void setup_layout_option_no_match(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
+    void setup_layout_options(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
+    void setup_ternary_layout_options(const IR::MAU::Table *tbl,
+            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
+
  public:
-    using FormatType_t = ActionData::FormatType_t;
-    using LayoutOptionsPerType = std::map<ActionData::FormatType_t, safe_vector<LayoutOption>>;
-    using ActionFormatsPerType =
-            std::map<ActionData::FormatType_t, safe_vector<ActionData::Format::Use>>;
-
-    std::map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
-    std::map<cstring, LayoutOptionsPerType> total_layout_options;
-    std::map<cstring, ActionFormatsPerType> total_action_formats;
-
-    safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t,
-                                                 ActionData::FormatType_t type) const {
-        safe_vector<LayoutOption> empty;
-        if (t == nullptr)
-            return empty;
-        if (total_layout_options.count(t->name) == 0)
-            return empty;
-        auto &lo_by_type = total_layout_options.at(t->name);
-        if (lo_by_type.count(type) == 0)
-            return empty;
-        return lo_by_type.at(type);
+    const safe_vector<LayoutOption> &
+    get_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type) {
+        BUG_CHECK(t, "null table pointer");
+        auto key = std::make_pair(t->name, type);
+        if (!cache_layout_options.count(key))
+            compute_layout_options(t, type);
+        return cache_layout_options.at(key);
     }
 
-    safe_vector<ActionData::Format::Use> get_action_formats(const IR::MAU::Table *t,
-                                                            ActionData::FormatType_t type) const;
+    const safe_vector<ActionData::Format::Use> &
+    get_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type) {
+        BUG_CHECK(t, "null table pointer");
+        auto key = std::make_pair(t->name, type);
+        if (!cache_action_formats.count(key))
+            compute_action_formats(t, type);
+        return cache_action_formats.at(key);
+    }
+
+    // meter output formats are stored here, but they are essentially completely independent
+    // of the layout choices.
+    std::map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
     MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t) const {
-        MeterALU::Format::Use empty;
-        if (t == nullptr)
-            return empty;
-        else if (total_meter_output_format.find(t->name) == total_meter_output_format.end())
-            return empty;
+        if (!t || !total_meter_output_format.count(t->name))
+            return {};
         return total_meter_output_format.at(t->name);
     }
 
     void clear() {
-        total_layout_options.clear();
-        total_action_formats.clear();
+        cache_layout_options.clear();
+        cache_action_formats.clear();
         total_meter_output_format.clear();
     }
+
+    LayoutChoices(PhvInfo &p, SplitAttachedInfo &a) : phv(p), att_info(a) {}
 };
 
 extern std::ostream &operator<<(std::ostream &, ActionData::FormatType_t);
@@ -175,86 +194,13 @@ class MeterColorMapramAddress : public PassManager {
     }
 };
 
-class DoTableLayout : public MauModifier, Backtrack {
-    // In order to know how many field sections can be packed together into the same byte
-    struct MatchByteKey {
-        cstring name;
-        int lo;
-        int ixbar_multiplier;
-        int match_multiplier;
-
-        MatchByteKey(cstring n, int l, int im, int mm)
-            : name(n), lo(l), ixbar_multiplier(im), match_multiplier(mm) { }
-
-        bool operator<(const MatchByteKey &mbk) const {
-            if (name != mbk.name) return name < mbk.name;
-            if (lo != mbk.lo) return lo < mbk.lo;
-            if (ixbar_multiplier < mbk.ixbar_multiplier)
-                return ixbar_multiplier < mbk.ixbar_multiplier;
-            if (match_multiplier < mbk.match_multiplier)
-                return match_multiplier < mbk.match_multiplier;
-            return false;
-        }
-    };
-
-    static constexpr int MIN_PACK = 1;
-    static constexpr int MAX_PACK = 9;
-    // FIXME: Technically this is 5, but need to update version bit information
-    static constexpr int MAX_ENTRIES_PER_ROW = 5;
-
-    PhvInfo &phv;
-    LayoutChoices &lc;
-    SplitAttachedInfo &att_info;
-    bool alloc_done = false;
-    int get_hit_actions(const IR::MAU::Table *tbl);
-    profile_t init_apply(const IR::Node *root) override;
-    bool backtrack(trigger &trig) override;
-    bool preorder(IR::MAU::Table *tbl) override;
-    bool preorder(IR::MAU::Action *act) override;
-    bool preorder(IR::MAU::TableKey *read) override;
-    bool preorder(IR::MAU::Selector *sel) override;
-    void check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-        cstring &partition_index);
-    void check_for_proxy_hash(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
-    bool check_for_versioning(const IR::MAU::Table *tbl);
-    void setup_instr_and_next(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
-    void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
-    void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
-    void setup_exact_match(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
-        ActionData::FormatType_t format_type, int action_data_bytes_in_table,
-        int immediate_bits, int index);
-    void setup_layout_options(IR::MAU::Table *tbl,
-        safe_vector<IR::MAU::Table::Layout> &layouts_per_type);
-    void setup_action_layout(IR::MAU::Table *tbl);
-    void setup_ternary_layout_options(IR::MAU::Table *tbl,
-        safe_vector<IR::MAU::Table::Layout> &layouts_per_type);
-    void setup_layout_option_no_match(IR::MAU::Table *tbl,
-        safe_vector<IR::MAU::Table::Layout> &layouts_per_type);
-    void setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-        ActionData::FormatType_t format_type);
-    void attach_random_seed(IR::MAU::Table *tbl);
-    bool can_be_hash_action(IR::MAU::Table *tbl, std::string &reason);
-    void add_hash_action_option(IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
-        ActionData::FormatType_t format_type, bool &hash_action_only);
-    void determine_byte_impacts(const IR::MAU::Table *tbl, IR::MAU::Table::Layout &layout,
-        std::map<MatchByteKey, safe_vector<le_bitrange>> &byte_impacts, bool &partition_found,
-        cstring partition_index);
-
- public:
-    explicit DoTableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sai)
-        : phv(p), lc(l), att_info(sai) {}
-    static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
-    static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
-                                cstring &partition_index, const PhvInfo& phv);
-};
-
 class ValidateActionProfileFormat : public MauInspector {
-    const LayoutChoices &lc;
+    LayoutChoices &lc;
 
     bool preorder(const IR::MAU::ActionData *) override;
 
  public:
-    explicit ValidateActionProfileFormat(const LayoutChoices &l) : lc(l) { visitDagOnce = false; }
+    explicit ValidateActionProfileFormat(LayoutChoices &l) : lc(l) { visitDagOnce = false; }
 };
 
 class ValidateTableSize : public MauInspector {
@@ -296,6 +242,9 @@ class TableLayout : public PassManager {
     profile_t init_apply(const IR::Node *root) override;
  public:
     TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia);
+    static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
+    static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                                cstring &partition_index, const PhvInfo& phv);
 };
 
 /// Run after TablePlacement to assign LR(t) values for counters.

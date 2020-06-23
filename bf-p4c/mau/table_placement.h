@@ -26,7 +26,7 @@ class TablePlacement : public PassManager {
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
     PhvInfo &phv;
-    const LayoutChoices &lc;
+    LayoutChoices &lc;
     const SharedIndirectAttachedAnalysis &siaa;
     CalculateNextTableProp ntp;
     ControlPathwaysToTable con_paths;
@@ -64,7 +64,7 @@ class TablePlacement : public PassManager {
     class SetupInfo;
 
     TablePlacement(const BFN_Options &, const DependencyGraph *, const TablesMutuallyExclusive &,
-                   PhvInfo &, const LayoutChoices &, const SharedIndirectAttachedAnalysis &,
+                   PhvInfo &, LayoutChoices &, const SharedIndirectAttachedAnalysis &,
                    SplitAttachedInfo &, TableSummary &);
 
     struct RedoTablePlacement : public Backtrack::trigger {

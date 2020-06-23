@@ -144,7 +144,7 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     const TablesMutuallyExclusive &mutex;
     const IgnoreTableDeps &ignore;
     const ActionMutuallyExclusive &action_mutex;
-    const LayoutChoices &lc;
+    LayoutChoices &lc;
     SymBitMatrix _mutex_through_ignore;
 
     std::map<const IR::MAU::Table *, int>    table_ids;
@@ -174,7 +174,7 @@ class SharedIndirectAttachedAnalysis : public MauInspector {
     // for gtest
     bool if_table_share_attach(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m,
-         const IgnoreTableDeps &i, const ActionMutuallyExclusive &a, const LayoutChoices  &lc) :
+         const IgnoreTableDeps &i, const ActionMutuallyExclusive &a, LayoutChoices  &lc) :
          mutex(m), ignore(i), action_mutex(a), lc(lc) {}
 };
 #endif /* BF_P4C_MAU_TABLE_MUTEX_H_ */

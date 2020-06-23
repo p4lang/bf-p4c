@@ -891,7 +891,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
-        attached_entries_t &attached_entries, const LayoutChoices *lc, bool prev_placed,
+        attached_entries_t &attached_entries, LayoutChoices *lc, bool prev_placed,
         bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();

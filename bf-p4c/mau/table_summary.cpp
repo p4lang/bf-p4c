@@ -246,21 +246,6 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
 
     int prev_stage = 0;
     for (auto *t : Values(ts.order)) {
-        safe_vector<LayoutOption> lo;
-        safe_vector<ActionData::Format::Use> action_formats;
-        StageUseEstimate::attached_entries_t attached_entries;
-        LayoutChoices lc;
-        if (t->layout.ternary || t->layout.no_match_rams() || t->ways.empty())
-            lo.emplace_back(t->layout, 0);
-        else
-            lo.emplace_back(t->layout, t->ways[0], 0);
-        action_formats.push_back(t->resources->action_format);
-        lc.total_layout_options[t->name][ActionData::NORMAL] = lo;
-        lc.total_action_formats[t->name][ActionData::NORMAL] = action_formats;
-
-        // int entries = t->layout.entries;
-        // StageUseEstimate use(t, entries, attached_entries, &lc, false, true);
-
         int curr_stage = t->stage();
         if (curr_stage != prev_stage)
             tp.addSep();

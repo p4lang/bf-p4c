@@ -586,10 +586,11 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     IgnoreTableDeps ignore;
     TablesMutuallyExclusive mutex;
     ActionMutuallyExclusive action_mutex;
-    LayoutChoices lc;
-    SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex, lc);
     SymBitMatrix s_mutex;
     PhvInfo phv(s_mutex);
+    SplitAttachedInfo att_info;
+    LayoutChoices lc(phv, att_info);
+    SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex, lc);
     auto options = new BFN_Options();
     auto *post_pm_pipe = runInitialPassManager(test->pipe, *options, &phv);
     post_pm_pipe = post_pm_pipe->apply(mutex);

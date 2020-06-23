@@ -109,7 +109,7 @@ class SplitAttachedInfo : public PassManager {
     // are unique and stable, so use them instead.
     ordered_map<cstring, ordered_set<const IR::MAU::Table *>> attached_to_table_map;
     ordered_map<cstring, const IR::MAU::AttachedMemory *> table_to_attached_map;
-    ordered_map<cstring, bitvec> types_per_attached;
+    // ordered_map<cstring, bitvec> types_per_attached;  -- unused
 
     struct IndexTemp {
         const IR::TempVar *index = nullptr;
@@ -140,7 +140,7 @@ class SplitAttachedInfo : public PassManager {
         auto rv = PassManager::init_apply(node);
         attached_to_table_map.clear();
         table_to_attached_map.clear();
-        types_per_attached.clear();
+        // types_per_attached.clear();
         address_info_per_table.clear();
         return rv;
     }
@@ -193,18 +193,24 @@ class SplitAttachedInfo : public PassManager {
         return table_to_attached_map.at(tbl->name);
     }
 
+ private:
     int addr_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
     bool enable_to_phv_on_split(const IR::MAU::Table *tbl) const;
     int type_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
 
+ public:
+    // public so ActionData::Format can call it (why?)
     const IR::MAU::Instruction *pre_split_addr_instr(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
+
+ private:
     const IR::MAU::Instruction *pre_split_enable_instr(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Instruction *pre_split_type_instr(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
-    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
 
+ public:
+    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
     const IR::MAU::Action *create_pre_split_action(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Action *create_post_split_action(const IR::MAU::Action *act,

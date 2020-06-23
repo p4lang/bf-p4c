@@ -2985,7 +2985,7 @@ void dump(const ordered_set<const DecidePlacement::GroupPlace *> &work) {
 
 TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
-                               const LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
+                               LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
                                SplitAttachedInfo &sia, TableSummary &summary_)
 : options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d), att_info(sia),
   summary(summary_) {

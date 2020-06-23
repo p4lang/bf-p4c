@@ -168,7 +168,7 @@ bool SplitAttachedInfo::EnableAndTypesOnActions::preorder(const IR::MAU::Action 
             addr_info.types_on_miss.setbit(meter_type);
         if (!act->miss_only())
             addr_info.types_on_hit.setbit(meter_type);
-        self.types_per_attached[at->name].setbit(meter_type);
+        // self.types_per_attached[at->name].setbit(meter_type);
     }
     return false;
 }

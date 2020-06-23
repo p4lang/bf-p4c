@@ -21,14 +21,14 @@ void TernaryMatchKeyConstraints::end_apply() {
 bool TernaryMatchKeyConstraints::isATCAM(IR::MAU::Table *tbl) const {
     cstring partition_index;
     IR::MAU::Table::Layout layout;
-    DoTableLayout::check_for_atcam(layout, tbl, partition_index, phv);
+    TableLayout::check_for_atcam(layout, tbl, partition_index, phv);
     return layout.atcam;
 }
 
 bool TernaryMatchKeyConstraints::isTernary(IR::MAU::Table *tbl) const {
     if (!tbl->match_table) return false;
     IR::MAU::Table::Layout layout;
-    DoTableLayout::check_for_ternary(layout, tbl);
+    TableLayout::check_for_ternary(layout, tbl);
     return layout.ternary;
 }
 
