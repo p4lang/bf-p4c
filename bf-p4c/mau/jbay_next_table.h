@@ -160,10 +160,10 @@ class JbayNextTable : public PassManager, public NextTable {
     }
 
     /*===================================Data gathered by Prop===================================*/
-    std::map<int, Memories>                      mems;       // Map from stage to tables
-    std::map<int, int>                           stage_id;   // Map from stage to next open LID
-    std::set<LBUse>                              lbus;       // Long branches that are needed
-    std::map<UniqueId, std::set<UniqueId>>       dest_src;   // Map from dest. to set of srcs
+    std::map<int, Memories>                         mems;       // Map from stage to tables
+    std::map<int, int>                              stage_id;   // Map from stage to next open LID
+    ordered_set<LBUse>                              lbus;       // Long branches that are needed
+    ordered_map<UniqueId, ordered_set<UniqueId>>    dest_src;   // Map from dest. to set of srcs
     // Map from dest. to containing seqs
     std::map<UniqueId, ordered_set<const IR::MAU::TableSeq *>> dest_ts;
     std::set<UniqueId>                           al_runs;    // Set of tables that always run
