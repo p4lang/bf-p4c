@@ -4014,7 +4014,7 @@ void IXBar::XBarHashDist::immediate_inputs() {
  * and uses it as context required for the HashDistPostExpandAllocReq creation.
  */
 void IXBar::XBarHashDist::hash_action() {
-    if (tbl->gateway_only())
+    if (tbl->conditional_gateway_only())
         return;
     if (!lo->layout.hash_action)
         return;
@@ -4115,7 +4115,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-    if (!tbl->gateway_only() && !lo->layout.no_match_rams() && !lo->layout.atcam &&
+    if (!tbl->conditional_gateway_only() && !lo->layout.no_match_rams() && !lo->layout.atcam &&
         !lo->layout.proxy_hash) {
         bool ternary = tbl->layout.ternary;
         safe_vector<IXBar::Use::Byte *> alloced;

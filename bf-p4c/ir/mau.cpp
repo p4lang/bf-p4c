@@ -91,7 +91,7 @@ void Table::visit_children(THIS* self, Visitor& v) {
     // Now, we fall into one of four cases, depending on whether the table uses its gateway
     // payload, and on whether the table has a match component.
     bool have_gateway_payload = self->uses_gateway_payload();
-    bool have_match_table = !self->gateway_only();
+    bool have_match_table = !self->conditional_gateway_only();
     payload_info_t      payload_info;
 
     if (have_gateway_payload && have_match_table) {
@@ -135,7 +135,7 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
     // with a copy of "saved", as needed.  However, if there's a match table, we need to save
     // v to visit the match table actions with.
     Visitor* current = &v;
-    if (!self->gateway_only())
+    if (!self->conditional_gateway_only())
         current = nullptr;
 
     std::set<cstring> gw_tags_seen;
@@ -180,7 +180,7 @@ void Table::visit_gateway_inhibited(THIS* self, Visitor& v, payload_info_t &payl
         if (!fallen_through) {
             if (current) {
                 // "current" hasn't been used yet, so just consume it.
-                BUG_CHECK(self->gateway_only(), "inconsistent gateway_only");
+                BUG_CHECK(self->conditional_gateway_only(), "inconsistent gateway_only");
                 BUG_CHECK(!payload_info.post_payload, "inconsitent gateway post-payload");
                 BUG_CHECK(current == &v, "inconsitent gateway current");
                 payload_info.post_payload = current;
@@ -367,6 +367,21 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
            layout == a.layout &&
            ways == a.ways &&
            resources == a.resources;
+}
+
+cstring IR::MAU::Table::get_table_type_string() const {
+    cstring tbl_type = "gateway";
+    bool no_match_hit = layout.no_match_hit_path() && !conditional_gateway_only();
+    if (!conditional_gateway_only())
+        tbl_type = layout.ternary || layout.no_match_miss_path()
+                   ? "ternary_match" : "exact_match";
+    if (layout.proxy_hash)
+        tbl_type = "proxy_hash";
+    if (no_match_hit)
+        tbl_type = "hash_action";
+    if (layout.atcam)
+        tbl_type = "atcam_match";
+    return tbl_type;
 }
 
 IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table::Layout &a) {
@@ -566,6 +581,25 @@ int IR::MAU::Table::action_next_paths() const {
     return action_paths;
 }
 
+/**
+ * If the gateway is a standard conditional and does not use the gateway payload to
+ * run an action
+ */
+bool IR::MAU::Table::conditional_gateway_only() const {
+    return match_key.empty() && actions.empty();
+}
+
+/**
+ * This will return true if the table is either a conditional gateway or a gateway that
+ * is enabling a payload, for a hash action table
+ */
+bool IR::MAU::Table::is_a_gateway_table_only() const {
+    if (conditional_gateway_only()) return true;
+    if (match_key.empty() && !gateway_payload.empty())
+        return true;
+    return false;
+}
+
 bool IR::MAU::Table::getAnnotation(cstring name, int &val) const {
     if (!match_table) return false;
     if (auto annot = match_table->annotations->getSingle(name)) {
@@ -646,7 +680,7 @@ std::set<cstring> IR::MAU::Table::get_placement_priority_string() const {
 }
 
 int IR::MAU::Table::get_provided_stage(const int *init_stage, int *req_entries) const {
-    if (gateway_only()) {
+    if (conditional_gateway_only()) {
         int min_stage = -1;
         for (auto *seq : Values(next)) {
             int i = -1;

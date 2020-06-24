@@ -107,7 +107,7 @@ bool FindInitializationNode::summarizeUseDefs(
             // Only insert the current table as the dominator node if it is a non-gateway table.
             bool addReadNode = false;
             LOG3("\t\t\tFound table use: " << t->name);
-            if (!t->gateway_only()) {
+            if (!t->conditional_gateway_only()) {
                 addReadNode = true;
                 // If the field is marked no-init, then we do not actually need to consider the
                 // dominator of the field because no initialization will be required for that field.
@@ -485,7 +485,7 @@ FindInitializationNode::getInitializationCandidates(
         const ordered_set<const IR::MAU::Table*> tables = metaLiveMap.getTablesInStage(i);
         for (const auto* tbl : tables) {
             // Cannot initialize at gateway table.
-            if (tbl->gateway_only()) continue;
+            if (tbl->conditional_gateway_only()) continue;
             // Do not add group dominator a second time.
             if (tbl == groupDominator) continue;
             if (!domTree.strictlyDominates(tbl, groupDominator)) continue;

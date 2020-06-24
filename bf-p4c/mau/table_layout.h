@@ -4,6 +4,7 @@
 #include "bf-p4c/mau/action_format.h"
 #include "bf-p4c/mau/attached_output.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/payload_gateway.h"
 #include "lib/safe_vector.h"
 
 class LayoutOption {
@@ -47,6 +48,11 @@ class LayoutOption {
 class LayoutChoices {
     PhvInfo &phv;                       // may need to add TempVars as part of action/table
     SplitAttachedInfo &att_info;        // rewrites for splitting
+
+ public:
+    FindPayloadCandidates fpc;
+
+ private:
     using key_t = std::pair<cstring, ActionData::FormatType_t>;
     template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
     cache_t<LayoutOption>               cache_layout_options;
@@ -100,9 +106,12 @@ class LayoutChoices {
         cache_layout_options.clear();
         cache_action_formats.clear();
         total_meter_output_format.clear();
+        fpc.clear();
     }
 
-    LayoutChoices(PhvInfo &p, SplitAttachedInfo &a) : phv(p), att_info(a) {}
+    LayoutChoices(PhvInfo &p, SplitAttachedInfo &a)
+        : phv(p), att_info(a), fpc(phv) {}
+    void add_payload_gw_layout(const IR::MAU::Table *tbl, const LayoutOption &base_option);
 };
 
 extern std::ostream &operator<<(std::ostream &, ActionData::FormatType_t);

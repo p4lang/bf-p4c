@@ -302,6 +302,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/mau_alloc.cpp
   mau/mau_power.cpp
   mau/memories.cpp
+  mau/payload_gateway.cpp
   mau/reduction_or.cpp
   mau/resource_estimate.cpp
   mau/resource.cpp
@@ -356,6 +357,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/mau_power.h
   mau/memories.h
   mau/next_table.h
+  mau/payload_gateway.h
   mau/push_pop.h
   mau/reduction_or.h
   mau/remove_noop_gateway.h

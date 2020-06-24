@@ -11,7 +11,8 @@ class RemoveNoopGateway : public MauTransform {
     const IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *seq) override {
         if (seq->size() < 1) return seq;
         auto *last = seq->back();
-        if (!last->gateway_only() || last->gateway_rows.size() != 1 || last->next.size() != 1) {
+        if (!last->conditional_gateway_only() || last->gateway_rows.size() != 1
+            || last->next.size() != 1) {
             // not a noop gateway
             return seq; }
         if (seq->size() == 1) {

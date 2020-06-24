@@ -2614,7 +2614,16 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             }
             NextTableSet nxt_tbl;
             if (line.second) {
-                if (no_match) {
+                if (!tbl->gateway_payload.empty()) {
+                    if (tbl->gateway_payload.count(line.second)) {
+                        nxt_tbl = next_for(tbl, line.second);
+                        out << next_for(tbl, line.second);
+                    } else {
+                        out << "run_table";
+                        gw_miss = nxt_tbl = next_for(tbl, line.second);
+                        gw_can_miss = true;
+                    }
+                } else if (no_match) {
                     out << "run_table";
                     gw_miss = nxt_tbl = next_for(tbl, line.second);
                     gw_can_miss = true;
@@ -2623,7 +2632,11 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                     out << next_for(tbl, line.second);
                 }
             } else {
-                if (no_match) {
+                if (!tbl->gateway_payload.empty()) {
+                   out << "run_table";
+                   gw_miss = nxt_tbl = next_for(tbl, "$miss");
+                   gw_can_miss = true;
+                } else if (no_match) {
                     out << next_hit;
                     nxt_tbl = next_hit;
                 } else {
@@ -3285,7 +3298,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     auto unique_id = tbl->unique_id();
     LOG1("Emitting table " << unique_id);
-    bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
+    bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->conditional_gateway_only();
     TableMatch fmt(*this, phv, tbl);
     indent_t indent(1);
 
@@ -3297,7 +3310,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         out << indent << "always_run: true" << std::endl;
     }
 
-    if (!tbl->gateway_only()) {
+    if (!tbl->conditional_gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         if (!tbl->layout.no_match_miss_path()) {
             emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
@@ -3348,9 +3361,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
         --indent;
     }
 
-    if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->gateway_only()) {
+    if (tbl->uses_gateway() || tbl->layout.no_match_hit_path() || tbl->conditional_gateway_only()) {
         indent_t gw_indent = indent;
-        if (!tbl->gateway_only())
+        if (!tbl->conditional_gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         out << gw_indent << "name: " <<  tbl->build_gateway_name() << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, nullptr,
@@ -3378,7 +3391,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
             gw_can_miss = emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else
             emit_no_match_gateway(out, gw_indent, tbl);
-        if (tbl->gateway_only())
+        if (tbl->conditional_gateway_only())
             return;
     }
 
@@ -3661,7 +3674,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         --indent;
     }
 
-    if (!tbl->gateway_only()) {
+    if (!tbl->conditional_gateway_only()) {
         bool found_def_act = false;
         for (auto act : Values(tbl->actions)) {
             if (!act->init_default) continue;

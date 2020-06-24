@@ -107,7 +107,7 @@ void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
         return;
     }
 
-    BUG_CHECK(!tbl->gateway_only(),
+    BUG_CHECK(!tbl->conditional_gateway_only(),
               "A Table object corresponding to a table at the P4 source level is unexpectedly "
               "gateway-only: %1%",
               tbl->externalName());
@@ -187,9 +187,9 @@ bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::Table* tabl
     if (self.duplicate_tables.find(table1) == self.duplicate_tables.find(table2)) return true;
 
     if (table1->match_table != table2->match_table) return false;
-    if (table1->gateway_only() != table2->gateway_only()) return false;
+    if (table1->conditional_gateway_only() != table2->conditional_gateway_only()) return false;
 
-    if (table1->gateway_only()) {
+    if (table1->conditional_gateway_only()) {
         // Check gateway rows for equivalence.
         if (table1->gateway_rows.size() != table2->gateway_rows.size()) return false;
 

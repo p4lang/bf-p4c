@@ -44,8 +44,7 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         ia.address_bits = std::max(ceil_log2(am->size), 10);
     } else if (ba->addr_location == IR::MAU::AddrLocation::HASH) {
         from_hash = true;
-        // FIXME need to set the address size to something to not ignore it!
-        ia.address_bits = std::max(ceil_log2(am->size), 10);
+        ia.hash_bits = std::max(ceil_log2(am->size), 10);
     }
 
     if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD) {
@@ -138,6 +137,7 @@ bool SplitAttachedInfo::ValidateAttachedOfAllTables::preorder(const IR::MAU::Tab
 
     auto &addr_info = self.address_info_per_table[tbl->name];
     addr_info.address_bits = ia[ValidateAttachedOfSingleTable::METER].address_bits;
+    addr_info.hash_bits = ia[ValidateAttachedOfSingleTable::METER].hash_bits;
     return true;
 }
 
@@ -177,7 +177,7 @@ int SplitAttachedInfo::addr_bits_to_phv_on_split(const IR::MAU::Table *tbl) cons
     if (address_info_per_table.count(tbl->name) == 0)
         return false;
     auto &addr_info = address_info_per_table.at(tbl->name);
-    return addr_info.address_bits;
+    return std::max(addr_info.address_bits, addr_info.hash_bits);
 }
 
 bool SplitAttachedInfo::enable_to_phv_on_split(const IR::MAU::Table *tbl) const {

@@ -41,6 +41,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "mismatch from expected(.*) at byte .*"
+    # Needs some fixes to ternary static entries/gateway payload for TCAM
+    extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
+    )
+
 endif() # HARLYN_STF_tofino
 
 # Tests that run packets:
@@ -234,6 +240,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1697,7 +1704,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
 
 # p4c-2581

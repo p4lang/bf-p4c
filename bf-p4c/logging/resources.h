@@ -34,7 +34,7 @@ class Visualization : public Inspector {
     bool preorder(const IR::MAU::Table *tbl) override {
         cstring tblName = "";
         if (!tbl->match_table) {
-            if (!tbl->gateway_only()) {
+            if (!tbl->conditional_gateway_only()) {
                 LOG1("Can't find name for table" << *tbl);
                 return true;
             } else {

@@ -422,7 +422,7 @@ TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *
         node.min_stage = stage_info.at(tbl).min_stage;
         node.dep_chain = stage_info.at(tbl).dep_stages_control_anti;
     }
-    if (tbl->gateway_only()) {
+    if (tbl->conditional_gateway_only()) {
         type = "condition";
         nodeTable.condition = tbl->gateway_cond;
     } else {
@@ -522,7 +522,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
             nodeTable.name = tbl->name;
         node.min_stage = stage_info.at(tbl).min_stage;
         node.dep_chain = stage_info.at(tbl).dep_stages_control_anti;
-        if (tbl->gateway_only()) {
+        if (tbl->conditional_gateway_only()) {
             type = "condition";
             nodeTable.condition = tbl->gateway_cond;
         } else {

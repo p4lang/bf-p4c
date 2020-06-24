@@ -18,7 +18,7 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
         return t; }
 #endif
     if (!t->uses_gateway()) return t;
-    if (!t->gateway_only()) return t;
+    if (!t->conditional_gateway_only()) return t;
     assert(t->actions.empty());
     assert(t->attached.empty());
     auto rv = new IR::Vector<IR::MAU::Table>();

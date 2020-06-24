@@ -71,6 +71,25 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
     return MauModifier::init_apply(root);
 }
 
+void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
+        const LayoutOption &base_option) {
+    LayoutOption lo;
+    lo.layout.gateway = true;
+    lo.layout.hash_action = true;
+    lo.layout.ternary = false;
+    lo.layout.action_data_bytes = base_option.layout.action_data_bytes;
+    lo.layout.action_data_bytes_in_table = base_option.layout.action_data_bytes_in_table;
+    lo.layout.meter_addr = base_option.layout.meter_addr;
+    lo.layout.stats_addr = base_option.layout.stats_addr;
+    lo.layout.action_addr = base_option.layout.action_addr;
+    lo.layout.immediate_bits = base_option.layout.immediate_bits;
+    lo.action_format_index = base_option.action_format_index;
+    lo.way.match_groups = tbl->entries_list->entries.size();
+    lo.way.width = 1;
+    lo.layout.overhead_bits = base_option.layout.overhead_bits * lo.way.match_groups;
+    cache_layout_options[std::make_pair(tbl->name, ActionData::NORMAL)].push_back(lo);
+}
+
 std::ostream &operator<<(std::ostream &out, ActionData::FormatType_t type) {
     switch (type) {
     case ActionData::NORMAL: out << "NORMAL"; break;
@@ -704,6 +723,10 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
     layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
     layout.overhead_bits += use.immediate_bits();
     LayoutOption lo(layout, uses.size() - 1);
+    if (layout.hash_action) {
+        lo.way.match_groups = 1;
+        lo.way.width = 1;
+    }
     cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
 }
 
@@ -838,6 +861,8 @@ void LayoutChoices::add_hash_action_option(const IR::MAU::Table *tbl,
     ha_layout.action_data_bytes_in_table = use.bytes_per_loc[ActionData::ACTION_DATA_TABLE];
     ha_layout.hash_action = true;
     LayoutOption lo(ha_layout, 0);
+    lo.way.match_groups = 1;
+    lo.way.width = 1;
     cache_layout_options[std::make_pair(tbl->name, format_type)].push_back(lo);
 }
 
@@ -952,6 +977,9 @@ void LayoutChoices::compute_layout_options(const IR::MAU::Table *tbl,
     } else {
         setup_layout_options(tbl, layout, format_type);
     }
+
+    if (format_type == ActionData::NORMAL)
+        fpc.add_option(tbl, *this);
 }
 
 

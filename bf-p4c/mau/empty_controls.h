@@ -8,14 +8,14 @@ class RemoveEmptyControls : public MauTransform {
         if (tbl->next.count("$default")) {
             auto def = tbl->next.at("$default");
             if (def->tables.empty())
-                tbl->next.erase("$default"); }
-        else {
+                tbl->next.erase("$default");
+        } else {
             for (auto it = tbl->next.begin(); it != tbl->next.end();) {
                 if (it->second->tables.empty())
                     it = tbl->next.erase(it);
                 else
                     ++it; } }
-        if (tbl->gateway_only() && tbl->next.empty())
+        if (tbl->conditional_gateway_only() && tbl->next.empty())
             return nullptr;
         return tbl; }
 };

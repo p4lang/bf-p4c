@@ -17,6 +17,7 @@ struct StageUseEstimate;
 class PhvInfo;
 class LayoutChoices;
 class SharedIndirectAttachedAnalysis;
+class FindPayloadCandidates;
 
 
 class TablePlacement : public PassManager {

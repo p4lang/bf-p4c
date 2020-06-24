@@ -141,10 +141,10 @@ BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gre
     auto dom = getImmediateDominator(t, gress);
     if (!dom) return boost::none;
     // If the table is not a gateway, then return the immediate dominator itself.
-    if (!((*dom)->gateway_only())) return (*dom);
+    if (!((*dom)->conditional_gateway_only())) return (*dom);
     // If the table is the same as its dominator then we are at the source node and if the source
     // node is a gateway, then return boost::none.
-    if ((*dom)->gateway_only() && t == *dom) return boost::none;
+    if ((*dom)->conditional_gateway_only() && t == *dom) return boost::none;
     return getNonGatewayImmediateDominator(*dom, gress);
 }
 
@@ -272,7 +272,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
         }
         if (foundCommonAncestor) {
             LOG3("\t\t\t  Found common ancestor: " << (*dom)->name);
-            if ((*dom)->gateway_only()) {
+            if ((*dom)->conditional_gateway_only()) {
                 auto rv = getNonGatewayImmediateDominator(*dom, (*dom)->gress);
                 if (!rv) return nullptr;
                 return *rv;

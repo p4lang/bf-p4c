@@ -111,7 +111,7 @@ class ElimUnused::Tables : public MauTransform {
         }
 
         // Don't remove the table unless all its match actions are empty.
-        if (!table->gateway_only()) {
+        if (!table->conditional_gateway_only()) {
             for (auto& entry : table->actions) {
                 if (!isNoOp(entry.second)) return table;
             }

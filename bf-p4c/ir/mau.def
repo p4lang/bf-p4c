@@ -85,6 +85,7 @@ class Table : BFN::Unit {
     class IndirectAddress {
         bool shifter_enabled = false;
         int address_bits = 0;
+        int hash_bits = 0;   // this is a temporary field to do some of the splitting statefuls
         bool per_flow_enable = false;
         int meter_type_bits = 0;
         IndirectAddress() { memset(this, 0, sizeof(*this)); }
@@ -301,20 +302,7 @@ class Table : BFN::Unit {
 #emit
     bool operator==(const Table &a) const override;
 #end
-    cstring get_table_type_string() const {
-        cstring tbl_type = "gateway";
-        bool no_match_hit = layout.no_match_hit_path() && !gateway_only();
-        if (!gateway_only())
-            tbl_type = layout.ternary || layout.no_match_miss_path()
-                       ? "ternary_match" : "exact_match";
-        if (layout.proxy_hash)
-            tbl_type = "proxy_hash";
-        if (no_match_hit)
-            tbl_type = "hash_action";
-        if (layout.atcam)
-            tbl_type = "atcam_match";
-        return tbl_type;
-    }
+    cstring get_table_type_string() const;
     bool uses_gateway() const { return !gateway_rows.empty(); }
     bool uses_gateway_payload() const {
         for (auto row : gateway_rows) {
@@ -323,7 +311,8 @@ class Table : BFN::Unit {
 
         return false;
     }
-    bool gateway_only() const { return match_key.empty() && actions.empty(); }
+    bool conditional_gateway_only() const;
+    bool is_a_gateway_table_only() const;
     cstring build_gateway_name() const {
         auto gName = gateway_name.isNullOrEmpty() ? name : gateway_name;
         // Add '-gateway' suffix to table name if gateway_name is not unique
@@ -357,13 +346,13 @@ class Table : BFN::Unit {
             else if (gw.first)
                 gw_next.emplace(cstring());
             gw_next.emplace(gw.second); }
-        if (created_during_tp && !gateway_only())
+        if (created_during_tp && !conditional_gateway_only())
             BUG("starter-pistol table %s cannot have a match table", name);
         if (created_during_tp && uses_gateway_payload())
             BUG("starter-pistol table %s cannot have a gateway payload", name);
-        if (gateway_only() && gw_next.count(cstring()))
+        if (conditional_gateway_only() && gw_next.count(cstring()))
             BUG("gateway with no match table wants to run match table");
-        if (!gateway_only() && uses_gateway() && !gw_next.count(cstring()))
+        if (!is_a_gateway_table_only() && uses_gateway() && !gw_next.count(cstring()))
             BUG("gateway always overrides match table");
         for (auto &nxt : next) {
             if (nxt.first == "$default") {
@@ -374,7 +363,7 @@ class Table : BFN::Unit {
             } else if (!gw_next.count(nxt.first) && !actions.count(nxt.first)) {
                 BUG("%s next on table with no such action or gw result", nxt.first);
             }
-            if (!gateway_only()) {
+            if (!conditional_gateway_only()) {
                 if (next.count("$hit") || next.count("$miss")) {
                     BUG_CHECK(!action_chain() && !has_default_path(),
                               "Somehow have a hit/miss table combined with an action chain");

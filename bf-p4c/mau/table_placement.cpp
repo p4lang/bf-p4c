@@ -12,6 +12,7 @@
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -396,7 +397,7 @@ struct TablePlacement::Placed {
         }
 
         if (curr && curr->stage == stage) {
-            if (curr->table->gateway_only()) {
+            if (curr->table->conditional_gateway_only()) {
                 logical_id = curr->logical_id + 1;
             } else {
                 logical_id = curr->logical_id + curr->use.preferred()->logical_tables();
@@ -625,14 +626,14 @@ bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
 
     if (!estimate_set)
         next->use = StageUseEstimate(next->table, next->entries, next->attached_entries, &lc,
-                                     next->stage_split > 0);
+                                     next->stage_split > 0, next->gw != nullptr);
     // FIXME: This is not the appropriate way to check if a table is a single gateway
     do {
         bool ixbar_fit = try_alloc_ixbar(next);
         if (!ixbar_fit) {
             next->stage_advance_log = "ran out of ixbar";
             return false; }
-        if (!next->table->gateway_only() && !next->table->is_always_run_action()) {
+        if (!next->table->conditional_gateway_only() && !next->table->is_always_run_action()) {
             table_format = try_alloc_format(next, next->gw);
         }
 
@@ -649,7 +650,7 @@ bool TablePlacement::pick_layout_option(Placed *next, bool estimate_set) {
 
 bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_left,
         int min_entries) {
-    if (next->table->gateway_only() || next->table->match_key.empty())
+    if (next->table->is_a_gateway_table_only() || next->table->match_key.empty())
         return false;
 
     auto t = next->table;
@@ -715,6 +716,12 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
                 if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
                     ba->hash_dist = hd;
                     break; } } }
+        if (ba->attached->is<IR::MAU::Counter>() || ba->attached->is<IR::MAU::Meter>() ||
+            ba->attached->is<IR::MAU::StatefulAlu>()) {
+            ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+            if (!ba->attached->is<IR::MAU::Counter>())
+                ba->type_location = IR::MAU::TypeLocation::DEFAULT;
+        }
         prune();
         return ba; }
 };
@@ -729,7 +736,8 @@ bool TablePlacement::try_alloc_ixbar(Placed *next) {
 
     const ActionData::Format::Use *action_format = next->use.preferred_action_format();
     auto *table = next->table;
-    if (next->entries == 0 && !table->gateway_only() && !table->is_always_run_action()) {
+    if (next->entries == 0 && !table->conditional_gateway_only() &&
+        !table->is_always_run_action()) {
         // detached attached table -- need to rewrite it as a hash_action gateway that
         // tests the enable bit it drives the attached table with the saved index
         // FIXME -- should we memoize this rather than recreating it each time?
@@ -796,14 +804,21 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     if (shrink_lt)
         current_mem.shrink_allowed_lts();
 
+    const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
+        table_to_add = p->table;
+        if (p->use.format_type == ActionData::POST_SPLIT_ATTACHED)
+            table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, p));
         BUG_CHECK(p != next && p->stage == next->stage, "invalid whole_stage");
         // Always Run Tables cannot be counted in the logical table check
-        current_mem.add_table(p->table, p->gw, &p->resources, p->use.preferred(),
+        current_mem.add_table(table_to_add, p->gw, &p->resources, p->use.preferred(),
                               p->use.preferred_action_format(), p->entries, p->stage_split,
                               p->attached_entries);
         p->resources.memuse.clear(); }
-    current_mem.add_table(next->table, next->gw, &next->resources, next->use.preferred(),
+    table_to_add = next->table;
+    if (next->use.format_type == ActionData::POST_SPLIT_ATTACHED)
+        table_to_add = table_to_add->apply(RewriteForSplitAttached(*this, next));
+    current_mem.add_table(table_to_add, next->gw, &next->resources, next->use.preferred(),
                           next->use.preferred_action_format(), next->entries, next->stage_split,
                           next->attached_entries);
     next->resources.memuse.clear();
@@ -835,6 +850,8 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
 bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
+    gw_linked |= next->use.preferred()->layout.gateway &&
+                 next->use.preferred()->layout.hash_action;
     TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
                                next->resources.proxy_hash_ixbar, next->table,
                                immediate_mask, gw_linked);
@@ -850,7 +867,7 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
 }
 
 bool TablePlacement::try_alloc_adb(Placed *next) {
-    if (next->table->gateway_only())
+    if (next->table->conditional_gateway_only())
         return true;
 
     BUG_CHECK(next->use.preferred_action_format() != nullptr,
@@ -895,7 +912,7 @@ bool TablePlacement::try_alloc_adb(Placed *next) {
 }
 
 bool TablePlacement::try_alloc_imem(TablePlacement::Placed *next) {
-    if (next->table->gateway_only())
+    if (next->table->conditional_gateway_only())
         return true;
 
     InstructionMemory imem;
@@ -906,6 +923,8 @@ bool TablePlacement::try_alloc_imem(TablePlacement::Placed *next) {
     }
 
     bool gw_linked = next->gw != nullptr;
+    gw_linked |= next->use.preferred()->layout.gateway &&
+                 next->use.preferred()->layout.hash_action;
     if (!imem.allocate_imem(next->table, next->resources.instr_mem, phv, gw_linked,
                             next->use.format_type, att_info)) {
         error_message = "The table " + next->table->name + " could not fit within the "
@@ -1122,7 +1141,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             }
         }
     }
-    if (rv->entries <= 0 && !t->gateway_only() && !t->is_always_run_action()) {
+    if (rv->entries <= 0 && !t->conditional_gateway_only() && !t->is_always_run_action()) {
         rv->entries = 0;
         if (repeated_stage) return false;
         // FIXME -- should use std::any_of, but pre C++-17 is too hard to use and verbose
@@ -1142,7 +1161,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
     if (stage_pragma >= 0) {
         rv->stage = std::max(stage_pragma, rv->stage);
         furthest_stage = std::max(rv->stage, furthest_stage);
-    } else if (options.forced_placement && !t->gateway_only()) {
+    } else if (options.forced_placement && !t->conditional_gateway_only()) {
         ::warning("%s: Table %s has not been provided a stage even though forced placement of "
                   "tables is turned on", t->srcInfo, t->name);
     }
@@ -1267,7 +1286,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         // will use less space, but for some reason doing that causes switch_16_d0 to need
         // 21 stages instead of 20.
         rv->use = StageUseEstimate(rv->table, rv->entries, rv->attached_entries, &lc,
-                                   rv->stage_split > 0);
+                                   rv->stage_split > 0, rv->gw != nullptr);
 
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
@@ -1370,7 +1389,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             break; } }
 
     rv->update_formats();
-    if (!rv->table->gateway_only()) {
+    if (!rv->table->conditional_gateway_only()) {
         BUG_CHECK(rv->use.preferred_action_format() != nullptr,
                   "Action format could not be found for a particular layout option.");
         BUG_CHECK(rv->use.preferred_meter_format() != nullptr,
@@ -2588,8 +2607,8 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
 void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed, IR::MAU::Table::Layout &gw_layout) {
     auto match = placed->table;
-    BUG_CHECK(match && tbl->gateway_only() && !match->uses_gateway(), "Table IR is not set up "
-        "in the preorder");
+    BUG_CHECK(match && tbl->conditional_gateway_only() && !match->uses_gateway(),
+        "Table IR is not set up in the preorder");
     LOG3("folding gateway " << tbl->name << " onto " << match->name);
 
     tbl->gateway_name = tbl->name;
@@ -2662,17 +2681,18 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         return tbl; }
     if (tbl->is_placed())
         return tbl;
-    if (tbl->is_always_run_action())
-        tbl->stage_ = it->second->stage;
-    else
-        tbl->set_global_id(it->second->logical_id);
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     IR::MAU::Table::Layout gw_layout;
     bool gw_only = true;
     bool gw_layout_used = false;
 
-    if (it->second->gw && it->second->gw->name == tbl->name) {
+    if (it->second->use.preferred() &&
+        it->second->use.preferred()->layout.hash_action &&
+        it->second->use.preferred()->layout.gateway) {
+        tbl = self.lc.fpc.convert_to_gateway(tbl);
+        gw_only = false;
+    } else if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
         merge_match_and_gateway(tbl, it->second, gw_layout);
         gw_only = false;
@@ -2681,6 +2701,10 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         gw_only = false;
     }
 
+    if (tbl->is_always_run_action())
+        tbl->stage_ = it->second->stage;
+    else
+        tbl->set_global_id(it->second->logical_id);
 
     if (self.table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
@@ -2777,6 +2801,19 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
                 return !pl->attached_entries.count(ba->attached) ||
                        pl->attached_entries.at(ba->attached) == 0; });
+            for (size_t i = 0; i < table_part->attached.size(); i++) {
+                auto ba_clone = new IR::MAU::BackendAttached(*(table_part->attached.at(i)));
+                // This needs to be reset, as the backend attached is initialized as DEFAULT
+                if (ba_clone->attached->is<IR::MAU::Counter>() ||
+                    ba_clone->attached->is<IR::MAU::Meter>() ||
+                    ba_clone->attached->is<IR::MAU::StatefulAlu>()) {
+                    ba_clone->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+                    if (!ba_clone->attached->is<IR::MAU::Counter>())
+                        ba_clone->type_location = IR::MAU::TypeLocation::DEFAULT;
+                }
+                table_part->attached.at(i) = ba_clone;
+            }
+
             BUG_CHECK(!rv->empty(), "first stage has no match entries?");
             rv->push_back(table_part); }
 
@@ -2821,14 +2858,6 @@ IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
         if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD ||
             format.meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
             ba->type_location = format.meter_type_loc;
-        if (tbl->layout.hash_action && !ba->attached->direct) {
-            // FIXME -- this should actually be GATEWAY_PAYLOAD, but that is not yet set up
-            // properly...
-            ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
-            // FIXME -- if there's more than one type, this needs to go in a JBay gateway
-            // or match overhead of a small synthetic table.  For now we only support this
-            ba->type_location = IR::MAU::TypeLocation::DEFAULT;
-        }
     }
 
     for (auto act : Values(tbl->actions)) {

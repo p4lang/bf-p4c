@@ -618,8 +618,8 @@ cstring PhvInfo::reportMinStages() {
 }
 
 bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
-    BUG_CHECK(gateway->gateway_only(), "Trying to merge non gateway table %1% with table %2%",
-              gateway->name, t->name);
+    BUG_CHECK(gateway->conditional_gateway_only(), "Trying to merge non gateway table %1% with "
+              "table %2%", gateway->name, t->name);
     auto t_stages = minStage(t);
     CollectGatewayFields collect_fields(*this);
     gateway->apply(collect_fields);

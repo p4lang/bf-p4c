@@ -549,7 +549,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 /* Convert all possible layout options to the correct way sizes */
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
-        if (lo.layout.hash_action || lo.way.match_groups == 0) {
+        if (lo.layout.hash_action || lo.way.match_groups == 0 || lo.layout.gateway == true) {
             lo.entries = entries;
             lo.srams = 0;
             continue;
@@ -800,7 +800,12 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             if (a.way.width > 2)
                 return false;
 
+
         if ((t = a.srams - b.srams) != 0) return t < 0;
+        // Added to keep obfuscated-nat-mpls for compiling.  In theory the match groups/width
+        // should not be used for hash action tables
+        if (a.layout.hash_action && !b.layout.hash_action) return true;
+        if (!a.layout.hash_action && b.layout.hash_action) return false;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
         if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
         if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
@@ -877,7 +882,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
         options_to_rams(tbl, attached_entries, table_placement);
         select_best_option_ternary();
         fill_estimate_from_option(entries);
-    } else if (!tbl->gateway_only()) {  // exact_match
+    } else if (!tbl->conditional_gateway_only()) {  // exact_match
         /* assuming all ways have the same format and width (only differ in depth) */
         options_to_ways(tbl, entries);
         options_to_rams(tbl, attached_entries, table_placement);
@@ -892,7 +897,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         attached_entries_t &attached_entries, LayoutChoices *lc, bool prev_placed,
-        bool table_placement) {
+        bool gateway_attached, bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
     format_type = ActionData::NORMAL;
@@ -918,7 +923,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
             // an error if it needs to split this table.
             format_type = ActionData::NORMAL;
             layout_options = lc->get_layout_options(tbl, format_type); }
-        BUG_CHECK(tbl->gateway_only() || !layout_options.empty(),
+        BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(),
                   "No %s layout options for %s", format_type, tbl);
         action_formats = lc->get_action_formats(tbl, format_type);
         if (format_type != ActionData::PRE_SPLIT_ATTACHED)
@@ -938,7 +943,16 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         }
     }
 
-    BUG_CHECK(tbl->gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
+    if (gateway_attached) {
+        auto it = layout_options.begin();
+        while (it != layout_options.end()) {
+            if (it->layout.gateway)
+                it = layout_options.erase(it);
+            else
+                it++;
+        }
+    }
+    BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
     determine_initial_layout_option(tbl, entries, attached_entries, table_placement);
     // FIXME: This is a quick hack to handle tables with only a default action
 
@@ -948,7 +962,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
 
 bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
                                       attached_entries_t &attached_entries) {
-    if (tbl->gateway_only() || tbl->layout.no_match_data())
+    if (tbl->is_a_gateway_table_only() || tbl->layout.no_match_data())
         return false;
 
     if (tbl->layout.ternary) {

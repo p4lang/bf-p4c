@@ -6,6 +6,7 @@
 
 #include "bf-p4c-options.h"
 #include "bf-p4c/logging/pass_manager.h"
+#include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_layout.h"

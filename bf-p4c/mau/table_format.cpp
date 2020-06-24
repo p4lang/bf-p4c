@@ -485,12 +485,14 @@ bool TableFormat::find_format(Use *u) {
             return false;
         return true;
     } else if (layout_option.layout.no_match_hit_path()) {
-        overhead_groups_per_RAM.push_back(1);
+        BUG_CHECK(layout_option.way.match_groups > 0 &&
+                  layout_option.way.match_groups <= Device::uniqueGatewayShifts(),
+                  "Unsupported immediate profile on a hash action table");
+        overhead_groups_per_RAM.push_back(layout_option.way.match_groups);
         LOG3("No match hit");
-        use->match_groups.emplace_back();
-        if (!allocate_all_instr_selection())
-            return false;
-        if (!allocate_all_indirect_ptrs())
+        for (int i = 0; i < layout_option.way.match_groups; i++)
+            use->match_groups.emplace_back();
+        if (!allocate_overhead())
             return false;
         return true;
     }

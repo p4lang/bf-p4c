@@ -45,7 +45,7 @@ struct StageUseEstimate {
         stats_alus += a.stats_alus;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, LayoutChoices *lc,
-                     bool prev_placed, bool table_placement = false);
+                     bool prev_placed, bool gateway_attached, bool table_placement = false);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }

@@ -597,7 +597,7 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     removeUnusedRows(tbl, false);
 
     if (rows.empty() || !rows[0].first) {
-        if (tbl->gateway_only()) {
+        if (tbl->conditional_gateway_only()) {
             LOG3("eliminating completely dead gateway-only table " << tbl->name);
             if (!rows.empty() && tbl->next.count(rows.front().second))
                 return &tbl->next.at(rows.front().second)->tables;

@@ -126,6 +126,8 @@ class SplitAttachedInfo : public PassManager {
         bool always_run_on_miss = true;
         ///> The number of address bits stored in overhead
         int address_bits = 0;
+        ///> The number of bis that are necessary to come through the hash engine
+        int hash_bits = 0;
         ///> The number of meter types possible in the table's hit action.  Each action
         ///> currently supports one meter type, (i.e. which stateful instruction to run)
         ///> but different actions can have different types

@@ -1,6 +1,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/mau/memories.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "lib/bitops.h"
@@ -268,7 +269,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
         TableResourceAlloc *resources, const LayoutOption *lo, const ActionData::Format::Use *af,
         int entries, int stage_table, attached_entries_t attached_entries) {
     table_alloc *ta;
-    if (!t->gateway_only()) {
+    if (!t->conditional_gateway_only()) {
         const IXBar::Use *match_ixbar = &resources->match_ixbar;
         if (lo->layout.gateway && lo->layout.hash_action)
             match_ixbar = &resources->gateway_ixbar;
@@ -3565,46 +3566,15 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
  * row are definitely possible, and will be required for multi-stage DLEFT hash tables.
  */
 uint64_t Memories::determine_payload(table_alloc *ta) {
-    uint64_t rv = 0ULL;
-    auto format = ta->table_format;
-    if (format->instr_in_overhead()) {
-        bitvec instr_mask = format->match_groups[0].mask[TableFormat::ACTION];
-        BUG_CHECK(instr_mask.popcount() == 1, "An instruction is indicated to be in the payload, "
-                  "but not found");
-        rv |= 1ULL << instr_mask.min().index();
-    }
-
-    if (format->stats_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
-        bitvec stats_pfe_mask = format->match_groups[0].mask[TableFormat::COUNTER_PFE];
-        BUG_CHECK(stats_pfe_mask.popcount() == 1, "A pfe is indicated to be in the payload, "
-                  "but not found");
-        rv |= 1ULL << stats_pfe_mask.min().index();
-    }
-
-    if (format->meter_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD) {
-        bitvec meter_pfe_mask = format->match_groups[0].mask[TableFormat::METER_PFE];
-        BUG_CHECK(meter_pfe_mask.popcount() == 1, "A pfe is indicated to be in the payload, "
-                  "but not found");
-        rv |= 1ULL << meter_pfe_mask.min().index();
-    }
-
-    if (format->meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD) {
-        bitvec meter_type_mask = format->match_groups[0].mask[TableFormat::METER_TYPE];
-        BUG_CHECK(meter_type_mask.popcount() == 3, "A meter type is indicated to be in the "
-                  "payload, but not found");
-        for (auto act : Values(ta->table->actions)) {
-            if (act->miss_only())
-                continue;
-            bool found = false;
-            for (auto meter_type : Values(act->meter_types)) {
-                rv |= uint64_t(meter_type) << meter_type_mask.min().index();
-                found = true;
-                break;
-            }
-            if (found) break;
-        }
-    }
-    return rv;
+    TableResourceAlloc temp_alloc;
+    temp_alloc.table_format = *ta->table_format;
+    temp_alloc.instr_mem = *ta->instr_mem;
+    temp_alloc.action_format = *ta->action_format;
+    bitvec payload_bv = FindPayloadCandidates::determine_payload(ta->table, &temp_alloc,
+                                                                 &ta->layout_option->layout);
+    uint64_t lo_bv = payload_bv.getrange(0, 32);
+    uint64_t hi_bv = payload_bv.getrange(32, 32);
+    return (hi_bv << 32) | lo_bv;
 }
 
 /** Allocates all gateways with a payload, which is a conditional linked to a no match table.
