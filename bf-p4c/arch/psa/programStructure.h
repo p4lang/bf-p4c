@@ -82,12 +82,13 @@ struct ProgramStructure : BFN::ProgramStructure {
     PsaBlockInfo egress;
     PsaBlockInfo egress_deparser;
 
-    ordered_map<cstring, int> error_to_constant;
-
     void createParsers() override;
     void createControls() override;
     void createMain() override;
     void createPipeline();
+    std::map<cstring, int> error_to_constant;
+
+    std::map<gress_t, std::map<cstring, const IR::MethodCallExpression*>> state_to_verify;
 
     const IR::P4Program *create(const IR::P4Program *program) override;
     void loadModel();

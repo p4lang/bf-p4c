@@ -321,16 +321,33 @@ class TranslateProgram : public Inspector {
         return;
     }
 
+    int getErrorIdx(cstring errorName) {
+        if (structure->error_to_constant.count(errorName)) {
+            return structure->error_to_constant.at(errorName);
+        } else {
+            auto error_idx = 12 + structure->error_to_constant.size();
+            if (error_idx > 15) {
+                ::error("Cannot accomodate custom error %1%", errorName);
+            } else {
+                structure->error_to_constant[errorName] = error_idx;
+                return error_idx;
+            }
+        }
+        return 0;
+    }
+
     void evaluateVerifyEnd(const IR::StatOrDecl* stmt,
                            const P4::ExternFunction* em,
                            gress_t gress,
                            cstring stateName) {
-        auto equ = (*em->expr->arguments)[0]->expression->to<IR::Equ>();
+        auto equ = (*em->expr->arguments)[0]->expression;
         auto err = (*em->expr->arguments)[1]->expression->to<IR::Member>();
-        cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
-                                               "eg_intr_md_from_prsr";
+        CHECK_NULL(equ);
         Pattern::Match<IR::Expression> member;
         Pattern::Match<IR::MethodCallExpression> expr;
+        cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
+                                                "eg_intr_md_from_prsr";
+        int error_idx = getErrorIdx(err->member);
         if ((expr == member).match(equ)) {
             auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
             if (auto emExpr = miExpr->to<P4::ExternMethod>()) {
@@ -350,9 +367,7 @@ class TranslateProgram : public Inspector {
                     auto parser_err = new IR::Member(
                                           new IR::PathExpression(metaParam),
                                           "parser_err");
-                    auto lhs = new IR::Slice(parser_err, 12, 12);
-                    structure->_map.emplace(err, new IR::Constant(IR::Type::Bits::get(16), 4096));
-                    structure->error_to_constant[err->member] = 1 << 12;
+                    auto lhs = new IR::Slice(parser_err, error_idx, error_idx);
                     auto verifyEnd = new IR::AssignmentStatement(lhs, rhs);
                     if (gress == INGRESS) {
                         structure->ingressParserStatements[stateName].push_back(verifyEnd);
@@ -362,7 +377,8 @@ class TranslateProgram : public Inspector {
                 }
             }
         } else {
-            ::error("Verify statement %1% not supported", stmt);
+            structure->state_to_verify[gress][stateName] = em->expr;
+            structure->_map.emplace(stmt, nullptr);
         }
     }
 
@@ -846,6 +862,100 @@ struct ConvertNames : public PassManager {
     }
 };
 
+struct CreateErrorStates : public Transform {
+    PSA::ProgramStructure* structure;
+    std::map<gress_t, std::set<const IR::ParserState*>> newStates;
+
+ public:
+    explicit CreateErrorStates(PSA::ProgramStructure* structure)
+        : structure(structure) { }
+
+    const IR::ParserState* create_error_state(const IR::ParserState* origState,
+                                              const IR::Member* member, int error_idx,
+                                              cstring metaParam) {
+        auto statements = new IR::IndexedVector<IR::StatOrDecl>();
+        auto parser_err = new IR::Member(new IR::PathExpression(metaParam),
+                                         "parser_err");
+        auto lhs = new IR::Slice(parser_err, error_idx, error_idx);
+        auto assign = new IR::AssignmentStatement(lhs, new IR::Constant(
+                                                           IR::Type::Bits::get(1), 1));
+        statements->push_back(assign);
+        auto newStateName = IR::ID(cstring("__" + origState->name + "_error_" +
+                                           std::to_string(error_idx)));
+        auto selectExpression = new IR::PathExpression(IR::ID("accept"));
+        auto newState = new IR::ParserState(newStateName, *statements, selectExpression);
+        return newState;
+    }
+
+    const IR::Node* preorder(IR::ParserState* state) override {
+        auto parser = findContext<IR::BFN::TnaParser>();
+        if (structure->state_to_verify.count(parser->thread) &&
+           (structure->state_to_verify.at(parser->thread).count(state->name))) {
+            auto stmt = structure->state_to_verify.at(parser->thread).at(state->name);
+            auto expr = (*stmt->arguments)[0]->expression;
+            auto err = (*stmt->arguments)[1]->expression->to<IR::Member>();
+            Pattern::Match<IR::Member> member;
+            Pattern::Match<IR::Constant> constant;
+            cstring metaParam = parser->thread == INGRESS ? "ig_intr_md_from_prsr" :
+                                                   "eg_intr_md_from_prsr";
+            int error_idx = structure->error_to_constant.at(err->member);
+            if (expr->is<IR::Equ>()) {
+                (member == constant).match(expr);
+            } else if (expr->is<IR::Neq>()) {
+                (member != constant).match(expr);
+            } else {
+                ::error("Verify statement not supported %1%", stmt);
+            }
+            auto errorState = create_error_state(state, member, error_idx, metaParam);
+            newStates[parser->thread].insert(errorState);
+            auto stateName = IR::ID(cstring("__" + state->name + "_non_error"));
+            auto statements = new IR::IndexedVector<IR::StatOrDecl>();
+            auto origTransState = new IR::ParserState(stateName, *statements,
+                                                       state->selectExpression);
+            newStates[parser->thread].insert(origTransState);
+            auto selectCases = new IR::Vector<IR::SelectCase>();
+            selectCases->push_back(new IR::SelectCase(
+                                   constant, new IR::PathExpression(
+                                   expr->is<IR::Equ>() ? origTransState->name :
+                                                         errorState->name)));
+            selectCases->push_back(new IR::SelectCase(
+                               new IR::DefaultExpression(new IR::Type_Dontcare()),
+                               new IR::PathExpression(expr->is<IR::Equ>() ? errorState->name :
+                                                       origTransState->name)));
+            IR::Vector<IR::Expression> selectOn;
+            selectOn.push_back(member);
+            auto selectExpression = new IR::SelectExpression(new IR::ListExpression(selectOn),
+                                                                        *selectCases);
+            state->selectExpression = selectExpression;
+        }
+        return state;
+    }
+};
+
+struct AddParserStates : public Transform {
+    const CreateErrorStates* createErrorStates;
+ public:
+    explicit AddParserStates(const CreateErrorStates* createErrorStates) :
+                             createErrorStates(createErrorStates) { }
+    const IR::BFN::TnaParser* preorder(IR::BFN::TnaParser* parser) override {
+        if (!createErrorStates->newStates.count(parser->thread)) return parser;
+        for (auto newState : createErrorStates->newStates.at(parser->thread)) {
+            parser->states.push_back(newState);
+        }
+        return parser;
+    }
+};
+
+struct RewriteParserVerify : public PassManager {
+    explicit RewriteParserVerify(PSA::ProgramStructure* structure,
+                            P4::ReferenceMap *refMap, P4::TypeMap *typeMap) {
+        auto createErrorStates = new BFN::PSA::CreateErrorStates(structure);
+        addPasses({ createErrorStates,
+                    new BFN::PSA::AddParserStates(createErrorStates),
+                   });
+    }
+};
+
 }  // namespace PSA
 
 PortableSwitchTranslation::PortableSwitchTranslation(
@@ -873,6 +983,7 @@ PortableSwitchTranslation::PortableSwitchTranslation(
         new PSA::ConvertNames(structure, refMap, typeMap),
         new AddIntrinsicMetadata(refMap, typeMap),
         new PSA::RewritePacketPath(refMap, typeMap, structure),
+        new PSA::RewriteParserVerify(structure, refMap, typeMap),
         new AddPsaBridgeMetadata(refMap, typeMap, structure),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),

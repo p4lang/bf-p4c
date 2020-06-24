@@ -111,6 +111,7 @@ parser IngressParserImpl(packet_in buffer,
         // demonstrate checking of IPv4 header checksums for IPv4
         // headers with options, but this example does not handle such
         // packets.
+        verify(hdr.ipv4.ihl == 5, error.UnhandledIPv4Options);
         ck.add({
             /* 16-bit word  0   */ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv,
             /* 16-bit word  1   */ hdr.ipv4.totalLen,
@@ -143,14 +144,6 @@ control ingress(inout headers hdr,
                 in    psa_ingress_input_metadata_t  istd,
                 inout psa_ingress_output_metadata_t ostd)
 {
-    // Table parser_error_count_and_convert below shows one way to
-    // count the number of times each parser error was encountered.
-    // Although it is not used in this example program, it also shows
-    // how to convert the error value into a unique bit vector value
-    // 'error_idx', which can be useful if you wish to put a bit
-    // vector encoding of an error into a packet header, e.g. for a
-    // packet sent to the control CPU.
-
        apply {
            ostd.egress_port = (PortId_t) 1;
        }
