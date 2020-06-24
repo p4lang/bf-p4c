@@ -646,16 +646,16 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     BUG_CHECK(field, "%1%: Operand %2% of instruction %3% operating on container %4% must be "
               "a PHV.", read.expr->srcInfo, read.expr, cont_action, container);
 
-    int count = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);
+    std::set<PHV::Container> container_reads;
     field->foreach_alloc(range, cont_action.table_context, &use,
                          [&](const PHV::AllocSlice &alloc) {
-        count++;
+        container_reads.insert(alloc.container());
         BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
     });
 
-    if (count > MAX_PHV_SOURCES) {
-        error_message += "an individual read phv is contained within more than 2 containers, and"
+    if (container_reads.size() > MAX_PHV_SOURCES) {
+        error_message += "an individual read phv is contained within more than 2 containers, and "
                          "is considered impossible";
         return false;
     }
