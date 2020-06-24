@@ -856,6 +856,23 @@ bool CoreAllocation::satisfies_constraints(
 
                     for (auto e : field_to_parser_states_i.field_to_extracts.at(sl.field())) {
                         other_write_mode = e->write_mode;
+                        auto es = field_to_parser_states_i.extract_to_state.at(e);
+
+                        for (auto x : field_to_parser_states_i.field_to_extracts.at(f)) {
+                            auto xs = field_to_parser_states_i.extract_to_state.at(x);
+
+                            if (es == xs && e->source->equiv(*x->source)) {
+                                // see P4C-2794, fields in same state have same source and one of
+                                // the field has subsequent write in a later state. In this case,
+                                // we cannot allocate both fields to the same parser group.
+                                if (*write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+                                    LOG5("        constraint: container " << c <<
+                                      " has parser write mode " << *write_mode << " but "
+                                      << other << " in parser group has same extraction source");
+                                    return false;
+                                }
+                            }
+                        }
                     }
 
                     if (*write_mode != *other_write_mode) {
