@@ -151,6 +151,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue995-bmv2.p4
   ../glass/testsuite/p4_tests/parde/COMPILER-368/out.p4
   testdata/p4_16_samples/v1model-p4runtime-most-types1.p4
+  testdata/p4_16_samples/v1model-p4runtime-enumint-types1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -642,13 +643,6 @@ p4c_add_xfail_reason("tofino"
     extensions/p4_tests/p4_16/stf/stateful5-psa.p4
 )
 
-# Register read/write support
-
-p4c_add_xfail_reason("tofino"
-  "Unsupported Register element type"
-  testdata/p4_16_samples/psa-register1.p4
-)
-
 # p4smith and p4testgen regression XFAILs
 
 # real error. fails because gateway condition too complex and cannot fit in a TCAM.
@@ -763,11 +757,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Action parameter color has a type which is not bit<>, int<>, bool, type or serializable enum"
   testdata/p4_16_samples/psa-meter1.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Maximum width for byte counter .* is 64 bits"
-  testdata/p4_16_samples/psa-example-counters-bmv2.p4
 )
 
 # p4c_add_xfail_reason("tofino"
@@ -1263,6 +1252,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue561-bmv2.p4
 )
 
+# broken tests that don't set egress_spec
 p4c_add_xfail_reason("tofino"
   ".* expected packet.* on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
@@ -1273,6 +1263,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2383-bmv2.p4
   testdata/p4_16_samples/issue2375-1-bmv2.p4
   testdata/p4_16_samples/issue2375-bmv2.p4
+  testdata/p4_16_samples/issue2392-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1804,6 +1795,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*visitor returned non-Statement type"
   testdata/p4_16_samples/issue2359.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug.*: .*Invalid register call statement"
+  testdata/p4_16_samples/psa-register-complex-bmv2.p4
 )
 
 # error in flattening nested header
