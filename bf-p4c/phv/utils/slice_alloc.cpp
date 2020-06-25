@@ -62,6 +62,7 @@ PHV::AllocSlice::AllocSlice(const AllocSlice& other) {
     this->setLiveness(other.getEarliestLiveness(), other.getLatestLiveness());
 }
 
+
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
     return field_i             == other.field_i
         && container_i         == other.container_i
@@ -96,6 +97,17 @@ bool PHV::AllocSlice::operator<(const PHV::AllocSlice& other) const {
     if (max_stage_i.second != other.max_stage_i.second)
         return max_stage_i.second < other.max_stage_i.second;
     return false;
+}
+
+boost::optional<PHV::AllocSlice> PHV::AllocSlice::sub_alloc_by_field(int start, int len) const {
+    if (start > this->field_bit_lo_i + this->width_i - 1 || len > this->width_i) {
+        return boost::none;
+    }
+    PHV::AllocSlice clone = *this;
+    clone.container_bit_lo_i += (start - this->field_bit_lo_i);
+    clone.field_bit_lo_i = start;
+    clone.width_i = len;
+    return clone;
 }
 
 bool PHV::AllocSlice::isLiveRangeDisjoint(const AllocSlice& other) const {

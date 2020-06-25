@@ -384,14 +384,15 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-2555
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
+  "error: Ran out of chunks in field dictionary"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
 # P4C-2572
+# P4C-2832 shadowed this bug.
 p4c_add_xfail_reason("tofino2"
   "parser error allocated to multiple containers?"
-  extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
+  # extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
 )
 
 # DRV-3549

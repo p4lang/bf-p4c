@@ -45,6 +45,14 @@ class AllocSlice {
     bool operator!=(const AllocSlice& other) const;
     bool operator<(const AllocSlice& other) const;
 
+    // returns a cloned AllocSlice split by field[start:start+ len - 1].
+    // by_field indicates that @p start and @p len are applied on field.
+    // e.g.
+    // alloc_slice: container[5:28] <= f1[0:23]
+    // ^^^.sub_alloc_by_field(3,6) returns
+    // alloc_slice: container[8:13] <= f1[3:8]
+    boost::optional<AllocSlice> sub_alloc_by_field(int start, int len) const;
+
     const PHV::Field* field() const         { return field_i; }
     PHV::Container container() const        { return container_i; }
     le_bitrange field_slice() const         { return StartLen(field_bit_lo_i, width_i); }

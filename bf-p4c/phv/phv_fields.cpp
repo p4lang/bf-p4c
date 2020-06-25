@@ -923,6 +923,9 @@ void PHV::Field::foreach_alloc(
     std::vector<PHV::AllocSlice> candidate_slices;
     // Sort from hi to lo.
     for (auto it = alloc_slice_i.rbegin(); it != alloc_slice_i.rend(); ++it) {
+        // ignore other stage alloc slices
+        if (!checkContext(*it, ctxt, use))  continue;
+
         int lo = it->field_slice().lo;
         int hi = it->field_slice().hi;
         // Required range is less than and disjoint with the allocated slice range.
@@ -934,23 +937,19 @@ void PHV::Field::foreach_alloc(
             candidate_slices.push_back(*it);
             continue;
         }
+
         // Need to create a copy of the allocated slice with different width and modified range
         // because there is only a partial overlap with the requested range.
         auto overlap = range.intersectWith(it->field_slice());
         if (!overlap.empty()) {
-            PHV::AllocSlice tmp(it->field(), it->container(), overlap.lo,
-                                it->container_slice().lo + (overlap.lo - it->field_slice().lo),
-                                overlap.size());
-            candidate_slices.push_back(tmp);
+            candidate_slices.push_back(*(it->sub_alloc_by_field(overlap.lo, overlap.size())));
         }
     }
     // candidate_slices contains all the slices that are in @range.
     for (auto& slice : candidate_slices) {
         LOG7("\tforeach_alloc slice: " << slice << " stages: " << slice.getEarliestLiveness() <<
              " - " << slice.getLatestLiveness());
-        if (checkContext(slice, ctxt, use)) {
-            fn(slice);
-        }
+        fn(slice);
     }
 }
 

@@ -8,6 +8,7 @@
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/parser_extract_balance_score.h"
+#include "bf-p4c/phv/utils/utils.h"
 #include "lib/log.h"
 
 // AllocScore metrics.
@@ -895,14 +896,36 @@ bool CoreAllocation::satisfies_constraints(
              *deparserGroupGress << " but slice needs " << f->gress);
         return false; }
 
+    // true if @a is the same field allocated right before @b. e.g.
+    // B1[0:1] <- f1[0:1], B1[2:7] <- f1[2:7]
+    auto is_aligned_same_field_alloc = [](PHV::AllocSlice a, PHV::AllocSlice b) {
+        if (a.field() != b.field() || a.container() != b.container()) {
+            return false;
+        }
+        if (a.container_slice().hi > b.container_slice().hi) {
+            std::swap(a, b);
+        }
+        return  b.field_slice().lo - a.field_slice().hi ==
+            b.container_slice().lo - a.container_slice().hi;
+    };
     // Check no pack for this field.
     const auto& slices = alloc.slicesByLiveness(c, slice);
     std::vector<PHV::FieldSlice> liveFieldSlices;
     ordered_set<PHV::FieldSlice> initFieldSlices;
-    for (auto& sl : slices)
+    for (auto& sl : slices) {
+        // XXX(yumin): aligned fieldslice from the same field can be ignored
+        if (is_aligned_same_field_alloc(slice, sl)) {
+            continue;
+        }
         liveFieldSlices.push_back(PHV::FieldSlice(sl.field(), sl.field_slice()));
-    for (auto& initSlice : initFields)
-        initFieldSlices.insert(PHV::FieldSlice(initSlice.field(), initSlice.field_slice()));
+    }
+    for (auto& sl : initFields) {
+        // XXX(yumin): aligned fieldslice from the same field can be ignored
+        if (is_aligned_same_field_alloc(slice, sl)) {
+            continue;
+        }
+        initFieldSlices.insert(PHV::FieldSlice(sl.field(), sl.field_slice()));
+    }
     if (slices.size() > 0 && slice.field()->is_solitary()) {
         for (auto& sl : slices) {
             LOG5("\t\t\tChecking no-pack for live slice: " << sl);
@@ -931,16 +954,16 @@ bool CoreAllocation::satisfies_constraints(
     // pov bits are parser initialized as well.
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
-    bool hasUninitializedRead = std::any_of(
-            liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {
-        return s.field()->pov
-            || (defuse_i.hasUninitializedRead(s.field()->id) && !initFieldSlices.count(s));
-    });
+    bool hasOtherUninitializedRead =
+        std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&](const PHV::FieldSlice& s) {
+            return s.field()->pov
+                || (defuse_i.hasUninitializedRead(s.field()->id) && !initFieldSlices.count(s));
+        });
 
-    bool hasExtracted = std::any_of(liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const
-                PHV::FieldSlice& s) {
-        return !s.field()->pov && uses_i.is_extracted(s.field()) &&
-            !uses_i.is_extracted_from_constant(s.field());
+    bool hasOtherExtracted = std::any_of(
+            liveFieldSlices.begin(), liveFieldSlices.end(), [&] (const PHV::FieldSlice& s) {
+                    return !s.field()->pov && uses_i.is_extracted(s.field()) &&
+                        !uses_i.is_extracted_from_constant(s.field());
     });
 
     bool isThisSliceExtracted = !slice.field()->pov && uses_i.is_extracted(slice.field());
@@ -956,7 +979,7 @@ bool CoreAllocation::satisfies_constraints(
         return extracted_together;
     });
 
-    if (hasExtracted && !hasExtractedTogether &&
+    if (hasOtherExtracted && !hasExtractedTogether &&
         (isThisSliceUninitialized || isThisSliceExtracted)) {
         LOG5("        constraint: container already contains extracted slices, "
              "can not be packed, because: this slice is "
@@ -965,11 +988,11 @@ bool CoreAllocation::satisfies_constraints(
 
     // Account for metadata initialization and ensure that initialized fields are not considered
     // uninitialized any more.
-    if (isThisSliceExtracted && (hasUninitializedRead || hasExtracted)) {
-        if (!hasExtractedTogether || !hasUninitializedRead) {
+    if (isThisSliceExtracted && (hasOtherUninitializedRead || hasOtherExtracted)) {
+        if (!hasExtractedTogether || !hasOtherUninitializedRead) {
             LOG5("        constraint: this slice is extracted, "
                  "can not be packed, because allocated fields has "
-                 << (hasExtracted ? "extracted" : "uninitialized"));
+                 << (hasOtherExtracted ? "extracted" : "uninitialized"));
             return false; } }
 
     return true;
