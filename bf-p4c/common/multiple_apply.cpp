@@ -243,30 +243,7 @@ bool MultipleApply::CheckStaticNextTable::equiv_gateway(
     // structurally equivalent, without considering semantic equivalence.
     if (expr1 == expr2) return true;
     if (!expr1 || !expr2) return false;
-    if (*expr1 == *expr2) return true;
-
-    // Consider expressions with different types as being inequivalent.
-    if (typeid(*expr1) != typeid(*expr2)) return false;
-
-    if (auto unary1 = expr1->to<IR::Operation_Unary>()) {
-        auto unary2 = expr2->to<IR::Operation_Unary>();
-        return equiv_gateway(unary1->expr, unary2->expr);
-    }
-
-    if (auto binary1 = expr1->to<IR::Operation_Binary>()) {
-        auto binary2 = expr2->to<IR::Operation_Binary>();
-        return equiv_gateway(binary1->left, binary2->left)
-            && equiv_gateway(binary1->right, binary2->right);
-    }
-
-    if (auto ternary1 = expr1->to<IR::Operation_Ternary>()) {
-        auto ternary2 = expr2->to<IR::Operation_Ternary>();
-        return equiv_gateway(ternary1->e0, ternary2->e0)
-            && equiv_gateway(ternary1->e1, ternary2->e1)
-            && equiv_gateway(ternary1->e2, ternary2->e2);
-    }
-
-    return false;
+    return expr1->equiv(*expr2);
 }
 
 Visitor::profile_t MultipleApply::DeduplicateTables::init_apply(const IR::Node* root) {
