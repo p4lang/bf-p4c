@@ -3,7 +3,6 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv.h"
 
 class PhvInfo;
