@@ -241,6 +241,8 @@ class JBayUMauPowerSpec : public JBayMauPowerSpec {
 class CloudbreakMauPowerSpec : public JBayMauPowerSpec {
  public:
   CloudbreakMauPowerSpec() { }
+  double get_max_power() const override { return 1e9; }  // essentially unlimited for now
+  double get_excess_power_threshold() const override { return 1e9; }
 };
 #endif  /* HAVE_CLOUDBREAK */
 
