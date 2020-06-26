@@ -423,3 +423,9 @@ p4c_add_xfail_reason("tofino2"
   "error: This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
 )
+
+# P4C-2836
+p4c_add_xfail_reason("tofino2"
+  "error: Some fields cannot be allocated because of unsatisfiable constraints."
+  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)

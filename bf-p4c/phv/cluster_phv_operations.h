@@ -48,6 +48,10 @@ class PHV_Field_Operations : public Inspector {
     // even the sources should have a no-pack property.
     static const ordered_set<cstring> SHIFT_OPS;
 
+    // The following instructions are saturating instructions, for which
+    // even the sources shoudl have a no-pack property.
+    static const ordered_set<cstring> SATURATE_OPS;
+
  private:
     PhvInfo &phv;
 

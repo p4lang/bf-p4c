@@ -26,6 +26,13 @@ const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {
     "shrs"
 };
 
+const ordered_set<cstring> PHV_Field_Operations::SATURATE_OPS = {
+    "saddu",
+    "sadds",
+    "ssubu",
+    "ssubs"
+};
+
 void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     LOG4("Stateful instruction: " << inst);
     // SALU operands have the following constraints:
@@ -214,30 +221,61 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         // overflow from writing to the destination and clobber adjacently
         // packed fields.
         //
-        // However, the sources may be packed with other fields, because other
-        // bits of the container can't influence the destination.
+        // The sources possibly also need to be placed alone in their PHV
+        // containers because they may also influence the destination.
+        //
         // For example:
         //
-        // Container 1               Container 2               Container 3
-        // [ 0000 XXXX XXXX 0000 ] = [ AAAA YYYY YYYY BBBB ] + [ CCCC ZZZZ ZZZZ DDDD ]
+        // Container 1               Container 2                Container 3
+        // [ 0000 XXXX XXXX 0000 ] = [ AAAA YYYY YYYY BBBB ] OP [ CCCC ZZZZ ZZZZ DDDD ]
         //
-        // where the instruction in question is X = Y + Z.  The result is
-        // [ ____ RRRR RRRR ____ ], where '_' is some unknown value and R is
-        // the result stored in the destination in question.
+        // where the instruction in question is X = Y OP Z, e.g., X = Y + Z.
+        // The result is [ ____ RRRR RRRR ____ ], where '_' is some unknown
+        // value and R is the result stored in the destination in question.
+        //
+        //
+        // Addition/subraction (regular):
+        //  - Bits below Y and Z impact X when they generate a carry (i.e.,
+        //    overflow/underflow of BBBB + DDDD).
+        //  - Bits above Y and Z do _not_ impact X.
+        //
+        //  Example:
+        //    Y = 0x01, Z = 0x02, B = 0xFF, D = 0x01
+        //    X = Y + Z = 0x03
+        //
+        //    [ 01 FF ] + [ 02 01 ] = [ 04 00 ]
+        //
+        //
+        // Saturating addition/subtraction:
+        //  - Bits below Y and Z impact X when they generate a carry (i.e.,
+        //    overflow/underflow of BBBB + DDDD).
+        //  - Bits above Y and Z impact X by preventing saturation of X (i.e.,
+        //    Y OP Z will overflow/underflow into the higher-order bits instead
+        //    of saturating).
+        //
+        //  Example 1:
+        //    Y = 0x01, Z = 0x02, B = 0xFF, D = 0x01
+        //    X = Y |+| Z = 0x03
+        //
+        //    [ 01 FF ] |+| [ 02 01 ] = [ 04 00 ]
+        //                                ^^ - X is incorrect
+        //
+        //  Example 2:
+        //    Y = 0xF0, Z = 0x11, A = 0x00, C = 0x00
+        //    X = Y |+| Z = 0xFF
+        //
+        //    [ 00 F0 ] |+| [ 00 11 ] = [ 01 01 ]
+        //                                   ^^ - X is incorrect
 
-        // XXX(cole): Actually, this only works if the other bits in the
-        // destination container are guaranteed to be zero, which is not true
-        // after this instruction executes.  Hence, two back-to-back addition
-        // instructions could overflow the lower bits of the destination
-        // container and modify the destination field.
-        // XXX(mike): This example is wrong.  What if BBBB + DDDD overflows?
-        // Likely, cannot pack sources either.
+        // Discussion (keep until resolved)
+        // XXX/TODO(glen): Need to restrict packing for regular arithmetic ops.
         //
+        // XXX(mike):
         // Until we add a "don't pack the lower order bits" constraint, we'll
         // have to rely on validate allocation to catch bad packings that hit
         // this corner case.  Unfortunately, it's too restrictive to not pack
         // any sources of non-bitwise instructions.
-
+        //
         // XXX(cole): In some circumstances, it may be possible to pack these
         // fields in the same container if enough padding is left between them.
 
@@ -255,10 +293,12 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                  "non-MOVE operation to a larger field " << dst->name);
             field->set_solitary(PHV::SolitaryReason::ALU); }
 
-        // For shift operations, the sources must be assigned no-pack.
-        if (SHIFT_OPS.count(inst->name)) {
-            LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a "
-                 "shift operation " << inst);
+        // For shift and saturate operations, the sources must be assigned no-pack.
+        auto is_shift = SHIFT_OPS.count(inst->name);
+        auto is_saturate = SATURATE_OPS.count(inst->name);
+        if ((is_shift || is_saturate) && field != dst) {
+            LOG3("Marking "  << field->name << " as 'no pack' because it is a source of a " <<
+                 (is_shift ? "shift" : "saturate") << " operation " << inst);
             field->set_solitary(PHV::SolitaryReason::ALU); } }
 
     if (!alignStatefulSource) return;

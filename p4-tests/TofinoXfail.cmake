@@ -1855,3 +1855,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-l2_subintf.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-map.p4
 )
+
+# P4C-2836
+p4c_add_xfail_reason("tofino"
+  "error: Some fields cannot be allocated because of unsatisfiable constraints."
+  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)

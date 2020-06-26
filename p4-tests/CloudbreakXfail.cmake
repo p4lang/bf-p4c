@@ -454,3 +454,9 @@ p4c_add_xfail_reason("tofino3"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
 )
+
+# P4C-2836
+p4c_add_xfail_reason("tofino3"
+  "error: Some fields cannot be allocated because of unsatisfiable constraints."
+  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)
