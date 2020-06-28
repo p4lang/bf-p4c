@@ -55,12 +55,6 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
    extensions/p4_tests/p4_14/stf/decaf_1.p4 # 16-bit container repeated in FD
    )
 
-  p4c_add_xfail_reason("tofino3"
-    "mismatch from expected(.*) at byte .*"
-    # Needs some fixes to ternary static entries/gateway payload for TCAM
-    extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
-    )
-
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS

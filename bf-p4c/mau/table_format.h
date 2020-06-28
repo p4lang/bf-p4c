@@ -161,6 +161,7 @@ struct TableFormat {
         IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
         IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
 
+        std::map<int, int> payload_map;
 
         void clear() {
             ghost_bits.clear();
@@ -175,6 +176,7 @@ struct TableFormat {
             stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
             meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
             meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
+            payload_map.clear();
         }
 
         bool has_overhead() const {
@@ -258,6 +260,8 @@ struct TableFormat {
     int ghost_bits_count = 0;
     const bitvec immediate_mask;
     bool gw_linked;
+    FindPayloadCandidates &fpc;
+
     bool skinny = false;
     bool requires_versioning() const { return layout_option.layout.requires_versioning; }
 
@@ -318,13 +322,14 @@ struct TableFormat {
     void redistribute_entry_priority();
     void redistribute_next_table();
     bool build_match_group_map();
+    bool build_payload_map();
     bool interleave_match_and_overhead();
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IXBar::Use &phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl)
+                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc)
         : layout_option(l), match_ixbar(mi), proxy_hash_ixbar(phi), tbl(t), immediate_mask(im),
-          gw_linked(gl) {}
+          gw_linked(gl), fpc(fpc) {}
     bool find_format(Use *u);
     void verify();
 };

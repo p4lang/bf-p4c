@@ -494,6 +494,9 @@ bool TableFormat::find_format(Use *u) {
             use->match_groups.emplace_back();
         if (!allocate_overhead())
             return false;
+        if (layout_option.layout.gateway && Device::uniqueGatewayShifts() > 1) {
+            build_payload_map();
+        }
         return true;
     }
 
@@ -2427,9 +2430,6 @@ bool TableFormat::build_match_group_map() {
                                            (use->match_group_map[idx].size() + 1) - 1;
                 next_bit_upper_bound += idx * SINGLE_RAM_BITS;
                 // Bounds described in the comments
-                LOG1("   Help me out " << idx << " " << entry << " " <<  min_next_bit << " "
-                     << max_next_bit << " " << next_bit_lower_bound << " "
-                     << next_bit_upper_bound << " " << use->match_group_map[idx].size());
                 BUG_CHECK(min_next_bit >= next_bit_lower_bound &&
                           max_next_bit <= next_bit_upper_bound,
                           "Next table pointers not saved correctly to entries");
@@ -2437,6 +2437,48 @@ bool TableFormat::build_match_group_map() {
             use->match_group_map[idx].push_back(entry);
         }
         result_buses_seen += overhead_groups_per_RAM[idx];
+    }
+    return true;
+}
+
+
+/**
+ * A gateway that is used as small match table, similar to a normal exact match
+ * table, has different shiftcounts per entry.  Each table entry can be assigned
+ * a RAM entry, which is what is done in build_match_group_map.
+ *
+ * For a gateway, the shifts are hard-coded to the gateway line that matches.
+ * The four matching lines are for shifts, 3, 2, 1, and 0, while the miss entry
+ * is shift 4.
+ *
+ * Each gateway_row in the IR corresponds to an entry, specifically each gateway row
+ * corresponds to an individual match_group.  Every entry that is running a payload
+ * will have a corresponding match group.
+ *
+ * This is to coordinate all the match_groups, which are entries running a payload action
+ * with the actual RAM entry so that the exact_shiftcount registers are programmed
+ * correctly.
+ *
+ * For instance, the miss entry may run the payload, and must always use shift 4.
+ * The miss entry has null gateway row.
+ */
+bool TableFormat::build_payload_map() {
+    std::vector<int> gateway_entry_to_table_entries = { 3, 2, 1, 0, 4 };
+    auto gw_tbl = fpc.convert_to_gateway(tbl);
+    BUG_CHECK(gw_tbl, "Building a payload map requires a gateway option");
+    int index = -1;
+    bool miss_seen = false;
+    for (auto gw_row : gw_tbl->gateway_rows) {
+        index++;
+        if (gw_row.second.isNull()) continue;
+        if (gw_row.first) {
+            BUG_CHECK(!miss_seen, "A miss entry on a table has a higher priority than "
+                "any other entry on table %1%", tbl->externalName());
+            use->payload_map[gateway_entry_to_table_entries.at(index)] = index;
+        } else {
+            miss_seen = true;
+            use->payload_map[4] = index;
+        }
     }
     return true;
 }
@@ -2561,8 +2603,6 @@ void ByteInfo::set_interleave_info(int overhead_bits) {
         il_info.overhead_start = msb_hole_start;
         il_info.byte_cycle = (msb_hole_start + overhead_bits + 7) / 8;
     }
-    LOG1("\t\t   Boobs " << il_info.match_byte_start << " " << il_info.overhead_start << " " <<
-          il_info.byte_cycle << " " << best_hole << " " << msb_hole_start);
 }
 
 /**
@@ -2598,7 +2638,6 @@ bool TableFormat::interleave_match_and_overhead() {
 
     int overhead_bits = overhead_bits_necessary();
     if (overhead_bits == 0) return false;
-    LOG1("    overhead bits " << overhead_bits);
     clear_pre_allocation_state();
     classify_match_bits();
 

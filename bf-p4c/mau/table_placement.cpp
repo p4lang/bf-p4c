@@ -854,7 +854,7 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
                  next->use.preferred()->layout.hash_action;
     TableFormat current_format(*next->use.preferred(), next->resources.match_ixbar,
                                next->resources.proxy_hash_ixbar, next->table,
-                               immediate_mask, gw_linked);
+                               immediate_mask, gw_linked, lc.fpc);
 
     if (!current_format.find_format(&next->resources.table_format)) {
         next->resources.table_format.clear();

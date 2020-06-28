@@ -168,7 +168,7 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
     for (auto &lo : table_layouts) {
         if (lo.action_format_index != static_cast<int>(action_formats.size()) - 1)
             continue;
-        if (!lo.layout.ternary && lo.way.match_groups != 1)
+        if (lo.way.match_groups != 1 && !lo.layout.ternary)
             continue;
         single_lo = &lo;
         break;
@@ -179,11 +179,6 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
     // Guarantee that we fit all of the overhead
     if (single_lo->layout.overhead_bits * (tbl->entries_list->entries.size())
         > TableFormat::OVERHEAD_BITS)
-        return;
-
-    // Currently due to assembly problems, we cannot support ternary tables yet due to
-    // the behavior of the catch all entry.  Delete when Chris adds assembly support
-    if (single_lo->layout.ternary)
         return;
 
     candidates.insert(tbl->name);

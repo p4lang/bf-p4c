@@ -818,6 +818,7 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
         int chosen_byte = -1;
         bool found = false;
         for (auto byte : grp->max_free()) {
+            // Alignment check to verify that the byte is a legal container position
             if (align_flags[(byte+align) & 3] & need.flags) {
                  continue;
             }

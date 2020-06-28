@@ -8,6 +8,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/mau/payload_gateway.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/parde/asm_output.h"
@@ -3381,6 +3382,21 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                     emit_table_format(out, gw_indent, tbl->resources->table_format, nullptr,
                                       false, true);
                     // FIXME: Assembler doesn't yet support payload bus/row for every table
+                }
+
+                auto &payload_map = tbl->resources->table_format.payload_map;
+                if (!payload_map.empty()) {
+                    out << gw_indent << "payload_map: [";
+                    cstring sep = "";
+                    for (int i = 0; i <= FindPayloadCandidates::GATEWAY_ROWS_FOR_ENTRIES; i++) {
+                        out << sep;
+                        if (payload_map.count(i))
+                            out << payload_map.at(i);
+                        else
+                            out << "_";
+                        sep = ", ";
+                    }
+                    out << "]" << std::endl;
                 }
                 ok = true;
                 break;
