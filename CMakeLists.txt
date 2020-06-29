@@ -31,6 +31,9 @@ if (ENABLE_STATIC_LIBS)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
 
+if (ENABLE_TESTING)
+  enable_testing()
+endif()
 
 set(BOOST_MIN_VERSION "1.58.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
