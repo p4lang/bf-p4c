@@ -265,16 +265,27 @@ template<> void Deparser::write_config(Target::Cloudbreak::deparser_regs &regs) 
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
-    for (auto &rslice : regs.dprsrreg.ho_i)
+    json::map field_dictionary_alloc;
+    for (auto &rslice : regs.dprsrreg.ho_i) {
+        json::vector fd_ingress;
         output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
-            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS]);
-
+            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_ingress,
+            INGRESS);
+        field_dictionary_alloc["ingress"] = fd_ingress.clone();
+    }
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
-    for (auto &rslice : regs.dprsrreg.ho_e)
+    for (auto &rslice : regs.dprsrreg.ho_e) {
+        json::vector fd_egress;
         output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
-            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS]);
-
+            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_egress,
+            EGRESS);
+        field_dictionary_alloc["egress"] = fd_egress.clone();
+    }
+    if (Log::verbosity() > 0) {
+        auto json_dump = open_output("logs/field_dictionary.log");
+        *json_dump  << &field_dictionary_alloc;
+    }
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         if (!options.match_compiler) {
             error(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",

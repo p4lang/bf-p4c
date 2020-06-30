@@ -87,7 +87,9 @@ public:
         void dbprint(std::ostream &out) const;
     };
 protected:
+    // registers indexed according to MAU id
     std::vector<Register *> regs;
+    std::map<int, std::map<int, std::string>> phv_pov_names;
     struct PerStageInfo {
         int     max_stage = INT_MAX;
         Slice   slice;
@@ -192,14 +194,31 @@ public:
         int slicelobit() const override { return (**this).lo; }
         int slicehibit() const override { return (**this).hi; }
     };
-
+    // Return register using mau_id as @arg index
     static const Register *reg(int idx)
         { BUG_CHECK(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
+
+    // Return POV name allocated in @arg reg at @arg index
+    static const std::string get_pov_name(int reg, int index) {
+        if (phv.phv_pov_names.count(reg) && phv.phv_pov_names.at(reg).count(index))
+            return phv.phv_pov_names[reg][index];
+        return " "; }
+
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }
     static std::string db_regset(const bitvec &s);
     static unsigned mau_groupsize();
+
+    // Return all field names in @arg reg at @arg stage
+    static const std::vector<std::string> &aliases(const Register *reg, int stage) {
+        static std::vector<std::string> empty;
+        if (!phv.user_defined.count(reg)) return empty;
+        auto &m = phv.user_defined.at(reg).second;
+        auto it = m.upper_bound(stage);
+        if (it == m.begin()) return empty;
+        return (--it)->second;
+    }
 };
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);

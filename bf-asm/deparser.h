@@ -144,6 +144,25 @@ public:
             return std::distance(singleton_object.constants[gr].begin(),
                                  singleton_object.constants[gr].find(c));
         return -1; }
+
+    // @return constant value that will be deparsed
+    static int get_constant(gress_t gr, int phv_idx) {
+        int i = 0;
+        for (auto constant : singleton_object.constants[gr]) {
+            if ((phv_idx - 224) == i) {
+                return constant; }
+           else {
+                i++; }}
+        return -1; }
+
+    // Writes POV information in json used for field dictionary logging
+    static void write_pov_in_json(json::map& fd, const Phv::Register* pov, int bit) {
+        auto povName = Phv::get_pov_name(pov->uid, bit);
+        fd["POV PHV"] = pov->uid;
+        fd["POV Field bit"] =  bit;
+        fd["POV Field Name"] = povName;
+        return;
+    }
 };
 
 #endif /* _deparser_h_ */

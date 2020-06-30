@@ -112,8 +112,13 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
         if (!reg[stage].slice.valid) {
             error(what.lineno, "Invalid register slice");
             return -1; }
-        if (stage == -1)
+        if (stage == -1) {
             add_phv_field_sizes(gress, phv_name, reg[stage].slice->size());
+            bool is_pov = (phv_name.find(".$valid") != std::string::npos);
+            if (is_pov) {
+                phv_pov_names[sl->reg.mau_id()][reg[stage].slice.lo] = phv_name;
+            }
+        }
         return 0;
     } else {
         error(what.lineno, "No register named %s", reg);

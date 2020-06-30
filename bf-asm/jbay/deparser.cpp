@@ -320,11 +320,13 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
         regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
         regs.chunk_info[ch].seg_vld = 0;  // no CLOTs yet
         regs.chunk_info[ch].seg_slice = byte & 7;
-        regs.chunk_info[ch].seg_sel = byte >> 3; }
+        regs.chunk_info[ch].seg_sel = byte >> 3;
+    }
 }
 
 template<class CHUNKS, class CLOTS, class POV, class DICT>
-void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov, DICT &dict) {
+void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov,
+                                        DICT &dict, json::vector& fd_gress, gress_t gress) {
     // DANGER -- this code and output_jbay_field_dictionary above must match exactly
     const unsigned CHUNK_SIZE = Target::JBay::DEPARSER_CHUNK_SIZE;
     const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
@@ -332,16 +334,22 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
     const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
     unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
     Phv::Slice prev_pov;
+    json::map fd;
+    json::vector chunk_bytes;
     for (auto &ent : dict) {
         if (!check_chunk(lineno, ch)) break;
         auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
         unsigned size = ent.what->size();
         if (byte && (clot || byte + size > CHUNK_SIZE ||
                      (prev_pov && *ent.pov != prev_pov))) {
+            fd["Field Dictionary Number"] = ch;
+            Deparser::write_pov_in_json(fd, &prev_pov.reg, prev_pov.lo);
             chunk[ch].cfg.seg_vld = 0;
             chunk[ch].cfg.seg_slice = byte & 7;
             chunk[ch].cfg.seg_sel = byte >> 3;
             ++ch;
+            fd["Content"] = std::move(chunk_bytes);
+            fd_gress.push_back(std::move(fd));
             if (!check_chunk(lineno, ch)) break;
             tof2lab44_workaround(lineno, ch);
             byte = 0; }
@@ -357,8 +365,10 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             auto phv_repl = clot->phv_replace.begin();
             auto csum_repl = clot->csum_replace.begin();
             for (int i = 0; i < clot->length; i += 8, ++ch) {
+                fd["Field Dictionary Number"] = ch;
                 if (!check_chunk(lineno, ch)) break;
                 tof2lab44_workaround(lineno, ch);
+                Deparser::write_pov_in_json(fd, &ent.pov->reg, ent.pov->lo);
                 if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
                     seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
                     clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
@@ -366,26 +376,50 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                 chunk[ch].cfg.seg_sel = seg_tag;
                 chunk[ch].cfg.seg_slice = i/8U;
                 for (int j = 0; j < 8 && i + j < clot->length; ++j) {
+                    json::map chunk_byte;
                     if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
                         chunk[ch].is_phv |= 1 << j;
                         chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
+                        chunk_byte["Byte"] = j;
+                        auto phv_reg = &phv_repl->second->reg;
+                        write_field_name_in_json(phv_reg, &ent.pov->reg,
+                                                  ent.pov->lo, chunk_byte, 19, gress);
                         if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
                             ++phv_repl;
                     } else if (csum_repl != clot->csum_replace.end() && int(csum_repl->first) <= i + j) {
                         chunk[ch].is_phv |= 1 << j;
                         chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
+                        chunk_byte["Byte"] = j;
+                        write_csum_const_in_json(csum_repl->second.encode(), chunk_byte, gress);
                         if (int(csum_repl->first + 2) <= i + j + 1)
                             ++csum_repl;
                     } else {
                         chunk[ch].byte_off.phv_offset[j] = i + j;
+                        chunk_byte["Byte"] = j;
+                        chunk_byte["CLOT"] = clot_tag;
                     }
+                    chunk_bytes.push_back(std::move(chunk_byte));
                 }
+                fd["Content"] = std::move(chunk_bytes);
+                fd_gress.push_back(std::move(fd));
+
             }
             tof2lab44_workaround(lineno, ch);
             if (!check_chunk(lineno, ch)) break;
         } else {
             // Phv, Constant, or Checksum
             while (size--) {
+                json::map chunk_byte;
+                chunk_byte["Byte"] = byte;
+                if (ent.what->encode() < 224) {
+                    auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
+                    auto phv_reg = phv->reg();
+                    write_field_name_in_json(phv_reg, &ent.pov->reg, ent.pov->lo,
+                                             chunk_byte, 19, gress);
+                } else {
+                    write_csum_const_in_json(ent.what->encode(), chunk_byte, gress);
+                }
+                chunk_bytes.push_back(std::move(chunk_byte));
                 chunk[ch].is_phv |= 1 << byte;
                 chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); } }
         prev_pov = *ent.pov; }
@@ -393,7 +427,10 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
         tof2lab44_workaround(lineno, ch);
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
-        chunk[ch].cfg.seg_sel = byte >> 3; }
+        chunk[ch].cfg.seg_sel = byte >> 3;
+        fd["Content"] = std::move(chunk_bytes);
+        fd_gress.push_back(std::move(fd));
+    }
 }
 
 static void check_jbay_ownership(bitvec phv_use[2]) {
@@ -594,19 +631,26 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
             write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum_unit[EGRESS][i], pov[EGRESS]); } }
-
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
-    for (auto &rslice : regs.dprsrreg.ho_i)
+    json::map field_dictionary_alloc;
+    json::vector fd_gress;
+    for (auto &rslice : regs.dprsrreg.ho_i) {
         output_jbay_field_dictionary_slice(lineno[INGRESS], rslice.him.fd_compress.chunk,
-            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS]);
-
+            rslice.hir.h.compress_clot_sel, pov[INGRESS], dictionary[INGRESS], fd_gress, INGRESS);
+            field_dictionary_alloc["ingress"] = std::move(fd_gress);
+    }
     output_jbay_field_dictionary(lineno[EGRESS], regs.dprsrreg.inp.icr.egr,
         regs.dprsrreg.inp.ipp.main_e.pov.phvs, pov[EGRESS], dictionary[EGRESS]);
-    for (auto &rslice : regs.dprsrreg.ho_e)
+    for (auto &rslice : regs.dprsrreg.ho_e) {
         output_jbay_field_dictionary_slice(lineno[EGRESS], rslice.hem.fd_compress.chunk,
-            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS]);
-
+            rslice.her.h.compress_clot_sel, pov[EGRESS], dictionary[EGRESS], fd_gress, EGRESS);
+            field_dictionary_alloc["egress"] = std::move(fd_gress);
+    }
+    if (Log::verbosity() > 0) {
+        auto json_dump = open_output("logs/field_dictionary.log");
+        *json_dump  << &field_dictionary_alloc;
+    }
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         if (!options.match_compiler) {
             error(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",

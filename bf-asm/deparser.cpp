@@ -7,6 +7,7 @@
 #include "range.h"
 #include "target.h"
 #include "top_level.h"
+#include "../lib/stringref.h"
 
 static unsigned unique_field_list_handle = FIELD_HANDLE_START;
 
@@ -34,6 +35,7 @@ struct Deparser::FDEntry {
                                       "in deparser"); } }
         unsigned encode() override { return val->reg.deparser_id(); }
         unsigned size() override { return val->reg.size/8; }
+        const ::Phv::Register* reg() { return &val->reg; }
     };
     struct Checksum : Base {
         gress_t         gress;
@@ -261,9 +263,8 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 if (kv.value.type == tVEC && kv.value.vec.size == 0) continue;
                 collapse_list_of_maps(kv.value);
                 if (!CHECKTYPE(kv.value, tMAP)) continue;
-                for (auto &ent : kv.value.map) {
+                for (auto &ent : kv.value.map)
                     dictionary[gress].emplace_back(gress, ent.key, ent.value);
-                }
             } else if (kv.key == "pov") {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
@@ -407,6 +408,52 @@ void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const
         break;
     default:
         break; }
+}
+
+// Used for field dictionary logging. Using fd entry and pov, a json::map
+// is filled with appropriate field names
+void write_field_name_in_json(const Phv::Register* phv, const Phv::Register* pov, int povBit,
+                              json::map& chunk_byte, int stageno, gress_t gress) {
+    auto povName_ = Phv::get_pov_name(pov->mau_id(), povBit);
+    StringRef povName = povName_;
+    StringRef headerName;
+    if (auto *p = povName.findstr("$valid")) {
+        headerName = povName.before(p);
+    }
+    std::string fieldNames;
+    auto allFields = Phv::aliases(phv, stageno);
+    for (auto fieldName : allFields) {
+         if (fieldName.find(headerName.string()) != std::string::npos)
+             fieldNames += (fieldName + ", ");
+    }
+    chunk_byte["PHV"] = phv->uid;
+    chunk_byte["Field"] = fieldNames;
+    return;
+}
+
+
+// Used for field dictionary logging. Using fd entry and pov, a json::map
+// is filled with appropriate checksum or constant
+void write_csum_const_in_json(int deparserPhvIdx,
+                              json::map& chunk_byte, gress_t gress) {
+    if (options.target == Target::Tofino::tag) {
+        if  (deparserPhvIdx >= 224 && deparserPhvIdx <= 235 ) {
+            chunk_byte["Checksum"] = deparserPhvIdx - 224 - gress * 6;
+        }
+    } else if (options.target == Target::JBay::tag) {
+        if (deparserPhvIdx > 224 && deparserPhvIdx < 232) {
+            chunk_byte["Constant"] = Deparser::get_constant(gress, deparserPhvIdx - 224);
+        } else {
+            chunk_byte["Checksum"] = deparserPhvIdx - 232;
+        }
+    } else if (options.target == Target::Cloudbreak::tag) {
+        if (deparserPhvIdx > 224 && deparserPhvIdx < 240) {
+            chunk_byte["Constant"] = Deparser::get_constant(gress, deparserPhvIdx - 224);
+        } else {
+            chunk_byte["Checksum"] = deparserPhvIdx - 240;
+        }
+    }
+    return;
 }
 
 #include "tofino/deparser.cpp"    // tofino template specializations
