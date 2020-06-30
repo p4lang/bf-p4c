@@ -436,16 +436,23 @@ PHV::SlicingIterator::SlicingIterator(
                 if (!possible) {
                     return false;
                 }
+                bool found = false;
                 for (auto& fs_a : sc_i->cluster(a).slices()) {
                     for (auto& fs_b : sc_i->cluster(b).slices()) {
                         // adjacent fieldslice + no_split
-                        if (fs_a.field()->no_split() && fs_a.field() == fs_b.field()
-                            && fs_a.range().hi + 1 == fs_b.range().lo) {
-                            return true;
+                        if (fs_a.field()->no_split() && fs_a.field() == fs_b.field()) {
+                            if (fs_a.range().hi + 1 == fs_b.range().lo) {
+                                found = true;
+                            } else {
+                                // the logic is complicated here as there can be some other
+                                // fieldslice that rotationallly set this fieldslice but does
+                                // not indicate any no_split constraint.
+                                return false;
+                            }
                         }
                     }
                 }
-                return false;
+                return found;
             };
 
         // mark no_split fields
@@ -2755,6 +2762,7 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
     if (done_i)
         return *this;
 
+    bool has_restarted = false;
     while (!compressed_schemas_i[sentinel_idx_i]) {
         if (num_slicings_i % 10000 == 0)
             LOG4("Tried " << num_slicings_i << " slicings.");
@@ -2798,7 +2806,28 @@ PHV::SlicingIterator PHV::SlicingIterator::operator++() {
 
         // reaches the end.
         if (compressed_schemas_i[sentinel_idx_i]) {
-            break;
+            int n_search_bits = sentinel_idx_i;
+            for (const auto& x : no_splits_i) {
+                (void)x;  // bypass -unused-variable
+                n_search_bits -= 1;
+            }
+            // if didn't find any solution with less than 1024 tries, then reset
+            // required_slices_i to empty and redo. This slicing iterator will be
+            // completely removed soon.
+            if (!has_restarted && cached_i.empty() &&
+                num_slicings_i < (1 << 16) && n_search_bits <= 20) {
+                has_restarted = true;
+                compressed_schemas_i = bitvec();
+                required_slices_i = bitvec();
+                exp_split_enabled_i = true;
+                LOG1("enable exp_split and restart");
+                continue;
+            } else {
+                LOG1("cannot enable exp_split because alreay "
+                     "found solution or tried enough: " << cached_i.empty() << " " <<
+                     num_slicings_i);
+                break;
+            }
         }
 
         // Increment the counter for number of slicings.
