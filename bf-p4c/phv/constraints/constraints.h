@@ -91,7 +91,7 @@ class IntegerConstraint {
 };
 
 /// This class represents the alignment constraint, which implies that field must start at
-/// a particular offset within a container.
+/// a particular offset within a byte.
 class AlignmentConstraint : IntegerConstraint {
  protected:
     // used by bridged packing to insert extra padding to ease phv allocation
@@ -117,11 +117,11 @@ class AlignmentConstraint : IntegerConstraint {
 
     void updateConstraint(unsigned source) { reason |= source; }
     void eraseConstraint() { reason = 0; }
-    unsigned getAlignment() { return value; }
-    unsigned getReason() { return reason; }
+    unsigned getAlignment() const { return value; }
+    unsigned getReason() const { return reason; }
 
     void setContainerSize(unsigned size) { container_size = size; }
-    unsigned getContainerSize() { return container_size; }
+    unsigned getContainerSize() const { return container_size; }
 
     bool isBridged() const { return reason & BRIDGE; }
     bool isParser() const { return reason & PARSER; }

@@ -105,8 +105,7 @@ set (TOFINO_MUST_PASS_TESTS
   extensions/p4_tests/p4_16/customer/arista/p4c-2032.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2370.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal.p4
-  # XXX(yumin): temporarily disabled, will be fixed in P4C-2797.
-  # extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default_2.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-default_3.p4

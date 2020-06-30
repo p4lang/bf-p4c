@@ -1692,11 +1692,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
-)
-
 # p4c-2581
 p4c_add_xfail_reason("tofino"
   "PHV allocation requires the following field slices to be packed together"
@@ -1830,8 +1825,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages, using .*"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_2.p4
-  # extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-media.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat_2.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_3.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-qinq.p4
@@ -1853,6 +1846,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-l2_subintf.p4
+)
+
+# P4C-2824
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-map.p4
 )
 
@@ -1860,4 +1858,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Some fields cannot be allocated because of unsatisfiable constraints."
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: PHV allocation creates an invalid container action within a Tofino ALU"
+  extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
 )

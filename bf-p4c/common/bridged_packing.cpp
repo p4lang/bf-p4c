@@ -905,7 +905,8 @@ void CollectConstraints::end_apply() {
     // encode the validity check as a constraint to filter out some
     // of the alignment constraint candidates and eliminate the
     // heuristics.
-    auto rank = [&](ordered_set<AlignmentConstraint>& constraints) -> AlignmentConstraint {
+    auto rank = [&](ordered_set<AlignmentConstraint>& constraints,
+                    const PHV::Field* f) -> AlignmentConstraint {
         // sort the alignment by reason by inserting them in a map.
         std::map<unsigned, std::vector<AlignmentConstraint>> byReason;
         for (auto c : constraints)
@@ -917,8 +918,33 @@ void CollectConstraints::end_apply() {
         // sort alignment withint the same reason.
         std::sort(align.second.begin(), align.second.end());
 
-        // take the smallest alignment value.
+        // XXX(yumin): Although we don't have access
+        // to those analysis, here we use a heuristic
+        // that if there are multiple aligments on the field,
+        // always pick the *largest* alignment of sources as it encourages/allows
+        // the field to be split so that if it is used as destination
+        // its sources can has different alignments and be split.
+        ordered_set<unsigned int> srcAlignments;
+        for (const auto& src : actionConstraints.field_sources(f)) {
+            if (src->getAlignmentConstraint().hasConstraint()) {
+                srcAlignments.insert(src->getAlignmentConstraint().getAlignment());
+            }
+            for (const auto& parser_src : parserAlignedFields.at(src)) {
+                if (parser_src->getAlignmentConstraint().hasConstraint()) {
+                    srcAlignments.insert(parser_src->getAlignmentConstraint().getAlignment());
+                }
+            }
+        }
+
+        // XXX(yumin): heuristic. Choose the largest source field alignment
+        // if multiple destination field alignments exist.
         auto ret = *align.second.begin();
+        for (const auto& c : align.second) {
+            if (srcAlignments.count(c.getAlignment())) {
+                ret = c;
+            }
+        }
+
         return ret;
     };
 
@@ -935,8 +961,7 @@ void CollectConstraints::end_apply() {
             continue; }
 
         // sort alignment constraint by satisfying difficulties
-        auto alignment = rank(align.second);
-
+        auto alignment = rank(align.second, f);
         f->set_alignment(alignment);
         LOG5("\t Updating alignment constraint of " << align.first->name <<
              " to " << alignment.getAlignment());
@@ -947,11 +972,11 @@ void CollectConstraints::end_apply() {
         // egress, bridged packing must allocate the field by itself to a
         // container to avoid slicing the fields further which may cause
         // the 'multiple phv sources' error in phv allocation.
-        if (align.second.size() > 1) {
-            LOG5("\t Detect field with conflicting alignment requirement " << f);
-            f->set_no_split(true);
-            f->set_no_split_container_size(alignment.getContainerSize());
-        }
+        // if (align.second.size() > 1) {
+        //     LOG5("\t Detect field with conflicting alignment requirement " << f);
+        //     f->set_no_split(true);
+        //     f->set_no_split_container_size(alignment.getContainerSize());
+        // }
     }
 
     for (auto fields : mutualAlignmentConstraints) {
