@@ -1,0 +1,137 @@
+
+#include "gtest/gtest.h"
+
+#include "depositfield.h"
+
+#if __cplusplus < 201402L && __cpp_binary_literals < 201304
+  #error "Binary literals are required"
+  // We could fall back on boost/utility/binary.hpp
+#endif
+
+namespace {
+
+constexpr int conSize8 = 8;
+constexpr int conSize32 = 32;
+constexpr int tooLarge = 8;
+constexpr int tooSmall = -9;
+constexpr int tooSmall2 = -5;
+
+TEST(depositfield, 0) {
+  int32_t zero = 0;
+  auto res = DepositField::discoverRotation(zero, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, zero);
+  res = DepositField::discoverRotation(zero, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, zero);
+  res = DepositField::discoverRotation(zero, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, zero);
+}
+
+TEST(depositfield, large) {
+  int32_t value = tooLarge - 1;
+  auto res = DepositField::discoverRotation(value, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value);
+  res = DepositField::discoverRotation(value, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value);
+  res = DepositField::discoverRotation(value, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value);
+}
+
+TEST(depositfield, small) {
+  int32_t value = tooSmall + 1;
+  int32_t value2 = tooSmall2 + 1;
+  auto res = DepositField::discoverRotation(value, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value);
+  res = DepositField::discoverRotation(value, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value);
+  ASSERT_TRUE(value < tooSmall2);
+  res = DepositField::discoverRotation(value, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 0);   // Not possible '0b11111000'
+  EXPECT_EQ(res.value, value);
+  res = DepositField::discoverRotation(value2, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, value2);
+}
+
+TEST(depositfield, numTooLarge) {  // 0b00001000
+  // N.B. other solutions are valid, these are the ones we expect.
+  auto res = DepositField::discoverRotation(8, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 5);
+  EXPECT_EQ(res.value, 1);
+  res = DepositField::discoverRotation(8, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 29);
+  EXPECT_EQ(res.value, 1);
+  res = DepositField::discoverRotation(8, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 5);
+  EXPECT_EQ(res.value, 1);
+}
+
+TEST(depositfield, numTooSmall) {  // 0b11110111
+  auto res = DepositField::discoverRotation(-9, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 5);
+  EXPECT_EQ(res.value, -2);
+  res = DepositField::discoverRotation(-9, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 29);
+  EXPECT_EQ(res.value, -2);
+  res = DepositField::discoverRotation(-9, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 5);
+  EXPECT_EQ(res.value, -2);
+}
+
+TEST(depositfield, 0b00110000) {
+  auto res = DepositField::discoverRotation(0b00110000, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 4);
+  EXPECT_EQ(res.value, 0b00000011);
+  res = DepositField::discoverRotation(0b00110000, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 28);
+  EXPECT_EQ(res.value, 0b00000011);
+  res = DepositField::discoverRotation(0b00110000, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 4);
+  EXPECT_EQ(res.value, 0b00000011);
+}
+
+TEST(depositfield, 0b00100001) {
+  // Failures are sent back with zero rotation and the value unchanged.
+  auto res = DepositField::discoverRotation(0b00100001, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, 0b00100001);
+  res = DepositField::discoverRotation(0b00100001, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, 0b00100001);
+  res = DepositField::discoverRotation(0b00100001, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, 0b00100001);
+}
+
+TEST(depositfield, 0b01111111) { // 127
+  auto res = DepositField::discoverRotation(0b01111111, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 1);
+  EXPECT_EQ(res.value, -2);
+  res = DepositField::discoverRotation(0b01111111, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 0);
+  EXPECT_EQ(res.value, 0b01111111);  // Can't do.
+  res = DepositField::discoverRotation(0b01111111, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 1);
+  EXPECT_EQ(res.value, -2);
+}
+
+TEST(depositfield, 0b10011111) {  // -97
+  auto res = DepositField::discoverRotation(-97, conSize8, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 3);
+  EXPECT_EQ(res.value, -4);
+  res = DepositField::discoverRotation(-97, conSize32, tooLarge, tooSmall);
+  EXPECT_EQ(res.rotate, 27);
+  EXPECT_EQ(res.value, -4);
+  res = DepositField::discoverRotation(-97, conSize8, tooLarge, tooSmall2);
+  EXPECT_EQ(res.rotate, 3);
+  EXPECT_EQ(res.value, -4);
+}
+
+}   // namespace

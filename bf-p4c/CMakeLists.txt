@@ -1049,6 +1049,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/ir_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 

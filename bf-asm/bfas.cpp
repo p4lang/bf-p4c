@@ -127,6 +127,8 @@ void output_all() {
     if (!strcasecmp(OPT, Target::TARGET::name)) options.target = Target::TARGET::tag; else
 #define OUTPUT_TARGET(TARGET)           << " " << Target::TARGET::name
 
+// Do not build main() when BUILDING_FOR_GTEST.
+#ifndef BUILDING_FOR_GTEST
 int main(int ac, char **av) {
     int srcfiles = 0;
     const char *firstsrc = 0;
@@ -375,6 +377,7 @@ int main(int ac, char **av) {
         warning(0, "%d config errors in log file", log_error);
     return error_count > 0 || (options.werror && warn_count > 0) ? 1 : 0;
 }
+#endif
 
 void no_sections_error_exit() {
     if (Section::no_sections_in_assembly()) {

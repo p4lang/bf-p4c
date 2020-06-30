@@ -5,6 +5,81 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitrange.h"
 
+namespace {
+
+constexpr unsigned makeMask(unsigned size) {
+    return (0xffffffffU) >> (sizeof(unsigned) * 8 - size);
+}
+
+bool setBitRangeFits(unsigned value, int numBits, int container_size) {
+    BUG_CHECK(sizeof(unsigned) * 8 >= (unsigned)container_size,
+                            "Variable can't hold container bits");
+    // Pre-rotate set bits away from the wrap-ends.
+    // N.B. This only works for encodable values, other values remain uncodable.
+    constexpr int rotate = 4;
+    BUG_CHECK(container_size/2 >= rotate && rotate >= numBits,
+                            "We can't rotate set-bits away from wrap-ends");
+    constexpr int bitsToCheck = 2;
+    BUG_CHECK(bitsToCheck >= numBits-1, "Need to check more wrap-end bits");
+    unsigned topBit = 1U << (container_size - 1);
+    if ((value & topBit) || (value & 1)) {  // <---bitsToCheck
+        value = ((value >> rotate) | (value << (container_size - rotate)))
+                    & makeMask(container_size);
+    }
+    int range = bitvec(value).max().index() - bitvec(value).min().index() + 1;
+    return range <= numBits;
+}
+
+enum class EncodeConstant {NotPossible, WithSignExtend, WithZeroExtend};
+EncodeConstant canRotateConstant(unsigned value, int max_bits, int min_bits,
+                        int container_size, int constant_size) {
+    // Check if we can rotate a constant viz only m**_bits contiguous bits of variation.
+    // First decide if zero/sign extension of the remaining bits may work.
+    int setBits = bitvec(value).popcount();
+    if (setBits <= max_bits) {  // Zero extend & check the set bit pattern.
+        if (setBitRangeFits(value, max_bits, container_size))
+            return EncodeConstant::WithZeroExtend;
+    }
+    int clearBits = constant_size - setBits;
+    if (clearBits <= min_bits) {  // Sign extend & check the clear bit pattern.
+        // invert bits to reuse functionality.
+        unsigned inverted = ~value & makeMask(constant_size);
+        if (setBitRangeFits(inverted, min_bits, container_size))
+            return EncodeConstant::WithSignExtend;
+    }
+    return EncodeConstant::NotPossible;
+}
+
+/** A verification of the constant used in a ContainerAction to make sure that it can
+ *  be used without being converted to action data
+ */
+EncodeConstant valid_instruction_constant(unsigned value, int max_bits, int min_bits,
+                                            int container_size, int constant_size = -1) {
+    unsigned max_value = (1U << max_bits);
+    unsigned min_value = (1U << min_bits);
+    unsigned complement = makeMask((constant_size == -1)? container_size : constant_size);
+    if (value < max_value)
+        return EncodeConstant::WithZeroExtend;
+    if (value > complement - min_value)
+        return EncodeConstant::WithSignExtend;
+    if (constant_size != -1) {  // Possible deposit-field instruction.
+        return canRotateConstant(value, max_bits, min_bits, container_size, constant_size);
+    }
+    return EncodeConstant::NotPossible;
+}
+}   // namespace
+
+namespace Test {
+// gtest accesses via the global Test::valid_instruction_constant()
+// It would be better to refactor all the code into a public sub-API module.
+bool valid_instruction_constant(unsigned value, int max_bits, int min_bits,
+                                    int container_size, int constant_size) {
+    auto valid = ::valid_instruction_constant(value, max_bits, min_bits,
+                                    container_size, constant_size);
+    return valid != EncodeConstant::NotPossible;
+}
+}
+
 std::set<unsigned> ActionAnalysis::FieldAction::codesForErrorCases =
     { READ_AFTER_WRITES,
       REPEATED_WRITES,
@@ -79,26 +154,20 @@ unsigned ActionAnalysis::ConstantInfo::build_shiftable_constant() {
 
 /** Because the assembly only recognizes constants between -8..7 or their corresponding
  *  container size complement, this function converts all container constants (post-shifted)
- *  to a pre-shift value between -8 and 7
+ *  to a pre-shift value between -8 and 7.
+ *  If the value is used in a deposit-field instruction, the value is the post-rotation result,
+ *  implicitly encoding the required rotation (no longer between -8 and 7).
+ *  The assembler will need to undo this rotation, so it can recreate the pre-rotational
+ *  value of between -8 and 7, along with its rotation parameter.
  */
 unsigned ActionAnalysis::ConstantInfo::valid_instruction_constant(int container_size) const {
-     unsigned max_value = (1U << CONST_SRC_MAX) - 1;
-     if (max_value >= constant_value) {
-         return constant_value;
-     }
-
-     unsigned total_container_mask;
-     if (container_size == sizeof(unsigned) * 8)
-         total_container_mask = static_cast<unsigned>(-1);
-     else
-         total_container_mask = (1U << container_size) - 1;
-     unsigned constant_mask;
-     int cm_size = alignment.bitrange_size();
-     if (cm_size == sizeof(unsigned) * 8)
-         constant_mask = static_cast<unsigned>(-1);
-     else
-         constant_mask = (1U << cm_size) - 1;
-     return ((total_container_mask & ~constant_mask) | constant_value);
+    if (signExtend) {
+        unsigned container_mask = makeMask(container_size);
+        int constant_size = alignment.bitrange_size();
+        unsigned constant_mask = makeMask(constant_size);
+        return container_mask & (~constant_mask | constant_value);
+    }
+    return constant_value;
 }
 
 void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
@@ -1862,20 +1931,6 @@ void ActionAnalysis::check_single_ad_params(ContainerAction &cont_action) {
     }
 }
 
-/** A verification of the constant used in a ContainerAction to make sure that it can
- *  be used without being converted to action data
- */
-bool ActionAnalysis::valid_instruction_constant(unsigned value, int max_shift, int min_shift,
-        int complement_size) {
-    unsigned max_value = (1U << max_shift);
-    unsigned min_value = (1U << min_shift);
-    unsigned complement = (0xffffffffU) >> (sizeof(unsigned) * 8 - complement_size);
-
-    if ((value < max_value) || (value > complement - min_value))
-        return true;
-    return false;
-}
-
 /** A check to guarantee that the use of constant is legal in the action within a container.
  *  The constant does not have to be converted to action data if:
  *
@@ -1942,12 +1997,14 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         return;
     } else if (container.is(PHV::Kind::mocha)) {
-         constant_value = cont_action.ci.build_constant();
-         if (!valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
-                                         container.size())) {
+        constant_value = cont_action.ci.build_constant();
+        auto valid = valid_instruction_constant(constant_value, CONST_SRC_MAX,
+                                                const_src_min, container.size());
+        if (valid == EncodeConstant::NotPossible) {
              cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
              return;
-         }
+        }
+        cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
     } else if (cont_action.name == "set" &&
                cont_action.ci.alignment.direct_write_bits.popcount()
                                             == static_cast<int>(container.size()) &&
@@ -1962,18 +2019,23 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     } else if (cont_action.name != "set") {
         // Using the constant source directly in a non deposit-field operation
         constant_value = cont_action.ci.build_constant();
-        if (!(valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
-                                          container.size()))) {
+        auto valid = valid_instruction_constant(constant_value, CONST_SRC_MAX,
+                                                const_src_min, container.size());
+        if (valid == EncodeConstant::NotPossible) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             return;
         }
+        cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
     } else {
-        int complement_size = cont_action.ci.alignment.bitrange_size();
         // Set or deposit-field
         constant_value = cont_action.ci.build_shiftable_constant();
-        if (!(valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
-                                           complement_size))) {
+        int constant_size = cont_action.ci.alignment.bitrange_size();
+        auto valid = valid_instruction_constant(constant_value, CONST_SRC_MAX, const_src_min,
+                                                    container.size(), constant_size);
+        if (valid == EncodeConstant::NotPossible) {
             cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+        } else {
+            cont_action.ci.signExtend = valid == EncodeConstant::WithSignExtend;
         }
         if (constant_value > ((1U << CONST_SRC_MAX) - 1)) {
             cont_action.error_code |= ContainerAction::REFORMAT_CONSTANT;

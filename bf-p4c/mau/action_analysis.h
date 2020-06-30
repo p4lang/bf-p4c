@@ -249,6 +249,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         unsigned build_shiftable_constant();
         // built as part of the check_constant_to_actiondata function
         unsigned constant_value;
+        bool signExtend = false;  // Only true if requires rotation in a deposit-field instruction
         unsigned valid_instruction_constant(int container_size) const;
     };
 
@@ -516,8 +517,6 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void build_phv_alignment(PHV::Container container, ContainerAction &cont_action);
     void determine_unused_bits(PHV::Container container, ContainerAction &cont_action);
 
-    bool valid_instruction_constant(unsigned value, int max_shift, int min_shift,
-                                    int complement_size);
     void check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
     void add_to_single_ad_params(ContainerAction &cont_action);
     void check_single_ad_params(ContainerAction &cont_action);

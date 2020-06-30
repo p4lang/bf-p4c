@@ -112,6 +112,7 @@ set (BFAS_COMMON_SOURCES
   counter.cpp
   crash.cpp
   deparser.cpp
+  depositfield.cpp
   dynhash.cpp
   exact_match.cpp
   flexible_headers.cpp
@@ -159,6 +160,7 @@ SET (BFAS_COMMON_HEADERS
   constants.h
   data_switchbox.h
   deparser.h
+  depositfield.h
   escape.h
   fdstream.h
   hash_dist.h
@@ -289,3 +291,27 @@ add_custom_target(ctags-asm
   COMMAND ctags -R -I VECTOR --exclude=test --exclude=submodules
               "--regex-C++=${CTAGS_CXX_REGEXP}"
   COMMENT "Generating ctags")
+
+if (ENABLE_GTESTS)
+  # TODO Components need to be built, once, into intermediate libraries.
+  # These lib would then be linked to unit-tests and also linked into larger components/executable.
+  # The exact shape, size, hierarchy of components is to be decided.
+  # For now we will allow the source to be built twice, once for 'bfas', and once for
+  # gtest/CMakeList.txt as a single monolithic component 'bfas_lib'.
+  # TODO ASAP refactor bfas.cpp, moving main() into its own file.
+  #           add_executable (bfas asm_main.cpp)
+  #           target_link_libraries (bfas bfas_lib ${BFASM_LIBS} ${BFASM_LIB_DEPS})
+
+  add_library (bfas_lib ${BFAS_SOURCES})
+  target_compile_definitions(bfas_lib PRIVATE BUILDING_FOR_GTEST)  # removes main()
+  target_link_libraries (bfas_lib PRIVATE ${BFASM_LIBS} ${BFASM_LIB_DEPS})
+
+  # The component's unit-tests are #included in gtestasm.cpp.
+  add_executable (gtestasm gtest/gtestasm.cpp)
+  target_link_libraries (gtestasm PRIVATE bfas_lib gtest)
+  target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3)
+
+  # Add to CTests - but this is in the BFASM project viz build/bf-asm, not build/p4c
+  add_test (NAME gtestasm COMMAND gtestasm WORKING_DIRECTORY ${P4C_BINARY_DIR})
+  set_tests_properties (gtestasm PROPERTIES LABELS "gtest")
+endif ()

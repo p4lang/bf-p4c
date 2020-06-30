@@ -1,11 +1,17 @@
-#include <config.h>
+#include "instruction.h"
 
 #include "action_bus.h"
-#include "instruction.h"
 #include "power_ctl.h"
 #include "phv.h"
-#include "tables.h"
+#include "depositfield.h"
 #include "stage.h"
+#include "tables.h"
+
+#include <config.h>
+
+namespace {
+constexpr int RotationBits = 16;
+}
 
 std::multimap<std::string, Instruction::Decode *>
     Instruction::Decode::opcode[Instruction::NUM_SETS];
@@ -93,10 +99,18 @@ struct operand {
             } else return false; }
         Const *clone() override { return new Const(*this); }
         int32_t bits(int group, int dest_size = -1) override {
+            // assert(value <= 0xffffffffLL);
             int32_t val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
                 val |= UINT64_MAX << group_size[group];
             int minconst = Target::MINIMUM_INSTR_CONSTANT();
+
+            if (dest_size != -1) {  // DepositField::encode() calling.
+                auto rotConst = DepositField::discoverRotation(val, group_size[group], 8, minconst - 1);
+                if (rotConst.rotate)
+                    return rotConst.value+24 | (rotConst.rotate << RotationBits);
+            }
+
             if (val >= minconst && val < 8)
                 return val+24;
             error(lineno, "constant value %" PRId64 " out of range for immediate", value);
@@ -1050,9 +1064,15 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int DepositField::encode() {
-    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize()))
-                    % dest->reg.size;
-    int bits = (1 << 6) | src1.bits(slot/Phv::mau_groupsize(), dest.size());
+    // If src1 is an operand::Const (and we pass a valid dest_size),
+    // we will recieve the combined rotation + bits from DepositField::discoverRotation().
+    // Otherwise the top 'RotationBits' will be zero.
+    int rotConst = src1.bits(slot/Phv::mau_groupsize(), dest.size());
+    unsigned rot = rotConst >> RotationBits;
+    rot += dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize());
+    rot %= dest->reg.size;
+    int bits = rotConst & ((1U << RotationBits) - 1);
+    bits |= (1 << 6);
     bits |= dest->hi << 7;
     bits |= rot << 12;
     switch (Phv::reg(slot)->size) {
