@@ -868,23 +868,13 @@ void PHV::Field::foreach_byte(
         if (slice.container().is(PHV::Kind::tagalong))
             continue;
 
+        if (!checkContext(slice, ctxt, use))
+            continue;
+
         // The requested range may only cover part of slice, so we create a new
         // slice that intersects with the range.
-        PHV::AllocSlice intersectedSlice = slice;
-        if (slice.field_slice().lo < range.lo) {
-            int difference = range.lo - slice.field_slice().lo;
-            int diff_width = difference;
-            if (range.hi < slice.field_slice().hi)
-                diff_width += slice.field_slice().hi - range.hi;
-
-            intersectedSlice = PHV::AllocSlice(slice.field(), slice.container(),
-                slice.field_slice().lo + difference, slice.container_slice().lo + difference,
-                slice.width() - diff_width);
-        } else if (range.hi < slice.field_slice().hi) {
-            intersectedSlice = PHV::AllocSlice(slice.field(), slice.container(),
-                slice.field_slice().lo, slice.container_slice().lo,
-                slice.width() - (slice.field_slice().hi - range.hi));
-        }
+        auto overlap = range.intersectWith(slice.field_slice());
+        PHV::AllocSlice intersectedSlice = *(slice.sub_alloc_by_field(overlap.lo, overlap.size()));
 
         // Apply @fn to each byte of the restricted allocation, taking care to
         // split the allocation along container byte boundaries.
@@ -908,7 +898,8 @@ void PHV::Field::foreach_byte(
             tmp.setLiveness(slice.getEarliestLiveness(), slice.getLatestLiveness());
 
             // Invoke the function.
-            if (checkContext(tmp, ctxt, use)) fn(tmp);
+            fn(tmp);
+
             // Increment the window.
             byte = byte.shiftedByBits(8); } }
 }
