@@ -1,5 +1,3 @@
-// TOFINO1_ONLY
-
 /* This is the P4-16 core library, which declares some built-in P4 constructs using P4 */
 #include <core.p4>
 #include <tna.p4>
@@ -998,7 +996,7 @@ control PortFailover(
      * be in the same stage.
      */
 
-    @stage(5)
+    //@stage(5)
 
 
     /* port_failover is used to translate port number into a register index that is
@@ -1303,7 +1301,7 @@ control FabricRouting(
      * be in the same stage.
      */
 
-    @stage(5)
+    //@stage(5)
 
 
     /* ecmp_groups table is used to select one nexthop entry from an ECMP group

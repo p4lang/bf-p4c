@@ -184,6 +184,8 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "error: This program violates action constraints imposed by Tofino3"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-2573-spine.p4
+  extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4
 )
 
 # These tests fail at runtime with the driver
@@ -396,6 +398,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
@@ -457,4 +460,10 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "error: Some fields cannot be allocated because of unsatisfiable constraints."
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)
+
+# Compiler Bug:                     Did not find initial offset.
+p4c_add_xfail_reason("tofino3"
+  "Did not find initial offset."
+  extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
 )

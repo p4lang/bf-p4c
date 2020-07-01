@@ -800,7 +800,11 @@ control EgressMirror(
     Mirror() mirror;
 
     apply {
-        if (eg_intr_md_for_dprsr.mirror_type == MIRROR_TYPE_E2E) {
+        #if __TARGET_TOFINO__ == 1
+            if (eg_intr_md_for_dprsr.mirror_type == MIRROR_TYPE_E2E) {
+        #elif __TARGET_TOFINO__ >= 2
+            if (eg_intr_md_for_dprsr.mirror_type == (bit<4>) MIRROR_TYPE_E2E) {
+        #endif
             mirror.emit<eg_mirror_metadata_t>(eg_md.mirror.session_id,
                     eg_md.mirror);
         }
@@ -5407,7 +5411,11 @@ control TelE2EMirror(
 
     /* TODO: @ignore_table_dependency("tel_postcard_insert") */
     action tel_postcard_e2e() {
-        eg_dprsr_md.mirror_type = MIRROR_TYPE_E2E;
+        #if __TARGET_TOFINO__ == 1
+            eg_dprsr_md.mirror_type = MIRROR_TYPE_E2E;
+        #elif __TARGET_TOFINO__ >= 2
+            eg_dprsr_md.mirror_type = (bit<4>) MIRROR_TYPE_E2E;
+        #endif
         mirror_packet();
     }
 

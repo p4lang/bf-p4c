@@ -1,4 +1,4 @@
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tna.p4>
 
 # 1 "hw_defs.h" 1
 /****************************************************************
@@ -1009,7 +1009,7 @@ control PortFailover(
      * be in the same stage.
      */
 
-    @stage(5)
+    //@stage(5)
 
 
     /* port_failover is used to translate port number into a register index that is
@@ -1314,7 +1314,7 @@ control FabricRouting(
      * be in the same stage.
      */
 
-    @stage(5)
+    //@stage(5)
 
 
     /* ecmp_groups table is used to select one nexthop entry from an ECMP group

@@ -1,4 +1,4 @@
-#include <tna.p4>       /* TOFINO1_ONLY */
+#include <tna.p4>
 
 typedef bit<48> mac_addr_t;
 typedef bit<32> ipv4_addr_t;
@@ -403,8 +403,13 @@ const switch_ecn_codepoint_t SWITCH_ECN_CODEPOINT_CE = 0b11;
 typedef MirrorId_t switch_mirror_session_t;
 const switch_mirror_session_t SWITCH_MIRROR_SESSION_CPU = 250;
 typedef MirrorType_t switch_mirror_type_t;
-@pa_container_size("ingress", "ig_md.mirror.session_id", 16)
-@pa_container_size("egress", "eg_md.mirror.session_id", 16)
+#if __TARGET_TOFINO__ == 1
+    @pa_container_size("ingress", "ig_md.mirror.session_id", 16)
+    @pa_container_size("egress", "eg_md.mirror.session_id", 16)
+#elif __TARGET_TOFINO__ >= 2
+    @pa_container_size("ingress", "ig_md.mirror.session_id", 8)
+    @pa_container_size("egress", "eg_md.mirror.session_id", 8)
+#endif
 @pa_no_overlay("egress", "eg_md.mirror.src")
 @pa_no_overlay("egress", "eg_md.timestamp")
 @pa_no_overlay("egress", "eg_md.mirror.session_id")
