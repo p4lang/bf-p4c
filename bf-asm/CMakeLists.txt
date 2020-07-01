@@ -308,6 +308,9 @@ if (ENABLE_GTESTS)
 
   # The component's unit-tests are #included in gtestasm.cpp.
   add_executable (gtestasm gtest/gtestasm.cpp)
+  include_directories(
+    ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
+  )
   target_link_libraries (gtestasm PRIVATE bfas_lib gtest)
   target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3)
 
