@@ -1117,6 +1117,15 @@ class SuperCluster : public ClusterStats {
     /// @returns true if no structural constraints prevent this super cluster
     /// from fitting.
     static bool is_well_formed(const SuperCluster* sc, PHV::Error* err = new PHV::Error());
+
+    /// @returns the total bits in a \p list paramter
+    static int slice_list_total_bits(const SliceList& list);
+
+    /// @returns the vector of \ref le_bitrange instances identified for each \ref PHV::FieldSlice
+    static std::vector<le_bitrange> slice_list_exact_containers(const SliceList& list);
+
+    /// @returns true iff the slice list has any exact container inside
+    static bool slice_list_has_exact_containers(const SliceList& list);
 };
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);

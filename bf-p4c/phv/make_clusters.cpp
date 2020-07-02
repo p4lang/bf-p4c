@@ -747,12 +747,8 @@ bool Clustering::MakeSuperClusters::preorder(const IR::BFN::ParserState* state) 
     PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
     auto start_new_slicelist = [&] () {
         if (accumulator->size() > 1) {
-            const int sz = std::accumulate(
-                accumulator->begin(), accumulator->end(), 0,
-                [] (int s, const PHV::FieldSlice& fs) { return s + fs.size(); });
-            const bool has_ec = std::any_of(
-                accumulator->begin(), accumulator->end(),
-                [] (const PHV::FieldSlice& fs) { return fs.field()->exact_containers(); });
+            const int sz = PHV::SuperCluster::slice_list_total_bits(*accumulator);
+            const bool has_ec = PHV::SuperCluster::slice_list_has_exact_containers(*accumulator);
             if (sz % 8 != 0 && has_ec) {
                 // XXX(yumin): alternatively, we can add some dummy_padding fields.
                 // but conservatively, we do not do it here.
@@ -1162,9 +1158,7 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
     // slice list, up to the largest container size.
     int max_slice_list_size = 8;
     for (const auto* slice_list : these_lists) {
-        int sum_bits = 0;
-        for (const auto& fs : *slice_list) {
-            sum_bits += fs.size(); }
+        int sum_bits = PHV::SuperCluster::slice_list_total_bits(*slice_list);
         max_slice_list_size = std::max(max_slice_list_size, sum_bits);
     }
     // Round up to the closest 8-bit.

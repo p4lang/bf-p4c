@@ -2498,8 +2498,7 @@ static std::string diagnoseSuperCluster(const PHV::SuperCluster& sc) {
                     conflicts.insert(ss.str());
                 } else {
                     for (auto* sliceList : smallerLists) {
-                        int listSize = std::accumulate(sliceList->begin(), sliceList->end(), 0,
-                            [](int acc, const PHV::FieldSlice& s) { return acc + s.size(); });
+                        int listSize = PHV::SuperCluster::slice_list_total_bits(*sliceList);
                         if (listSize < larger.size()) {
                             std::stringstream ss;
                             ss << "Constraint conflict: ";
@@ -3293,9 +3292,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         n_required_length[super_cluster] = super_cluster->max_width();
         for (const auto* slice_list : super_cluster->slice_lists()) {
             BUG_CHECK(slice_list->size() > 0, "empty slice list");
-            int length = std::accumulate(
-                    slice_list->begin(), slice_list->end(), 0,
-                    [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
+            int length = PHV::SuperCluster::slice_list_total_bits(*slice_list);
             n_required_length[super_cluster] =
                 std::max(n_required_length[super_cluster], length);
         } }

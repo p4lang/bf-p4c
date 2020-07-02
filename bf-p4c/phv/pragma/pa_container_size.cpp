@@ -246,9 +246,8 @@ PragmaContainerSize::unsatisfiable_fields(
             LOG3("Checking slice list:\n" << *slice_list);
             bool sliceListCheckRequired = false;
             bool need_exact_container =
-                std::any_of(slice_list->begin(), slice_list->end(),
-                            [] (const PHV::FieldSlice& fs) {
-                                return fs.field()->exact_containers(); });
+                PHV::SuperCluster::slice_list_has_exact_containers(*slice_list);
+
             // This check only applies to slice list that has exact_container requirement.
             // Pragma enforced requirements on non-exact-container fields are checked later
             // in the satisfies_constraints().
@@ -258,10 +257,7 @@ PragmaContainerSize::unsatisfiable_fields(
             // in the desired way.
             if (!need_exact_container) continue;
 
-            int slice_list_size =
-                std::accumulate(slice_list->begin(), slice_list->end(), 0,
-                                [] (int a, const PHV::FieldSlice& fs) {
-                                    return a + fs.size(); });
+            int slice_list_size = PHV::SuperCluster::slice_list_total_bits(*slice_list);
             for (const auto& slice : *slice_list) {
                 LOG3("  Slice: " << slice);
                 // not a specified field
@@ -496,11 +492,7 @@ void PragmaContainerSize::adjust_requirements(const std::list<PHV::SuperCluster*
             if (!is_single_parameter(field)) continue;
 
             int req_size = int(pa_container_sizes_i.at(field).front());
-            int slice_list_size =
-                std::accumulate(slice_list->begin(), slice_list->end(), 0,
-                                [] (int a, const PHV::FieldSlice& fs) {
-                                    return a + fs.size(); });
-
+            int slice_list_size = PHV::SuperCluster::slice_list_total_bits(*slice_list);
             if (slice_list_size != field->size) continue;
             if (slice_list_size > req_size) continue;
 

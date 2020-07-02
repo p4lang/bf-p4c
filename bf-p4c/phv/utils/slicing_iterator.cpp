@@ -51,18 +51,10 @@ void bitvec_add(bitvec& rst, const bitvec& add) {
     }
 }
 
-int get_sz(PHV::SuperCluster::SliceList* sl) {
-    int sz = 0;
-    for (auto& fs : *sl) {
-        sz += fs.size();
-    }
-    return sz;
-}
-
 bool is_allocable(PHV::SuperCluster* cluster) {
     for (auto* sl : cluster->slice_lists()) {
         if ((*sl->begin()).field()->exact_containers()) {
-            int sz = get_sz(sl);
+            int sz = PHV::SuperCluster::slice_list_total_bits(*sl);
             if (sz != 8 && sz != 16 && sz != 32) {
                 return false;
             }
@@ -127,10 +119,7 @@ std::map<int, int> build_offsets_to_compress_schema(const PHV::SuperCluster* sc,
     int right = 0;
     int bits_right = 0;
     for (const auto& sl : sc->slice_lists()) {
-        const int sz = std::accumulate(sl->begin(), sl->end(), 0,
-        [] (int s, PHV::FieldSlice fs) -> int {
-            return s + fs.size();
-        });
+        const int sz = PHV::SuperCluster::slice_list_total_bits(*sl);
         const int nbits = std::max(0, (sz / 8) - 1 + int(sz % 8 > 0));
         for (int i = 0; i < nbits; i++) {
             if (schema[bits_right + i]) {
@@ -2856,7 +2845,7 @@ boost::optional<std::list<PHV::SuperCluster*>>
 PHV::SlicingIterator::exp_further_split(PHV::SuperCluster* sc) {
     std::map<int, std::vector<SuperCluster::SliceList*>> sz_slicelists;
     for (auto* sl : sc->slice_lists()) {
-        int sz = get_sz(sl);
+        int sz = PHV::SuperCluster::slice_list_total_bits(*sl);
         sz_slicelists[sz].push_back(sl);
     }
 

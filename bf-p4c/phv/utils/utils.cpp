@@ -1199,8 +1199,7 @@ bool PHV::SuperCluster::operator==(const PHV::SuperCluster& other) const {
 bool PHV::SuperCluster::isSliceable() const {
     int sc_width = 0;
     for (const auto* slice_list : slice_lists()) {
-        int size = std::accumulate(slice_list->begin(), slice_list->end(), 0,
-                [] (int a, const PHV::FieldSlice& b) { return a + b.size(); });
+        int size =  PHV::SuperCluster::slice_list_total_bits(*slice_list);
         if (slice_list->front().field()->exact_containers()) {
             sc_width = (sc_width < size) ? size : sc_width;
             if (size == 8)
@@ -1442,6 +1441,29 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) 
 
     err->set(PHV::ErrorCode::ok);
     return true;
+}
+
+int PHV::SuperCluster::slice_list_total_bits(const SliceList& list) {
+    auto alloc_function = [] (int a, const PHV::FieldSlice& b) {
+        return a + b.size();
+    };
+    // Accumuate the bit size of the slice list
+    int slice_bit_width = std::accumulate(list.begin(), list.end(), 0, alloc_function);
+    return slice_bit_width;
+}
+
+std::vector<le_bitrange> PHV::SuperCluster::slice_list_exact_containers(const SliceList& list) {
+    auto ret_vector = std::vector<le_bitrange>();
+    for (const auto& field_slice : list) {
+        if (!field_slice.field()->exact_containers()) continue;
+        ret_vector.push_back(field_slice.range());
+    }
+
+    return ret_vector;
+}
+
+bool PHV::SuperCluster::slice_list_has_exact_containers(const SliceList& list) {
+    return slice_list_exact_containers(list).size() > 0;
 }
 
 namespace PHV {
