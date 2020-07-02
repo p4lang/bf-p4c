@@ -35,8 +35,6 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
   # needs strided CLOT alloc
   p4c_add_xfail_reason("tofino3"
     ".* expected packet.* on port .* not seen|shorter than expected"
-    extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-    extensions/p4_tests/p4_16/stf/parser_loop_2.p4
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
     extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
@@ -466,4 +464,12 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "Did not find initial offset."
   extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
+)
+
+# P4C-2886
+p4c_add_xfail_reason("tofino3"
+  "CRASH with signal 6"
+  extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_1.p4
 )

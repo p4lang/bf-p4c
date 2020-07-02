@@ -26,8 +26,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   # needs strided CLOT alloc
   p4c_add_xfail_reason("tofino2"
     ".* expected packet.* on port .* not seen|shorter than expected"
-    extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-    extensions/p4_tests/p4_16/stf/parser_loop_2.p4
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
     extensions/p4_tests/p4_16/stf/parser_loop_4.p4
   )
@@ -426,4 +424,12 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: Some fields cannot be allocated because of unsatisfiable constraints."
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)
+
+# P4C-2886
+p4c_add_xfail_reason("tofino2"
+  "CRASH with signal 6"
+  extensions/p4_tests/p4_16/stf/parser_loop_2.p4
+  extensions/p4_tests/p4_16/stf/parser_counter_12.p4
+  extensions/p4_tests/p4_16/stf/parser_loop_1.p4
 )
