@@ -670,12 +670,6 @@ class Field : public LiftLess<Field> {
     void clear_alloc() { alloc_slice_i.clear(); }
 
     /// Allocate a slice of this field.
-    void add_alloc(const Field* f, PHV::Container c, int fb, int cb, int w,
-            ordered_set<const IR::MAU::Action*> a) {
-        alloc_slice_i.emplace_back(f, c, fb, cb, w, a);
-    }
-
-    /// Allocate a slice of this field.
     void add_alloc(const PHV::AllocSlice& alloc) {
         alloc_slice_i.push_back(alloc);
     }
@@ -1379,10 +1373,7 @@ class PhvInfo {
     bitvec constantExtractedInSameState;
 
     void clear();
-    void add(cstring fieldName, gress_t gress, int size, int offset,
-             bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
-             bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false,
-             boost::optional<Util::SourceInfo> srcInfo = boost::none);
+
     void add_hdr(cstring headerName, const IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
     void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
@@ -1447,6 +1438,11 @@ class PhvInfo {
     /// @returns the TempVar pointer corresponding to @f, if the underlying expression for field @f
     /// is a TempVar. @returns nullptr otherwise.
     const IR::TempVar* getTempVar(const PHV::Field* f) const;
+
+    PHV::Field* add(cstring fieldName, gress_t gress, int size, int offset,
+             bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
+             bool isOverlayable = false, bool isFlexible = false, bool isFixedSizeHeader = false,
+             boost::optional<Util::SourceInfo> srcInfo = boost::none);
 
     PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true) {
         cstring name = cstring::make_unique(dummyPaddingNames, "__phv_dummy_padding__");

@@ -1611,8 +1611,11 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container contai
     // byte rotate merge
     if (non_aligned_and_non_contiguous_sources > 0)
         return is_byte_rotate_merge(container, ad_alignment);
+
     if (non_aligned_sources == 2 || non_contiguous_sources == 2)
-        return is_byte_rotate_merge(container, ad_alignment);
+        if (is_byte_rotate_merge(container, ad_alignment))
+            return true;
+
     if (ad_sources() && non_aligned_phv_sources > 0)
         return is_byte_rotate_merge(container, ad_alignment);
 
@@ -1627,8 +1630,12 @@ bool ActionAnalysis::ContainerAction::verify_set_alignment(PHV::Container contai
     }
 
     if (name == "to-bitmasked-set") {
-        convert_instr_to_bitmasked_set = true;
-        return true;
+        if (non_aligned_sources == 0) {
+            convert_instr_to_bitmasked_set = true;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     return verify_deposit_field_variant(container, ad_alignment);

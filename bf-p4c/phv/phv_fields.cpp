@@ -81,7 +81,7 @@ void PhvInfo::clear() {
     PhvInfo::resetDeparserStage();
 }
 
-void PhvInfo::add(
+PHV::Field* PhvInfo::add(
         cstring name, gress_t gress, int size, int offset, bool meta, bool pov,
         bool bridged, bool pad, bool overlay, bool flex, bool fixed_size,
         boost::optional<Util::SourceInfo> srcInfo) {
@@ -90,7 +90,8 @@ void PhvInfo::add(
         meta = true;
     if (all_fields.count(name)) {
         LOG3("Already added field; skipping: " << name);
-        return; }
+        return &all_fields.at(name);
+    }
     LOG3("PhvInfo adding " << (pad ? "padding" : (meta ? "metadata" : "header")) << " field " <<
          name << " size " << size << " offset " << offset << (flex? " flexible" : "") <<
          (fixed_size? " fixed_size" : ""));
@@ -109,6 +110,7 @@ void PhvInfo::add(
     info->set_fixed_size_header(fixed_size);
     info->srcInfo = srcInfo;
     by_id.push_back(info);
+    return info;
 }
 
 void PhvInfo::add_struct(
@@ -183,8 +185,7 @@ void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
         BUG_CHECK(all_fields.at(tv->name).gress == gress, "Inconsistent gress for %s (%s and %s)",
                   tv, all_fields.at(tv->name).gress, gress);
     } else {
-        add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
-        const PHV::Field* fld = field(tv->name);
+        auto fld = add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
         if (fld)
             fields_to_tempvars_i[fld] = tv;
     }
