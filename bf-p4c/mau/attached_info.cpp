@@ -119,7 +119,7 @@ bool SplitAttachedInfo::BuildSplitMaps::preorder(const IR::MAU::Table *tbl) {
     for (auto back_at : tbl->attached) {
         if (back_at->attached->direct || TablePlacement::can_duplicate(back_at->attached))
             continue;
-        BUG_CHECK(at == nullptr, "A single table %s% has multiple meters/stateful ALUs");
+        BUG_CHECK(at == nullptr, "A single table %1% has multiple meters/stateful ALUs", tbl->name);
         at = back_at->attached;
         self.attached_to_table_map[at->name].insert(tbl);
         self.table_to_attached_map[tbl->name] = at; }
