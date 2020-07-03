@@ -1,8 +1,14 @@
 #ifndef BF_P4C_ARCH_CHECK_EXTERN_INVOCATION_H_
 #define BF_P4C_ARCH_CHECK_EXTERN_INVOCATION_H_
 
+#include "ir/ir.h"
+#include "ir/visitor.h"
 #include "lib/bitvec.h"
-#include "bf-p4c/arch/arch.h"
+
+namespace P4 {
+class ReferenceMap;
+class TypeMap;
+}
 
 namespace BFN {
 
@@ -23,25 +29,16 @@ class CheckExternInvocationCommon : public Inspector {
             cons |= vec; }
     }
 
-    bool check_pipe_constraints(cstring extType, bitvec bv,
-            const IR::MethodCallExpression *expr, cstring extName, cstring pipe) {
-        BUG_CHECK(pipe_constraints.count(extType) != 0,
-                "pipe constraints not defined for %1%", extType);
-        auto constraint = pipe_constraints.at(extType) & bv;
-        if (!bv.empty() && constraint.empty()) {
-            ::error("%s %s %s cannot be used in the %s pipeline", expr->srcInfo,
-                    extType, extName, pipe); }
-        return false;
-    }
-
-    static int genIndex(gress_t gress, ArchBlock_t block) {
-        return gress * ArchBlock_t::BLOCK_TYPE + block;
-    }
-
     bool preorder(const IR::MethodCallExpression *expr) override;
+
+ protected:
     void init_common_pipe_constraints();
 
+ private:
     virtual void init_pipe_constraints() = 0;
+
+    bool check_pipe_constraints(cstring extType, bitvec bv,
+            const IR::MethodCallExpression *expr, cstring extName, cstring pipe);
 };
 
 

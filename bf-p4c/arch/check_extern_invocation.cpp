@@ -1,8 +1,38 @@
+
+#include "check_extern_invocation.h"
+
+#include "bf-p4c/arch/arch.h"
 #include "frontends/p4/methodInstance.h"
-#include "bf-p4c/arch/helpers.h"
-#include "bf-p4c/arch/check_extern_invocation.h"
 
 namespace BFN {
+
+namespace {
+
+int genIndex(gress_t gress, ArchBlock_t block) {
+    return gress * ArchBlock_t::BLOCK_TYPE + block;
+}
+
+cstring extractBlock(bitvec vec) {
+    int bit = vec.ffs(0);
+    BUG_CHECK(vec.ffs(bit), "Trying to extract multiple gress/block encodings");
+    static const char* lookup[] = {"parser", "control (MAU)", "deparser"};
+    BUG_CHECK(sizeof(lookup)/sizeof(lookup[0]) == ArchBlock_t::BLOCK_TYPE, "Bad lookup table");
+    return lookup[bit % ArchBlock_t::BLOCK_TYPE];
+}
+
+}  // namespace
+
+
+bool CheckExternInvocationCommon::check_pipe_constraints(cstring extType, bitvec bv,
+            const IR::MethodCallExpression *expr, cstring extName, cstring pipe) {
+    BUG_CHECK(pipe_constraints.count(extType), "pipe constraints not defined for %1%", extType);
+    auto constraint = pipe_constraints.at(extType) & bv;
+    if (!bv.empty() && constraint.empty()) {
+        ::error("%s %s %s cannot be used in the %s %s", expr->srcInfo,
+                extType, extName, pipe, extractBlock(bv)); }
+    return false;
+}
+
 
 bool CheckExternInvocationCommon::preorder(const IR::MethodCallExpression *expr) {
     auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
