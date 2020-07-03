@@ -192,6 +192,9 @@ class BarefootBackend(BackendDriver):
                                         help="run context.json validation")
             self._argGroup.add_argument("--validate-manifest", action="store_true", default=False,
                                         help="run manifest validation")
+        self._argGroup.add_argument("--schema-versions",
+                                    help="Print all used schema versions",
+                                    action="store_true", default=False)
 
     def config_preprocessor(self, targetDefine):
         self.add_command_option('preprocessor', "-E -x assembler-with-cpp")
@@ -366,6 +369,12 @@ class BarefootBackend(BackendDriver):
                                                                                  parde_logging,
                                                                                  bridge_logging,
                                                                                  ixbar_logging))
+        # Print all used schema versions
+        if opts.schema_versions:
+            schema_versions_file = open(os.path.join(os.environ['P4C_CFG_PATH'], 'schema_versions'), 'r')
+            print(schema_versions_file.read().rstrip('\n'))
+            schema_versions_file.close()
+
         if opts.bf_rt_schema is None and opts.language == 'p4-16' and \
            not (self._arch == 'v1model' or self._arch == 'psa' or opts.no_bf_rt_schema):
             opts.bf_rt_schema = "{}/bfrt.json".format(self._output_directory)

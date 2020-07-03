@@ -904,14 +904,18 @@ set (LOGGING_FILES
   ${INTERFACES_DIR}/tools/__init__.py
   )
 set (SCHEMA_FILES
+  ${INTERFACES_DIR}/schemas/bfrt_schema.py
   ${INTERFACES_DIR}/schemas/context_schema.py
+  ${INTERFACES_DIR}/schemas/jgf_schema.py
   ${INTERFACES_DIR}/schemas/manifest_schema.py
   ${INTERFACES_DIR}/schemas/mau_schema.py
+  ${INTERFACES_DIR}/schemas/metrics_schema.py
   ${INTERFACES_DIR}/schemas/phv_schema.py
   ${INTERFACES_DIR}/schemas/power_schema.py
   ${INTERFACES_DIR}/schemas/resources_schema.py
   ${INTERFACES_DIR}/schemas/schema_enum_values.py
   ${INTERFACES_DIR}/schemas/schema_keys.py
+  ${INTERFACES_DIR}/schemas/table_graph_schema.py
   ${INTERFACES_DIR}/schemas/__init__.py
   )
 if (EXISTS ${COMPILER_SCHEMA_TARGETS})
@@ -931,6 +935,18 @@ add_dependencies(p4c_driver p4c-build-logs)
 
 install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   DESTINATION bin)
+
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
+  COMMAND ${CMAKE_SOURCE_DIR}/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
+  DEPENDS ${SCHEMA_FILES}
+  COMMENT "Extract all used schema versions")
+
+add_custom_target(schema-versions
+  DEPENDS ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions)
+add_dependencies(p4c_driver schema-versions)
+
+install (FILES ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
+  DESTINATION share/p4c/p4c_src)
 
 if(ENABLE_CLOUDBREAK)
   set(SED_RELEASE_FILTERS -e '')
