@@ -1458,7 +1458,6 @@ std::vector<le_bitrange> PHV::SuperCluster::slice_list_exact_containers(const Sl
         if (!field_slice.field()->exact_containers()) continue;
         ret_vector.push_back(field_slice.range());
     }
-
     return ret_vector;
 }
 
