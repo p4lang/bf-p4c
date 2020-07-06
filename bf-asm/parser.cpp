@@ -1410,7 +1410,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     if (offset_inc) return;
     use += output_use();
 
-    // Compiler may over allocate each extractor size and take advantage of the narrow-to-wide
+    // Compiler may over allocate each extractor size to take advantage of the narrow-to-wide
     // feature. Need to account for these before combining adjacent extracts.
     while (use.b32 > 4) {
         if (use.b16 + 2 <= 4) {
@@ -1418,7 +1418,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
             use.b16 += 2;
         } else if (use.b8 + 4 <= 4) {
             use.b32--;
-            use.b8 + 4;
+            use.b8 += 4;
         } else {
             break;
         }
@@ -1427,7 +1427,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     while (use.b16 > 4) {
         if (use.b8 + 2 <= 4) {
             use.b16--;
-            use.b8 + 2;
+            use.b8 += 2;
         } else {
             break;
         }
