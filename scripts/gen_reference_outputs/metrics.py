@@ -28,15 +28,13 @@ def get_metric(metrics_info, metric):
 
 # Determine delta/percentage deviation calculation based on
 # format string
-def get_delta(datum1, datum2, delta_format):
-    delta = 0
-    if '%' not in delta_format:
-        if datum1 > 0:
-            delta = datum1 - datum2
-    else:
-        if datum1 > 0:
-            delta = round(100.0 * (datum1 - datum2) / datum1, 2)
-    return delta
+def get_delta(new_value, old_value, delta_format):
+    if old_value > 0:
+        if '%' not in delta_format:
+            return new_value - old_value
+        else:
+            return round(100.0 * (new_value - old_value) / old_value, 2)
+    return 0
 
 
 class Metric:
