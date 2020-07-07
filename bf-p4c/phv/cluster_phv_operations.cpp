@@ -152,7 +152,29 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         }
         le_bitrange field_bits;
         PHV::Field* field = phv.field(inst->operands[idx], &field_bits);
-        if (!field) continue;
+        if (!field) {
+            // Each variant of subtraction must have PHV as the last operand. Constant are
+            // pre-processed and transformed as "add" instruction prior to this pass.
+            if ((idx + 1) == int(inst->operands.size()) &&
+                (inst->name == "sub" || inst->name == "subc" || inst->name == "ssubu" ||
+                 inst->name == "ssubs")) {
+                // sizeInBytes and sizeInBits will be resolved as constant.
+                const IR::Expression *e = inst->operands[idx];
+                if (auto *sl = e->to<IR::Slice>())
+                    e = sl->e0;
+
+                if (e->is<IR::MAU::TypedPrimitive>()) {
+                    if (e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBytes" ||
+                        e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBits")
+                        continue;
+                }
+
+                fatal_error("Second operand of arithmetic subtraction cannot be sourced from "
+                            "action data. The second operand must either come from a packet field, "
+                            "metadata or a constant. %1%", inst);
+            }
+            continue;
+        }
 
         // Add details of this operation to the field object.
         bool is_bitwise_op = BITWISE_OPS.count(inst->name) > 0;
