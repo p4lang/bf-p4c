@@ -3,7 +3,6 @@
 
 #include "ir/ir.h"
 #include "lib/ordered_map.h"
-#include "lib/symbitmatrix.h"
 #include "bf-p4c/mau/table_summary.h"
 
 /** When backtracking, this class contains members that save the generated table placement (without
@@ -14,9 +13,6 @@ class MauBacktracker : public Backtrack {
     static constexpr unsigned NUM_LOGICAL_TABLES_PER_STAGE = 16;
     /// To keep track of the number of times this pass has been invoked
     static int numInvoked;
-
-    /// Reference to the overlay bit matrix
-    SymBitMatrix&   overlay;
 
     /// Store a map of table names to stage, used as reference by the second round of PHV allocation
     /// (after a backtrack exception has been thrown by TableSummary)
@@ -82,7 +78,7 @@ class MauBacktracker : public Backtrack {
     int numStages() const;
 
     /// Constructor takes mutually exclusive to be able to clear it before every PHV allocation pass
-    explicit MauBacktracker(SymBitMatrix& o) : overlay(o) {}
+    MauBacktracker() {}
 };
 
 #endif /* BF_P4C_PHV_MAU_BACKTRACKER_H_ */

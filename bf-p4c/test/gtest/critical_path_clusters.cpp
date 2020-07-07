@@ -5,7 +5,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/field_defuse.h"
@@ -189,10 +188,9 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     PhvUse uses(phv);
-    MauBacktracker table_alloc(phv.field_mutex());
+    MauBacktracker table_alloc;
     DependencyGraph deps;
     TablesMutuallyExclusive table_mutex;
     ActionMutuallyExclusive action_mutex;

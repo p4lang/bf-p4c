@@ -4,7 +4,6 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -101,15 +100,15 @@ TEST_F(PaNoOverlayPragmaTest, P4_16) {
     auto test = createPaNoOverlayPragmaTestCase();
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutually_exclusive_field_ids;
-    PhvInfo phv(mutually_exclusive_field_ids);
+    PhvInfo phv;
 
     runMockPasses(test->pipe, phv);
-    EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h2.f2")->id,
-                                           phv.field("ingress::h3.f2")->id), true);
 
-    EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h2.f1")->id,
-                                           phv.field("ingress::h3.f1")->id), false);
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f2")->id,
+                                 phv.field("ingress::h3.f2")->id), true);
+
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f1")->id,
+                                 phv.field("ingress::h3.f1")->id), false);
 }
 
 }  // namespace Test

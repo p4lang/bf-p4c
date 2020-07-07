@@ -306,7 +306,6 @@ FlexiblePacking::FlexiblePacking(
           options(o),
           ingressBridgedFields(p),
           egressBridgedFields(p),
-          table_alloc(p.field_mutex()),
           packConflicts(p, dg, tMutex, table_alloc, aMutex),
           actionConstraints(p, u, packConflicts, tableActionsMap, dg),
           packWithConstraintSolver(sol),
@@ -380,7 +379,6 @@ std::string LogRepackedHeaders::asm_output() const {
  */
 PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         ordered_set<cstring>& candidates, RepackedHeaderTypes& map) :
-    phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv),
     solver(context),

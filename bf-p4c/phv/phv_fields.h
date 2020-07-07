@@ -1313,7 +1313,7 @@ class PhvInfo {
     bool                                pov_alloc_done = false;
 
     /// Stores the mutual exclusion relationships between different PHV fields
-    SymBitMatrix&                            field_mutex_i;
+    SymBitMatrix                             field_mutex_i;
 
     /// Stores the potential overlayable relationships due to live ranges between different metadata
     /// fields.
@@ -1409,7 +1409,7 @@ class PhvInfo {
     void allocatePOV(const BFN::HeaderStackInfo&);
 
  public:  // class PhvInfo
-    explicit PhvInfo(SymBitMatrix& m) : field_mutex_i(m) {}
+    PhvInfo() { }
     void addTempVar(const IR::TempVar* tempVar, gress_t gress);
 
     const PHV::Field *field(int idx) const {

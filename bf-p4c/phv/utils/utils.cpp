@@ -205,7 +205,7 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     auto slices = this->slices(c);
     for (auto& slice : slices) {
         LOG1("\t\t\tChecking slice " << slice);
-        bool mutex = PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field());
+        bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         LOG1("\t\t\t  mutex: " << mutex << ", live range mutex: " << liverange_mutex);
         if (!mutex && !liverange_mutex) rs.insert(slice); }
@@ -219,7 +219,8 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c,
     auto existingSlices = this->slices(c);
     for (auto& slice : existingSlices) {
         for (auto sl : slices) {
-            if (!PHV::Allocation::mutually_exclusive(*mutex_i, slice.field(), sl.field()))
+            bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
+            if (!mutex)
                 rs.insert(slice); } }
     return rs;
 }
@@ -251,9 +252,9 @@ PHV::Allocation::slicesByLiveness(PHV::Container c) const {
                 // schedule bv for eventual removal.
                 bool all_live = true;
                 for (int fid2 : bv) {
-                    if (PHV::Allocation::mutually_exclusive(
-                            *mutex_i, fid_to_slice.at(fid)->field(),
-                                     fid_to_slice.at(fid2)->field())) {
+                    if (phv_i->field_mutex()(
+                                     fid_to_slice.at(fid)->field()->id,
+                                     fid_to_slice.at(fid2)->field()->id)) {
                         all_live = false;
                         break; } }
                 if (all_live) {
@@ -489,14 +490,6 @@ PHV::Allocation::getParserStateToContainers(const PhvInfo&,
     return state_to_containers_i;
 }
 
-/* static */ bool
-PHV::Allocation::mutually_exclusive(
-        const SymBitMatrix& mutex,
-        const PHV::Field *f1,
-        const PHV::Field *f2) {
-    return mutex(f1->id, f2->id);
-}
-
 std::set<PHV::Allocation::AvailableSpot>
 PHV::Allocation::available_spots() const {
     std::set<AvailableSpot> rst;
@@ -537,10 +530,10 @@ PHV::Allocation::available_spots() const {
  * initialized to that gress.
  */
 PHV::ConcreteAllocation::ConcreteAllocation(
-        const SymBitMatrix& mutex,
+        const PhvInfo& phv,
         const PhvUse& uses,
         bitvec containers)
-        : PHV::Allocation(mutex, uses) {
+        : PHV::Allocation(phv, uses) {
     auto& phvSpec = Device::phvSpec();
     for (auto cid : containers) {
         PHV::Container c = phvSpec.idToContainer(cid);
@@ -563,8 +556,8 @@ PHV::ConcreteAllocation::ConcreteAllocation(
               PHV::Allocation::ContainerAllocStatus::EMPTY }; }
 }
 
-PHV::ConcreteAllocation::ConcreteAllocation(const SymBitMatrix& mutex, const PhvUse& uses)
-: PHV::ConcreteAllocation::ConcreteAllocation(mutex, uses, Device::phvSpec().physicalContainers())
+PHV::ConcreteAllocation::ConcreteAllocation(const PhvInfo& phv, const PhvUse& uses)
+: PHV::ConcreteAllocation::ConcreteAllocation(phv, uses, Device::phvSpec().physicalContainers())
 { }
 
 /// @returns true if this allocation owns @c.

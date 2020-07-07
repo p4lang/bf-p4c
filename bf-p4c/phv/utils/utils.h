@@ -157,7 +157,7 @@ class Allocation {
  protected:
     // These are copied from parent to child on creating a transaction, and
     // from child to parent on committing.
-    const SymBitMatrix* mutex_i;
+    const PhvInfo* phv_i;
     const PhvUse* uses_i;
     ordered_map<PHV::Size, ordered_map<ContainerAllocStatus, int>> count_by_status_i;
 
@@ -185,7 +185,7 @@ class Allocation {
     /// Initialization information about allocating to dark containers during certain stages.
     mutable DarkInitMap init_map_i;
 
-    Allocation(const SymBitMatrix& mutex, const PhvUse& uses) : mutex_i(&mutex), uses_i(&uses) { }
+    Allocation(const PhvInfo& phv, const PhvUse& uses) : phv_i(&phv), uses_i(&uses) { }
 
     /// @returns the meta_init_points_i map for the current allocation object.
     ordered_map<AllocSlice, ordered_set<const IR::MAU::Action*>>& get_meta_init_points() const {
@@ -414,13 +414,6 @@ class Allocation {
     /// this may add new slices but does not remove or overwrite existing slices.
     cstring commit(Transaction& view);
 
-    /// Utility function.
-    /// @returns true if @f1 and @f2 are mutually exclusive.
-    static bool mutually_exclusive(
-            const SymBitMatrix& mutex,
-            const PHV::Field *f1,
-            const PHV::Field *f2);
-
     /// Available bits of this allocation
     struct AvailableSpot {
         PHV::Container container;
@@ -449,7 +442,7 @@ class ConcreteAllocation : public Allocation {
      * containers that the Device pins to a particular gress are
      * initialized to that gress.
      */
-    ConcreteAllocation(const SymBitMatrix&, const PhvUse&, bitvec containers);
+    ConcreteAllocation(const PhvInfo& phv, const PhvUse&, bitvec containers);
 
  public:
     /// Uniform abstraction for accessing a container state.
@@ -466,7 +459,7 @@ class ConcreteAllocation : public Allocation {
      * Device::phvSpec, with the gress set for any hard-wired containers, but
      * no slices allocated.
      */
-    explicit ConcreteAllocation(const SymBitMatrix&, const PhvUse&);
+    explicit ConcreteAllocation(const PhvInfo&, const PhvUse&);
 
     /// Iterate through container-->allocation slices.
     const_iterator begin() const override { return container_status_i.begin(); }
@@ -513,7 +506,7 @@ class Transaction : public Allocation {
  public:
     /// Constructor.
     explicit Transaction(const Allocation& parent)
-    : Allocation(*parent.mutex_i, *parent.uses_i), parent_i(&parent) {
+    : Allocation(*parent.phv_i, *parent.uses_i), parent_i(&parent) {
         BUG_CHECK(&parent != this, "Creating transaction with self as parent");
     }
 

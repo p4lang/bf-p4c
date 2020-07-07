@@ -5,7 +5,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/phv/analysis/parser_critical_path.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
@@ -95,8 +94,7 @@ state start {
 )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     CalcParserCriticalPath *run = new CalcParserCriticalPath(phv);
     test->pipe->apply(*run);
 
@@ -136,8 +134,7 @@ state parseH2AndMeta {
 )"));
     ASSERT_TRUE(test);
     // ingress and egress should be the same here
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     CalcParserCriticalPath *run = new CalcParserCriticalPath(phv);
     test->pipe->apply(*run);
 

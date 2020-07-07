@@ -6,7 +6,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
@@ -131,8 +130,7 @@ apply {
 )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
 

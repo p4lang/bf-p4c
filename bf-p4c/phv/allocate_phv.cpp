@@ -589,7 +589,7 @@ bool CoreAllocation::can_overlay(
         const PHV::Field* f,
         const ordered_set<PHV::AllocSlice>& slices) {
     for (auto slice : slices)
-        if (!PHV::Allocation::mutually_exclusive(mutex, f, slice.field()))
+        if (!mutex(f->id, slice.field()->id))
             return false;
     return true;
 }
@@ -1243,8 +1243,8 @@ CoreAllocation::tryAllocSliceList(
                     for (auto& field_slice : container_state) {
                         bool sliceOverlaysAllCandidates = true;
                         for (auto& candidate_slice : candidate_slices) {
-                            if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_mutex(),
-                                        field_slice.field(), candidate_slice.field()))
+                            if (!phv_i.metadata_mutex()(
+                                        field_slice.field()->id, candidate_slice.field()->id))
                                 sliceOverlaysAllCandidates = false;
                         }
                         if (sliceOverlaysAllCandidates) continue;
@@ -1407,8 +1407,8 @@ CoreAllocation::tryAllocSliceList(
             bool hasOverlay = std::any_of(candidate_slices.begin(), candidate_slices.end(),
                 Overlaps);
             for (auto& candidate_slice : candidate_slices) {
-                if (!PHV::Allocation::mutually_exclusive(phv_i.metadata_mutex(),
-                            field_slice.field(), candidate_slice.field()))
+                if (!phv_i.metadata_mutex()(
+                            field_slice.field()->id, candidate_slice.field()->id))
                     sliceLiveRangeDisjointWithAllCandidates = false;
             }
             // If the current slice overlays with at least one candidate slice AND its live range

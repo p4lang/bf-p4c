@@ -6,7 +6,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/header_stack.h"
@@ -115,8 +114,7 @@ TEST_F(ActionPhv, IngressSingleTableSharedWrites) {
     )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     auto *post_pm_pipe = runInitialPassManager(test->pipe, &phv);
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);
@@ -198,8 +196,7 @@ TEST_F(ActionPhv, IngressMultipleTablesSharedWrites) {
     )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     auto *post_pm_pipe = runInitialPassManager(test->pipe, &phv);
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);
@@ -280,8 +277,7 @@ TEST_F(ActionPhv, IngressMultipleTablesReads) {
     )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     auto *post_pm_pipe = runInitialPassManager(test->pipe, &phv);
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);

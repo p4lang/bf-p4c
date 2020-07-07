@@ -6,7 +6,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
@@ -74,8 +73,7 @@ using ExpectedAlignmentMap = std::map<cstring, boost::optional<unsigned>>;
 /// agree with the alignments we expect.
 void checkFieldAlignment(const IR::BFN::Pipe* pipe,
                          const ExpectedAlignmentMap& expected) {
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     PassManager computeAlignment = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv)

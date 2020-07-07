@@ -4,7 +4,6 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -139,28 +138,28 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
     auto test = createPaMutuallyExclusivePragmaTestCase();
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutually_exclusive_field_ids;
-    PhvInfo phv(mutually_exclusive_field_ids);
+    PhvInfo phv;
 
     runMockPasses(test->pipe, phv);
-    EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h1.f2")->id,
-                                           phv.field("ingress::h2.f1")->id), false);
 
-    EXPECT_EQ(mutually_exclusive_field_ids(phv.field("ingress::h1.f1")->id,
-                                           phv.field("ingress::h2.f1")->id), true);
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f2")->id,
+                                phv.field("ingress::h2.f1")->id), false);
+
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f1")->id,
+                                phv.field("ingress::h2.f1")->id), true);
 
     auto test2 = createPaMutuallyExclusiveHeaderPragmaTestCase();
     ASSERT_TRUE(test2);
 
-    SymBitMatrix mutually_exclusive_field_ids2;
-    PhvInfo phv2(mutually_exclusive_field_ids2);
+    PhvInfo phv2;
 
     runMockPasses(test2->pipe, phv2);
-    EXPECT_EQ(mutually_exclusive_field_ids2(phv2.field("ingress::h1.f2")->id,
-                                            phv2.field("ingress::h2.f2")->id), true);
 
-    EXPECT_EQ(mutually_exclusive_field_ids2(phv2.field("ingress::h1.f1")->id,
-                                           phv2.field("ingress::h2.f1")->id), true);
+    EXPECT_EQ(phv2.field_mutex()(phv2.field("ingress::h1.f2")->id,
+                                 phv2.field("ingress::h2.f2")->id), true);
+
+    EXPECT_EQ(phv2.field_mutex()(phv2.field("ingress::h1.f1")->id,
+                                 phv2.field("ingress::h2.f1")->id), true);
 }
 
 }  // namespace Test

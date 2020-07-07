@@ -18,7 +18,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 
 #include "test/gtest/helpers.h"
 
@@ -184,8 +183,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     DependencyGraph dg;
     FieldDefUse defuse(phv);
     auto *find_dg = new FindDependencyGraph(phv, dg);
@@ -332,8 +330,7 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     DependencyGraph dg;
     FieldDefUse defuse(phv);
     auto *find_dg = new FindDependencyGraph(phv, dg);
@@ -603,8 +600,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
             )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     DependencyGraph dg;
     FieldDefUse defuse(phv);
     auto *find_dg = new FindDependencyGraph(phv, dg);
@@ -777,8 +773,7 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     }
 )"));
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -885,8 +880,7 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -973,8 +967,7 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1062,8 +1055,7 @@ TEST_F(TableDependencyGraphTest, DomFrontier2) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1143,8 +1135,7 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1239,8 +1230,7 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1332,8 +1322,7 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
     } )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1425,8 +1414,7 @@ TEST_F(TableDependencyGraphTest, GraphA) {
 )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1525,8 +1513,7 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1595,8 +1582,7 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1686,8 +1672,7 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -1847,8 +1832,7 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
 
     test->pipe = runMockPasses(test->pipe, phv, defuse);
@@ -1991,8 +1975,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2071,8 +2054,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2160,8 +2142,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2243,8 +2224,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2351,8 +2331,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2451,8 +2430,7 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
             )"), "tofino2");
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 
@@ -2551,8 +2529,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges1) {
             )"));
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
 
     test->pipe = runMockPasses(test->pipe, phv, defuse);
@@ -2657,8 +2634,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges2) {
     // reordered.
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
 
     test->pipe = runMockPasses(test->pipe, phv, defuse);
@@ -2779,8 +2755,7 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges3) {
 
     // A generally more complex version of multiple apply to see if the paths are right
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
 
     test->pipe = runMockPasses(test->pipe, phv, defuse);
@@ -2904,8 +2879,7 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
     // node_f was not found logically after node_c and node_d without the fix for P4C-2716
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     DependencyGraph dg;
 

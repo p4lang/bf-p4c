@@ -10,7 +10,6 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "lib/symbitmatrix.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/common/header_stack.h"
@@ -586,8 +585,7 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     IgnoreTableDeps ignore;
     TablesMutuallyExclusive mutex;
     ActionMutuallyExclusive action_mutex;
-    SymBitMatrix s_mutex;
-    PhvInfo phv(s_mutex);
+    PhvInfo phv;
     SplitAttachedInfo att_info;
     LayoutChoices lc(phv, att_info);
     SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex, lc);

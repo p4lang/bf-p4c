@@ -10,7 +10,6 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "lib/symbitmatrix.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/common/header_stack.h"
@@ -166,8 +165,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntry) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix s_mutex;
-    PhvInfo phv(s_mutex);
+    PhvInfo phv;
     auto options = new BFN_Options();
     auto *post_pm = runCustomPassManager(test->pipe, *options, &phv);
     auto ingress_tables =  post_pm->thread[0].mau->tables;
@@ -213,8 +211,7 @@ TEST_F(StaticEntriesConstPropTest, TestMultipleConstEntry) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix s_mutex;
-    PhvInfo phv(s_mutex);
+    PhvInfo phv;
     auto options = new BFN_Options();
     auto *post_pm = runCustomPassManager(test->pipe, *options, &phv);
     auto ingress_tables =  post_pm->thread[0].mau->tables;
@@ -258,8 +255,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntryIsDefaultAction) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix s_mutex;
-    PhvInfo phv(s_mutex);
+    PhvInfo phv;
     auto options = new BFN_Options();
     auto *post_pm = runCustomPassManager(test->pipe, *options, &phv);
     auto ingress_tables =  post_pm->thread[0].mau->tables;

@@ -170,7 +170,6 @@ using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
 // is necessary to maintain z3 context as this level.
 class PackFlexibleHeaders : public PassManager {
     std::vector<const IR::BFN::Pipe*> pipe;
-    SymBitMatrix mutually_exclusive_field_ids;
     PhvInfo phv;
     PhvUse uses;
     FieldDefUse defuse;

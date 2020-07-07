@@ -90,11 +90,9 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
 
 Backend::Backend(const BFN_Options& options, int pipe_id) :
     clot(uses),
-    phv(mutually_exclusive_field_ids),
     uses(phv),
     defuse(phv),
     decaf(phv, uses, defuse, deps),
-    table_alloc(phv.field_mutex()),
     table_summary(pipe_id, deps) {
     flexibleLogging = new LogFlexiblePacking(phv);
     phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
@@ -217,47 +215,9 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
-        // Primitives info is generated for model logging and is associated with
-        // a 'primitives' node (in context.json) for each action within a table.
-        //
-        // The 'GeneratePrimitiveInfo' pass does the job of generating a
-        // <testname>.prim.json file with all action primitives and is later
-        // merged into the context.json by the assembler. This is separated out
-        // from being generated directly into the assembly file purely to keep
-        // the assembly concise and readable.
-        //
-        // The primitives node requires instruction details like destination
-        // field, source operand info and operation type which requires the
-        // compiler to have done instruction selection and phv allocation.
-        //
-        // This pass should however always be called before any instruction
-        // adjustment (splitting) occurs as the logging only needs to output the
-        // overall instruction execution as specified in the p4 program. This
-        // should also happen before table placement which can cause table
-        // splitting across stages.
-        //
-        // TBD: [JIRA CI-11] Compiler while optimizing may split tables across
-        // stages. This could result in multiple scenarios - e.g.
-        // - all split stages have same set of actions
-        // - one split stage has a different set of actions as compared to the others
-        // - one split stage is a no match table and others have a gateway
-        // - one split stage has an indirect resource and others dont
-        // - one split stage has a partial action completed in the other stages
-        //
-        // With current schema the action primitives (used for logging) are
-        // populated per table and are stage agnostic. They assume the actions
-        // are same in each stage.
-        //
-        // Model logging in such cases will be inconsistent/missing since model
-        // logs actions per stage. This will require an update to the schema to
-        // represent the actions node within a stage_table.  In addition to
-        // actions, the indirect_resource node may also need to be moved
-        // similarly.
-        //
-        // Overall this is a significant change as the updated schema
-        // must be supported by the driver/model. The schema should also convey
-        // the original p4 action and how it is split across the stages to give
-        // a clear idea during logging.
+        // This pass must be called before instruction adjustment since the primitive info
+        // is per P4 actions. This should also happen before table placement which may cause
+        // tables to be split across stages.
         new GeneratePrimitiveInfo(phv, primNode),
         new TableAllocPass(options, phv, deps, table_summary, &jsonGraph),
         new DumpPipe("After TableAlloc"),
@@ -272,15 +232,10 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         new InstructionAdjustment(phv),
         nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
-
         new AdjustExtract(phv),
-        // Lower the parser IR to a target-specific representation. This *loses
-        // information* about field reads and writes in the parser and deparser,
-        // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,
-        // or any other pass that walks over the IR to find references to
-        // fields.
+        // Rewrite parser and deparser IR to reflect the PHV allocation such that field operations
+        // are converted into container operations.
         new LowerParser(phv, clot, defuse),
-
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         // must be called right before characterize power

@@ -46,7 +46,6 @@ const IR::Node *MauBacktracker::apply_visitor(const IR::Node* root, const char *
     LOG1("  Is metadata initialization disabled? " << (metaInitDisable ? "YES" : "NO"));
     LOG1("  Should pack conflicts be ignored? " << (ignorePackConflicts ? "YES" : "NO"));
     ++numInvoked;
-    overlay.clear();
     LOG4("    Size of this round tables: " << tables.size());
     LOG4("    Size of previous round tables: " << prevRoundTables.size());
     if (firstRoundFit) {

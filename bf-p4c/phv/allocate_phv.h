@@ -644,7 +644,7 @@ class AllocatePHV : public Inspector {
 
     /// @returns a concrete allocation.
     PHV::ConcreteAllocation make_concrete_allocation() const {
-        return PHV::ConcreteAllocation(mutex_i, uses_i); }
+        return PHV::ConcreteAllocation(phv_i, uses_i); }
 
     /** @returns the container groups available on this Device.  All fields in
      * a cluster must be allocated to the same container group.

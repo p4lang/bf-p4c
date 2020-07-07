@@ -290,10 +290,9 @@ TEST_F(TofinoPhvCrush, clusterAlignment) {
 
 TEST_F(TofinoPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto mutex = SymBitMatrix();
-    auto info = PhvInfo(mutex);
-    auto uses = PhvUse(info);
-    auto alloc = PHV::ConcreteAllocation(mutex, uses);
+    PhvInfo phv;
+    PhvUse uses(phv);
+    PHV::ConcreteAllocation alloc(phv, uses);
 
     // Check that all physical containers are accounted for and unallocated.
     for (auto cid : phvSpec.physicalContainers()) {
@@ -316,10 +315,9 @@ TEST_F(TofinoPhvCrush, makeDeviceAllocation) {
 
 TEST_F(TofinoPhvCrush, Transaction) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto mutex = SymBitMatrix();
-    auto info = PhvInfo(mutex);
-    auto uses = PhvUse(info);
-    auto alloc = PHV::ConcreteAllocation(mutex, uses);
+    PhvInfo phv;
+    PhvUse uses(phv);
+    PHV::ConcreteAllocation alloc(phv, uses);
 
     EXPECT_NE(phvSpec.ingressOnly() | phvSpec.egressOnly(), phvSpec.physicalContainers());
 
@@ -498,11 +496,11 @@ TEST_F(TofinoPhvCrush, Transaction) {
 TEST_F(TofinoPhvCrush, slicesByLiveness) {
     const PhvSpec& phvSpec = Device::phvSpec();
 
-    SymBitMatrix mutex;
-    mutex[1][2] = true;
-    auto info = PhvInfo(mutex);
-    auto uses = PhvUse(info);
-    auto alloc = PHV::ConcreteAllocation(mutex, uses);
+    PhvInfo phv;
+    PhvUse uses(phv);
+    PHV::ConcreteAllocation alloc(phv, uses);
+
+    phv.field_mutex()[1][2] = true;
 
     std::vector<PHV::Container> containers;
     for (auto cid : phvSpec.physicalContainers()) {
@@ -544,10 +542,10 @@ class JBayPhvCrush : public JBayBackendTest {};
 
 TEST_F(JBayPhvCrush, makeDeviceAllocation) {
     const PhvSpec& phvSpec = Device::phvSpec();
-    auto mutex = SymBitMatrix();
-    auto info = PhvInfo(mutex);
-    auto uses = PhvUse(info);
-    auto alloc = PHV::ConcreteAllocation(mutex, uses);
+
+    PhvInfo phv;
+    PhvUse uses(phv);
+    PHV::ConcreteAllocation alloc(phv, uses);
 
     // Check that all physical containers are accounted for and unallocated.
     for (auto cid : phvSpec.physicalContainers()) {

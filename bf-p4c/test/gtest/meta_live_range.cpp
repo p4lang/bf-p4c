@@ -183,13 +183,12 @@ TEST_F(MetadataLiveRangeTest, BasicControlFlow) {
     )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
     DependencyGraph deps;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
     PHV::Pragmas pragmas(phv);
-    MauBacktracker entry(mutex);
+    MauBacktracker entry;
     MetadataLiveRange metaLive(phv, deps, defuse, pragmas, uses, entry);
 
     auto *pipe = test->pipe;

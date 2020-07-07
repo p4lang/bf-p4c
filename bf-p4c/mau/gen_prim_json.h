@@ -6,10 +6,6 @@
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/mau_visitor.h"
 
-namespace PHV {
-class Field;
-}  // namespace PHV
-
 // Generate Primitive Info for actions before instruction adjustment. Once
 // instruction adjustment is applied it merges/splits instructions and we loose
 // the initial p4 info on the operands. This info is passed off to the assembler
@@ -24,6 +20,49 @@ class Field;
 // - RemoveHeaderPrimitive
 // - ShiftPrimitive
 // - ExecuteMeterPrimitive
+//
+// Primitives info is generated for model logging and is associated with
+// a 'primitives' node (in context.json) for each action within a table.
+//
+// The 'GeneratePrimitiveInfo' pass does the job of generating a
+// <testname>.prim.json file with all action primitives and is later
+// merged into the context.json by the assembler. This is separated out
+// from being generated directly into the assembly file purely to keep
+// the assembly concise and readable.
+//
+// The primitives node requires instruction details like destination
+// field, source operand info and operation type which requires the
+// compiler to have done instruction selection and phv allocation.
+//
+// This pass should however always be called before any instruction
+// adjustment (splitting) occurs as the logging only needs to output the
+// overall instruction execution as specified in the p4 program. This
+// should also happen before table placement which can cause table
+// splitting across stages.
+//
+// TBD: [JIRA CI-11] Compiler while optimizing may split tables across
+// stages. This could result in multiple scenarios - e.g.
+// - all split stages have same set of actions
+// - one split stage has a different set of actions as compared to the others
+// - one split stage is a no match table and others have a gateway
+// - one split stage has an indirect resource and others dont
+// - one split stage has a partial action completed in the other stages
+//
+// With current schema the action primitives (used for logging) are
+// populated per table and are stage agnostic. They assume the actions
+// are same in each stage.
+//
+// Model logging in such cases will be inconsistent/missing since model
+// logs actions per stage. This will require an update to the schema to
+// represent the actions node within a stage_table.  In addition to
+// actions, the indirect_resource node may also need to be moved
+// similarly.
+//
+// Overall this is a significant change as the updated schema
+// must be supported by the driver/model. The schema should also convey
+// the original p4 action and how it is split across the stages to give
+// a clear idea during logging.
+
 class GeneratePrimitiveInfo : public MauInspector {
  private:
     const PhvInfo &phv;

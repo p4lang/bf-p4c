@@ -18,13 +18,12 @@ namespace Test {
 
 class ContainerAction: public TofinoBackendTest {
  protected:
-    ContainerAction() : phv(mutex) {
+    ContainerAction() {
         tbl = new IR::MAU::Table("test", INGRESS);
         act = new IR::MAU::Action("act");
         tbl->actions["act"] = act;
     }
 
-    SymBitMatrix mutex;
     PhvInfo phv;
     IR::MAU::Table* tbl;
     IR::MAU::Action* act;

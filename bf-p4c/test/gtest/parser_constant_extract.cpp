@@ -5,7 +5,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/elim_unused.h"
@@ -128,8 +127,7 @@ state parse6 {
 )"));
     ASSERT_TRUE(test);
     // ingress and egress should be the same here
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
 
     PassManager quick_backend = {
         new CollectHeaderStackInfo,

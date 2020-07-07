@@ -4,7 +4,6 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -97,8 +96,7 @@ TEST_F(PaSolitaryPragmaTest, Basic) {
                          )"));
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     PragmaSolitary pa_solitary(phv);
     runMockPasses(test->pipe, phv, pa_solitary);
 

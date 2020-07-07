@@ -17,7 +17,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {
@@ -198,8 +197,7 @@ TEST_F(DynamicDepTest, DownwardProp1) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     CalculateNextTableProp ntp;
     ControlPathwaysToTable paths;
     DependencyGraph dg;
@@ -331,8 +329,7 @@ TEST_F(DynamicDepTest, CanPlaceCDS) {
 
     ASSERT_TRUE(test);
 
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
     CalculateNextTableProp ntp;
     ControlPathwaysToTable paths;
     DependencyGraph dg;

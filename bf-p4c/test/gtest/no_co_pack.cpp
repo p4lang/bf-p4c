@@ -6,7 +6,6 @@
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/error.h"
-#include "lib/symbitmatrix.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/header_stack.h"
@@ -96,8 +95,7 @@ TEST_F(NoCoPack, Sanity) {
     auto test = createActionTest();
 
     ASSERT_TRUE(test);
-    SymBitMatrix mutex;
-    PhvInfo phv(mutex);
+    PhvInfo phv;
 
     runInitialPassManager(test->pipe, &phv);
 
