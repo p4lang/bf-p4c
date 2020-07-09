@@ -229,14 +229,16 @@ std::string Phv::Ref::toString() const {
 void Phv::Ref::dbprint(std::ostream &out) const {
     out << name_;
     if (lo >= 0) {
-        out << '(' << lo;
-        if (hi != lo) out << ".." << hi;
-        out << ')'; }
+        out << '[' << hi;
+        if (hi != lo) out << ":" << lo;
+        out << ']';
+    }
     Slice sl(**this);
     if (sl.valid) {
         out << '[';
         sl.dbprint(out);
-        out << ']'; }
+        out << ']';
+    }
 }
 
 std::string Phv::Ref::desc() const {
@@ -253,9 +255,10 @@ void Phv::Slice::dbprint(std::ostream &out) const {
     if (valid) {
         out << reg.name;
         if (lo != 0 || hi != reg.size-1) {
-            out << '(' << lo;
-            if (hi != lo) out << ".." << hi;
-            out << ')'; }
+            out << '[' << hi;
+            if (hi != lo) out << ":" << lo;
+            out << ']';
+        }
     } else
         out << "<invalid>";
 }

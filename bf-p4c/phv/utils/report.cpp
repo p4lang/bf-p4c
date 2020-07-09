@@ -53,8 +53,8 @@ void PHV::AllocationReport::collectStatus() {
 static std::string
 format_bit_slice(unsigned lo, unsigned hi) {
     std::stringstream slice;
-    slice << "[" << lo;
-    if (lo != hi) slice << ":" << hi;
+    slice << "[" << hi;
+    if (lo != hi) slice << ":" << lo;
     slice << "]";
     return slice.str();
 }
@@ -77,6 +77,18 @@ format_alloc_slice(const PHV::AllocSlice& slice) {
     }
 
     return {container_slice.str(), field_slice.str()};
+}
+
+std::vector<std::string> getPrinterSliceRow(const PHV::AllocSlice &slice,
+    const boost::optional<gress_t> &gress, bool first, bool hardwired = false) {
+    auto formatted = format_alloc_slice(slice);
+
+    return {
+        first ? std::string(slice.container().toString()) : "",
+        first ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
+        formatted.first,
+        std::string(slice.field()->name + formatted.second)
+    };
 }
 
 cstring
@@ -128,20 +140,14 @@ PHV::AllocationReport::printAllocation() const {
             }
             firstEmpty = true;
 
-            bool firstSlice = true;
-            for (auto slice : slices) {
-                auto formatted = format_alloc_slice(slice);
+            bool first = true;
+            for (const auto &slice : slices) {
+                tp.addRow(getPrinterSliceRow(slice, gress, first, hardwired));
+                first = false;
 
-                tp.addRow({
-                    firstSlice ? std::string(slice.container().toString()) : "",
-                    firstSlice ? (std::string(toSymbol(*gress)) + (hardwired ? "-HW" : "")) : "",
-                    formatted.first,
-                    std::string(slice.field()->name + formatted.second)
-                   });
-                firstSlice = false;
-
-                if (slice.field()->pov)
+                if (slice.field()->pov) {
                     pov_bits[*gress][container].push_back(slice);
+                }
             }
             tp.addBlank();
         }
@@ -254,20 +260,7 @@ PHV::AllocationReport::printOverlayStatus() const {
 
                 bool first = true;
                 for (const auto& slice : alloc.slices(kv.first)) {
-                    std::stringstream container_slice, field_slice;
-
-                    if (slice.container_slice().size() != int(slice.container().size()))
-                        container_slice << "[" << slice.container_slice().lo << ":" <<
-                        slice.container_slice().hi << "]";
-                    if (slice.field_slice().size() != slice.field()->size)
-                        field_slice << "[" << slice.field_slice().lo << ":" <<
-                        slice.field_slice().hi << "]";
-
-                    tp.addRow({first ? std::string(container.toString().c_str()) : "",
-                               first ? std::string(toSymbol(*gress).c_str()) : "",
-                               container_slice.str(),
-                               std::string(slice.field()->name) + field_slice.str()
-                              });
+                    tp.addRow(getPrinterSliceRow(slice, gress, first));
                     first = false;
                 }
 
