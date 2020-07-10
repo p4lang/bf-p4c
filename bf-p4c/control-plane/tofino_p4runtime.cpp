@@ -601,6 +601,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
             auto parsersName = "ig_prsr";
             forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock* pkg) {
                 auto parsers = pkg->findParameterValue(parsersName);
+                BUG_CHECK(parsers, "Expected Block");
                 if (!parsers->is<IR::PackageBlock>()) {
                     ::error(ErrorType::ERR_INVALID, "%1% package block. "
                             "You are compiling for the %2% P4 architecture.\n"
@@ -674,7 +675,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
                 for (auto gressName : gressNames) {
                     auto parsersName = gressName + "_prsr";
                     auto parsers = pkg->findParameterValue(parsersName);
-                    BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                    BUG_CHECK(parsers && parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
                     auto parsersBlock = parsers->to<IR::PackageBlock>();
                     auto decl = parsersBlock->node->to<IR::Declaration_Instance>();
                     if (decl)
@@ -1000,7 +1001,7 @@ class P4RuntimeArchHandlerTofino final : public P4::ControlPlaneAPI::P4RuntimeAr
 
                 auto parsersName = gressName + "_prsr";
                 auto parsers = pkg->findParameterValue(parsersName);
-                BUG_CHECK(parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
+                BUG_CHECK(parsers && parsers->is<IR::PackageBlock>(), "Expected PackageBlock");
                 auto parsersBlock = parsers->to<IR::PackageBlock>();
                 auto decl = parsersBlock->node->to<IR::Declaration_Instance>();
                 if (decl)
