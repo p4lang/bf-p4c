@@ -216,8 +216,8 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
             table_sharing_attached[tbl].insert(am_tbl);
             continue;
         } else {
-           ::error("table %1% and table %2% cannot share %3% because use of the %3% is not "
-                    "mutually exclusive", tbl->externalName(), am_tbl->externalName(), am);
+           ::error("%1% and %2% cannot share %3% because use of the %3% is not "
+                    "mutually exclusive", tbl, am_tbl, am);
         }
     }
     backend_users[am].push_back(tbl);
