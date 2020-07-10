@@ -24,6 +24,7 @@ import json
 from packaging import version
 import re
 import time
+import glob
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
@@ -84,6 +85,7 @@ class BarefootBackend(BackendDriver):
         self.add_command('assembler', bfas)
         self.add_command('bf-rt-verifier', bfrt_schema)
         self.add_command('p4c-gen-conf', p4c_gen_conf)
+        self.add_command('cleaner', 'rm')
 
         self.runVerifiers = False
         top_src_dir = checkEnv()
@@ -97,7 +99,7 @@ class BarefootBackend(BackendDriver):
 
         # order of commands
         self.enable_commands(['preprocessor', 'compiler', 'assembler',
-                              'summary_logging', 'p4c-gen-conf'])
+                              'summary_logging', 'p4c-gen-conf', 'cleaner'])
 
         # additional options
         self.add_command_line_options()
@@ -223,6 +225,9 @@ class BarefootBackend(BackendDriver):
             opts.verbose = 1
         if opts.debug_info:
             opts.create_graphs = True
+
+        if opts.verbose > 0:
+            self._verbose = True
 
         self.checkVersionTargetArch(opts.target, opts.language, opts.arch)
         self.language = opts.language
@@ -600,7 +605,7 @@ class BarefootBackend(BackendDriver):
         # Note that we need to make a copy of the list
         self._commands['assembler'] = list(self._saved_assembler_params)
         # lookup the directory name. For P4-16, it is the output + pipe_name
-        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self._verbose:
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(dirname))
         else:
@@ -663,6 +668,31 @@ class BarefootBackend(BackendDriver):
             pass
             # raise
 
+    def runCleaner(self):
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self._verbose:
+            return 0
+
+        filesToRemove = []
+
+        if os.environ['P4C_BUILD_TYPE'] != "DEVELOPER":
+            filesToRemove.append('*.bfa')
+
+        filesToRemove.append('*.dynhash.json')
+        filesToRemove.append('*.prim.json')
+
+        self.add_command_option('cleaner', '-f'); 
+        filesFound = 0
+        for rFile in filesToRemove:
+            rFileSearchString = os.path.join(self._output_directory,"**/",rFile)
+            for f in glob.glob(rFileSearchString, recursive=True):
+                self.add_command_option('cleaner', f); 
+                filesFound += 1
+
+        if filesFound == 0:
+            return 0
+
+        return self.checkAndRunCmd('cleaner')
+
     # this should be in the parent class!!
     def checkAndRunCmd(self, command):
         cmd = self._commands[command]
@@ -700,10 +730,11 @@ class BarefootBackend(BackendDriver):
         run_manifest_verifier = 'manifest-verifier' in self._commandsEnabled
         run_summary_logs = 'summary_logging' in self._commandsEnabled
         run_p4c_gen_conf = 'p4c-gen-conf' in self._commandsEnabled
+        run_cleaner  = 'cleaner' in self._commandsEnabled
 
         # run the preprocessor, compiler, and verifiers (manifest, context schema, and bf-rt)
         self.disable_commands(['assembler', 'archiver', 'verifier',
-                               'summary_logging', 'p4c-gen-conf'])
+                               'summary_logging', 'p4c-gen-conf', 'cleaner'])
 
         start_t = time.time()
         rc = BackendDriver.run(self)
@@ -724,6 +755,7 @@ class BarefootBackend(BackendDriver):
                         # ignore the return code -- we may have failed generating some logs.
                         self.runSummaryLogging(pipe)
                 self.updateManifest(os.path.join(self._output_directory, 'manifest.json'), False)
+                if run_cleaner: self.runCleaner()
                 if run_archiver: self.checkAndRunCmd('archiver')
             finally:
                 return rc
@@ -802,6 +834,9 @@ class BarefootBackend(BackendDriver):
                 pipeNames = [ p['pipe_name'] for p in self._pipes ]
             self.add_command_option('p4c-gen-conf', '--pipe {}'.format(' '.join(pipeNames)))
             rc += self.checkAndRunCmd('p4c-gen-conf')
+
+        # Cleanup temp files
+        if run_cleaner: self.runCleaner()
 
         # run the archiver if one has been set, regardless whether the
         # execution was successful or not

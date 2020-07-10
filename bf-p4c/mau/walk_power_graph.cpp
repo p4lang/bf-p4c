@@ -73,7 +73,8 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
   }
 
   create_mau_power_log(root);
-  create_mau_power_json(root);
+  if (BackendOptions().verbose > 0)
+    create_mau_power_json(root);
 
   // log results (power.json, mau.power.log)
   // latency, features, power

@@ -38,8 +38,7 @@ FinalizeMauPredDepsPower::FinalizeMauPredDepsPower(const PhvInfo& phv,
 
     // Walk power graph to compute MPR, estimate power, update latencies.
     // Populates mpr_settings_.  Updates stage dependencies in mau_features_.
-    new WalkPowerGraph(next_table_properties_,
-                       graphs_, exceeds_stages_, table_memory_access_,
+    new WalkPowerGraph(next_table_properties_, graphs_, exceeds_stages_, table_memory_access_,
                        options_, mau_features_, mpr_settings_)
   });
 }
