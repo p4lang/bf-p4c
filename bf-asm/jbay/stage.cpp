@@ -83,8 +83,12 @@ void Stage::gen_mau_stage_extension(REGS &regs, json::map &extend) {
     json::vector &registers = extend["registers"] = json::vector();
     registers.push_back(make_reg_vec(regs, regs.dp.phv_ingress_thread, "regs.dp.phv_ingress_thread",
                                      0, 0x3ff, 0x3ff));
+    registers.push_back(make_reg_vec(regs, regs.dp.phv_ingress_thread_imem,
+                                     "regs.dp.phv_ingress_thread_imem", 0, 0x3ff, 0x3ff));
     registers.push_back(make_reg_vec(regs, regs.dp.phv_egress_thread, "regs.dp.phv_egress_thread",
                                      0, 0x3ff, 0x3ff));
+    registers.push_back(make_reg_vec(regs, regs.dp.phv_egress_thread_imem,
+                                     "regs.dp.phv_egress_thread_imem", 0, 0x3ff, 0x3ff));
     registers.push_back(make_reg_vec(regs, regs.rams.match.adrdist.adr_dist_pipe_delay,
                                      "regs.rams.match.adrdist.adr_dist_pipe_delay",
                                      0, 0xf, 0xf));
@@ -114,6 +118,11 @@ void Stage::gen_mau_stage_extension(REGS &regs, json::map &extend) {
     registers.push_back(make_reg_vec(regs, regs.rams.match.merge.exact_match_delay_thread,
                                      "regs.rams.match.merge.exact_match_delay_thread",
                                      0, 0x3, 0x3));
+    BUG_CHECK((regs.rams.match.merge.mpr_thread_delay[0] & 1) == 0);
+    BUG_CHECK((regs.rams.match.merge.mpr_thread_delay[1] & 1) == 0);
+    registers.push_back(make_reg_vec(regs, regs.rams.match.merge.mpr_thread_delay,
+                                     "regs.rams.match.merge.mpr_thread_delay",
+                                     1, 1, 0x1f));
 }
 
 /* disable power gating configuration for specific MAU regs to weedout delay programming
