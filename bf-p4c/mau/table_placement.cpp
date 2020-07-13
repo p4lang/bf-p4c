@@ -2951,10 +2951,35 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
+bool MergeAlwaysRunActions::Scan::preorder(const IR::Primitive *prim) {
+    auto *tbl = findContext<IR::MAU::Table>();
+    if (tbl != nullptr && tbl->is_always_run_action()) {
+        for (int idx = 0; idx < prim->operands.size(); ++idx) {
+            auto expr = prim->operands.at(idx);
+            le_bitrange bits;
+            PHV::Field* exp_f = self.self.phv.field(expr, &bits);
+            PHV::FieldSlice fslice = PHV::FieldSlice(exp_f, bits);
+
+            if (idx != 0)
+                self.read_fldSlice[tbl].insert(fslice);
+            else
+                self.writen_fldSlice[tbl].insert(fslice);
+        }
+
+        LOG5("\tPrimitive " << *prim << "\n\t\t writen slices: " << self.writen_fldSlice <<
+         "\n\t\t read slices: "  << self.read_fldSlice);
+    }
+
+    return true;
+}
+
 void MergeAlwaysRunActions::Scan::end_apply() {
     for (auto entry : self.ar_tables_per_stage) {
-        IR::MAU::Table *merged_table = new IR::MAU::Table(cstring(), entry.first.gress);
-        merged_table->stage_ = entry.first.stage;
+        const AlwaysRunKey& araKey = entry.first;
+        auto& tables = entry.second;
+
+        IR::MAU::Table *merged_table = new IR::MAU::Table(cstring(), araKey.gress);
+        merged_table->stage_ = araKey.stage;
         merged_table->always_run = IR::MAU::AlwaysRun::ACTION;
         IR::MAU::Action *act = new IR::MAU::Action("$always_run_act");
         TableResourceAlloc *resources = new TableResourceAlloc();
@@ -2964,7 +2989,7 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         resources->instr_mem.all_instrs.emplace("$always_run", single_instr);
         std::set<int> minDgStages;
         // Should really only be an Action and an instr_mem allocation
-        for (auto tbl : entry.second) {
+        for (auto tbl : tables) {
             BUG_CHECK(tbl->actions.size() == 1, "Always run tables can only have one action");
             const IR::MAU::Action *local_act = *(Values(tbl->actions).begin());
             for (auto instr : local_act->action)
@@ -2973,12 +2998,12 @@ void MergeAlwaysRunActions::Scan::end_apply() {
             for (auto stg : PhvInfo::minStage(tbl)) minDgStages.insert(stg);
         }
 
-        auto tbl_to_replace = self.ar_replacement(entry.first.stage, entry.first.gress);
+        auto tbl_to_replace = self.ar_replacement(araKey.stage, araKey.gress);
         merged_table->name = tbl_to_replace->name;
         merged_table->actions.emplace("$always_run_act", act);
         merged_table->resources = resources;
-        self.merge_per_stage.emplace(entry.first, merged_table);
-        self.merged_ar_minStages[entry.first] = minDgStages;
+        self.merge_per_stage.emplace(araKey, merged_table);
+        self.merged_ar_minStages[araKey] = minDgStages;
     }
 }
 
@@ -2987,14 +3012,135 @@ const IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(IR::MAU::Table *tb
     if (!tbl->is_always_run_action())
         return tbl;
     AlwaysRunKey ark(tbl->stage(), tbl->gress);
+
     auto tbl_to_replace = self.ar_replacement(ark.stage, ark.gress);
     if (tbl_to_replace == orig_tbl) {
-        for (auto stg : self.merged_ar_minStages.at(ark))
-            PhvInfo::addMinStageEntry(self.merge_per_stage.at(ark), stg);
         return self.merge_per_stage.at(ark);
     } else {
         return nullptr;
     }
+}
+
+void MergeAlwaysRunActions::Update::end_apply() {
+    // MinSTage status before updating slice liveranges and merged table minStage
+    LOG7(PhvInfo::reportMinStages());
+
+    // Print Fields involved in Always Run Actions
+    for (auto pr : self.read_fldSlice) {
+        LOG7("\t  Read slices for" << *(pr.first));
+        for (auto sl : pr.second) {
+            LOG7("\t\t" << *(sl.field()) << " num allocs: " << sl.field()->alloc_size());
+        }
+    }
+
+    for (auto pr : self.writen_fldSlice) {
+        LOG7("\t  Writen slices for" << *(pr.first));
+        for (auto sl : pr.second) {
+            LOG7("\t\t" << *(sl.field()) << " num allocs: " << sl.field()->alloc_size());
+        }
+    }
+
+    // Update liveranges of AllocSlice's impacted by merged tables
+    for (auto entry : self.ar_tables_per_stage) {
+        const AlwaysRunKey& araKey = entry.first;
+        auto& tables = entry.second;
+
+        // Nothing to do if stage does not contain merged Always Run Action tables
+        if (tables.size() <= 1)
+            continue;
+
+        // Nothing to do if merged tables have same minStage
+        if (self.merged_ar_minStages.at(araKey).size() <= 1)
+            continue;
+
+        // Get table that will be replaced by merged table
+        auto *merged_tbl = *(tables.begin());
+
+        // Get max minStage of merged tables - This will be used as
+        // the new minStage of the merged table
+        int newStg = *(self.merged_ar_minStages.at(araKey).rbegin());
+
+        std::stringstream ss;
+        ss << "Merged tables: ";
+
+        for (auto tbl : tables) {
+            int oldStg = *(PhvInfo::minStage(tbl).begin());
+
+            ss << tbl->externalName() << "  (stage:" << oldStg << ")  ";
+
+            // If the minStage of the table has not changed there is nothing to do
+            if (oldStg == newStg)
+                continue;
+
+            // Since (newStg != oldStg), we need to update all the affected AllocSlices
+            // First look into the read slices
+            for (auto fslice : self.read_fldSlice.at(tbl)) {
+                PHV::Field *fld = const_cast<PHV::Field*>(fslice.field());
+                le_bitrange rng = fslice.range();
+                safe_vector<PHV::AllocSlice>& alc_slices = fld->get_alloc();
+
+                for (auto &alc_slice : alc_slices) {
+                    if (!(alc_slice.field_slice().overlaps(fslice.range())))
+                        continue;
+
+                    // The AlwaysRunAction table may be the last live stage of the slice or ...
+                    if (alc_slice.getLatestLiveness().first == oldStg) {
+                        alc_slice.setLatestLiveness(
+                            std::make_pair(newStg, alc_slice.getLatestLiveness().second));
+
+                        LOG7("\tUpdate last stage from " << oldStg << " to " << newStg <<
+                             " for read slice: " << alc_slice);
+                    }
+
+                    // ... the ARA table may be the first live stage of the slice
+                    if (alc_slice.getEarliestLiveness().first == oldStg) {
+                        alc_slice.setEarliestLiveness(
+                            std::make_pair(newStg, alc_slice.getEarliestLiveness().second));
+
+                        LOG7("\tUpdate first stage from " << oldStg << " to " << newStg <<
+                             " for read slice: " << alc_slice);
+                    }
+                }
+            }
+
+            // Then look into the writen slices
+            for (auto fslice : self.writen_fldSlice.at(tbl)) {
+                PHV::Field *fld = const_cast<PHV::Field*>(fslice.field());
+                le_bitrange rng = fslice.range();
+                safe_vector<PHV::AllocSlice>& alc_slices = fld->get_alloc();
+
+                for (auto &alc_slice : alc_slices) {
+                    if (!(alc_slice.field_slice().overlaps(fslice.range())))
+                        continue;
+
+                    // The AlwaysRunAction table may be the first live stage of the slice or ...
+                    if (alc_slice.getEarliestLiveness().first == oldStg) {
+                        alc_slice.setEarliestLiveness(
+                            std::make_pair(newStg, alc_slice.getEarliestLiveness().second));
+
+                        LOG7("\tUpdate first stage from " << oldStg << " to " << newStg <<
+                             " for writen slice: " << alc_slice);
+                    }
+
+                    // ... the ARA table may be the last live stage of the slice
+                    if (alc_slice.getLatestLiveness().first == oldStg) {
+                        alc_slice.setLatestLiveness(
+                            std::make_pair(newStg, alc_slice.getLatestLiveness().second));
+
+                        LOG7("\tUpdate last stage from " << oldStg << " to " << newStg <<
+                             " for written slice: " << alc_slice);
+                    }
+                }
+            }
+        }
+
+        ss << std::endl;
+        LOG7(ss.str());
+        PhvInfo::addMinStageEntry(merged_tbl, newStg, true);
+    }
+
+    // MinSTage status after updating slice liveranges and merged table minStage
+    LOG7(PhvInfo::reportMinStages());
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator
@@ -3024,6 +3170,6 @@ TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
          new SetupInfo(*this),
          new DecidePlacement(*this),
          new TransformTables(*this),
-         new MergeAlwaysRunActions
+         new MergeAlwaysRunActions(*this)
      });
 }

@@ -689,7 +689,7 @@ class Instruction : Primitive {
     Instruction(Util::SourceInfo si, cstring op, const std::vector<Expression> &args)
         : Primitive(si, op) { for (auto a : args) operands.push_back(a); }
     bool isOutput(int operand_index) const override { return operand_index == 0; }
-    virtual Expression getOutput() const { return operands.empty() ? operands.at(0) : nullptr; }
+    virtual Expression getOutput() const { return operands.empty() ? nullptr : operands.at(0); }
     validate { BUG_CHECK(name, "empty name in instruction"); }
 }
 

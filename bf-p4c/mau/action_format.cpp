@@ -2477,12 +2477,9 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
                           << action_name << " is not allocated?");
             });
 
-            bool is_merged_ara_table = (cont_action.table_context != nullptr)
-                && cont_action.table_context->is_always_run_action()
-                && (PhvInfo::minStage(cont_action.table_context).size() > 1);
-
-            if (!is_merged_ara_table && (write_count > 1))
+            if (write_count > 1)
                 BUG("Splitting of writes handled incorrectly");
+
             const IR::MAU::ConditionalArg *cond_arg = nullptr;
             if (field_action.name == "conditionally-set") {
                 auto last_read = field_action.reads.back();

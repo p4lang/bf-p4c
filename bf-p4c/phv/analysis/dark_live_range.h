@@ -298,8 +298,6 @@ class DarkLiveRange : public Inspector {
             const ordered_set<const IR::BFN::Unit*>& doms,
             const IR::MAU::Table* groupDominator) const;
 
-    const ordered_set<const IR::BFN::Unit*>& getPostDomUnits(const OrderedFieldInfo* field);
-
     boost::optional<PHV::DarkInitEntry> generateInitForLastStageAlwaysInit(
             const OrderedFieldInfo& field,
             const OrderedFieldInfo* previousField,

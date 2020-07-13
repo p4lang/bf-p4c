@@ -1269,7 +1269,8 @@ class PhvInfo {
 
     static std::set<int> minStage(const IR::MAU::Table *tbl);
 
-    static void addMinStageEntry(const IR::MAU::Table *tbl, int stage);
+    static void addMinStageEntry(const IR::MAU::Table *tbl, int stage,
+                                 bool remove_prev_stages = false);
 
     static cstring reportMinStages();
 

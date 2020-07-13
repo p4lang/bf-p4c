@@ -918,16 +918,6 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldWithZer
     return rv;
 }
 
-const ordered_set<const IR::BFN::Unit*>&
-DarkLiveRange::getPostDomUnits(const OrderedFieldInfo* field) {
-    // Get access units for @field
-    ordered_set<const IR::BFN::Unit*> nodes;
-    nodes.insert(field->units.begin(), field->units.end());
-
-    return nodes;
-}
-
-
 boost::optional<PHV::DarkInitEntry>
 DarkLiveRange::generateInitForLastStageAlwaysInit(
         const OrderedFieldInfo& field,

@@ -187,6 +187,10 @@ class TransformTables : public MauTransform {
 
 
 class MergeAlwaysRunActions : public PassManager {
+    TablePlacement &self;
+
+    using TableFieldSlices = std::map<IR::MAU::Table* , PHV::FieldSlice>;
+
     struct AlwaysRunKey {
         int stage;
         gress_t gress;
@@ -203,17 +207,23 @@ class MergeAlwaysRunActions : public PassManager {
     std::map<AlwaysRunKey, ordered_set<const IR::MAU::Table *>> ar_tables_per_stage;
     std::map<AlwaysRunKey, const IR::MAU::Table *> merge_per_stage;
     std::map<AlwaysRunKey, std::set<int>> merged_ar_minStages;
+    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> writen_fldSlice;
+    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> read_fldSlice;
 
     profile_t init_apply(const IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
         ar_tables_per_stage.clear();
         merge_per_stage.clear();
+        merged_ar_minStages.clear();
+        writen_fldSlice.clear();
+        read_fldSlice.clear();
         return rv;
     }
 
     class Scan : public MauInspector {
         MergeAlwaysRunActions &self;
         bool preorder(const IR::MAU::Table *) override;
+        bool preorder(const IR::Primitive *) override;
         void end_apply() override;
 
      public:
@@ -223,7 +233,7 @@ class MergeAlwaysRunActions : public PassManager {
     class Update : public MauTransform {
         MergeAlwaysRunActions &self;
         const IR::MAU::Table *preorder(IR::MAU::Table *) override;
-        void end_apply() override { LOG7(PhvInfo::reportMinStages()); }
+        void end_apply() override;
 
      public:
         explicit Update(MergeAlwaysRunActions &s) : self(s) {}
@@ -238,7 +248,7 @@ class MergeAlwaysRunActions : public PassManager {
     }
 
  public:
-    MergeAlwaysRunActions() {
+    explicit MergeAlwaysRunActions(TablePlacement &s) : self(s) {
         addPasses({
             new Scan(*this),
             new Update(*this)

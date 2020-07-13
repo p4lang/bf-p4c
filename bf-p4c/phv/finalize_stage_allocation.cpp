@@ -274,16 +274,9 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                 new_min_stage = minPhysicalWrite;
                 new_min_use = write;
             }
-            if (maxPhysicalWrite > maxPhysicalRead) {
+            if (maxPhysicalWrite >= maxPhysicalRead) {
                 new_max_stage = maxPhysicalWrite;
                 new_max_use = write;
-            } else if (maxPhysicalWrite == maxPhysicalRead) {
-                new_max_stage = maxPhysicalWrite;
-                // *ALEX* special case for merged AlwaysRunAction tables
-                if (alloc.container().is(PHV::Kind::dark))
-                    new_max_use = read;
-                else
-                    new_max_use = write;
             } else {
                 new_max_stage = maxPhysicalRead;
                 new_max_use = read;

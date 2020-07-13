@@ -597,8 +597,11 @@ std::set<int> PhvInfo::minStage(const IR::MAU::Table *table) {
     return ::get(table_to_min_stage, TableSummary::getTableName(table));
 }
 
-void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage) {
+void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remove_prev_stages) {
     auto tableName = TableSummary::getTableName(table);
+    if (remove_prev_stages)
+        table_to_min_stage[tableName].clear();
+
     table_to_min_stage[tableName].insert(stage);
     LOG6("Adding stage " << stage << " to table " << tableName);
     if (table->gateway_name && table->gateway_name != tableName) {
