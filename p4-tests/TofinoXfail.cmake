@@ -1708,6 +1708,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Invalid select case expression"
+  extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
+)
+
 # power.p4 PTF failure
 # hw team uses it to do some manual testing
 # to measure the SRAM and TCAM power draw

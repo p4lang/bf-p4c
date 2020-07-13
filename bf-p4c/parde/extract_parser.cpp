@@ -1291,15 +1291,11 @@ struct RewriteParserStatements : public Transform {
 
                     if (method->member == "verify") {
                         auto verify = new IR::BFN::ChecksumVerify(declName);
-                        if (auto mem = lhs->to<IR::Member>())
-                            verify->dest = new IR::BFN::FieldLVal(mem);
-                        else if (auto sl = lhs->to<IR::Slice>())
-                            verify->dest = new IR::BFN::FieldLVal(sl);
+                        verify->dest = new IR::BFN::FieldLVal(lhs);
                         return verify;
                     } else if (method->member == "get") {
                         ::warning("checksum.get() will deprecate in future versions. Please use"
                                   " void subtract_all_and_deposit(bit<16>) instead");
-                        auto mem = lhs->to<IR::Member>();
                         if (!lastChecksumSubtract || !lastSubtractField) {
                             ::fatal_error("Checksum \"get\" must have preceding \"subtract\""
                                           " call in the same parser state");
@@ -1307,7 +1303,7 @@ struct RewriteParserStatements : public Transform {
                         auto endPos = getHeaderEndPos(lastChecksumSubtract, lastSubtractField);
                         auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8));
                         auto get = new IR::BFN::ChecksumResidualDeposit(declName,
-                                              new IR::BFN::FieldLVal(mem), endByte);
+                                              new IR::BFN::FieldLVal(lhs), endByte);
                         return get;
                     }
                 }
