@@ -1401,6 +1401,14 @@ void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
     auto pre_color = prim->operands[pre_color_index];
     // pre_color = convert_cast_to_slice(pre_color);
     auto *field = self.phv.field(pre_color);
+    if (!field) {
+        // The pre-color must come from phv.
+        error(ErrorType::ERR_UNEXPECTED, "The pre-color must come from phv. Please have a separate"
+              " table that writes the precolor to meter metadata in an earlier stage. It makes "
+              "sure that the precolor comes from PHV.");
+        return;
+    }
+
     BUG_CHECK(field, "%s: Not a phv field in the lpf execute: %s", prim->srcInfo, field->name);
 
     if (self.update_pre_colors.count(mtr) == 0) {
