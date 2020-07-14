@@ -295,7 +295,8 @@ struct AluOP : public SaluInstruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    enum { LO, HI }     dest;
+    enum dest_t { LO, HI };
+    dest_t dest = LO;
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     std::string name() override { return opc->name; };
@@ -533,7 +534,7 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    int unit, len;
+    unsigned unit, len;
     if (op[1] == "lo") {
         rv->slot = CMPLO;
     } else if (op[1] == "hi") {
@@ -541,7 +542,7 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     } else if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
                 sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
                unit < Target::STATEFUL_CMP_UNITS() && op[1].s[len] == 0) {
-        rv->slot = CMP0 + unit;
+        rv->slot = CMP0 + unit ;
     } else
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
     for (int idx = 2; idx < op.size; ++idx) {
@@ -638,7 +639,7 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    int unit, len;
+    unsigned unit, len;
     if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
          sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
         unit < Target::STATEFUL_TMATCH_UNITS() && op[1].s[len] == 0) {
@@ -666,9 +667,11 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
             rv->mask = op[idx].bigi.data[0];
         } else if (op[idx].type == tSTR) {
             if (auto f = tbl->format->field(op[idx].s)) {
-                if (rv->srca)
+                if (rv->srca) {
                     error(op[idx].lineno, "Can't have more than one memory operand to an "
                           "SALU tmatch");
+                    delete rv->srca;
+                }
                 rv->srca = new operand::Memory(op[idx].lineno, tbl, f);
             } else if (rv->srcb) {
                 error(op[idx].lineno, "Can't have more than one phv operand to an SALU tmatch");
@@ -712,7 +715,7 @@ struct OutOP : public SaluInstruction {
                             const VECTOR(value_t) &op) const override;
     };
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    int output_mux;
+    int output_mux = -1;
 #if HAVE_JBAY
     bool lmatch = false;
     int lmatch_pred = 0;

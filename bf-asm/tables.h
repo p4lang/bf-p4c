@@ -185,7 +185,12 @@ public:
             return next_table_ ? next_table_->table_id() : Target::END_OF_PIPE(); }
         std::string next_table_name() const {
             BUG_CHECK(resolved);
-            return next_table_ ? next_table_->p4_name() : "END"; }
+            if (next_table_) {
+                if (auto nxt_p4_name = next_table_->p4_name())
+                    return nxt_p4_name;
+            }
+            return "END";
+        }
         const Table *next_table() const { return next_table_; }
         unsigned long_branch_tags() const { return lb_tags; }
         unsigned next_in_stage(int stage) const;
@@ -333,6 +338,7 @@ public:
                 memcpy(this, &a, sizeof(*this));
                 a.type = Const; }
             Arg &operator=(const Arg &a) {
+                if (a == *this) return *this;
                 if (type == Name) free(str);
                 memcpy(this, &a, sizeof(*this));
                 if (type == Name) str = strdup(str);
@@ -407,7 +413,7 @@ public:
                 std::string     name;
                 int             lineno = -1, lo = -1, hi = -1;
                 bool            is_constant = false;
-                unsigned        value;
+                unsigned        value = 0;
                 alias_t(value_t &);
                 unsigned size() const {
                     if (hi != -1 && lo != -1)
@@ -1128,9 +1134,9 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     friend class TernaryIndirectTable;
 public:
     void pass0() override;
-    int tcam_id;
+    int tcam_id = -1;
     Table::Ref indirect;
-    int indirect_bus;   /* indirect bus to use if there's no indirect table */
+    int indirect_bus = -1;   /* indirect bus to use if there's no indirect table */
     void alloc_vpns() override;
     range_match_t get_dirtcam_mode(int group, int byte) const {
         BUG_CHECK(group >= 0);
@@ -1254,7 +1260,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
-    TernaryMatchTable           *match_table;
+    TernaryMatchTable           *match_table = nullptr;
     AttachedTables              attached;
     table_type_t table_type() const override { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m, bool indirect) override;
@@ -1383,7 +1389,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
-    int                                 action_id;
+    int                                 action_id = -1;
     std::map<int, bitvec>               home_rows_per_word;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;

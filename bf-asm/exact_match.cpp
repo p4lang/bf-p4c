@@ -244,6 +244,7 @@ void ExactMatchTable::generate_stash_overhead_rows() {
                 auto stash_ram = std::make_pair(stash_row, stash_col);
                 if (way_map.count(stash_ram) > 0) {
                     auto way_word = way_map[stash_ram].word;
+                    BUG_CHECK(format);
                     if (way_word == format->overhead_word) {
                         stash_overhead_rows.push_back(stash_row);
                         break;
@@ -414,7 +415,9 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
             way_tbl["stage_number"] = stage->stageno;
             way_tbl["way_number"] = way_number++;
             way_tbl["stage_table_type"] = "hash_way";
-            way_tbl["size"] = way.rams.size()/get_format_width() * format->groups() * 1024;
+            auto fmt_width = get_format_width();
+            BUG_CHECK(fmt_width);
+            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
             add_pack_format(way_tbl, format, false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }

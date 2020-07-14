@@ -370,6 +370,7 @@ void Phv::output(json::map &ctxt_json) {
                             phv_record[live_string] = "deparser"; return; }
                         phv_record[live_string] = live_stage; };
                     auto container_json = field_context_json[slot.first->name];
+                    BUG_CHECK(container_json);
                     bool field_added = false;
                     for (auto &field_json : *container_json->as_vector()) {
                         auto live_start = -1, live_end = Target::NUM_MAU_STAGES();

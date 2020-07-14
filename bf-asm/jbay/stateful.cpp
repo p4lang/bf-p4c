@@ -244,11 +244,17 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
             ctl2.slog_watermark_ctl = watermark_pop_not_push;
             ctl2.slog_watermark_enable = 1;
             merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
-        if (underflow_action.set())
+        if (underflow_action.set()) {
+            auto act = actions->action(underflow_action.name);
+            BUG_CHECK(act);    
             // 4-bit stateful addr MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
-            ctl3.slog_underflow_instruction = actions->action(underflow_action.name)->code * 2 + 1;
-        if (overflow_action.set())
-            ctl3.slog_overflow_instruction = actions->action(overflow_action.name)->code * 2 + 1;
+            ctl3.slog_underflow_instruction = act->code * 2 + 1;
+        }
+        if (overflow_action.set()) {
+            auto act = actions->action(overflow_action.name);
+            BUG_CHECK(act);    
+            ctl3.slog_overflow_instruction = act->code * 2 + 1;
+        }
     } else {
         // we set up for fast clear from the control plane if the counter mode is unused
         ctl2.slog_counter_function = FUNCTION_FAST_CLEAR >> FUNCTION_SHIFT;

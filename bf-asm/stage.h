@@ -13,7 +13,7 @@ class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
      * generation of the move construtor properly */
 public:
-    int                         stageno;
+    int                         stageno = -1;
     std::vector<Table *>        tables;
     std::set<Stage **>          all_refs;
     Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
@@ -72,7 +72,7 @@ public:
     Alloc1D<int, MAX_LONGBRANCH_TAGS> mpr_long_brch_lut;
 
 
-    int                         pass1_logical_id, pass1_tcam_id;
+    int                         pass1_logical_id = -1, pass1_tcam_id = -1;
 
 protected:
     Stage_data() {}

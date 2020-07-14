@@ -151,10 +151,13 @@ int main(int ac, char **av) {
                 in.seekg(0);
                 error |= dump_bin(in);
             } else if (magic[0] == 0x1f && magic[1] == 0x8b) {
-                auto *pipe = popen((std::string("zcat < ") + av[i]).c_str(), "r");
-                fdstream in(fileno(pipe));
-                error |= dump_bin(in);
-                pclose(pipe);
+                if (auto *pipe = popen((std::string("zcat < ") + av[i]).c_str(), "r")) {
+                    fdstream in(fileno(pipe));
+                    error |= dump_bin(in);
+                    pclose(pipe);
+                } else {
+                    fprintf(stderr, "%s: Cannot open pipe to read\n", av[i]);
+                }
             } else {
                 fprintf(stderr, "%s: Unknown file format\n", av[i]);
             }

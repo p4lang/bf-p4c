@@ -440,8 +440,8 @@ void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, in
     for (auto &s : stats) s->write_merge_regs(regs, self, type, bus, s.args);
     for (auto &m : meters) m->write_merge_regs(regs, self, type, bus, m.args);
     for (auto &s : statefuls) s->write_merge_regs(regs, self, type, bus, s.args);
-    if (selector)
-        get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
+    if (auto s = get_selector())
+        s->write_merge_regs(regs, self, type, bus, selector.args);
 }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,
                 void AttachedTables::write_merge_regs, mau_regs &, MatchTable *, int, int)

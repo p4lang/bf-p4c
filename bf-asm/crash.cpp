@@ -72,6 +72,10 @@ const char *addr2line(void *addr, const char *text)
         p += t-text;
     } else if (program_name != nullptr) {
         strncpy(p, program_name, (buffer+1023-p));
+        // Below fix is for Klockwork to not report critical errors.  Ensure
+        // buffer is always null terminated, even when add2line is called
+        // multiple times.
+        buffer[1023] = 0;
         p += strlen(p); }
     else {
       return nullptr;

@@ -148,7 +148,7 @@ bool equiv(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b,
 void print_diff(json::obj *a, json::obj *b, int indent, json::obj *key = nullptr);
 void print_diff(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b,
                 int indent, json::obj *key = nullptr) {
-    return print_diff(a.get(), b.get(), indent, key); }
+    print_diff(a.get(), b.get(), indent, key); }
 
 json::vector::iterator find(json::vector::iterator p, json::vector::iterator end, json::obj *m) {
     while (p < end && !equiv(*p, m)) ++p;
@@ -526,9 +526,10 @@ int main(int ac, char **av) {
                     cmd += av[i];
                     cmd = "2>/dev/null; " + cmd;  // ignore errors (Broken Pipe in particular)
                     auto *pipe = popen(cmd.c_str(), "r");
+                    if (pipe) {
                     auto *pstream = new fdstream(fileno(pipe));
                     pstream->setclose([pipe]() { pclose(pipe); });
-                    in = pstream; } }
+                    in = pstream; } } }
             if (!in)
                 in = new std::ifstream(av[i]);
             if (!in || !*in) {

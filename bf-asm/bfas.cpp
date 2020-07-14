@@ -94,7 +94,9 @@ void output_all() {
     json::map ctxtJson;
     const time_t now = time(NULL);
     char build_date[1024];
-    strftime(build_date, 1024, "%c", localtime(&now));
+    auto lt = localtime(&now);
+    BUG_CHECK(lt);
+    strftime(build_date, 1024, "%c", lt);
     ctxtJson["build_date"] = build_date;
     ctxtJson["schema_version"] = SCHEMA_VERSION;
     ctxtJson["compiler_version"] = BF_P4C_VERSION;

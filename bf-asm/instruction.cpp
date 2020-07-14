@@ -798,7 +798,7 @@ struct CondMoveMux : VLIWInstruction {
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
-    unsigned    cond;
+    unsigned    cond = 0;
     CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
                 const value_t &d, const value_t &s)
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
@@ -1248,7 +1248,7 @@ struct ShiftOP : VLIWInstruction {
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
-    int         shift;
+    int         shift = 0;
     ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops)
     : VLIWInstruction(ops->lineno), opc(d), dest(tbl->gress, tbl->stage->stageno + 1, ops[0]),
       src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {

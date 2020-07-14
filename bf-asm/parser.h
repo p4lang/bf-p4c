@@ -180,8 +180,8 @@ class Parser {
             struct FieldMapping {
                 Phv::Ref        where;
                 std::string     container_id;
-                int             lo;
-                int             hi;
+                int             lo = -1;
+                int             hi = -1;
                 FieldMapping(Phv::Ref &ref, const value_t &a);
             };
             std::vector<FieldMapping>   field_mapping;
@@ -197,6 +197,7 @@ class Parser {
 
             Match(int lineno, gress_t, State *s, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
+            ~Match() { if (ctr_instr) delete ctr_instr; }
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
             void pass2(Parser *pa, State *state);
@@ -226,8 +227,8 @@ class Parser {
         std::vector<Match*>     match;
         Match                   *def;
         std::set<Match*>        pred;
-        int                     lineno;
-        int                     all_idx;
+        int                     lineno = -1;
+        int                     all_idx = -1;
 
         State(State &&) = default;
         State(int lineno, const char *name, gress_t, match_t stateno, const VECTOR(pair_t) &data);

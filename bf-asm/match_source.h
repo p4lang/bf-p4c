@@ -19,10 +19,10 @@ class MatchSource {
  * The source used by proxy hash tables for their match key.
  */
 class HashMatchSource : public MatchSource {
-    int lo;
-    int hi;
+    int lo = 0;
+    int hi = 0;
  public:
-    int lineno;
+    int lineno = 0;
     HashMatchSource(int line, int l, int h) : lineno(line), lo(l), hi(h) {}
     HashMatchSource(value_t value) {
         if (CHECKTYPE(value, tCMD)) {

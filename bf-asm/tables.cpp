@@ -405,6 +405,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
     bool on_repeat = false;
     for (auto &row : layout) {
         if (++word < width) {
+            BUG_CHECK(firstrow);
             if (row.cols != firstrow->cols)
                 error(row.lineno, "Columns across wide rows don't match in table %s", name());
             row.vpns = firstrow->vpns;
@@ -429,6 +430,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                                 "Vpn entries for row %d is %d not equal to column "
                                 "entries %d", row.row, vpniter->vec.size,
                                 (int)row.vpns.size());
+                                continue;
                             } else {
                                 vpncoliter = vpniter->vec.begin();
                             }
@@ -875,15 +877,19 @@ void Table::pass1() {
         // though it is not 'live' there.  It can also be reused (set) in that stage for use in
         // later stages.  This matches the range of stages we need to set timing regs for.
         for (int st = stage->stageno; st < last_stage; ++st) {
-            auto &prev = Stage::stage(st)->long_branch_use[lb.first];
+            auto stg = Stage::stage(st);
+            BUG_CHECK(stg);
+            auto &prev = stg->long_branch_use[lb.first];
             if (prev && *prev != lb.second) {
                 error(lb.second.lineno, "Conflicting use of long_branch tag %d", lb.first);
                 error(prev->lineno, "previous use");
             } else {
                 prev = &lb.second; }
-            Stage::stage(st)->long_branch_thread[gress] |= 1U << lb.first; }
-        Stage::stage(last_stage)->long_branch_thread[gress] |= 1U << lb.first;
-        Stage::stage(last_stage)->long_branch_terminate |= 1U << lb.first; }
+            stg->long_branch_thread[gress] |= 1U << lb.first; }
+        auto last_stg = Stage::stage(last_stage);
+        BUG_CHECK(last_stg);
+        last_stg->long_branch_thread[gress] |= 1U << lb.first;
+        last_stg->long_branch_terminate |= 1U << lb.first; }
 }
 
 static void overlap_test(int lineno,
@@ -2332,7 +2338,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) const {
     if (c) {
         auto t_name = c->name();
-        if (c->p4_table)
+        if (c->p4_table && c->p4_table->p4_name())
             t_name = c->p4_table->p4_name();
         // Dont add ref table if already present in table_refs vector
         for (auto &tref : table_refs) {
@@ -2566,6 +2572,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     if (format->log2size == 0) {
         if (auto at = this->to<ActionTable>()) {
             format->size = at->get_size();
+            BUG_CHECK(format->size);
             format->log2size = at->get_log2size();
             // For wide action formats, entries per word is 1, so plug in a
             // single pad field of 256 bits
@@ -2646,6 +2653,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
      * JSON is reversed.
      */
     if (print_fields) {
+        BUG_CHECK(format);
         int basebit = std::max(0, mem_word_width - (1 << format->log2size));
         json::vector &entry_list = pack_fmt["entries"];
         if (format->is_wide_format()) {

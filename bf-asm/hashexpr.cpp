@@ -162,15 +162,15 @@ class HashExpr::Random : HashExpr {
 };
 
 class HashExpr::Crc : HashExpr {
-    bitvec                           poly;
-    bitvec                           init;
-    bitvec                           final_xor;
+    bitvec                              poly;
+    bitvec                              init;
+    bitvec                              final_xor;
     ///> It is a multimap to allow two fields to have the exact same hash matrix requirements
-    std::multimap<int, Phv::Ref>     what;
-    std::map<int, bitvec>            constants;
-    std::vector<Phv::Ref>            vec_what;
-    bool                             reverse = false;
-    int                              total_input_bits = -1;
+    std::multimap<unsigned, Phv::Ref>   what;
+    std::map<int, bitvec>               constants;
+    std::vector<Phv::Ref>               vec_what;
+    bool                                reverse = false;
+    int                                 total_input_bits = -1;
     Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override;
@@ -490,14 +490,15 @@ void HashExpr::Random::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, Inpu
  */
 void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table) {
-    int previous_range_hi = 0;
+    unsigned previous_range_hi = 0;
     for (auto &entry : what) {
-        ixbar_input_t normal_input;
-        ixbar_input_t invalid_input;
         if (previous_range_hi != entry.first) {
-            invalid_input.type = ixbar_input_type::tPHV;
-            invalid_input.u.valid = false;
-            invalid_input.bit_size = entry.first - previous_range_hi;
+            ixbar_input_t invalid_input = {
+                ixbar_input_type::tPHV,  // type
+                0,  // ixbar_bit_position
+                entry.first - previous_range_hi,  // bit_size
+                false  // u.valid 
+            };
             inputs.push_back(invalid_input);
         }
 
@@ -506,10 +507,12 @@ void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXb
         previous_range_hi = entry.first + ref->size();
     }
     if (previous_range_hi != input_size()) {
-        ixbar_input_t invalid_input;
-        invalid_input.type = ixbar_input_type::tPHV;
-        invalid_input.u.valid = false;
-        invalid_input.bit_size = input_size() - previous_range_hi;
+        ixbar_input_t invalid_input = {
+            ixbar_input_type::tPHV,  // type
+            0,  // ixbar_bit_position
+            input_size() - previous_range_hi,  // bit_size
+            false  // u.valid
+        };
         inputs.push_back(invalid_input);
     }
 }

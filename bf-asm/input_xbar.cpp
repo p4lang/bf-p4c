@@ -42,6 +42,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
         error(what.lineno, "hash expression width mismatch (%d != %d)", width, abs(hi-lo)+1);
     int bit = 0;
     int errlo = -1;
+    bool fn_assigned = false;
     for (int col : Range(lo, hi)) {
         if (hash_table[col].data || hash_table[col].fn) {
             if (errlo < 0) errlo = col;
@@ -54,10 +55,16 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
                 errlo = -1; }
             hash_table[col].lineno = what.lineno;
             hash_table[col].fn = fn;
-            hash_table[col].bit = bit++; }
+            hash_table[col].bit = bit++; 
+            fn_assigned = true;
+        }
     }
-    if (errlo >= 0)
+
+    if (!fn_assigned) delete fn;
+
+    if (errlo >= 0) {
         error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, hi);
+    }
 }
 
 InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)

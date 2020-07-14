@@ -30,7 +30,7 @@ public:
     bool                disable_atomic_modify = false;
     unsigned            size = 0;
     std::string         match_type, action_profile, how_referenced;
-    enum type { MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6 };
+    enum type { None = 0, MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6, NUM_TABLE_TYPES=7 };
     enum alpm_type { PreClassifier=1, Atcam=2 };
     static const char *type_name[];
 private:

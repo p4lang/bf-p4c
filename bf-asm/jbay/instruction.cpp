@@ -38,6 +38,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
     case Phv::Register::NORMAL:
         switch (Phv::reg(slot)->size) {
         case 8:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_subword8[side][group][off][iaddr].imem_subword8_instr = bits;
             imem.imem_subword8[side][group][off][iaddr].imem_subword8_color = color;
             imem.imem_subword8[side][group][off][iaddr].imem_subword8_parity = parity(bits) ^ color;
@@ -48,6 +49,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
             imem.imem_subword16[side][group][off][iaddr].imem_subword16_parity = parity(bits) ^ color;
             break;
         case 32:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_instr = bits;
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_color = color;
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_parity = parity(bits) ^ color;
@@ -58,6 +60,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
     case Phv::Register::MOCHA:
         switch (Phv::reg(slot)->size) {
         case 8:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_mocha_subword8[side][group][off-12][iaddr].imem_mocha_subword_instr = bits;
             imem.imem_mocha_subword8[side][group][off-12][iaddr].imem_mocha_subword_color = color;
             imem.imem_mocha_subword8[side][group][off-12][iaddr].imem_mocha_subword_parity =
@@ -70,6 +73,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
                     parity(bits) ^ color;
             break;
         case 32:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_instr = bits;
             imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_color = color;
             imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_parity =
@@ -81,6 +85,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
     case Phv::Register::DARK:
         switch (Phv::reg(slot)->size) {
         case 8:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_dark_subword8[side][group][off-16][iaddr].imem_dark_subword_instr = bits;
             imem.imem_dark_subword8[side][group][off-16][iaddr].imem_dark_subword_color = color;
             imem.imem_dark_subword8[side][group][off-16][iaddr].imem_dark_subword_parity =
@@ -93,6 +98,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
                     parity(bits) ^ color;
             break;
         case 32:
+            BUG_CHECK(group == 0 || group == 1);
             imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_instr = bits;
             imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_color = color;
             imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_parity =

@@ -18,12 +18,13 @@ struct HashDistribution {
     int         hash_group = -1, id = -1;
     int         shift = 0, mask = 0, expand = -1;
     bool        meter_pre_color = false;
-    int         meter_mask_index;
+    int         meter_mask_index = 0;
     enum { IMMEDIATE_HIGH=1<<0, IMMEDIATE_LOW=1<<1, METER_ADDRESS=1<<2, STATISTICS_ADDRESS=1<<3,
            ACTION_DATA_ADDRESS=1<<4, HASHMOD_DIVIDEND=1<<5 };
     unsigned    xbar_use = 0;
-    enum delay_type_t { SELECTOR=0, OTHER=1 } delay_type;
-    bool        non_linear;
+    enum delay_type_t { SELECTOR=0, OTHER=1 };
+    delay_type_t delay_type = SELECTOR;
+    bool        non_linear = false;
     HashDistribution(int id, value_t &data, unsigned  u=0);
     static void parse(std::vector<HashDistribution> &out, const value_t &v, unsigned u=0);
     bool compatible(HashDistribution *a);

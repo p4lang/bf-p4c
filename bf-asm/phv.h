@@ -28,8 +28,8 @@ public:
         enum type_t { NORMAL, TAGALONG, CHECKSUM, MOCHA, DARK }   type;
         // uid is used for "phv_number" in the context.json, but otherwise is just
         // a unique id for the register, encoded differently for different targets
-        unsigned short                                  index, uid, size;
-        Register() {}
+        unsigned short                                  index = 0, uid = 0, size = 0;
+        Register() { type = NORMAL; }
         Register(const Register &) = delete;
         Register &operator=(const Register &) = delete;
         Register(const char *n, type_t t, unsigned i, unsigned u, unsigned s)
@@ -141,8 +141,8 @@ public:
     protected:
         gress_t         gress_;
         std::string     name_;
-        int             stage;
-        int             lo, hi;
+        int             stage = -1;
+        int             lo = -1, hi = -1;
     public:
         int             lineno;
         Ref() : gress_(INGRESS), lineno(-1) {}
