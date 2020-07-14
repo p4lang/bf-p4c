@@ -320,6 +320,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/table_summary.cpp
   mau/table_injected_deps.cpp
   mau/table_flow_graph.cpp
+  mau/validate_actions.cpp
   mau/walk_power_graph.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_SRCS}")
@@ -378,6 +379,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/table_seqdeps.h
   mau/table_summary.h
   mau/table_injected_deps.h
+  mau/validate_actions.h
   mau/walk_power_graph.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_HDRS}")

@@ -10,7 +10,7 @@
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/mau/validate_actions.h"
 
 bool UnimplementedRegisterMethodCalls::preorder(const IR::Primitive *prim) {
     auto dot = prim->name.find('.');
@@ -437,6 +437,90 @@ class DoInstructionSelection::SplitInstructions : public Transform {
     explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
 
+// Create a compiler generated table per lowest common table sequence having saturated subtract
+// operation that require a constant to be applied to a metadata PHV. The generated metadata PHV
+// can be shared among different saturated subtract as long as they refer to the same value and
+// refer to a container of the same size. We can assume that typically multiple actions can lead to
+// a saturated subtract to the same value under the same table sequence, e.g.:
+//
+//  action l3_switch(PortId_t port, bit<48> new_mac_da, bit<48> new_mac_sa) {
+//      hdr.ethernet.dst_addr = new_mac_da;
+//      hdr.ethernet.src_addr = new_mac_sa;
+//      hdr.ipv4.ttl = hdr.ipv4.ttl |-| 1;
+//      send(port);
+//  }
+//
+//  table ipv4_host {
+//      key = { hdr.ipv4.dst_addr : exact; }
+//      actions = { send; drop; l3_switch; }
+//  }
+//
+//  table ipv4_lpm {
+//      key     = { hdr.ipv4.dst_addr : lpm; }
+//      actions = { send; drop; l3_switch; }
+//  }
+//
+// The two tables above will share the same "const_to_phv_8w1" metadata PHV to carry the constant
+// value "1" and the compiler generated table will be added at the beginning of the table sequence
+// that include them.
+//
+// It is also possible to have saturated subtract from two different table sequence, e.g.:
+//
+//  apply {
+//      if (hdr.ipv4.isValid()) {
+//          hdr.ipv4.total_len = hdr.ipv4.total_len |-| 10;
+//          if (!meta.ipv4_checksum_err && hdr.ipv4.ttl > 1) {
+//              if (!ipv4_host.apply().hit) {
+//                  ipv4_lpm.apply();
+//              }
+//          }
+//      }
+//      if (hdr.vlan_tag[0].isValid()) {
+//          hdr.ipv4.total_len = hdr.ipv4.total_len |-| 10;
+//      }
+//  }
+//
+// For this example, two compiler generated table will be added, one for each table sequence. The
+// metadata PHV will have the same "const_to_phv_16w10" name but will be part of two different
+// table "ingress_assign_const_to_phv_0" vs "ingress_assign_const_to_phv_1". Ultimately the
+// metadata PHV selected should be the same because of overlay.
+const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts) {
+    static int id = 0;
+
+    if (!const_to_phv.empty() && this->ts == ts) {
+        LOG5("DoInstructionSelection Postorder adding temp variable to " << ts);
+
+        gress_t gress = VisitingThread(this);
+
+        auto action = new IR::MAU::Action("__assign_const_to_phv__");
+        action->default_allowed = action->init_default = true;
+
+        for (const auto inst : const_to_phv) {
+            LOG3("Adding instruction " << inst.first << " to table");
+            action->action.push_back(inst.second);
+        }
+
+        auto table_name = toString(gress) + "_assign_const_to_phv_" + cstring::to_cstring(id++);
+        auto t = new IR::MAU::Table(table_name, gress);
+
+        t->is_compiler_generated = true;
+        t->actions[action->name] = action;
+        t->match_table = new IR::P4Table(table_name.c_str(), new IR::TableProperties());
+
+        ts->tables.insert(ts->tables.begin(), t);
+        const_to_phv.clear();
+    }
+
+    return ts;
+}
+
+const IR::MAU::TableSeq *DoInstructionSelection::preorder(IR::MAU::TableSeq *ts) {
+    if (const_to_phv.empty())
+        this->ts = ts;
+
+    return ts;
+}
+
 const IR::MAU::Action *DoInstructionSelection::postorder(IR::MAU::Action *af) {
     IR::Vector<IR::Primitive> split;
     // FIXME: This should be pulled out as a different pass
@@ -444,6 +528,7 @@ const IR::MAU::Action *DoInstructionSelection::postorder(IR::MAU::Action *af) {
         split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
+
     LOG5("Postorder " << af);
     this->af = nullptr;
     return af;
@@ -672,11 +757,22 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     //    value of 0 to conditionally execute the subtract or not
     // Both these solutions require program transformations
     if (bits && !bits->isSigned && eRight->to<IR::Constant>()) {
-        error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%"
-            "A saturated unsigned subtract (ssubu) cannot have the second operand "
-            "(value to be subtracted) as a constant value.  "
-            "Try rewriting the relevant P4 by initializing the constant value "
-            "to be subtracted within a field.", e->srcInfo);
+        cstring temp_name = "const_to_phv_" + cstring::to_cstring(bits->width_bits()) + "w" +
+                            cstring::to_cstring(eRight->to<IR::Constant>()->asLong());
+
+        const IR::MAU::Instruction *temp_inst;
+        const IR::TempVar *temp_var;
+        if (const_to_phv.count(temp_name)) {
+            temp_inst = const_to_phv.at(temp_name);
+            BUG_CHECK(!temp_inst->operands.empty(), "Incomplete temporary instruction");
+            temp_var = temp_inst->operands[0]->to<IR::TempVar>();
+        } else {
+            temp_var = new IR::TempVar(IR::Type::Bits::get(bits->width_bits()), false, temp_name);
+            temp_inst = new IR::MAU::Instruction(e->srcInfo, "set", temp_var, eRight);
+            const_to_phv[temp_name] = temp_inst;
+        }
+        return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type),
+                                        eLeft, temp_var);
     }
 
     return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type), eLeft, eRight);
@@ -2213,5 +2309,5 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new EliminateAllButLastWrite(phv),
     new RemoveUnnecessaryActionArgSlice,
     new CollectPhvInfo(phv),
-    new PHV::ValidateActions(phv, false, false, false)
+    new ValidateActions(phv, false, false, false)
 } {}

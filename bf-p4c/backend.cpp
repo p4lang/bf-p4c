@@ -30,6 +30,7 @@
 #include "bf-p4c/mau/split_alpm.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/mau/validate_actions.h"
 #include "bf-p4c/mau/mau_alloc.h"
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/adjust_extract.h"
@@ -211,7 +212,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
 
         options.privatization ? new UndoPrivatization(phv, doNotPrivatize) : nullptr,
                                 // Undo results of privatization for the doNotPrivatize fields
-        new PHV::ValidateActions(phv, false, true, false),
+        new ValidateActions(phv, false, true, false),
         new AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         options.privatization ? &defuse : nullptr,
