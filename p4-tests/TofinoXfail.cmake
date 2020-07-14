@@ -430,12 +430,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/fabric-psa/fabric.p4
 )
 
-# unsupported p4c tests
 p4c_add_xfail_reason("tofino"
-  "Invalid select case expression"
-  testdata/p4_16_samples/issue-2123.p4
-  testdata/p4_16_samples/issue-2123-2-bmv2.p4
-  testdata/p4_16_samples/issue-2123-3-bmv2.p4
+    "Conditions in an action must be simple comparisons of an action data parameter"
+    testdata/p4_16_samples/issue-2123-3-bmv2.p4
+    testdata/p4_16_samples/issue-2123-2-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1373,6 +1371,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
+  extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
@@ -1457,7 +1456,7 @@ p4c_add_xfail_reason("tofino"
 
 # select ranges not supported
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: Invalid select case expression"
+  "error: Ran out of parser match registers"
   testdata/p4_16_samples/pvs-struct-3-bmv2.p4
 )
 

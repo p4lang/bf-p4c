@@ -147,7 +147,8 @@ class CollectVarbitExtract : public Inspector {
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
         const IR::Expression* varsize_expr,
-        const IR::Member* hdr_inst);
+        const IR::Type_Header* hdr_type,
+        cstring headerName);
 
     bool preorder(const IR::MethodCallExpression*) override;
     bool preorder(const IR::AssignmentStatement*) override;

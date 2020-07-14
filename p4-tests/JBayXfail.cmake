@@ -303,6 +303,7 @@ p4c_add_xfail_reason("tofino2"
   "Use of uninitialized parser value"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1740.p4
+  extensions/p4_tests/p4_16/compile_only/simple_l3_mcast.p4
   testdata/p4_14_samples/issue2196.p4
 )
 

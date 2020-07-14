@@ -194,13 +194,13 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         const IR::MethodCallExpression* call,
         const IR::ParserState* state,
         const IR::Expression* varsize_expr,
-        const IR::Member* hdr_inst) {
+        const IR::Type_Header* hdr_type,
+        cstring headerName) {
     if (state_to_varbit_header.count(state)) {
         P4C_UNIMPLEMENTED("%1%: multiple varbit fields in a parser state"
                               " is currently unsupported", call);
     }
 
-    auto hdr_type = hdr_inst->type->to<IR::Type_Header>();
 
     const IR::StructField* varbit_field = nullptr;
 
@@ -235,12 +235,18 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
     state_to_length_to_match[state] = length_to_match;
     state_to_reject_matches[state] = reject_matches;
 
-    auto path = (*call->arguments)[0]->expression->to<IR::Member>()
+    auto expr = (*call->arguments)[0]->expression;
+    const IR::PathExpression* path = nullptr;
+    if (expr->is<IR::Member>()) {
+        path = (*call->arguments)[0]->expression->to<IR::Member>()
                                          ->expr->to<IR::PathExpression>();
+    } else if (expr->is<IR::PathExpression>()) {
+        path = expr->to<IR::PathExpression>();
+    }
 
     varbit_field_to_extract_call_path[varbit_field] = path;
 
-    varbit_field_to_header_instance[varbit_field] = hdr_inst->member;
+    varbit_field_to_header_instance[varbit_field] = headerName;
     header_type_to_varbit_field[hdr_type] = varbit_field;
 }
 
@@ -285,7 +291,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
 
         if (auto method = call->method->to<IR::Member>()) {
             if (method->member == "extract") {
-                auto hdr_inst = (*call->arguments)[0]->expression->to<IR::Member>();
+                auto expr = (*call->arguments)[0]->expression;
 
                 if (call->arguments->size() == 2) {
                     auto varsize_expr = (*call->arguments)[1]->expression;
@@ -297,8 +303,20 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                         P4C_UNIMPLEMENTED("%1%: multiple varbit fields in a parser state"
                               " is currently unsupported", call);
                     }
+                    const IR::Type_Header* hdr_type = nullptr;
+                    cstring headerName;
 
-                    enumerate_varbit_field_values(call, state, varsize_expr, hdr_inst);
+                    if (auto header = expr->to<IR::Member>()) {
+                        hdr_type = header->type->to<IR::Type_Header>();
+                        headerName = header->member;
+                    } else if (auto headerPath = expr->to<IR::PathExpression>()) {
+                        hdr_type = headerPath->type->to<IR::Type_Header>();
+                        auto path = headerPath->path->to<IR::Path>();
+                        headerName = path->name;
+                    } else {
+                        ::error("Unsupported header type %1%", expr);
+                    }
+                    enumerate_varbit_field_values(call, state, varsize_expr, hdr_type, headerName);
 
                     auto parser = findContext<IR::BFN::TnaParser>();
                     state_to_parser[state] = parser;

@@ -31,6 +31,7 @@
 #include "midend/removeMiss.h"
 #include "midend/removeSelectBooleans.h"
 #include "midend/removeExits.h"
+#include "midend/replaceSelectRange.h"
 #include "midend/simplifyBitwise.h"
 #include "midend/simplifyKey.h"
 #include "midend/simplifySelectCases.h"
@@ -375,6 +376,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),
         new P4::ExpandEmit(&refMap, &typeMap, typeChecking),
         new P4::SimplifyParsers(&refMap),
+        new P4::ReplaceSelectRange(&refMap, &typeMap),
         new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
         new P4::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
         new P4::SimplifyComparisons(&refMap, &typeMap, typeChecking),

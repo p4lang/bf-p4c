@@ -89,6 +89,7 @@ class RewriteTypeArguments : public Transform {
     const IR::Node* preorder(IR::Type_Struct* type_struct) override;
     const IR::Node* preorder(IR::MethodCallExpression* mc) override;
 };
+
 /**
  * This pass manager performs the following simplification on headers
  * and emit() methods.
