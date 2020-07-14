@@ -61,7 +61,7 @@ done
 $topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
                                    -DCMAKE_INSTALL_PREFIX=$install_prefix \
-                                   -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF \
+                                   -DENABLE_BMV2=OFF -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF \
                                    -DENABLE_P4TEST=OFF -DENABLE_P4C_GRAPHS=OFF \
                                    $enable_static \
                                    $barefoot_internal \

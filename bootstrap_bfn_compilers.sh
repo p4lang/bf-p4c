@@ -120,7 +120,7 @@ function install_hook() {
 install_hook pre-commit
 install_hook commit-msg
 
-ENABLED_COMPONENTS="-DENABLE_JBAY=ON -DENABLE_EBPF=OFF"
+ENABLED_COMPONENTS="-DENABLE_JBAY=ON -DENABLE_EBPF=OFF -DENABLE_UBPF=OFF"
 if $smallConfig ; then
     ENABLED_COMPONENTS="$ENABLED_COMPONENTS -DENABLE_BMV2=OFF \
                         -DENABLE_P4C_GRAPHS=OFF -DENABLE_GTESTS=OFF"
