@@ -12,6 +12,9 @@
 
 namespace BFN {
 
+// Collect the 'emit' and 'extract' call on @flexible headers. We need to
+// consider constraints both briding and mirror/resubmit, as a field may
+// be used in both places.
 void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
     auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
     if (!mi)
@@ -26,7 +29,8 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
     auto type_name = em->originalExternType->name;
     if (type_name != "packet_in" &&
         type_name != "packet_out" &&
-        type_name != "Resubmit")  // FIXME: need to support Resubmit packing
+        type_name != "Resubmit" &&
+        type_name != "Mirror")
         return;
 
     boost::optional<gress_t> thread = boost::none;
@@ -42,33 +46,43 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
     if (thread == boost::none)
         return;
 
-    if (expr->arguments->size() == 0)
+    // expected number of argument
+    size_t arg_count = 1;
+    if (type_name == "Mirror")
+        arg_count = 2;
+
+    if (expr->arguments->size() < arg_count)
         return;
 
-    auto dest = (*expr->arguments)[0]->expression;
-    auto *hdr = dest->to<IR::HeaderRef>();
+    auto dest = (*expr->arguments)[arg_count - 1]->expression;
+    const IR::Type* type = nullptr;
+    if (auto *hdr = dest->to<IR::HeaderRef>()) {
+        type = hdr->type;
+    } else if (auto *hdr = dest->to<IR::StructExpression>()) {
+        type = hdr->type;
+    }
 
-    if (!hdr)
+    if (type == nullptr)
         return;
 
     bool need_packing = false;
-    if (auto type = hdr->type->to<IR::Type_StructLike>()) {
-        if (findFlexibleAnnotation(type)) {
+    if (auto ty = type->to<IR::Type_StructLike>()) {
+        if (findFlexibleAnnotation(ty)) {
             need_packing = true;
         }
-    } else if (hdr->type->is<IR::BFN::Type_FixedSizeHeader>()) {
+    } else if (type->is<IR::BFN::Type_FixedSizeHeader>()) {
         need_packing = true;
     }
     if (!need_packing)
         return;
 
     Use u;
-    u.type = hdr->type;
+    u.type = type;
     u.method = em->method->name;
     u.thread = *thread;
 
-    if (auto type = hdr->type->to<IR::Type_StructLike>())
-        u.name = type->name;
+    if (auto ty = type->to<IR::Type_StructLike>())
+        u.name = ty->name;
 
     bridge_uses.insert(u);
 }

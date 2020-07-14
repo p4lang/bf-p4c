@@ -1473,9 +1473,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/simple_l3_nexthop_ipv6_options.p4
 )
 
-# P4C-1723
 p4c_add_xfail_reason("tofino"
-  "error: Could not place table .* could not fit within a single input crossbar in an MAU stage"
+  "The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
   extensions/p4_tests/p4_14/compile_only/p4c-2271.p4
 )
 

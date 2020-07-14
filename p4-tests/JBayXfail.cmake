@@ -417,7 +417,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-2824
 p4c_add_xfail_reason("tofino2"
-  "Unable to pack bridged header"
+  "PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
 )
 
