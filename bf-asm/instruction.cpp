@@ -582,11 +582,17 @@ struct AluOP : VLIWInstruction {
             opcode(opc), swap_args(assoc ? this : 0) {}
         Decode(const char *n, target_t targ, unsigned opc, bool assoc = false)
         : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(assoc ? this : 0) {}
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, bool assoc = false)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(assoc ? this : 0) {}
         Decode(const char *n, unsigned opc, Decode *sw, const char *alias_name = 0)
         : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Decode(const char *n, target_t targ, unsigned opc, Decode *sw, const char *alias_name = 0)
+        : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
+            if (sw && !sw->swap_args) sw->swap_args = this;
+            if (alias_name) alias(alias_name); }
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, Decode *sw, const char *alias_name = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
@@ -616,6 +622,7 @@ struct AluOP3Src : AluOP {
     struct Decode : AluOP::Decode {
         Decode(const char *n, unsigned opc) : AluOP::Decode(n, opc) {}
         Decode(const char *n, target_t t, unsigned opc) : AluOP::Decode(n, t, opc) {}
+        Decode(const char *n, std::set<target_t> t, unsigned opc) : AluOP::Decode(n, t, opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -790,6 +797,10 @@ struct CondMoveMux : VLIWInstruction {
         : Instruction::Decode(name), name(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
         Decode(const char *name, target_t targ, unsigned opc, unsigned csize, bool s2opt,
+               const char *alias_name) : Instruction::Decode(name, targ), name(name),
+               opcode(opc), cond_size(csize), src2opt(s2opt) {
+            alias(alias_name); }
+        Decode(const char *name, std::set<target_t> targ, unsigned opc, unsigned csize, bool s2opt,
                const char *alias_name) : Instruction::Decode(name, targ), name(name),
                opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
@@ -1191,6 +1202,8 @@ struct NulOP : VLIWInstruction {
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Instruction::Decode(n), name(n), opcode(opc) {}
         Decode(const char *n, target_t targ, unsigned opc) : Instruction::Decode(n, targ), name(n), opcode(opc) {}
+        Decode(const char *n, std::set<target_t> targ, unsigned opc)
+        : Instruction::Decode(n, targ), name(n), opcode(opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
@@ -1369,17 +1382,25 @@ static AluOP3Src::Decode    tf_opBMSET       ("bitmasked-set", TOFINO, 0x2e);
 static CondMoveMux::Decode  tf_opCondMove    ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");
 static CondMoveMux::Decode  tf_opCondMux     ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");
 static NulOP::Decode        tf_opInvalidate  ("invalidate", TOFINO, 0x3800);
-#if HAVE_JBAY
-static AluOP3Src::Decode    jb_opBMSET    ("bitmasked-set", JBAY, 0x0e);
-static CondMoveMux::Decode  jb_opCondMove ("cmov",    JBAY, 0x6, true,  5, "conditional-move");
 
-        // TODO add new jbay instructions, alu_gtequ, alu_geqs ...
-#endif // HAVE_JBAY
+#if HAVE_JBAY || HAVE_CLOUDBREAK
+static std::set<target_t>   jb_cb_targets = std::set<target_t>({JBAY, CLOUDBREAK});
 
-#if HAVE_CLOUDBREAK
-static AluOP3Src::Decode    cb_opBMSET    ("bitmasked-set", CLOUDBREAK, 0x0e);
-static CondMoveMux::Decode  cb_opCondMove ("cmov", CLOUDBREAK, 0x6, true,  5, "conditional-move");
-#endif // HAVE_CLOUDBREAK
+static AluOP3Src::Decode    jb_cb_opBMSET    ("bitmasked-set", jb_cb_targets, 0x0e);
+static CondMoveMux::Decode  jb_cb_opCondMove ("cmov",    jb_cb_targets, 0x6, true,  5, "conditional-move");
+static AluOP::Decode        jb_cb_opGTEQU    ("gtequ",   jb_cb_targets, 0x02e),
+                            jb_cb_opGTEQS    ("gteqs",   jb_cb_targets, 0x06e),
+                            jb_cb_opLTU      ("ltu",     jb_cb_targets, 0x0ae),
+                            jb_cb_opLTS      ("lts",     jb_cb_targets, 0x0ee),
+                            jb_cb_opLEQU     ("lequ",    jb_cb_targets, 0x12e, &jb_cb_opGTEQU),
+                            jb_cb_opLEQS     ("leqs",    jb_cb_targets, 0x16e, &jb_cb_opGTEQS),
+                            jb_cb_opGTU      ("gtu",     jb_cb_targets, 0x1ae, &jb_cb_opLTU),
+                            jb_cb_opGTS      ("gts",     jb_cb_targets, 0x1ee, &jb_cb_opLTS),
+                            jb_cb_opEQ       ("eq",      jb_cb_targets, 0x22e, true),
+                            jb_cb_opNEQ      ("neq",     jb_cb_targets, 0x2ae, true),
+                            jb_cb_opEQ64     ("eq64",    jb_cb_targets, 0x26e, true),
+                            jb_cb_opNEQ64    ("neq64",   jb_cb_targets, 0x2ee, true);
+#endif // HAVE_JBAY || HAVE_CLOUDBREAK
 
 }  // end namespace VLIW
 

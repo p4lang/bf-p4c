@@ -1845,3 +1845,9 @@ p4c_add_xfail_reason("tofino"
   "error: PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
 )
+
+# P4C-2783
+p4c_add_xfail_reason("tofino"
+  "error: : source of modify_field invalid"
+  extensions/p4_tests/p4_16/stf/arith_compare.p4
+)

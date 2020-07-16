@@ -59,6 +59,7 @@ class Device {
     static int numClots() { return pardeSpec().numClotsPerGress(); }
     static int isMemoryCoreSplit() { return Device::get().getIfMemoryCoreSplit(); }
     static int uniqueGatewayShifts() { return Device::get().getUniqueGatewayShifts(); }
+    static bool hasCompareInstructions() { return Device::get().getHasCompareInstructions(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -87,6 +88,7 @@ class Device {
     virtual int getNumMaxChannels() const = 0;
     virtual bool getIfMemoryCoreSplit() const = 0;
     virtual int getUniqueGatewayShifts() const = 0;
+    virtual bool getHasCompareInstructions() const = 0;
 
  private:
     static Device* instance_;
@@ -132,6 +134,7 @@ class TofinoDevice : public Device {
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return false; }
     int getUniqueGatewayShifts() const override { return 1; }
+    bool getHasCompareInstructions() const override { return false; }
 };
 
 class JBayDevice : public Device {
@@ -173,6 +176,7 @@ class JBayDevice : public Device {
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
     int getUniqueGatewayShifts() const override { return 5; }
+    bool getHasCompareInstructions() const override { return true; }
 };
 
 /// Tofino2 variants. The only difference between them is the number of
@@ -237,6 +241,7 @@ class CloudbreakDevice : public Device {
     const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
     bool getIfMemoryCoreSplit() const override { return true; }
     int getUniqueGatewayShifts() const override { return 5; }
+    bool getHasCompareInstructions() const override { return true; }
 };
 #endif /* HAVE_CLOUDBREAK */
 

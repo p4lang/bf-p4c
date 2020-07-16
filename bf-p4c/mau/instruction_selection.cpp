@@ -808,6 +808,41 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Shr *e) {
     return new IR::MAU::Instruction(e->srcInfo, shr, new IR::TempVar(e->type), e->left, e->right);
 }
 
+const IR::Expression *DoInstructionSelection::postorder(IR::Operation_Relation *e) {
+    if (!af) return e;
+    // Skip the transform if it's in a Mux -- the Mux should handle it
+    if (getParent<IR::Mux>()) return e;
+    if (Device::hasCompareInstructions()) {
+        auto isSigned =
+                (e->left->type->is<IR::Type_Bits>() &&
+                 e->left->type->to<IR::Type_Bits>()->isSigned) ||
+                (e->right->type->is<IR::Type_Bits>() &&
+                 e->right->type->to<IR::Type_Bits>()->isSigned);
+        auto isWide = e->left->type->width_bits() > 32 || e->right->type->width_bits() > 32;
+        auto opName = "";
+        if (e->is<IR::Equ>()) {
+            opName = isWide ? "eq64" : "eq";
+        } else if (e->is<IR::Neq>()) {
+            opName = isWide ? "neq64" : "neq";
+        } else if (e->is<IR::Lss>()) {
+            opName = isSigned ? "lts" : "ltu";
+        } else if (e->is<IR::Leq>()) {
+            opName = isSigned ? "leqs" : "lequ";
+        } else if (e->is<IR::Grt>()) {
+            opName = isSigned ? "gts" : "gtu";
+        } else if (e->is<IR::Geq>()) {
+            opName = isSigned ? "gteqs" : "gtequ";
+        } else {
+            error("%1%: Unknown relational operator",
+                    e, e->node_type_name());
+        }
+        return new IR::MAU::Instruction(e->srcInfo, opName,
+                new IR::TempVar(e->type), e->left, e->right);
+    } else {
+        return e;
+    }
+}
+
 const IR::Expression *DoInstructionSelection::postorder(IR::Mux *e) {
     if (auto r = e->e0->to<IR::Operation_Relation>()) {
         bool isMin = false;
@@ -2184,6 +2219,230 @@ const IR::MAU::Instruction *
     return instr;
 }
 
+/** This pass transforms arithmetic compare operations. Aritmetic compares
+ *  write to an entire PHV, not just single bits.
+ *
+ *  See the description in the header file.
+ *
+ *  The Scan pass identifies fields used in compare operations that should be
+ *  transformed.
+ *
+ *  Clear local state when entering an MAU action.
+ */
+bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Action *) {
+    comp_targets.clear();
+    comp_or_set_zero_writes.clear();
+    other_targets.clear();
+    return true;
+}
+
+/** Identify comparison instructions or set 0 instructions that might be paired
+ *  with comparison instructions.
+ */
+bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
+    if (instr->operands.size() == 0)
+        return false;
+
+    int max_width = 0;
+    const PHV::Field *write_field = nullptr;
+    le_bitrange write_bits = { 0, 0 };
+    for (auto op : instr->operands) {
+        le_bitrange bits = { 0, 0 };
+        auto field = self.phv.field(op, &bits);
+
+        if (!write_field && !field) {
+            auto act = findContext<IR::MAU::Action>();
+            ::error("%sA write of an instruction in action %s is not a PHV field", instr->srcInfo,
+                    act->name);
+            return false;
+        }
+
+        if (field && !write_field) {
+            write_field = field;
+            write_bits = bits;
+        }
+
+        // This is safe for set/compare ops. The value may be wrong for other
+        // instructions, but in that case it is not used.
+        max_width = std::max(max_width, op->type->width_bits());
+    }
+
+    // Record details of the instruction
+    if (self.is_compare(instr->name)) {
+        comp_targets[write_field] = max_width;
+
+        bitvec &zero_bits = comp_or_set_zero_writes[write_field];
+        zero_bits.setrange(write_bits.lo, write_bits.size());
+    } else if (instr->name == "set") {
+        auto src = instr->operands[1]->to<IR::Constant>();
+        if (src && src->fitsInt() && src->asInt() == 0) {
+            bitvec &zero_bits = comp_or_set_zero_writes[write_field];
+            zero_bits.setrange(write_bits.lo, write_bits.size());
+        }
+    } else {
+        other_targets.emplace(write_field);
+    }
+
+    return false;
+}
+
+/** Identify which fields are elegible for transformation after processing all
+ *  instructions in an action. Elegible fields:
+ *    - Are the target of a comparison operation.
+ *    - All bits of the field are written to by either the comparison (LSB) or
+ *      by set 0 operations.
+ */
+void ArithCompareAdjustment::Scan::postorder(const IR::MAU::Action *a) {
+    std::set<const PHV::Field *> action_comp_adj_fields;
+    for (auto target : comp_targets) {
+        auto field = target.first;
+        auto width = target.second;
+
+        if (other_targets.count(field))
+            continue;
+        if (field->size > 1) {
+            bitvec &set_bits = comp_or_set_zero_writes[field];
+            if (set_bits != bitvec(0, field->size))
+                continue;
+        }
+
+        LOG4("Marking field for comparison transformation: " << field->name);
+        action_comp_adj_fields.emplace(field);
+        self.comp_adj_field_width_map.emplace(field, width);
+        self.comp_adj_name_width_map.emplace(field->name, width);
+    }
+
+    self.comp_adj_fields_per_action_map[a] = action_comp_adj_fields;
+}
+
+const IR::MAU::Action *ArithCompareAdjustment::Update::preorder(IR::MAU::Action *act) {
+    current_af = getOriginal()->to<IR::MAU::Action>();
+    comp_adj_fields = self.comp_adj_fields_per_action_map[current_af];
+    return act;
+}
+
+const IR::MAU::Action *ArithCompareAdjustment::Update::postorder(IR::MAU::Action *act) {
+    current_af = nullptr;
+    comp_adj_fields.clear();
+    return act;
+}
+
+/** Modify instructions as follows:
+ *    1. Comparisons: adjust the destination field width to match the source widths.
+ *    2. Sets: delete any set 0 instructions to a comparison target field in
+ *       the same action as the comparison. The comparison sets all bits except
+ *       the LSB to 0.
+ */
+const IR::MAU::Instruction *
+        ArithCompareAdjustment::Update::preorder(IR::MAU::Instruction *instr) {
+    if (instr->operands.size() == 0)
+        return instr;
+
+    auto write = instr->operands[0];
+    le_bitrange bits = { 0, 0 };
+    auto field = self.phv.field(write, &bits);
+    if (field == nullptr)
+        return instr;
+
+    if (!comp_adj_fields.count(field))
+        return instr;
+
+    LOG3("Modifying/deleting instruction: " << instr);
+
+    if (instr->name == "set")
+        return nullptr;
+
+    int width = self.comp_adj_field_width_map[field];
+    if (write->type->width_bits() != width) {
+        auto slice_op = write->to<IR::Slice>();
+        if (slice_op) {
+            write = instr->operands[0] = slice_op->e0;
+        }
+        if (write->type->width_bits() != width) {
+            auto dst = write->clone();
+            dst->type = new IR::Type_Bits(width, false);
+            instr->operands[0] = dst;
+        }
+    }
+    return instr;
+}
+
+/** Update metadata field widths
+ */
+const IR::Metadata *ArithCompareAdjustment::Update::preorder(IR::Metadata* h) {
+    prune();
+
+    auto type_new = adjust_type_struct(h->type, h->name.name);
+    if (type_new != h->type)
+        h->type = type_new;
+    return h;
+}
+
+/** Update field widths
+ */
+const IR::ConcreteHeaderRef *ArithCompareAdjustment::Update::preorder(IR::ConcreteHeaderRef* chr) {
+    // Don't prune -- allow to propagate into ref
+
+    if (!chr->type->is<IR::Type_Struct>())
+        return chr;
+
+    auto type = chr->type->to<IR::Type_Struct>();
+    auto type_new = adjust_type_struct(type, chr->ref->name.name);
+    if (type != type_new)
+        chr->type = type_new;
+    return chr;
+}
+
+/** Update field widths if the member is a compare target field
+ */
+const IR::Node *ArithCompareAdjustment::Update::preorder(IR::Member *m) {
+    auto name = m->toString();
+    if (!self.comp_adj_name_width_map.count(name))
+        return m;
+
+    int orig_width = m->type->width_bits();
+    int target_width = self.comp_adj_name_width_map[name];
+    if (orig_width != target_width) {
+        if (getContext()->node->is<IR::MAU::Instruction>())
+            LOG3("Changing field width of " << name
+                    << " in " << getContext()->node);
+        else
+            LOG3("Changing field width of " << name
+                    << " in " << getContext()->node->toString());
+
+        m->type = new IR::Type_Bits(target_width, false);
+        return new IR::Slice(m, orig_width - 1, 0);
+    }
+
+    return m;
+}
+
+/** Adjust field widths in a Type_StructLike object
+ *
+ *  Returns a new object if the struct is modified, otherwise returns the
+ *  original object.
+ */
+const IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
+        const IR::Type_StructLike *ts, cstring prefix) {
+    bool changed = false;
+    auto rv = ts->clone();
+    rv->fields.clear();
+    for (auto f : ts->fields) {
+        cstring fname = prefix + '.' + f->name.name;
+        auto it = self.comp_adj_name_width_map.find(fname);
+        if (it != self.comp_adj_name_width_map.end() && f->type->width_bits() != it->second) {
+            int width = it->second;
+            auto fc = f->clone();
+            fc->type = new IR::Type_Bits(width, false);
+            rv->fields.push_back(fc);
+            changed = true;
+        } else {
+            rv->fields.push_back(f);
+        }
+    }
+    return changed ? rv : ts;
+}
+
 /**
  * modify_field_with_hash_based_offset is not yet converted correctly in the converters,
  * as the slicing operation portion, i.e. the max size of the instruction is not correct.
@@ -2307,6 +2566,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new BackendCopyPropagation(phv),
     new VerifyParallelWritesAndReads(phv),
     new EliminateAllButLastWrite(phv),
+    new ArithCompareAdjustment(phv),
     new RemoveUnnecessaryActionArgSlice,
     new CollectPhvInfo(phv),
     new ValidateActions(phv, false, false, false)

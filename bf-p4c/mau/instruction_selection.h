@@ -162,6 +162,7 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
     const IR::Expression *preorder(IR::BFN::SignExtend *) override;
     const IR::Expression *preorder(IR::Concat *) override;
     // const IR::Expression *postorder(IR::Cast *) override;
+    const IR::Expression *postorder(IR::Operation_Relation *) override;
     const IR::Expression *postorder(IR::Mux *) override;
     const IR::Slice *postorder(IR::Slice *) override;
     const IR::Expression *postorder(IR::BoolLiteral *) override;
@@ -352,6 +353,137 @@ class EliminateAllButLastWrite : public PassManager {
 
  public:
     explicit EliminateAllButLastWrite(const PhvInfo &p) : phv(p) {
+        addPasses({ new Scan(*this), new Update(*this) }); }
+};
+
+/** Applies two transformations to arithmetic compare operations:
+ *
+ *    1. Narrow write destinations are expanded to match the read field widths.
+ *       Currently done by expanding the write field width. This should be
+ *       changed in the future to add and write to padding.
+ *
+ *    2. A compare + set 0 that writes across all bits in a wide write target
+ *       are merged into a single compare. (The compare must write to bit 0,
+ *       and the set must write to bits width-1 .. 1 .)
+ *
+ *  These transformations are necessary because of the mismatch between P4
+ *  comparison operators and MAU arithmetic compare instructions. P4
+ *  comparison operators always produce a 1b boolean value. MAU compare
+ *  instructions write to the entire PHV container: the LSB is set to the
+ *  comparison result and all other bits are zeroed.
+ *
+ *  E.g.:
+ *    header data_t {
+ *        bit<8> f1;
+ *        bit<8> f2;
+ *        bit<8> f3;
+ *    }
+ *
+ *    struct metadata {
+ *        bool is_gt;
+ *    };
+ *
+ *    action gt_action() {
+ *        meta.is_gt = hdr.data.f1 > hdr.data.f2;
+ *        hdr.data.f3 = (bit<8>)(bit<1>)(hdr.data.f1 > data.data.f2);
+ *    }
+ *
+ *  This pass will:
+ *
+ *    - Change the type of 'meta.is_gt' from bool to bit<8>. All references to
+ *      'meta.is_gt' other than the comparions would be replaced with
+ *      'meta.is_gt[0:0]'
+ *
+ *    - The hdr.data.f3 action is translated to two IR::MAU:Instruction
+ *      objects:
+ *        set(ingress::hdr.data.f3[7:1], 0);
+ *        gtu(ingress::hdr.data.f3[0:0], ingress::hdr.data.f1, ingress::hdr.data.f2);
+ *      This is changed to:
+ *        gtu(ingress::hdr.data.f3, ingress::hdr.data.f1, ingress::hdr.data.f2);
+ *
+ *  Details:
+ *  This pass has two sub-passes: the first scans the design to find
+ *  comparisons to transform, and the second applies the transforms.
+ *
+ *  Usage:
+ *  This pass should be run after ElimAllButLastWrite. This ensures that only
+ *  the last write to a location is used when verifying whether the comparison
+ *  transforms can be safely applied.
+ *
+ *  Limitations:
+ *   - Currently only works on metadata.
+ *
+ *  FIXME(glen):
+ *    The first transformation currently expands the width of the write field
+ *    to match the width of the read fields. This should be changed to add a
+ *    pad field and then write to the pad + original field. Unfortunately the
+ *    compiler doesn't currently support writing to more than one field with a
+ *    single instruction.
+ *
+ *    MultiOperand seems an appropriate candidate to allow writes to multiple
+ *    fields at the same time, but this require updates to the PHV allocation
+ *    location logic and the dead code elimination logic.
+ */
+class ArithCompareAdjustment : public PassManager {
+    const PhvInfo &phv;
+
+ public:
+    std::map<const PHV::Field *, int> comp_adj_field_width_map;
+    std::map<const cstring, int> comp_adj_name_width_map;
+    std::map<const IR::MAU::Action *, std::set<const PHV::Field *>> comp_adj_fields_per_action_map;
+
+ private:
+    class Scan : public MauInspector {
+        ArithCompareAdjustment &self;
+        std::map<const PHV::Field *, bitvec> comp_or_set_zero_writes;
+        ordered_map<const PHV::Field *, int> comp_targets;
+        std::set<const PHV::Field *> other_targets;
+
+        bool preorder(const IR::MAU::Action *) override;
+        bool preorder(const IR::MAU::Instruction *) override;
+        bool preorder(const IR::MAU::StatefulCall *) override { return false; }
+        bool preorder(const IR::MAU::BackendAttached *) override { return false; }
+        void postorder(const IR::MAU::Action *) override;
+
+     public:
+        explicit Scan(ArithCompareAdjustment &self) : self(self) {}
+    };
+
+    class Update : public Transform {
+     private:
+        ArithCompareAdjustment &self;
+        const IR::MAU::Action *current_af = nullptr;
+        std::set<const PHV::Field *> comp_adj_fields;
+
+        const IR::MAU::Action *preorder(IR::MAU::Action *) override;
+        const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+        const IR::Metadata *preorder(IR::Metadata *) override;
+        const IR::ConcreteHeaderRef *preorder(IR::ConcreteHeaderRef *) override;
+        const IR::Node *preorder(IR::Member *) override;
+        const IR::Type_StructLike *adjust_type_struct(const IR::Type_StructLike *, cstring name);
+        const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
+            prune(); return sc;
+        }
+        const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) override {
+            prune(); return ba;
+        }
+        const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+
+     public:
+        explicit Update(ArithCompareAdjustment &self) : self(self) { }
+    };
+
+    bool is_compare(cstring name) {
+        return name == "gtequ" || name == "gteqs" ||
+            name == "ltu" || name == "lts" ||
+            name == "lequ" || name == "leqs" ||
+            name == "gtu" || name == "gts" ||
+            name == "eq" || name == "neq" ||
+            name == "eq64" || name == "neq64";
+    }
+
+ public:
+    explicit ArithCompareAdjustment(const PhvInfo &p) : phv(p) {
         addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
