@@ -24,7 +24,6 @@ import json
 from packaging import version
 import re
 import time
-import glob
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
@@ -675,18 +674,19 @@ class BarefootBackend(BackendDriver):
         filesToRemove = []
 
         if os.environ['P4C_BUILD_TYPE'] != "DEVELOPER":
-            filesToRemove.append('*.bfa')
+            filesToRemove.append('.bfa')
 
-        filesToRemove.append('*.dynhash.json')
-        filesToRemove.append('*.prim.json')
+        filesToRemove.append('.dynhash.json')
+        filesToRemove.append('.prim.json')
 
         self.add_command_option('cleaner', '-f'); 
         filesFound = 0
-        for rFile in filesToRemove:
-            rFileSearchString = os.path.join(self._output_directory,"**/",rFile)
-            for f in glob.glob(rFileSearchString, recursive=True):
-                self.add_command_option('cleaner', f); 
-                filesFound += 1
+        for root, dirs, files in os.walk(self._output_directory):
+            for f in files:
+                for rFile in filesToRemove:
+                    if f.endswith(rFile):
+                        self.add_command_option('cleaner', os.path.join(root, f));
+                        filesFound += 1
 
         if filesFound == 0:
             return 0
