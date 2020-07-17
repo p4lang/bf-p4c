@@ -1512,8 +1512,11 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
 }
 
 void PackWithConstraintSolver::optimize() {
-    for (auto f : nonByteAlignedFieldsMap)
-        LOG1("k: " << f.first << " " << f.second);
+    for (auto f : nonByteAlignedFieldsMap) {
+        for (auto g : f.second) {
+            LOG1("k: " << f.first << " " << g);
+        }
+    }
     // add constraints related to a single field list
     for (auto v : nonByteAlignedFieldsMap) {
         solver.add_constraints(v.first, v.second);

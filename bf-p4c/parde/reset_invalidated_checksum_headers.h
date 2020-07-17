@@ -94,6 +94,14 @@ struct CollectInvalidatedHeaders : public Inspector {
 
         return false;
     }
+
+    Visitor::profile_t init_apply(const IR::Node* root) override {
+        profile_t rv = Inspector::init_apply(root);
+        invalidated_field_to_pov_bit.clear();
+        invalidated_header_pov_bits.clear();
+        pov_bit_to_invalidated_checksum_fields.clear();
+        return rv;
+    }
 };
 
 class InsertParsedValidBits : public ParserModifier {
