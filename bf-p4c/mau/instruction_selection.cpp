@@ -2549,7 +2549,7 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
  *  above EliminateAllButLastWrite
  */
 InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
-    new CheckInvalidate(phv),
+    new CheckInvalidate(phv),           // Instructions in actions are sequential.
     new UnimplementedRegisterMethodCalls,
     new HashGenSetup(phv, options),
     new Synth2PortSetup(phv),
@@ -2564,7 +2564,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new CollectPhvInfo(phv),
     new StaticEntriesConstProp(phv),
     new BackendCopyPropagation(phv),
-    new VerifyParallelWritesAndReads(phv),
+    new VerifyParallelWritesAndReads(phv),  // Instructions in actions are now parallel
     new EliminateAllButLastWrite(phv),
     new ArithCompareAdjustment(phv),
     new RemoveUnnecessaryActionArgSlice,

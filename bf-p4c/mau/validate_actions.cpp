@@ -9,7 +9,7 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     LOG4("ValidateActions for table: " << tbl->externalName());
     ActionAnalysis::FieldActionsMap field_actions_map;
     ActionAnalysis::ContainerActionsMap container_actions_map;
-    ActionAnalysis aa(phv, phv_alloc, ad_alloc, tbl);
+    ActionAnalysis aa(phv, phv_alloc, ad_alloc, tbl, false, false);  // action block is parallel.
     if (phv_alloc)
         aa.set_container_actions_map(&container_actions_map);
     else

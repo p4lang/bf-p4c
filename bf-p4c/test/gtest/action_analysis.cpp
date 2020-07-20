@@ -1,20 +1,25 @@
-#include "gtest/gtest.h"
-
 #include "bf-p4c/mau/action_analysis.h"
 
-#if __cplusplus < 201402L && __cpp_binary_literals < 201304
-    #error "Binary literals are required"
-    // We could fall back on boost/utility/binary.hpp
-#endif
+#include <boost/optional.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include "gtest/gtest.h"
+#include "test/gtest/helpers.h"
+#include "tofino_gtest_utils.h"
+#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/mau/instruction_selection.h"
+#include "bf-p4c/mau/validate_actions.h"
 
 namespace Test {
-
+// valid_instruction_constant unit-tests
+#if __cplusplus < 201402L && __cpp_binary_literals < 201304
+    #warning "Binary literals are required. A C++14 feature with early availability in GCC"
+  // We could fall back on boost/utility/binary.hpp
+#else
 bool valid_instruction_constant(unsigned value, int maxBits, int minBits,
         int C8Size, int constant_size);
-
-// unsigned makeMask(unsigned size)
-// bool signExtendConstComplement(int setBits, int complement_size, int maxBits=0, int minBits=0)
-// unsigned ActionAnalysis::ConstantInfo::valid_instruction_constant(int C8Size)
 
 namespace {
 unsigned rotate(unsigned value, unsigned width, unsigned leftShift) {
@@ -264,9 +269,10 @@ TEST(valid_instruction_constant, Rotate010111111111111111111111111111) {
     }
 }
 
-// N.B. The following tests are not part of regression as they run too slowly.
+// N.B. The following tests are not part of regression as they take too long to run.
 // However, they are a useful whilst debugging.
-#if 0
+#define RUN_CROSS_CHECK_ALGORITHM 0
+#if RUN_CROSS_CHECK_ALGORITHM
 namespace {
 bool run_cross_check_algorithm(int32_t val, int max_bits, int min_bits,
                                 int container_size, int constant_size) {
@@ -332,5 +338,100 @@ TEST(valid_instruction_constant, CrossCheckAlgorithm32) {  // ~350 seconds to ru
         }
     }
 }
-#endif
+#endif   // RUN_CROSS_CHECK_ALGORITHM
+#endif   // __cpp_binary_literals
+
+}  // namespace Test
+
+namespace Test {
+// ActionAnalysisTest unit-tests
+
+namespace {
+boost::optional<TofinoPipeTestCase> createTest(const std::string& ingressPipeline) {
+    auto source = P4_SOURCE(P4Headers::V1MODEL, R"(
+        header H { bit<8> field1; bit<8> field2;}
+        struct Headers { H h;}
+        struct Metadata { H h; }
+
+        parser parse(packet_in packet, out Headers headers, inout Metadata meta,
+                     inout standard_metadata_t sm) {
+            state start {
+                    packet.extract(headers.h);
+                    transition accept;
+            }
+        }
+
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
+        control ingress(inout Headers headers, inout Metadata meta,
+                        inout standard_metadata_t sm) {
+            %INGRESS_PIPELINE%
+        }
+
+        control egress(inout Headers headers, inout Metadata meta,
+                       inout standard_metadata_t sm) {
+            apply { } }
+
+        control computeChecksum(inout Headers headers, inout Metadata meta) {
+            apply { } }
+
+        control deparse(packet_out packet, in Headers headers) {
+            apply { packet.emit(headers.h); }
+        }
+
+        V1Switch(parse(), verifyChecksum(), ingress(), egress(),
+                 computeChecksum(), deparse()) main;
+    )");
+
+    boost::replace_first(source, "%INGRESS_PIPELINE%", ingressPipeline);
+
+    auto& options = BackendOptions();
+    options.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    options.target = "tofino";
+    options.arch = "v1model";
+
+    return TofinoPipeTestCase::createWithThreadLocalInstances(source);
+}
+}  // namespace
+
+class ActionAnalysisTest : public TofinoBackendTest {};
+
+
+TEST_F(ActionAnalysisTest, ParallelAction) {
+    auto test = createTest(P4_SOURCE(P4Headers::NONE, R"(
+        action swap_fields() {
+            bit<8> tmp;
+            tmp = headers.h.field1;
+            headers.h.field1 = headers.h.field2;
+            headers.h.field2 = tmp;
+        }
+        apply {
+            swap_fields();
+        }
+    )"));
+    ASSERT_TRUE(test);
+
+    PhvInfo phv;
+    PassManager validate = {
+            new CollectHeaderStackInfo,
+            // Instructions in actions are sequential.
+            new CollectPhvInfo(phv),
+            new DoInstructionSelection(phv),
+            new CollectPhvInfo(phv),
+            new BackendCopyPropagation(phv),
+            // Instructions in actions are now parallel
+            new CollectPhvInfo(phv),
+            new ValidateActions(phv, false, false, false)
+    };
+
+    testing::internal::CaptureStderr();
+    test->pipe->apply(validate);
+    std::string stderr = testing::internal::GetCapturedStderr();
+    // we don't expect any warnings, but the two we are interested in are:
+    // warning: Action ingress.swap_fields has a read of a field ingress::headers.h.field1; after
+    //          it already has been written
+    // warning: Instruction selection creates an instruction that the rest of the compiler cannot
+    //          correctly interpret
+    EXPECT_TRUE(stderr.find("warning") == std::string::npos);
+}
+
 }  // namespace Test

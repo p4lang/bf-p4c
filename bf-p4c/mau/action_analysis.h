@@ -454,6 +454,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool warning = false;
     bool error = false;
     bool allow_unalloc = false;
+    bool sequential = true;  // Prior to BackendCopyPropagation actions are sequential.
 
     bool action_data_misaligned = false;
     bool verbose = false;
@@ -560,8 +561,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool warning_found() { return warning; }
     bool error_found() { return error; }
 
-    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t, bool au = false)
-        : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), tbl(t) { visitDagOnce = false; }
+    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t,
+            bool au = false, bool seq = true)
+        : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), sequential(seq), tbl(t)
+        {visitDagOnce = false;}
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_ */

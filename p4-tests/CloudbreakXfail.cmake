@@ -172,11 +172,6 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "Unsupported type argument for Value Set"
   testdata/p4_14_samples/parser_value_set2.p4
-  )
-
-p4c_add_xfail_reason("tofino3"
-  "warning: Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
-  extensions/p4_tests/p4_16/compile_only/brig-42.p4
 )
 
 p4c_add_xfail_reason("tofino3"

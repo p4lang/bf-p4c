@@ -523,6 +523,7 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
  *      later in the operation)
  *    - The operands must be in the same size
  *    - Only one action data per instruction
+ *  If this check is post BackendCopyPropagation, we have gone from sequential to parallel.
  */
 bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
     ordered_map<const PHV::Field *, bitvec> written_fields;
@@ -530,19 +531,22 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
     for (auto field_action_info : *field_actions_map) {
         auto &field_action = field_action_info.second;
 
-        // Check reads before writes for this, as field can be used in it's own instruction
-        for (auto read : field_action.reads) {
-            if (read.type != ActionParam::PHV) continue;
-            le_bitrange read_bitrange = {0, 0};
-            auto field = phv.field(read.expr, &read_bitrange);
-            bitvec read_bits(read_bitrange.lo, read_bitrange.size());
-            BUG_CHECK(field, "Cannot convert an instruction read to a PHV field reference");
-            if (written_fields.find(field) == written_fields.end()) continue;
-            if (written_fields[field].intersects(read_bits)) {
-                ::warning("Action %s has a read of a field %s after it already has been written",
-                          action_name, cstring::to_cstring(read));
-                field_action.error_code |= FieldAction::READ_AFTER_WRITES;
-                warning = true;
+        if (sequential) {
+            // Check reads before writes for this, as field can be used in it's own instruction
+            for (auto read : field_action.reads) {
+                if (read.type != ActionParam::PHV) continue;
+                le_bitrange read_bitrange = {0, 0};
+                auto field = phv.field(read.expr, &read_bitrange);
+                bitvec read_bits(read_bitrange.lo, read_bitrange.size());
+                BUG_CHECK(field, "Cannot convert an instruction read to a PHV field reference");
+                if (written_fields.find(field) == written_fields.end()) continue;
+                if (written_fields[field].intersects(read_bits)) {
+                    ::warning("Action %s has a read of a field %s "
+                                      "after it already has been written",
+                              action_name, cstring::to_cstring(read));
+                    field_action.error_code |= FieldAction::READ_AFTER_WRITES;
+                    warning = true;
+                }
             }
         }
 
