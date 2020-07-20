@@ -192,7 +192,11 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
         }
     }
     ordered_set<cstring> candidates;
+    for (auto kv : uses_by_name)
+        candidates.insert(kv.first);
+
     auto pack = new PackFlexibleHeaders(options, candidates, map);
+
     for (auto kv : uses_by_name) {
         std::vector<BridgeContext> bridge_infos;
         for (auto u : kv.second) {
@@ -205,9 +209,8 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
 
         auto bridgePath = generate_bridge_pairs(bridge_infos);
 
-        candidates.insert(kv.first);
         for (auto p : *bridgePath) {
-            LOG3("collect flexible fields for " << kv.first);
+            LOG3("XXX: collect flexible fields for " << kv.first);
             p->apply(*pack);
         }
     }
