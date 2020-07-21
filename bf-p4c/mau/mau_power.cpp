@@ -408,7 +408,12 @@ bool MprSettings::need_to_emit(lut_t type, int stage) const {
 std::ostream& MprSettings::emit_stage_asm(std::ostream& out, int stage) const {
   if (mau_features_.get_dependency_for_gress_stage(gress_, stage+1) == DEP_MATCH) {
     BUG_CHECK(get_mpr_bus_dep_glob_exec(stage) == 0, "mpr_bus_dep_glob_exec not zero");
-    BUG_CHECK(get_mpr_bus_dep_long_brch(stage) == 0, "mpr_bus_dep_long_brch not zero"); }
+    BUG_CHECK(get_mpr_bus_dep_long_brch(stage) == 0, "mpr_bus_dep_long_brch not zero");
+  } else {
+    BUG_CHECK(get_mpr_bus_dep_glob_exec(stage) == glob_exec_use[stage],
+              "mpr_bus_dep_glob_exec does not match glob_exec_use");
+    BUG_CHECK(get_mpr_bus_dep_long_brch(stage) == long_branch_use[stage],
+              "mpr_bus_dep_long_brch does not match long_branch_use"); }
   out << "  mpr_stage_id: " << get_mpr_stage(stage) << std::endl;
   out << "  mpr_bus_dep_glob_exec: 0x" << hex(get_mpr_bus_dep_glob_exec(stage)) << std::endl;
   out << "  mpr_bus_dep_long_brch: 0x" << hex(get_mpr_bus_dep_long_brch(stage)) << std::endl;

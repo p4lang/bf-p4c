@@ -172,6 +172,7 @@ void WalkPowerGraph::compute_mpr() {
           if (tbl->logical_id) always_run |= (1 << *tbl->logical_id); }
       } else {
         for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
+          BUG_CHECK(tbl->gress == g, "%s not in %s", tbl, g);
           if (!tbl->logical_id) continue;  // ignore unplaced and non- tables
           if (tbl->always_run == IR::MAU::AlwaysRun::TABLE) {
             always_run |= (1 << *tbl->logical_id);
@@ -182,6 +183,7 @@ void WalkPowerGraph::compute_mpr() {
           // this table that are in the same non-match-dep group of stages.  We then need
           // enable match power for this table if any of them might run.
           for (auto t : tables) {
+            BUG_CHECK(t->gress == g, "%s not in %s", tbl, g);
             for (auto p_uid : graph->predecessors(t->unique_id())) {
               if (!mau_features_->uid_to_table_.count(p_uid)) continue;
               auto p = mau_features_->uid_to_table_.at(p_uid);
@@ -193,6 +195,7 @@ void WalkPowerGraph::compute_mpr() {
           int long_branch = 0;  // incoming long branch tags dependent on
           int next_tables = 0;  // incoming next table values dependent on
           for (auto t : tables) {
+            BUG_CHECK(t->gress == g, "%s not in %s", tbl, g);
             auto &predecessors = graph->predecessors(t->unique_id());
             if (t->always_run == IR::MAU::AlwaysRun::TABLE || predecessors.empty()) {
               always_run |= (1 << *tbl->logical_id);
@@ -275,14 +278,16 @@ void WalkPowerGraph::compute_mpr() {
 
 bool WalkPowerGraph::check_mpr_conflict() {
   bool change = false;
-  for (int stage = 0; stage < Device::numStages(); ++stage) {
+  for (int stage = 1; stage < Device::numStages(); ++stage) {
     auto ig_dep = mau_features_->get_dependency_for_gress_stage(INGRESS, stage);
     auto eg_dep = mau_features_->get_dependency_for_gress_stage(EGRESS, stage);
+    /* for every stage, need to check that the mpr_glob_exec/long_branch use out of the
+     * previous stage is consistent between ingress and egress. */
+    auto ig_mpr = mpr_settings_.at(INGRESS);
+    auto eg_mpr = mpr_settings_.at(EGRESS);
     if (ig_dep != eg_dep) {
-      auto ig_mpr = mpr_settings_.at(INGRESS);
-      auto eg_mpr = mpr_settings_.at(EGRESS);
-      if ((ig_mpr->glob_exec_use[stage] & eg_mpr->glob_exec_use[stage]) != 0 ||
-          (ig_mpr->long_branch_use[stage] & eg_mpr->long_branch_use[stage]) != 0) {
+      if ((ig_mpr->glob_exec_use[stage-1] & eg_mpr->glob_exec_use[stage-1]) != 0 ||
+          (ig_mpr->long_branch_use[stage-1] & eg_mpr->long_branch_use[stage-1]) != 0) {
         change = true;
         if (ig_dep == DEP_MATCH) {
           mau_features_->stage_dep_to_previous_[EGRESS][stage] = DEP_MATCH;
@@ -293,6 +298,11 @@ bool WalkPowerGraph::check_mpr_conflict() {
           BUG("impossible gress dep combo ig=%d eg=%d", ig_dep, eg_dep);
         }
       }
+    } else {
+      BUG_CHECK((ig_mpr->glob_exec_use[stage-1] & eg_mpr->glob_exec_use[stage-1]) == 0,
+                "inconsistent ingress/egress mpr_glob_exec use into stage %d", stage);
+      BUG_CHECK((ig_mpr->long_branch_use[stage-1] & eg_mpr->long_branch_use[stage-1]) == 0,
+                "inconsistent ingress/egress mpr_long_branch use into stage %d", stage);
     }
   }
   return change;
