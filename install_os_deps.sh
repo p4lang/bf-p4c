@@ -98,10 +98,11 @@ install_python_packages() {
     $SUDO pip$pipVersion install Cython pyinstaller || die "Failed to install pyinstaller and Cython packages"
     $SUDO pip$pipVersion install ply==3.9 || die "Failed to install ply packages"
     $SUDO pip$pipVersion install jsl jsonschema || die "Failed to install jsl packages"
-    $SUDO pip$pipVersion install thrift==0.9.2 || die "Failed to install thrift packages"  # need this one instead
+    $SUDO pip$pipVersion install thrift==0.11.0 || die "Failed to install thrift packages"  # need this one instead
     $SUDO pip$pipVersion install packaging || die "Failed to install packaging packages"
     $SUDO pip$pipVersion install pexpect || die "Failed to install pexpect packages"
     $SUDO pip$pipVersion install ipaddr pyyaml scapy || die "Failed to install python packages"
+    $SUDO pip$pipVersion install ctypesgen || die "Failed to install python packages"
 }
 
 install_linux_packages() {
