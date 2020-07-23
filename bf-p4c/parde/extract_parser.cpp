@@ -321,6 +321,14 @@ struct AncestorStates {
         explicit GetHeaderStackIndex(cstring hdr) : header(hdr) { }
 
         bool preorder(const IR::HeaderStackItemRef* ref) override {
+            auto stmt = findContext<IR::AssignmentStatement>();
+            if (stmt) {
+                auto lhs = stmt->left->to<IR::Member>();
+                // Ignore any prior change to $valid
+                if (lhs && lhs->member == "$valid") {
+                    return false;
+                }
+            }
             auto hdr = ref->baseRef()->name;
 
             if (hdr == header) {
