@@ -385,9 +385,11 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
     containerKinds.erase(PHV::Kind::tagalong);
 
     TablePrinter tp(ss, {
-       containerKinds.size() == 1 ? "MAU Group" : "Container Set",
-       "Gress", "Containers Used", "Bits Used", "Bits Allocated", "Available Bits"
-       }, TablePrinter::Align::CENTER);
+        containerKinds.size() == 1 ? "MAU Group" : "Container Set", "Containers Used",
+            "Bits Used", "Bits Used on Ingress", "Bits Used on Egress",
+            "Bits Allocated", "Bits Allocated on Ingress", "Bits Allocated on Egress",
+            "Available Bits"
+        }, TablePrinter::Align::CENTER);
 
     PhvOccupancyMetric overallStats;
     auto overallTotalBits = 0;
@@ -437,10 +439,13 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
                 containerSet << phvSpec.containerSetToString(subgroup);
 
                 tp.addRow({containerSet.str(),
-                           kindInfo.bitsUsed ? to_string(kindInfo.gress) : "",
-                           formatUsage(kindInfo.containersUsed, subgroup.popcount()),
-                           formatUsage(kindInfo.bitsUsed, curTotalBits),
-                           formatUsage(kindInfo.bitsAllocated, curTotalBits),
+                           formatUsage(kindInfo.total.containersUsed, subgroup.popcount()),
+                           formatUsage(kindInfo.total.bitsUsed, curTotalBits),
+                           formatUsage(kindInfo.gress[INGRESS].bitsUsed, curTotalBits),
+                           formatUsage(kindInfo.gress[EGRESS].bitsUsed, curTotalBits),
+                           formatUsage(kindInfo.total.bitsAllocated, curTotalBits),
+                           formatUsage(kindInfo.gress[INGRESS].bitsAllocated, curTotalBits),
+                           formatUsage(kindInfo.gress[EGRESS].bitsAllocated, curTotalBits),
                            std::to_string(curTotalBits)});
             }
 
@@ -455,10 +460,13 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
                 auto curTotalBits = totalContainers * size_t(containerSize);
 
                 tp.addRow({group.str(),
-                           "",
-                           formatUsage(totalStats.containersUsed, totalContainers),
-                           formatUsage(totalStats.bitsUsed, curTotalBits),
-                           formatUsage(totalStats.bitsAllocated, curTotalBits),
+                           formatUsage(totalStats.total.containersUsed, totalContainers),
+                           formatUsage(totalStats.total.bitsUsed, curTotalBits),
+                           formatUsage(totalStats.gress[INGRESS].bitsUsed, curTotalBits),
+                           formatUsage(totalStats.gress[EGRESS].bitsUsed, curTotalBits),
+                           formatUsage(totalStats.total.bitsAllocated, curTotalBits),
+                           formatUsage(totalStats.gress[INGRESS].bitsAllocated, curTotalBits),
+                           formatUsage(totalStats.gress[EGRESS].bitsAllocated, curTotalBits),
                            std::to_string(curTotalBits)});
             }
         }
@@ -483,10 +491,13 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
         ss << "Usage for " << size_t(size) << "b";
 
         tp.addRow({ss.str(),
-                   "",
-                   formatUsage(stats.containersUsed, totalContainers),
-                   formatUsage(stats.bitsUsed, curTotalBits),
-                   formatUsage(stats.bitsAllocated, curTotalBits),
+                   formatUsage(stats.total.containersUsed, totalContainers),
+                   formatUsage(stats.total.bitsUsed, curTotalBits),
+                   formatUsage(stats.gress[INGRESS].bitsUsed, curTotalBits),
+                   formatUsage(stats.gress[EGRESS].bitsUsed, curTotalBits),
+                   formatUsage(stats.total.bitsAllocated, curTotalBits),
+                   formatUsage(stats.gress[INGRESS].bitsAllocated, curTotalBits),
+                   formatUsage(stats.gress[EGRESS].bitsAllocated, curTotalBits),
                    std::to_string(curTotalBits)});
     }
 
@@ -505,10 +516,13 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
             ss << "Usage for " << PHV::STR_OF_KIND.at(kind);
 
             tp.addRow({ss.str(),
-                       "",
-                       formatUsage(stats.containersUsed, totalContainers),
-                       formatUsage(stats.bitsUsed, curTotalBits),
-                       formatUsage(stats.bitsAllocated, curTotalBits),
+                       formatUsage(stats.total.containersUsed, totalContainers),
+                       formatUsage(stats.total.bitsUsed, curTotalBits),
+                       formatUsage(stats.gress[INGRESS].bitsUsed, curTotalBits),
+                       formatUsage(stats.gress[EGRESS].bitsUsed, curTotalBits),
+                       formatUsage(stats.total.bitsAllocated, curTotalBits),
+                       formatUsage(stats.gress[INGRESS].bitsAllocated, curTotalBits),
+                       formatUsage(stats.gress[EGRESS].bitsAllocated, curTotalBits),
                        std::to_string(curTotalBits)});
         }
 
@@ -517,10 +531,13 @@ PHV::AllocationReport::printMauGroupsOccupancyMetrics() const {
 
     // Print stats for overall usage.
     tp.addRow({"Overall PHV Usage",
-               "",
-               formatUsage(overallStats.containersUsed, overallTotalContainers),
-               formatUsage(overallStats.bitsUsed, overallTotalBits),
-               formatUsage(overallStats.bitsAllocated, overallTotalBits),
+               formatUsage(overallStats.total.containersUsed, overallTotalContainers),
+               formatUsage(overallStats.total.bitsUsed, overallTotalBits),
+               formatUsage(overallStats.gress[INGRESS].bitsUsed, overallTotalBits),
+               formatUsage(overallStats.gress[EGRESS].bitsUsed, overallTotalBits),
+               formatUsage(overallStats.total.bitsAllocated, overallTotalBits),
+               formatUsage(overallStats.gress[INGRESS].bitsAllocated, overallTotalBits),
+               formatUsage(overallStats.gress[EGRESS].bitsAllocated, overallTotalBits),
                std::to_string(overallTotalBits)
               });
 

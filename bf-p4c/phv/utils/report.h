@@ -45,33 +45,45 @@ class AllocationReport {
         return ss.str();
     }
 
-    static std::string
-    to_string(const std::set<gress_t>& gress) {
-       std::stringstream ss;
-       std::string sep = "";
-       for (auto gr : gress) {
-           ss << sep;
-           ss << toSymbol(gr);
-           sep = "/";
-       }
-       return ss.str();
-    }
+    struct PhvOccupancyMetricFields {
+        unsigned containersUsed = 0;
+        unsigned bitsUsed       = 0;
+        unsigned bitsAllocated  = 0;
+
+        inline PhvOccupancyMetricFields& operator+=(const PhvOccupancyMetricFields& src) {
+            containersUsed  += src.containersUsed;
+            bitsUsed        += src.bitsUsed;
+            bitsAllocated   += src.bitsAllocated;
+
+            return *this;
+        }
+    };
 
     /// Information about a set of PHV containers.
     struct PhvOccupancyMetric {
-        unsigned containersUsed = 0;
-        unsigned bitsUsed = 0;
-        unsigned bitsAllocated = 0;
-
-        std::set<gress_t> gress;   // MAU group can consists containers of mixed gress
+        // in total
+        PhvOccupancyMetricFields                    total;
+        // per gress
+        std::map<gress_t, PhvOccupancyMetricFields> gress;
 
         inline PhvOccupancyMetric& operator+=(const PhvOccupancyMetric& src) {
-            containersUsed += src.containersUsed;
-            bitsUsed += src.bitsUsed;
-            bitsAllocated += src.bitsAllocated;
-            gress.insert(src.gress.begin(), src.gress.end());
+            total += src.total;
+            for (const auto& gr : src.gress) {
+                gress[gr.first] += gr.second;
+            }
 
             return *this;
+        }
+
+        inline std::string gressToSymbolString() const {
+            std::stringstream ss;
+            std::string sep = "";
+            for (const auto& gr : gress) {
+                ss << sep;
+                ss << toSymbol(gr.first);
+                sep = "/";
+            }
+            return ss.str();
         }
     };
 
@@ -89,40 +101,44 @@ class AllocationReport {
         explicit MauGroupInfo(size_t sz, int i, PHV::Kind containerKind, bool cont, size_t used,
                               size_t allocated, boost::optional<gress_t> gr)
             : size(sz), groupID(i) {
-            auto& kindStats = statsByContainerKind[containerKind];
-
-            if (cont) {
-                ++totalStats.containersUsed;
-                ++kindStats.containersUsed;
-            }
-
-            totalStats.bitsUsed = kindStats.bitsUsed = used;
-            totalStats.bitsAllocated = kindStats.bitsAllocated = allocated;
-
-            if (gr) {
-                totalStats.gress.insert(*gr);
-                kindStats.gress.insert(*gr);
-            }
+            update(containerKind, cont, used, allocated, gr);
         }
 
+        /// Adds usage information from a single container
         void update(PHV::Kind containerKind, bool cont, size_t used, size_t allocated,
                 boost::optional<gress_t> gr) {
             auto& kindStats = statsByContainerKind[containerKind];
 
+            // Update total stats
+            auto& totalStatsTotal = totalStats.total;
+            auto& kindStatsTotal = kindStats.total;
+
             if (cont) {
-                ++totalStats.containersUsed;
-                ++kindStats.containersUsed;
+                ++totalStatsTotal.containersUsed;
+                ++kindStatsTotal.containersUsed;
             }
 
-            totalStats.bitsUsed += used;
-            kindStats.bitsUsed += used;
+            totalStatsTotal.bitsUsed += used;
+            kindStatsTotal.bitsUsed += used;
 
-            totalStats.bitsAllocated += allocated;
-            kindStats.bitsAllocated += allocated;
+            totalStatsTotal.bitsAllocated += allocated;
+            kindStatsTotal.bitsAllocated += allocated;
 
             if (gr) {
-                totalStats.gress.insert(*gr);
-                kindStats.gress.insert(*gr);
+                // Update per gress stats
+                auto& totalStatsGress = totalStats.gress[*gr];
+                auto& kindStatsGress = kindStats.gress[*gr];
+
+                if (cont) {
+                    ++totalStatsGress.containersUsed;
+                    ++kindStatsGress.containersUsed;
+                }
+
+                totalStatsGress.bitsUsed += used;
+                kindStatsGress.bitsUsed += used;
+
+                totalStatsGress.bitsAllocated += allocated;
+                kindStatsGress.bitsAllocated += allocated;
             }
         }
     };
