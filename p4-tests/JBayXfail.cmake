@@ -393,8 +393,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
 
+# P4C-2896
 p4c_add_xfail_reason("tofino2"
-  "Cannot unify bit<8> to MeterColor_t"
+  "Not every payload is accounted for"
   p4_16_internal_p4_16_t2na_static_entry
 )
 
@@ -428,4 +429,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expecting error as part of -ve test of filter get with action"
+  p4_16_programs_tna_ternary_match
 )

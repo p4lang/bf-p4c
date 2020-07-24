@@ -1,4 +1,3 @@
-#if __p4c__ && __p4c_major__ >= 6
 #include <tna.p4>
 
 header data_h {
@@ -88,7 +87,3 @@ control SwitchEgressDeparser(
 Pipeline(InParser(), SwitchIngress(), SwitchIngressDeparser(),
        EgParser(), SwitchEgress(), SwitchEgressDeparser()) pipe0;
 Switch(pipe0) main;
-
-#else
-#error "Tofino Native Arch not supported on compiler versions earlier than 6.0"
-#endif

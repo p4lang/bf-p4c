@@ -75,8 +75,8 @@ RUN echo "autogen.sh" && ./autogen.sh > /dev/null && mkdir -p build && cd build 
     echo "configure" && ../configure > /dev/null && \
     make libdynhash.la && \
     mkdir -p /usr/local/lib /usr/local/include/bfutils && \
-    cp .libs/libdynhash.a /usr/local/lib && \
-    cp -r ../include/dynamic_hash /usr/local/include/bfutils
+    cp libdynhash.a /usr/local/lib && \
+    cp -r ../include/bfutils/dynamic_hash /usr/local/include/bfutils
 
 WORKDIR /bfn/bf-p4c-compilers
 

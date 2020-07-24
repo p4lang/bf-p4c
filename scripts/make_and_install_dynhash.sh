@@ -85,5 +85,5 @@ echo "Running configure ..."
 make libdynhash.la
 echo "Installing ..."
 $SUDO mkdir -p $install_dir/lib $install_dir/include/bfutils
-$SUDO cp .libs/libdynhash.a $install_dir/lib
-$SUDO cp -r ../include/dynamic_hash $install_dir/include/bfutils
+$SUDO cp libdynhash.a $install_dir/lib
+$SUDO cp -r ../include/bfutils/dynamic_hash $install_dir/include/bfutils

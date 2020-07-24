@@ -145,8 +145,23 @@ set (P14_XFAIL_TESTS
   # hash_test.p4(171): error: set_p: parameter p must be bound
   extensions/p4_tests/p4-programs/programs/hash_test/hash_test.p4
   # tofino hash function extensions not supported with p4test
-  extensions/p4_tests/p4_14/compile_only/brig-540.p4
   extensions/p4_tests/p4_14/compile_only/brig-540-2.p4
+  # some declarations not supported with p4test
+  extensions/p4_tests/p4_14/compile_only/brig-814.p4
+  # execute_meter errors with p4test
+  extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
+  # some types not supported with p4test: error: hash: Cannot unify .*
+  extensions/p4_tests/p4_14/stf/hash_calculation_8.p4
+  extensions/p4_tests/p4_14/stf/cond_checksum_update_3.p4
+  extensions/p4_tests/p4_14/stf/update_checksum_9.p4
+  # tofino primitives not supported with p4test
+  extensions/p4_tests/p4_14/stf/header_validity_1.p4
+  extensions/p4_tests/p4_14/stf/decaf_3.p4
+  extensions/p4_tests/p4_14/ptf/p4c2662.p4
+  # could not find type with p4test
+  extensions/p4_tests/p4_14/stf/sful_sel1.p4
+  # tofino specific p4
+  extensions/p4_tests/p4_14/ptf/sful_split1.p4
   )
 
 # p4-tests has all the includes at the same level with the programs.

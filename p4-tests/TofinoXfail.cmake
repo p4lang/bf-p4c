@@ -925,6 +925,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-761/simple_l3_mirror.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Cannot operate on values with different widths"
+  ba102_simple_l3_mirror
+  )
+
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
@@ -1850,4 +1855,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expecting error as part of -ve test of filter get with action"
+  p4_16_programs_tna_ternary_match
 )
