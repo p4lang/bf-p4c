@@ -2152,9 +2152,9 @@ void AllocatePHV::bindSlices(const PHV::ConcreteAllocation& alloc, PhvInfo& phv)
                 BUG_CHECK(new_slice.field_slice().contains(slice.field_slice()),
                           "Merged alloc slice %1% does not contain lo slice %2%",
                           cstring::to_cstring(new_slice), cstring::to_cstring(slice));
-                last = new_slice;
                 LOG4("MERGING " << last->field() << ": " << *last << " and " << slice <<
                      " into " << new_slice);
+                last = new_slice;
             } else {
                 merged_alloc.push_back(*last);
                 last = slice; } }
