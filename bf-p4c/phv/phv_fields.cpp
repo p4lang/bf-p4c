@@ -1794,10 +1794,22 @@ class CollectPardeConstraints : public Inspector {
                  << "exact container.");
             for (auto fieldList : digest->fieldLists) {
                 LOG3("\t.....resubmit metadata field list....." << fieldList);
+                int total_bits = 0;
+                for (auto resubmit_field_expr : fieldList->sources) {
+                    PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
+                    if (!resubmit_field) {
+                        BUG("\t\t resubmit field does not exist: %1%",
+                            resubmit_field_expr->field);
+                    }
+                    total_bits += resubmit_field->is_padding() ? 0 : resubmit_field->size;
+                }
                 for (auto resubmit_field_expr : fieldList->sources) {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
-                        if (resubmit_field->metadata) {
+                        // XXX(yumin): P4C-1870, an edge case for resubmit fields,
+                        // that if they are in a 8-byte-long
+                        // resubmit field list, then they must take the whole container.
+                        if (resubmit_field->metadata || total_bits == 64) {
                             resubmit_field->set_exact_containers(true);
                             resubmit_field->set_is_marshaled(true);
                             LOG3("\t\t" << resubmit_field);

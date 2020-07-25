@@ -547,10 +547,17 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
             LOG5("Starting new slice list (for deparser zero field):");
         } else if (accumulator_bits && field->is_digest()) {
             // Break off the existing slice list if this field is a digest
-            if (lastDigest == nullptr || accumulator_bits % int(PHV::Size::b8) == 0)
+            if (field->exact_containers() && field->is_marshaled()) {
+                LOG5("Do not start a new slice list because 8-bytes resubmit limit");
+            } else if (lastDigest == nullptr || accumulator_bits % int(PHV::Size::b8) == 0) {
+                // XXX(yumin): `&& !field->exact_containers()` is introduced for an edge case
+                // of P4C-1870 that if the resubmit field list is 8 bytes long, then they must
+                // take the whole container to avoid breaking the 8 bytes resubmit engine
+                // constraint.
+                LOG5("Starting new slice list (for digest field):");
                 StartNewSliceList();
+            }
             lastDigest = field;
-            LOG5("Starting new slice list (for digest field):");
         } else if (accumulator_bits % int(PHV::Size::b8) == 0 &&
                 lastDigest != nullptr && !field->is_digest() && !field->padding) {
             // break off the existing slice list if a metadata field is used in digest,
@@ -689,6 +696,10 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
                 PHV::Field* nextField = fields_in_header[j];
                 nextSliceSizes += nextField->size;
                 LOG5("\t\tSubsequent slice: " << nextField->name);
+                if (nextField->is_marshaled() && nextField->exact_containers()) {
+                    startNewSliceList = false;
+                    break;
+                }
                 if (!sizesMap.count(nextField)) continue;
                 int totalSizeReqd = 0;
                 for (auto sz : sizesMap.at(nextField))
