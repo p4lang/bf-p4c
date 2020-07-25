@@ -13,7 +13,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -68,43 +68,43 @@ header IttaBena {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<6>  Freeman;
-    @flexible 
+    @flexible
     bit<3>  Exton;
-    @flexible 
+    @flexible
     bit<9>  Floyd;
-    @flexible 
+    @flexible
     bit<2>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<1>  PineCity;
-    @flexible 
+    @flexible
     bit<32> Alameda;
-    @flexible 
+    @flexible
     bit<1>  Rexville;
-    @flexible 
+    @flexible
     bit<16> Quinwood;
-    @flexible 
+    @flexible
     bit<3>  Marfa;
-    @flexible 
+    @flexible
     bit<12> Palatine;
-    @flexible 
+    @flexible
     bit<12> Mabelle;
-    @flexible 
+    @flexible
     bit<1>  Hoagland;
-    @flexible 
+    @flexible
     bit<6>  Ocoee;
 }
 
@@ -5297,7 +5297,7 @@ control Waretown(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         default_action = Longport();
         size = 1024;
     }
-    @disable_atomic_modify(1) @name(".Varna") table Varna {
+    @disable_atomic_modify(1) @name(".Varna") @stage(7) table Varna {
         actions = {
             Belfalls();
             Clarendon();

@@ -1823,7 +1823,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages, using .*"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_2.p4
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat_2.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_3.p4
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-qinq.p4
 )
