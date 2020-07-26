@@ -13,7 +13,7 @@
 
 header Chaska {
     bit<8> Selawik;
-    @flexible 
+    @flexible
     bit<9> Waipahu;
 }
 
@@ -68,41 +68,41 @@ header IttaBena {
     bit<3>  Connell;
     bit<1>  Cisco;
     bit<4>  Higginson;
-    @flexible 
+    @flexible
     bit<8>  Oriskany;
-    @flexible 
+    @flexible
     bit<3>  Bowden;
-    @flexible 
+    @flexible
     bit<24> Cabot;
-    @flexible 
+    @flexible
     bit<24> Keyes;
-    @flexible 
+    @flexible
     bit<12> Basic;
-    @flexible 
+    @flexible
     bit<3>  Freeman;
-    @flexible 
+    @flexible
     bit<9>  Exton;
-    @flexible 
+    @flexible
     bit<2>  Floyd;
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<1>  Osterdock;
-    @flexible 
+    @flexible
     bit<32> PineCity;
-    @flexible 
+    @flexible
     bit<16> Alameda;
-    @flexible 
+    @flexible
     bit<3>  Rexville;
-    @flexible 
+    @flexible
     bit<12> Quinwood;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<1>  Mabelle;
-    @flexible 
+    @flexible
     bit<6>  Hoagland;
 }
 
@@ -4700,6 +4700,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
         size = 8192;
         default_action = NoAction();
     }
+    @pa_container_size("ingress", "Talco.Emida.Hampton", 16)
     @disable_atomic_modify(1) @placement_priority(1) @name(".Parole") table Parole {
         actions = {
             DuPont();
@@ -4735,7 +4736,7 @@ control Gorum(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrinsic
     @name(".Morgana") action Morgana(bit<32> Garcia) {
         Talco.Elvaston.Cutten = max<bit<32>>(Talco.Elvaston.Cutten, Garcia);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @placement_priority(".Kingsland" , ".Tullytown") @name(".Aquilla") table Aquilla {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(4) @name(".Aquilla") table Aquilla {
         key = {
             Talco.Elkville.Maddock   : exact @name("Elkville.Maddock") ;
             Talco.Corvallis.Findlay  : exact @name("Corvallis.Findlay") ;
@@ -4772,7 +4773,7 @@ control Sanatoga(inout Sumner Boonsboro, inout Dateland Talco, in ingress_intrin
         Talco.Corvallis.Coalwood = Talco.Elkville.Coalwood & Coalwood;
         Talco.Corvallis.Sublett = Talco.Elkville.Sublett & Sublett;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Mulhall") table Mulhall {
+    @disable_atomic_modify(1) @stage(2) @name(".Mulhall") @placement_priority(1) table Mulhall {
         key = {
             Talco.Elkville.Maddock: exact @name("Elkville.Maddock") ;
         }
