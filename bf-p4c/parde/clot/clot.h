@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_H_
+#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_
+#define EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_
 
 #include <vector>
 #include <map>
@@ -145,4 +145,4 @@ class Clot final : public LiftCompare<Clot> {
 std::ostream& operator<<(std::ostream& out, const Clot c);
 JSONGenerator& operator<<(JSONGenerator& out, const Clot c);
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_H_ */
+#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_ */

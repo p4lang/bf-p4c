@@ -8,7 +8,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/constraints/constraints.h"

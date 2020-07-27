@@ -93,9 +93,9 @@ set (BF_P4C_IR_SRCS
   ir/tofino_write_context.cpp
   ir/unique_id.cpp
   mau/hash_function.cpp
-  parde/clot.cpp
   parde/marshal.cpp
   parde/match_register.cpp
+  parde/clot/clot.cpp
   phv/phv.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
@@ -114,9 +114,9 @@ set (BF_P4C_IR_HDRS
   ir/tofino_write_context.h
   ir/unique_id.h
   mau/hash_function.h
-  parde/clot.h
   parde/marshal.h
   parde/match_register.h
+  parde/clot/clot.h
   phv/phv.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_HDRS}")
@@ -389,7 +389,6 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/adjust_extract.cpp
   parde/allocate_parser_checksum.cpp
   parde/allocate_parser_match_register.cpp
-  parde/clot_info.cpp
   parde/check_parser_multi_write.cpp
   parde/create_pov_encoder.cpp
   parde/decaf.cpp
@@ -404,6 +403,11 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/phase0.cpp
   parde/infer_payload_offset.cpp
   parde/split_parser_state.cpp
+  parde/clot/allocate_clot.cpp
+  parde/clot/clot_candidate.cpp
+  parde/clot/clot_info.cpp
+  parde/clot/field_slice_extract_info.cpp
+  parde/clot/pseudoheader.cpp
   parde/p4i/gen_parser_json.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PARDE_SRCS}")
@@ -416,7 +420,6 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/adjust_extract.h
   parde/asm_output.h
   parde/characterize_parser.h
-  parde/clot_info.h
   parde/collect_parser_usedef.h
   parde/check_parser_multi_write.h
   parde/create_pov_encoder.h
@@ -438,6 +441,12 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/parser_info.h
   parde/resolve_negative_extract.h
   parde/split_parser_state.h
+  parde/clot/allocate_clot.h
+  parde/clot/clot_candidate.h
+  parde/clot/clot_info.h
+  parde/clot/field_slice_extract_info.h
+  parde/clot/pov_bit_set.h
+  parde/clot/pseudoheader.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h
   parde/reset_invalidated_checksum_headers.h

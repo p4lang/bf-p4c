@@ -6,7 +6,7 @@
 #include "bf-p4c/common/map_tables_to_actions.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv.h"

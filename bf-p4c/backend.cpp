@@ -36,6 +36,7 @@
 #include "bf-p4c/parde/adjust_extract.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/check_parser_multi_write.h"
+#include "bf-p4c/parde/clot/allocate_clot.h"
 #include "bf-p4c/parde/egress_packet_length.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/merge_parser_state.h"

@@ -7,7 +7,7 @@
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
 #include "bf-p4c/phv/make_clusters.h"

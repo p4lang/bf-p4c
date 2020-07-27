@@ -355,7 +355,7 @@ class BarefootBackend(BackendDriver):
             pa_logging = "allocate_phv:" + phv_verbosity + \
                          ",alias:1"
             parde_verbosity = str(2 * opts.verbose - 1)
-            parde_logging = ",clot_info:" + parde_verbosity + \
+            parde_logging = ",allocate_clot:" + parde_verbosity + \
                             ",split_parser_state:" + parde_verbosity + \
                             ",allocate_parser_match_register:" + parde_verbosity + \
                             ",allocate_parser_checksum:" + parde_verbosity + \

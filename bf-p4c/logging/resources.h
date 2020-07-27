@@ -4,7 +4,7 @@
 #include <boost/range/irange.hpp>
 #include <vector>
 #include <set>
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "common/asm_output.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"

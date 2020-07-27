@@ -10,7 +10,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_summary.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/decaf.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv_fields.h"

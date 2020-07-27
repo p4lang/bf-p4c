@@ -7,7 +7,7 @@
 
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"

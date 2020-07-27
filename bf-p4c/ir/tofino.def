@@ -2,7 +2,7 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/clot.h"
+#include "bf-p4c/parde/clot/clot.h"
 #include "bf-p4c/phv/phv.h"
 
 struct StageUse {

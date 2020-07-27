@@ -21,7 +21,7 @@
 #include "bf-p4c/parde/allocate_parser_checksum.h"
 #include "bf-p4c/parde/allocate_parser_match_register.h"
 #include "bf-p4c/parde/characterize_parser.h"
-#include "bf-p4c/parde/clot_info.h"
+#include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/parde_visitor.h"
