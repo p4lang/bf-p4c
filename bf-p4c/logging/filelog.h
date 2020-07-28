@@ -34,6 +34,7 @@ class FileLog {
     static const cstring& name2type(cstring logName) {
         static const cstring unknown("Unknown");
         static const std::map<cstring, cstring> logNames2Type = {
+            {"clot_allocation",     "parser"},
             {"decaf",               "parser"},
             {"flexible_packing",    "parser"},
             {"ixbar",               "mau"},

@@ -998,7 +998,7 @@ Visitor::profile_t CollectClotInfo::init_apply(const IR::Node* root) {
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {
         if (auto pipe = root->to<IR::BFN::Pipe>())
-            log = new Logging::FileLog(pipe->id, "parser.log");
+            log = new Logging::FileLog(pipe->id, "clot_allocation.log");
     }
 
     return rv;

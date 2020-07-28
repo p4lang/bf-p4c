@@ -579,7 +579,7 @@ class GreedyClotAllocator : public Visitor {
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
             if (auto pipe = root->to<IR::BFN::Pipe>())
-                log = new Logging::FileLog(pipe->id, "parser.log");
+                log = new Logging::FileLog(pipe->id, "clot_allocation.log");
         }
 
         // Make sure we clear our state from previous invocations of the visitor.
@@ -621,7 +621,7 @@ class GreedyClotAllocator : public Visitor {
         }
 
         if (auto *pipe = root->to<IR::BFN::Pipe>())
-            Logging::FileLog parserLog(pipe->id, "parser.log");
+            Logging::FileLog parserLog(pipe->id, "clot_allocation.log");
 
         LOG2(clotInfo.print());
 
@@ -655,7 +655,7 @@ Visitor::profile_t ClotAdjuster::init_apply(const IR::Node* root) {
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {
         if (auto pipe = root->to<IR::BFN::Pipe>())
-            log = new Logging::FileLog(pipe->id, "parser.log");
+            log = new Logging::FileLog(pipe->id, "clot_allocation.log");
     }
 
     return result;
@@ -666,7 +666,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
 
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
     if (pipe)
-        Logging::FileLog parserLog(pipe->id, "parser.log");
+        Logging::FileLog parserLog(pipe->id, "clot_allocation.log");
     LOG1(clotInfo.print(&phv));
 
     return root;
