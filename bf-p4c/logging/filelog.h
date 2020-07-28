@@ -100,6 +100,7 @@ class FileLog {
         log = nullptr;
     }
 };
+
 }  // end namespace Logging
 
 #endif  /* _EXTENSIONS_BF_P4C_LOGGING_FILELOG_H_ */

@@ -98,7 +98,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // shrinking that will be effected during and post AllocatePHV.
             &meta_live_range,
             (Device::phvSpec().hasContainerKind(PHV::Kind::dark) &&
-             !options.disable_dark_allocation)
+                !options.disable_dark_allocation)
                 ? &dark_live_range : nullptr,
             // Metadata initialization pass should be run after the metadata live range is
             // calculated.

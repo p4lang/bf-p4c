@@ -5,6 +5,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/allocate_phv.h"
+#include "bf-p4c/logging/pass_manager.h"
 #include "bf-p4c/phv/utils/slicing_iterator.h"
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/parser_extract_balance_score.h"
@@ -2183,9 +2184,22 @@ static void log_device_stats() {
     LOG3("Egress  only: " << numEgress);
 }
 
+// Create callback for creating FileLog objects
+// Those can locally redirect LOG* macros to another file which
+// will share path and suffix number with phv_allocation_*.log
+// To restore original logging behaviour, call Logging::FileLog::close on the object.
+static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int loglevel) {
+    if (!LOGGING(loglevel)) return nullptr;
+
+    auto filename = Logging::PassManager::getNewLogFileName(prefix);
+    return new Logging::FileLog(pipeId, filename, Logging::Mode::CREATE);
+}
+
 Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
     log_device_stats();
+
+    int pipeId = root->to<IR::BFN::Pipe>()->id;
 
     // Make sure that fields are not marked as mutex with itself.
     for (const auto& field : phv_i) {
@@ -2197,7 +2211,6 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     auto alloc = make_concrete_allocation();
     auto container_groups = makeDeviceContainerGroups();
     std::list<PHV::SuperCluster*> cluster_groups = make_cluster_groups();
-    std::stringstream report;
 
     // Remove super clusters that are entirely allocated to CLOTs.
     ordered_set<PHV::SuperCluster*> to_remove;
@@ -2238,10 +2251,10 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         }
         AllocationStrategy *strategy =
             new BruteForceAllocationStrategy(
-                config.name, core_alloc_i, report, parser_critical_path_i,
+                config.name, core_alloc_i, parser_critical_path_i,
                 critical_path_clusters_i, clot_i,
                 strided_headers_i, uses_i,
-                config);
+                config, pipeId);
         result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
         if (result.status == AllocResultCode::SUCCESS) {
             break;
@@ -2254,26 +2267,14 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     }
     alloc.commit(result.transaction);
 
-    bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
-        diagnoseFailures(result.remaining_clusters);
-
     // If only privatized fields are unallocated, mark allocation as done.
     // The rollback of unallocated privatized fields will happen in ValidateAllocation.
-    if (result.status == AllocResultCode::SUCCESS) {
+    bool allocationDone = result.status == AllocResultCode::SUCCESS |
+        onlyPrivatizedFieldsUnallocated(result.remaining_clusters);
+    if (allocationDone) {
         clearSlices(phv_i);
         bindSlices(alloc, phv_i);
         phv_i.set_done();
-        LOG1("PHV ALLOCATION SUCCESSFUL");
-        LOG2(alloc);
-    } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
-        LOG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
-        clearSlices(phv_i);
-        bindSlices(alloc, phv_i);
-        phv_i.set_done();
-        LOG1("SuperClusters with Privatized Fields unallocated: ");
-        for (auto* sc : result.remaining_clusters)
-            LOG1(sc);
-        LOG2(alloc);
     } else {
         bool firstRoundFit = alloc_i.didFirstRoundFit();
         if (firstRoundFit) {
@@ -2286,6 +2287,24 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
                                       false /* metaInitDisable */);
         }
         bindSlices(alloc, phv_i);
+    }
+
+    // Redirect all following LOG*s into summary file
+    // Print summaries
+    auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
+    if (result.status == AllocResultCode::SUCCESS) {
+        LOG1("PHV ALLOCATION SUCCESSFUL");
+        LOG2(alloc);
+    } else if (onlyPrivatizedFieldsUnallocated(result.remaining_clusters)) {
+        LOG1("PHV ALLOCATION SUCCESSFUL FOR NON-PRIVATIZED FIELDS");
+        LOG1("SuperClusters with Privatized Fields unallocated: ");
+        for (auto* sc : result.remaining_clusters)
+            LOG1(sc);
+        LOG2(alloc);
+    } else {
+        bool failure_diagnosed = (result.remaining_clusters.size() == 0) ? false :
+            diagnoseFailures(result.remaining_clusters);
+
         if (result.status == AllocResultCode::FAIL_UNSAT_SLICING) {
             formatAndThrowError(alloc, result.remaining_clusters);
             formatAndThrowUnsat(result.remaining_clusters);
@@ -2293,6 +2312,8 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
             formatAndThrowError(alloc, result.remaining_clusters);
         }
     }
+    Logging::FileLog::close(logfile);
+
     return Inspector::init_apply(root);
 }
 
@@ -2628,15 +2649,6 @@ void AllocatePHV::formatAndThrowUnsat(const std::list<PHV::SuperCluster*>& unsat
         << " of unsatisfiable constraints remaining)" << std::endl;
     LOG3(msg.str());
     ::error("%1%", msg.str());
-}
-
-void AllocationStrategy::writeTransactionSummary(
-    const PHV::Transaction& transaction,
-    const std::list<PHV::SuperCluster *>& allocated) {
-    report_i << transaction.getTransactionSummary() << std::endl;
-    report_i << "......Allocated......." << std::endl;
-    for (const auto& v : allocated) {
-        report_i << v << std::endl; }
 }
 
 std::list<PHV::SuperCluster*>
@@ -3095,8 +3107,6 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
 
     if (deparser_zero_superclusters.size() > 0) {
         LOG1("Deparser Zero field allocation failed: " << deparser_zero_superclusters.size());
-        report_i << "Deparser Zero Field Allocation Failed.\n";
-        writeTransactionSummary(rst, allocated_dep_zero_clusters);
     }
 
     // Packing opportunities for each field, if allocated in @p cluster_groups order.
@@ -3121,13 +3131,10 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
             pounderRoundAllocLoop(rst, cluster_groups, container_groups); }
 
     if (cluster_groups.size() > 0 || deparser_zero_superclusters.size() > 0) {
-        report_i << "BruteForceStrategy Allocation Failed.\n";
-        writeTransactionSummary(rst, allocated_clusters);
         return AllocResult(AllocResultCode::FAIL, std::move(rst), std::move(cluster_groups));
-    } else {
-        report_i << "BruteForceStrategy Allocation Successful.\n";
-        return AllocResult(AllocResultCode::SUCCESS, std::move(rst), std::move(cluster_groups));
     }
+
+    return AllocResult(AllocResultCode::SUCCESS, std::move(rst), std::move(cluster_groups));
 }
 
 
@@ -3792,9 +3799,11 @@ BruteForceAllocationStrategy::allocLoop(
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
 
+    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 4);
     LOG4("Allocation history of config " << config_i.name);
     LOG4(alloc_history.str());
-    LOG4("Allocation history Ends Here");
+    Logging::FileLog::close(logfile);
+
     return allocated;
 }
 

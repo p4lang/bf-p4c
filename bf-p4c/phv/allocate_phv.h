@@ -2,7 +2,6 @@
 #define BF_P4C_PHV_ALLOCATE_PHV_H_
 
 #include <boost/optional.hpp>
-#include <functional>
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -428,11 +427,10 @@ class AllocationStrategy {
  protected:
     const cstring name;
     const CoreAllocation& core_alloc_i;
-    std::ostream& report_i;
 
  public:
-    AllocationStrategy(cstring name, const CoreAllocation& alloc, std::ostream& out)
-        : name(name), core_alloc_i(alloc), report_i(out) {}
+    AllocationStrategy(cstring name, const CoreAllocation& alloc)
+        : name(name), core_alloc_i(alloc) {}
 
     /** Run this strategy
      * Returns: a AllocResult that
@@ -445,11 +443,6 @@ class AllocationStrategy {
     tryAllocation(const PHV::Allocation& alloc,
                   const std::list<PHV::SuperCluster *>& cluster_groups_input,
                   const std::list<PHV::ContainerGroup *>& container_groups) = 0;
-
-    /// Write summary of this strategy to report_i.
-    void writeTransactionSummary(
-            const PHV::Transaction& transaction,
-            const std::list<PHV::SuperCluster *>& allocated);
 };
 
 struct BruteForceStrategyConfig {
@@ -477,23 +470,25 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
     const BruteForceStrategyConfig& config_i;
+    int pipe_id_i;  /// used for logging purposes
 
  public:
     BruteForceAllocationStrategy(
         const cstring name,
         const CoreAllocation& alloc,
-        std::ostream& out,
         const CalcParserCriticalPath& ccp,
         const CalcCriticalPathClusters& cpc,
         const ClotInfo& clot,
         const CollectStridedHeaders& hs,
         const PhvUse& uses,
-        const BruteForceStrategyConfig& config)
-        : AllocationStrategy(name, alloc, out), parser_critical_path_i(ccp),
+        const BruteForceStrategyConfig& config,
+        int pipeId)
+        : AllocationStrategy(name, alloc), parser_critical_path_i(ccp),
           critical_path_clusters_i(cpc), clot_i(clot),
           strided_headers_i(hs),
           uses_i(uses),
-          config_i(config) { }
+          config_i(config),
+          pipe_id_i(pipeId) { }
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,

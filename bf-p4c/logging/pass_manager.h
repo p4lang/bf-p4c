@@ -16,30 +16,41 @@ namespace Logging {
 /// the opened file. The Logging::PassManager manages the logging
 /// file, opening it in init_apply and closing it in end_apply.
 class PassManager : public ::PassManager {
+ protected:
     cstring            _logFilePrefix;
     Logging::Mode      _logMode;
     Logging::FileLog * _logFile;
+
+    /// Used to index logfiles based on how many times this class
+    /// was instantiated and invoked on pipe nodes (when logMode is CREATE)
+    static int         invocationCount;
 
  public:
     explicit PassManager(cstring logFilePrefix,
                          Logging::Mode logMode = Logging::Mode::CREATE) :
         _logFilePrefix(logFilePrefix), _logMode(logMode), _logFile(nullptr) {}
 
+    static cstring getNewLogFileName(const cstring &prefix) {
+        return prefix + std::to_string(invocationCount) + ".log";
+    }
+
  protected:
     profile_t init_apply(const IR::Node *root) override {
-        if (BackendOptions().verbose == 0)
+        if (BackendOptions().verbose == 0) {
             return ::PassManager::init_apply(root);
+        }
 
-        static int invocation = 0;
-        if (auto pipe = root->to<IR::BFN::Pipe>()) {
+        auto pipe = root->to<IR::BFN::Pipe>();
+        if (pipe) {
             if (_logMode == Logging::Mode::CREATE) {
-                auto logFileName = _logFilePrefix + std::to_string(invocation) + ".log";
+                ++invocationCount;
+                auto logFileName = getNewLogFileName(_logFilePrefix);
                 _logFile = new Logging::FileLog(pipe->id, logFileName, _logMode);
-                ++invocation;
             } else {
                 _logFile = new Logging::FileLog(pipe->id, _logFilePrefix + ".log", _logMode);
             }
         }
+
         return ::PassManager::init_apply(root);
     }
 
