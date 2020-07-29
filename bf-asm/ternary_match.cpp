@@ -623,6 +623,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                         // Add the difference from the first bit of this byte and the lowest bit
                         range_start_bit += bit + lsb_lo_bit_in_byte - lsb_lo;
                         range_width = std::min(static_cast<int>(field_width), 4 - lsb_lo_bit_in_byte);
+                        range_width = std::min(static_cast<int>(range_width), lsb_hi - bit + 1);
                         nibble_offset = lsb_lo_bit_in_byte % 4;
                     } else {
                         BUG_CHECK(nibbles_of_range.getbit(1));
