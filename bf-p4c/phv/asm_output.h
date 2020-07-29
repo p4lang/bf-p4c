@@ -39,7 +39,7 @@ class PhvAsmOutput {
     };
 
     /// Populate liveRanges.
-    typedef std::map<cstring, std::vector<FieldUse>> FieldUses;
+    typedef ordered_map<cstring, std::vector<FieldUse>> FieldUses;
     typedef std::map<PHV::Container, FieldUses> LiveRangePerContainer[2];
     void getLiveRanges(LiveRangePerContainer& c) const;
 

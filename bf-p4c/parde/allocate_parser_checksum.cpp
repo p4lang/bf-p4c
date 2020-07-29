@@ -320,7 +320,7 @@ struct ParserChecksumAllocator : public Visitor {
     }
 
     void compute_disjoint_sets(const IR::BFN::Parser* parser,
-                               const std::set<cstring>& decls,
+                               const ordered_set<cstring>& decls,
                                std::vector<ordered_set<cstring>>& disjoint_sets) {
         for (auto decl : decls) {
             bool found_union = false;

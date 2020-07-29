@@ -18,13 +18,13 @@ struct CollectParserChecksums : public ParserInspector {
         ordered_set<cstring>> parser_to_decl_names;
 
     std::map<const IR::BFN::Parser*,
-        std::set<cstring>> parser_to_verifies;
+        ordered_set<cstring>> parser_to_verifies;
 
     std::map<const IR::BFN::Parser*,
-        std::set<cstring>> parser_to_residuals;
+        ordered_set<cstring>> parser_to_residuals;
 
     std::map<const IR::BFN::Parser*,
-        std::set<cstring>> parser_to_clots;
+        ordered_set<cstring>> parser_to_clots;
 
     std::map<const IR::BFN::Parser*,
         std::map<cstring,

@@ -99,7 +99,7 @@ struct HeaderStackInfo {
  private:
     friend struct ::CollectHeaderStackInfo;
     friend class ::ElimUnusedHeaderStackInfo;
-    std::map<cstring, Info> info;
+    ordered_map<cstring, Info> info;
 
  public:
     auto begin() const -> decltype(Values(info).begin()) { return Values(info).begin(); }

@@ -447,7 +447,7 @@ struct ExtractSimplifier {
     ordered_map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     ordered_map<PHV::Container, ExtractSequence> extractConstantByContainer;
 
-    std::map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
+    ordered_map<const Clot*, std::vector<const IR::BFN::ExtractClot*>> clotExtracts;
 };
 
 /// Maps a sequence of fields to a sequence of PHV containers. The sequence of
