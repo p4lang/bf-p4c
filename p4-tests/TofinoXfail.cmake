@@ -1854,8 +1854,3 @@ p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
 )
-
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expecting error as part of -ve test of filter get with action"
-  p4_16_programs_tna_ternary_match
-)
