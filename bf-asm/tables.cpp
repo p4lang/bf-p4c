@@ -278,13 +278,11 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
         error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
     auto *bus = get(data, "bus");
-    const value_t *result_bus = nullptr;
-    if (!bus && (table_type() == EXACT || table_type() == ATCAM || table_type() == PROXY_HASH)) {
+    if (!bus)
         bus = get(data, "search_bus");
-        result_bus = get(data, "result_bus"); }
     if (bus)
         err |= Table::setup_layout_attrib(layout, *bus, "Bus", &Layout::bus);
-    if (result_bus)
+    if (auto *result_bus = get(data, "result_bus"))
         err |= Table::setup_layout_attrib(layout, *result_bus, "Bus", &Layout::result_bus);
     if (auto *word = get(data, "word"))
         err |= Table::setup_layout_attrib(layout, *word, "Word", &Layout::word);

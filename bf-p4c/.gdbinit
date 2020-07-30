@@ -428,6 +428,8 @@ class MemoriesUsePrinter(object):
             rv += str(row['row'])
             if row['bus'] >= 0:
                 rv += "," + str(row['bus'])
+            if row['result_bus'] >= 0:
+                rv += ",rb" + str(row['result_bus'])
             rv += ": "
             for j in range(0, vec_size(row['col'])):
                 if j > 0:
@@ -441,9 +443,11 @@ class MemoriesUsePrinter(object):
                 rv += str(vec_at(row['mapcol'], j))
         if self.val['gateway']['unit'] >= 0:
             rv += " payload " + str(self.val['gateway']['payload_row']) + ":"
-            rv += str(self.val['gateway']['payload_bus']) + ":"
+            rv += str(self.val['gateway']['payload_unit']) + ":"
             rv += str(self.val['gateway']['unit']) + " = "
             rv += str(self.val['gateway']['payload_value'])
+            if self.val['gateway']['payload_match_address'] >= 0:
+                rv += ", match_address = " + str(self.val['gateway']['payload_match_address'])
         rv += ')'
         return rv
 

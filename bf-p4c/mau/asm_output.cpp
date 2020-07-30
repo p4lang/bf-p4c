@@ -1359,6 +1359,8 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             } else {
                 out << indent << "bus: " << bus << std::endl;
             }
+        } else if (separate_bus) {
+            out << indent << "result_bus: " << result_bus << std::endl;
         }
         if (have_word)
             out << indent << "word: " << word << std::endl;
@@ -1387,6 +1389,8 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             } else {
                 out << indent << "bus: " << bus[0] << std::endl;
             }
+        } else if (separate_bus) {
+            out << indent << "result_bus: " << result_bus[0] << std::endl;
         }
         if (have_col) {
             out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false)
@@ -3375,6 +3379,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
                 out << gw_indent << "unit: " << use.gateway.unit << std::endl;
+                if (use.gateway.payload_row >= 0)
+                    out << gw_indent << "payload_row: " << use.gateway.payload_row << std::endl;
+                if (use.gateway.payload_unit >= 0)
+                    out << gw_indent << "payload_unit: " << use.gateway.payload_unit << std::endl;
                 // FIXME: This is the case for a gateway attached to a ternary or exact match
                 if (use.gateway.payload_value != 0ULL) {
                     out << gw_indent << "payload: 0x" << hex(use.gateway.payload_value)
@@ -3383,6 +3391,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                                       false, true);
                     // FIXME: Assembler doesn't yet support payload bus/row for every table
                 }
+                if (use.gateway.payload_match_address > 0) {
+                    out << gw_indent << "match_address: 0x"
+                        << hex(use.gateway.payload_match_address) << std::endl; }
 
                 auto &payload_map = tbl->resources->table_format.payload_map;
                 if (!payload_map.empty()) {

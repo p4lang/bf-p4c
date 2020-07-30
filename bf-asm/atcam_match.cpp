@@ -199,7 +199,8 @@ void AlgTcamMatchTable::no_overhead_determine_result_bus_usage() {
 
 void AlgTcamMatchTable::verify_format() {
     SRamMatchTable::verify_format();
-    verify_entry_priority();
+    if (!error_count)
+        verify_entry_priority();
 }
 
 void AlgTcamMatchTable::pass1() {

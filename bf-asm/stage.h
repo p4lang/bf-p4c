@@ -17,7 +17,8 @@ public:
     std::vector<Table *>        tables;
     std::set<Stage **>          all_refs;
     Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
-    Alloc2D<Table *, SRAM_ROWS, 2>                      sram_match_bus_use;
+    Alloc2D<Table *, SRAM_ROWS, 2>                      sram_search_bus_use;
+    Alloc2D<Table *, SRAM_ROWS, 2>                      match_result_bus_use;
     Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
     Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;

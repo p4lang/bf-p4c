@@ -354,7 +354,7 @@ bool Memories::single_allocation_balance(mem_info &mi, unsigned row) {
 bool Memories::allocate_all() {
     mem_info mi;
 
-    LOG3(" Analyzing tables");
+    LOG3("Analyzing tables " << tables << IndentCtl::indent);
     if (!analyze_tables(mi)) {
         return false;
     }
@@ -377,6 +377,7 @@ bool Memories::allocate_all() {
             LOG2(" Increasing balance");
     } while (bitcount(row) < SRAM_COLUMNS && !finished);
 
+    LOG3_UNINDENT;
     if (!finished) {
         return false;
     }
@@ -1922,6 +1923,7 @@ bool Memories::allocate_all_tind() {
 
                 auto &alloc = (*tg->ta->memuse)[unique_id];
                 alloc.row.emplace_back(best_row, best_bus);
+                alloc.row.back().result_bus = best_bus;
                 alloc.row.back().col.push_back(i);
                 break;
             }
@@ -3522,34 +3524,96 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
  *  row, bus, and value, as well as link no match tables if necessary
  */
 bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstring name,
-                                 table_alloc *ta_no_match, int logical_table) {
-    for (int i = 0; i < SRAM_ROWS; i++) {
-        for (int j = 0; j < BUS_COUNT; j++) {
-            if (payload_use[i][j]) continue;
-            if (payload == 0ULL) {
-               // FIXME: Add ability to handle tind outputs from payload
-               if (!sram_result_bus[i][j].free()) continue;
-            } else {
-                if (!sram_result_bus[i][j].free() || tind_bus[i][j]) continue;
-            }
-            alloc.gateway.payload_row = i;
-            alloc.gateway.payload_bus = j;
-            alloc.gateway.payload_value = payload;
-            // FIXME: again allow tind busses to potentially be used
-            alloc.gateway.bus_type = Use::EXACT;
-            if (payload != 0ULL)
-                payload_use[i][j] = name;
-            if (ta_no_match) {
-                auto no_match_id = ta_no_match->build_unique_id(nullptr, false, logical_table);
-                auto &no_match_alloc = (*ta_no_match->memuse)[no_match_id];
-                no_match_alloc.row.emplace_back(i, j);
-                no_match_alloc.type = Use::EXACT;
-                sram_result_bus[i][j] = result_bus_info(no_match_id.name, 0, logical_table);
-                sram_print_result_bus[i][j] = no_match_id.build_name();
-            } else {
-                sram_result_bus[i][j] = result_bus_info(name, 0, logical_table);
-                sram_print_result_bus[i][j] = name;
-            }
+                                 table_alloc *table, int logical_table) {
+    Memories::Use *sram_use = nullptr;
+    auto *result_bus = &sram_result_bus;
+    auto *print_result_bus = &sram_print_result_bus;
+    auto match_id = table->build_unique_id(nullptr, false, logical_table);
+    bool ternary = false;
+    if (table->memuse->count(match_id) != 0) {
+        sram_use = &table->memuse->at(match_id);
+        switch (sram_use->type) {
+        case Use::TIND:
+            print_result_bus = &tind_bus;
+            result_bus = nullptr;
+            ternary = true;
+            break;
+        case Use::EXACT:
+        case Use::ATCAM:
+            break;
+        default:
+            // no result bus in this memory type
+            sram_use = nullptr;
+            break; } }
+    if (!sram_use) {
+        for (auto &mem : *table->memuse) {
+            switch (mem.second.type) {
+            case Use::TIND:
+                print_result_bus = &tind_bus;
+                result_bus = nullptr;
+                ternary = true;
+                // fall through
+            case Use::EXACT:
+            case Use::ATCAM:
+                match_id = mem.first;
+                sram_use = &mem.second;
+                break;
+            default: continue; }
+            break; } }
+    if (!sram_use) {
+        if (table->memuse->count(match_id) == 0) {
+            sram_use = &(*table->memuse)[match_id];
+            sram_use->type = Use::EXACT;
+        } else {
+            // FIXME already have a memuse for the table, but no TIND or EXACT -- its probably
+            // a TERNARY table with no TIND, so need to allocate a TIND bus.  For now we skip
+            // this case, which will result in not outputting a bus spec, so the assembler
+            // will allocate a bus that is otherwise not in use, if it can find one
+            ternary = table->memuse->at(match_id).type == Use::TERNARY;
+        }
+    }
+    // If the table has any direct attached synth2port tables, need to force the payload
+    // match address to be invalid in case the PFE is defaulted.
+    // FIXME -- this probably belongs somewhere else?
+    for (auto at : table->table->attached) {
+        if (at->attached->direct && at->attached->is<IR::MAU::Synth2Port>()) {
+            alloc.gateway.payload_match_address = 0x7ffff;
+            break; } }
+    ordered_set<int> rows;
+    // search on rows already in use first -- FIXME for wide exact match should only be
+    // searching on rows that already use a result bus first.
+    if (sram_use)
+        for (auto &r : sram_use->row)
+            rows.insert(r.row);
+    for (int i = 0; i < SRAM_ROWS; i++)
+        rows.insert(i);
+    for (int row : rows) {
+        int bus = 0;
+        if (sram_use) {
+            for (auto &r : sram_use->row) {
+                if (r.row == row && r.result_bus >= 0) {
+                    bus = r.result_bus;
+                    break; } } }
+        for (; bus < BUS_COUNT; bus++) {
+            if ((*print_result_bus)[row][bus] &&
+                (*print_result_bus)[row][bus] != match_id.build_name())
+                continue;
+            alloc.gateway.bus_type = ternary ? Use::TIND : Use::EXACT;
+            if (payload != 0ULL || alloc.gateway.payload_match_address >= 0) {
+                if (payload_use[row][bus]) continue;
+                alloc.gateway.payload_row = row;
+                alloc.gateway.payload_unit = bus;
+                alloc.gateway.payload_value = payload;
+                payload_use[row][bus] = name; }
+            if (sram_use && !std::any_of(sram_use->row.begin(), sram_use->row.end(),
+                [row, bus](Use::Row &r) { return r.row == row && r.result_bus == bus; })) {
+                sram_use->row.emplace_back(row);
+                sram_use->row.back().result_bus = bus;
+                if (ternary)
+                    sram_use->row.back().bus = bus; }
+            if (result_bus)
+                (*result_bus)[row][bus] = result_bus_info(match_id.name, 0, logical_table);
+            (*print_result_bus)[row][bus] = match_id.build_name();
             return true;
         }
     }
@@ -3607,12 +3671,20 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
 
 
             table_alloc *payload_ta = ta->table_link ? ta->table_link : ta;
-            uint64_t payload_value = determine_payload(payload_ta);
+            uint64_t payload_value = 0;
+            if (!ta->payload_match_addr_only) {
+                // FIXME -- determine_payload assumes the payload is coming from the
+                // match table, which is not the case when we're just using a payload to
+                // supply an invalid match address to avoid running a direct table (P4C-2938)
+                // this needs cleaning up
+                payload_value = determine_payload(payload_ta); }
             bool result_bus_found = find_result_bus_gw(alloc, payload_value, u_id.build_name(),
                                                        // Change this in a little bit
                                                        payload_ta);
-            if (!(gw_found && result_bus_found))
-                return false;
+            if (!(gw_found && result_bus_found)) {
+                if (!gw_found) LOG3("  failed to find gw for " << u_id);
+                if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
+                return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me payload");
         }
     }
@@ -3641,10 +3713,11 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
             else
                 gw_found = find_unit_gw(alloc, u_id.build_name(), false);
             alloc.gateway.payload_value = 0ULL;
-            alloc.gateway.payload_bus = -1;
+            alloc.gateway.payload_unit = -1;
             alloc.gateway.payload_row = -1;
-            if (!gw_found)
-                return false;
+            if (!gw_found) {
+                LOG3("  failed to find gw for " << u_id);
+                return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me normal");
         }
     }
@@ -3664,8 +3737,10 @@ bool Memories::allocate_all_no_match_gw() {
             bool unit_found = find_unit_gw(alloc, u_id.build_name(), false);
             bool result_bus_found = find_result_bus_gw(alloc, 0ULL, u_id.build_name(), ta,
                                                        u_id.logical_table);
-            if (!(unit_found && result_bus_found))
-                return false;
+            if (!(unit_found && result_bus_found)) {
+                if (!unit_found) LOG3("  failed to find gw for " << u_id);
+                if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
+                return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me no match");
         }
     }
@@ -3728,9 +3803,24 @@ bool Memories::allocate_all_gw() {
                 break;
             }
         }
+        if (pushed_back) continue;
 
-        if (!pushed_back)
-            normal_gws.push_back(ta_gw);
+        if (auto *mt = ta_gw->table_link ? ta_gw->table_link->table : nullptr) {
+            for (auto at : mt->attached) {
+                if (at->attached->direct && at->attached->is<IR::MAU::Synth2Port>()) {
+                    /* direct attached synth2port tables will use the match address, so we
+                     * need to make sure the gateway has an invalid match address in case
+                     * it wants to completely override the linked match table
+                     * FIXME -- the direct attached could in theory use a PFE in the match
+                     * overhead, in which case this would not be necessary.  Hard to know
+                     * when we could/should do that -- in the match table layout perhaps? */
+                    payload_gws.push_back(ta_gw);
+                    ta_gw->payload_match_addr_only = true;
+                    pushed_back = true;
+                    break; } } }
+        if (pushed_back) continue;
+
+        normal_gws.push_back(ta_gw);
     }
 
     for (auto *ta_nm : no_match_hit_tables) {
@@ -3786,11 +3876,13 @@ bool Memories::allocate_all_no_match_miss() {
             alloc.used_by = ta->table->externalName();
             bool found = false;
             for (int i = 0; i < SRAM_ROWS; i++) {
-                for (int j = 0; j < BUS_COUNT; j++) {
+                for (int j = 0; j < BUS_COUNT && j < PAYLOAD_COUNT; j++) {
                     if (payload_use[i][j]) continue;
                     if (tind_bus[i][j]) continue;
                     alloc.row.emplace_back(i, j);
+                    alloc.row.back().result_bus = j;
                     tind_bus[i][j] = u_id.build_name();
+                    payload_use[i][j] = u_id.build_name();
                     found = true;
                     break;
                 }
@@ -3824,12 +3916,13 @@ bool Memories::allocate_all_tind_result_bus_tables() {
             BUG_CHECK(alloc.type == Use::TERNARY, "Tind result bus not on a ternary table?");
             bool found = false;
             for (int i = 0; i < SRAM_ROWS; i++) {
-                for (int j = 0; j < BUS_COUNT; j++) {
+                for (int j = 0; j < BUS_COUNT && j < PAYLOAD_COUNT; j++) {
                     if (payload_use[i][j]) continue;
                     if (tind_bus[i][j]) continue;
                     // Add a tind result bus node
                     alloc.tind_result_bus = i * BUS_COUNT + j;
                     tind_bus[i][j] = u_id.build_name();
+                    payload_use[i][j] = u_id.build_name();
                     found = true;
                     break;
                 }
@@ -4038,6 +4131,8 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &, update_ty
                     map_inuse[r.row] &= ~(1 << col); } }
         if (gw_use) {
             fn((*gw_use)[r.row][gateway.unit], UPDATE_GATEWAY);
+            if (gateway.payload_row >= 0)
+                fn(mem.payload_use[gateway.payload_row][gateway.payload_unit], UPDATE_PAYLOAD);
         }
     }
     if (mapuse) {
@@ -4156,5 +4251,13 @@ std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta) {
     for (auto &u : *ta.memuse)
         out << "(" << u.first.build_name() << ", " << use_type_to_str[u.second.type] << ") ";
     out << "]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const safe_vector<Memories::table_alloc *> &v) {
+    const char *sep = "";
+    for (auto *ta : v) {
+        out << sep << ta->table->name;
+        sep = ", "; }
     return out;
 }

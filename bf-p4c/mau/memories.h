@@ -30,7 +30,8 @@ struct Memories {
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;
     static constexpr int GATEWAYS_PER_ROW = 2;
-    static constexpr int BUS_COUNT = 2;
+    static constexpr int BUS_COUNT = 2;         // search/result busses per row
+    static constexpr int PAYLOAD_COUNT = 2;     // payload per row
     static constexpr int STATS_ALUS = 4;
     static constexpr int METER_ALUS = 4;
     static constexpr int MAX_DATA_SWBOX_ROWS = 5;
@@ -125,15 +126,15 @@ struct Memories {
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, SRAM_ROWS, STASH_UNITS>           stash_use;
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
-    Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
-    Alloc2D<result_bus_info, SRAM_ROWS, 2>             sram_result_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_result_bus;
+    Alloc2D<cstring, SRAM_ROWS, GATEWAYS_PER_ROW>      gateway_use;
+    Alloc2D<search_bus_info, SRAM_ROWS, BUS_COUNT>     sram_search_bus;
+    Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_search_bus;
+    Alloc2D<result_bus_info, SRAM_ROWS, BUS_COUNT>     sram_result_bus;
+    Alloc2D<cstring, SRAM_ROWS, BUS_COUNT>             sram_print_result_bus;
     // int tcam_group_use[TCAM_ROWS][TCAM_COLUMNS] = {{-1}};
     int tcam_midbyte_use[TCAM_ROWS/2][TCAM_COLUMNS] = {{-1}};
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     payload_use;
+    Alloc2D<cstring, SRAM_ROWS, PAYLOAD_COUNT>         payload_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
     Alloc1D<cstring, SRAM_ROWS>                        twoport_bus;
@@ -219,14 +220,16 @@ struct Memories {
         };
         struct Gateway {
             uint64_t payload_value = 0ULL;
+            int      payload_match_address = -1;
             int      payload_row = -1;
-            int      payload_bus = -1;
+            int      payload_unit = -1;
             int      unit = -1;
             type_t bus_type;
             void clear() {
                 payload_value = 0ULL;
+                payload_match_address = -1;
                 payload_row = -1;
-                payload_bus = -1;
+                payload_unit = -1;
                 unit = -1;
             }
         };
@@ -272,7 +275,8 @@ struct Memories {
         int rams_required() const;
         bool separate_search_and_result_bus() const;
         // depth in memory units + mask to use for memory selection per way
-        enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY, UPDATE_RESULT_BUS };
+        enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,
+                             UPDATE_PAYLOAD, UPDATE_RESULT_BUS };
         void visit(Memories &mem, std::function<void(cstring &, update_type_t)>) const;
     };
 
@@ -299,6 +303,9 @@ struct Memories {
         int stage_table = -1;
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
+        // FIXME -- hack to avoid problems in payload calculation when the only reason we
+        // have a payload is to set the match address for P4C-2938
+        bool payload_match_addr_only = false;
         table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,
                     std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
@@ -730,6 +737,7 @@ struct Memories {
                    attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
+    friend std::ostream &operator<<(std::ostream &, const safe_vector<Memories::table_alloc *> &);
 };
 
 template<int R, int C>

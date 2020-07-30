@@ -22,7 +22,9 @@ Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
 void HashActionTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
-        if (!common_setup(kv, data, P4Table::MatchEntry)) {
+        if (kv.key == "search_bus" || kv.key == "result_bus") {
+            // already dealt with in Table::setup_layout via common_init_setup
+        } else if (!common_setup(kv, data, P4Table::MatchEntry)) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); } }
     if (!action.set() && !actions)
@@ -47,8 +49,14 @@ void HashActionTable::pass1() {
 void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
-    if (layout.size() != 1 || layout[0].bus < 0)
+    if (layout.size() != 1 || (layout[0].bus < 0 && layout[0].result_bus < 0))
         error(lineno, "Need explicit row/bus in hash_action table");
+    else if (layout[0].bus >= 0 && layout[0].result_bus >= 0)
+        error(lineno, "Can't have both bus and result_bus in hash_action table");
+    else if (layout[0].bus < 0)
+        layout[0].bus = layout[0].result_bus;
+    else if (layout[0].result_bus < 0)
+        layout[0].result_bus = layout[0].bus;
     determine_word_and_result_bus();
     if (input_xbar)
         input_xbar->pass2();

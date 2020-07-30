@@ -1442,6 +1442,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     std::vector<int>            payload_map;
     int                         match_address = -1;
     int                         gw_unit = -1;
+    int                         payload_unit = -1;
     enum range_match_t { NONE, DC_2BIT, DC_4BIT }
                                 range_match = NONE;
     std::string                 gateway_name;

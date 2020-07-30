@@ -583,7 +583,7 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
 }
 
 void SRamMatchTable::common_sram_checks() {
-    alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
+    alloc_rams(false, stage->sram_use, &stage->sram_search_bus_use);
     if (layout_size() > 0 && !format)
         error(lineno, "No format specified in table %s", name());
     if (!action.set() && !actions)
@@ -595,7 +595,7 @@ void SRamMatchTable::common_sram_checks() {
 
 void SRamMatchTable::pass1() {
     LOG1("### SRam match table " << name() << " pass1");
-    alloc_busses(stage->sram_match_bus_use);
+    alloc_busses(stage->sram_search_bus_use);
     if (format) {
         verify_format();
         setup_ways();
@@ -751,9 +751,14 @@ void SRamMatchTable::determine_word_and_result_bus() {
 
     for (auto &row : layout) {
         bool result_bus_needed = false;
-        for (auto group_in_word : word_info.at(row.word)) {
-            if (group_info[group_in_word].result_bus_word == row.word)
-                result_bus_needed = true;
+        if (row.word < 0) {
+            // row with no rams -- assume it needs a result bus for the payload
+            result_bus_needed = true;
+        } else {
+            for (auto group_in_word : word_info.at(row.word)) {
+                if (group_info[group_in_word].result_bus_word == row.word)
+                    result_bus_needed = true;
+            }
         }
         if (!row.result_bus_initialized()) {
             if (result_bus_needed)
@@ -763,6 +768,13 @@ void SRamMatchTable::determine_word_and_result_bus() {
         } else if (!row.result_bus_used() && result_bus_needed) {
             error(row.lineno, "Row %d: Bus %d requires a result bus, but has not been allocated "
                               "one", row.row, row.bus);
+        }
+        if (row.result_bus >= 0) {
+            auto *old = stage->match_result_bus_use[row.row][row.result_bus];
+            if (old && old != this)
+                error(row.lineno, "inconsistent use of match result bus %d on row %d between "
+                      "table %s and %s", row.row, row.result_bus, name(), old->name());
+            stage->match_result_bus_use[row.row][row.result_bus] = this;
         }
     }
 }
@@ -953,59 +965,60 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
             }
         }
 
-        for (unsigned word_group = 0; format && word_group < word_info[word].size(); word_group++) {
-            int group = word_info[word][word_group];
-            if (group_info[group].result_bus_word == (int)word) {
-                BUG_CHECK(r_bus >= 0);
-                if (format->immed) {
-                    BUG_CHECK(format->immed->by_group[group]->bit(0)/128U == word);
-                    merge.mau_immediate_data_exact_shiftcount[r_bus][word_group] =
-                        format->immed->by_group[group]->bit(0) % 128; }
-                if (instruction) {
-                    int shiftcount = 0;
-                    if (auto field = instruction.args[0].field()) {
-                        assert(field->by_group[group]->bit(0)/128U == word);
-                        shiftcount = field->by_group[group]->bit(0) % 128U;
-                    } else if (auto field = instruction.args[1].field()) {
-                        assert(field->by_group[group]->bit(0)/128U == word);
-                        shiftcount = field->by_group[group]->bit(0) % 128U;
+        if (format && word < word_info.size()) {
+            for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
+                int group = word_info[word][word_group];
+                if (group_info[group].result_bus_word == (int)word) {
+                    BUG_CHECK(r_bus >= 0);
+                    if (format->immed) {
+                        BUG_CHECK(format->immed->by_group[group]->bit(0)/128U == word);
+                        merge.mau_immediate_data_exact_shiftcount[r_bus][word_group] =
+                            format->immed->by_group[group]->bit(0) % 128; }
+                    if (instruction) {
+                        int shiftcount = 0;
+                        if (auto field = instruction.args[0].field()) {
+                            assert(field->by_group[group]->bit(0)/128U == word);
+                            shiftcount = field->by_group[group]->bit(0) % 128U;
+                        } else if (auto field = instruction.args[1].field()) {
+                            assert(field->by_group[group]->bit(0)/128U == word);
+                            shiftcount = field->by_group[group]->bit(0) % 128U;
+                        }
+                        merge.mau_action_instruction_adr_exact_shiftcount[r_bus][word_group]
+                            = shiftcount;
                     }
-                    merge.mau_action_instruction_adr_exact_shiftcount[r_bus][word_group]
-                        = shiftcount;
                 }
-            }
-            /* FIXME -- factor this where possible with ternary match code */
-            if (action) {
-                if (group_info[group].result_bus_word == (int)word) {
-                    BUG_CHECK(r_bus >= 0);
-                    merge.mau_actiondata_adr_exact_shiftcount[r_bus][word_group]
-                        = action->determine_shiftcount(action, group, word, 0);
+                /* FIXME -- factor this where possible with ternary match code */
+                if (action) {
+                    if (group_info[group].result_bus_word == (int)word) {
+                        BUG_CHECK(r_bus >= 0);
+                        merge.mau_actiondata_adr_exact_shiftcount[r_bus][word_group]
+                            = action->determine_shiftcount(action, group, word, 0);
+                    }
                 }
-            }
-            if (attached.selector) {
-                if (group_info[group].result_bus_word == (int)word) {
-                    BUG_CHECK(r_bus >= 0);
-                    auto sel = get_selector();
-                    merge.mau_meter_adr_exact_shiftcount[r_bus][word_group] =
-                        sel->determine_shiftcount(attached.selector, group, word, 0);
-                    merge.mau_selectorlength_shiftcount[0][r_bus] =
-                        sel->determine_length_shiftcount(attached.selector_length, group, word);
-                    merge.mau_selectorlength_mask[0][r_bus] =
-                        sel->determine_length_mask(attached.selector_length);
-                    merge.mau_selectorlength_default[0][r_bus] =
-                        sel->determine_length_default(attached.selector_length);
+                if (attached.selector) {
+                    if (group_info[group].result_bus_word == (int)word) {
+                        BUG_CHECK(r_bus >= 0);
+                        auto sel = get_selector();
+                        merge.mau_meter_adr_exact_shiftcount[r_bus][word_group] =
+                            sel->determine_shiftcount(attached.selector, group, word, 0);
+                        merge.mau_selectorlength_shiftcount[0][r_bus] =
+                            sel->determine_length_shiftcount(attached.selector_length, group, word);
+                        merge.mau_selectorlength_mask[0][r_bus] =
+                            sel->determine_length_mask(attached.selector_length);
+                        merge.mau_selectorlength_default[0][r_bus] =
+                            sel->determine_length_default(attached.selector_length);
+                    }
                 }
-
-            }
-            if (idletime) {
-                if (group_info[group].result_bus_word == (int)word) {
-                    BUG_CHECK(r_bus >= 0);
-                    merge.mau_idletime_adr_exact_shiftcount[r_bus][word_group] =
-                        idletime->direct_shiftcount();
+                if (idletime) {
+                    if (group_info[group].result_bus_word == (int)word) {
+                        BUG_CHECK(r_bus >= 0);
+                        merge.mau_idletime_adr_exact_shiftcount[r_bus][word_group] =
+                            idletime->direct_shiftcount();
+                    }
                 }
+                if (r_bus >= 0)
+                    write_attached_merge_regs(regs, r_bus, word, word_group);
             }
-            if (r_bus >= 0)
-                write_attached_merge_regs(regs, r_bus, word, word_group);
         }
         for (auto col : row.cols) {
             int word_group = 0;

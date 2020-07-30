@@ -700,7 +700,8 @@ void Visualization::gen_exm_search_buses(unsigned int stageNo, Util::JsonObject 
             {
                 auto row = memuse.row[0].row;
                 auto bus = memuse.row[0].bus;
-                int id = 2 * row + bus;
+                if (bus < 0) break;
+                int id = 2 * row + (bus & 1);
                 Util::JsonArray *usages = nullptr;
                 auto it = id_to_usages.find(id);
                 if (it != id_to_usages.end()) {
@@ -750,8 +751,11 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
             case Memories::Use::ATCAM:
             {
                 auto row = memuse.row[0].row;
-                auto bus = memuse.row[0].bus;
-                int id = 2 * row + bus;
+                auto bus = memuse.row[0].result_bus;
+                if (bus < 0)
+                    bus = memuse.row[0].bus;
+                if (bus < 0) break;
+                int id = 2 * row + (bus & 1);
                 Util::JsonArray *usages = nullptr;
                 auto it = id_to_usages.find(id);
                 if (it != id_to_usages.end()) {
@@ -773,10 +777,10 @@ void Visualization::gen_exm_result_buses(unsigned int stageNo, Util::JsonObject 
                 auto row = memuse.row[0].row;
                 auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?
-                if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
+                if (memuse.gateway.payload_unit == 0 || memuse.gateway.payload_unit == 1) {
                     auto *exm_result_usage = new Util::JsonObject();
                     auto result_bus_unit = 2 * memuse.gateway.payload_row;
-                    result_bus_unit += memuse.gateway.payload_bus;
+                    result_bus_unit += memuse.gateway.payload_unit;
                     exm_result_usage->emplace("id", new Util::JsonValue(result_bus_unit));
                     auto *usages = new Util::JsonArray;
                     exm_result_usage->emplace("usages", usages);
@@ -845,9 +849,9 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
                 // auto row = memuse.row[0].row;
                 // auto unit = memuse.gateway.unit;
                 // FIXME: How do we know if this is a tind bus or exm bus?
-                if (memuse.gateway.payload_bus == 0 || memuse.gateway.payload_bus == 1) {
+                if (memuse.gateway.payload_unit == 0 || memuse.gateway.payload_unit == 1) {
                     auto result_bus_unit = 2 * memuse.gateway.payload_row +
-                        memuse.gateway.payload_bus;
+                        memuse.gateway.payload_unit;
                     Util::JsonArray *usages = nullptr;
                     auto it = id_to_usages.find(result_bus_unit);
                     if (it != id_to_usages.end()) {
