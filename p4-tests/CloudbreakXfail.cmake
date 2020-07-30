@@ -475,3 +475,8 @@ p4c_add_xfail_reason("tofino3"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
+
+p4c_add_xfail_reason ("tofino3"
+  "error: tofino3 supports up to 20 stages, using 23"
+  extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
+)
