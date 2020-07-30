@@ -430,3 +430,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
 )
+
+# Negative test, expected xfail
+p4c_add_xfail_reason("tofino2"
+  "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
+  extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
+)

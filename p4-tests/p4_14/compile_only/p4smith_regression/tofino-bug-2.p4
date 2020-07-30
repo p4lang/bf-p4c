@@ -24,7 +24,6 @@ header_type flanges {
     pressies : 128;
     occupy : 64;
     incisions : 64;
-    lathers : 128;
     victuals : 16 (signed, saturating);
   }
 }
@@ -110,7 +109,6 @@ field_list vinous {
 
 field_list defencelessnesss {
   orchestrating.narratives;
-  orchestrating.lathers;
   unimpressive.adjectives;
   unimpressive.ethnocentrisms;
   orchestrating.occupy;
@@ -157,8 +155,8 @@ calculated_field menaces.kaye {
   verify mindfulnesss;
 }
 
-action travestying() {
-  modify_field(ig_intr_md_for_tm.ucast_egress_port, 1);
+action travestying(val) {
+  modify_field(ig_intr_md_for_tm.ucast_egress_port, val);
 }
 
 action rasmussens() {
@@ -200,7 +198,6 @@ table sf {
     orchestrating.narratives : ternary;
     orchestrating.pressies : exact;
     orchestrating.occupy : ternary;
-    orchestrating.lathers : range;
     orchestrating.victuals : ternary;
     enchantress.prettys mask 183 : exact;
     pronged : valid;

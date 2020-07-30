@@ -165,9 +165,21 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
     }
 
     if (partitions_found) {
-        WARN_CHECK(index_found, ErrorType::WARN_MISSING,
-                   "%1%: Number of partitions specified for table %2% but will be "
-                   "ignored because no partition index specified", tbl, tbl->externalName());
+        // Check if atcam_partition_index pragma is applied
+        auto pi = annot->getSingle("atcam_partition_index")->expr.at(0)->to<IR::Expression>();
+        ERROR_CHECK(pi, ErrorType::WARN_MISSING,
+                   "%1%: atcam parition index is not present for table %2%. "
+                   "Ensure that an atcam_partition_index is added for a match key.",
+                   tbl, tbl->externalName());
+
+
+        // Check if atcam_partition_index name is consistent with the match key
+        ERROR_CHECK(index_found, ErrorType::WARN_MISSING,
+                   "%1%: Number of partitions are specified for table %2% but "
+                   "the partition index %3% is not found consistent with the exact match key. "
+                   "Ensure that the atcam_partition_index and exact match key name match, "
+                   "or add a @name annotation to the match key expression consistent with "
+                   "the partition index.", tbl, tbl->externalName(), pi);
     }
 
 #if 0

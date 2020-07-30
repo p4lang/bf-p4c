@@ -136,7 +136,6 @@ p4c_add_xfail_reason("tofino"
   "Action profile .* does not have any action data"
   extensions/p4_tests/p4_14/bf_p4c_samples/port_vlan_mapping.p4
   extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-2.p4
   testdata/p4_14_samples/const_default_action.p4
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_selector_shared-bmv2.p4
@@ -1853,4 +1852,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
+)
+
+# Negative test, expected xfail
+p4c_add_xfail_reason("tofino"
+  "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
+  extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )

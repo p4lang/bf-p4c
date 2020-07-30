@@ -92,6 +92,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test1.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match3.p4
+  extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
   extensions/p4_tests/p4_16/compile_only/brig-235.p4
   extensions/p4_tests/p4_16/compile_only/hit_miss_gw1.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1659.p4
@@ -177,6 +178,8 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
   extensions/p4_tests/p4_16/compile_only/mod_cond_variants.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2350.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2035-name.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match4.p4
   extensions/p4_tests/p4_16/stf/parser_multi_write_2.p4
   extensions/p4_tests/p4_16/stf/parser_extract_upcast.p4
