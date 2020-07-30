@@ -69,7 +69,7 @@ def prep_test_line(mTest, p4c):
     extra_args = ['"' + os.path.join(mTest.p4_path) + '"', \
         '"-o"', \
         '"' + os.path.join(mTest.out_path, p4c.name) + '"']
-    test_line += ', '.join(extra_args) + '], None),\n'
+    test_line += ', '.join(extra_args) + '], None, None),\n'
     p4c.testmatrix += test_line
     return p4c
 

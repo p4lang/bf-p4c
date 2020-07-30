@@ -15,100 +15,112 @@ tna32q_program = os.path.join(p4_16_path, 'tna_32q_2pipe/tna_32q_2pipe.p4')
 t2na_program = os.path.join(tests_dir, 'p4_16/ptf/ipv4_checksum.p4')
 p4_16_includes_dir = os.path.join(tests_dir, 'p4_16/includes')
 
-# A map of test name to: (compiler args, xfail_msg)
+# A map of test name to: (compiler args, xfail_msg, files to check for (non)existence)
 # **** Note *****
 #  that when run with -j, tests will run in parallel, so please ensure the output goes to
 #  different directories
 test_matrix = {
     # Tofino
-    'p4_16_noargs': (['-I', p4_16_includes_dir, p4_16_default], None),
+    'p4_16_noargs': (['-I', p4_16_includes_dir, p4_16_default], None, [
+            '!pipe/logs/phv_allocation_0.log', '!pipe/logs/phv_allocation_summary_0.log',
+            '!pipe/logs/phv_allocation_history_0.log' ]),  # no phv alloc logs produced
 
     # Preprocessor only
-    'p4_preprocessor_only': (['-I', p4_16_includes_dir, '-E', p4_16_default, '-o', 'p4_preprocessor_only'], None),
+    'p4_preprocessor_only': (['-I', p4_16_includes_dir, '-E', p4_16_default, '-o', 'p4_preprocessor_only'], None, None),
 
     # Tofino P4-16
     'p4_16_tna': (['--target', 'tofino', '--arch', 'tna',
-                   '-I', p4_16_path, tna_program], None),
+                   '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_debug': (['--target', 'tofino', '--arch', 'tna', '-g',
-                          '-o', 'p4_16_tna_debug', '-I', p4_16_path, tna_program], None),
+                          '-o', 'p4_16_tna_debug', '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_verbose': (['--target', 'tofino', '--arch', 'tna', '--verbose', '2',
-                          '-o', 'p4_16_tna_verbose', '-I', p4_16_path, tna_program], None),
+                          '-o', 'p4_16_tna_verbose', '-I', p4_16_path, tna_program], None, [
+                              'pipe/logs/phv_allocation_0.log', 'pipe/logs/phv_allocation_summary_0.log',
+                              '!pipe/logs/phv_allocation_history_0.log' ]), # no phv alloc history
     'p4_16_tna_parser_timing': (['--target', 'tofino', '--arch', 'tna', '--parser-timing-reports',
-                          '-o', 'p4_16_tna_parser_timing', '-I', p4_16_path, tna_program], None),
+                          '-o', 'p4_16_tna_parser_timing', '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_graphs': (['--target', 'tofino', '--arch', 'tna', '--create-graphs',
-                           '-o', 'p4_16_tna_graphs', '-I', p4_16_path, tna_program], None),
+                           '-o', 'p4_16_tna_graphs', '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_graphs_debug': (['--target', 'tofino', '--arch', 'tna', '--create-graphs', '-g',
                                  '-o', 'p4_16_tna_graphs_debug',
-                                 '-I', p4_16_path, tna_program], None),
+                                 '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_archive': (['--target', 'tofino', '--arch', 'tna', '--archive',
-                            '-o', 'p4_16_tna_archive', '-I', p4_16_path, tna_program], None),
+                            '-o', 'p4_16_tna_archive', '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_archive_debug': (['--target', 'tofino', '--arch', 'tna',
                                  '--archive', 'p4_16_tna_archive_debug', '-g',
                                  '-o', 'p4_16_tna_archive_debug',
-                                 '-I', p4_16_path, tna_program], None),
+                                 '-I', p4_16_path, tna_program], None, None),
     'p4_16_tna_archive_arg_last': (['--target', 'tofino', '--arch', 'tna',
                                     '-o', 'p4_16_tna_archive_arg_last',
                                     '-I', p4_16_path,
-                                    tna_program, '--archive'], None),
+                                    tna_program, '--archive'], None, None),
     'p4_16_tna_archive_source': (['--target', 'tofino', '--arch', 'tna', '--archive',
                                   '--archive-source', '-o', 'p4_16_tna_archive_source',
-                                  '-I', p4_16_path, tna_program], None),
+                                  '-I', p4_16_path, tna_program], None, None),
     'lrn1': (['--target', 'tofino', '--arch', 'tna', '-o', 'lrn1', p4_16_lrn1],
-                                  "PHV allocation was not successful"),
+                                  "PHV allocation was not successful", None),
 
     # Tofino 32q
     'p4_16_t32q': (['--target', 'tofino', '--arch', 'tna',
-                    '-I', p4_16_path, tna32q_program], None),
+                    '-I', p4_16_path, tna32q_program], None, None),
+    'p4_16_t32q_verbose': (['--target', 'tofino', '--arch', 'tna', '--verbose', '3',
+                    '-o', 'p4_16_t32q_verbose', '-I', p4_16_path, tna32q_program], None, [
+                        'pipeline_profile_a/logs/phv_allocation_0.log',
+                        'pipeline_profile_a/logs/phv_allocation_summary_0.log',
+                        'pipeline_profile_a/logs/phv_allocation_history_0.log',
+                        'pipeline_profile_b/logs/phv_allocation_2.log',
+                        'pipeline_profile_b/logs/phv_allocation_summary_2.log',
+                        'pipeline_profile_b/logs/phv_allocation_history_2.log']),
     'p4_16_t32q_debug': (['--target', 'tofino', '--arch', 'tna', '-g',
-                          '-o', 'p4_16_t32q_debug', '-I', p4_16_path, tna32q_program], None),
+                          '-o', 'p4_16_t32q_debug', '-I', p4_16_path, tna32q_program], None, None),
     'p4_16_t32q_graphs': (['--target', 'tofino', '--arch', 'tna', '--create-graphs',
-                           '-o', 'p4_16_t32q_graphs', '-I', p4_16_path, tna32q_program], None),
+                           '-o', 'p4_16_t32q_graphs', '-I', p4_16_path, tna32q_program], None, None),
     'p4_16_t32q_graphs_debug': (['--target', 'tofino', '--arch', 'tna', '--create-graphs', '-g',
                                  '-o', 'p4_16_t32q_graphs_debug',
-                                 '-I', p4_16_path, tna32q_program], None),
+                                 '-I', p4_16_path, tna32q_program], None, None),
     'p4_16_t32q_archive': (['--target', 'tofino', '--arch', 'tna', '--archive',
-                            '-o', 'p4_16_t32q_archive', '-I', p4_16_path, tna32q_program], None),
+                            '-o', 'p4_16_t32q_archive', '-I', p4_16_path, tna32q_program], None, None),
     'p4_16_t32q_archive_debug': (['--target', 'tofino', '--arch', 'tna',
                                   '--archive', 'p4_16_t32q_archive_debug', '-g',
                                   '-o', 'p4_16_t32q_archive_debug',
-                                  '-I', p4_16_path, tna32q_program], None),
+                                  '-I', p4_16_path, tna32q_program], None, None),
     'p4_16_v1model': (['--target', 'tofino', '--arch', 'v1model',
-                       '-I', p4_16_path, v1model_program], None),
+                       '-I', p4_16_path, v1model_program], None, None),
 
     # Tofino P4-14
-    'p4_14_noargs': (['--std', 'p4-14', '--arch', 'v1model', p4_14_program], None),
+    'p4_14_noargs': (['--std', 'p4-14', '--arch', 'v1model', p4_14_program], None, None),
     'p4_14_output': (['--std', 'p4-14', '--target', 'tofino', '--arch', 'v1model',
-                      '-o', 'p4_14_output', p4_14_program], None),
+                      '-o', 'p4_14_output', p4_14_program], None, None),
     'p4_14_debug': (['-g', '--std', 'p4-14', '--target', 'tofino', '--arch', 'v1model',
-                     '-o', 'p4_14_debug', p4_14_program], None),
+                     '-o', 'p4_14_debug', p4_14_program], None, None),
     'p4_14_verbose': (['-g', '--std', 'p4-14', '--target', 'tofino', '--arch', 'v1model',
-                       '--verbose', '2', '-o', 'p4_14_verbose', p4_14_program], None),
+                       '--verbose', '2', '-o', 'p4_14_verbose', p4_14_program], None, None),
     'p4_14_graphs': (['--create-graphs', '--std', 'p4-14',
                       '--target', 'tofino', '--arch', 'v1model',
-                      '-o', 'p4_14_graphs', p4_14_program], None),
+                      '-o', 'p4_14_graphs', p4_14_program], None, None),
     'p4_14_graphs_debug': (['--create-graphs', '-g', '--std', 'p4-14',
                             '--target', 'tofino', '--arch', 'v1model',
-                            '-o', 'p4_14_graphs_debug', p4_14_program], None),
+                            '-o', 'p4_14_graphs_debug', p4_14_program], None, None),
     'p4_14_archive': (['--target', 'tofino', '--archive', '--std', 'p4-14',
                        '--target', 'tofino', '--arch', 'v1model',
-                       '-o', 'p4_14_archive', p4_14_program], None),
+                       '-o', 'p4_14_archive', p4_14_program], None, None),
     'p4_14_archgraphs': (['--archive', 'p4_14_archgraphs', '--create-graphs', '--std', 'p4-14',
                           '--target', 'tofino', '--arch', 'v1model', '-o', 'p4_14_archgraphs',
-                          p4_14_program], None),
+                          p4_14_program], None, None),
     'p4_14_not_v1': (['--std', 'p4-14', '-o', 'p4_14_not_v1', p4_14_program],
-                     'Architecture tna is not supported in p4-14, use v1model'),
+                     'Architecture tna is not supported in p4-14, use v1model', None),
 
     # JBay P4-14 emulation
     'p4_14_jbay': (['--std', 'p4-14',
-                    '--target', 'tofino2', '--arch', 'v1model', p4_14_program], None),
-    'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir, t2na_program], None),
-    'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None),
-    # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None),
+                    '--target', 'tofino2', '--arch', 'v1model', p4_14_program], None, None),
+    'p4_16_jbay_t2na': (['--target', 'tofino2', '--arch', 't2na', '-I', p4_16_includes_dir, t2na_program], None, None),
+    'p4_16_jbay_v1model': (['--target', 'tofino2', '--arch', 'v1model', v1model_program], None, None),
+    # 'p4_16_jbay_tna': (['--target', 'tofino2', '--arch', 'tna', tna_program], None, None),
 
     # Tofino2H
-    'tofino2h' : (['--target', 'tofino2h', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2h', t2na_program], None),
+    'tofino2h' : (['--target', 'tofino2h', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2h', t2na_program], None, None),
     # Tofino2M
-    'tofino2m' : (['--target', 'tofino2m', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2m', t2na_program], None),
+    'tofino2m' : (['--target', 'tofino2m', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2m', t2na_program], None, None),
     # Tofino2U
-    'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2u', t2na_program], None),
+    'tofino2u' : (['--target', 'tofino2u', '--arch', 't2na', '-g', '-I', p4_16_includes_dir, '-o', 'tofino2u', t2na_program], None, None),
 }

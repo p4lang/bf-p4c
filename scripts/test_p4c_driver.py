@@ -317,9 +317,32 @@ class Test:
         # success
         # if we either did not have a resource file, or all the stages check out.
 
-    def checkTest(self, options):
-        """Check that the generated output is correct.
+    def checkOutputFiles(self, args, file_list):
+        """
+        If third item of the test_matrix tuple is not None, but List
+        check (non)existence of files Listed. File path prefixed
+        with ! symbol means check non-existence.
+        """
+        if file_list is None: return
 
+        for file in file_list:
+            fileShouldNotExist = False
+            if file[0] is '!':
+                file = file[1:]
+                fileShouldNotExist = True
+            path = os.path.join(args.output_directory, file)
+
+            if fileShouldNotExist and os.path.isfile(path):
+                raise TestError(
+                    "ERROR: File {} exists (and should not)".format(path))
+            elif not fileShouldNotExist and not os.path.isfile(path):
+                raise TestError(
+                    "ERROR: File {} does not exist".format(path))
+
+    def checkTest(self, options, file_list):
+        """
+        Check that the generated output is correct.
+        file_list contains list of files to check for (non)existence
         """
         if self._dry_run: return 0 # nothing to check if we didn't run
 
@@ -330,6 +353,7 @@ class Test:
             self.checkGraphs(args)
             self.checkArchive(args)
             self.checkMAUStagesForTarget(args)
+            self.checkOutputFiles(args, file_list)
         except TestError as e:
             print("********************", file=sys.stderr)
             print("Error when checking output", file=sys.stderr)
@@ -358,7 +382,7 @@ class Test:
         return 0
 
 
-    def runTest(self, options, xfail_msg = None):
+    def runTest(self, options, xfail_msg = None, file_list = None):
         """Run an individual test using the options and if the run is
         successful check the outputs.
 
@@ -367,7 +391,7 @@ class Test:
         """
         rcCode = self.runCompiler(options, xfail_msg)
         #if rc == 0 and xfail_msg is None:
-        ctCode = self.checkTest(options)
+        ctCode = self.checkTest(options, file_list)
         if rcCode == 0 and ctCode == 0 and xfail_msg is None:
             return "PASS"
         elif ctCode != 0: return "VALIDATION_FAIL"
@@ -439,12 +463,12 @@ test_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../p4-tests
 tests_file = args.testfile or os.path.join(test_dir, "p4c_driver_tests.py")
 test_matrix = load_test_file(tests_file)
 
-def runOneTest(test_runner, test_name, args, xfail_msg):
+def runOneTest(test_runner, test_name, args, xfail_msg, file_list):
     """Run a test and print the status
 
     """
     print('Starting', test_name, '......')
-    rc = test_runner.runTest(args, xfail_msg)
+    rc = test_runner.runTest(args, xfail_msg, file_list)
     print(rc, ':', test_name)
     if rc == "PASS" or rc == "XFAIL": return 0
     else: return 1
@@ -468,7 +492,7 @@ failed = Queue()
 test_runner = Test(args)
 
 def worker(test_name):
-    rc = runOneTest(test_runner, test_name, test_matrix[test_name][0], test_matrix[test_name][1])
+    rc = runOneTest(test_runner, test_name, test_matrix[test_name][0], test_matrix[test_name][1], test_matrix[test_name][2])
     if rc != 0:
         failed.put(test_name)
     else:
