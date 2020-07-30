@@ -49,6 +49,7 @@ struct RightShiftPacketRVal : public Modifier {
 
 class ComputeMergeableState : public ParserInspector {
     using State = IR::BFN::ParserState;
+    std::set<cstring> loop_header;
 
  public:
     explicit ComputeMergeableState(const CollectStateUses& uses)
@@ -57,6 +58,14 @@ class ComputeMergeableState : public ParserInspector {
  private:
     void postorder(const IR::BFN::ParserState* state) {
         // If branching, cannot fold in any children node.
+        if (state->dontMerge)
+            return;
+        for (auto t : state->transitions) {
+            if (t->loop.size()) {
+                loop_header.insert(t->loop);
+                return;
+            }
+        }
         if (state->transitions.size() > 1)
             return;
 
@@ -66,8 +75,14 @@ class ComputeMergeableState : public ParserInspector {
 
         auto* transition = *state->transitions.begin();
         auto* next_state = transition->next;
-
         if (!next_state)
+            return;
+
+        // Dont merge loop header with its previous state
+        if (loop_header.count(next_state->name)) {
+            return;
+        }
+        if (next_state->dontMerge)
             return;
 
         if (!is_dont_care(transition->value))
@@ -85,11 +100,9 @@ class ComputeMergeableState : public ParserInspector {
             if (stmt->is<IR::BFN::ParserCounterLoadPkt>())
                 return;
         }
-
         std::vector<const State*> state_chain = getStateChain(next_state);
 
         LOG4("Add " << state->name << " to merge chain");
-
         state_chain.push_back(state);
         state_chains[state] = state_chain;
         state_chains.erase(next_state);

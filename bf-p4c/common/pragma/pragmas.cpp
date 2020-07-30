@@ -492,6 +492,11 @@ const char *PragmaMode::name = "mode";  // FIXME
 const char *PragmaMode::description = "To be documented";
 const char *PragmaMode::help = "To be documented";
 
+const char *PragmaDontMerge::name = "dontmerge";
+const char *PragmaDontMerge::description = "The specific parser state will not be merged with "
+                                           "any other state";
+const char *PragmaDontMerge::help = "@dontmerge gress state state_name";
+
 const char *PragmaNotExtractedInEgress::name = "not_extracted_in_egress";  // FIXME
 const char *PragmaNotExtractedInEgress::description = "To be documented";
 const char *PragmaNotExtractedInEgress::help = "To be documented";

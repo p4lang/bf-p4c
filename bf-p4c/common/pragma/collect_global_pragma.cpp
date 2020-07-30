@@ -71,7 +71,9 @@ bool CollectGlobalPragma::preorder(const IR::Annotation *annotation) {
                                        g_global_pragma_names->end(), pragma_name)
                              != g_global_pragma_names->end());
     if (is_global_pragma) {
-        global_pragmas_.push_back(annotation); }
+        global_pragmas_.push_back(annotation);
+        LOG1("      Adding global annotation: " << annotation);
+    }
     return false;
 }
 

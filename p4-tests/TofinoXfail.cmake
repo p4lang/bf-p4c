@@ -339,6 +339,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1412-bmv2.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue2248.p4
+  testdata/p4_16_samples/issue2330-1.p4
+  testdata/p4_16_samples/issue2330.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1063,6 +1065,8 @@ p4c_add_xfail_reason("tofino"
 # P4C-539
 p4c_add_xfail_reason("tofino"
   "error: .*: declaration not found"
+  testdata/p4_16_samples/issue2201-1-bmv2.p4
+  testdata/p4_16_samples/issue2201-bmv2.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue1768-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
@@ -1852,6 +1856,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expecting error as part of -ve test of filter get with action"
+  p4_16_programs_tna_ternary_match
+)
+
+p4c_add_xfail_reason("tofino"
+  "error -2 thrown"
+  testdata/p4_16_samples/psa-meter7-bmv2.p4
 )
 
 # Negative test, expected xfail

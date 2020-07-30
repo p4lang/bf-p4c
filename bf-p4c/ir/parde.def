@@ -422,6 +422,9 @@ class ParserState : Unit {
     /// If true, extract at stridded offset on state re-entry
     bool stride = false;
 
+    // If true, do not merge this state with any other state
+    bool dontMerge = false;
+
     inline Vector<ParserPrimitive> statements;
     inline Vector<Select> selects;
     inline Vector<Transition> transitions;

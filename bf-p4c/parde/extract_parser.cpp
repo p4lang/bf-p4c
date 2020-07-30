@@ -646,6 +646,14 @@ GetBackendParser::createBackendParser() {
             backendState->stride = true;
             LOG3("mark " << state->name << " as strided");
         }
+        if (auto dontmerge = state->getAnnotation("dontmerge")) {
+            if (dontmerge->expr.size()) {
+                auto gress = dontmerge->expr[0]->to<IR::StringLiteral>();
+                if (gress->value == toString(parser->thread)) {
+                    backendState->dontMerge = true;
+                }
+            }
+        }
     }
 
     // 2. resolve header stack indices if graph has no loops
