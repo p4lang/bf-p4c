@@ -1079,6 +1079,8 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/static_entries_const_prop.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 
