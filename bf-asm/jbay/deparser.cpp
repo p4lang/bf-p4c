@@ -223,15 +223,6 @@ JBAY_SIMPLE_DIGEST(INGRESS, pktgen, regs.dprsrreg.inp.ipp.ingr.pgen_tbl,
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_pgen_len, disable_) \
     M(NO, , regs.dprsrreg.inp.ipp.ingr.m_resub_sel, disable_)
 
-bool check_chunk(int lineno, unsigned chunk) {
-    const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
-    if (chunk >= TOTAL_CHUNKS) {
-        error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
-        return false;
-    };
-    return true; 
-}
-
 // Compiler workaround for TOF2LAB-44, skip certain chunk indices
 void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
     if (options.tof2lab44_workaround) {
@@ -240,7 +231,111 @@ void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
         };
     
         while (skipped_chunks.count(chunk_index)) chunk_index++;
-        check_chunk(lineno, chunk_index);
+    }
+}
+
+// INVARIANT: check_chunk is idempotent.
+bool check_chunk(int lineno, unsigned& chunk) {
+    tof2lab44_workaround(lineno, chunk);
+
+    const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
+    if (chunk >= TOTAL_CHUNKS) {
+        error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
+        return false;
+    };
+    return true;
+}
+
+/// A callback to write a PHV, constant, or checksum chunk to the field dictionary.
+using WriteChunk = std::function<void(unsigned & /* chunk_index */ ,
+                                      const Phv::Slice & /* prev_pov */ ,
+                                      int /* prev_entry_encoded */ ,
+                                      int /* entry_lineno */ ,
+                                      const Phv::Ref & /* entry_pov */ ,
+                                      Deparser::FDEntry::Base * /* entry_what */ ,
+                                      unsigned /* byte */ ,
+                                      unsigned /* size */ )>;
+
+/// A callback to finish writing a PHV, constant, or checksum chunk to the field dictionary.
+using FinishChunk = std::function<void(unsigned /* chunk_index */ ,
+                                       const Phv::Slice & /* pov_bit */ ,
+                                       unsigned /* byte */ )>;
+
+/// A callback for writing a CLOT to the field dictionary. This increments the chunk index if the
+/// CLOT spans multiple chunks.
+using WriteClot = std::function<void(unsigned & /* chunk_index */ ,
+                                     int /* segment_tag */ ,
+                                     int /* clot_tag */ ,
+                                     const Phv::Ref & /* pov_bit */ ,
+                                     Deparser::FDEntry::Clot * /* clot */ )>;
+
+/// Implements common control functionality for outputting field dictionaries and field dictionary
+/// slices.
+template<class POV, class DICT>
+void output_jbay_field_dictionary_helper(int lineno,
+                                         POV &pov,
+                                         DICT &dict,
+                                         WriteChunk write_chunk,
+                                         FinishChunk finish_chunk,
+                                         WriteClot write_clot) {
+    const unsigned CHUNK_SIZE = Target::JBay::DEPARSER_CHUNK_SIZE;
+    const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
+    const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
+    const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
+    unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
+    Phv::Slice prev_pov;
+    int prev = -1;
+
+    // INVARIANT: check_chunk should be called immediately before doing anything with a chunk.
+    // Because check_chunk is idempotent, it is fine to call it on a chunk that has previously been
+    // checked.
+
+    for (auto &ent : dict) {
+        auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
+        // FIXME -- why does the following give an error from gcc?
+        // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
+        unsigned size = ent.what->size();
+
+        // Finish the current chunk if needed.
+        if (byte && (clot || byte + size > CHUNK_SIZE ||
+                     (prev_pov && *ent.pov != prev_pov))) {
+            if (!check_chunk(lineno, ch)) break;
+
+            finish_chunk(ch++, prev_pov, byte);
+            byte = 0;
+        }
+
+        if (clot) {
+            // Start a new group if needed. Each group has a maximum number of CLOTs that can be
+            // deparsed, and CLOTs cannot span multiple groups.
+            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
+            auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+            bool out_of_chunks_in_group =
+                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
+            if (out_of_clots_in_group || out_of_chunks_in_group) {
+                ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
+            }
+
+            // Write the CLOT to the next segment in the current group.
+            if (!check_chunk(lineno, ch)) break;
+            int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
+            int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
+            write_clot(ch, seg_tag, clot_tag, ent.pov, clot);
+
+            prev = -1;
+        } else {
+            // Phv, Constant, or Checksum
+            if (!check_chunk(lineno, ch)) break;
+            write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov, ent.what, byte, size);
+            byte += size;
+            prev = ent.what->encode();
+        }
+        prev_pov = *ent.pov;
+    }
+
+    if (byte > 0) {
+        if (check_chunk(lineno, ch))
+            finish_chunk(ch, prev_pov, byte);
     }
 }
 
@@ -248,6 +343,7 @@ void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
 template<class REGS, class POV_FMT, class POV, class DICT>
 void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                                   POV &pov, DICT &dict) {
+    // Initialize pov_layout.
     unsigned byte = 0;
     for (auto &r : pov) {
         for (int bits = 0; bits < r.first->size; bits += 8) {
@@ -256,197 +352,154 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             pov_layout[byte++] = r.first->deparser_id(); } }
     while (byte < pov_layout.size())
         pov_layout[byte++] = 0xff;
-    // DANGER -- this code and output_jbay_field_dictionary_slice below must match exactly
-    const unsigned CHUNK_SIZE = Target::JBay::DEPARSER_CHUNK_SIZE;
-    const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
-    const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
-    const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    unsigned ch = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
-    byte = 0;
-    Phv::Slice prev_pov;
-    int prev = -1;
 
-    for (auto &ent : dict) {
-        if (!check_chunk(lineno, ch)) break;
-        auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
-        // FIXME -- why does the following give an error from gcc?
-        // auto *clot = ent.what->to<Deparser::FDEntry::Clot>();
-        unsigned size = ent.what->size();
-        if (byte && (clot || byte + size > CHUNK_SIZE ||
-                     (prev_pov && *ent.pov != prev_pov))) {
-            regs.chunk_info[ch].chunk_vld = 1;
-            regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
-            regs.chunk_info[ch].seg_vld = 0;
-            regs.chunk_info[ch].seg_slice = byte & 7;
-            regs.chunk_info[ch].seg_sel = byte >> 3;
-            ++ch;
-            if (!check_chunk(lineno, ch)) break;
-            tof2lab44_workaround(lineno, ch);
-            byte = 0; }
-        if (clot) {
-            // Start a new group if needed. Each group has a maximum number of CLOTs that can be
-            // deparsed, and CLOTs cannot span multiple groups.
-            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
-            auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
-            bool out_of_chunks_in_group =
-                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
-            if (out_of_clots_in_group || out_of_chunks_in_group) {
-                ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
-                if (!check_chunk(lineno, ch)) break;
-                tof2lab44_workaround(lineno, ch);
-            }
+    // Declare some callback functions, and then delegate to helper.
+    auto write_chunk = [](unsigned ch,
+                          const Phv::Slice& prev_pov,
+                          int prev,
+                          int ent_lineno,
+                          const Phv::Ref &ent_pov,
+                          Deparser::FDEntry::Base *ent_what,
+                          unsigned byte,
+                          unsigned size) {
+        // Just do an error check here. Defer actual writing to finish_chunk.
+        if (dynamic_cast<Deparser::FDEntry::Phv *>(ent_what) && prev_pov == *ent_pov &&
+            int(ent_what->encode()) == prev && (size & 6))
+            error(ent_lineno, "16 and 32-bit container cannot be repeatedly deparsed");
+    };
 
-            int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
-            int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-            regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;
-            for (int i = 0; i < clot->length; i += 8, ++ch) {
-                if (!check_chunk(lineno, ch)) break;
-                tof2lab44_workaround(lineno, ch);
-                if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
-                    seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-                    regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
-                regs.chunk_info[ch].chunk_vld = 1;
-                regs.chunk_info[ch].pov = pov.at(&ent.pov->reg) + ent.pov->lo;
-                regs.chunk_info[ch].seg_vld = 1;
-                regs.chunk_info[ch].seg_sel = seg_tag;
-                regs.chunk_info[ch].seg_slice = i/8U;
-            }
-            if (!check_chunk(lineno, ch)) break;
-            tof2lab44_workaround(lineno, ch);
-            prev = -1;
-        } else {
-            // Phv, Constant, or Checksum
-            byte += size;
-            if (dynamic_cast<Deparser::FDEntry::Phv *>(ent.what) && prev_pov == *ent.pov &&
-                int(ent.what->encode()) == prev && (size & 6))
-                error(ent.lineno, "16 and 32-bit container cannot be repeatedly deparsed");
-            prev = ent.what->encode(); }
-        prev_pov = *ent.pov; }
-    if (byte > 0) {
-        tof2lab44_workaround(lineno, ch);
+    auto finish_chunk = [&](unsigned ch, const Phv::Slice &pov_bit, unsigned byte) {
         regs.chunk_info[ch].chunk_vld = 1;
-        regs.chunk_info[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
-        regs.chunk_info[ch].seg_vld = 0;  // no CLOTs yet
+        regs.chunk_info[ch].pov = pov.at(&pov_bit.reg) + pov_bit.lo;
+        regs.chunk_info[ch].seg_vld = 0;
         regs.chunk_info[ch].seg_slice = byte & 7;
         regs.chunk_info[ch].seg_sel = byte >> 3;
-    }
+    };
+
+    auto write_clot = [&](unsigned &ch,
+                          int seg_tag,
+                          int clot_tag,
+                          const Phv::Ref &pov_bit,
+                          Deparser::FDEntry::Clot *clot) {
+        const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
+        const int group = ch/CHUNKS_PER_GROUP;
+        regs.fd_tags[group].segment_tag[seg_tag] = clot_tag;
+        for (int i = 0; i < clot->length; i += 8, ++ch) {
+            if (!check_chunk(lineno, ch)) break;
+
+            // CLOTs cannot span multiple groups.
+            BUG_CHECK(ch/CHUNKS_PER_GROUP == group);
+
+            regs.chunk_info[ch].chunk_vld = 1;
+            regs.chunk_info[ch].pov = pov.at(&pov_bit->reg) + pov_bit->lo;
+            regs.chunk_info[ch].seg_vld = 1;
+            regs.chunk_info[ch].seg_sel = seg_tag;
+            regs.chunk_info[ch].seg_slice = i/8U;
+        }
+    };
+
+    output_jbay_field_dictionary_helper(lineno, pov, dict, write_chunk, finish_chunk, write_clot);
 }
 
 // Also used for outputting Cloudbreak field dictionary slices.
 template<class CHUNKS, class CLOTS, class POV, class DICT>
 void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov,
                                         DICT &dict, json::vector& fd_gress, gress_t gress) {
-    // DANGER -- this code and output_jbay_field_dictionary above must match exactly
-    const unsigned CHUNK_SIZE = Target::JBay::DEPARSER_CHUNK_SIZE;
-    const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
-    const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
-    const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    unsigned ch = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
-    Phv::Slice prev_pov;
     json::map fd;
     json::vector chunk_bytes;
-    for (auto &ent : dict) {
-        if (!check_chunk(lineno, ch)) break;
-        auto *clot = dynamic_cast<Deparser::FDEntry::Clot *>(ent.what);
-        unsigned size = ent.what->size();
-        if (byte && (clot || byte + size > CHUNK_SIZE ||
-                     (prev_pov && *ent.pov != prev_pov))) {
-            fd["Field Dictionary Number"] = ch;
-            Deparser::write_pov_in_json(fd, &prev_pov.reg, prev_pov.lo);
-            chunk[ch].cfg.seg_vld = 0;
-            chunk[ch].cfg.seg_slice = byte & 7;
-            chunk[ch].cfg.seg_sel = byte >> 3;
-            ++ch;
-            fd["Content"] = std::move(chunk_bytes);
-            fd_gress.push_back(std::move(fd));
-            if (!check_chunk(lineno, ch)) break;
-            tof2lab44_workaround(lineno, ch);
-            byte = 0; }
-        if (clot) {
-            // Start a new group if needed. Each group has a maximum number of CLOTs that can be
-            // deparsed, and CLOTs cannot span multiple groups.
-            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
-            auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
-            bool out_of_chunks_in_group =
-                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
-            if (out_of_clots_in_group || out_of_chunks_in_group) {
-                ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
-                if (!check_chunk(lineno, ch)) break;
-                tof2lab44_workaround(lineno, ch);
-            }
 
-            int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
-            int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-            clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;
-            auto phv_repl = clot->phv_replace.begin();
-            auto csum_repl = clot->csum_replace.begin();
-            for (int i = 0; i < clot->length; i += 8, ++ch) {
-                fd["Field Dictionary Number"] = ch;
-                if (!check_chunk(lineno, ch)) break;
-                tof2lab44_workaround(lineno, ch);
-                Deparser::write_pov_in_json(fd, &ent.pov->reg, ent.pov->lo);
-                if (clots_in_group[ch/CHUNKS_PER_GROUP] == 0) {
-                    seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
-                    clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag; }
-                chunk[ch].cfg.seg_vld = 1;
-                chunk[ch].cfg.seg_sel = seg_tag;
-                chunk[ch].cfg.seg_slice = i/8U;
-                for (int j = 0; j < 8 && i + j < clot->length; ++j) {
-                    json::map chunk_byte;
-                    if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
-                        chunk[ch].is_phv |= 1 << j;
-                        chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
-                        chunk_byte["Byte"] = j;
-                        auto phv_reg = &phv_repl->second->reg;
-                        write_field_name_in_json(phv_reg, &ent.pov->reg,
-                                                  ent.pov->lo, chunk_byte, 19, gress);
-                        if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
-                            ++phv_repl;
-                    } else if (csum_repl != clot->csum_replace.end() && int(csum_repl->first) <= i + j) {
-                        chunk[ch].is_phv |= 1 << j;
-                        chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
-                        chunk_byte["Byte"] = j;
-                        write_csum_const_in_json(csum_repl->second.encode(), chunk_byte, gress);
-                        if (int(csum_repl->first + 2) <= i + j + 1)
-                            ++csum_repl;
-                    } else {
-                        chunk[ch].byte_off.phv_offset[j] = i + j;
-                        chunk_byte["Byte"] = j;
-                        chunk_byte["CLOT"] = clot_tag;
-                    }
-                    chunk_bytes.push_back(std::move(chunk_byte));
-                }
-                fd["Content"] = std::move(chunk_bytes);
-                fd_gress.push_back(std::move(fd));
-
+    auto write_chunk = [&](unsigned ch,
+                           const Phv::Slice& prev_pov,
+                           int prev,
+                           int ent_lineno,
+                           const Phv::Ref &ent_pov,
+                           Deparser::FDEntry::Base *ent_what,
+                           unsigned byte,
+                           unsigned size) {
+        while (size--) {
+            json::map chunk_byte;
+            chunk_byte["Byte"] = byte;
+            if (ent_what->encode() < 224) {
+                auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent_what);
+                auto phv_reg = phv->reg();
+                write_field_name_in_json(phv_reg, &ent_pov->reg, ent_pov->lo,
+                                         chunk_byte, 19, gress);
+            } else {
+                write_csum_const_in_json(ent_what->encode(), chunk_byte, gress);
             }
-            tof2lab44_workaround(lineno, ch);
-            if (!check_chunk(lineno, ch)) break;
-        } else {
-            // Phv, Constant, or Checksum
-            while (size--) {
-                json::map chunk_byte;
-                chunk_byte["Byte"] = byte;
-                if (ent.what->encode() < 224) {
-                    auto *phv = dynamic_cast<Deparser::FDEntry::Phv *>(ent.what);
-                    auto phv_reg = phv->reg();
-                    write_field_name_in_json(phv_reg, &ent.pov->reg, ent.pov->lo,
-                                             chunk_byte, 19, gress);
-                } else {
-                    write_csum_const_in_json(ent.what->encode(), chunk_byte, gress);
-                }
-                chunk_bytes.push_back(std::move(chunk_byte));
-                chunk[ch].is_phv |= 1 << byte;
-                chunk[ch].byte_off.phv_offset[byte++] = ent.what->encode(); } }
-        prev_pov = *ent.pov; }
-    if (byte > 0) {
-        tof2lab44_workaround(lineno, ch);
+            chunk_bytes.push_back(std::move(chunk_byte));
+            chunk[ch].is_phv |= 1 << byte;
+            chunk[ch].byte_off.phv_offset[byte++] = ent_what->encode();
+        }
+    };
+
+    auto finish_chunk = [&](unsigned ch, const Phv::Slice &pov_bit, unsigned byte) {
+        fd["Field Dictionary Number"] = ch;
+        Deparser::write_pov_in_json(fd, &pov_bit.reg, pov_bit.lo);
         chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
         chunk[ch].cfg.seg_sel = byte >> 3;
+
         fd["Content"] = std::move(chunk_bytes);
         fd_gress.push_back(std::move(fd));
-    }
+    };
+
+    auto write_clot = [&](unsigned &ch,
+                          int seg_tag,
+                          int clot_tag,
+                          const Phv::Ref &pov_bit,
+                          Deparser::FDEntry::Clot *clot) {
+        const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
+        const int group = ch/CHUNKS_PER_GROUP;
+        clots[group].segment_tag[seg_tag] = clot_tag;
+        auto phv_repl = clot->phv_replace.begin();
+        auto csum_repl = clot->csum_replace.begin();
+        for (int i = 0; i < clot->length; i += 8, ++ch) {
+            if (!check_chunk(lineno, ch)) break;
+
+            // CLOTs cannot span multiple groups.
+            BUG_CHECK(ch/CHUNKS_PER_GROUP == group);
+
+            fd["Field Dictionary Number"] = ch;
+            Deparser::write_pov_in_json(fd, &pov_bit->reg, pov_bit->lo);
+
+            chunk[ch].cfg.seg_vld = 1;
+            chunk[ch].cfg.seg_sel = seg_tag;
+            chunk[ch].cfg.seg_slice = i/8U;
+
+            for (int j = 0; j < 8 && i + j < clot->length; ++j) {
+                json::map chunk_byte;
+                if (phv_repl != clot->phv_replace.end() && int(phv_repl->first) <= i + j) {
+                    chunk[ch].is_phv |= 1 << j;
+                    chunk[ch].byte_off.phv_offset[j] = phv_repl->second->reg.deparser_id();
+                    chunk_byte["Byte"] = j;
+                    auto phv_reg = &phv_repl->second->reg;
+                    write_field_name_in_json(phv_reg, &pov_bit->reg,
+                                              pov_bit->lo, chunk_byte, 19, gress);
+                    if (int(phv_repl->first + phv_repl->second->size()/8U) <= i + j + 1)
+                        ++phv_repl;
+                } else if (csum_repl != clot->csum_replace.end()
+                        && int(csum_repl->first) <= i + j) {
+                    chunk[ch].is_phv |= 1 << j;
+                    chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
+                    chunk_byte["Byte"] = j;
+                    write_csum_const_in_json(csum_repl->second.encode(), chunk_byte, gress);
+                    if (int(csum_repl->first + 2) <= i + j + 1)
+                        ++csum_repl;
+                } else {
+                    chunk[ch].byte_off.phv_offset[j] = i + j;
+                    chunk_byte["Byte"] = j;
+                    chunk_byte["CLOT"] = clot_tag;
+                }
+                chunk_bytes.push_back(std::move(chunk_byte));
+            }
+            fd["Content"] = std::move(chunk_bytes);
+            fd_gress.push_back(std::move(fd));
+
+        }
+    };
+
+    output_jbay_field_dictionary_helper(lineno, pov, dict, write_chunk, finish_chunk, write_clot);
 }
 
 static void check_jbay_ownership(bitvec phv_use[2]) {
