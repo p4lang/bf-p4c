@@ -137,7 +137,7 @@ void AsmParser::output(json::map &ctxt_json) {
     }
 }
 
-std::map<std::string, std::vector<Parser::State::Match::Clot *>>     Parser::clots;
+std::map<gress_t, std::map<std::string, std::vector<Parser::State::Match::Clot *>>> Parser::clots;
 Alloc1D<std::vector<Parser::State::Match::Clot *>, PARSER_MAX_CLOTS> Parser::clot_use;
 unsigned                                                             Parser::max_handle = 0;
 
@@ -237,33 +237,39 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
 
         // process the CLOTs immediately rather than in Parser::process() so that it
         // happens before Deparser::process()
-        for (auto &vec : Values(clots)) {
-            State::Match::Clot *maxlen = 0;
-            for (auto *cl : vec) {
-                if (cl->tag >= 0)
-                    clot_use[cl->tag].push_back(cl);
-                if (!maxlen || cl->max_length > maxlen->max_length)
-                    maxlen = cl; }
-            for (auto *cl : vec)
-                cl->max_length = maxlen->max_length; }
-        std::map<std::string, unsigned> clot_alloc;
-        unsigned free_clot_tag = 0;
-        while (free_clot_tag < PARSER_MAX_CLOTS && !clot_use[free_clot_tag].empty())
-            ++free_clot_tag;
-        for (auto &vec : Values(clots)) {
-            for (auto *cl : vec) {
-                if (cl->tag >= 0) continue;
-                if (clot_alloc.count(cl->name)) {
-                    cl->tag = clot_alloc.at(cl->name);
-                    clot_use[cl->tag].push_back(cl);
-                } else if (free_clot_tag >= PARSER_MAX_CLOTS) {
-                    error(cl->lineno, "Too many CLOTs (%d max)", PARSER_MAX_CLOTS);
-                } else {
-                    clot_alloc[cl->name] = cl->tag = free_clot_tag++;
-                    clot_use[cl->tag].push_back(cl);
-                    while (free_clot_tag < PARSER_MAX_CLOTS &&
-                           !clot_use[free_clot_tag].empty())
-                        ++free_clot_tag; } } }
+        for (auto &map : Values(clots)) {
+            for (auto &vec : Values(map)) {
+                State::Match::Clot *maxlen = 0;
+                for (auto *cl : vec) {
+                    if (cl->tag >= 0)
+                        clot_use[cl->tag].push_back(cl);
+                    if (!maxlen || cl->max_length > maxlen->max_length)
+                        maxlen = cl; }
+                for (auto *cl : vec)
+                    cl->max_length = maxlen->max_length; }
+        }
+
+        for (auto &map : Values(clots)) {
+            std::map<std::string, unsigned> clot_alloc;
+            unsigned free_clot_tag = 0;
+            while (free_clot_tag < PARSER_MAX_CLOTS && !clot_use[free_clot_tag].empty())
+                ++free_clot_tag;
+
+            for (auto &vec : Values(map)) {
+                for (auto *cl : vec) {
+                    if (cl->tag >= 0) continue;
+                    if (clot_alloc.count(cl->name)) {
+                        cl->tag = clot_alloc.at(cl->name);
+                        clot_use[cl->tag].push_back(cl);
+                    } else if (free_clot_tag >= PARSER_MAX_CLOTS) {
+                        error(cl->lineno, "Too many CLOTs (%d max)", PARSER_MAX_CLOTS);
+                    } else {
+                        clot_alloc[cl->name] = cl->tag = free_clot_tag++;
+                        clot_use[cl->tag].push_back(cl);
+                        while (free_clot_tag < PARSER_MAX_CLOTS &&
+                               !clot_use[free_clot_tag].empty())
+                            ++free_clot_tag; } } }
+        }
     }
 }
 
@@ -1140,7 +1146,7 @@ Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
         } else {
             this->tag = -1;
             name = tag.s; } }
-    Parser::clots[name].push_back(this);
+    Parser::clots[gress][name].push_back(this);
     if (!CHECKTYPE3(data, tINT, tRANGE, tMAP)) return;
     if (data.type == tINT) {
        start = data.i;

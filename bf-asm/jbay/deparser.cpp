@@ -244,6 +244,7 @@ void tof2lab44_workaround(int lineno, unsigned& chunk_index) {
     }
 }
 
+// Also used for outputting Cloudbreak field dictionaries.
 template<class REGS, class POV_FMT, class POV, class DICT>
 void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                                   POV &pov, DICT &dict) {
@@ -283,11 +284,18 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
             tof2lab44_workaround(lineno, ch);
             byte = 0; }
         if (clot) {
-            if (clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP) {
+            // Start a new group if needed. Each group has a maximum number of CLOTs that can be
+            // deparsed, and CLOTs cannot span multiple groups.
+            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
+            auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+            bool out_of_chunks_in_group =
+                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
+            if (out_of_clots_in_group || out_of_chunks_in_group) {
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
                 if (!check_chunk(lineno, ch)) break;
                 tof2lab44_workaround(lineno, ch);
             }
+
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
             regs.fd_tags[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;
@@ -324,6 +332,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
     }
 }
 
+// Also used for outputting Cloudbreak field dictionary slices.
 template<class CHUNKS, class CLOTS, class POV, class DICT>
 void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov,
                                         DICT &dict, json::vector& fd_gress, gress_t gress) {
@@ -354,11 +363,18 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             tof2lab44_workaround(lineno, ch);
             byte = 0; }
         if (clot) {
-            if (clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP) {
+            // Start a new group if needed. Each group has a maximum number of CLOTs that can be
+            // deparsed, and CLOTs cannot span multiple groups.
+            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
+            auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+            bool out_of_chunks_in_group =
+                ch % CHUNKS_PER_GROUP + chunks_in_clot >= CHUNKS_PER_GROUP;
+            if (out_of_clots_in_group || out_of_chunks_in_group) {
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
                 if (!check_chunk(lineno, ch)) break;
                 tof2lab44_workaround(lineno, ch);
             }
+
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
             int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
             clots[ch/CHUNKS_PER_GROUP].segment_tag[seg_tag] = clot_tag;

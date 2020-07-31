@@ -270,7 +270,7 @@ class Parser {
     int                                 hdr_len_adj = 0, meta_opt = 0;
     std::vector<Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>>              checksum_use;
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init;
-    static std::map<std::string, std::vector<State::Match::Clot *>>     clots;
+    static std::map<gress_t, std::map<std::string, std::vector<State::Match::Clot *>>> clots;
     static Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS> clot_use;
     static unsigned                                                     max_handle;
     int                                                                 parser_handle = -1;
@@ -283,12 +283,12 @@ class Parser {
         auto &vec = clot_use[tag];
         return vec.empty() ? -1 : vec.at(0)->max_length; }
     static int clot_maxlen(gress_t gress, std::string tag) {
-        if (clots.count(tag))
-            return clots.at(tag).at(0)->max_length;
+        if (clots.count(gress) && clots.at(gress).count(tag))
+            return clots.at(gress).at(tag).at(0)->max_length;
         return -1; }
     static int clot_tag(gress_t gress, std::string tag) {
-        if (clots.count(tag))
-            return clots.at(tag).at(0)->tag;
+        if (clots.count(gress) && clots.at(gress).count(tag))
+            return clots.at(gress).at(tag).at(0)->tag;
         return -1; }
 
     static const char* match_key_loc_name(int loc);
