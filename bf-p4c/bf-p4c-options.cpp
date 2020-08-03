@@ -425,7 +425,8 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
         { "--placement-order",          false },
         { "--auto-init-metadata",       true },  // brig only
         { "--decaf",                    true },  // brig only
-        { "--infer-payload-offset",     true }
+        { "--infer-payload-offset",     true },
+        { "--relax-phv-init",           true }
     };
 
     boost::optional<CommandLineOptions> newOptions;
@@ -446,28 +447,38 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
 
     bool first = true;
     for (auto* arg : *args) {
-        auto* argString = arg->to<IR::StringLiteral>();
-        if (!argString) {
-            ::warning("@pragma command_line arguments must be strings: %1%",
-                      annotation);
-            return boost::none;
+        // Try to convert the parsed expression to a valid option string
+        cstring optionString = "";
+        if (auto* argString = arg->to<IR::StringLiteral>()) {
+            optionString = argString->value;
+        } else {
+            // The expression is not a IR::StringLiteral, but it can still be a valid integer
+            if (auto* argConstant = arg->to<IR::Constant>()) {
+                optionString = std::to_string(argConstant->asInt());
+            } else {
+                // The expression is neither a IR::StringLiteral or IR::Constant and so is invalid
+                ::warning("@pragma command_line arguments must be strings or integers: %1%",
+                        annotation);
+                return boost::none;
+            }
         }
-        if (first && !cmdLinePragmas.count(argString->value)) {
+
+        if (first && !cmdLinePragmas.count(optionString)) {
             ::warning("Unknown @pragma command_line %1%", annotation);
             return boost::none;
         }
-        if (first && !cmdLinePragmas.at(argString->value)) {
+        if (first && !cmdLinePragmas.at(optionString)) {
             ::warning("@pragma command_line %1% is disabled in this "
                       "compiler version", annotation);
             return boost::none;
         }
         // trim the options off --placement
-        if (first && argString->value == "--placement") {
-            newOptions->push_back(argString->value.c_str());
+        if (first && optionString == "--placement") {
+            newOptions->push_back(optionString.c_str());
             break;
         }
         first = false;
-        newOptions->push_back(argString->value.c_str());
+        newOptions->push_back(optionString.c_str());
     }
 
     return newOptions;

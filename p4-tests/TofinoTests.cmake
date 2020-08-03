@@ -133,8 +133,8 @@ endforeach()
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4" PROPERTIES TIMEOUT 1200)
 
-# p4_16/customer/kaloom/p4c-2398.p4 needs a relaxed phv initialization.
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2398.p4" "-Xp4c=\"--relax-phv-init 2\"")
+# p4_16/customer/kaloom/p4c-2398.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2398.p4")
 
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}

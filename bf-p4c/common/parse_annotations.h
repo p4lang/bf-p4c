@@ -54,7 +54,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaCalculatedFieldUpdateLocation, PARSE, StringLiteral, extPragma);
         BFN_PARSE_EMPTY(PragmaChainAddress, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaChainTotalSize, PARSE, Expression, intPragma);
-        BFN_PARSE(PragmaCommandLine, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaCommandLine, PARSE_CONSTANT_OR_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaCritical, PARSE_EMPTY, extPragma);
         BFN_PARSE_EMPTY(PragmaDefaultPortmap, PARSE_EXPRESSION_LIST, intPragma);
         BFN_PARSE(PragmaDisableAtomicModify, PARSE, Expression, extPragma);
