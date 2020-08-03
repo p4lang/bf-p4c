@@ -642,7 +642,7 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallStatement* node) {
         auto size = annot->expr.at(0)->type->width_bits();
         auto expr = annot->expr.at(0);
         auto castedExpr = cast_if_needed(expr, size, 8);
-        args->push_back(new IR::Argument(new IR::Cast(
+        args->push_back(new IR::Argument("color", new IR::Cast(
                 new IR::Type_Name("MeterColor_t"), castedExpr))); }
 
     int meter_color_index;
@@ -655,8 +655,10 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallStatement* node) {
 
     auto size = meterColor->type->width_bits();
     BUG_CHECK(size != 0, "meter color cannot be bit<0>");
-    if (!direct)
-        args->push_back(mce->arguments->at(0));
+    if (!direct) {
+        auto indexArg = mce->arguments->at(0);
+        args->push_back(new IR::Argument(indexArg->srcInfo, "index", indexArg->expression));
+    }
     auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
     auto castedMethodCall = cast_if_needed(methodcall, 8, size);
     return new IR::AssignmentStatement(meterColor, castedMethodCall);

@@ -1400,12 +1400,14 @@ class ConstructSymbolTable : public Inspector {
 
         auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
         auto args = new IR::Vector<IR::Argument>();
-        args->push_back(mce->arguments->at(1));
-        auto pre_color_size = mce->arguments->at(3)->expression->type->width_bits();
-        auto pre_color_expr = mce->arguments->at(3)->expression;
+        auto index_arg = mce->arguments->at(1);
+        args->push_back(new IR::Argument(index_arg->srcInfo, "index", index_arg->expression));
+        auto pre_color_arg = mce->arguments->at(3);
+        auto pre_color_size = pre_color_arg->expression->type->width_bits();
+        auto pre_color_expr = pre_color_arg->expression;
         auto castedExpr = cast_if_needed(pre_color_expr, pre_color_size, 8);
-        args->push_back(new IR::Argument(new IR::Cast(
-                new IR::Type_Name("MeterColor_t"), castedExpr)));
+        args->push_back(new IR::Argument(pre_color_arg->srcInfo, "color",
+            new IR::Cast(new IR::Type_Name("MeterColor_t"), castedExpr)));
         auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
 
         auto meterColor = mce->arguments->at(2)->expression;
@@ -2320,6 +2322,41 @@ bool skipCond(const Visitor::Context *ctxt, const IR::Expression *expr) {
 
 }  // namespace V1
 
+const IR::Node * AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
+    auto control = findContext<IR::P4Control>();
+    if (!control) return decl;
+
+    if (control->name != structure->getBlockName(ProgramStructure::EGRESS)) return decl;
+    if (auto type = decl->type->to<IR::Type_Specialized>()) {
+        auto bType = type->baseType;
+        if (auto path = bType->path) {
+            auto declName = path->name;
+            if (((declName == "Counter") || (declName == "Meter"))
+                || (declName == "DirectCounter") || (declName == "DirectMeter")) {
+                auto* new_abc_member = new IR::Member(new IR::PathExpression("meta"),
+                                                        IR::ID("__bfp4c_bridged_metadata"));
+                auto new_abc_arg = new IR::Argument(new_abc_member);
+                auto new_abc_args = new IR::Vector<IR::Argument>();
+                new_abc_args->push_back(new_abc_arg);
+                auto new_abc_method = new IR::PathExpression(IR::Type::Bits::get(32),
+                                                                new IR::Path("sizeInBytes"));
+                auto new_abc_expr = new IR::MethodCallExpression(new_abc_method, new_abc_args);
+
+                auto annot = new IR::Annotation(IR::ID("adjust_byte_count"), { new_abc_expr });
+                auto annots = new IR::Annotations(decl->annotations->annotations);
+                annots->add(annot);
+                auto new_decl = new IR::Declaration_Instance(decl->srcInfo,
+                        decl->name, annots, decl->type, decl->arguments);
+                LOG3("Adding annotation "
+                    "'@adjust_byte_count(sizeInBytes(meta.__bfp4c_bridge_metadata))' to decl: "
+                        << new_decl);
+                return new_decl;
+            }
+        }
+    }
+    return decl;
+}
+
 /// The general work flow of architecture translation consists of the following steps:
 /// * analyze original source program to build a programStructure that represent original program.
 /// * construct symbol tables of each IR type.
@@ -2361,6 +2398,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new V1::InsertChecksumError(parserChecksums),
         new V1::InsertChecksumDeposit(parserChecksums),
         new AddMetadataParserStates(refMap, typeMap),
+        new BFN::AddAdjustByteCount(structure, refMap, typeMap),
         new P4::EliminateSerEnums(refMap, typeMap),
         new TranslationLast(),
     });

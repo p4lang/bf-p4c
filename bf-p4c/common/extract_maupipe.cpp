@@ -150,17 +150,43 @@ class ConvertMethodCalls : public MauTransform {
             name = ef->method->name;
         } else {
             BUG("method call %s not yet implemented", mc); }
-        IR::Primitive *prim;
+        IR::MAU::TypedPrimitive *prim;
         if (mc->method && mc->method->type)
             prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
         else
-            prim = new IR::Primitive(mc->srcInfo, mc->type, name);
-        if (recv) prim->operands.push_back(recv);
-        if (constructor_params.size() != 0)
+            prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, nullptr, name);
+        int op_index = 0;
+        if (recv) {
+            prim->operands.push_back(recv);
+            op_index++;
+        }
+        if (constructor_params.size() != 0) {
             prim->operands.append(constructor_params);
-        for (auto arg : *mc->arguments)
+            op_index += constructor_params.size();
+        }
+        int op_index_offset = op_index;
+        for (auto arg : *mc->arguments) {
             prim->operands.push_back(arg->expression);
-        if (extra_arg) prim->operands.push_back(extra_arg);
+            if (arg->name.name.isNullOrEmpty()) {
+                if (auto method = mc->method) {
+                    if (auto method_type = method->type) {
+                        if (auto method_type_method = method_type->to<IR::Type_Method>()) {
+                            auto param_idx = op_index == 0 ? 0 : op_index - op_index_offset;
+                            auto param = method_type_method->parameters->getParameter(param_idx);
+                            if (param) {
+                                prim->op_names[op_index] = param->name;
+                            }
+                        }
+                    }
+                }
+            } else {
+                prim->op_names[op_index] = arg->name;
+            }
+            op_index++;
+        }
+        if (extra_arg) {
+            prim->operands.push_back(extra_arg);
+        }
         // if method call returns a value
         return prim;
     }
@@ -689,6 +715,11 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 ctr->interval = getConstant(anno);
             else if (anno->name == "true_egress_accounting")
                 ctr->true_egress_accounting = true;
+            else if ((anno->name == "adjust_byte_count")
+                    && anno->expr.size() == 1
+                    && anno->expr[0]->to<IR::Constant>())
+                // Byte count adjustment is always subtracted
+                ctr->bytecount_adjust -= getConstant(anno);
         }
         if (ctr->true_egress_accounting)
             check_true_egress_accounting(ctr, match_table);
@@ -743,6 +774,11 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 mtr->sweep_interval = getConstant(anno);
             else if (anno->name == "true_egress_accounting")
                 mtr->true_egress_accounting = true;
+            else if ((anno->name == "adjust_byte_count")
+                    && anno->expr.size() == 1
+                    && anno->expr[0]->to<IR::Constant>())
+                // Byte count adjustment is always subtracted
+                mtr->bytecount_adjust -= getConstant(anno);
             else
                 WARNING("Unknown annotation " << anno->name << " on " << tname);
         }
@@ -1252,7 +1288,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
         if (self.converted.count(di)) {
             obj = self.converted.at(di);
             gref->obj = obj;
-        } else if (auto att = createAttached(di->srcInfo, di->externalName(),
+        } else if (auto att = createAttached(di->srcInfo, di->controlPlaneName(),
                                              di->type, &inst->substitution,
                                              inst->typeArguments, di->annotations,
                                              refMap, typeMap, self.stateful_selectors,

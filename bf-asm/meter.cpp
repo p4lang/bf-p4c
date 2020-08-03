@@ -119,6 +119,10 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                         "Invalid meter sweep interval of %d. Allowed values are in the range[0:4]",
                         intvl );
             }
+        } else if (kv.key == "bytecount_adjust") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                bytecount_adjust = kv.value.i;
+            }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -313,7 +317,20 @@ void MeterTable::write_regs(REGS &regs) {
             auto &meter = map_alu.meter_group[meter_group_index].meter;
             auto &meter_ctl = meter.meter_ctl;
             auto &red_value_ctl = meter.red_value_ctl;
-            meter_ctl.meter_bytecount_adjust = 0; // FIXME -- need asm syntax to set
+            if (count == BYTES) {
+                auto meter_bytecount_adjust_size = meter_ctl.meter_bytecount_adjust.size();
+                auto meter_bytecount_adjust_mask = ((1U << meter_bytecount_adjust_size) - 1);
+                int bytecount_adjust_max = (1U << (meter_bytecount_adjust_size - 1)) - 1;
+                int bytecount_adjust_min = -1 * (1U << (meter_bytecount_adjust_size - 1));
+                if (bytecount_adjust > bytecount_adjust_max
+                        ||  bytecount_adjust < bytecount_adjust_min) {
+                    error(lineno, "The bytecount adjust value of %d on meter %s "
+                            "does not fit within allowed range for %d bits - { %d, %d }",
+                            bytecount_adjust, name(), meter_bytecount_adjust_size,
+                            bytecount_adjust_min, bytecount_adjust_max);
+                }
+                meter_ctl.meter_bytecount_adjust = bytecount_adjust & meter_bytecount_adjust_mask;
+            }
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
             delay_ctl.meter_alu_right_group_delay = Target::METER_ALU_GROUP_DATA_DELAY()
                                                         + row/4 + stage->tcam_delay(gress);

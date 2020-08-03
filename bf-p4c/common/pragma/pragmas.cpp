@@ -3,6 +3,24 @@
 std::set<const BFN::Pragma *, BFN::Pragma::PragmaCmp> BFN::Pragma::_supported_pragmas;
 std::set<const BFN::Pragma *, BFN::Pragma::PragmaCmp> BFN::Pragma::_internal_pragmas;
 
+const char *PragmaAdjustByteCount::name = "adjust_byte_count";
+const char *PragmaAdjustByteCount::description =
+    "Adds/subtracts the byte value associated with provided header(s) or given constant(s).";
+const char *PragmaAdjustByteCount::help =
+    "@pragma adjust_byte_count(sizeInBytes(hdr.bridged_md1) + sizeInBytes(hdr.bridged_md2) + 16) \n"
+    "+ attached to P4 Stats and Meter tables\n"
+    "\n"
+    "In p4-16 programs byte counts on meters and stats tables may include      "
+    "additional bytes which are associated with bridged metadata. User must add "
+    "pragma with all relevant bridged metadata headers valid on a counter/meter "
+    "table. The argument can also be a constant if this byte value is always    "
+    "fixed. For headers, compiler evaluates their size in bytes and ensures this "
+    "value is subtracted from the byte count. It is necessary to use the pragma "
+    "with the sizeInBytes(<header>) whenever @flexible packing is used since in these "
+    "cases the header sizes can vary based on compilation. The argument can be an "
+    "expression which adds/subtracts multiple header sizes / constants. The evaluated "
+    "value is always subtracted from the final count";
+
 const char *PragmaAlpm::name = "alpm";
 const char *PragmaAlpm::description =
     "Requests the associated match table to be implemented as an Alogrithmic LPM (ALPM) table.";

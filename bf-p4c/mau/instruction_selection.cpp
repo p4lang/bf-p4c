@@ -782,7 +782,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
         return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type),
-                                        (-*k).clone(), e->left);
+                                        new IR::Constant(k->type, -k->value), e->left);
     return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type), e->left, e->right);
 }
 const IR::Expression *DoInstructionSelection::postorder(IR::Neg *e) {
@@ -1074,10 +1074,15 @@ static size_t input_operand(const IR::Primitive *prim) {
 }
 
 static size_t precolor_operand(const IR::Primitive *prim) {
-    if (prim->name.startsWith("DirectMeter"))
-        return 1;
-    else if (prim->name.startsWith("Meter"))
-        return 2;
+    if (prim->name.startsWith("DirectMeter") || prim->name.startsWith("Meter")) {
+        if (auto tprim = prim->to<IR::MAU::TypedPrimitive>()) {
+            for (auto o : tprim->op_names) {
+                if (o.second == "color")
+                    return o.first;
+            }
+        }
+    }
+
     return -1;
 }
 
@@ -1480,8 +1485,7 @@ void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
         return;
 
     auto gref = prim->operands[0]->to<IR::GlobalRef>();
-    // typechecking should catch this too
-    BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+    if (!gref) return;
     auto mtr = gref->obj->to<IR::MAU::Meter>();
     BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
     auto input = prim->operands[input_index];
@@ -1512,8 +1516,7 @@ void MeterSetup::Scan::find_pre_color(const IR::Primitive *prim) {
     if (act == nullptr)
         return;
     auto gref = prim->operands[0]->to<IR::GlobalRef>();
-    // typechecking should catch this too
-    BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+    if (!gref) return;
     auto mtr = gref->obj->to<IR::MAU::Meter>();
     int pre_color_index = precolor_operand(prim);
     BUG_CHECK(!(mtr == nullptr && pre_color_index != -1), "%s: Operation requiring pre-color is "

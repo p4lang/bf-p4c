@@ -550,29 +550,31 @@ extern Counter<W, I> {
 
     /// Increment the counter value.
     /// @param index : index of the counter to be incremented.
-    void count(in I index);
+    /// @param adjust_byte_count : optional parameter indicating value to be
+    //                             subtracted from counter value.
+    void count(in I index, @optional in bit<32> adjust_byte_count);
 }
 
 /// DirectCounter
 extern DirectCounter<W> {
     DirectCounter(CounterType_t type);
-    void count();
+    void count(@optional in bit<32> adjust_byte_count);
 }
 
 /// Meter
 extern Meter<I> {
     Meter(bit<32> size, MeterType_t type);
     Meter(bit<32> size, MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in I index, in MeterColor_t color);
-    bit<8> execute(in I index);
+    bit<8> execute(in I index, in MeterColor_t color, @optional in bit<32> adjust_byte_count);
+    bit<8> execute(in I index, @optional in bit<32> adjust_byte_count);
 }
 
 /// Direct meter.
 extern DirectMeter {
     DirectMeter(MeterType_t type);
     DirectMeter(MeterType_t type, bit<8> red, bit<8> yellow, bit<8> green);
-    bit<8> execute(in MeterColor_t color);
-    bit<8> execute();
+    bit<8> execute(in MeterColor_t color, @optional in bit<32> adjust_byte_count);
+    bit<8> execute(@optional in bit<32> adjust_byte_count);
 }
 
 /// LPF

@@ -1874,3 +1874,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
+
+p4c_add_xfail_reason("tofino"
+    "was not correctly converted in Instruction Selection"
+  ../glass/testsuite/p4_tests/mau/test_config_183_sample_e2e.p4
+)
+

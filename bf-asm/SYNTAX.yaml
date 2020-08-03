@@ -700,6 +700,8 @@ stage <constant> <thread>:
           # largest recent with threshold params
         global_binding: true | false
         per_flow_enable: true | false
+        bytecount_adjust: <int>
+          # add value to counted bytes 
     meter <name> [<logical_id>]:
         logical_row: <vector>
         column: <vector> | '[' <vector>, ... ']'
@@ -721,6 +723,8 @@ stage <constant> <thread>:
             # see hash_action hash_dist
         type: standard | lpf | red
         count: bytes | packets
+        bytecount_adjust: <int>
+          # add value to counted bytes 
         sweep_interval: <int>
         global_binding: true | false
         per_flow_enable: true | false

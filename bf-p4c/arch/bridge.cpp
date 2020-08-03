@@ -3,11 +3,13 @@
 #include <iostream>
 #include "bf-p4c/common/flexible_packing.h"
 #include "bf-p4c/common/bridged_packing.h"
+#include "bf-p4c/common/size_of.h"
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/backend.h"
 #include "bf-p4c/midend/simplify_args.h"
 #include "midend/local_copyprop.h"
+#include "frontends/common/constantFolding.h"
 #include "frontends/p4/typeMap.h"
 
 namespace BFN {
@@ -259,6 +261,8 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options, RepackedH
     evaluator = new BFN::ApplyEvaluator(&refMap, &typeMap);
     addPasses({
         new ReplaceFlexibleType(map),
+        new BFN::ResolveSizeOfOperator(),
+        new P4::ConstantFolding(&refMap, nullptr),
         new P4::ClearTypeMap(&typeMap),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         new RenameArchParams(&refMap, &typeMap),

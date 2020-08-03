@@ -15,6 +15,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
+#include "bf-p4c/mau/adjust_byte_count.h"
 #include "bf-p4c/mau/check_duplicate.h"
 #include "bf-p4c/mau/dump_json_graph.h"
 #include "bf-p4c/mau/empty_controls.h"
@@ -118,6 +119,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         flexibleLogging,
         new DumpPipe("Initial table graph"),
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
+        new AdjustByteCountSetup,
         new CreateThreadLocalInstances,
         new CheckForUnimplementedFeatures(),
         new RemoveEmptyControls,

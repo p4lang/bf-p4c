@@ -1,0 +1,38 @@
+# Default action forwards out port 1
+add set_port hdr.f1:0x10000001 act(port:1)
+add set_bridged hdr.f1:0x10000001 set_bmd()
+add update_ingress_counter hdr.f1:0x10000001 update_ig() = A
+add update_ingress_counter2 hdr.f1:0x10000001 update2_ig(idx:1)
+add update_egress_counter hdr.f1:0x10000001 update_eg() = B
+add update_egress_counter2 hdr.f1:0x10000001 update2_eg(idx:1)
+
+#        f1       f2       h1   b1 b2 b2
+packet 0 10000001 00000002 f654 55 66 77
+expect 1 10000001 00000002 f654 11 22 77
+packet 0 10000001 00000002 f654 55 66 77
+expect 1 10000001 00000002 f654 11 22 77
+
+wait
+
+# NOTES:
+# STF adds a 4-byte ethernet trailer by default.
+# Total Size of 1 Packet (Bytes) = 13 (Header) + 4 (Eth trailer)
+#                                = 17
+# With new adjust_byte_count pragma this value is subtracted through p4
+# Pragma does not seem to have any affect on an Ingress Counter, hence we test
+# the expected value with the STF ethernet trailer (+4 bytes)
+
+# Ingress Counters Check
+# check_counter ICounterDirect($A) packets == 2
+check_counter ICounterDirect($A) bytes == 26
+
+# # check_counter ICounter(1) packets == 2
+check_counter ICounter(1) bytes == 26
+#
+# # Egress Counters Check
+# # check_counter ECounterDirect($A) packets == 2
+check_counter ECounterDirect($B) bytes == 26
+#
+# # check_counter ECounter(1) packets == 2
+check_counter ECounter(1) bytes == 26
+

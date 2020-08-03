@@ -52,7 +52,7 @@ control SwitchIngress(inout headers_t hdr, inout user_metadata_t md, in ingress_
     }
 
     action act2(bit<10> meter_id) {
-	ig_intr_dprsr_md.drop_ctl[0:0] = (bit<1>)meter.execute(meter_id, (MeterColor_t)(bit<8>)ig_intr_tm_md.packet_color);
+	ig_intr_dprsr_md.drop_ctl[0:0] = (bit<1>)meter.execute(index = meter_id, color = (MeterColor_t)(bit<8>)ig_intr_tm_md.packet_color);
     }
 
     action nop() {

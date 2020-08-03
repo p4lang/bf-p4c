@@ -3807,6 +3807,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
             count_type = "";
     }
     out << indent << "count: " << count_type << std::endl;
+    auto bytecount_adjust = counter->get_bytecount_adjust();
+    if (bytecount_adjust != 0)
+        out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     if (counter->true_egress_accounting) {
         if (teop == 4)
             ::error("Ran out of tEOP buses for true egress accounting: %1%", counter);
@@ -3920,6 +3923,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     }
     if (count_type != "")
         out << indent << "count: " << count_type << std::endl;
+    auto bytecount_adjust = meter->get_bytecount_adjust();
+    if (bytecount_adjust != 0)
+        out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     auto *ba = findContext<IR::MAU::BackendAttached>();
     // FIXME: Eventually should not be necessary due to DRV-1856
     if (ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)

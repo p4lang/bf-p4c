@@ -276,6 +276,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/action_data_bus.cpp
   mau/action_format.cpp
   mau/action_mutex.cpp
+  mau/adjust_byte_count.cpp
   mau/add_always_run.cpp
   mau/asm_output.cpp
   mau/attached_info.cpp
@@ -331,6 +332,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_data_bus.h
   mau/action_format.h
   mau/action_mutex.h
+  mau/adjust_byte_count.h
   mau/add_always_run.h
   mau/asm_output.h
   mau/attached_info.h

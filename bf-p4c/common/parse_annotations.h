@@ -46,6 +46,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
             }, true) {
         constexpr bool extPragma = false;  // externally supported
         constexpr bool intPragma = true;   // Barefoot internal
+        BFN_PARSE(PragmaAdjustByteCount, PARSE, Expression, intPragma);
         BFN_PARSE(PragmaAlpm, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaAlpmPartitions, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaAlpmSubtreePartitions, PARSE, Expression, extPragma);

@@ -434,6 +434,7 @@ abstract Synth2Port : AttachedMemory {
     ID table = {};
     bool saturating = false;
     int width = 0;
+    int bytecount_adjust = 0;
     DataAggregation type = DataAggregation::NONE;
     void settype(cstring t) {
         if (strcasecmp(t.c_str(), "packets") == 0) type = DataAggregation::PACKETS;
@@ -441,6 +442,11 @@ abstract Synth2Port : AttachedMemory {
         else if (strcasecmp(t.c_str(), "packets_and_bytes") == 0 ||
                  strcasecmp(t.c_str(), "packetsandbytes") == 0) type = DataAggregation::BOTH;
         else error("%s: Unknown type %s", srcInfo, t); }  // NOLINT
+    int get_bytecount_adjust() const {
+        if (type == DataAggregation::BYTES || type == DataAggregation::BOTH)
+            return bytecount_adjust;
+        return 0;
+    }
 }
 
 class Counter : Synth2Port {
@@ -661,6 +667,7 @@ class TypedPrimitive : Primitive {
 #noconstructor
     IR::Type method_type;
 
+    std::map<unsigned, cstring> op_names;
     TypedPrimitive(cstring name)
     : Primitive(name), method_type(nullptr) { }
     TypedPrimitive(Util::SourceInfo srcInfo, const IR::Type* return_type, const IR::Type* m_type, cstring name)

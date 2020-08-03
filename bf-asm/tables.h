@@ -1607,6 +1607,7 @@ public:
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
     int teop = -1;
+    int bytecount_adjust = 0;
     table_type_t table_type() const override { return COUNTER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
@@ -1649,6 +1650,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     int red_value = 3;
     int profile = 0;
     int teop = -1;
+    int bytecount_adjust = 0;
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;

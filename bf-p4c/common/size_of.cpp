@@ -12,6 +12,21 @@ const IR::Node* ConvertSizeOfToConstant::preorder(IR::MAU::TypedPrimitive* p) {
     return new IR::Constant(p->type, widthBits);
 }
 
+const IR::Node* ConvertSizeOfToConstant::preorder(IR::MethodCallExpression* mce) {
+    if (!mce->method) return mce;
+    if (!mce->method->type) return mce;
+    if (!mce->method->to<IR::PathExpression>()) return mce;
+    auto path = mce->method->to<IR::PathExpression>()->path;
+    if (path->name.name != "sizeInBytes" && path->name.name != "sizeInBits")
+        return mce;
+
+    auto width = mce->arguments->at(0)->expression->type->width_bits();
+    if (path->name.name == "sizeInBytes")
+        width = width / 8;
+    LOG3(" Converted Method Call Expression  " << mce << " to constant width " << width);
+    return new IR::Constant(mce->type, width);
+}
+
 const IR::Expression* BackendConstantFolding::getConstant(const IR::Expression* expr) const {
     CHECK_NULL(expr);
     if (expr->is<IR::Constant>())

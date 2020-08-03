@@ -12,6 +12,7 @@
      static const char *help;           \
   };
 
+DEFINE_PRAGMA_CLASS(PragmaAdjustByteCount);
 DEFINE_PRAGMA_CLASS(PragmaAlpm);
 DEFINE_PRAGMA_CLASS(PragmaAlpmPartitions);
 DEFINE_PRAGMA_CLASS(PragmaAlpmSubtreePartitions);

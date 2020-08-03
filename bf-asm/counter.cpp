@@ -54,6 +54,10 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
                         lrt.emplace_back(el.key.lineno, el.key.bigi.data[0], el.value.i);
                     } else {
                         lrt.emplace_back(el.key.lineno, el.key.i, el.value.i); } } }
+        } else if (kv.key == "bytecount_adjust") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                bytecount_adjust = kv.value.i;
+            }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -236,7 +240,20 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                     stats.lrt_update_interval[idx] = l.interval;
                     ++idx; } }
             stat_ctl.stats_alu_egress = timing_thread(gress);
-            stat_ctl.stats_bytecount_adjust = 0; // TODO
+            if (type == BYTES || type == BOTH) {
+                auto stats_bytecount_adjust_size = stat_ctl.stats_bytecount_adjust.size();
+                auto stats_bytecount_adjust_mask = ((1U << stats_bytecount_adjust_size) - 1);
+                int bytecount_adjust_max = (1U << (stats_bytecount_adjust_size - 1)) - 1;
+                int bytecount_adjust_min = -1 * (1U << (stats_bytecount_adjust_size - 1));
+                if (bytecount_adjust > bytecount_adjust_max
+                        ||  bytecount_adjust < bytecount_adjust_min) {
+                    error(lineno, "The bytecount adjust value of %d on counter %s "
+                            "does not fit within allowed range for %d bits - { %d, %d }",
+                            bytecount_adjust, name(), stats_bytecount_adjust_size,
+                            bytecount_adjust_min, bytecount_adjust_max);
+                }
+                stat_ctl.stats_bytecount_adjust = bytecount_adjust & stats_bytecount_adjust_mask;
+            }
             stat_ctl.stats_alu_error_enable = 0; // TODO
             if (logical_id >= 0)
                 regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;

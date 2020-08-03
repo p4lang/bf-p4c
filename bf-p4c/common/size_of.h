@@ -39,6 +39,7 @@ class ConvertSizeOfToConstant : public Transform {
  public:
     ConvertSizeOfToConstant() { }
     const IR::Node *preorder(IR::MAU::TypedPrimitive* p) override;
+    const IR::Node *preorder(IR::MethodCallExpression* mce) override;
 };
 
 /**
