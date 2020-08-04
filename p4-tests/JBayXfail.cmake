@@ -42,6 +42,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino2"
     "Assertion .* failed"  # model asserts
    extensions/p4_tests/p4_14/stf/decaf_1.p4 # 16-bit container repeated in FD
+   # P4C-2999
+   extensions/p4_tests/p4_14/stf/decaf_2.p4
    )
 
 endif() # HARLYN_STF
