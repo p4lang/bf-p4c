@@ -1,6 +1,7 @@
 #include "allocate_clot.h"
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
+#include "header_removal_analysis.h"
 
 /**
  * This implements a greedy CLOT-allocation algorithm, as described in
@@ -8,12 +9,14 @@
  */
 class GreedyClotAllocator : public Visitor {
     ClotInfo& clotInfo;
+    const PhvInfo& phvInfo;
     const CollectParserInfo& parserInfo;
     Logging::FileLog* log = nullptr;
 
  public:
-    explicit GreedyClotAllocator(ClotInfo& clotInfo) :
+    explicit GreedyClotAllocator(const PhvInfo& phvInfo, ClotInfo& clotInfo) :
         clotInfo(clotInfo),
+        phvInfo(phvInfo),
         parserInfo(clotInfo.parserInfo) { }
 
  private:
@@ -26,20 +29,19 @@ class GreedyClotAllocator : public Visitor {
     /// subgraph rooted at the given state and (2) can be part of a clot (@see
     /// ClotInfo::can_be_in_clot).
     ///
-    /// Returns @arg result, a map from pseudoheaders to fields to their FieldSliceExtractInfo
-    /// instances.
+    /// Returns @arg result.
     ///
     /// This method assumes the graph is an unrolled DAG.
     //
     // Invariant: `state` is not an element of `visited`.
-    FieldSliceExtractInfoMap* group_extracts(
+    FieldExtractInfo* group_extracts(
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state = nullptr,
-            FieldSliceExtractInfoMap* result = nullptr,
+            FieldExtractInfo* result = nullptr,
             std::set<const IR::BFN::ParserState*>* visited = nullptr) {
         // Initialize parameters if needed.
         if (!state) state = graph->root;
-        if (!result) result = new FieldSliceExtractInfoMap();
+        if (!result) result = new FieldExtractInfo();
         if (!visited) visited = new std::set<const IR::BFN::ParserState*>();
 
         LOG6("Finding extracts in state " << state->name);
@@ -50,6 +52,13 @@ class GreedyClotAllocator : public Visitor {
             for (auto entry : clotInfo.field_range_.at(state)) {
                 auto field = entry.first;
                 const auto& bitrange = entry.second;
+                auto max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
+
+                // Add to result->fieldMap.
+                result->updateFieldMap(field,
+                                       state,
+                                       static_cast<unsigned>(bitrange.lo),
+                                       static_cast<unsigned>(max_packet_offset));
 
                 if (!clotInfo.can_be_in_clot(field)) continue;
 
@@ -58,23 +67,13 @@ class GreedyClotAllocator : public Visitor {
                           "pseudoheader information)",
                           field->name);
 
-                auto max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
+                // Add to result->pseudoheaderMap.
                 for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
-                    if (result->count(pseudoheader) && result->at(pseudoheader).count(field)) {
-                        auto* fei = result->at(pseudoheader).at(field);
-                        fei->update(state,
-                                    static_cast<unsigned>(bitrange.lo),
-                                    static_cast<unsigned>(max_packet_offset));
-                    } else {
-                        ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
-                        state_bit_offsets[state] = static_cast<unsigned>(bitrange.lo);
-                        auto fei =
-                            new FieldSliceExtractInfo(state_bit_offsets,
-                                                      static_cast<unsigned>(max_packet_offset),
-                                                      field);
-
-                        (*result)[pseudoheader][field] = fei;
-                    }
+                    result->updatePseudoheaderMap(pseudoheader,
+                                                  field,
+                                                  state,
+                                                  static_cast<unsigned>(bitrange.lo),
+                                                  static_cast<unsigned>(max_packet_offset));
                 }
             }
         }
@@ -230,12 +229,13 @@ class GreedyClotAllocator : public Visitor {
     //   - No pair of extracted field slices have a deparserNoPack constraint.
     //   - Neither the first nor last field in the candidate is modified or is a checksum.
     //   - The fields in the candidate are all extracted in the same set of parser states.
-    ClotCandidateSet* find_clot_candidates(FieldSliceExtractInfoMap* extract_info_map) {
+    ClotCandidateSet*
+    find_clot_candidates(const FieldExtractInfo::PseudoheaderMap& extract_info_map) {
         auto result = new ClotCandidateSet();
 
-        for (auto entry : *extract_info_map) {
+        for (const auto& entry : extract_info_map) {
             std::map<const PHV::Field*, std::vector<const FieldSliceExtractInfo*>> submap;
-            for (auto subentry : entry.second) {
+            for (const auto& subentry : entry.second) {
                 submap[subentry.first].push_back(subentry.second);
             }
 
@@ -245,10 +245,187 @@ class GreedyClotAllocator : public Visitor {
         return result;
     }
 
+    /// Helper to determine whether an adjustment is needed to create an inter-CLOT gap between two
+    /// CLOT candidates, when @c1 is parsed before @c2. If @c1 is never parsed before @c2, or if
+    /// @c1 and @c2 are always separated by at least the inter-CLOT gap requirement, then this
+    /// conservatively returns true.
+    bool needInterClotGap(const ClotCandidate* c1,
+                          const ClotCandidate* c2,
+                          const FieldExtractInfo* fei,
+                          const HeaderRemovalAnalysis::ResultMap header_removals) const {
+        BUG_CHECK(c1->thread() == c2->thread(),
+                  "Candidate %1% comes from %2%, but candidate %3% comes from %4%",
+                  c1->id, c1->thread(), c2->id, c2->thread());
+
+        auto gress = c1->thread();
+        const auto& deparse_graph = clotInfo.deparse_graph_[gress];
+
+        auto gaps = c1->byte_gaps(parserInfo, c2);
+        if (gaps.empty()) {
+            LOG5("    Candidate " << c1->id << " is never parsed before candidate " << c2->id);
+            return true;
+        }
+
+        LOG5("    Candidate " << c1->id << " might be parsed before candidate " << c2->id);
+
+        // Need gap if CLOTs are never zero-separated.
+        if (!gaps.count(0)) {
+            LOG5("      Candidate " << c1->id << " never appears immediately before candidate "
+                << c2->id << " in parsed packet");
+            return true;
+        }
+
+        // Need gap if separation between CLOTs can be non-zero and smaller than the required
+        // inter-CLOT gap.
+        for (unsigned i = 1; i < Device::pardeSpec().byteInterClotGap(); i++) {
+            if (gaps.count(i)) {
+                LOG5("      Candidates might be separated by " << i << " bytes in parsed packet");
+                return true;
+            }
+        }
+
+        // Need gap if c1 can become invalid in MAU when c2 is still valid.
+        auto c1_pov_bits = c1->pseudoheader->pov_bits;
+        auto c2_pov_bits = c2->pseudoheader->pov_bits;
+        auto check = [&](const PHV::FieldSlice* f1) {
+            auto check = [&](const PHV::FieldSlice* f2) {
+                return f1 != f2 && header_removals.at({f1, f2}).count({f1});
+            };
+            return std::any_of(c2_pov_bits.begin(), c2_pov_bits.end(), check);
+        };
+        if (std::any_of(c1_pov_bits.begin(), c1_pov_bits.end(), check)) {
+            LOG5("      Candidate " << c1->id << " might be invalidated by MAU while candidate "
+                 << c2->id << " remains valid");
+            return true;
+        }
+
+        // Need gap if c2 can be deparsed before c1.
+        const auto* c2_last_field = c2->extracts().back()->slice()->field();
+        const auto* c1_first_field = c1->extracts().front()->slice()->field();
+        if (deparse_graph.canReach(c2_last_field, c1_first_field)) {
+            LOG5("      Candidate " << c2->id << " might be deparsed before candidate " << c1->id);
+            return true;
+        }
+
+        // Need gap if c1 can become separated from c2 during deparsing.
+        {
+            const auto* c1_last_slice = c1->extracts().back()->slice();
+            const auto* c2_first_slice = c2->extracts().front()->slice();
+            const auto* c1_last_field = c1_last_slice->field();
+            const auto* c2_first_field = c2_first_slice->field();
+
+            if (c1_last_field == c2_first_field) {
+                // c1's last slice and c2's first slice come from the same field. This means that
+                // the "gaps" set should be a singleton containing the exact separation between the
+                // two slices. We already know that 0 ∈ gaps, so expect that |gaps| = 1.
+                if (gaps.size() != 1) {
+                    std::stringstream msg;
+                    msg << "Unexpectedly got more than one gap size between two slices of the "
+                        << "same field. Slices " << c1_last_slice->shortString() << " and "
+                        << c2_first_slice->shortString() << " have gaps {";
+
+                    bool first = true;
+                    for (auto gap : Keys(gaps)) {
+                        if (!first) msg << ", ";
+                        msg << gap;
+                        first = false;
+                    }
+
+                    msg << "}";
+
+                    BUG("%s", msg.str());
+                }
+            } else {
+                // c1's last slice and c2's first slice come from different fields. Because we know
+                // 0 ∈ gaps, c1's last slice must cover the last bit of its field, and c2's first
+                // slice must cover the first bit of its field. It suffices, then, to check
+                // entities that might be deparsed between those two fields.
+                for (const auto nodeInfo : deparse_graph.nodesBetween(c1_last_field,
+                                                                      c2_first_field)) {
+                    if (nodeInfo.isConstant()) {
+                        LOG5("      Constant " << nodeInfo.constant << " might be deparsed "
+                             "between CLOT candidates");
+                        return true;
+                    }
+
+                    const auto* f = nodeInfo.field;
+
+                    // The field f might be deparsed between c1 and c2, so the two CLOT candidates
+                    // might be separated if f's header might be added by the MAU pipeline.
+                    if (clotInfo.is_added_by_mau(f->header())) {
+                        LOG5("      Field " << f->name << " might be deparsed between candidates, "
+                             "and its header might be added by MAU");
+                        return true;
+                    }
+
+                    // The two CLOT candidates might be separated if there is a path through the
+                    // parser in which c1 is parsed immediately before c2, and f is also parsed.
+                    //
+                    // fei->fieldMap will contain an entry for f if f is parsed.
+                    if (fei->fieldMap.count(f)) {
+                        BUG_CHECK(fei->fieldMap.count(c1_first_field),
+                                  "Field %1% is part of a CLOT candidate, but has no fieldMap "
+                                  "entry",
+                                  c1_first_field);
+                        BUG_CHECK(fei->fieldMap.count(c2_last_field),
+                                  "Field %1% is part of a CLOT candidate, but has no fieldMap "
+                                  "entry",
+                                  c2_last_field);
+
+                        const auto* fExtractInfo = fei->fieldMap.at(f);
+                        const auto* c1ExtractInfo = fei->fieldMap.at(c1_first_field);
+                        const auto* c2ExtractInfo = fei->fieldMap.at(c2_last_field);
+
+                        // Get the set of states in which the first field of c1 is extracted, and
+                        // that field comes after f in the packet.
+                        const auto fC1Gaps = fExtractInfo->bit_gaps(parserInfo, c1ExtractInfo);
+                        ordered_set<const IR::BFN::ParserState*> c1States;
+                        for (const auto& statePairSet : Values(fC1Gaps)) {
+                            for (const auto& statePair : statePairSet) {
+                                c1States.insert(statePair.second);
+                            }
+                        }
+
+                        // Get the set of states in which the last field of c2 is extracted, and
+                        // that field comes before f in the packet.
+                        const auto c2FGaps = c2ExtractInfo->bit_gaps(parserInfo, fExtractInfo);
+                        ordered_set<const IR::BFN::ParserState*> c2States;
+                        for (const auto& statePairSet : Values(c2FGaps)) {
+                            for (const auto& statePair : statePairSet) {
+                                c2States.insert(statePair.first);
+                            }
+                        }
+
+                        // Look at the states in which c1 is extracted immediately before c2. If
+                        // any of those states are contained in c1States or c2States, then c1 might
+                        // be separated from c2.
+                        for (auto statePair : gaps.at(0)) {
+                            const auto* c1State = statePair.first;
+                            const auto* c2State = statePair.second;
+
+                            if (c1States.count(c1State) || c2States.count(c2State)) {
+                                LOG5("      Field " << f->name << " might be inserted between "
+                                     "candidates");
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     /// Adjusts a CLOT candidate to account for the allocation of another (possibly the same)
     /// candidate.
     ClotCandidateSet* adjust_for_allocation(const ClotCandidate* to_adjust,
-                                            const ClotCandidate* allocated) const {
+            const ClotCandidate* allocated,
+            const FieldExtractInfo* fei,
+            const HeaderRemovalAnalysis::ResultMap header_removals) const {
+        const auto GAP_BYTES = Device::pardeSpec().byteInterClotGap();
+        const auto GAP_BITS = 8 * GAP_BYTES;
+
         LOG5("");
         LOG5("  Adjusting candidate " << to_adjust->id << " for allocated CLOT");
 
@@ -274,28 +451,121 @@ class GreedyClotAllocator : public Visitor {
             return result;
         }
 
-        // Slow path: if the candidates conflict, delegate to add_clot_candidates.
-        // Fast path: if the candidates do not conflict, then we just return a singleton containing
-        //            the candidate that we are adjusting.
-        bool have_conflict = false;
-        std::map<const PHV::Field*, std::vector<const FieldSliceExtractInfo*>> extract_map;
-        for (auto extract : to_adjust->extracts()) {
-            bool extract_conflicts = false;
-            auto non_conflicts = extract->remove_conflicts(parserInfo, allocated);
-            if (non_conflicts->empty()) {
-                extract_conflicts = true;
+        // Determine the inter-CLOT gap sizes needed before and after the allocated candidate.
+        bool allocatedNeedsPreGap = needInterClotGap(to_adjust, allocated, fei, header_removals);
+        int preGapBits = allocatedNeedsPreGap ? GAP_BITS : 0;
 
-                LOG5("    Removed " << extract->slice()->shortString());
+        bool allocatedNeedsPostGap = needInterClotGap(allocated, to_adjust, fei, header_removals);
+        int postGapBits = allocatedNeedsPostGap ? GAP_BITS : 0;
+
+        // If the candidate occurs immediately after a CLOT that has already been allocated, and
+        // the just-allocated CLOT conflicts with the first byte of the candidate, then we need to
+        // remove the first few bytes to create a sufficient inter-CLOT gap with the previously
+        // allocated CLOT.
+        //
+        // Given this constraint, this le_bitinterval tracks which bits in the candidate can be
+        // included in the adjusted CLOT candidate. This is kept in low-endian format to make
+        // manipulations with field slices easier later on.
+        le_bitinterval candidate_interval = StartLen(0, to_adjust->size_bits);
+        if (to_adjust->afterAllocatedClot) {
+            // Get the first extract and figure out what parts of it don't conflict.
+            const auto* first_extract = to_adjust->extracts().front();
+            const auto* non_conflicts = first_extract->remove_conflicts(parserInfo,
+                                                                        preGapBits,
+                                                                        allocated,
+                                                                        postGapBits);
+
+            // Figure out if first byte conflicts.
+            bool first_byte_conflicts;
+            if (non_conflicts->empty()) {
+                first_byte_conflicts = true;
+            } else {
+                const auto* first_adjusted = non_conflicts->front();
+                first_byte_conflicts =
+                    first_extract->slice()->range().hi != first_adjusted->slice()->range().hi;
             }
 
+            // Adjust candidate_interval as needed.
+            if (first_byte_conflicts) {
+                LOG5("    First byte of candidate " << to_adjust->id << " conflicts");
+                int new_size = std::max(0L, candidate_interval.size() - GAP_BITS);
+                candidate_interval = candidate_interval.resizedToBits(new_size);
+            }
+        }
+
+        // Similarly, we may need to remove the last few bytes of the candidate.
+        if (to_adjust->beforeAllocatedClot) {
+            // Get the last extract and figure out what parts of it don't conflict.
+            const auto* last_extract = to_adjust->extracts().back();
+            const auto* non_conflicts = last_extract->remove_conflicts(parserInfo,
+                                                                       preGapBits,
+                                                                       allocated,
+                                                                       postGapBits);
+
+            // Figure out if last byte conflicts.
+            bool last_byte_conflicts;
+            if (non_conflicts->empty()) {
+                last_byte_conflicts = true;
+            } else {
+                const auto* last_adjusted = non_conflicts->back();
+                last_byte_conflicts =
+                    last_extract->slice()->range().lo != last_adjusted->slice()->range().lo;
+            }
+
+            // Adjust candidate_interval as needed.
+            if (last_byte_conflicts) {
+                LOG5("    Last byte of candidate " << to_adjust->id << " conflicts");
+                int new_size = std::max(0L, candidate_interval.size() - GAP_BITS);
+                candidate_interval = candidate_interval.resizedToBits(new_size)
+                                                       .shiftedByBits(GAP_BITS);
+            }
+        }
+
+        // Figure out whether the candidates conflict. Build an extract_map for the set of
+        // non-conflicting extracts. This map will be used for the slow path below.
+        bool have_conflict = false;
+        std::map<const PHV::Field*, std::vector<const FieldSliceExtractInfo*>> extract_map;
+        unsigned extract_bit_pos = to_adjust->size_bits;
+        for (auto extract : to_adjust->extracts()) {
+            const auto* slice = extract->slice();
+            extract_bit_pos -= slice->size();
+
+            // Adjust the extract so it lands within candidate_bitinterval. If the extract is
+            // disjoint from the interval, then use nullptr to represent the empty extract.
+            const FieldSliceExtractInfo* adjusted_extract = nullptr;
+            auto trim_range =
+                toHalfOpenRange(slice->range())
+                    .shiftedByBits(extract_bit_pos)
+                    .intersectWith(candidate_interval)
+                    .shiftedByBits(-extract_bit_pos)
+                    .shiftedByBits(-slice->range().lo);
+            if (!trim_range.empty()) {
+                adjusted_extract = extract->trim(trim_range.lo, trim_range.size());
+            }
+
+            const auto* non_conflicts =
+                adjusted_extract
+                    ? adjusted_extract->remove_conflicts(parserInfo,
+                                                         preGapBits,
+                                                         allocated,
+                                                         postGapBits)
+                    : new std::vector<const FieldSliceExtractInfo*>();
+
+            // Figure out whether this extract conflicts with the allocated candidate, and add the
+            // non-conflicting extracts to extract_map.
+            bool extract_conflicts = false;
+            if (non_conflicts->empty()) {
+                extract_conflicts = true;
+                LOG5("    Removed " << slice->shortString());
+            }
             for (auto adjusted : *non_conflicts) {
                 extract_conflicts |= extract != adjusted;
-                extract_map[extract->slice()->field()].push_back(adjusted);
+                extract_map[slice->field()].push_back(adjusted);
             }
 
             have_conflict |= extract_conflicts;
             if (LOGGING(5) && extract_conflicts && !non_conflicts->empty()) {
-                LOG5("    Replaced " << extract->slice()->shortString());
+                LOG5("    Replaced " << slice->shortString());
 
                 bool first_replacement = true;
                 for (auto adjusted : *non_conflicts) {
@@ -307,9 +577,40 @@ class GreedyClotAllocator : public Visitor {
             }
         }
 
+        // Fast path, taken when the candidates don't conflict:
+        //   Return a singleton containing the candidate that we are adjusting, after updating the
+        //   candidate with information about whether it appears immediately before or after an
+        //   allocated CLOT.
+        //
+        // Slow path, taken when the candidates conflict:
+        //   Delegate to add_clot_candidates.
         if (!have_conflict) {
-            LOG5("    No need to adjust: candidate does not conflict with allocated CLOT");
-            result->insert(to_adjust);
+            if (LOGGING(5)) {
+                LOG5("    Candidate does not conflict with allocated CLOT");
+
+                if (!allocatedNeedsPostGap) {
+                    if (to_adjust->afterAllocatedClot) {
+                        LOG5("    Candidate already appears after an allocated CLOT with 0-byte "
+                             "gap");
+                    } else {
+                        LOG5("    Marking candidate as appearing after allocated CLOT with 0-byte "
+                             "gap");
+                    }
+                }
+
+                if (!allocatedNeedsPreGap) {
+                    if (to_adjust->beforeAllocatedClot) {
+                        LOG5("    Candidate already appears before an allocated CLOT with 0-byte "
+                             "gap");
+                    } else {
+                        LOG5("    Marking candidate as appearing before allocated CLOT with "
+                             "0-byte gap");
+                    }
+                }
+            }
+
+            result->insert(to_adjust->mark_adjacencies(!allocatedNeedsPostGap,
+                                                       !allocatedNeedsPreGap));
         } else if (!extract_map.empty()) {
             add_clot_candidates(result, to_adjust->pseudoheader, extract_map);
         }
@@ -422,7 +723,9 @@ class GreedyClotAllocator : public Visitor {
     }
 
     /// Uses a greedy algorithm to allocate the given candidates.
-    void allocate(ClotCandidateSet* candidates) {
+    void allocate(ClotCandidateSet* candidates,
+                  const FieldExtractInfo* fei,
+                  const HeaderRemovalAnalysis::ResultMap header_removals) {
         const auto MAX_CLOTS_PER_GRESS = Device::pardeSpec().numClotsPerGress();
 
         // Invariant: all members of the candidate set can be allocated. That is, if we were to
@@ -540,7 +843,8 @@ class GreedyClotAllocator : public Visitor {
 
                     if (candidate == other_candidate) continue;
 
-                    auto adjusted = adjust_for_allocation(other_candidate, candidate);
+                    auto adjusted =
+                        adjust_for_allocation(other_candidate, candidate, fei, header_removals);
                     new_candidates->insert(adjusted->begin(), adjusted->end());
                 }
 
@@ -575,6 +879,33 @@ class GreedyClotAllocator : public Visitor {
         }
     }
 
+    HeaderRemovalAnalysis::ResultMap analyze_header_removals(const ClotCandidateSet* candidates,
+                                                             const IR::MAU::TableSeq* mau) {
+        // Build the set of correlations that we're interested in.
+        std::set<FieldSliceSet> correlations = {};
+        for (const auto* c1 : *candidates) {
+            for (const auto* c2 : *candidates) {
+                if (c1 == c2) continue;
+
+                // Only interesting if c1 and c2 can appear back-to-back in the packet.
+                if (!c1->byte_gaps(parserInfo, c2).count(0)
+                        && !c2->byte_gaps(parserInfo, c1).count(0))
+                    continue;
+
+                for (const auto* pov1 : c1->pseudoheader->pov_bits) {
+                    for (const auto* pov2 : c2->pseudoheader->pov_bits) {
+                        FieldSliceSet set = {pov1, pov2};
+                        correlations.emplace(set);
+                    }
+                }
+            }
+        }
+
+        HeaderRemovalAnalysis hra(phvInfo, correlations);
+        mau->apply(hra);
+        return hra.resultMap;
+    }
+
     Visitor::profile_t init_apply(const IR::Node* root) override {
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
@@ -589,23 +920,32 @@ class GreedyClotAllocator : public Visitor {
     }
 
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
+        const auto* pipe = root->to<IR::BFN::Pipe>();
+        BUG_CHECK(pipe, "GreedyClotAllocator must be applied to pipe");
+
         // Loop over each gress.
-        for (auto kv : parserInfo.graphs()) {
+        for (const auto& entry : parserInfo.graphs()) {
+            const auto* parser = entry.first;
+            const auto* graph = entry.second;
+
             // Build auxiliary data structures.
-            auto field_extract_info = group_extracts(kv.second);
+            auto field_extract_info = group_extracts(graph);
             if (LOGGING(4)) {
                 LOG4("Extracts found that can be part of a CLOT:");
-                for (auto kv2 : *field_extract_info) {
-                    LOG4("  In pseudoheader " << kv2.first->id << ":");
-                    for (auto kv3 : kv2.second)
-                        LOG4("    " << kv3.first->name);
+                for (const auto& entry2 : field_extract_info->pseudoheaderMap) {
+                    const auto* pseudoheader = entry2.first;
+                    const auto& extracts = entry2.second;
+
+                    LOG4("  In pseudoheader " << pseudoheader->id << ":");
+                    for (const auto* field : Keys(extracts))
+                        LOG4("    " << field->name);
                     LOG4("");
                 }
                 LOG4("");
             }
 
             // Identify CLOT candidates.
-            auto candidates = find_clot_candidates(field_extract_info);
+            auto candidates = find_clot_candidates(field_extract_info->pseudoheaderMap);
             if (LOGGING(3)) {
                 if (candidates->empty()) {
                     LOG3("No CLOT candidates found.");
@@ -616,8 +956,12 @@ class GreedyClotAllocator : public Visitor {
                 }
             }
 
+            // Do header-removal analysis.
+            const auto* mau = pipe->thread[parser->gress].mau;
+            auto header_removals = analyze_header_removals(candidates, mau);
+
             // Perform allocation.
-            allocate(candidates);
+            allocate(candidates, field_extract_info, header_removals);
         }
 
         if (auto *pipe = root->to<IR::BFN::Pipe>())
@@ -645,7 +989,7 @@ clotInfo(clotInfo) {
         &clotInfo.parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new GreedyClotAllocator(clotInfo)
+        new GreedyClotAllocator(phv, clotInfo)
     });
 }
 

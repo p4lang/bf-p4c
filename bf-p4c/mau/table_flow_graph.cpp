@@ -267,40 +267,6 @@ void FindFlowGraph::end_apply() {
     LOG4(fg);
     if (LOGGING(4))
         FlowGraph::dump_viz(std::cout, fg);
-
-    // Compute reachability with Floyd-Warshall. Absent cycles, do not consider nodes to be
-    // self-reachable.
-    FlowGraph::Graph::edge_iterator edges, edges_end;
-    for (boost::tie(edges, edges_end) = boost::edges(fg.g); edges != edges_end; ++edges) {
-        auto src = boost::source(*edges, fg.g);
-        auto dst = boost::target(*edges, fg.g);
-
-        fg.reachableNodes[src].setbit(dst);
-    }
-    typename FlowGraph::Graph::vertex_iterator mid, mid_end;
-    for (boost::tie(mid, mid_end) = boost::vertices(fg.g); mid != mid_end; ++mid) {
-        // Ignore the sink node.
-        if (*mid == fg.v_sink) continue;
-
-        typename FlowGraph::Graph::vertex_iterator src, src_end;
-        for (boost::tie(src, src_end) = boost::vertices(fg.g); src != src_end; ++src) {
-            // Ignore the sink node.
-            if (*src == fg.v_sink) continue;
-
-            // If we can't reach mid from src, don't bother going through dsts.
-            if (!fg.reachableNodes[*src].getbit(*mid)) continue;
-
-            // This is a vectorized form of an inner loop that goes through all dsts and sets
-            //
-            //   fg.reachableNodes[src][dst] |=
-            //     fg.reachableNodes[src][mid] & fg.reachableNodes[mid][dst]
-            //
-            // while taking advantage of the fact that we know that
-            //
-            //   fg.reachableNodes[src][mid] = 1
-            fg.reachableNodes[*src] |= fg.reachableNodes[*mid];
-        }
-    }
 }
 
 Visitor::profile_t FindFlowGraphs::init_apply(const IR::Node* root) {

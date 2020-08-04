@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include "bf-p4c/ir/control_flow_visitor.h"
+#include "bf-p4c/lib/boost_graph.h"
 #include "bf-p4c/mau/mau_visitor.h"
 
 namespace boost {
@@ -100,9 +101,7 @@ struct FlowGraph {
 
     boost::optional<gress_t> gress;
 
-    /// Maps each vertex to the set of IDs for all nodes reachable from that vertex. Vertices are
-    /// not considered reachable from themselves unless the graph has cycles.
-    std::map<typename Graph::vertex_descriptor, bitvec> reachableNodes;
+    mutable Reachability<Graph> reachability;
 
     /// Maps each table to its corresponding vertex ID in the Boost graph.
     ordered_map<const IR::MAU::Table*, int> tableToVertexIndex;
@@ -125,10 +124,22 @@ struct FlowGraph {
         return boost::get(boost::edge_annotation, g)[edge];
     }
 
-    FlowGraph(void) : path_finder(this->g) {
+    FlowGraph(void) : reachability(g), path_finder(g) {
         gress = boost::none;
         dominators = boost::none;
     }
+
+    FlowGraph(FlowGraph&& other)
+    : g(std::move(other.g)),
+      gress(std::move(other.gress)),
+      reachability(g),
+      tableToVertexIndex(std::move(other.tableToVertexIndex)),
+      tables(std::move(other.tables)),
+      dominators(std::move(other.dominators)),
+      emptyFlowGraph(std::move(other.emptyFlowGraph)),
+      tableToVertex(std::move(other.tableToVertex)),
+      path_finder(g)
+    { }
 
     /// Maps each table to its associated graph vertex.
     std::map<const IR::MAU::Table*, typename Graph::vertex_descriptor> tableToVertex;
@@ -146,7 +157,7 @@ struct FlowGraph {
     void clear() {
         g.clear();
         gress = boost::none;
-        reachableNodes.clear();
+        reachability.clear();
         tableToVertexIndex.clear();
         tableToVertex.clear();
         tables.clear();
@@ -155,6 +166,7 @@ struct FlowGraph {
 
     void add_sink_vertex() {
         v_sink = add_vertex(nullptr);
+        reachability.setSink(v_sink);
     }
 
     /// @returns true iff there is a path in the flow graph from @t1 to @t2. Passing nullptr for
@@ -165,8 +177,7 @@ struct FlowGraph {
         if (t1 == nullptr) return false;
         const auto v1 = get_vertex(t1);
         const auto v2 = get_vertex(t2);
-        BUG_CHECK(reachableNodes.count(v1), "No reachable nodes entry for %1%", t1->name);
-        return reachableNodes.at(v1).getbit(v2);
+        return reachability.canReach(v1, t1->name, v2, t2->name);
     }
 
     /// @returns the dominator set of the given table. If the IR is well-formed (i.e., the flow

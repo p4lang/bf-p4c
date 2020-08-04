@@ -523,12 +523,23 @@ bitvec PhvInfo::bits_allocated(
     bitvec ret_bitvec;
     for (auto* field : fields_in_container(c)) {
         if (field->padding) continue;
-        field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
-            if (alloc.container() != c) return;
-            le_bitrange bits = alloc.container_slice();
-            ret_bitvec.setrange(bits.lo, bits.size());
-        }); }
+        ret_bitvec |= bits_allocated(c, field, ctxt, use);
+    }
     return ret_bitvec;
+}
+
+bitvec PhvInfo::bits_allocated(
+        const PHV::Container c,
+        const PHV::Field* field,
+        const PHV::AllocContext* ctxt,
+        const PHV::FieldUse* use) const {
+    bitvec result;
+    field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice& alloc) {
+        if (alloc.container() != c) return;
+        le_bitrange bits = alloc.container_slice();
+        result.setrange(bits.lo, bits.size());
+    });
+    return result;
 }
 
 bitvec PhvInfo::bits_allocated(

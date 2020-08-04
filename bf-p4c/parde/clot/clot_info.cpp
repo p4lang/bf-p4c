@@ -669,19 +669,55 @@ bitvec ClotInfo::bits_overwritten_by_phv(const PhvInfo& phv,
     bitvec result;
     if (is_checksum(slice->field())) return result;
 
-    auto field = slice->field();
-    auto slice_range = slice->range();
+    const auto* field = slice->field();
+    const auto& slice_range = slice->range();
     field->foreach_alloc(slice_range, PHV::AllocContext::DEPARSER, nullptr,
             [&](const PHV::AllocSlice& alloc) {
-        // The container overwrites the slice if the container has a modified field or is not
-        // completely covered by the CLOT.
-        bool container_overwrites = false;
-        auto container = alloc.container();
-        for (auto alloc_slice : phv.get_slices_in_container(container)) {
-            auto field = alloc_slice.field();
-            auto slice = new PHV::FieldSlice(field, alloc_slice.field_slice());
-            container_overwrites = !clot_covers_slice(clot, slice) || is_modified(field);
-            if (container_overwrites) break;
+        // The container overwrites the CLOT if we were given a slice of a modified field.
+        bool container_overwrites = is_modified(field);
+
+        // Handle other cases in which the container overwrites the CLOT.
+        //
+        // We can ignore any slice allocated to the container if that allocated slice satisfies any
+        // of the following conditions:
+        //
+        //   - The given slice and the allocated slice are from mutually exclusive fields.
+        //   - The given slice and the allocated slice from different fields, and those fields are
+        //     allocated to overlapping ranges in the container.
+        //
+        // Otherwise, we know one of the following is true, in which case, the container overwrites
+        // the CLOT if the CLOT does not completely cover the allocated slice.
+        //
+        //   - The given slice and the allocated slice are from the same field.
+        //   - The given slice and the allocated slice are from different non-mutually-exclusive
+        //     fields, and those fields are allocated to non-overlapping ranges in the container.
+        if (!container_overwrites) {
+            // Get the current container and figure out which bits of the container are occupied by
+            // the field of the slice we were given.
+            auto container = alloc.container();
+            auto occupied_bits =
+                phv.bits_allocated(container, field, PHV::AllocContext::DEPARSER);
+
+            // Go through the analysis described above.
+            for (const auto& alloc_slice : phv.get_slices_in_container(container)) {
+                const auto* other_field = alloc_slice.field();
+
+                // Ignore if field and other_field are mutually exclusive.
+                if (phv.isFieldMutex(field, other_field)) continue;
+
+                // Ignore if field and other_field are different, and alloc_slice overlaps with
+                // occupied_bits in the container.
+                auto other_occupied =
+                    phv.bits_allocated(container, other_field, PHV::AllocContext::DEPARSER);
+                if (field != other_field && !(occupied_bits & other_occupied).empty()) continue;
+
+                // Container overwrites the CLOT if the CLOT doesn't completely cover the allocated
+                // slice.
+                const auto* other_slice = new PHV::FieldSlice(other_field,
+                                                              alloc_slice.field_slice());
+                container_overwrites = !clot_covers_slice(clot, other_slice);
+                if (container_overwrites) break;
+            }
         }
 
         if (!container_overwrites) return;
@@ -942,8 +978,8 @@ void ClotInfo::clear() {
     field_range_.clear();
     field_aliases_.clear();
     headers_added_by_mau_.clear();
-    pseudoheaders_.clear();
     field_to_pseudoheaders_.clear();
+    deparse_graph_.clear();
     Clot::tagCnt.clear();
     Pseudoheader::nextId = 0;
 }
@@ -1045,39 +1081,49 @@ bool CollectClotInfo::preorder(const IR::BFN::EmitChecksum* emit) {
 
 void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
     // Used for deduplicating pseudoheaders. Contains the POV bits and fields of pseudoheaders
-    // that have already been allocated.
-    std::set<std::pair<const PovBitSet,
-                       const std::vector<const PHV::Field*>>> allocated;
+    // that have already been allocated, mapped to the allocated pseudoheader.
+    std::map<std::pair<const PovBitSet,
+                       const std::vector<const PHV::Field*>>,
+             const Pseudoheader*> allocated;
 
     // The POV bits and field list for the current pseudoheader we are building.
     PovBitSet cur_pov_bits;
     std::vector<const PHV::Field*> cur_fields;
 
+    // Tracks the graph node corresponding to the field or constant that was previously emitted by
+    // the deparser.
+    boost::optional<DeparseGraph::Node> prev_node = boost::none;
+
+    // The deparse graph for the current gress.
+    auto& deparse_graph = clotInfo.deparse_graph_[deparser->gress];
+
     for (auto emit : deparser->emits) {
         const PHV::Field* cur_field = nullptr;
+        DeparseGraph::Node cur_node;
 
         if (auto emit_field = emit->to<IR::BFN::EmitField>()) {
             cur_field = phv.field(emit_field->source->field);
+            cur_node = deparse_graph.addField(cur_field);
         } else if (auto emit_checksum = emit->to<IR::BFN::EmitChecksum>()) {
             cur_field = phv.field(emit_checksum->dest->field);
-        } else if (emit->is<IR::BFN::EmitConstant>()) {
+            cur_node = deparse_graph.addField(cur_field);
+        } else if (auto emit_constant = emit->to<IR::BFN::EmitConstant>()) {
             // exclude from pseudoheader (below)
             // can potentially combine constants and fields with same
             // pov bit sets to create bigger pseudoheader? TODO
+            cur_node = deparse_graph.addConst(emit_constant->constant);
         } else {
             BUG("Unexpected deparser emit: %1%", emit);
         }
 
         if (!cur_field) {
-            // if current emit is constant, create pseudoheader with current set of fields
-            if (!cur_fields.empty()) {
-                add_pseudoheader(cur_pov_bits, cur_fields, allocated);
-                cur_pov_bits.clear();
-                cur_fields.clear();
-            }
+            // Current emit is a constant. Create a pseudoheader with current set of fields.
+            add_pseudoheader(cur_pov_bits, cur_fields, allocated);
+            cur_pov_bits.clear();
+            cur_fields.clear();
         } else {
-            // if current emit is field, create pseudoheader if its pov set is different from
-            // previous field
+            // Current emit is a field. Create a pseudoheader if its pov set is different from
+            // previous field.
             auto pov_bits = fields_to_pov_bits.at(cur_field);
 
             if (cur_pov_bits != pov_bits) {
@@ -1088,6 +1134,13 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
 
             cur_fields.push_back(cur_field);
         }
+
+        // Update the deparse graph with the current field and set things up for the next
+        // iteration.
+        if (prev_node) {
+            deparse_graph.addEdge(*prev_node, cur_node);
+        }
+        prev_node = cur_node;
     }
 
     add_pseudoheader(cur_pov_bits, cur_fields, allocated);
@@ -1096,8 +1149,9 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
 void CollectClotInfo::add_pseudoheader(
     const PovBitSet pov_bits,
     const std::vector<const PHV::Field*> fields,
-    std::set<std::pair<const PovBitSet,
-                       const std::vector<const PHV::Field*>>>& allocated
+    std::map<std::pair<const PovBitSet,
+                       const std::vector<const PHV::Field*>>,
+             const Pseudoheader*>& allocated
 ) {
     if (fields.empty()) return;
 
@@ -1106,13 +1160,11 @@ void CollectClotInfo::add_pseudoheader(
 
     // Have a new pseudoheader.
     auto pseudoheader = new Pseudoheader(pov_bits, fields);
-    clotInfo.pseudoheaders_.push_back(pseudoheader);
-
     for (auto field : fields) {
         clotInfo.field_to_pseudoheaders_[field].insert(pseudoheader);
     }
 
-    allocated.insert(key);
+    allocated[key] = pseudoheader;
 
     if (LOGGING(6)) {
         LOG6("Pseudoheader " << pseudoheader->id);
@@ -1154,11 +1206,12 @@ bool CollectClotInfo::preorder(const IR::MAU::Instruction* instruction) {
     auto src = instruction->operands.at(1);
 
     // Make sure we are setting a header's validity bit.
-    auto dst_field = phv.field(dst);
+    le_bitrange bitrange;
+    auto dst_field = phv.field(dst, &bitrange);
     if (!dst_field || !dst_field->pov) return true;
 
-    // Make sure we are not assigning 0 to the validity bit. Conservatively, we assume that any
-    // other kind of assignment might make the header valid.
+    // Handle case where we are assigning a zero constant to the validity bit. Conservatively, we
+    // assume that assigning a non-constant value to the POV bit can change its value arbitrarily.
     if (auto constant = src->to<IR::Constant>()) {
         if (constant->value == 0) return true;
     }

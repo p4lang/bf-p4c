@@ -5,9 +5,12 @@
 
 ClotCandidate::ClotCandidate(const ClotInfo& clotInfo,
                              const Pseudoheader* pseudoheader,
-                             const std::vector<const FieldSliceExtractInfo*>& extract_infos)
+                             const std::vector<const FieldSliceExtractInfo*>& extract_infos,
+                             bool afterAllocatedClot,
+                             bool beforeAllocatedClot)
                              : pseudoheader(pseudoheader), extract_infos(extract_infos),
-                               id(nextId++) {
+                               id(nextId++), afterAllocatedClot(afterAllocatedClot),
+                               beforeAllocatedClot(beforeAllocatedClot) {
     unsigned offset = 0;
     unsigned idx = 0;
     for (auto extract_info : extract_infos) {
@@ -68,6 +71,26 @@ const std::vector<unsigned>& ClotCandidate::can_end_indices() const {
     return can_end_indices_;
 }
 
+const std::map<unsigned, StatePairSet>
+ClotCandidate::byte_gaps(const CollectParserInfo& parserInfo, const ClotCandidate* other) const {
+    return extract_infos.back()->byte_gaps(parserInfo, other->extract_infos.front());
+}
+
+const ClotCandidate* ClotCandidate::mark_adjacencies(bool afterAllocatedClot,
+                                                     bool beforeAllocatedClot) const {
+    afterAllocatedClot |= this->afterAllocatedClot;
+    beforeAllocatedClot |= this->beforeAllocatedClot;
+
+    if (afterAllocatedClot == this->afterAllocatedClot
+            && beforeAllocatedClot == this->beforeAllocatedClot)
+        return this;
+
+    auto* result = new ClotCandidate(*this);
+    result->afterAllocatedClot = afterAllocatedClot;
+    result->beforeAllocatedClot = beforeAllocatedClot;
+    return result;
+}
+
 bool ClotCandidate::operator<(const ClotCandidate& other) const {
     if (unused_bits.popcount() != other.unused_bits.popcount())
         return unused_bits.popcount() < other.unused_bits.popcount();
@@ -93,6 +116,11 @@ std::string ClotCandidate::print() const {
         first_state = false;
         out << state->name << std::endl;
     }
+
+    if (afterAllocatedClot)
+        out << "  appears after  an allocated CLOT with 0-byte gap" << std::endl;
+    if (beforeAllocatedClot)
+        out << "  appears before an allocated CLOT with 0-byte gap" << std::endl;
 
     TablePrinter tp(out, {"Fields", "Bits", "Property"}, TablePrinter::Align::CENTER);
 

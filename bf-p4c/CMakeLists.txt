@@ -264,6 +264,7 @@ set (BF_P4C_BACKEND_CONTROL_PLANE_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_CONTROL_PLANE_HDRS}")
 
 set (BF_P4C_BACKEND_LIB_HDRS
+  lib/boost_graph.h
   lib/cmp.h
   lib/error_type.h
   lib/pointer_wrapper.h
@@ -408,7 +409,9 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/allocate_clot.cpp
   parde/clot/clot_candidate.cpp
   parde/clot/clot_info.cpp
+  parde/clot/deparse_graph.cpp
   parde/clot/field_slice_extract_info.cpp
+  parde/clot/header_removal_analysis.cpp
   parde/clot/pseudoheader.cpp
   parde/p4i/gen_parser_json.cpp
   )
@@ -446,8 +449,10 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/allocate_clot.h
   parde/clot/clot_candidate.h
   parde/clot/clot_info.h
+  parde/clot/deparse_graph.h
   parde/clot/field_slice_extract_info.h
-  parde/clot/pov_bit_set.h
+  parde/clot/field_slice_set.h
+  parde/clot/header_removal_analysis.h
   parde/clot/pseudoheader.h
   parde/p4i/gen_parser_json.h
   parde/p4i/p4i_json_types.h

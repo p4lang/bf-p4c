@@ -1518,6 +1518,23 @@ class PhvInfo {
         return bits_allocated(container, PHV::AllocContext::of_unit(ctxt), use);
     }
 
+    /// @returns a bitvec showing all potentially allocated bits within a container for the given
+    /// @field field, within the @ctxt context. The context is one of ParserState, Table/Stage,
+    /// Deparser. A null context represents the entire pipeline.
+    bitvec bits_allocated(
+            const PHV::Container,
+            const PHV::Field* field,
+            const PHV::AllocContext *ctxt = nullptr,
+            const PHV::FieldUse* use = nullptr) const;
+
+    bitvec bits_allocated(
+            const PHV::Container container,
+            const PHV::Field* field,
+            const IR::MAU::Table *ctxt,
+            const PHV::FieldUse* use = nullptr) const {
+        return bits_allocated(container, field, PHV::AllocContext::of_unit(ctxt), use);
+    }
+
     /** @returns a bitvec showing the currently allocated bits in a container corresponding to
       * fields simultaneously live with the fields passed in the argument set, within the context
       * @ctxt.

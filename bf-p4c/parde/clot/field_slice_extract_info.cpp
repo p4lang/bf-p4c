@@ -95,9 +95,9 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int start_idx, int size
 
 std::vector<const FieldSliceExtractInfo*>*
 FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
-                                        const ClotCandidate* candidate) const {
-    const int GAP_SIZE = 8 * Device::pardeSpec().byteInterClotGap();
-
+                                        int preGapBits,
+                                        const ClotCandidate* candidate,
+                                        int postGapBits) const {
     int candidate_size = candidate->size_bits;
     int extract_size = slice()->size();
 
@@ -111,13 +111,13 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
     // starts at bit (shift + candidate_offset - extract_offset). So, each shift amount results in
     // a conflict with the bits in the interval
     //
-    //   [shift + candidate_offset - extract_offset - GAP_SIZE,
-    //    shift + candidate_offset - extract_offset + candidate_size + GAP_SIZE - 1].
+    //   [shift + candidate_offset - extract_offset - preGapBits,
+    //    shift + candidate_offset - extract_offset + candidate_size + postGapBits - 1].
     //
     // So, we have a conflict for shift amounts in the interval
     //
-    //   [extract_offset - candidate_offset - candidate_size - GAP_SIZE + 1,
-    //    extract_offset + extract_size - candidate_offset + GAP_SIZE - 1].
+    //   [extract_offset - candidate_offset - candidate_size - postGapBits + 1,
+    //    extract_offset + extract_size - candidate_offset + preGapBits - 1].
 
     // Tracks which bits in the extract conflict with the candidate. Indices are in field order,
     // which is the opposite of packet order.
@@ -133,8 +133,10 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
 
             auto shift_amounts = parserInfo.get_all_shift_amounts(extract_state, candidate_state);
 
-            int lower_bound = extract_offset - candidate_offset - candidate_size - GAP_SIZE + 1;
-            int upper_bound = extract_offset + extract_size - candidate_offset + GAP_SIZE - 1;
+            int lower_bound =
+                extract_offset - candidate_offset - candidate_size - postGapBits + 1;
+            int upper_bound =
+                extract_offset + extract_size - candidate_offset + preGapBits - 1;
 
             for (auto it = shift_amounts->lower_bound(lower_bound);
                  it != shift_amounts->end() && *it <= upper_bound;
@@ -142,11 +144,11 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
                 auto shift = *it;
 
                 auto conflict_start =
-                    std::max(0, shift + candidate_offset - extract_offset - GAP_SIZE);
+                    std::max(0, shift + candidate_offset - extract_offset - preGapBits);
                 auto conflict_end =
                     std::min(extract_size - 1,
                              shift + candidate_offset - extract_offset
-                                 + candidate_size + GAP_SIZE - 1);
+                                 + candidate_size + postGapBits - 1);
                 auto conflict_size = conflict_end - conflict_start + 1;
 
                 // NB: conflict_start and conflict_end are in packet coordinates, but
@@ -178,6 +180,54 @@ FieldSliceExtractInfo::remove_conflicts(const CollectParserInfo& parserInfo,
     if (start_idx != -1) {
         // Add a final chunk of non-conflicts.
         result->push_back(trim(0, start_idx + 1));
+    }
+
+    return result;
+}
+
+const std::map<unsigned, StatePairSet>
+FieldSliceExtractInfo::byte_gaps(const CollectParserInfo& parserInfo,
+                                 const FieldSliceExtractInfo* other) const {
+    std::map<unsigned, StatePairSet> result;
+
+    for (auto& entry : bit_gaps(parserInfo, other)) {
+        auto& bit_gap = entry.first;
+        auto& states = entry.second;
+
+        BUG_CHECK(bit_gap % 8 == 0, "Gap between %1% in state %2% and %3% in state %4% "
+            "can be %5% bits, which is not a whole-byte multiple",
+            slice_->shortString(),
+            states.begin()->first,
+            other->slice_->shortString(),
+            states.begin()->second,
+            bit_gap);
+
+        result[static_cast<unsigned>(bit_gap / 8)] = states;
+    }
+
+    return result;
+}
+
+const std::map<unsigned, StatePairSet>
+FieldSliceExtractInfo::bit_gaps(const CollectParserInfo& parserInfo,
+                                const FieldSliceExtractInfo* other) const {
+    std::map<unsigned, StatePairSet> result;
+
+    for (const auto& thisEntry : state_bit_offsets_) {
+        const auto* thisState = thisEntry.first;
+        const auto thisStateBitOffset = thisEntry.second;
+
+        for (const auto& otherEntry : other->state_bit_offsets_) {
+            const auto* otherState = otherEntry.first;
+            const auto otherStateBitOffset = otherEntry.second;
+
+            for (auto shiftAmount : *parserInfo.get_all_shift_amounts(thisState, otherState)) {
+                int gap = shiftAmount + otherStateBitOffset - thisStateBitOffset - slice_->size();
+                if (gap >= 0) {
+                    result[static_cast<unsigned>(gap)].insert({thisState, otherState});
+                }
+            }
+        }
     }
 
     return result;

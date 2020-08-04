@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
 
-#include "pov_bit_set.h"
+#include "field_slice_set.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 /// Represents a sequence of fields that are always contiguously emitted by the deparser. A

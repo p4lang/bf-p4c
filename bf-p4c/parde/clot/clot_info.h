@@ -4,7 +4,8 @@
 #include <algorithm>
 
 #include "clot.h"
-#include "pov_bit_set.h"
+#include "deparse_graph.h"
+#include "field_slice_set.h"
 #include "pseudoheader.h"
 #include "lib/ordered_map.h"
 #include "bf-p4c/lib/cmp.h"
@@ -67,8 +68,10 @@ class ClotInfo {
     /// Names of headers that might be added by MAU.
     std::set<cstring> headers_added_by_mau_;
 
-    std::vector<const Pseudoheader*> pseudoheaders_;
+    /// Maps each field that is part of a pseudoheader to the pseudoheaders containing that field.
     std::map<const PHV::Field*, std::set<const Pseudoheader*>> field_to_pseudoheaders_;
+
+    std::map<gress_t, DeparseGraph> deparse_graph_;
 
  public:
     explicit ClotInfo(PhvUse& uses) : uses(uses) {}
@@ -361,12 +364,15 @@ class CollectClotInfo : public Inspector {
     /// Uses @ref fields_to_pov_bits to identify pseudoheaders.
     void postorder(const IR::BFN::Deparser* deparser) override;
 
-    /// Helper. Adds a new pseudoheader with the given @arg pov_bits and @arg fields, if one hasn't
-    /// already been allocated, and @arg fields is non-empty.
+    /// Helper.
+    ///
+    /// Does nothing if @arg fields is empty. Otherwise, adds a new pseudoheader with the given
+    /// @arg pov_bits and @arg fields, if one hasn't already been allocated.
     void add_pseudoheader(const PovBitSet pov_bits,
                           const std::vector<const PHV::Field*> fields,
-                          std::set<std::pair<const PovBitSet,
-                                             const std::vector<const PHV::Field*>>>& allocated);
+                          std::map<std::pair<const PovBitSet,
+                                             const std::vector<const PHV::Field*>>,
+                                   const Pseudoheader*>& allocated);
 
     /// Collects aliasing information.
     bool preorder(const IR::BFN::AliasMember* alias) override {
