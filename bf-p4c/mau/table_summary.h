@@ -68,9 +68,9 @@ class TableSummary: public MauInspector {
 
  private:
     static constexpr int CRITICAL_PATH_THRESHOLD = 2;
-    static int numInvoked[4];
+    int numInvoked = 0;
     /// true if the first round of table placement resulted in less than Device::numStages() stages.
-    static bool firstRoundFit;
+    bool firstRoundFit = false;
     Logging::FileLog *tsLog = nullptr;
     enum state_t {
         INITIAL,

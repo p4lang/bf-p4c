@@ -1859,11 +1859,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "AssertionError: Expecting error as part of -ve test of filter get with action"
-  p4_16_programs_tna_ternary_match
-)
-
-p4c_add_xfail_reason("tofino"
   "error -2 thrown"
   testdata/p4_16_samples/psa-meter7-bmv2.p4
 )

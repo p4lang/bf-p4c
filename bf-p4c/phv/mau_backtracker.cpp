@@ -2,8 +2,6 @@
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "lib/log.h"
 
-int MauBacktracker::numInvoked = 0;
-
 bool MauBacktracker::backtrack(trigger &trig) {
     if (trig.is<PHVTrigger::failure>()) {
         auto t = dynamic_cast<PHVTrigger::failure *>(&trig);

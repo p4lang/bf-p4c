@@ -8,8 +8,6 @@
 #include "lib/map.h"
 #include "lib/safe_vector.h"
 
-int TableSummary::numInvoked[] = {0};
-bool TableSummary::firstRoundFit = false;
 const char *state_name[] = { "INITIAL", "NOCC_TRY1", "REDO_PHV1", "NOCC_TRY2", "REDO_PHV2",
     "FINAL_PLACEMENT", "FAILURE", "SUCCESS" };
 
@@ -39,9 +37,9 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     ingressDone = false;
     egressDone = false;
     no_errors_before_summary = placementErrorCount() == 0;
-    ++numInvoked[pipe_id];
+    ++numInvoked;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
-    LOG1("Table allocation done " << numInvoked[pipe_id] << " time(s), state = " <<
+    LOG1("Table allocation done " << numInvoked << " time(s), state = " <<
          state_name[state]);
     return rv;
 }
@@ -209,7 +207,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         return;
 
     default:
-        BUG("TableSummary state %s (pass %d) not handled", state_name[state], numInvoked[pipe_id]);
+        BUG("TableSummary state %s (pass %d) not handled", state_name[state], numInvoked);
     }
 }
 

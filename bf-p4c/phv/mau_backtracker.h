@@ -12,7 +12,7 @@ class MauBacktracker : public Backtrack {
  private:
     static constexpr unsigned NUM_LOGICAL_TABLES_PER_STAGE = 16;
     /// To keep track of the number of times this pass has been invoked
-    static int numInvoked;
+    int numInvoked = 0;
 
     /// Store a map of table names to stage, used as reference by the second round of PHV allocation
     /// (after a backtrack exception has been thrown by TableSummary)
