@@ -2192,7 +2192,7 @@ static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int lo
     if (!LOGGING(loglevel)) return nullptr;
 
     auto filename = Logging::PassManager::getNewLogFileName(prefix);
-    return new Logging::FileLog(pipeId, filename, Logging::Mode::CREATE);
+    return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
 Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
@@ -2269,7 +2269,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
 
     // If only privatized fields are unallocated, mark allocation as done.
     // The rollback of unallocated privatized fields will happen in ValidateAllocation.
-    bool allocationDone = result.status == AllocResultCode::SUCCESS |
+    bool allocationDone = (result.status == AllocResultCode::SUCCESS) ||
         onlyPrivatizedFieldsUnallocated(result.remaining_clusters);
     if (allocationDone) {
         clearSlices(phv_i);
