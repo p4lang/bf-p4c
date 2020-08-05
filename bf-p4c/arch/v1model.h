@@ -22,11 +22,11 @@
 
 namespace BFN {
 
-class AddAdjustByteCount : public Transform {
+class AddAdjustByteCount : public Modifier {
     V1::ProgramStructure *structure;
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-    const IR::Node * preorder(IR::Declaration_Instance* decl) override;
+    bool preorder(IR::Declaration_Instance* decl) override;
  public:
      AddAdjustByteCount(V1::ProgramStructure *structure,
              P4::ReferenceMap* refMap, P4::TypeMap *typeMap)

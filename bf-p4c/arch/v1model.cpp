@@ -2322,9 +2322,9 @@ bool skipCond(const Visitor::Context *ctxt, const IR::Expression *expr) {
 
 }  // namespace V1
 
-const IR::Node * AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
+bool AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
     auto control = findContext<IR::P4Control>();
-    if (!control) return decl;
+    if (!control) return false;
 
     if (control->name != structure->getBlockName(ProgramStructure::EGRESS)) return decl;
     if (auto type = decl->type->to<IR::Type_Specialized>()) {
@@ -2342,19 +2342,17 @@ const IR::Node * AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
                                                                 new IR::Path("sizeInBytes"));
                 auto new_abc_expr = new IR::MethodCallExpression(new_abc_method, new_abc_args);
 
-                auto annot = new IR::Annotation(IR::ID("adjust_byte_count"), { new_abc_expr });
-                auto annots = new IR::Annotations(decl->annotations->annotations);
-                annots->add(annot);
-                auto new_decl = new IR::Declaration_Instance(decl->srcInfo,
-                        decl->name, annots, decl->type, decl->arguments);
+                decl->annotations = decl->annotations->addAnnotation("adjust_byte_count",
+                                                                        new_abc_expr);
+
                 LOG3("Adding annotation "
                     "'@adjust_byte_count(sizeInBytes(meta.__bfp4c_bridge_metadata))' to decl: "
-                        << new_decl);
-                return new_decl;
+                        << decl);
+                return true;
             }
         }
     }
-    return decl;
+    return true;
 }
 
 /// The general work flow of architecture translation consists of the following steps:
