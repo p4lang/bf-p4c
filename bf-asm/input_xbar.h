@@ -1,5 +1,5 @@
-#ifndef _input_xbar_h_
-#define _input_xbar_h_
+#ifndef BF_ASM_INPUT_XBAR_H_
+#define BF_ASM_INPUT_XBAR_H_
 
 #include <fstream>
 
@@ -14,7 +14,7 @@ struct HashCol {
     HashExpr                *fn = 0;
     int                     bit = 0;
     bitvec                  data;
-    unsigned                valid = 0; // Used only in Tofino
+    unsigned                valid = 0;  // Used only in Tofino
     void dbprint(std::ostream & out) const {
         out << "HashCol: " <<
                " lineno: " << lineno <<
@@ -52,20 +52,21 @@ class InputXbar {
                    t == TERNARY ? "ternary" :
                    t == BYTE ? "byte" : ""; }
     };
+
  private:
     struct Input {
         Phv::Ref        what;
         int             lo, hi;
-        Input(const Phv::Ref &a) : what(a), lo(-1), hi(-1) {}
+        explicit Input(const Phv::Ref &a) : what(a), lo(-1), hi(-1) {}
         Input(const Phv::Ref &a, int s) : what(a), lo(s), hi(-1) {}
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
         unsigned size() const { return hi - lo + 1; }
     };
     struct HashGrp {
         int             lineno = -1;
-        unsigned        tables = 0; //Bit set for table index
+        unsigned        tables = 0;  // Bit set for table index
         uint64_t        seed = 0;
-        bool            seed_parity = false; // Parity to be set on the seed value
+        bool            seed_parity = false;  // Parity to be set on the seed value
     };
     Table       *table;
     std::map<int, HashCol>                              empty_hash_table;
@@ -99,10 +100,11 @@ class InputXbar {
         Input *find(Phv::Slice sl) const;
         std::vector<Input *> find_all(Phv::Slice sl) const;
     };
-public:
+
+ public:
     const int   lineno;
     int random_seed = -1;
-    InputXbar(Table *table) : table(table), lineno(-1) {}
+    explicit InputXbar(Table *table) : table(table), lineno(-1) {}
     InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data);
     void pass1();
     void pass2();
@@ -145,8 +147,8 @@ public:
                     return Phv::Ref(in.what, bit-in.lo, bit-in.lo);
         return Phv::Ref(); }
     std::string get_field_name(int bit) {
-        for (auto &g: groups) {
-            for (auto &p: g.second) {
+        for (auto &g : groups) {
+            for (auto &p : g.second) {
                 if (bit <= p.hi && bit >= p.lo)
                     return p.what.name(); } }
         return ""; }
@@ -154,7 +156,7 @@ public:
         if (hash_groups.count(group))
             return ((hash_groups.at(group).seed >> bit) & 0x1);
         return 0; }
-    HashGrp* get_hash_group(unsigned group = -1){ return ::getref(hash_groups, group); }
+    HashGrp* get_hash_group(unsigned group = -1) { return ::getref(hash_groups, group); }
     HashGrp* get_hash_group_from_hash_table(int hash_table) {
         if (hash_table < 0 || hash_table >= HASH_TABLES) return nullptr;
         for (auto &hg : hash_groups) {
@@ -177,10 +179,11 @@ public:
                 inner = outer->second.begin(); }
             inner_valid = true; }
         struct iter_deref : public std::pair<Group, const Input &> {
-            iter_deref(const std::pair<Group, const Input &> &a)
+            explicit iter_deref(const std::pair<Group, const Input &> &a)
             : std::pair<Group, const Input &>(a) {}
             iter_deref *operator->() { return this; } };
-    public:
+
+     public:
         all_iter(decltype(groups)::const_iterator o, decltype(groups)::const_iterator oend)
         : outer(o), outer_end(oend), inner_valid(false) { mk_inner_valid(); }
         bool operator==(const all_iter &a) {
@@ -217,4 +220,4 @@ inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {
     default: out << "<type=" << static_cast<int>(gr.type) << ">"; }
     return out << " ixbar group " << gr.index; }
 
-#endif /* _input_xbar_h_ */
+#endif /* BF_ASM_INPUT_XBAR_H_ */

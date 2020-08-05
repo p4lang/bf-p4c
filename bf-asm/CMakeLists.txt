@@ -213,10 +213,10 @@ set (CPPLINT_FILES
   ${REFLOW_SOURCES}
   ${MKSIZE_SOURCES}
   ${BFAS_COMMON_SOURCES}
-  asm-parse.ypp
   ${BFAS_UTIL_HEADERS}
   ${BFAS_COMMON_HEADERS}
   )
+list(REMOVE_ITEM CPPLINT_FILES vector.c)
 
 add_custom_command(OUTPUT lex-yaml.c
   COMMAND ${FLEX_EXECUTABLE} -t ${CMAKE_CURRENT_SOURCE_DIR}/lex-yaml.l > lex-yaml.c

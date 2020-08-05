@@ -7,7 +7,6 @@
 #include "sections.h"
 
 class Primitives : public Section {
-
     int lineno = -1;
     std::unique_ptr<json::obj>_primitives = nullptr;
     std::string _primitivesFileName;
@@ -92,7 +91,8 @@ class Primitives : public Section {
             json::vector &prim_tables = _primitives->to<json::map>()["tables"];
             json::vector &ctxt_tables = ctxtJson["tables"];
             for (auto &prim_table : prim_tables) {
-                json::string prim_table_name = prim_table->to<json::map>()["name"]->to<json::string>();
+                json::string prim_table_name
+                    = prim_table->to<json::map>()["name"]->to<json::string>();
                 bool is_merged = false;
                 json::string ctxt_table_name;
                 for (auto &ctxt_table : ctxt_tables) {
@@ -100,25 +100,35 @@ class Primitives : public Section {
                     if (prim_table_name == ctxt_table_name) {
                         if ((ctxt_table->to<json::map>().count("actions") > 0) &&
                            (prim_table->to<json::map>().count("actions") > 0)) {
-                            json::vector &prim_table_actions = prim_table->to<json::map>()["actions"];
-                            json::vector &ctxt_table_actions = ctxt_table->to<json::map>()["actions"];
+                            json::vector &prim_table_actions
+                                = prim_table->to<json::map>()["actions"];
+                            json::vector &ctxt_table_actions
+                                = ctxt_table->to<json::map>()["actions"];
                             is_merged = merge_actions(prim_table_actions, ctxt_table_actions);
                             break;
                         } else if ((ctxt_table->to<json::map>().count("match_attributes") > 0) &&
                            (prim_table->to<json::map>().count("match_attributes") > 0)) {
-                            json::map &prim_table_ma = prim_table->to<json::map>()["match_attributes"];
-                            json::map &ctxt_table_ma = ctxt_table->to<json::map>()["match_attributes"];
+                            json::map &prim_table_ma
+                                = prim_table->to<json::map>()["match_attributes"];
+                            json::map &ctxt_table_ma
+                                = ctxt_table->to<json::map>()["match_attributes"];
                             if ((ctxt_table_ma.to<json::map>().count("pre_classifier") > 0) &&
                                (prim_table_ma.to<json::map>().count("pre_classifier") > 0)) {
-                                json::map &prim_table_pc = prim_table_ma.to<json::map>()["pre_classifier"];
-                                json::map &ctxt_table_pc = ctxt_table_ma.to<json::map>()["pre_classifier"];
-                                        if ((ctxt_table_pc.to<json::map>().count("actions") > 0) &&
-                                            (prim_table_pc.to<json::map>().count("actions") > 0)) {
-                                                json::vector &prim_table_actions = prim_table_pc.to<json::map>()["actions"];
-                                                json::vector &ctxt_table_actions = ctxt_table_pc.to<json::map>()["actions"];
-                                                LOG3("Merging primitive actions on table: " << prim_table_name);
-                                                is_merged = merge_actions(prim_table_actions, ctxt_table_actions);
-                                                break; } } } } }
+                                json::map &prim_table_pc
+                                    = prim_table_ma.to<json::map>()["pre_classifier"];
+                                json::map &ctxt_table_pc
+                                    = ctxt_table_ma.to<json::map>()["pre_classifier"];
+                                if ((ctxt_table_pc.to<json::map>().count("actions") > 0) &&
+                                    (prim_table_pc.to<json::map>().count("actions") > 0)) {
+                                        json::vector &prim_table_actions
+                                            = prim_table_pc.to<json::map>()["actions"];
+                                        json::vector &ctxt_table_actions
+                                            = ctxt_table_pc.to<json::map>()["actions"];
+                                        LOG3("Merging primitive actions on table: "
+                                                << prim_table_name);
+                                        is_merged = merge_actions(prim_table_actions,
+                                                                  ctxt_table_actions);
+                                        break; } } } } }
                 if (!is_merged) {
                     warning(lineno, "No table named %s found to merge primitive info",
                             prim_table_name.c_str()); } }

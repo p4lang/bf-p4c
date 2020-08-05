@@ -6,7 +6,6 @@
 #include "tables.h"
 #include "hashexpr.h"
 #include "hex.h"
-#include "misc.h"
 
 DEFINE_TABLE_TYPE(GatewayTable)
 
@@ -15,14 +14,15 @@ static struct {
 } range_match_info[] = { { 0, 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
 
 GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match) {
-    if (range_match)
+    if (range_match) {
         for (unsigned i = 0; i < range_match_info[range_match].units; i++)
             range[i] = range_match_info[range_match].mask;
+    }
     if (v) {
         lineno = v->lineno;
         if (v->type == tVEC) {
             int last = v->vec.size - 1;
-            if (last > (int)range_match_info[range_match].units)
+            if (last > static_cast<int>(range_match_info[range_match].units))
                 error(lineno, "Too many set values for range match");
             for (int i = 0; i < last; i++)
                 if (CHECKTYPE((*v)[last-i-1], tINT)) {
@@ -43,7 +43,7 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
     } else if (data.type == tSTR || data.type == tVEC) {
         next = data;
     } else if (data.type == tMAP) {
-        for (auto &kv: MapIterChecked(data.map)) {
+        for (auto &kv : MapIterChecked(data.map)) {
             if (kv.key == "next") {
                 next = kv.value;
             } else if (kv.key == "run_table") {
@@ -53,12 +53,14 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                     run_table = false;
                 else
                     error(kv.value.lineno, "Syntax error, expecting boolean");
-            } else
+            } else {
                 error(kv.key.lineno, "Syntax error, expecting gateway action description"); }
+            }
         if (run_table && next.set())
             error(data.lineno, "Can't run table and override next in the same gateway row");
-    } else
+    } else {
         error(data.lineno, "Syntax error, expecting gateway action description");
+    }
 }
 
 void GatewayTable::setup(VECTOR(pair_t) &data) {
@@ -66,8 +68,10 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
     if (auto *v = get(data, "range")) {
         if (CHECKTYPE(*v, tINT)) {
             if (v->i == 2) range_match = DC_2BIT;
-            if (v->i == 4) range_match = DC_4BIT;
-            else error(v->lineno, "Unknown range match size %" PRId64 " bits", v->i); } }
+            if (v->i == 4)
+                range_match = DC_4BIT;
+            else
+                error(v->lineno, "Unknown range match size %" PRId64 " bits", v->i); } }
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "name") {
             if (CHECKTYPE(kv.value, tSTR))
@@ -163,8 +167,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT))
                         match.emplace_back(v.key.i, gress, stage->stageno, v.value);
-            } else
+            } else {
                 match.emplace_back(gress, stage->stageno, kv.value);
+            }
         } else if (kv.key == "range") {
             /* done above, to be before match parsing */
         } else if (kv.key == "xor") {
@@ -175,8 +180,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.map)
                     if (CHECKTYPE(v.key, tINT))
                         xor_match.emplace_back(v.key.i, gress, stage->stageno, v.value);
-            } else
+            } else {
                 xor_match.emplace_back(gress, stage->stageno, kv.value);
+            }
         } else if (kv.key == "long_branch" && Target::LONG_BRANCH_TAGS() > 0) {
             if (options.disable_long_branch)
                 error(kv.key.lineno, "long branches disabled");
@@ -192,17 +198,17 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "context_json") {
             setup_context_json(kv.value);
         } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||
-                   (kv.key.type == tVEC && range_match != NONE))
-        {
+                   (kv.key.type == tVEC && range_match != NONE)) {
             table.emplace_back(&kv.key, kv.value, range_match);
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
 }
 
 static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec,
-                            const char *name, unsigned max)
-{
+                            const char *name, unsigned max) {
     for (unsigned i = 0; i < vec.size(); i++) {
         if (!vec[i].val.check())
             break;
@@ -210,12 +216,13 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
             error(vec[i].val.lineno, "%s not accessable in mau", vec[i].val->reg.name);
         if (vec[i].offset >= 0) {
             for (unsigned j = 0; j < i; ++j) {
-                if (vec[i].offset < vec[j].offset + (int)vec[j].val->size() &&
-                    vec[j].offset < vec[i].offset + (int)vec[i].val->size())
+                if (vec[i].offset < vec[j].offset + static_cast<int>(vec[j].val->size()) &&
+                    vec[j].offset < vec[i].offset + static_cast<int>(vec[i].val->size()))
                     error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous "
                           "value at offset %d", name, vec[i].offset, vec[j].offset); }
-        } else
+        } else {
             vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
+        }
         if (vec[i].offset < 32 && (vec[i].offset & 7) != (vec[i].val->lo & 7))
             error(vec[i].val.lineno, "Gateway %s key %s misaligned within byte", name,
                   vec[i].val.name());
@@ -296,7 +303,7 @@ void GatewayTable::verify_format() {
                           field.first.c_str());
                     err = true; } } }
     } else if (layout.size() > 1) {
-        if(layout[1].result_bus < 0 || layout[1].result_bus > 3)
+        if (layout[1].result_bus < 0 || layout[1].result_bus > 3)
             error(layout[1].lineno, "Invalid bus %d for gateway payload",  layout[1].result_bus);
         if ((layout[1].result_bus & 2) && format->groups() > 1)
             error(format->lineno, "Can't have mulitple payload format groups when using "
@@ -452,15 +459,18 @@ static int find_next_lut_entry(Table *tbl, const Table::NextTables &next) {
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
     if (logical_id < 0)  {
-        if (match_table) logical_id = match_table->logical_id;
-        else choose_logical_id(); }
+        if (match_table)
+            logical_id = match_table->logical_id;
+        else
+            choose_logical_id(); }
     if (gw_unit < 0) {
         if (layout[0].bus >= 0 && !stage->gw_unit_use[layout[0].row][layout[0].bus]) {
             gw_unit = layout[0].bus;
-        } else for (int i = 0; i < 2; ++i) {
-            if (!stage->gw_unit_use[layout[0].row][i]) {
-                gw_unit = i;
-                break; } }
+        } else {
+            for (int i = 0; i < 2; ++i) {
+                if (!stage->gw_unit_use[layout[0].row][i]) {
+                    gw_unit = i;
+                    break; } } }
         if (gw_unit < 0)
             error(layout[0].lineno, "No gateway units available on row %d", layout[0].row);
         else
@@ -566,8 +576,7 @@ unsigned GatewayTable::input_use() const {
  */
 template<class REGS>
 static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
-                          std::vector<GatewayTable::MatchKey> &match, int group)
-{
+                          std::vector<GatewayTable::MatchKey> &match, int group) {
     auto &rams_row = regs.rams.array.row[row.row];
     auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
     for (auto &r : match) {
@@ -589,10 +598,10 @@ template<class REGS> void enable_gateway_payload_exact_shift_ovr(REGS &regs, int
 #include "tofino/gateway.cpp"
 #if HAVE_JBAY
 #include "jbay/gateway.cpp"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/gateway.cpp"
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 template<class REGS>
 void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
@@ -651,9 +660,10 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
                         if (grp < 0) continue;
                         merge.mau_stats_adr_exact_shiftcount[row*2 + bus][i]
                             = st->determine_shiftcount(st, grp, 0, 0); }
-                } else
+                } else {
                     merge.mau_stats_adr_tcam_shiftcount[row*2 + bus]
                         = st->determine_shiftcount(st, 0, 0, tcam_shift);
+                }
                 break;
             }
 
@@ -664,9 +674,10 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
                         if (grp < 0) continue;
                         merge.mau_meter_adr_exact_shiftcount[row*2 + bus][i]
                             = m->determine_shiftcount(m, grp, 0, 0); }
-                } else
+                } else {
                     merge.mau_meter_adr_tcam_shiftcount[row*2 + bus]
                         = m->determine_shiftcount(m, 0, 0, tcam_shift);
+                }
                 break;
             }
 
@@ -677,9 +688,10 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
                         if (grp < 0) continue;
                         merge.mau_meter_adr_exact_shiftcount[row*2 + bus][i]
                             = s->determine_shiftcount(s, grp, 0, 0); }
-                } else
+                } else {
                     merge.mau_meter_adr_tcam_shiftcount[row*2 + bus]
                         = s->determine_shiftcount(s, 0, 0, tcam_shift);
+                }
                 break;
             }
         }
@@ -854,7 +866,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     LOG3("### Gateway table " << gwName << " gen_tbl_cfg");
     json::map gTable;
     gTable["direction"] = P4Table::direction_name(gress);
-    gTable["attached_to"] = match_table ? match_table->p4_name() : "-" ;
+    gTable["attached_to"] = match_table ? match_table->p4_name() : "-";
     gTable["handle"] = gateway_handle++;
     gTable["name"] = gwName;
     gTable["table_type"] = "condition";
@@ -870,7 +882,7 @@ void GatewayTable::gen_tbl_cfg(json::vector &out) const {
     mra["memory_type"] = "gateway";
     mra["payload_buses"] = json::vector();
     gStageTable["memory_resource_allocation"] = std::move(mra);
-    json::vector pack_format; // For future use
+    json::vector pack_format;  // For future use
     gStageTable["pack_format"] = std::move(pack_format);
     json::map next_table_names;
     next_table_names["false"] = cond_false.next.next_table_name();

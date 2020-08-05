@@ -32,7 +32,8 @@ Table::Format::Field *TernaryIndirectTable::lookup_field(const std::string &n,
     return rv;
 }
 
-void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {
+void TernaryMatchTable::vpn_params(int &width, int &depth, int &period,
+        const char *&period_name) const {
     if ((width = match.size()) == 0)
         width = input_xbar->tcam_width();
     depth = width ? layout_size() / width : 0;
@@ -74,8 +75,9 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
         if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
             if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
                 error(v[1].lineno, "Invalid input xbar group %" PRId64, v[1].i);
-        } else
+        } else {
             byte_group = -1;
+        }
         if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
             error(v[v.vec.size-1].lineno, "Invalid input xbar byte control %d", byte_config);
     } else if (CHECKTYPE(v, tMAP)) {
@@ -83,19 +85,23 @@ TernaryMatchTable::Match::Match(const value_t &v) : lineno(v.lineno) {
             if (kv.key == "group") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS)
                     error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
-                else word_group = kv.value.i;
+                else
+                    word_group = kv.value.i;
             } else if (kv.key == "byte_group") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS/2)
                     error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
-                else byte_group = kv.value.i;
+                else
+                    byte_group = kv.value.i;
             } else if (kv.key == "byte_config") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= 4)
                     error(kv.value.lineno, "Invalid byte group config %s", value_desc(kv.value));
-                else byte_config = kv.value.i;
+                else
+                    byte_config = kv.value.i;
             } else if (kv.key == "dirtcam") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i > 0xfff)
                     error(kv.value.lineno, "Invalid dirtcam mode %s", value_desc(kv.value));
-                else dirtcam = kv.value.i;
+                else
+                    dirtcam = kv.value.i;
             } else {
                 error(kv.key.lineno, "Unknown key '%s' in ternary match spec",
                       value_desc(kv.key)); } } }
@@ -116,13 +122,15 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, true, P4Table::MatchEntry);
     if (!input_xbar)
         input_xbar = new InputXbar(this);
-    if (auto *m = get(data, "match"))
+    if (auto *m = get(data, "match")) {
         if (CHECKTYPE2(*m, tVEC, tMAP)) {
             if (m->type == tVEC)
                 for (auto &v : m->vec)
                     match.emplace_back(v);
             else
-                match.emplace_back(*m); }
+                match.emplace_back(*m);
+        }
+    }
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "match") {
@@ -132,9 +140,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                 indirect = kv.value;
         } else if (kv.key == "indirect_bus") {
             if (CHECKTYPE(kv.value, tINT)) {
-                if (kv.value.i < 0 || kv.value.i >= 16)
+                if (kv.value.i < 0 || kv.value.i >= 16) {
                     error(kv.value.lineno, "Invalid ternary indirect bus number");
-                else {
+                } else {
                     indirect_bus = kv.value.i;
                     if (auto *old = stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1])
                         error(kv.value.lineno, "Indirect bus %d already in use by table %s",
@@ -148,9 +156,11 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
                     stage->tcam_id_use[tcam_id] = this; }
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
     check_tcam_match_bus(layout);
     if (indirect_bus >= 0) {
@@ -162,9 +172,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         if (!attached.stats.empty() || !attached.meters.empty() || !attached.statefuls.empty())
             error(lineno, "Table %s has ternary indirect table and directly attached stats/meters"
                   " -- move them to indirect table", name());
-    }
-    else if (!action.set() && !actions)
+    } else if (!action.set() && !actions) {
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
+    }
     if (action && !action_bus) action_bus = new ActionBus();
 }
 
@@ -285,8 +295,9 @@ void TernaryMatchTable::pass1() {
                 if (action->bit(0) != 0)
                     error(indirect->format->lineno, "ternary indirect 'action' field must be"
                           " at bit 0 to be used as next table selector");
-            } else
+            } else {
                 error(indirect->format->lineno, "No 'next' or 'action' field in format"); } }
+            }
     attached.pass1(this);
     if (hit_next.size() > 2 && !indirect)
         error(lineno, "Ternary Match tables cannot directly specify more than 2 hit next tables");
@@ -320,7 +331,10 @@ void TernaryMatchTable::pass2() {
                 if (act->p4_params_list.size() == 1)
                     set_partition_field_name(act->p4_params_list[0].name);
             } else {
-                error(lineno, "For ALPM pre_classifier '%s-%s' only 1 action expected to set parition index but found %d", p4_name(), name(), acts->count()); } } }
+                error(lineno,
+                    "For ALPM pre_classifier '%s-%s' only 1 action expected "
+                    "to set parition index but found %d",
+                    p4_name(), name(), acts->count()); } } }
 }
 
 void TernaryMatchTable::pass3() {
@@ -401,7 +415,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
             auto &tcam_mode = regs.tcams.col[col].tcam_mode[row.row];
-            //tcam_mode.tcam_data1_select = row.bus; -- no longer used
+            // tcam_mode.tcam_data1_select = row.bus; -- no longer used
             if (options.match_compiler)
                 tcam_mode.tcam_data1_select = col;
             tcam_mode.tcam_chain_out_enable = (chain_rows[col] >> row.row) & 1;
@@ -483,10 +497,10 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     //     merge.mau_action_instruction_adr_tcam_actionbit_map_en |= 1 << logical_id;
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg (
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(
         const char *type, const std::vector<Layout> & layout, bool skip_spare_bank) const {
     if (layout.size() == 0) return nullptr;
-    BUG_CHECK(!skip_spare_bank); // never spares in tcam
+    BUG_CHECK(!skip_spare_bank);  // never spares in tcam
     json::map mra { { "memory_type", json::string(type) } };
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
     json::vector mem_units;
@@ -503,7 +517,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
             mem_units.push_back(memunit(row.row, col));
             lrow = memunit(row.row, col);
             if (++word == match.size()) {
-                mem_units_and_vpns.push_back( json::map {
+                mem_units_and_vpns.push_back(json::map {
                         { "memory_units",  std::move(mem_units) },
                             { "vpns", json::vector { json::number(vpn) }}});
                 mem_units = json::vector();
@@ -513,7 +527,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
     if (mem_units_and_vpns.size() == 0)
         mem_units_and_vpns.push_back(json::map {
                 { "memory_units", json::vector() },
-                { "vpns", json::vector() } } );
+                { "vpns", json::vector() } });
     mra["spare_bank_memory_unit"] = lrow;
     return json::mkuniq<json::map>(std::move(mra));
 }
@@ -552,7 +566,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
     LOG3("Adding entry to Ternary Table : name: " << name << " lsb_offset: " << lsb_offset
             << " lsb_idx: " << lsb_idx << " msb_idx: " << msb_idx << " source: " << source
             << " start_bit: " << start_bit << " field_width: " << field_width
-            << " index: " << index << " tcam_bits: " << tcam_bits << " nibble_offset: " << nibble_offset);
+            << " index: " << index << " tcam_bits: " << tcam_bits << " nibble_offset: "
+            << nibble_offset);
     std::string fix_name(name);
 
     // If the name has a slice in it, remove it and add the lo bit of
@@ -622,7 +637,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                         BUG_CHECK(nibbles_of_range.getbit(0));
                         // Add the difference from the first bit of this byte and the lowest bit
                         range_start_bit += bit + lsb_lo_bit_in_byte - lsb_lo;
-                        range_width = std::min(static_cast<int>(field_width), 4 - lsb_lo_bit_in_byte);
+                        range_width = std::min(static_cast<int>(field_width),
+                                4 - lsb_lo_bit_in_byte);
                         range_width = std::min(static_cast<int>(range_width), lsb_hi - bit + 1);
                         nibble_offset = lsb_lo_bit_in_byte % 4;
                     } else {
@@ -630,7 +646,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                         // Because the bit starts at the upper nibble, the start bit is either the
                         // beginning of the nibble or more
                         range_start_bit += bit + std::max(4, lsb_lo_bit_in_byte) - lsb_lo;
-                        range_width = std::min(static_cast<int>(field_width), lsb_hi_bit_in_byte - 3);
+                        range_width = std::min(static_cast<int>(field_width),
+                                lsb_hi_bit_in_byte - 3);
                         nibble_offset = std::max(4, lsb_lo_bit_in_byte) % 4;
                     }
 
@@ -661,8 +678,8 @@ void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, uns
     // Tcam bits are arranged as follows in each tcam word
     // LSB -------------------------------------MSB
     // PAYLOAD BIT - TCAM BITS - [VERSION] - PARITY
-    auto start_bit = 0; // always 0 for fields not on input xbar
-    auto dirtcam_index = 0; // not relevant for fields not on input xbar
+    auto start_bit = 0;  // always 0 for fields not on input xbar
+    auto dirtcam_index = 0;  // not relevant for fields not on input xbar
     auto payload_name = "--tcam_payload_" + std::to_string(word) + "--";
     auto parity_name = "--tcam_parity_" + std::to_string(word) + "--";
     auto version_name = "--version--";
@@ -712,7 +729,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     tcam_bits.resize(match.size());
     // Set pvp bits for each tcam word
     for (unsigned i = 0; i < match.size(); i++) {
-        gen_match_fields_pvp(match_field_list, i, uses_versioning, version_word_group, tcam_bits[i]);
+        gen_match_fields_pvp(match_field_list, i, uses_versioning,
+                version_word_group, tcam_bits[i]);
     }
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
@@ -721,16 +739,17 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     // is specified, which is impossible for Brig through p4-16
     stage_tbl["default_next_table"] = Stage::end_of_pipe();
     json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+    stage_tbl["memory_resource_allocation"]
+        = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
-    //stage_tbl["default_next_table"] = Target::END_OF_PIPE();
+    // stage_tbl["default_next_table"] = Target::END_OF_PIPE();
     // FIXME: How to deal with multiple next hit tables?
     stage_tbl["default_next_table"] = hit_next.size() > 0
                                     ? hit_next[0].next_table_id() : Target::END_OF_PIPE();
     add_result_physical_buses(stage_tbl);
     for (auto field : *input_xbar) {
-        switch(field.first.type) {
+        switch (field.first.type) {
         case InputXbar::Group::EXACT:
             continue;
         case InputXbar::Group::TERNARY: {
@@ -785,7 +804,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
             // word. Based on the byte config, the corresponding match word is
             // selected and the field (slice) is placed in the nibble.
             // E.g. (P4C-2257)
-            //   byte group 5: { 0: HillTop.Lamona.Whitefish(0..1) , 2: HillTop.RossFork.Adona(0..5) }
+            //   byte group 5: { 0: HillTop.Lamona.Whitefish(0..1) ,
+            //                   2: HillTop.RossFork.Adona(0..5) }
             //   match:
             //        - { group: 10, byte_group: 5, byte_config: 0, dirtcam: 0x555 }
             //        - { group: 11, byte_group: 5, byte_config: 1, dirtcam: 0x555 }
@@ -872,8 +892,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     // 'zero' for correctness during entry encoding.
     for (unsigned word = 0; word < match.size(); word++) {
         bitvec &pb = tcam_bits[word];
-        unsigned start_bit = 0; // always 0 for padded fields
-        int dirtcam_index = -1; // irrelevant in this context
+        unsigned start_bit = 0;  // always 0 for padded fields
+        int dirtcam_index = -1;  // irrelevant in this context
         if (pb != bitvec(0)) {
             int idx_lo = 0;
             std::string pad_name = "--unused--";
@@ -899,7 +919,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tind = stage_tbl["ternary_indirection_stage_table"] = json::map();
     if (indirect) {
         unsigned fmt_width = 1U << indirect->format->log2size;
-        //json::map tind;
+        // json::map tind;
         tind["stage_number"] = stage->stageno;
         tind["stage_table_type"] = "ternary_indirection";
         tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
@@ -928,9 +948,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
         pack_format_entry["memory_word_width"] = 128;
         pack_format_entry["entries_per_table_word"] = 1;
         json::vector &entries = pack_format_entry["entries"] = json::vector();
-        entries.push_back( json::map {
+        entries.push_back(json::map {
                 { "entry_number", json::number(0) },
-                    { "fields", json::vector() } } );
+                    { "fields", json::vector() } });
         pack_format_entry["table_word_width"] = 0;
         pack_format_entry["number_memory_units_per_table_word"] = 0;
         pack_format.push_back(std::move(pack_format_entry));
@@ -959,8 +979,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             /* pad out to minumum size */
             format->size = 4;
             format->log2size = 2; }
-    } else
+    } else {
         error(lineno, "No format specified in table %s", name());
+    }
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "input_xbar") {
@@ -978,20 +999,24 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
                     attached.stats.emplace_back(v, this);
-            else attached.stats.emplace_back(kv.value, this);
+            else
+                attached.stats.emplace_back(kv.value, this);
         } else if (kv.key == "meter") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
                     attached.meters.emplace_back(v, this);
-            else attached.meters.emplace_back(kv.value, this);
+            else
+                attached.meters.emplace_back(kv.value, this);
         } else if (kv.key == "stateful") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
                     attached.statefuls.emplace_back(v, this);
-            else attached.statefuls.emplace_back(kv.value, this);
-        } else
+            else
+                attached.statefuls.emplace_back(kv.value, this);
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+        }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
@@ -999,12 +1024,12 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
 }
 
 Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool indirect) {
-    if (match_table)
+    if (match_table) {
         error(lineno, "Multiple references to ternary indirect table %s", name());
-    else if (!(match_table = dynamic_cast<TernaryMatchTable *>(m)))
+    } else if (!(match_table = dynamic_cast<TernaryMatchTable *>(m))) {
         error(lineno, "Trying to link ternary indirect table %s to non-ternary table %s",
               name(), m->name());
-    else {
+    } else {
         if (action.check() && action->set_match_table(m, !action.is_direct_call()) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
         attached.pass0(m);

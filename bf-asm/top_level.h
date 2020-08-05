@@ -1,5 +1,5 @@
-#ifndef _top_level_h_
-#define _top_level_h_
+#ifndef BF_ASM_TOP_LEVEL_H_
+#define BF_ASM_TOP_LEVEL_H_
 
 #include "target.h"
 #include "json.h"
@@ -7,9 +7,9 @@
 template<class REGSET> class TopLevelRegs;
 
 class TopLevel {
-protected:
+ protected:
     TopLevel();
-public:
+ public:
     static TopLevel *all;
     virtual ~TopLevel();
     virtual void output(json::map &) = 0;
@@ -23,8 +23,7 @@ public:
 
 template<class REGSET>
 class TopLevelRegs : public TopLevel, public REGSET::top_level_regs {
-public:
-
+ public:
     TopLevelRegs();
     ~TopLevelRegs();
 
@@ -36,4 +35,4 @@ public:
 template<class T> TopLevelRegs<typename T::register_type> *TopLevel::regs() {
     return dynamic_cast<TopLevelRegs<typename T::register_type> *>(all); }
 
-#endif /* _top_level_h_ */
+#endif /* BF_ASM_TOP_LEVEL_H_ */

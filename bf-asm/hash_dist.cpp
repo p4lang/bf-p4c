@@ -24,11 +24,10 @@ static void set_output_bit(unsigned &xbar_use, value_t &v) {
 }
 
 HashDistribution::HashDistribution(int id_, value_t &data, unsigned u)
-    : lineno(data.lineno), id (id_), xbar_use(u)
-{
+    : lineno(data.lineno), id(id_), xbar_use(u) {
     if (id < 0 || id >= 6)
         error(data.lineno, "Invalid hash_dist unit id %d", id);
-    if (CHECKTYPE(data, tMAP))
+    if (CHECKTYPE(data, tMAP)) {
         for (auto &kv : MapIterChecked(data.map)) {
             if (kv.key == "hash") {
                 if (CHECKTYPE(kv.value, tINT) && (unsigned)(hash_group = kv.value.i) >= 8U)
@@ -48,9 +47,12 @@ HashDistribution::HashDistribution(int id_, value_t &data, unsigned u)
                         set_output_bit(xbar_use, s);
                 else
                     set_output_bit(xbar_use, kv.value);
-            } else
+            } else {
                 warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
-                        value_desc(kv.key)); }
+                        value_desc(kv.key));
+            }
+        }
+    }
 }
 
 void HashDistribution::parse(std::vector<HashDistribution> &out, const value_t &data,
@@ -86,7 +88,7 @@ void HashDistribution::pass1(Table *tbl, delay_type_t delay_type, bool non_linea
             warning(use->lineno, "previous use in table %s", use->tbl->name()); } }
     if (expand >= 0) {
         int min_shift = 7, diff = 7, other = id-1;
-        switch(id%3) {
+        switch (id%3) {
         case 0:
             min_shift = 0; diff = -7; other = id+1;
             // fall through
@@ -133,20 +135,23 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl) {
     merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * id, 2);
     merge.mau_hash_group_shiftcount.set_subfield(shift, 3 * id, 3);
     merge.mau_hash_group_mask[id] |= mask;
-    if (expand >= 0) switch (id % 3) {
-    case 0:
-        merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
-        merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
-        merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 2);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 2), 2);
-        break;
-    case 1:
-        merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
-        merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
-        merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 1), 2);
-        break;
-    default: BUG(); }
+    if (expand >= 0) {
+        switch (id % 3) {
+        case 0:
+            merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
+            merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
+            merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 2);
+            merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 2), 2);
+            break;
+        case 1:
+            merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
+            merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
+            merge.mau_hash_group_config.hash_group_enable |= 1 << (id + 1);
+            merge.mau_hash_group_config.hash_group_ctl.set_subfield(delay_type, 2 * (id + 1), 2);
+            break;
+        default: BUG();
+        }
+    }
     for (int oxbar : Range(0, 4))
         if ((xbar_use >> oxbar) & 1)
             merge.mau_hash_group_xbar_ctl[oxbar][tbl->logical_id/8U].set_subfield(

@@ -6,7 +6,6 @@
 #include "sections.h"
 
 class DynHash : public Section {
-
     int lineno = -1;
     std::unique_ptr<json::obj> _dynhash = nullptr;
     std::string _dynhashFileName;

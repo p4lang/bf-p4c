@@ -14,10 +14,11 @@ void Synth2Port::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::ty
 
 bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
     if (kv.key == "vpns") {
-        if (kv.value == "null")
+        if (kv.value == "null") {
             no_vpns = true;
-    else if (CHECKTYPE(kv.value, tVEC))
-        setup_vpns(layout, &kv.value.vec, true);
+        } else if (CHECKTYPE(kv.value, tVEC)) {
+            setup_vpns(layout, &kv.value.vec, true);
+        }
     } else if (kv.key == "maprams") {
         setup_maprams(kv.value);
     } else if (kv.key == "global_binding") {
@@ -34,8 +35,9 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else if (kv.key == "format" || kv.key == "row" || kv.key == "logical_row" ||
                kv.key == "column" || kv.key == "bus") {
         /* already done in setup_layout */
-    } else
+    } else {
         return false;
+    }
     return true;
 }
 
@@ -61,7 +63,7 @@ json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int s
     std::string hr = how_referenced();
     if (hr.empty())
         hr = direct ? "direct" : "indirect";
-    tbl["how_referenced"] = hr; 
+    tbl["how_referenced"] = hr;
     int entries = 1;
     if (format) {
         BUG_CHECK(format->log2size <= 7);

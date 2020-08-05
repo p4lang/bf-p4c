@@ -28,7 +28,7 @@ class AsmStage : public Section {
     ~AsmStage() {}
     std::vector<Stage>  stage;
     static AsmStage     singleton_object;
-public:
+ public:
     static int numstages() { return singleton_object.stage.size(); }
     static std::vector<Stage> &stages() { return singleton_object.stage; }
 } AsmStage::singleton_object;
@@ -58,12 +58,12 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
         stage.resize(Target::NUM_MAU_STAGES());
     if (args.size != 2 || args[0].type != tINT ||
         (args[1] != "ingress" && args[1] != "egress" &&
-         (args[1] != "ghost" || options.target < JBAY)))
+         (args[1] != "ghost" || options.target < JBAY))) {
         error(lineno, "stage must specify number and ingress%s or egress",
             options.target >= JBAY ? ", ghost" : "");
-    else if (args[0].i < 0)
+    } else if (args[0].i < 0) {
         error(lineno, "invalid stage number");
-    else if ((unsigned)args[0].i >= stage.size()) {
+    } else if ((unsigned)args[0].i >= stage.size()) {
         stage.resize(args[0].i + 1); }
     for (size_t i = oldsize; i < stage.size(); i++)
         stage[i].stageno = i;
@@ -94,17 +94,19 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
                 if (stageno == Target::NUM_MAU_STAGES()/2 && options.target == TOFINO)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
-            } else if (kv.value == "match")
+            } else if (kv.value == "match") {
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
-            else
+            } else {
                 error(kv.value.lineno, "Invalid stage dependency %s", value_desc(kv.value));
+            }
             continue;
 
         } else if (kv.key == "mpr_stage_id") {
             stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
             if CHECKTYPE(kv.value, tINT) {
                 if (kv.value.i > stageno)
-                    error(kv.value.lineno, "mpr_stage_id value cannot be greater than current stage.");
+                    error(kv.value.lineno,
+                            "mpr_stage_id value cannot be greater than current stage.");
                 stage[stageno].mpr_stage_id[gress] = kv.value.i;
             }
             continue;
@@ -132,7 +134,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 for (auto &lut : kv.value.map) {
                     if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= LOGICAL_TABLES_PER_STAGE)
                         error(lut.key.lineno, "Invalid mpr_next_table_lut key.");
-                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                    if (!CHECKTYPE(lut.value, tINT) ||
+                            lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
                         error(lut.value.lineno, "Invalid mpr_next_table_lut value.");
                     stage[stageno].mpr_next_table_lut[gress][lut.key.i] = lut.value.i;
                 }
@@ -144,7 +147,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 for (auto &lut : kv.value.map) {
                     if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= LOGICAL_TABLES_PER_STAGE)
                         error(lut.key.lineno, "Invalid mpr_glob_exec_lut key.");
-                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                    if (!CHECKTYPE(lut.value, tINT)
+                            || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
                         error(lut.value.lineno, "Invalid mpr_glob_exec_lut value.");
                     stage[stageno].mpr_glob_exec_lut[lut.key.i] |= lut.value.i;
             } }
@@ -155,7 +159,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 for (auto &lut : kv.value.map) {
                     if (!CHECKTYPE(lut.key, tINT) || lut.key.i >= MAX_LONGBRANCH_TAGS)
                         error(lut.key.lineno, "Invalid mpr_long_brch_lut key.");
-                    if (!CHECKTYPE(lut.value, tINT) || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
+                    if (!CHECKTYPE(lut.value, tINT)
+                            || lut.value.i >= (1 << LOGICAL_TABLES_PER_STAGE))
                         error(lut.value.lineno, "Invalid mpr_long_brch_lut value.");
                     stage[stageno].mpr_long_brch_lut[lut.key.i] |= lut.value.i;
                 }
@@ -350,13 +355,13 @@ void AsmStage::output(json::map &ctxt_json) {
 }
 
 unsigned AsmStage::compute_latency(gress_t gress) {
-    auto total_cycles = 4; // There are 4 extra cycles between stages 5 & 6 of the MAU
+    auto total_cycles = 4;  // There are 4 extra cycles between stages 5 & 6 of the MAU
     for (unsigned i = 1; i < stage.size(); i++) {
         auto stage_dep = stage[i].stage_dep[gress];
         auto contribute = 0;
         if (stage_dep == Stage::MATCH_DEP) {
             contribute = stage[i].pipelength(gress);
-        } else if(stage_dep == Stage::ACTION_DEP) {
+        } else if (stage_dep == Stage::ACTION_DEP) {
             contribute = 2;
         } else if (stage_dep == Stage::CONCURRENT) {
             contribute = 1;
@@ -460,8 +465,8 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
     auto &adrdist = regs.rams.match.adrdist;
-    //merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
-    //merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
+    // merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
+    // merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (tcam_delay(gress) > 0) {
             merge.exact_match_delay_thread[0] |= 1U << gress;
@@ -490,8 +495,10 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
       adrdist.bubble_req_ctl[gress].bubble_req_ext_fltr_en = 0x1;
     }
 
-    regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;
-    regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = stage_dep[EGRESS] != ACTION_DEP;
+    regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable
+        = stage_dep[INGRESS] != ACTION_DEP;
+    regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable
+        = stage_dep[EGRESS] != ACTION_DEP;
     if (stageno != AsmStage::numstages()-1) {
         regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable =
             this[1].stage_dep[INGRESS] == ACTION_DEP;
@@ -589,14 +596,14 @@ void Stage::output(json::map &ctxt_json) {
             gw->gen_tbl_cfg(ctxt_tables); }
     write_regs(*regs);
 
-    // Output GFM 
+    // Output GFM
     if (gfm_out) {
         auto &hash = regs->dp.xbar_hash.hash;
         auto &gfm  = hash.galois_field_matrix;
         *gfm_out << &gfm << "\n";
         *gfm_out << "Col  :    ";
         for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-            *gfm_out << std::setw(3) << c ;
+            *gfm_out << std::setw(3) << c;
         }
         *gfm_out << " | Row Parity \n";
         for (auto r = 0; r < gfm.size(); r++) {
@@ -605,22 +612,21 @@ void Stage::output(json::map &ctxt_json) {
             unsigned byte0_parity = 0;
             unsigned byte1_parity = 0;
             for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte0; 
+                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte0;
                 byte0_parity ^= gfm[r][c].byte0;
             }
             *gfm_out << " | " << std::setw(3) << parity(byte0_parity) << "\n";
             *gfm_out << "  Byte 1 :";
             for (auto c = 0; c < GALOIS_FIELD_MATRIX_COLUMNS; c++) {
-                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte1; 
+                *gfm_out << std::setw(3) << std::hex << gfm[r][c].byte1;
                 byte1_parity ^= gfm[r][c].byte0;
             }
             *gfm_out << " | " << std::setw(3) << parity(byte1_parity) << "\n";
         }
-        
+
         *gfm_out << "\n";
         auto &grp_enable = regs->dp.hashout_ctl.hash_parity_check_enable;
         for (int grp = 0; grp < 8; grp++) {
-
             *gfm_out << "Hash Group : " << grp << "\n";
             *gfm_out << "Hash Seed : ";
             int seed_parity = 0;
@@ -628,7 +634,7 @@ void Stage::output(json::map &ctxt_json) {
             for (int bit = 51; bit >= 0; bit--) {
                 auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
                 hash_seed[bit] = seed_bit;
-                *gfm_out << seed_bit; 
+                *gfm_out << seed_bit;
                 seed_parity ^= seed_bit;
             }
             *gfm_out << " (" << hash_seed << ")";
@@ -655,13 +661,13 @@ void Stage::output(json::map &ctxt_json) {
     // checks for the base address of the register blocks to do a block DMA
     // during tofino.bin download
     regs->dp.imem.enable();
-    for(int row = 0; row < SRAM_ROWS; row++)
-        for(int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
+    for (int row = 0; row < SRAM_ROWS; row++)
+        for (int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
             regs->rams.map_alu.row[row].adrmux.mapram_config[col].enable();
     if (error_count == 0 && options.gen_json)
         regs->emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
-    sprintf(buf, "regs.match_action_stage.%02x", stageno);
+    snprintf(buf, sizeof(buf), "regs.match_action_stage.%02x", stageno);
     if (stageno < Target::NUM_MAU_STAGES())
         TopLevel::all->set_mau_stage(stageno, buf, regs);
     gen_mau_stage_characteristics(*regs, ctxt_json["mau_stage_characteristics"]);
@@ -704,7 +710,7 @@ void Stage::gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache) 
         reg_fqname = "mau[" + std::to_string(stageno)
             + "].rams.match.adrdist.meter_sweep_ctl["
             + std::to_string(i) + "]";
-        if (options.match_compiler) { //FIXME: Temp fix to match glass typo
+        if (options.match_compiler) {  // FIXME: Temp fix to match glass typo
             reg_fqname = "mau[" + std::to_string(stageno)
                 + "].rams.match.adrdist.meter_sweep_ctl.meter_sweep_ctl["
                 + std::to_string(i) + "]"; }
@@ -731,12 +737,12 @@ void Stage::gen_configuration_cache_common(REGS &regs, json::vector &cfg_cache) 
             + ".stats.statistics_ctl";
         reg_name = "stage_" + std::to_string(stageno) + "_statistics_ctl_" + std::to_string(i);
         reg_value = (statistics_ctl[i].stats.statistics_ctl.stats_entries_per_word & 0x00000007)
-                 | ((statistics_ctl[i].stats.statistics_ctl.stats_process_bytes    & 0x00000001) << 3)
-                 | ((statistics_ctl[i].stats.statistics_ctl.stats_process_packets  & 0x00000001) << 4)
-                 | ((statistics_ctl[i].stats.statistics_ctl.lrt_enable             & 0x00000001) << 5)
-                 | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_egress       & 0x00000001) << 6)
-                 | ((statistics_ctl[i].stats.statistics_ctl.stats_bytecount_adjust & 0x00003FFF) << 7)
-                 | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_error_enable & 0x00000001) << 21);
+             | ((statistics_ctl[i].stats.statistics_ctl.stats_process_bytes    & 0x00000001) << 3)
+             | ((statistics_ctl[i].stats.statistics_ctl.stats_process_packets  & 0x00000001) << 4)
+             | ((statistics_ctl[i].stats.statistics_ctl.lrt_enable             & 0x00000001) << 5)
+             | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_egress       & 0x00000001) << 6)
+             | ((statistics_ctl[i].stats.statistics_ctl.stats_bytecount_adjust & 0x00003FFF) << 7)
+             | ((statistics_ctl[i].stats.statistics_ctl.stats_alu_error_enable & 0x00000001) << 21);
         if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }

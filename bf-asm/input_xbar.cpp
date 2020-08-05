@@ -1,18 +1,17 @@
+#include "input_xbar.h"
 #include <config.h>
+#include <stdlib.h>
 #include <fstream>
 
 #include "hashexpr.h"
-#include "input_xbar.h"
 #include "log.h"
 #include "misc.h"
 #include "power_ctl.h"
 #include "stage.h"
 #include "range.h"
-#include <stdlib.h>
 
 void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
-                           gress_t gress, int stage, value_t &what, int lineno, int lo, int hi)
-{
+                           gress_t gress, int stage, value_t &what, int lineno, int lo, int hi) {
     if (lo < 0 || lo >= 52 || hi < 0 || hi >= 52) {
         error(lineno, "Hash column out of range");
         return; }
@@ -55,7 +54,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
                 errlo = -1; }
             hash_table[col].lineno = what.lineno;
             hash_table[col].fn = fn;
-            hash_table[col].bit = bit++; 
+            hash_table[col].bit = bit++;
             fn_assigned = true;
         }
     }
@@ -68,8 +67,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
 }
 
 InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
-: table(t), lineno(data[0].key.lineno)
-{
+: table(t), lineno(data[0].key.lineno) {
     for (auto &kv : data) {
         if ((kv.key.type == tSTR) && (kv.key == "random_seed")) {
           random_seed = kv.value.i;
@@ -107,9 +105,9 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                 for (auto &reg : kv.value.map) {
                     if (!CHECKTYPE2(reg.key, tINT, tRANGE)) continue;
                     int lo = -1, hi = -1;
-                    if (reg.key.type == tINT)
+                    if (reg.key.type == tINT) {
                         lo = reg.key.i;
-                    else {
+                    } else {
                         lo = reg.key.lo;
                         hi = reg.key.hi; }
                     if (lo < 0 || lo >= Group::group_size(grtype)) {
@@ -122,8 +120,9 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                     } else {
                         group.emplace_back(
                             Phv::Ref(t->gress, t->stage->stageno, reg.value), lo, hi); } }
-            } else
+            } else {
                 group.emplace_back(Phv::Ref(t->gress, t->stage->stageno, kv.value));
+            }
         } else if (kv.key[0] == "hash") {
             if (kv.key[1] == "group") {
                 if (index >= EXACT_HASH_GROUPS) {
@@ -161,23 +160,26 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                                     error(el.value.lineno, "invalid hash group descriptor");
                                 else
                                     hash_groups[index].tables |= 1U << el.value.i;
-                            } else if (CHECKTYPE(el.value, tVEC))
+                            } else if (CHECKTYPE(el.value, tVEC)) {
                                 tbl = &el.value.vec;
+                            }
                         } else if (el.key == "seed_parity") {
                             if (el.value.type == tSTR && el.value == "true")
                                     hash_groups[index].seed_parity = true;
-                        } else
-                            error(el.key.lineno, "invalid hash group descriptor"); }
-                } else
-                    tbl = &kv.value.vec;
+                        } else {
+                            error(el.key.lineno, "invalid hash group descriptor");
+                        }
+                    }
+                } else {
+                    tbl = &kv.value.vec; }
                 if (tbl) {
                     for (auto &v : *tbl) {
                         if (!CHECKTYPE(v, tINT)) continue;
                         if (v.i < 0 || v.i >= HASH_TABLES) {
                             error(v.lineno, "invalid hash group descriptor");
                         } else {
-                            hash_groups[index].tables |= 1U << v.i; 
-                        } 
+                            hash_groups[index].tables |= 1U << v.i;
+                        }
                     }
                 }
                 continue; }
@@ -293,8 +295,7 @@ uint64_t InputXbar::hash_columns_used(unsigned hash) {
 
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
-bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
-{
+bool InputXbar::can_merge(HashGrp &a, HashGrp &b) {
     unsigned both = a.tables & b.tables;
     uint64_t both_cols = 0, a_cols = 0, b_cols = 0;
     for (unsigned i = 0; i < 16; i++) {
@@ -303,13 +304,13 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
         for (InputXbar *other : table->stage->hash_table_use[i]) {
             if (both & mask) both_cols |= other->hash_columns_used(i);
             if (a.tables & mask) a_cols |= other->hash_columns_used(i);
-            if (b.tables & mask) b_cols |= other->hash_columns_used(i); 
+            if (b.tables & mask) b_cols |= other->hash_columns_used(i);
             for (auto htp : hash_table_parity) {
-                if (other->hash_table_parity.count(htp.first) 
-                 && other->hash_table_parity.at(htp.first) != htp.second) 
-                    return false; 
+                if (other->hash_table_parity.count(htp.first)
+                 && other->hash_table_parity.at(htp.first) != htp.second)
+                    return false;
             }
-        } 
+        }
     }
     a_cols &= ~both_cols;
     b_cols &= ~both_cols;
@@ -340,7 +341,7 @@ static int tcam_swizzle_16[2][2] { { 0, -1 }, { +1, 0 } };
 int InputXbar::tcam_input_use(int out_byte, int phv_byte, int phv_size) {
     int rv = out_byte;
     BUG_CHECK(phv_byte >= 0 && phv_byte < phv_size/8);
-    switch(phv_size) {
+    switch (phv_size) {
     case 8:
         break;
     case 32:
@@ -366,10 +367,9 @@ void InputXbar::tcam_update_use(TcamUseCache &use) {
             if (group.first.type == Group::BYTE) {
                 group_base = 5 + 11*group.first.index;
                 half_byte = -1; }
-            int group_byte =input.lo/8;
+            int group_byte = input.lo/8;
             for (int phv_byte = input.what->lo/8; phv_byte <= input.what->hi/8;
-                 phv_byte++, group_byte++)
-            {
+                 phv_byte++, group_byte++) {
                 BUG_CHECK(group_byte <= 5);
                 int out_byte = group_byte == 5 ? half_byte : group_base + group_byte;
                 int in_byte = tcam_input_use(out_byte, phv_byte, input.what->reg.size);
@@ -388,7 +388,7 @@ void InputXbar::check_tcam_input_conflict(InputXbar::Group group, Input &input, 
         bit_align_mask = 3;
         group_base = 5 + 11*group.index;
         half_byte = -1; }
-    int group_byte =input.lo/8;
+    int group_byte = input.lo/8;
     if ((input.lo ^ input.what->lo) & bit_align_mask) {
         error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
         return; }
@@ -443,8 +443,8 @@ void InputXbar::pass1() {
                 if (input.hi >= 0) {
                     if (input.size() != input.what->size())
                         error(input.what.lineno, "Input xbar size doesn't match register size");
-                } else
-                    input.hi = input.lo + input.what->size() - 1;
+                } else {
+                    input.hi = input.lo + input.what->size() - 1; }
                 if (input.lo >= Group::group_size(group.first.type))
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
@@ -531,12 +531,15 @@ std::vector<InputXbar::Input *> InputXbar::GroupSet::find_all(Phv::Slice sl) con
 
 void InputXbar::GroupSet::dbprint(std::ostream &out) const {
     std::map<unsigned, InputXbar::Input *> byte_use;
-    for (InputXbar *ixbar : use)
-        if (ixbar->groups.count(group))
+    for (InputXbar *ixbar : use) {
+        if (ixbar->groups.count(group)) {
             for (auto &i : ixbar->groups[group]) {
                 if (i.lo < 0) continue;
                 for (int byte = i.lo/8; byte <= i.hi/8; byte++)
-                    byte_use[byte] = &i; }
+                    byte_use[byte] = &i;
+            }
+        }
+}
     InputXbar::Input *prev = 0;
     for (auto &in : byte_use) {
         if (prev == in.second) continue;
@@ -591,13 +594,16 @@ void InputXbar::pass2() {
     }
 }
 
-#include <tofino/input_xbar.cpp>        // tofino template specializations
+// tofino template specializations
+#include <tofino/input_xbar.cpp>        // NOLINT(build/include_order)
 #if HAVE_JBAY
-#include <jbay/input_xbar.cpp>          // jbay template specializations
-#endif // HAVE_JBAY
+//  jbay template specializations
+#include <jbay/input_xbar.cpp>          // NOLINT(build/include_order)
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
-#include <cloudbreak/input_xbar.cpp>    // cloudbreak template specializations
-#endif // HAVE_CLOUDBREAK
+// cloudbreak template specializations
+#include <cloudbreak/input_xbar.cpp>    // NOLINT(build/include_order)
+#endif  // HAVE_CLOUDBREAK
 
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
@@ -667,7 +673,10 @@ void InputXbar::write_regs(REGS &regs) {
                         xbar.tswizzle.tcam_byte_swizzle_ctl[(i&0x7f)/4U].set_subfield(
                             off&3U, 2*(i%4U), 2);
                         i += off;
-                    } else error(input.what.lineno, "misaligned phv access on input_xbar"); }
+                    } else {
+                        error(input.what.lineno, "misaligned phv access on input_xbar");
+                    }
+                }
                 if (input.what->reg.ixbar_id() < 64) {
                     BUG_CHECK(input.what->reg.size == 32);
                     xbar.match_input_xbar_32b_ctl[word_group][i]
@@ -713,7 +722,7 @@ void InputXbar::write_regs(REGS &regs) {
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit) {
                 if ((hg.second.seed >> bit) & 1) {
-                    hash.hash_seed[bit] |= UINT64_C(1) << grp; 
+                    hash.hash_seed[bit] |= UINT64_C(1) << grp;
                 }
             }
         }
@@ -743,7 +752,7 @@ void InputXbar::write_regs(REGS &regs) {
                 regs.dp.hashout_ctl.hash_parity_check_enable |= 1 << grp;
                 // Hash seed must have even parity for the group. Loop through
                 // all bits set on the group for hash seed to determine if the
-                // parity bit must be set 
+                // parity bit must be set
                 int seed_parity = 0;
                 for (int bit = 0; bit < 52; ++bit) {
                     auto seed_bit = (hash.hash_seed[bit] >> grp) & 0x1;
@@ -751,7 +760,8 @@ void InputXbar::write_regs(REGS &regs) {
                 }
                 if (seed_parity) {  // flip parity bit setup on group for even parity
                     if (!hg.second.seed_parity)
-                        warning(hg.second.lineno, "hash group %d has parity enabled, but setting seed_parity"
+                        warning(hg.second.lineno,
+                                "hash group %d has parity enabled, but setting seed_parity"
                                 " is disabled, changing seed to even parity", grp);
                     hash.hash_seed[parity_bit] ^= (1 << grp);
                 }
@@ -762,7 +772,7 @@ void InputXbar::write_regs(REGS &regs) {
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     InputXbar::Input *rv = nullptr;
-    if (groups.count(grp))
+    if (groups.count(grp)) {
         for (auto &in : groups[grp]) {
             if (in.lo < 0) continue;
             if (in.what->reg.uid != sl.reg.uid) continue;
@@ -771,7 +781,9 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
             rv = &in;
             if (in.what->lo > sl.lo) continue;
             if (in.what->hi < sl.hi) continue;
-            return &in; }
+            return &in;
+        }
+    }
     return rv;
 }
 
@@ -793,7 +805,7 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
     bitvec rv;
     unsigned tables = 0;
     for (auto &g : hash_groups) {
-        if (grp == -1 || (int)g.first == grp) {
+        if (grp == -1 || static_cast<int>(g.first) == grp) {
             tables |= g.second.tables;
             rv |= g.second.seed; } }
     for (auto &tbl : hash_tables) {
@@ -805,7 +817,7 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
         }
         for (auto &col : tbl.second) {
             if (col.first == hash_parity_bit) continue;
-            rv[col.first] = 1; 
+            rv[col.first] = 1;
         }
     }
     return rv;
@@ -833,7 +845,7 @@ std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
     unsigned tables = 0;
     std::vector<const HashCol *> rv;
     for (auto &g : hash_groups)
-        if (grp == -1 || (int)g.first == grp)
+        if (grp == -1 || static_cast<int>(g.first) == grp)
             tables |= g.second.tables;
     for (auto &tbl : hash_tables) {
         if (!((tables >> tbl.first) & 1)) continue;
@@ -850,12 +862,12 @@ bool InputXbar::log_hashes(std::ofstream& out) const {
     if (ht.second.empty()) continue;
     out << std::endl << "Hash " << ht.first << std::endl;
     logged = true;
-    for (auto &col: ht.second) {
+    for (auto &col : ht.second) {
       // col.first is hash result bit
       // col.second is bits XOR'd in
       out << "result[" << col.first << "] = ";
       out << get_seed_bit(ht.first, col.first);
-      for (const auto &bit: col.second.data) {
+      for (const auto &bit : col.second.data) {
         if (auto ref = get_hashtable_bit(ht.first, bit)) {
           std::string field_name = ref.name();
           auto field_bit = remove_name_tail_range(field_name) + ref.lobit();

@@ -86,7 +86,7 @@ void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostr
     // The driver can reprogram parser blocks at runtime. We output parser
     // blocks in the binary with the same base address. The driver uses the
     // parser handle at the start of each block to associate the parser block
-    // with its respective parser node in context.json.  
+    // with its respective parser node in context.json.
     // In a p4 program, the user can associate multiple parsers to a
     // multi-parser configuration but only map a few ports. The unmapped
     // parser(s) will be output in context.json node and binary but not have an
@@ -99,21 +99,21 @@ void emit_parser_registers(const Target::Tofino::top_level_regs* regs, std::ostr
     uint64_t prsr_regs_base_addr = pipe_regs_base_addr + 0x700000;
     for (auto ig : regs->parser_ingress) {
         out << binout::tag('P') << binout::byte4(ig.first);
-        ig.second->emit_binary(out, prsr_regs_base_addr); 
+        ig.second->emit_binary(out, prsr_regs_base_addr);
     }
     for (auto ig : regs->parser_memory[INGRESS]) {
         out << binout::tag('P') << binout::byte4(ig.first);
-        ig.second->emit_binary(out, prsr_mem_base_addr); 
+        ig.second->emit_binary(out, prsr_mem_base_addr);
     }
     prsr_regs_base_addr = pipe_regs_base_addr + 0x740000;
     for (auto eg : regs->parser_egress) {
         out << binout::tag('P') << binout::byte4(eg.first);
-        eg.second->emit_binary(out, prsr_regs_base_addr); 
+        eg.second->emit_binary(out, prsr_regs_base_addr);
     }
     prsr_mem_base_addr = (pipe_mem_base_addr + 0x1C800400000) >> 4;
     for (auto eg : regs->parser_memory[EGRESS]) {
         out << binout::tag('P') << binout::byte4(eg.first);
-        eg.second->emit_binary(out, prsr_mem_base_addr); 
+        eg.second->emit_binary(out, prsr_mem_base_addr);
     }
 }
 
@@ -227,7 +227,7 @@ void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostrea
         out << binout::tag('P') << json::binary(header);
         eg.second->emit_binary(out, 0); }
 }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 
 #if HAVE_CLOUDBREAK
 void declare_registers(const Target::Cloudbreak::top_level_regs *regs) {
@@ -339,7 +339,7 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
         out << binout::tag('P') << json::binary(header);
         eg.second->emit_binary(out, 0); }
 }
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 int Target::encodeConst(int src) {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::encodeConst(src); );
@@ -351,6 +351,6 @@ int Target::encodeConst(int src) {
 TYPE Target::NAME() {                                                   \
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NAME; )        \
     BUG_CHECK(!"invalid target");                                       \
-    return (TYPE){};                                                    \
+    return (TYPE){};                   /* NOLINT(readability/braces) */ \
 }
 PER_TARGET_CONSTANTS(DEFINE_PER_TARGET_CONSTANT)

@@ -1,13 +1,14 @@
-#ifndef _ubits_h_
-#define _ubits_h_
+#ifndef BF_ASM_UBITS_H_
+#define BF_ASM_UBITS_H_
 
 #include <limits.h>
 #include <iostream>
 #include <functional>
-#include "log.h"
 #include <sstream>
+#include "log.h"
 
-void declare_registers(const void *addr, size_t sz, std::function<void(std::ostream &, const char *, const void *)> fn);
+void declare_registers(const void *addr, size_t sz,
+        std::function<void(std::ostream &, const char *, const void *)> fn);
 void undeclare_registers(const void *addr);
 void print_regname(std::ostream &out, const void *addr, const void *end);
 
@@ -19,7 +20,7 @@ struct ubits_base {
     mutable bool  disabled_;
 
     ubits_base() : value(0), reset_value(0), read(false), write(false), disabled_(false) {}
-    ubits_base(uint64_t v) : value(v), reset_value(v), read(false), write(false),
+    explicit ubits_base(uint64_t v) : value(v), reset_value(v), read(false), write(false),
                                   disabled_(false) {}
     operator uint64_t() const { read = true; return value; }
     bool modified() const { return write; }
@@ -34,7 +35,7 @@ struct ubits_base {
             return false; }
         disabled_ = true;
         return disabled_; }
-    void enable() const { disabled_ = false; };
+    void enable() const { disabled_ = false; }
     void rewrite() { write = false; }
     virtual uint64_t operator=(uint64_t v) = 0;
     virtual const ubits_base &operator|=(uint64_t v) = 0;
@@ -56,7 +57,7 @@ template<int N> struct ubits : ubits_base {
     const ubits &check(std::false_type) { return *this; }
     const ubits &check() {
         return check(std::integral_constant<bool, (N != sizeof(uint64_t) * CHAR_BIT)>{}); }
-    ubits(uint64_t v) : ubits_base(v) { check(); }
+    explicit ubits(uint64_t v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;
     uint64_t operator=(uint64_t v) override {
@@ -115,4 +116,4 @@ template<int N> struct ubits : ubits_base {
         return check(); }
 };
 
-#endif /* _ubits_h_ */
+#endif /* BF_ASM_UBITS_H_ */

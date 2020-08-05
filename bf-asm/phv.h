@@ -1,5 +1,8 @@
-#ifndef _phv_h_
-#define _phv_h_
+#ifndef BF_ASM_PHV_H_
+#define BF_ASM_PHV_H_
+
+#include <set>
+#include <vector>
 
 #include "sections.h"
 #include "bfas.h"
@@ -8,8 +11,6 @@
 #include "misc.h"
 #include "target.h"
 #include "match_source.h"
-#include <set>
-#include <vector>
 
 class Phv : public Section {
     void start(int lineno, VECTOR(value_t) args) override;
@@ -22,7 +23,8 @@ class Phv : public Section {
     static Phv phv;  // singleton class
     Target::Phv *target = nullptr;
     FOR_ALL_TARGETS(FRIEND_TARGET_CLASS, ::Phv)
-public:
+
+ public:
     struct Register {
         char                                            name[8];
         enum type_t { NORMAL, TAGALONG, CHECKSUM, MOCHA, DARK }   type;
@@ -55,7 +57,8 @@ public:
     };
     class Slice {
         static const Register invalid;
-    public:
+
+     public:
         const Register  &reg;
         int             lo = -1, hi = -1;
         bool            valid;
@@ -86,7 +89,8 @@ public:
         std::string toString() const;
         void dbprint(std::ostream &out) const;
     };
-protected:
+
+ protected:
     // registers indexed according to MAU id
     std::vector<Register *> regs;
     std::map<int, std::map<int, std::string>> phv_pov_names;
@@ -95,13 +99,14 @@ protected:
         Slice   slice;
     };
     std::map<std::string, std::map<int, PerStageInfo>> names[3];
-private:
+
+ private:
     typedef std::map<int, std::vector<std::string>> user_stagenames_t;
     std::map<const Register *, std::pair<gress_t, user_stagenames_t>, ptrless<Register>>
                 user_defined;
     bitvec      phv_use[3];
-    std::map<std::string, int> phv_field_sizes [3];
-    std::map<std::string, int> phv_pov_field_sizes [3];
+    std::map<std::string, int> phv_field_sizes[3];
+    std::map<std::string, int> phv_pov_field_sizes[3];
 
     // Maps P4-level field names (i.e. returned by stack_asm_name_to_p4()) to a
     // map to be embedded in the field's context_json "records" node.
@@ -122,7 +127,8 @@ private:
         if (phv_pov_field_sizes[gress].count(name) > 0)
             return phv_pov_field_sizes[gress][name];
         return 0; }
-public:
+
+ public:
     static const Slice *get(gress_t gress, int stage, const std::string &name) {
         phv.init_phv(options.target);
         if (!phv.names[gress].count(name)) return 0;
@@ -138,12 +144,13 @@ public:
     static const Slice *get(gress_t gress, int stg, const char *name) {
         return get(gress, stg, std::string(name)); }
     class Ref : public MatchSource{
-    protected:
+     protected:
         gress_t         gress_;
         std::string     name_;
         int             stage = -1;
         int             lo = -1, hi = -1;
-    public:
+
+     public:
         int             lineno;
         Ref() : gress_(INGRESS), lineno(-1) {}
         Ref(gress_t g, int stage, const value_t &n);
@@ -172,8 +179,9 @@ public:
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
                 return true;
-            } else if (lineno >= 0)
+            } else if (lineno >= 0) {
                 error(lineno, "No phv record %s", name_.c_str());
+            }
             return false; }
         gress_t gress() const { return gress_; }
         const char *name() const override { return name_.c_str(); }
@@ -238,9 +246,9 @@ inline unsigned Phv::mau_groupsize() { return phv.target->mau_groupsize(); }
 #include "tofino/phv.h"
 #if HAVE_JBAY
 #include "jbay/phv.h"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/phv.h"
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
-#endif /* _phv_h_ */
+#endif /* BF_ASM_PHV_H_ */

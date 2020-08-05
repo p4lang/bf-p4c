@@ -7,10 +7,10 @@
 #include "tofino/meter.cpp"            // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/meter.cpp"              // jbay template specializations
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/meter.cpp"        // cloudbreak template specializations
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 DEFINE_TABLE_TYPE(MeterTable)
 
@@ -31,17 +31,19 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 setup_layout(color_maprams, kv.value.map, " color_maprams");
                 if (auto *vpn = get(kv.value.map, "vpn"))
                     if (CHECKTYPE(*vpn, tVEC))
-                        setup_vpns(color_maprams, &vpn->vec, true); }
-                if (auto addr_type = get(kv.value.map, "address"))
-                    if (CHECKTYPE(*addr_type, tSTR)) {
-                        if (*addr_type == "idletime")
-                            color_mapram_addr = IDLE_MAP_ADDR; 
-                        else if (*addr_type == "stats")
-                            color_mapram_addr = STATS_MAP_ADDR;
-                        else
-                            error(addr_type->lineno, "Unrecognized color mapram address type %s",
-                                  addr_type->s); 
-                    }
+                        setup_vpns(color_maprams, &vpn->vec, true);
+            }
+            if (auto addr_type = get(kv.value.map, "address")) {
+                if (CHECKTYPE(*addr_type, tSTR)) {
+                    if (*addr_type == "idletime")
+                        color_mapram_addr = IDLE_MAP_ADDR;
+                    else if (*addr_type == "stats")
+                        color_mapram_addr = STATS_MAP_ADDR;
+                    else
+                        error(addr_type->lineno, "Unrecognized color mapram address type %s",
+                              addr_type->s);
+                }
+            }
         } else if (kv.key == "pre_color") {
             if (CHECKTYPE(kv.value, tCMD)) {
                 if (kv.value != "hash_dist")
@@ -66,21 +68,26 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 type = LPF;
             else if (kv.value == "wred")
                 type = RED;
-            else error(kv.value.lineno, "Unknown meter type %s", value_desc(kv.value));
+            else
+                error(kv.value.lineno, "Unknown meter type %s", value_desc(kv.value));
         } else if (kv.key == "red_output") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 for (auto &v : kv.value.map) {
                     if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tINT)) {
-                        if (v.key == "drop") red_drop_value = v.value.i;
-                        else if (v.key == "nodrop") red_nodrop_value = v.value.i;
-                        else error(kv.value.lineno, "Unknown meter red param: %s",
+                        if (v.key == "drop")
+                            red_drop_value = v.value.i;
+                        else if (v.key == "nodrop")
+                            red_nodrop_value = v.value.i;
+                        else
+                            error(kv.value.lineno, "Unknown meter red param: %s",
                                 v.key.s); } } }
         } else if (kv.key == "count") {
             if (kv.value == "bytes")
                 count = BYTES;
             else if (kv.value == "packets")
                 count = PACKETS;
-            else error(kv.value.lineno, "Unknown meter count %s", value_desc(kv.value));
+            else
+                error(kv.value.lineno, "Unknown meter count %s", value_desc(kv.value));
         } else if (kv.key == "teop") {
             if (!Target::SUPPORT_TRUE_EOP())
                 error(kv.value.lineno, "tEOP is not available on device");
@@ -117,15 +124,17 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                 else
                     error(lineno,
                         "Invalid meter sweep interval of %d. Allowed values are in the range[0:4]",
-                        intvl );
+                        intvl);
             }
         } else if (kv.key == "bytecount_adjust") {
             if (CHECKTYPE(kv.value, tINT)) {
                 bytecount_adjust = kv.value.i;
             }
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
     if (teop >= 0 && count != BYTES)
         error(lineno, "tEOP bus can only used when counting bytes");
     alloc_rams(true, stage->sram_use);
@@ -133,8 +142,10 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
 
 void MeterTable::pass1() {
     LOG1("### Meter table " << name() << " pass1");
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::Meter, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::Meter, this);
+    else
+        p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
     if (color_maprams.empty() && type != LPF && type != RED)
@@ -179,7 +190,6 @@ void MeterTable::pass2() {
             }
         }
     }
-
 }
 
 void MeterTable::pass3() {
@@ -208,10 +218,9 @@ int MeterTable::color_shiftcount(Table::Call &call, int group, int tcam_shift) c
         extra_padding = STAT_ADDRESS_ZERO_PAD - STAT_METER_COLOR_LOWER_HUFFMAN_BITS;
         zero_pad = STAT_ADDRESS_ZERO_PAD;
     }
-    
 
     if (call.args[0].name() && strcmp(call.args[0].name(), "$DIRECT") == 0) {
-        return 64 + tcam_shift + extra_padding; 
+        return 64 + tcam_shift + extra_padding;
     } else if (auto f = call.args[0].field()) {
         return f->by_group[group]->bit(0)%128U + extra_padding;
     } else if (auto f = call.args[1].field()) {
@@ -376,11 +385,11 @@ void MeterTable::write_regs(REGS &regs) {
             // The driver will manage turning on the meter sweep enable,
             // so the compiler should not configure this value (check glass
             // code)
-            //meter_sweep_ctl.meter_sweep_en = 1;
+            // meter_sweep_ctl.meter_sweep_en = 1;
             meter_sweep_ctl.meter_sweep_offset = minvpn;
             meter_sweep_ctl.meter_sweep_size = maxvpn;
-            meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME -- see CSR?
-            meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
+            meter_sweep_ctl.meter_sweep_remove_hole_pos = 0;  // FIXME -- see CSR?
+            meter_sweep_ctl.meter_sweep_remove_hole_en = 0;  // FIXME
             meter_sweep_ctl.meter_sweep_interval = sweep_interval + profile;
             if (input_xbar) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
@@ -468,9 +477,10 @@ void MeterTable::write_regs(REGS &regs) {
         if (row.row != home->row/2) { /* ALU home row */
             map_alu.mapram_color_write_switchbox[home->row/4U].ctl.b_oflo_color_write_o_mux_select
                 .b_oflo_color_write_o_sel_r_color_write_i = 1;
-            map_alu.mapram_color_write_switchbox[row.row/2U].ctl.r_oflo_color_write_o_mux_select=1;
+            map_alu.mapram_color_write_switchbox[row.row/2U].ctl.r_oflo_color_write_o_mux_select
+                = 1;
             BUG_CHECK(home->row/4U >= row.row/2U);
-            for (int i = home->row/4U - 1; i >= (int)(row.row/2U); i--) {
+            for (int i = home->row/4U - 1; i >= static_cast<int>(row.row/2U); i--) {
                 /* b_oflo_color_write_o_sel_t_oflo_color_write_i must be set of all
                  * switchboxes below the homerow
                  */
@@ -543,7 +553,8 @@ void MeterTable::write_regs(REGS &regs) {
             // Indicating what bus to pull from, either stats or idletime for the color mapram
             if (color_mapram_addr == IDLE_MAP_ADDR) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
-                setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
+                setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col],
+                        row.bus % 10);
             } else if (color_mapram_addr == STATS_MAP_ADDR) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
             }
@@ -552,11 +563,11 @@ void MeterTable::write_regs(REGS &regs) {
             ++vpn; } }
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1U << (home->row/4U);
-        //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
-        //icxbar.address_distr_to_logical_rows = 1U << home->row;
-        //icxbar.address_distr_to_overflow = push_on_overflow;
-        //if (direct)
-        //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
+        // auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
+        // icxbar.address_distr_to_logical_rows = 1U << home->row;
+        // icxbar.address_distr_to_overflow = push_on_overflow;
+        // if (direct)
+        //     regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
         adrdist.meter_color_output_map[m->logical_id].set_subfield(green_value,  0, 8);  // green
         adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value,  8, 8);  // yellow
         adrdist.meter_color_output_map[m->logical_id].set_subfield(yellow_value, 16, 8);  // yellow
@@ -574,7 +585,7 @@ void MeterTable::write_regs(REGS &regs) {
         meter_color_logical_to_phys(regs, m->logical_id, home->row/4U);
         adrdist.mau_ad_meter_virt_lt[home->row/4U] |= 1 << m->logical_id; }
     if (run_at_eop()) {
-        if (teop >= 0 ) {
+        if (teop >= 0) {
             setup_teop_regs(regs, home->row/4U);
         } else {
             adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
@@ -584,9 +595,11 @@ void MeterTable::write_regs(REGS &regs) {
         }
         if (push_on_overflow)
             adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
-        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << ((home->row/4U)+4);
+        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
+            |= 1 << ((home->row/4U)+4);
     } else {
-        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << (home->row/4U);
+        adrdist.meter_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
+            |= 1 << (home->row/4U);
         adrdist.packet_action_at_headertime[1][home->row/4U] = 1; }
     if (push_on_overflow)
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
@@ -661,7 +674,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &
     }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 
 #if HAVE_CLOUDBREAK
 template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_regs &regs,
@@ -692,7 +705,7 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Cloudbreak::mau_
     }
     adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
 }
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 void MeterTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- factor common Synth2Port stuff
@@ -717,8 +730,8 @@ void MeterTable::gen_tbl_cfg(json::vector &out) const {
     tbl["pre_color_field_name"] = "";
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
-    tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
-    tbl["reference_dictionary"] = json::map(); // To be removed in future
+    tbl["color_aware_pfe_address_type_bit_position"] = 0;  // FIXME
+    tbl["reference_dictionary"] = json::map();  // To be removed in future
     stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS;
     add_alu_index(stage_tbl, "meter_alu_index");
     if (context_json)

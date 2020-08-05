@@ -1,5 +1,7 @@
 #include <config.h>
 
+#include <unordered_map>
+
 #include "action_bus.h"
 #include "algorithm.h"
 #include "input_xbar.h"
@@ -7,8 +9,6 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
-
-#include <unordered_map>
 
 void AttachedTable::pass1() {
     if (default_action.empty()) default_action = get_default_action();
@@ -38,7 +38,7 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
             if (addr)
                 pfe_bit -= addr->bit(0);
             else
-                pfe_bit = 0; // we use the primary shift to get at the pfe bit
+                pfe_bit = 0;  // we use the primary shift to get at the pfe bit
         } else if (per_flow_enable_param == "true" && addr) {
             pfe_bit = addr->bit(addr->size-1) - addr->bit(0) + default_pfe_adjust();
         } else {
@@ -50,14 +50,18 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
             // and this can be an error again.
             warning(lineno, "can't find per_flow_enable param %s in format for %s",
                     per_flow_enable_param.c_str(), m->name()); }
-    } else for (auto mt : match_tables) {
-        auto bit = per_flow_enable_bit(mt);
-        if (bit && pfe_bit && bit != pfe_bit) {
-            // this should be ok, but the driver can't handle it currently
-            warning(lineno, "pfe_bit %s at different locations in different match tables,"
-                    " which will cause driver problems", per_flow_enable_param.c_str());
-        } else {
-            pfe_bit = bit; } }
+    } else {
+        for (auto mt : match_tables) {
+            auto bit = per_flow_enable_bit(mt);
+            if (bit && pfe_bit && bit != pfe_bit) {
+                // this should be ok, but the driver can't handle it currently
+                warning(lineno, "pfe_bit %s at different locations in different match tables,"
+                        " which will cause driver problems", per_flow_enable_param.c_str());
+            } else {
+                pfe_bit = bit;
+            }
+        }
+    }
     return pfe_bit;
 }
 
@@ -72,7 +76,8 @@ unsigned AttachedTable::per_flow_enable_bit(MatchTable *m) const {
 // ---------------
 void AttachedTable::add_alu_index(json::map &stage_tbl, std::string alu_index) const {
     if (layout.size() <= 0)
-        error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s", name());
+        error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s",
+                name());
     stage_tbl[alu_index] = get_alu_index();
 }
 
@@ -87,7 +92,7 @@ SelectionTable *AttachedTable::get_selector() const {
 
 SelectionTable *AttachedTables::get_selector() const {
     if (selector)
-        return dynamic_cast<SelectionTable *>((Table *)selector);
+        return dynamic_cast<SelectionTable *>(static_cast<Table *>(selector));
     return nullptr; }
 
 StatefulTable *AttachedTable::get_stateful() const {
@@ -102,7 +107,7 @@ StatefulTable *AttachedTable::get_stateful() const {
 StatefulTable *AttachedTables::get_stateful(std::string name) const {
     for (auto &s : statefuls) {
         if (name == s->name() || name.empty())
-            return dynamic_cast<StatefulTable*>((Table *)s); }
+            return dynamic_cast<StatefulTable*>(static_cast<Table *>(s)); }
     return nullptr; }
 
 MeterTable *AttachedTable::get_meter() const {
@@ -117,7 +122,7 @@ MeterTable *AttachedTable::get_meter() const {
 MeterTable* AttachedTables::get_meter(std::string name) const {
     for (auto &s : meters) {
         if (name == s->name() || name.empty())
-            return dynamic_cast<MeterTable*>((Table *)s); }
+            return dynamic_cast<MeterTable*>(static_cast<Table *>(s)); }
     return nullptr; }
 
 Table::Format::Field *AttachedTables::find_address_field(const AttachedTable *tbl) const {
@@ -131,9 +136,9 @@ Table::Format::Field *AttachedTables::find_address_field(const AttachedTable *tb
             return m.args.at(0).field();
     for (auto &s : statefuls)
         if (s == tbl) {
-            if (s.args.size() > 1)
+            if (s.args.size() > 1) {
                 return s.args.at(1).field();
-            else if (s.args.size() > 0) {
+            } else if (s.args.size() > 0) {
                 // this special case is a hack in case we're calling this before
                 // pass1 has run on the match table with these attached tables
                 auto *f = s.args.at(0).field();
@@ -401,7 +406,6 @@ void AttachedTables::pass1(MatchTable *self) {
             error(selector.lineno, "Must provide selector length information when a selector "
                                    "is called");
         }
-
     }
     for (auto &s : stats) {
         if (s) {

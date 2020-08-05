@@ -69,9 +69,9 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what, int stage,
                               ch.first, prev->max_stage, name);
                     prev->max_stage = ch.first - 1; } }
             prev = &ch.second;
-            if (size < 0)
+            if (size < 0) {
                 size = ch.second.slice->size();
-            else if (size != ch.second.slice->size() && size > 0) {
+            } else if (size != ch.second.slice->size() && size > 0) {
                 error(what.lineno, "Inconsitent sizes for %s", name);
                 size = 0; } }
         if (prev && prev->max_stage >= Target::NUM_MAU_STAGES())
@@ -156,9 +156,9 @@ Phv::Ref::Ref(gress_t g, int stage, const value_t &n)
         } else {
             name_ = n[0].s;
             if (PCHECKTYPE2M(n.vec.size == 2, n[1], tINT, tRANGE, "register slice")) {
-                if (n[1].type == tINT)
+                if (n[1].type == tINT) {
                     lo = hi = n[1].i;
-                else {
+                } else {
                     lo = n[1].lo;
                     hi = n[1].hi;
                     if (lo > hi) {
@@ -190,8 +190,9 @@ void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r) {
             if (vec[merged].merge(vec[i])) {
                 vec.erase(vec.begin()+i);
                 --i; }
-        } else if (vec[i].merge(r))
+        } else if (vec[i].merge(r)) {
             merged = i; }
+        }
     if (merged < 0)
         vec.push_back(r);
 }
@@ -208,7 +209,7 @@ std::vector<Phv::Ref> split_phv_bytes(const Phv::Ref &r) {
         int lo = byte*8 - sl.lo;
         int hi = lo + 7;
         if (lo < 0) lo = 0;
-        if (hi >= (int)sl.size()) hi = sl.size() - 1;
+        if (hi >= static_cast<int>(sl.size())) hi = sl.size() - 1;
         rv.emplace_back(r, lo, hi); }
     return rv;
 }
@@ -259,8 +260,9 @@ void Phv::Slice::dbprint(std::ostream &out) const {
             if (hi != lo) out << ":" << lo;
             out << ']';
         }
-    } else
+    } else {
         out << "<invalid>";
+    }
 }
 
 std::string Phv::db_regset(const bitvec &s) {
@@ -377,8 +379,8 @@ void Phv::output(json::map &ctxt_json) {
                         auto container_field_json = field_json->as_map();
                         if (container_field_json->count("name")) {
                             if ((*container_field_json)["name"] != field_name) continue;
-                        } else { 
-                            continue; 
+                        } else {
+                            continue;
                         }
                         if (container_field_json->count("live_start")) {
                             auto live_start_json  = (*container_field_json)["live_start"];
@@ -395,9 +397,11 @@ void Phv::output(json::map &ctxt_json) {
                             add_phv_record_items(live_end, "live_end");
                             phv_record["mutually_exclusive_with"] = json::vector();
                             if (container_field_json->count("mutually_exclusive_with")) {
-                                auto mutex_json = (*container_field_json)["mutually_exclusive_with"];
-                                if(json::vector *mutex_json_vec = mutex_json->as_vector())
-                                    phv_record["mutually_exclusive_with"] = std::move(*mutex_json_vec);
+                                auto mutex_json
+                                    = (*container_field_json)["mutually_exclusive_with"];
+                                if (json::vector *mutex_json_vec = mutex_json->as_vector())
+                                    phv_record["mutually_exclusive_with"]
+                                        = std::move(*mutex_json_vec);
                             }
                             field_added = true;
                             phv_records.push_back(phv_record.clone());
@@ -427,12 +431,12 @@ void Phv::output(json::map &ctxt_json) {
         phv_alloc_stage["stage_number"] = i;
         phv_alloc.push_back(std::move(phv_alloc_stage)); }
     // FIXME: Fix json clone method to do above loops more efficiently
-    //for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
-    //    phv_alloc_stage["stage_number"] = i;
-    //    phv_alloc.push_back(std::move(phv_alloc_stage.clone())); }
+    // for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
+    //     phv_alloc_stage["stage_number"] = i;
+    //     phv_alloc.push_back(std::move(phv_alloc_stage.clone())); }
 }
 
 #include "tofino/phv.cpp"
 #if HAVE_JBAY
 #include "jbay/phv.cpp"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY

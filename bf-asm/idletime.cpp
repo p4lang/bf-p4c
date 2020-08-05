@@ -25,9 +25,11 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
             setup_context_json(kv.value);
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
     alloc_rams(false, stage->mapram_use);
     for (auto &r : layout) {
         if (r.bus < 0) continue;
@@ -42,7 +44,9 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
             if (old != this)
                 error(r.lineno, "Table %s trying to use idletime bus %d which is already in "
                       "use by table %s", name(), r.bus, old->name());
-        } else stage->idletime_bus_use[r.bus] = this; }
+        } else {
+            stage->idletime_bus_use[r.bus] = this; }
+        }
 }
 
 void IdletimeTable::pass1() {
@@ -88,7 +92,7 @@ void IdletimeTable::write_regs(REGS &regs) {
         for (auto v : logical_row.vpns) {
             if (v < minvpn) minvpn = v;
             if (v > maxvpn) maxvpn = v; }
-    //regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
+    // regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
         auto &adrmux = map_alu_row.adrmux;
@@ -96,7 +100,7 @@ void IdletimeTable::write_regs(REGS &regs) {
         for (int col : row.cols) {
             setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus % 10);
             auto &mapram_cfg = adrmux.mapram_config[col];
-            //auto &mapram_ctl = adrmux.mapram_ctl[col];
+            // auto &mapram_ctl = adrmux.mapram_ctl[col];
             if (disable_notification)
                 mapram_cfg.idletime_disable_notification = 1;
             if (two_way_notification)
@@ -106,7 +110,7 @@ void IdletimeTable::write_regs(REGS &regs) {
             mapram_cfg.idletime_bitwidth = precision_bits[precision];
             mapram_cfg.mapram_type = MapRam::IDLETIME;
             mapram_cfg.mapram_logical_table = logical_id;
-            mapram_cfg.mapram_vpn_members = 0; // FIXME
+            mapram_cfg.mapram_vpn_members = 0;  // FIXME
             mapram_cfg.mapram_vpn = *vpn++;
             if (gress == INGRESS)
                 mapram_cfg.mapram_ingress = 1;
@@ -139,8 +143,8 @@ void IdletimeTable::write_regs(REGS &regs) {
                 regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
         adrdist.adr_dist_idletime_adr_oxbar_ctl[row.bus/4]
             .set_subfield(logical_id | 0x10, 5 * (row.bus%4), 5); }
-    //don't enable initially -- runtime will enable
-    //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
+    // don't enable initially -- runtime will enable
+    // adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_offset = minvpn;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_size = layout_size() - 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_remove_hole_pos = 0;  // TODO

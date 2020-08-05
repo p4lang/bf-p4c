@@ -1,10 +1,10 @@
-#ifndef slist_h_
-#define slist_h_
+#ifndef BF_ASM_SLIST_H_
+#define BF_ASM_SLIST_H_
 
 template<class T> class slist {
     const slist *next;
     T           value;
-public:
+ public:
     explicit slist(T v) : next(nullptr), value(v) {}
     slist(T v, const slist *n) : next(n), value(v) {}
     typedef T value_type;
@@ -12,8 +12,8 @@ public:
         friend class slist;
         const slist   *ptr;
         iterator() : ptr(nullptr) {}
-        iterator(const slist *p) : ptr(p) {}
-    public:
+        explicit iterator(const slist *p) : ptr(p) {}
+     public:
         iterator &operator++() { ptr = ptr->next; return *this; }
         bool operator==(const iterator &a) const { return ptr == a.ptr; }
         bool operator!=(const iterator &a) const { return ptr != a.ptr; }
@@ -26,4 +26,4 @@ public:
     iterator end() const { return iterator(); }
 };
 
-#endif /* slist_h_ */
+#endif /* BF_ASM_SLIST_H_ */

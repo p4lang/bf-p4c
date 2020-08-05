@@ -1,11 +1,12 @@
-#ifndef _parser_h_
-#define _parser_h_
+#ifndef BF_ASM_PARSER_H_
+#define BF_ASM_PARSER_H_
 
-#include "sections.h"
-#include "phv.h"
 #include <map>
 #include <vector>
 #include <set>
+
+#include "sections.h"
+#include "phv.h"
 #include "alloc.h"
 #include "bitvec.h"
 #include "ubits.h"
@@ -34,7 +35,7 @@ class Parser {
         unsigned        add = 0, mask = 0, swap = 0, mul_2 = 0;
         unsigned        dst_bit_hdr_end_pos = 0;
         bool            start = false, end = false, shift = false;
-        unsigned        type = 0; // 0 = verify, 1 = residual, 2 = clot
+        unsigned        type = 0;  // 0 = verify, 1 = residual, 2 = clot
         Checksum(gress_t, pair_t);
         bool equiv(const Checksum &) const;
         void pass1(Parser *);
@@ -42,7 +43,7 @@ class Parser {
         template<class REGS> void write_config(REGS &, Parser *);
         template<class REGS>
         void write_output_config(REGS &, Parser *, void *, unsigned &) const;
-      private:
+     private:
         template <typename ROW> void write_tofino_row_config(ROW &row);
         template <typename ROW> void write_row_config(ROW &row);
     };
@@ -59,7 +60,7 @@ class Parser {
     struct PriorityUpdate {
         int             lineno = -1, offset = -1, shift = -1, mask = -1;
         PriorityUpdate() {}
-        PriorityUpdate(const value_t &data);
+        explicit PriorityUpdate(const value_t &data);
         bool parse(const value_t &exp, int what = 0);
         explicit operator bool() const { return lineno >= 0; }
         template<class REGS> void write_config(REGS &);
@@ -74,7 +75,7 @@ class Parser {
             std::vector<State *>        ptr;
             Ref() : lineno(-1) { pattern.word0 = pattern.word1 = 0; }
             Ref &operator=(const value_t &);
-            Ref(value_t &v) { *this = v; }
+            explicit Ref(value_t &v) { *this = v; }
             operator bool() const { return ptr.size() > 0; }
             State *operator->() const { BUG_CHECK(ptr.size() == 1); return ptr[0]; }
             State *operator*() const { BUG_CHECK(ptr.size() == 1); return ptr[0]; }
@@ -99,7 +100,7 @@ class Parser {
             int setup_match_el(int, value_t &);
             void preserve_saved(unsigned mask);
             template<class REGS> void write_config(REGS &, json::vector &);
-        private:
+         private:
             int add_byte(int, int, bool use_saved = false);
             int move_down(int);
         };
@@ -132,14 +133,14 @@ class Parser {
             int row = -1;
             bool has_narrow_to_wide_extract = false;
 
-            enum flags_t { OFFSET=1, ROTATE=2 };
+            enum flags_t { OFFSET = 1, ROTATE = 2 };
 
             struct Save {
                 Match*      match;
                 int         lo, hi;
                 Phv::Ref    where, second;
                 int         flags;
-                Save(gress_t, Match* m, int l, int h, value_t &data, int flgs=0);
+                Save(gress_t, Match* m, int l, int h, value_t &data, int flgs = 0);
                 template<class REGS>
                 int write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
@@ -151,7 +152,7 @@ class Parser {
                 Phv::Ref        where;
                 unsigned        what;
                 int             flags;
-                Set(gress_t gress, Match* m, value_t &data, int v, int flgs=0);
+                Set(gress_t gress, Match* m, value_t &data, int v, int flgs = 0);
                 template<class REGS>
                 void write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
@@ -171,7 +172,7 @@ class Parser {
                 Clot(gress_t gress, const value_t &tag, const value_t &data);
                 Clot(const Clot &) = delete;
                 Clot(Clot &&) = delete;
-                bool parse_length(const value_t &exp, int what=0);
+                bool parse_length(const value_t &exp, int what = 0);
                 template<class PO_ROW> void write_config(PO_ROW &, int) const;
             };
             std::vector<Clot *>         clots;
@@ -188,9 +189,9 @@ class Parser {
 
             struct HdrLenIncStop {
                 int             lineno = -1;
-                unsigned        final_amt = 0; 
+                unsigned        final_amt = 0;
                 HdrLenIncStop() { }
-                HdrLenIncStop(const value_t &data);
+                explicit HdrLenIncStop(const value_t &data);
                 explicit operator bool() const { return lineno >= 0; }
                 template<class PO_ROW> void write_config(PO_ROW &) const;
             } hdr_len_inc_stop;
@@ -213,8 +214,10 @@ class Parser {
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *, json::map &);
             template<class REGS> void write_config(REGS &, json::vector &);
 
-            template <class REGS> void write_saves(REGS &regs, Match* def, void *output_map, int& max_off, unsigned& used);
-            template <class REGS> void write_sets(REGS &regs, Match* def, void *output_map, unsigned& used);
+            template <class REGS> void write_saves(REGS &regs, Match* def, void *output_map,
+                    int& max_off, unsigned& used);
+            template <class REGS> void write_sets(REGS &regs, Match* def,
+                    void *output_map, unsigned& used);
 
             std::set<Match*> get_all_preds();
             std::set<Match*> get_all_preds_impl(std::set<Match*>& visited);
@@ -240,6 +243,7 @@ class Parser {
         int write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
         template<class REGS> void write_config(REGS &, Parser *, json::vector &);
     };
+
  public:
     void input(VECTOR(value_t) args, value_t data);
     void process();
@@ -255,7 +259,7 @@ class Parser {
     bitvec                              state_use;
     State::Ref                          start_state[4];
     int                                 priority[4] = { 0 };
-    int                                 pri_thresh[4] = { 3,3,3,3 };
+    int                                 pri_thresh[4] = { 3, 3, 3, 3 };
     int                                 tcam_row_use = 0;
     Phv::Ref                            parser_error;
     // the ghost "parser" extracts a single 32-bit value
@@ -323,10 +327,10 @@ class Parser {
 
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
 
-private:
+ private:
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
     void define_state(gress_t gress, pair_t &kv);
     void output_default_ports(json::vector& vec, bitvec port_use);
 };
 
-#endif /* _parser_h_ */
+#endif /* BF_ASM_PARSER_H_ */

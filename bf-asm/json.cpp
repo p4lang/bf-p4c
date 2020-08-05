@@ -18,7 +18,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
         char ch;
         int base = 10, digit;
         in >> ch;
-        switch(ch) {
+        switch (ch) {
         case '-':
             neg = true;
             in >> ch;
@@ -98,14 +98,19 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                     s += ch;
                     if (!(in >> ch)) break; }
                 in.unget();
-                if (s == "true") json.reset(new True());
-                else if (s == "false") json.reset(new False());
-                else if (s == "null") json.reset();
-                else json.reset(new string(std::move(s)));
+                if (s == "true")
+                    json.reset(new True());
+                else if (s == "false")
+                    json.reset(new False());
+                else if (s == "null")
+                    json.reset();
+                else
+                    json.reset(new string(std::move(s)));
                 return in;
-            } else
+            } else {
                 std::cerr << "unexpected character '" << ch << "' (0x" << hex(ch) << ")"
                           << std::endl;
+            }
         }
     }
     return in;
@@ -137,7 +142,7 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
     int twidth = width;
     bool first = true;
     bool oneline = test_width(twidth);
-    //std::cout << "*** width=" << width << "  twdith=" << twidth << std::endl;
+    // std::cout << "*** width=" << width << "  twdith=" << twidth << std::endl;
     out << '{';
     indent += 2;
     for (auto &e : *this) {
@@ -183,7 +188,7 @@ map &map::merge(const map &a) {
     return *this;
 }
 
-}
+}  // namespace json
 
 void dump(const json::obj &o) { std::cout << &o << std::endl; }
 void dump(const json::obj *o) { std::cout << o << std::endl; }

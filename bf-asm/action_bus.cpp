@@ -108,9 +108,9 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (!PCHECKTYPE2M(kv.value.vec.size == 2, kv.value[1], tRANGE, tSTR,
                                  "field name or slice"))
                     continue;
-                //if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
-                //    error(kv.value.lineno, "Slice must be byte slice");
-                //    continue; }
+                // if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
+                //     error(kv.value.lineno, "Slice must be byte slice");
+                //     continue; }
                 name = kv.value[0].s;
                 name_ref = &kv.value[0];
                 if (kv.value[1].type == tRANGE) {
@@ -136,9 +136,9 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                     } else if (kv.value[1] == "address") {
                         src.type = ActionBusSource::AddressRef; }}
             } else if (kv.value.type == tCMD && kv.value == "hash_dist") {
-                if (auto hd = tbl->find_hash_dist(kv.value[1].i))
+                if (auto hd = tbl->find_hash_dist(kv.value[1].i)) {
                     src = ActionBusSource(hd);
-                else {
+                } else {
                     error(kv.value.lineno, "No hash_dist %" PRId64 " in table %s", kv.value[1].i,
                           tbl->name());
                     continue; }
@@ -153,8 +153,10 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         if (auto hd_hi = tbl->find_hash_dist(kv.value[i].i)) {
                             src.hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
                             hd_hi->xbar_use |= HashDistribution::IMMEDIATE_HIGH;
-                            setup_slot(kv.value.lineno, tbl, name, idx+2, ActionBusSource(hd_hi), 16, 16);
-                            setup_slot(kv.value.lineno, tbl, name, idx, ActionBusSource(src.hd, hd_hi), 32, 0); }
+                            setup_slot(kv.value.lineno, tbl, name, idx+2,
+                                    ActionBusSource(hd_hi), 16, 16);
+                            setup_slot(kv.value.lineno, tbl, name, idx,
+                                    ActionBusSource(src.hd, hd_hi), 32, 0); }
                     } else if (kv.value[i].type == tRANGE) {
                         if ((kv.value[i].lo & 7) != 0 || (kv.value[i].hi & 7) != 7)
                             error(kv.value.lineno, "Slice must be byte slice");
@@ -189,9 +191,10 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             unsigned size = (kv.key.hi-idx+1) * 8;
             // Make slot size (sz) same as no. of bytes allocated on action bus.
             if (size > sz) sz = size;
-        } else if (!sz)
+        } else if (!sz) {
             sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
                  idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
+        }
         setup_slot(kv.key.lineno, tbl, name, idx, src, sz, off);
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
@@ -199,8 +202,11 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             auto &slot = by_byte.at(idx);
             tbl->apply_to_field(name, [&slot, tbl, off](Table::Format::Field *f){
                 ActionBusSource src(f);
-                if (slot.data.emplace(src, off).second)
-                    LOG4("        data += " << src.toString(tbl) << " off=" << off); }); }
+                if (slot.data.emplace(src, off).second) {
+                    LOG4("        data += " << src.toString(tbl) << " off=" << off);
+                }
+            });
+        }
     }
 }
 
@@ -235,7 +241,8 @@ unsigned ActionBus::Slot::lo(Table *tbl) const {
     return rv;
 }
 
-bool ActionBus::compatible(const ActionBusSource &a, unsigned a_off, const ActionBusSource &b, unsigned b_off) {
+bool ActionBus::compatible(const ActionBusSource &a, unsigned a_off, const ActionBusSource &b,
+        unsigned b_off) {
     if ((a.type == ActionBusSource::HashDist) && (b.type == ActionBusSource::HashDistPair)) {
         return ((compatible(a, a_off, ActionBusSource(b.hd1), b_off     )) ||
                 (compatible(a, a_off, ActionBusSource(b.hd2), b_off + 16)));
@@ -253,8 +260,9 @@ bool ActionBus::compatible(const ActionBusSource &a, unsigned a_off, const Actio
     case ActionBusSource::HashDist:
         return a.hd->hash_group == b.hd->hash_group && a.hd->id == b.hd->id && a_off == b_off;
     case ActionBusSource::HashDistPair:
-        return ((a.hd1->hash_group == b.hd1->hash_group && a.hd1->id == b.hd1->id) && (a_off == b_off) &&
-                (a.hd2->hash_group == b.hd2->hash_group && a.hd2->id == b.hd2->id));
+        return ((a.hd1->hash_group == b.hd1->hash_group && a.hd1->id == b.hd1->id)
+                && (a_off == b_off)
+                && (a.hd2->hash_group == b.hd2->hash_group && a.hd2->id == b.hd2->id));
     case ActionBusSource::TableOutput:
         return a.table == b.table;
     default:
@@ -269,7 +277,8 @@ void ActionBus::pass1(Table *tbl) {
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         for (auto it = slot.data.begin(); it != slot.data.end();) {
-            if (it->first.type >= ActionBusSource::NameRef && it->first.type <= ActionBusSource::AddressRef) {
+            if (it->first.type >= ActionBusSource::NameRef
+                    && it->first.type <= ActionBusSource::AddressRef) {
                 // Remove all NameRef and replace with TableOutputs or Fields
                 // ColorRef turns into TableColor,  AddressRef into TableAddress
                 if (it->first.name_ref) {
@@ -317,11 +326,11 @@ void ActionBus::pass1(Table *tbl) {
                               it->first.name_ref->name.c_str());
                 } else {
                     auto att = tbl->get_attached();
-                    if (!att || att->meters.empty())
+                    if (!att || att->meters.empty()) {
                         error(lineno, "No meter table attached to %s", tbl->name());
-                    else if (att->meters.size() > 1)
+                    } else if (att->meters.size() > 1) {
                         error(lineno, "Multiple meter tables attached to %s", tbl->name());
-                    else {
+                    } else {
                         ActionBusSource src(att->meters.at(0));
                         switch (it->first.type) {
                         case ActionBusSource::NameRef:
@@ -355,8 +364,7 @@ void ActionBus::pass1(Table *tbl) {
         }
         int slotno = Stage::action_bus_slot_map[slot.byte];
         for (unsigned byte = slot.byte; byte < slot.byte + slot.size/8U;
-             byte += Stage::action_bus_slot_size[slotno++]/8U)
-        {
+                byte += Stage::action_bus_slot_size[slotno++]/8U) {
             if (slotno >= ACTION_DATA_BUS_SLOTS) {
                 error(lineno, "%s extends past the end of the actions bus",
                       slot.name.c_str());
@@ -460,7 +468,8 @@ void ActionBus::need_alloc(Table *tbl, const ActionBusSource &src,
  * input bus starting at 'lobyte'.  'step' is an optimization to only check every step bytes
  * as we know alignment restrictions mean those are the only possible aligned spots
  */
-int ActionBus::find_free(Table *tbl, unsigned min, unsigned max, unsigned step, unsigned lobyte, unsigned bytes) {
+int ActionBus::find_free(Table *tbl, unsigned min, unsigned max, unsigned step, unsigned lobyte,
+        unsigned bytes) {
     unsigned avail;
     LOG4("find_free(" << min << ", " << max << ", " << step << ", " << lobyte <<
          ", " << bytes << ")");
@@ -559,7 +568,8 @@ void ActionBus::do_alloc(Table *tbl, ActionBusSource src, unsigned use, int loby
 
 static unsigned size_masks[8] = { 7, 7, 15, 15, 31, 31, 31, 31 };
 
-void ActionBus::alloc_field(Table *tbl, ActionBusSource src, unsigned offset, unsigned sizes_needed) {
+void ActionBus::alloc_field(Table *tbl, ActionBusSource src,
+        unsigned offset, unsigned sizes_needed) {
     LOG4("alloc_field(" << src << ", " << offset << ", " << sizes_needed << ")");
     int lineno = this->lineno;
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
@@ -574,7 +584,8 @@ void ActionBus::alloc_field(Table *tbl, ActionBusSource src, unsigned offset, un
         if (src.type == ActionBusSource::TableOutput || src.type == ActionBusSource::TableColor ||
             src.type == ActionBusSource::TableAddress)
             can_merge = false;
-        if (src.type == ActionBusSource::HashDist && !(src.hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
+        if (src.type == ActionBusSource::HashDist
+                && !(src.hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
             lo += 16;
         hi = lo | size_masks[sizes_needed]; }
     if (lo/32U != hi/32U) {
@@ -682,8 +693,8 @@ int ActionBus::find(const char *name, TableOutputModifier mod, int lo, int hi, i
     for (auto &slot : by_byte) {
         int offset = lo;
         if (slot.second.name != name) continue;
-        if (size && !(size & (int)slot_sizes[slot.first/32U])) continue;
-        if (offset >= (int)slot.second.size) continue;
+        if (size && !(size & static_cast<int>(slot_sizes[slot.first/32U]))) continue;
+        if (offset >= static_cast<int>(slot.second.size)) continue;
         if (len) *len = slot.second.size;
         return slot.first + offset/8; }
     return -1;
@@ -706,7 +717,7 @@ int ActionBus::find(const ActionBusSource &src, int lo, int hi, int size, int po
         // thus >= 24, but we want to ignore that here and just use the offset within the byte
         if (src.type == ActionBusSource::TableColor) offset &= 7;
         if (offset > lo) continue;
-        if (offset + (int)slot.second.size <= hi) continue;
+        if (offset + static_cast<int>(slot.second.size) <= hi) continue;
         if (size && !(size & slot_sizes[slot.first/32U])) continue;
         if (len) *len = slot.second.size;
         auto bus_pos = slot.first + (lo - offset)/8;
@@ -906,8 +917,11 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
             for (auto &d : f.second.data) {
                 if (d.first.type == ActionBusSource::RandomGen) {
                     rngmask |= d.first.rng.unit << 4;
-                    rngmask |= ((1 << (size/8)) - 1) << d.second/8; } } }
-        switch(Stage::action_bus_slot_size[slot]) {
+                    rngmask |= ((1 << (size/8)) - 1) << d.second/8;
+                }
+            }
+        }
+        switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
                 BUG_CHECK((b&3) == (slot&3));
@@ -971,8 +985,10 @@ std::string ActionBusSource::toString(Table *tbl) const {
         return table->name_ + " address";
     case NameRef: case ColorRef: case AddressRef:
         tmp <<  "name ";
-        if (name_ref) tmp << name_ref->name;
-        else tmp << "(meter)";
+        if (name_ref)
+            tmp << name_ref->name;
+        else
+            tmp << "(meter)";
         if (type == ColorRef) tmp << " color";
         if (type == AddressRef) tmp << " address";
         return tmp.str();
@@ -998,7 +1014,7 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Slot &sl) {
 }
 
 std::ostream &operator<<(std::ostream &out, const ActionBus &a) {
-    for (auto &slot: a.by_byte) out << slot.first << ": " << slot.second << std::endl;
+    for (auto &slot : a.by_byte) out << slot.first << ": " << slot.second << std::endl;
     for (auto &np : a.need_place) {
         out << np.first << " {";
         const char *sep = " ";

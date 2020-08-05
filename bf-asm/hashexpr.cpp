@@ -21,7 +21,8 @@ static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
     if (grp < 0) return true;
     if (auto *in = ix->find_exact(*ref, grp))
         return in->lo >= 0;
-    else error(ref.lineno, "%s not in group %d", ref.name(), grp);
+    else
+        error(ref.lineno, "%s not in group %d", ref.name(), grp);
     return false;
 }
 
@@ -114,7 +115,7 @@ class HashExpr::PhvRef : HashExpr {
 
 class HashExpr::Random : HashExpr {
     std::vector<Phv::Ref>       what;
-    Random(int lineno) : HashExpr(lineno) {}
+    explicit Random(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
@@ -171,7 +172,7 @@ class HashExpr::Crc : HashExpr {
     std::vector<Phv::Ref>               vec_what;
     bool                                reverse = false;
     int                                 total_input_bits = -1;
-    Crc(int lineno) : HashExpr(lineno) {}
+    explicit Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override;
     int width() override { return poly.max().index(); }
@@ -217,7 +218,7 @@ class HashExpr::Crc : HashExpr {
 
 class HashExpr::Xor : HashExpr {
     std::vector<HashExpr *>     what;
-    Xor(int lineno) : HashExpr(lineno) {}
+    explicit Xor(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
@@ -268,7 +269,7 @@ class HashExpr::Xor : HashExpr {
 class HashExpr::Stripe : HashExpr {
     std::vector<HashExpr *>     what;
     bool supress_error_cascade = false;
-    Stripe(int lineno) : HashExpr(lineno) {}
+    explicit Stripe(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
@@ -310,7 +311,7 @@ class HashExpr::Stripe : HashExpr {
 class HashExpr::Slice : HashExpr {
     HashExpr    *what = nullptr;
     int         start = 0, _width = 0;
-    Slice(int lineno) : HashExpr(lineno) {}
+    explicit Slice(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) override {
         return what->check_ixbar(ix, grp); }
@@ -431,20 +432,22 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             return rv;
         } else if (what.vec.size == 2) {
             return new PhvRef(gress, stage, what);
-        } else
+        } else {
             error(what.lineno, "Unsupported hash operation '%s'", what[0].s);
+        }
     } else if (what.type == tSTR) {
         return new PhvRef(gress, stage, what);
-    } else
+    } else {
         error(what.lineno, "Syntax error, expecting hash expression");
+    }
     return nullptr;
 }
 
 void HashExpr::find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table) {
-   bool found = false;
-   auto vec = ix->find_all_exact(*what, (hash_table / 2));
-   for (auto *in : vec) {
+    bool found = false;
+    auto vec = ix->find_all_exact(*what, (hash_table / 2));
+    for (auto *in : vec) {
         int group_bit_position = in->lo + (what->lo - in->what->lo);
         if ((group_bit_position / 64 != (hash_table % 2)) ||
             (int(group_bit_position + what->size() - 1) / 64 != (hash_table % 2)))
@@ -497,7 +500,7 @@ void HashExpr::Crc::gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXb
                 ixbar_input_type::tPHV,  // type
                 0,  // ixbar_bit_position
                 entry.first - previous_range_hi,  // bit_size
-                false  // u.valid 
+                false  // u.valid
             };
             inputs.push_back(invalid_input);
         }

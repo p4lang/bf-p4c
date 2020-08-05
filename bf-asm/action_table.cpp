@@ -39,8 +39,10 @@ Table::Format::Field
         if (auto *fmt = get(action_formats, action)) {
             if (auto *rv = fmt->field(name))
                 return rv;
-        } else if (auto *rv = format ? format->field(name) : 0)
-            return rv; }
+        } else if (auto *rv = format ? format->field(name) : 0) {
+            return rv;
+        }
+    }
     for (auto *match_table : match_tables) {
         BUG_CHECK((Table *)match_table != (Table *)this);
         if (auto *rv = match_table->lookup_field(name))
@@ -204,7 +206,7 @@ unsigned ActionTable::determine_mask(Table::Call &call) const {
  */
 unsigned ActionTable::determine_vpn_shiftcount(Table::Call &call) const {
     if (call.args[0].name() && call.args[0] == "$DIRECT") {
-        return std::max(0, (int)(get_log2size()) - 2 - ACTION_DATA_LOWER_HUFFMAN_BITS);
+        return std::max(0, static_cast<int>(get_log2size()) - 2 - ACTION_DATA_LOWER_HUFFMAN_BITS);
     }
     return 0;
 }
@@ -227,7 +229,7 @@ int ActionTable::get_start_vpn() {
 void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) const {
     width = 1;
     depth = layout_size();
-    period = format ? 1 << std::max((int)format->log2size - 7, 0) : 0;
+    period = format ? 1 << std::max(static_cast<int>(format->log2size) - 7, 0) : 0;
     // Based on the format width, the vpn are numbered as follows (See Section
     // 6.2.8.4.3 in MAU MicroArchitecture Doc)
     //    WIDTH     PERIOD  VPN'S
@@ -236,7 +238,7 @@ void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&p
     //  = 512 bits  - +4 - 1, 5, 9, 13, ...
     //  = 1024 bits - +8 - 3, 11, 19, 27, ...
     for (auto fmt : Values(action_formats))
-        period = std::max(period, 1 << std::max((int)fmt->log2size - 7, 0));
+        period = std::max(period, 1 << std::max(static_cast<int>(fmt->log2size) - 7, 0));
     period_name = "action data width";
 }
 
@@ -292,25 +294,27 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                         home_rows_per_word[word].setbit(kv.value.i);
                     else
                         error(kv.value.lineno, "Invalid home row %" PRId64 "", kv.value.i);
-                } else for (auto &v : kv.value.vec) {
-                    if (CHECKTYPE2(v, tINT, tVEC)) {
-                        if (v.type == tINT) {
-                            if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
-                                home_rows_per_word[word].setbit(v.i);
-                            else
-                                error(v.lineno, "Invalid home row %" PRId64 "", v.i);
-                        } else if (v.type == tVEC) {
-                            for (auto &v2 : v.vec) {
-                                if (CHECKTYPE(v2, tINT)) {
-                                    if (v2.i >= 0 || v2.i < LOGICAL_SRAM_ROWS)
-                                        home_rows_per_word[word].setbit(v2.i);
-                                    else
-                                        error(v.lineno, "Invalid home row %" PRId64 "", v2.i);
+                } else {
+                    for (auto &v : kv.value.vec) {
+                        if (CHECKTYPE2(v, tINT, tVEC)) {
+                            if (v.type == tINT) {
+                                if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
+                                    home_rows_per_word[word].setbit(v.i);
+                                else
+                                    error(v.lineno, "Invalid home row %" PRId64 "", v.i);
+                            } else if (v.type == tVEC) {
+                                for (auto &v2 : v.vec) {
+                                    if (CHECKTYPE(v2, tINT)) {
+                                        if (v2.i >= 0 || v2.i < LOGICAL_SRAM_ROWS)
+                                            home_rows_per_word[word].setbit(v2.i);
+                                        else
+                                            error(v.lineno, "Invalid home row %" PRId64 "", v2.i);
+                                    }
                                 }
                             }
                         }
+                        word++;
                     }
-                    word++;
                 }
             }
         } else if (kv.key == "p4") {
@@ -321,9 +325,11 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column"
                    || kv.key == "word") {
             /* already done in setup_layout */
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
     alloc_rams(true, stage->sram_use, 0);
     if (!action_bus) action_bus = new ActionBus();
 }
@@ -331,8 +337,10 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
 void ActionTable::pass1() {
     LOG1("### Action table " << name() << " pass1");
     if (default_action.empty()) default_action = get_default_action();
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::ActionData, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::ActionData, this);
+    else
+        p4_table->check(this);
     alloc_vpns();
     std::sort(layout.begin(), layout.end(), [](const Layout &a, const Layout &b)->bool {
               if (a.word != b.word) return a.word < b.word;
@@ -358,7 +366,7 @@ void ActionTable::pass1() {
         width = std::max(width, int((fmt.second->size-1)/128U + 1)); }
     unsigned depth = layout_size()/width;
     std::vector<int> slice_size(width, 0);
-    unsigned idx = 0; // ram index within depth
+    unsigned idx = 0;  // ram index within depth
     int word = 0;  // word within wide table;
     int home_row = -1;
     std::map<int, bitvec> final_home_rows;
@@ -494,15 +502,15 @@ static void flow_selector_addr(REGS &regs, int from, int to) {
         /* R down */
         regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_r_i = 1;
-    //else
-    //    /* L down */
-    //    regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
-    //        .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
+    // else
+    //     /* L down */
+    //     regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
+    //         .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
 
     /* Include all selection address switchboxes needed when the action RAMs
      * reside on overflow rows */
     for (int row = from/4 - 1; row >= to/4; row--)
-	if (row != to/4 || (to % 4) < 2)
+        if (row != to/4 || (to % 4) < 2)
             /* top to bottom */
             regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
                 .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
@@ -584,7 +592,7 @@ void ActionTable::write_regs(REGS &regs) {
             /* if we're skipping over full rows and overflowing over those rows, need to
              * propagate overflow from bottom to top.  This effectively uses only the
              * odd (right side) overflow busses.  L ovfl can still go to R action */
-            for (int r = prev_logical_row/2 - 1; r > (int)row; r--) {
+            for (int r = prev_logical_row/2 - 1; r > static_cast<int>(row); r--) {
                 prev_switch_ctl = &regs.rams.array.switchbox.row[r].ctl;
                 prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1; }
 
@@ -655,11 +663,13 @@ void ActionTable::write_regs(REGS &regs) {
                         shift_ctl.mau_selector_action_adr_shift_left_oflo = shift;
                 }
             } else {
-                if (home == &logical_row)
+                if (home == &logical_row) {
                     adr_mux_sel = UnitRam::AdrMux::ACTION;
-                else {
+                } else {
                     adr_mux_sel = UnitRam::AdrMux::OVERFLOW;
-                    ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
+                    ram_mux.ram_oflo_adr_mux_select_oflo = 1;
+                }
+            }
             if (gress == EGRESS)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             regs.rams.array.row[row].actiondata_error_uram_ctl[timing_thread(gress)]
@@ -672,7 +682,7 @@ void ActionTable::write_regs(REGS &regs) {
     if (actions) actions->write_regs(regs, this);
 }
 
-//Action data address huffman encoding
+// Action data address huffman encoding
 //    { 0,      {"xxx", "xxxxx"} },
 //    { 8,      {"xxx", "xxxx0"} },
 //    { 16,     {"xxx", "xxx01"} },
@@ -685,7 +695,7 @@ void ActionTable::write_regs(REGS &regs) {
 
 // Track the actions added to json per action table. gen_tbl_cfg can be called
 // multiple times for the same action for each stage table in case of an action
-// table split across multiple stages, but must be added to json only once. 
+// table split across multiple stages, but must be added to json only once.
 static std::map<std::string, std::set<std::string>> actions_in_json;
 void ActionTable::gen_tbl_cfg(json::vector &out) const {
     // FIXME -- this is wrong if actions have different format sizes

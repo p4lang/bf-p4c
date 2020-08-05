@@ -1,5 +1,5 @@
-#ifndef _checked_array_
-#define _checked_array_
+#ifndef BF_ASM_CHECKED_ARRAY_H_
+#define BF_ASM_CHECKED_ARRAY_H_
 
 #include <stdlib.h>
 #include "log.h"
@@ -13,7 +13,7 @@ std::ostream &operator<<(std::ostream &out, checked_array<S, T> *arr);
 
 template<typename T>
 class checked_array_base {
-public:
+ public:
     virtual T& operator[](size_t) = 0;
     virtual const T& operator[](size_t) const = 0;
     virtual size_t size() const = 0;
@@ -31,8 +31,9 @@ template<size_t S, typename T>
 class checked_array : public checked_array_base<T> {
     bool disabled_;
     T data[S];
-public:
-    checked_array() : disabled_(false) {};
+
+ public:
+    checked_array() : disabled_(false) {}
     template<class U> explicit checked_array(U v) : disabled_(false) {
         for (auto &e : data) new(&e) T(v); }
     template<class U> checked_array(const std::initializer_list<U> &v) : disabled_(false) {
@@ -78,7 +79,7 @@ public:
         if (rv && !options.gen_json) {
             /* Can't actually disable arrays when generating json, as walle doesn't like it,
              * but allow containing object to be disabled */
-            disabled_ = true; } 
+            disabled_ = true; }
         return rv; }
     bool disable_if_zero() {
         bool rv = true;
@@ -87,7 +88,7 @@ public:
         if (rv && !options.gen_json) {
             /* Can't actually disable arrays when generating json, as walle doesn't like it,
              * but allow containing object to be disabled */
-            disabled_ = true; } 
+            disabled_ = true; }
         return rv; }
     bool disable_if_reset_value() {
         bool rv = true;
@@ -96,7 +97,7 @@ public:
         if (rv && !options.gen_json) {
             /* Can't actually disable arrays when generating json, as walle doesn't like it,
              * but allow containing object to be disabled */
-            disabled_ = true; } 
+            disabled_ = true; }
         return rv; }
 };
 
@@ -105,4 +106,4 @@ inline std::ostream &operator<<(std::ostream &out, checked_array<S, T> *arr) {
     print_regname(out, arr, arr+1);
     return out; }
 
-#endif /* _checked_array_ */
+#endif /* BF_ASM_CHECKED_ARRAY_H_ */

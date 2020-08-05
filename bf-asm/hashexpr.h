@@ -1,5 +1,5 @@
-#ifndef _hashexpr_h_
-#define _hashexpr_h_
+#ifndef BF_ASM_HASHEXPR_H_
+#define BF_ASM_HASHEXPR_H_
 
 #include "phv.h"
 #include "dynamic_hash/dynamic_hash.h"
@@ -13,9 +13,10 @@ class HashExpr {
     class Xor;
     class Stripe;
     class Slice;
-protected:
-    HashExpr(int l) : lineno(l) {}
-public:
+ protected:
+    explicit HashExpr(int l) : lineno(l) {}
+
+ public:
     int lineno;
     bfn_hash_algorithm_t hash_algorithm;
     static HashExpr *create(gress_t, int stage, const value_t &);
@@ -34,8 +35,8 @@ public:
     void find_input(Phv::Ref what, std::vector<ixbar_input_t> &inputs, InputXbar *ix,
         int hash_table);
     bool operator!=(const HashExpr &a) const { return !operator==(a); }
-    virtual void dbprint(std::ostream & out) const {} 
+    virtual void dbprint(std::ostream & out) const {}
     virtual Phv::Ref *get_ghost_slice() { return nullptr; }
 };
 
-#endif /* _hashexpr_h_ */
+#endif /* BF_ASM_HASHEXPR_H_ */

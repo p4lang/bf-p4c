@@ -1,7 +1,9 @@
 #include "widereg.h"
+
 #include <map>
-#include "log.h"
 #include <sstream>
+
+#include "log.h"
 
 void widereg_base::log(const char *op, bitvec v) const {
     std::ostringstream tmp;

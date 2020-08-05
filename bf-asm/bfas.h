@@ -1,16 +1,16 @@
-#ifndef _bfas_h_
-#define _bfas_h_
+#ifndef BF_ASM_BFAS_H_
+#define BF_ASM_BFAS_H_
 
-#include <string>
-#include "stdarg.h"
-#include "stdio.h"
 #include <iostream>
 #include <memory>
+#include <string>
 
+#include "stdarg.h"
+#include "stdio.h"
 
-enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
-enum target_t { NO_TARGET=0, TOFINO, TOFINO2, JBAY=TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
-                TOFINO3, CLOUDBREAK=TOFINO3,
+enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
+enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
+                TOFINO3, CLOUDBREAK = TOFINO3,
                 TARGET_INDEX_LIMIT };
 enum binary_type_t { NO_BINARY,
     FOUR_PIPE,  // binary replicating to all 4 pipes
@@ -85,7 +85,8 @@ inline void bug(const char* fname, int lineno) {
     fflush(stderr);
     std::terminate(); }
 
-extern std::unique_ptr<std::ostream> open_output(const char *, ...) __attribute__((format(printf, 1, 2)));
+extern std::unique_ptr<std::ostream> open_output(const char *,
+        ...) __attribute__((format(printf, 1, 2)));
 
 #define BUG() do { bug(__FILE__, __LINE__); } while (0)
 #define BUG_CHECK(e) do { if (!(e)) BUG(); } while (0)
@@ -94,8 +95,8 @@ class VersionIter {
     unsigned    left, bit;
     void check() { while (left && !(left & 1)) { ++bit; left >>= 1; } }
     VersionIter() : left(0), bit(0) {}
-public:
-    VersionIter(config_version_t v) : left(v), bit(0) { check(); }
+ public:
+    explicit VersionIter(config_version_t v) : left(v), bit(0) { check(); }
     VersionIter begin() { return *this; }
     VersionIter end() { return VersionIter(); }
     int operator*() const { return bit; }
@@ -105,4 +106,4 @@ public:
 
 extern unsigned unique_table_offset;
 
-#endif /* _bfas_h_ */
+#endif /* BF_ASM_BFAS_H_ */

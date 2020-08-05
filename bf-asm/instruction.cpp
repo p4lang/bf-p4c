@@ -1,13 +1,13 @@
 #include "instruction.h"
 
+#include <config.h>
+
 #include "action_bus.h"
 #include "power_ctl.h"
 #include "phv.h"
 #include "depositfield.h"
 #include "stage.h"
 #include "tables.h"
-
-#include <config.h>
 
 namespace {
 constexpr int RotationBits = 16;
@@ -70,7 +70,7 @@ struct operand {
     static const int ACTIONBUS_OPERAND = 0x20;
     struct Base {
         int     lineno;
-        Base(int line) : lineno(line) {}
+        explicit Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}
         virtual ~Base() {}
         virtual Base *clone() = 0;
@@ -81,7 +81,7 @@ struct operand {
         virtual unsigned bitoffset(int group) const { return 0; }
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
-        virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
+        virtual void phvRead(std::function<void(const ::Phv::Slice &sl)>) {}
         /** pass1 called as part of pass1 processing of stage
          * @tbl - table containing the action with the instruction with this operand
          * @group - mau PHV group of the ALU (dest) for this instruction */
@@ -96,7 +96,7 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
                 return value == a->value;
-            } else return false; }
+            } else { return false; } }
         Const *clone() override { return new Const(*this); }
         int32_t bits(int group, int dest_size = -1) override {
             // assert(value <= 0xffffffffLL);
@@ -106,7 +106,8 @@ struct operand {
             int minconst = Target::MINIMUM_INSTR_CONSTANT();
 
             if (dest_size != -1) {  // DepositField::encode() calling.
-                auto rotConst = DepositField::discoverRotation(val, group_size[group], 8, minconst - 1);
+                auto rotConst
+                    = DepositField::discoverRotation(val, group_size[group], 8, minconst - 1);
                 if (rotConst.rotate)
                     return rotConst.value+24 | (rotConst.rotate << RotationBits);
             }
@@ -122,11 +123,11 @@ struct operand {
         Phv(int line, gress_t g, int stage, const value_t &n) : Base(line), reg(g, stage, n) {}
         Phv(int line, gress_t g, int stage, const std::string &n, int l, int h) :
             Base(line), reg(g, stage, line, n, l, h) {}
-        Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
+        explicit Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Phv *>(a_)) {
                 return reg == a->reg;
-            } else return false; }
+            } else { return false; } }
         Phv *clone() override { return new Phv(*this); }
         bool check() override {
             if (!reg.check()) return false;
@@ -145,7 +146,7 @@ struct operand {
         void pass1(Table *tbl, int) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
-        void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
+        void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
     struct Action : Base {
         /* source referring to either an action data or immediate field OR an attached table
@@ -205,9 +206,9 @@ struct operand {
             if (byte < 0 || byte > 32*size)
                 error(lineno, "action bus entry %d(%s) out of range for %d-bit access",
                       byte_value, name.c_str(), size*8);
-            //else if (byte % size != 0)
-            //    error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
-            //          byte_value, name.c_str(), size*8);
+            // else if (byte % size != 0)
+            //     error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
+            //           byte_value, name.c_str(), size*8);
             else
                 return ACTIONBUS_OPERAND + byte/size;
             return -1; }
@@ -261,7 +262,7 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const RawAction *>(a_)) {
                 return index == a->index && offset == a->offset;
-            } else return false; }
+            } else { return false; } }
         RawAction *clone() override { return new RawAction(*this); }
         int bits(int group, int dest_size = -1) override { return ACTIONBUS_OPERAND + index; }
         unsigned bitoffset(int group) const override { return offset; }
@@ -312,7 +313,7 @@ struct operand {
                 return; }
             int size = group_size[group]/8U;
             if (lo < 0) lo = 0;
-            if (hi < 0) hi = 8*size - 1;;
+            if (hi < 0) hi = 8*size - 1;
             if ((lo ^ hi) & ~(8*size-1))
                 error(lineno, "hash dist slice(%d..%d) can't be accessed by %d bit PHV",
                       lo, hi, 8*size);
@@ -333,7 +334,9 @@ struct operand {
                         hi += 16; }
                 } else {
                     hd->xbar_use |= HashDistribution::IMMEDIATE_LOW; }
-            } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
+            } else {
+                error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
+            }
             int lo = this->lo;
             for (auto u : units) {
                 if (auto hd = find_hash_dist(u)) {
@@ -383,7 +386,7 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const RandomGen *>(a_)) {
                 return rng == a->rng && lo == a->lo && hi == a->hi;
-            } else return false; }
+            } else { return false; } }
         RandomGen *clone() override { return new RandomGen(*this); }
         void pass2(int group) override {
             unsigned size = group_size[group];
@@ -431,7 +434,7 @@ struct operand {
             if (auto *a = dynamic_cast<const Named *>(a_)) {
                 return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
                        action == a->action;
-            } else return false; }
+            } else { return false; } }
         Base *lookup(Base *&ref) override;
         Named *clone() override { return new Named(*this); }
         bool check() override { BUG(); return true; }
@@ -464,14 +467,14 @@ struct operand {
     ~operand() { delete op; }
     operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
     operand(gress_t gress, int stage, const value_t &v) : op(new Phv(v.lineno, gress, stage, v)) {}
-    operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
+    explicit operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
     bool operator==(operand &a) {
         return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
     int bits(int group, int dest_size = -1) { return op->lookup(op)->bits(group, dest_size); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
@@ -480,9 +483,9 @@ struct operand {
 
 static void parse_slice(const VECTOR(value_t) &vec, int idx, int &lo, int &hi) {
     if (PCHECKTYPE2(vec.size == idx+1, vec[idx], tINT, tRANGE)) {
-        if (vec[idx].type == tINT)
+        if (vec[idx].type == tINT) {
             lo = hi = vec[idx].i;
-        else {
+        } else {
             lo = vec[idx].lo;
             hi = vec[idx].hi; } }
 }
@@ -544,7 +547,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     } else if (::Phv::get(tbl->gress, tbl->stage->stageno, name)) {
         ref = new Phv(lineno, tbl->gress, tbl->stage->stageno, name, lo, hi);
     } else if (sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
-               len == (int)name.size() && slot >= 0 && slot < 32) {
+               len == static_cast<int>(name.size()) && slot >= 0 && slot < 32) {
         ref = new RawAction(lineno, slot, lo);
     } else if (name == "hash_dist" && (lo == hi || hi < 0)) {
         ref = new HashDist(lineno, tbl, lo);
@@ -557,7 +560,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
 }
 
 struct VLIWInstruction : Instruction {
-    VLIWInstruction(int l) : Instruction(l) {}
+    explicit VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     template<class REGS> void write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act);
@@ -568,10 +571,10 @@ struct VLIWInstruction : Instruction {
 #include "tofino/instruction.cpp"
 #if HAVE_JBAY
 #include "jbay/instruction.cpp"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/instruction.cpp"
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 struct AluOP : VLIWInstruction {
     const struct Decode : Instruction::Decode {
@@ -592,7 +595,8 @@ struct AluOP : VLIWInstruction {
         : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
-        Decode(const char *n, std::set<target_t> targ, unsigned opc, Decode *sw, const char *alias_name = 0)
+        Decode(const char *n, std::set<target_t> targ, unsigned opc, Decode *sw,
+               const char *alias_name = 0)
         : Instruction::Decode(n, targ), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
@@ -605,14 +609,14 @@ struct AluOP : VLIWInstruction {
           const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, tbl->stage->stageno + 1, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
-    std::string name() { return opc->name; };
+    std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
@@ -637,11 +641,11 @@ struct AluOP3Src : AluOP {
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
     AluOP *rv;
-    if (op.size == 4)
+    if (op.size == 4) {
         rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[3]);
-    else if (op.size == 3)
+    } else if (op.size == 3) {
         rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[2]);
-    else {
+    } else {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
     if (!rv->src1.valid())
@@ -722,13 +726,14 @@ int AluOP::encode() {
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
         return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2;
-    } else
+    } else {
         return false;
+    }
 }
 
 struct LoadConst : VLIWInstruction {
     struct Decode : Instruction::Decode {
-        Decode(const char *n) : Instruction::Decode(n) {}
+        explicit Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -737,15 +742,14 @@ struct LoadConst : VLIWInstruction {
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
-    std::string name() { return ""; };
+    std::string name() { return ""; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode() { return Target::encodeConst(src); }
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
-
 };
 
 Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action *act,
@@ -784,8 +788,9 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
         return dest == a->dest && src == a->src;
-    } else
+    } else {
         return false;
+    }
 }
 
 struct CondMoveMux : VLIWInstruction {
@@ -825,7 +830,7 @@ struct CondMoveMux : VLIWInstruction {
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         if (cond & 1) fn(*dest);
         src1.phvRead(fn);
         if (!opc->src2opt || (cond & 4))
@@ -839,10 +844,12 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
     if (op.size != 5 && (op.size != 4 || !src2opt)) {
         error(op[0].lineno, "%s requires %s4 operands", op[0].s, src2opt ? "3 or " : "");
         return 0; }
-    if (!CHECKTYPE(op[op.size-1], tINT))
-    if (op[op.size-1].i < 0 || op[op.size-1].i >= (1 << cond_size)) {
-        error(op[op.size-1].lineno, "%s condition must be %d-bit constant", op[0].s, cond_size);
-        return 0; }
+    if (!CHECKTYPE(op[op.size-1], tINT)) {
+        if (op[op.size-1].i < 0 || op[op.size-1].i >= (1 << cond_size)) {
+            error(op[op.size-1].lineno, "%s condition must be %d-bit constant", op[0].s, cond_size);
+            return 0;
+        }
+    }
     CondMoveMux *rv;
     if (op.size == 5)
         rv = new CondMoveMux(tbl, this, act, op[1], op[2], op[3]);
@@ -884,8 +891,9 @@ bool CondMoveMux::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CondMoveMux *>(a_)) {
         return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
                cond == a->cond;
-    } else
+    } else {
         return false;
+    }
 }
 
 /**
@@ -915,7 +923,7 @@ struct ByteRotateMerge : VLIWInstruction {
     }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         src1.phvRead(fn); src2.phvRead(fn);
     }
     void dbprint(std::ostream &out) const {
@@ -938,7 +946,7 @@ Instruction *ByteRotateMerge::Decode::decode(Table *tbl, const Table::Actions::A
         error(op[0].lineno, "%s requires operands 3-5 to be ints", op[0].s);
         return 0;
     }
-        
+
     ByteRotateMerge *rv = new ByteRotateMerge(tbl, act, op[1], op[2], op[3], op[4].i,
                                               op[5].i, op[6].i);
     if (!rv->src1.valid())
@@ -983,7 +991,7 @@ Instruction *ByteRotateMerge::pass1(Table *tbl, Table::Actions::Action *) {
     if (src2.phvGroup() < 0) {
         std::swap(src1, src2);
         std::swap(src1_shift, src2_shift);
-        byte_mask = bitvec(0, dest->reg.size / 8) - byte_mask; 
+        byte_mask = bitvec(0, dest->reg.size / 8) - byte_mask;
     }
     if (src2.phvGroup() < 0)
         error(lineno, "src2 must be phv register");
@@ -1034,7 +1042,7 @@ struct DepositField : VLIWInstruction {
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
@@ -1106,14 +1114,15 @@ int DepositField::encode() {
 bool DepositField::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<DepositField *>(a_)) {
         return dest == a->dest && src1 == a->src1 && src2 == a->src2;
-    } else
+    } else {
         return false;
+    }
 }
 
 struct Set : VLIWInstruction {
     struct Decode : Instruction::Decode {
         std::string name;
-        Decode(const char *n) : Instruction::Decode(n), name(n) {}
+        explicit Decode(const char *n) : Instruction::Decode(n), name(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -1122,15 +1131,14 @@ struct Set : VLIWInstruction {
     static AluOP::Decode *opA;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
     : VLIWInstruction(d.lineno), dest(tbl->gress, tbl->stage->stageno + 1, d), src(tbl, act, s) {}
-    std::string name() { return "set"; };
+    std::string name() { return "set"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
-
 };
 
 DepositField::DepositField(Table *tbl, const Set &s)
@@ -1192,8 +1200,9 @@ int Set::encode() {
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
         return dest == a->dest && src == a->src;
-    } else
+    } else {
         return false;
+    }
 }
 
 struct NulOP : VLIWInstruction {
@@ -1201,21 +1210,22 @@ struct NulOP : VLIWInstruction {
         std::string name;
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Instruction::Decode(n), name(n), opcode(opc) {}
-        Decode(const char *n, target_t targ, unsigned opc) : Instruction::Decode(n, targ), name(n), opcode(opc) {}
+        Decode(const char *n, target_t targ, unsigned opc)
+            : Instruction::Decode(n, targ), name(n), opcode(opc) {}
         Decode(const char *n, std::set<target_t> targ, unsigned opc)
-        : Instruction::Decode(n, targ), name(n), opcode(opc) {}
+            : Instruction::Decode(n, targ), name(n), opcode(opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
     NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d)
     : VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, tbl->stage->stageno + 1, d) {}
-    std::string name() { return opc->name; };
+    std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << " " << dest; }
 };
@@ -1244,8 +1254,9 @@ int NulOP::encode() {
 bool NulOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<NulOP *>(a_)) {
         return opc == a->opc && dest == a->dest;
-    } else
+    } else {
         return false;
+    }
 }
 
 struct ShiftOP : VLIWInstruction {
@@ -1270,14 +1281,14 @@ struct ShiftOP : VLIWInstruction {
         } else {
             src2 = src1;
             if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
-    std::string name() { return opc->name; };
+    std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
         src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+    void phvRead(std::function<void(const ::Phv::Slice &sl)> fn) {
         src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << shift; }
@@ -1330,77 +1341,78 @@ bool ShiftOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<ShiftOP *>(a_)) {
         return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
                shift == a->shift;
-    } else
+    } else {
         return false;
+    }
 }
 
 // lifted from MAU uArch 15.1.6
 // If the operation is associative operand swap is enabled
 //                                      OPNAME           OPCODE      OPERAND SWAP
 //                                                                   (default = false)
-static AluOP::Decode     opADD         ("add",           0x23e,      true),
-                         opADDC        ("addc",          0x2be,      true),
-                         opSUB         ("sub",           0x33e),
-                         opSUBC        ("subc",          0x3be),
-                         opSADDU       ("saddu",         0x03e,      true),
-                         opSADDS       ("sadds",         0x07e,      true),
-                         opSSUBU       ("ssubu",         0x0be),
-                         opSSUBS       ("ssubs",         0x0fe),
-                         opMINU        ("minu",          0x13e,      true),
-                         opMINS        ("mins",          0x17e,      true),
-                         opMAXU        ("maxu",          0x1be,      true),
-                         opMAXS        ("maxs",          0x1fe,      true),
-                         opSETZ        ("setz",          0x01e,      true),
-                         opNOR         ("nor",           0x05e,      true),
-                         opANDCA       ("andca",         0x09e),
-                         opNOTA        ("nota",          0x0de),
-                         opANDCB       ("andcb",         0x11e,      &opANDCA),
-                         opNOTB        ("notb",          0x15e,      &opNOTA, "not"),
-                         opXOR         ("xor",           0x19e,      true),
-                         opNAND        ("nand",          0x1de,      true),
-                         opAND         ("and",           0x21e,      true),
-                         opXNOR        ("xnor",          0x25e,      true),
-                         opB           ("alu_b",         0x29e),
-                         opORCA        ("orca",          0x2de),
-                         opA           ("alu_a",         0x31e,      &opB),
-                         opORCB        ("orcb",          0x35e,      &opORCA),
-                         opOR          ("or",            0x39e,      true),
-                         opSETHI       ("sethi",         0x3de,      true);
-static LoadConst::Decode opLoadConst   ("load-const");
-static Set::Decode       opSet         ("set");
-static NulOP::Decode     opNoop        ("noop",          0x0);
-static ShiftOP::Decode   opSHL         ("shl",           0x0c,       false),
-                         opSHRS        ("shrs",          0x1c,       false),
-                         opSHRU        ("shru",          0x14,       false),
-                         opFUNSHIFT    ("funnel-shift",  0x04,       true);
+static AluOP::Decode     opADD         ("add",           0x23e,      true), // NOLINT
+                         opADDC        ("addc",          0x2be,      true), // NOLINT
+                         opSUB         ("sub",           0x33e),            // NOLINT
+                         opSUBC        ("subc",          0x3be),            // NOLINT
+                         opSADDU       ("saddu",         0x03e,      true), // NOLINT
+                         opSADDS       ("sadds",         0x07e,      true), // NOLINT
+                         opSSUBU       ("ssubu",         0x0be),            // NOLINT
+                         opSSUBS       ("ssubs",         0x0fe),            // NOLINT
+                         opMINU        ("minu",          0x13e,      true), // NOLINT
+                         opMINS        ("mins",          0x17e,      true), // NOLINT
+                         opMAXU        ("maxu",          0x1be,      true), // NOLINT
+                         opMAXS        ("maxs",          0x1fe,      true), // NOLINT
+                         opSETZ        ("setz",          0x01e,      true), // NOLINT
+                         opNOR         ("nor",           0x05e,      true), // NOLINT
+                         opANDCA       ("andca",         0x09e),            // NOLINT
+                         opNOTA        ("nota",          0x0de),            // NOLINT
+                         opANDCB       ("andcb",         0x11e,      &opANDCA), // NOLINT
+                         opNOTB        ("notb",          0x15e,      &opNOTA, "not"), // NOLINT
+                         opXOR         ("xor",           0x19e,      true), // NOLINT
+                         opNAND        ("nand",          0x1de,      true), // NOLINT
+                         opAND         ("and",           0x21e,      true), // NOLINT
+                         opXNOR        ("xnor",          0x25e,      true), // NOLINT
+                         opB           ("alu_b",         0x29e),            // NOLINT
+                         opORCA        ("orca",          0x2de),            // NOLINT
+                         opA           ("alu_a",         0x31e,      &opB), // NOLINT
+                         opORCB        ("orcb",          0x35e,      &opORCA), // NOLINT
+                         opOR          ("or",            0x39e,      true), // NOLINT
+                         opSETHI       ("sethi",         0x3de,      true); // NOLINT
+static LoadConst::Decode opLoadConst   ("load-const");                      // NOLINT
+static Set::Decode       opSet         ("set");                             // NOLINT
+static NulOP::Decode     opNoop        ("noop",          0x0);              // NOLINT
+static ShiftOP::Decode   opSHL         ("shl",           0x0c,       false), // NOLINT
+                         opSHRS        ("shrs",          0x1c,       false), // NOLINT
+                         opSHRU        ("shru",          0x14,       false), // NOLINT
+                         opFUNSHIFT    ("funnel-shift",  0x04,       true); // NOLINT
 static DepositField::Decode opDepositField;
 static ByteRotateMerge::Decode opByteRotateMerge;
 
 AluOP::Decode* Set::opA = &VLIW::opA;
 
-static AluOP3Src::Decode    tf_opBMSET       ("bitmasked-set", TOFINO, 0x2e);
-static CondMoveMux::Decode  tf_opCondMove    ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");
-static CondMoveMux::Decode  tf_opCondMux     ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");
-static NulOP::Decode        tf_opInvalidate  ("invalidate", TOFINO, 0x3800);
+static AluOP3Src::Decode    tf_opBMSET       ("bitmasked-set", TOFINO, 0x2e);  // NOLINT
+static CondMoveMux::Decode  tf_opCondMove    ("cmov",  TOFINO, 0x16, true,  5, "conditional-move");  // NOLINT
+static CondMoveMux::Decode  tf_opCondMux     ("cmux",  TOFINO, 0x6,  false, 2, "conditional-mux");   // NOLINT
+static NulOP::Decode        tf_opInvalidate  ("invalidate", TOFINO, 0x3800);   // NOLINT
 
 #if HAVE_JBAY || HAVE_CLOUDBREAK
 static std::set<target_t>   jb_cb_targets = std::set<target_t>({JBAY, CLOUDBREAK});
 
-static AluOP3Src::Decode    jb_cb_opBMSET    ("bitmasked-set", jb_cb_targets, 0x0e);
-static CondMoveMux::Decode  jb_cb_opCondMove ("cmov",    jb_cb_targets, 0x6, true,  5, "conditional-move");
-static AluOP::Decode        jb_cb_opGTEQU    ("gtequ",   jb_cb_targets, 0x02e),
-                            jb_cb_opGTEQS    ("gteqs",   jb_cb_targets, 0x06e),
-                            jb_cb_opLTU      ("ltu",     jb_cb_targets, 0x0ae),
-                            jb_cb_opLTS      ("lts",     jb_cb_targets, 0x0ee),
-                            jb_cb_opLEQU     ("lequ",    jb_cb_targets, 0x12e, &jb_cb_opGTEQU),
-                            jb_cb_opLEQS     ("leqs",    jb_cb_targets, 0x16e, &jb_cb_opGTEQS),
-                            jb_cb_opGTU      ("gtu",     jb_cb_targets, 0x1ae, &jb_cb_opLTU),
-                            jb_cb_opGTS      ("gts",     jb_cb_targets, 0x1ee, &jb_cb_opLTS),
-                            jb_cb_opEQ       ("eq",      jb_cb_targets, 0x22e, true),
-                            jb_cb_opNEQ      ("neq",     jb_cb_targets, 0x2ae, true),
-                            jb_cb_opEQ64     ("eq64",    jb_cb_targets, 0x26e, true),
-                            jb_cb_opNEQ64    ("neq64",   jb_cb_targets, 0x2ee, true);
-#endif // HAVE_JBAY || HAVE_CLOUDBREAK
+static AluOP3Src::Decode    jb_cb_opBMSET    ("bitmasked-set", jb_cb_targets, 0x0e);   // NOLINT
+static CondMoveMux::Decode  jb_cb_opCondMove ("cmov",    jb_cb_targets, 0x6, true,  5, "conditional-move");  // NOLINT
+static AluOP::Decode        jb_cb_opGTEQU    ("gtequ",   jb_cb_targets, 0x02e),        // NOLINT
+                            jb_cb_opGTEQS    ("gteqs",   jb_cb_targets, 0x06e),        // NOLINT
+                            jb_cb_opLTU      ("ltu",     jb_cb_targets, 0x0ae),        // NOLINT
+                            jb_cb_opLTS      ("lts",     jb_cb_targets, 0x0ee),        // NOLINT
+                            jb_cb_opLEQU     ("lequ",    jb_cb_targets, 0x12e, &jb_cb_opGTEQU),  // NOLINT
+                            jb_cb_opLEQS     ("leqs",    jb_cb_targets, 0x16e, &jb_cb_opGTEQS),  // NOLINT
+                            jb_cb_opGTU      ("gtu",     jb_cb_targets, 0x1ae, &jb_cb_opLTU),  // NOLINT
+                            jb_cb_opGTS      ("gts",     jb_cb_targets, 0x1ee, &jb_cb_opLTS),  // NOLINT
+                            jb_cb_opEQ       ("eq",      jb_cb_targets, 0x22e, true),  // NOLINT
+                            jb_cb_opNEQ      ("neq",     jb_cb_targets, 0x2ae, true),  // NOLINT
+                            jb_cb_opEQ64     ("eq64",    jb_cb_targets, 0x26e, true),  // NOLINT
+                            jb_cb_opNEQ64    ("neq64",   jb_cb_targets, 0x2ee, true);  // NOLINT
+#endif  // HAVE_JBAY || HAVE_CLOUDBREAK
 
 }  // end namespace VLIW
 

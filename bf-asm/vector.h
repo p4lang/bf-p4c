@@ -1,27 +1,27 @@
-#ifndef _vector_h_
-#define _vector_h_
+#ifndef BF_ASM_VECTOR_H_
+#define BF_ASM_VECTOR_H_
 
 /* C code and macros for VECTOR objects similar to C++ std::vector */
 #include <stddef.h>
 
-#define CAT(A,B)        A##B
-#define VECTOR(NAME)    CAT(NAME,_VECTOR)
+#define CAT(A, B)        A##B
+#define VECTOR(NAME)    CAT(NAME, _VECTOR)
 #define DECLARE_VECTOR(TYPE)            \
 typedef struct {                        \
     int         capacity, size;         \
     TYPE        *data;                  \
-} CAT(TYPE,_VECTOR);
+} CAT(TYPE, _VECTOR);
 #define DECLARE_VECTOR2(NAME, ELTYPE)   \
 typedef struct {                        \
     int         capacity, size;         \
     ELTYPE      *data;                  \
-} CAT(NAME,_VECTOR);
+} CAT(NAME, _VECTOR);
 #define DECLARE_VECTOR3(NAME, ELTYPE, EXTRA)    \
 typedef struct {                        \
     int         capacity, size;         \
     ELTYPE      *data;                  \
     EXTRA                               \
-} CAT(NAME,_VECTOR);
+} CAT(NAME, _VECTOR);
 
 #define RAW(X)          X
 
@@ -133,7 +133,7 @@ typedef struct {                        \
  */
 #define VECTOR_foreach(vec, apply) do { \
     for (int i_ = 0; i_ < (vec).size; i_++) { apply((&(vec).data[i_])); } \
-} while(0)
+} while (0)
 
 /* VECTOR_insert(vec, idx, cnt)
  *   increase the size of a vector, adding uninitialized space at idx, and
@@ -204,4 +204,4 @@ extern int shrink_raw_vector(void *vec, size_t elsize);
 }
 #endif
 
-#endif /* _vector_h_ */
+#endif /* BF_ASM_VECTOR_H_ */

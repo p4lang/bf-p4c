@@ -17,14 +17,15 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "mode") {
             mode_lineno = kv.value.lineno;
             if (CHECKTYPEPM(kv.value, tCMD, kv.value.vec.size == 2 && kv.value[1].type == tINT,
-                            "hash mode and int param"))
-            {
+                            "hash mode and int param")) {
                 if (kv.value[0] == "resilient")
                     resilient_hash = true;
                 else if (kv.value[0] == "fair")
                     resilient_hash = false;
-                else error(kv.value.lineno, "Unknown hash mode %s", kv.value[0].s);
-                param = kv.value[1].i; }
+                else
+                    error(kv.value.lineno, "Unknown hash mode %s", kv.value[0].s);
+                param = kv.value[1].i;
+            }
         } else if (kv.key == "non_linear") {
             non_linear_hash = get_bool(kv.value);
         } else if (kv.key == "per_flow_enable") {
@@ -59,9 +60,10 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "row" || kv.key == "logical_row" ||
                    kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+        }
     if (p4_info.size) {
         if (p4_table)
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
@@ -73,8 +75,10 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
 
 void SelectionTable::pass1() {
     LOG1("### Selection table " << name() << " pass1");
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::Selection, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::Selection, this);
+    else
+        p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
@@ -85,11 +89,15 @@ void SelectionTable::pass1() {
               resilient_hash ? "resilient" : "fair", param);
     min_words = INT_MAX;
     max_words = 0;
-    if (pool_sizes.empty()) min_words = max_words = 1;
-    else for (int size : pool_sizes) {
-        int words = (size + SELECTOR_PORTS_PER_WORD - 1)/SELECTOR_PORTS_PER_WORD;
-        if (words < min_words) min_words = words;
-        if (words > max_words) max_words = words; }
+    if (pool_sizes.empty()) {
+        min_words = max_words = 1;
+    } else {
+        for (int size : pool_sizes) {
+            int words = (size + SELECTOR_PORTS_PER_WORD - 1)/SELECTOR_PORTS_PER_WORD;
+            if (words < min_words) min_words = words;
+            if (words > max_words) max_words = words;
+        }
+    }
     stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
     if (max_words > 1) {
         stage->table_use[timing_thread(gress)] |= Stage::USE_WIDE_SELECTOR;
@@ -250,14 +258,14 @@ template<> void SelectionTable::setup_physical_alu_map(Target::JBay::mau_regs &r
     auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
 }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 template<> void SelectionTable::setup_physical_alu_map(Target::Cloudbreak::mau_regs &regs,
                                                        int type, int bus, int alu) {
     auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
 }
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 template<class REGS>
 void SelectionTable::write_regs(REGS &regs) {
@@ -287,8 +295,9 @@ void SelectionTable::write_regs(REGS &regs) {
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
-            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[SELECTOR_VHXBAR_HASH_BUS_INDEX],
-                         selection_hash);
+            setup_muxctl(
+                    vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[SELECTOR_VHXBAR_HASH_BUS_INDEX],
+                    selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                 bitmask2bytemask(input_xbar->hash_group_bituse());
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
@@ -329,16 +338,16 @@ void SelectionTable::write_regs(REGS &regs) {
     auto &adrdist = regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
-        //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
-        //icxbar.address_distr_to_logical_rows = 1 << home->row;
-        //icxbar.address_distr_to_overflow = push_on_overflow;
+        // auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
+        // icxbar.address_distr_to_logical_rows = 1 << home->row;
+        // icxbar.address_distr_to_overflow = push_on_overflow;
         if (auto &act = m->get_action()) {
             /* FIXME -- can't be attached to mutliple tables ? */
             unsigned fmt = 3;
             fmt = std::max(fmt, act->format->log2size);
             if (auto at = dynamic_cast<ActionTable *>(&(*act)))
-                for (auto &f: at->get_action_formats()) fmt = std::max(fmt, f.second->log2size);
-            merge.mau_selector_action_entry_size[meter_group] = fmt - 3; } //val in bytes
+                for (auto &f : at->get_action_formats()) fmt = std::max(fmt, f.second->log2size);
+            merge.mau_selector_action_entry_size[meter_group] = fmt - 3; }  // val in bytes
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
         adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
             4 | meter_group, 3*(m->logical_id % 8U), 3);
@@ -366,7 +375,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::Tofino::mau_regs &
                                                       int logical_id, int alu) {
     auto &merge = regs.rams.match.merge;
     if (max_words > 1)
-        merge.mau_logical_to_meter_alu_map.set_subfield( 16 | logical_id, 5*alu, 5);
+        merge.mau_logical_to_meter_alu_map.set_subfield(16 | logical_id, 5*alu, 5);
     merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
         4 | alu, 3*(logical_id % 8U), 3);
 }
@@ -378,7 +387,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
     merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
         4 | alu, 3*(logical_id % 8U), 3);
 }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_regs &regs,
                                                       int logical_id, int alu) {
@@ -387,7 +396,7 @@ template<> void SelectionTable::setup_logical_alu_map(Target::Cloudbreak::mau_re
     merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
         4 | alu, 3*(logical_id % 8U), 3);
 }
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     // Stage table size reflects how many RAM lines are available for the selector, according
@@ -396,18 +405,21 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "selection", size);
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
     tbl["selector_name"] = p4_table ? p4_table->p4_name() : "undefined";
-    tbl["selection_key_name"] = "undefined"; /// FIXME!
+    tbl["selection_key_name"] = "undefined";  // FIXME!
     std::string hr = how_referenced();
     if (hr.empty())
         hr = indirect ? "indirect" : "direct";
     tbl["how_referenced"] = hr;
     if (pool_sizes.size() > 0)
         tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
-    for (MatchTable *m : match_tables)
-        if (auto &act = m->get_action())
+    for (MatchTable *m : match_tables) {
+        if (auto &act = m->get_action()) {
             if (auto at = dynamic_cast<ActionTable *>(&(*act))) {
                 tbl["bound_to_action_data_table_handle"] = act->handle();
-                break; }
+                break;
+            }
+        }
+    }
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", size);
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] =

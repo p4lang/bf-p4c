@@ -1,8 +1,10 @@
 #include "ubits.h"
+
 #include <map>
+#include <sstream>
+
 #include "hex.h"
 #include "log.h"
-#include <sstream>
 
 struct regrange {
     const char  *base;

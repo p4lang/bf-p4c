@@ -1,17 +1,19 @@
-#ifndef _json_h_
-#define _json_h_
+#ifndef BF_ASM_JSON_H_
+#define BF_ASM_JSON_H_
+
+#include <assert.h>
 
 #include <cinttypes>
 #include <iostream>
 #include <map>
 #include <memory>
-#include "ordered_map.h"
-#include "rvalue_reference_wrapper.h"
 #include <stdexcept>
 #include <string>
 #include <typeindex>
 #include <vector>
-#include <assert.h>
+
+#include "ordered_map.h"
+#include "rvalue_reference_wrapper.h"
 
 namespace json {
 
@@ -29,7 +31,7 @@ class vector;
 class map;
 
 class obj {
-public:
+ public:
     obj() {}
     obj(const obj &) = default;
     obj(obj &&) = default;
@@ -54,7 +56,8 @@ public:
         bool operator()(const std::unique_ptr<obj> &a, const std::unique_ptr<obj> &b) const
             { return b ? a ? *a < *b : true : false; }
     };
-    virtual void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const = 0;
+    virtual void print_on(std::ostream &out, int indent = 0, int width = 80,
+            const char *pfx = "") const = 0;
     virtual bool test_width(int &limit) const = 0;
     virtual number *as_number() { return nullptr; }
     virtual const number *as_number() const { return nullptr; }
@@ -68,8 +71,8 @@ public:
     template<class T> bool is() const { return dynamic_cast<const T *>(this) != nullptr; }
     template<class T> T &to() { return dynamic_cast<T &>(*this); }
     template<class T> const T &to() const { return dynamic_cast<const T &>(*this); }
-    virtual std::unique_ptr<obj> copy() && = 0; //Creates a shallow copy of unique_ptr
-    virtual std::unique_ptr<obj> clone() const = 0; //Creates a deep copy of obj
+    virtual std::unique_ptr<obj> copy() && = 0;  // Creates a shallow copy of unique_ptr
+    virtual std::unique_ptr<obj> clone() const = 0;  // Creates a deep copy of obj
     static std::unique_ptr<obj> clone_ptr(const std::unique_ptr<obj> &a) {
         return a ? a->clone() : std::unique_ptr<obj>(); }
     std::string toString() const;
@@ -79,7 +82,7 @@ class True : public obj {
     bool operator <(const obj &a) const {
         return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const { return dynamic_cast<const True *>(&a) != 0; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
+    void print_on(std::ostream &out, int indent = 0, int width = 80, const char *pfx = "") const
         { out << "true"; }
     bool test_width(int &limit) const { limit -= 4; return limit >= 0; }
     std::unique_ptr<obj> copy() && { return mkuniq<True>(std::move(*this)); }
@@ -90,7 +93,7 @@ class False : public obj {
     bool operator <(const obj &a) const {
         return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const { return dynamic_cast<const False *>(&a) != 0; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
+    void print_on(std::ostream &out, int indent = 0, int width = 80, const char *pfx = "") const
         { out << "false"; }
     bool test_width(int &limit) const { limit -= 5; return limit >= 0; }
     std::unique_ptr<obj> copy() && { return mkuniq<False>(std::move(*this)); }
@@ -98,9 +101,9 @@ class False : public obj {
 };
 
 class number : public obj {
-public:
-    int64_t	val;
-    number(int64_t l) : val(l) {}
+ public:
+    int64_t val;
+    explicit number(int64_t l) : val(l) {}
     ~number() {}
     bool operator <(const obj &a) const override {
         if (auto *b = dynamic_cast<const number *>(&a)) return val < b->val;
@@ -109,11 +112,12 @@ public:
         if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
         return false; }
     bool operator==(int64_t v) const override { return val == v; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const override {
+    void print_on(std::ostream &out, int indent = 0, int width = 80,
+            const char *pfx = "") const override {
         out << val; }
     bool test_width(int &limit) const override {
         char buf[32];
-        limit -= sprintf(buf, "%" PRId64, val);
+        limit -= snprintf(buf, sizeof(buf), "%" PRId64, val);
         return limit >= 0;
     }
     number *as_number() override { return this; }
@@ -123,13 +127,13 @@ public:
 };
 
 class string : public obj, public std::string {
-public:
+ public:
     string() {}
     string(const string &) = default;
-    string(const std::string &a) : std::string(a) {}
-    string(const char *a) : std::string(a) {}
+    string(const std::string &a) : std::string(a) {}  // NOLINT(runtime/explicit)
+    string(const char *a) : std::string(a) {}  // NOLINT(runtime/explicit)
     string(string &&) = default;
-    string(std::string &&a) : std::string(a) {}
+    string(std::string &&a) : std::string(a) {}  // NOLINT
     string &operator=(const string &) & = default;
     string &operator=(string &&) & = default;
     ~string() {}
@@ -150,8 +154,8 @@ public:
         return static_cast<const std::string &>(*this) == str; }
     bool operator ==(const std::string &str) const override {
         return static_cast<const std::string &>(*this) == str; }
-    void print_on(std::ostream &out, int indent=0,
-                  int width=80, const char *pfx="") const override {
+    void print_on(std::ostream &out, int indent = 0,
+                  int width = 80, const char *pfx = "") const override {
         out << '"' << *this << '"'; }
     bool test_width(int &limit) const override {
       limit -= size()+2; return limit >= 0; }
@@ -164,11 +168,11 @@ public:
       return mkuniq<string>(*this); }
 };
 
-class map; // forward decl
+class map;  // forward decl
 
 typedef std::vector<std::unique_ptr<obj>> vector_base;
 class vector : public obj, public vector_base {
-public:
+ public:
     vector() {}
     vector(const vector &) = delete;
     vector(vector &&) = default;
@@ -199,7 +203,8 @@ public:
             return (p1 == end() && p2 == b->end()); }
         return false; }
     using obj::operator !=;
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const override;
+    void print_on(std::ostream &out, int indent = 0, int width = 80,
+            const char *pfx = "") const override;
     bool test_width(int &limit) const override {
         limit -= 2;
         for (auto &e : *this) {
@@ -209,8 +214,11 @@ public:
     using vector_base::push_back;
     void push_back(decltype(nullptr)) { push_back(std::unique_ptr<obj>()); }
     void push_back(bool t) {
-        if (t) push_back(mkuniq<True>(True()));
-        else push_back(mkuniq<False>(False())); }
+        if (t)
+            push_back(mkuniq<True>(True()));
+        else
+            push_back(mkuniq<False>(False()));
+    }
     void push_back(int64_t n) { push_back(mkuniq<number>(number(n))); }
     void push_back(int n) { push_back((int64_t)n); }
     void push_back(unsigned int n) { push_back((int64_t)n); }
@@ -219,19 +227,19 @@ public:
     void push_back(std::string s) { push_back(mkuniq<string>(string(s))); }
     void push_back(string s) { push_back(mkuniq<string>(s)); }
     void push_back(vector &&v) { push_back(mkuniq<vector>(std::move(v))); }
-    void push_back(json::map &&);
+    void push_back(json::map &&);  // NOLINT(whitespace/operators)
     vector *as_vector() override { return this; }
     const vector *as_vector() const override { return this; }
     std::unique_ptr<obj> copy() && override { return mkuniq<vector>(std::move(*this)); }
     std::unique_ptr<obj> clone() const override {
         vector *v = new vector();
-        for (auto &e: *this) v->push_back(clone_ptr(e));
+        for (auto &e : *this) v->push_back(clone_ptr(e));
         return std::unique_ptr<vector>(v); }
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
 class map : public obj, public map_base {
-public:
+ public:
     map() {}
     map(const map &) = default;
     map(map &&) = default;
@@ -275,8 +283,8 @@ public:
         }
         return std::unique_ptr<obj>();
     }
-    void print_on(std::ostream &out, int indent=0,
-                  int width=80, const char *pfx="") const override;
+    void print_on(std::ostream &out, int indent = 0,
+                  int width = 80, const char *pfx = "") const override;
     bool test_width(int &limit) const override {
         limit -= 2;
         for (auto &e : *this) {
@@ -294,7 +302,7 @@ public:
     map_base::size_type count(int64_t n) const {
         number tmp(n);
         return count(&tmp); }
-    //using map_base::operator[];
+    // using map_base::operator[];
     obj *operator[](const std::unique_ptr<obj> &i) const {
         auto rv = find(i.get());
         if (rv != end()) return rv->second.get();
@@ -314,12 +322,14 @@ public:
         auto rv = find(&tmp);
         if (rv != end()) return rv->second.get();
         return 0; }
-private:
+
+ private:
     class element_ref {
         map                     &self;
         std::unique_ptr<obj>    key;
         map_base::iterator      iter;
-    public:
+
+     public:
         element_ref(map &s, const char *k) : self(s) {
             string tmp(k);
             iter = self.find(&tmp);
@@ -335,16 +345,22 @@ private:
             if (iter == self.end())
                 key = std::move(k); }
         void operator=(decltype(nullptr)) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), std::unique_ptr<obj>()).first;
-            else { assert(iter != self.end());
-                iter->second.reset(); } }
+            } else {
+                assert(iter != self.end());
+                iter->second.reset();
+            } }
         bool operator=(bool t) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(),
-                        std::unique_ptr<obj>(t ? (obj*)new True() : (obj*)new False())).first;
-            else { assert(iter != self.end());
-                iter->second.reset(t ? (obj*)new True() : (obj*)new False()); }
+                    std::unique_ptr<obj>(t ? static_cast<obj*>(new True())
+                        : static_cast<obj*>(new False()))).first;
+            } else {
+                assert(iter != self.end());
+                iter->second.reset(t ? static_cast<obj*>(new True())
+                        : static_cast<obj*>(new False()));
+            }
             return t; }
         bool operator=(void *);  // not defined to avoid converting pointers to bool
         bool operator==(string &str) {
@@ -366,24 +382,30 @@ private:
         bool operator!=(int64_t v) {
             return !(*this == v); }
         const char *operator=(const char *v) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
-            else { assert(iter != self.end());
-                iter->second.reset(new string(v)); }
+            } else {
+                assert(iter != self.end());
+                iter->second.reset(new string(v));
+            }
             return v; }
         const std::string &operator=(const std::string &v) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
-            else { assert(iter != self.end());
-                iter->second.reset(new string(v)); }
+            } else {
+                assert(iter != self.end());
+                iter->second.reset(new string(v));
+            }
             return v; }
         int64_t operator=(int64_t v) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new number(v))).first;
-            else { assert(iter != self.end());
-                iter->second.reset(new number(v)); }
+            } else {
+                assert(iter != self.end());
+                iter->second.reset(new number(v));
+            }
             return v; }
-        int operator=(int v) { return (int)(*this = (int64_t)v); }
+        int operator=(int v) { return static_cast<int>(*this = static_cast<int64_t>(v)); }
         unsigned int operator=(unsigned int v) { return (unsigned int)(*this = (int64_t)v); }
 #if defined(__clang__) && defined(__APPLE__)
         // Clang ang gcc on Mac OS can't agree whether size_t overloads uint64_t or unsigned long
@@ -392,21 +414,28 @@ private:
 #endif
         uint64_t operator=(uint64_t v) { return (uint64_t)(*this = (int64_t)v); }
         vector &operator=(vector &&v) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), mkuniq<vector>(std::move(v))).first;
-            else { assert(iter != self.end());
-                iter->second = mkuniq<vector>(std::move(v)); }
+            } else {
+                assert(iter != self.end());
+                iter->second = mkuniq<vector>(std::move(v));
+            }
             return dynamic_cast<vector &>(*iter->second); }
         map &operator=(map &&v) {
-            if (key)
+            if (key) {
                 iter = self.emplace(key.release(), mkuniq<map>(std::move(v))).first;
-            else { assert(iter != self.end());
-                iter->second = mkuniq<map>(std::move(v)); }
+            } else {
+                assert(iter != self.end());
+                iter->second = mkuniq<map>(std::move(v));
+            }
             return dynamic_cast<map &>(*iter->second); }
         const std::unique_ptr<obj> &operator=(std::unique_ptr<obj> &&v) {
-            if (key) iter = self.emplace(key.release(), std::move(v)).first;
-            else { assert(iter != self.end());
-                iter->second = std::move(v); }
+            if (key) {
+                iter = self.emplace(key.release(), std::move(v)).first;
+            } else {
+                assert(iter != self.end());
+                iter->second = std::move(v);
+            }
             return iter->second; }
         obj &operator*() {
             assert(!key && iter != self.end());
@@ -447,7 +476,8 @@ private:
             return dynamic_cast<T &>(*iter->second); }
     };
     friend std::ostream &operator<<(std::ostream &out, const element_ref &el);
-public:
+
+ public:
     element_ref operator[](const char *str) { return element_ref(*this, str); }
     element_ref operator[](const std::string &str) { return element_ref(*this, str.c_str()); }
     element_ref operator[](int64_t n) { return element_ref(*this, n); }
@@ -465,7 +495,7 @@ public:
       return mkuniq<map>(std::move(*this)); }
     std::unique_ptr<obj> clone() const override {
         map *m = new map();
-        for (auto &e: *this)
+        for (auto &e : *this)
             m->emplace(e.first ? e.first->clone().release() : nullptr, clone_ptr(e.second));
         return std::unique_ptr<map>(m); }
 
@@ -500,4 +530,4 @@ inline std::ostream &operator<<(std::ostream &out, const map::element_ref &el) {
 extern void dump(const json::obj *);
 extern void dump(const json::obj &);
 
-#endif /* _json_h_ */
+#endif /* BF_ASM_JSON_H_ */

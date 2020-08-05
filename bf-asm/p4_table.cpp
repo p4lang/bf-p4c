@@ -59,7 +59,6 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         if (rv->lineno <= 0 || rv->lineno > kv.key.lineno)
             rv->lineno = kv.key.lineno;
         if (kv.key == "handle") {
-            ;
         } else if (kv.key == "name") {
             if (CHECKTYPE(kv.value, tSTR)) {
                 if (!rv->name.empty() && rv->name != kv.value.s) {
@@ -99,8 +98,9 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
             }
         } else if (kv.key == "hidden") {
             rv->hidden = get_bool(kv.value);
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in p4 info", value_desc(kv.key)); }
+        }
     return rv;
 }
 
@@ -144,7 +144,8 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, const Table *table
     return &tbl;
 }
 
-void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4Table::alpm_type atype) const {
+void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
+        P4Table::alpm_type atype) const {
     if (is_alpm()) {
         json::map **alpm_cfg = nullptr;
         unsigned *alpm_table_handle = nullptr;
@@ -166,13 +167,13 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4
             json::map &tbl = out;
             tbl["direction"] = direction_name(table->gress);
             auto table_type = (handle >> 24) & 0x3f;
-            BUG_CHECK(table_type < NUM_TABLE_TYPES); 
+            BUG_CHECK(table_type < NUM_TABLE_TYPES);
             if (!(*alpm_table_handle & 0xffffff))
-                *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24) + (++max_handle[table_type]),
-                                                         unique_table_offset);
+                *alpm_table_handle = apply_handle_offset((P4Table::MatchEntry << 24)
+                        + (++max_handle[table_type]), unique_table_offset);
             if (*alpm_table_handle)
                 tbl["handle"] = *alpm_table_handle;
-            tbl["name"] = name; 
+            tbl["name"] = name;
             tbl["table_type"] = type_name[table_type];
             tbl["size"] = explicit_size ? this->size : size;
         } }
@@ -205,7 +206,7 @@ unsigned P4Table::get_alpm_atcam_table_handle() const {
 }
 
 std::string P4Table::direction_name(gress_t gress) {
-    switch(gress) {
+    switch (gress) {
     case INGRESS: return "ingress"; break;
     case EGRESS: return "egress"; break;
     case GHOST: return "ghost"; break;

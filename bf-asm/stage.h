@@ -1,10 +1,10 @@
-#ifndef _stage_h_
-#define _stage_h_
+#ifndef BF_ASM_STAGE_H_
+#define BF_ASM_STAGE_H_
 
 #include <fstream>
+#include <vector>
 
 #include "tables.h"
-#include <vector>
 #include "alloc.h"
 #include "bitvec.h"
 #include "input_xbar.h"
@@ -12,7 +12,7 @@
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
      * generation of the move construtor properly */
-public:
+ public:
     int                         stageno = -1;
     std::vector<Table *>        tables;
     std::set<Stage **>          all_refs;
@@ -49,15 +49,15 @@ public:
     unsigned                                            long_branch_terminate = 0;
 
     // for timing, ghost thread is tied to ingress, so we track ghost as ingress here
-    enum { USE_TCAM=1, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
-           USE_SELECTOR=32, USE_WIDE_SELECTOR=64, USE_STATEFUL_DIVIDE=128 };
+    enum { USE_TCAM = 1, USE_STATEFUL = 4, USE_METER = 8, USE_METER_LPF_RED = 16,
+           USE_SELECTOR = 32, USE_WIDE_SELECTOR = 64, USE_STATEFUL_DIVIDE = 128 };
     int /* enum */      table_use[2], group_table_use[2];
 
-    enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
+    enum { NONE = 0, CONCURRENT = 1, ACTION_DEP = 2, MATCH_DEP = 3 } stage_dep[2];
     bitvec              match_use[3], action_use[3], action_set[3];
 
     // there's no error mode registers for ghost thread, so we don't allow it to be set
-    enum { NO_CONFIG=0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
+    enum { NO_CONFIG = 0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
                         error_mode[2];
 
     // MPR stage config
@@ -75,7 +75,7 @@ public:
 
     int                         pass1_logical_id = -1, pass1_tcam_id = -1;
 
-protected:
+ protected:
     Stage_data() {}
     Stage_data(const Stage_data &) = delete;
     Stage_data(Stage_data &&) = default;
@@ -83,7 +83,7 @@ protected:
 };
 
 class Stage : public Stage_data {
-public:
+ public:
     static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
     static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];  // size in bits
 
@@ -113,4 +113,4 @@ public:
     void log_hashes(std::ofstream& out) const;
 };
 
-#endif /* _stage_h_ */
+#endif /* BF_ASM_STAGE_H_ */

@@ -1,23 +1,26 @@
-#ifndef _sections_h_
-#define _sections_h_
+#ifndef BF_ASM_SECTIONS_H_
+#define BF_ASM_SECTIONS_H_
+
+#include <stdarg.h>
+
+#include <string>
 
 #include "asm-types.h"
 #include "json.h"
 #include "map.h"
-#include <string>
-#include <stdarg.h>
 #include "bfas.h"
 
 /// A Section represents a top level section in assembly
-/// Current sections include: 
-/// version, phv, parser, deparser, stage, dynhash, primitives 
+/// Current sections include:
+/// version, phv, parser, deparser, stage, dynhash, primitives
 class Section {
     static std::map<std::string, Section *>     *sections;
     std::string name;
     bool isInput = false;
     static Section *get(const char *name) { return ::get(sections, name); }
-protected:
-    Section(const char *name_) : name(name_) {
+
+ protected:
+    explicit Section(const char *name_) : name(name_) {
         if (!sections) sections = new std::map<std::string, Section *>();
         if (get(name_)) {
             fprintf(stderr, "Duplicate section handler for %s\n", name_);
@@ -36,7 +39,8 @@ protected:
     virtual void process() {}
     /// generate context.json for this section
     virtual void output(json::map &ctxtJson) = 0;
-public:
+
+ public:
     static int start_section(int lineno, char *name, VECTOR(value_t) args) {
         if (Section *sec = get(name)) {
             int prev_error_count = error_count;
@@ -59,7 +63,7 @@ public:
                 if (it.first == "primitives") continue;
                 it.second->output(ctxtJson); }
             auto &s = *sections;
-            if(s.count("primitives"))
+            if (s.count("primitives"))
                 s["primitives"]->output(ctxtJson);
         }
     }
@@ -76,4 +80,4 @@ public:
     }
 };
 
-#endif /* _sections_h_ */
+#endif /* BF_ASM_SECTIONS_H_ */

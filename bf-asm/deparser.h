@@ -1,10 +1,11 @@
-#ifndef _deparser_h_
-#define _deparser_h_
+#ifndef BF_ASM_DEPARSER_H_
+#define BF_ASM_DEPARSER_H_
+
+#include <vector>
 
 #include "bitops.h"
 #include "sections.h"
 #include "phv.h"
-#include <vector>
 
 enum {
     // limits over all targets
@@ -14,7 +15,8 @@ enum {
 
 class Deparser : public Section {
     static Deparser singleton_object;
-public:
+
+ public:
     struct Val {
         /* a phv or clot reference with optional associated POV phv reference */
         Phv::Ref   val;
@@ -37,10 +39,10 @@ public:
             if (is_phv() && is_clot()) {
                 error(lineno, "Reference cannot be phv and clot at the same time");
                 return false; }
-            if (is_phv())
+            if (is_phv()) {
                 return val.check();
-            else if (is_clot()) {
-                if (!(bool)pov) {
+            } else if (is_clot()) {
+                if (!static_cast<bool>(pov)) {
                     error(lineno, "Clot requires a pov bit");
                     return false;
                 }
@@ -58,7 +60,7 @@ public:
         ChecksumVal(gress_t gr, const value_t &v, const value_t &m) : Val(gr, v) {
             if ((val->lo % 8 != 0) || (val->hi % 8 != 7))
                 error(lineno, "Can only do checksums on byte-aligned container slices");
-            
+
             mask = ((1 << (val->hi + 1)/8) - 1) ^ ((1 << val->lo/8) - 1);
 
             if (CHECKTYPE(m, tMAP)) {
@@ -66,10 +68,13 @@ public:
                     if (kv.key == "pov") {
                         if (pov) error(kv.value.lineno, "Duplicate POV");
                         pov = ::Phv::Ref(gr, DEPARSER_STAGE, kv.value);
-                    } else if (kv.key == "swap" && CHECKTYPE(kv.value, tINT))
+                    } else if (kv.key == "swap" && CHECKTYPE(kv.value, tINT)) {
                         swap = kv.value.i;
-                    else
-                        error(m.lineno, "Unknown key for checksum: %s", value_desc(kv.key)); } }
+                    } else {
+                        error(m.lineno, "Unknown key for checksum: %s", value_desc(kv.key));
+                    }
+                }
+            }
         }
         ChecksumVal(gress_t gr, int tag, const value_t &p) : Val(gr, tag, p) {}
         ChecksumVal &operator=(const ChecksumVal &a) {
@@ -150,9 +155,11 @@ public:
         int i = 0;
         for (auto constant : singleton_object.constants[gr]) {
             if ((phv_idx - 224) == i) {
-                return constant; }
-           else {
-                i++; }}
+                return constant;
+            } else {
+                i++;
+            }
+        }
         return -1; }
 
     // Writes POV information in json used for field dictionary logging
@@ -165,4 +172,4 @@ public:
     }
 };
 
-#endif /* _deparser_h_ */
+#endif /* BF_ASM_DEPARSER_H_ */

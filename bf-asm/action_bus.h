@@ -1,5 +1,5 @@
-#ifndef _action_bus_h_
-#define _action_bus_h_
+#ifndef BF_ASM_ACTION_BUS_H_
+#define BF_ASM_ACTION_BUS_H_
 
 #include <array>
 #include "tables.h"
@@ -20,31 +20,43 @@ struct ActionBusSource {
         RandomNumberGen                             rng;
     };
     ActionBusSource() : type(None) { field = nullptr; }
-    ActionBusSource(Table::Format::Field *f) : type(Field) { field = f; }
-    ActionBusSource(HashDistribution *h) : type(HashDist) { hd = h; }
-    ActionBusSource(HashDistribution *h1, HashDistribution *h2) : type(HashDistPair) { hd1 = h1; hd2 = h2; }
-    ActionBusSource(Table *t, TableOutputModifier m = TableOutputModifier::NONE) : type(TableOutput) {
+    ActionBusSource(Table::Format::Field *f) : type(Field) {  // NOLINT(runtime/explicit)
+        field = f;
+    }
+    ActionBusSource(HashDistribution *h) : type(HashDist) { hd = h; }  // NOLINT(runtime/explicit)
+    ActionBusSource(HashDistribution *h1, HashDistribution *h2) : type(HashDistPair) {
+        hd1 = h1; hd2 = h2;
+    }
+    ActionBusSource(Table *t,
+            TableOutputModifier m = TableOutputModifier::NONE)  // NOLINT(runtime/explicit)
+        : type(TableOutput) {
         switch (m) {
         case TableOutputModifier::Color: type = TableColor; break;
         case TableOutputModifier::Address: type = TableAddress; break;
         default: break;
         }
         table = t; }
-    ActionBusSource(Table::Ref *t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
+    ActionBusSource(Table::Ref *t,
+            TableOutputModifier m = TableOutputModifier::NONE)  // NOLINT(runtime/explicit)
+            : type(NameRef) {
         switch (m) {
         case TableOutputModifier::Color: type = ColorRef; break;
         case TableOutputModifier::Address: type = AddressRef; break;
         default: break;
         }
         name_ref = t; }
-    ActionBusSource(MeterBus_t, TableOutputModifier m = TableOutputModifier::NONE) : type(NameRef) {
+    ActionBusSource(MeterBus_t,
+            TableOutputModifier m = TableOutputModifier::NONE)  // NOLINT(runtime/explicit)
+            : type(NameRef) {
         switch (m) {
         case TableOutputModifier::Color: type = ColorRef; break;
         case TableOutputModifier::Address: type = AddressRef; break;
         default: break;
         }
         name_ref = nullptr; }
-    ActionBusSource(RandomNumberGen r) : type(RandomGen) { field = nullptr; rng = r; }
+    ActionBusSource(RandomNumberGen r) : type(RandomGen) {  // NOLINT(runtime/explicit)
+        field = nullptr; rng = r;
+    }
     bool operator==(const ActionBusSource &a) const {
         if (type == HashDistPair && hd2 != a.hd2) return false;
         return type == a.type && field == a.field; }
@@ -56,10 +68,11 @@ struct ActionBusSource {
 };
 
 class ActionBus {
-private :
+ private :
     // Check two ActionBusSource refs to ensure that they are compatible (can be at the same
     // location on the aciton bus -- basically the same data)
-    static bool compatible(const ActionBusSource &a, unsigned a_off, const ActionBusSource &b, unsigned b_off);
+    static bool compatible(const ActionBusSource &a, unsigned a_off,
+            const ActionBusSource &b, unsigned b_off);
     struct Slot {
         std::string                 name;
         unsigned                    byte, size;  // size in bits
@@ -95,11 +108,13 @@ private :
     void setup_slot(int lineno, Table *tbl, const char *name, unsigned idx, ActionBusSource src,
                     unsigned sz, unsigned off);
 
-    int find_free(Table *tbl, unsigned min, unsigned max, unsigned step, unsigned lobyte, unsigned bytes);
+    int find_free(Table *tbl, unsigned min, unsigned max, unsigned step,
+            unsigned lobyte, unsigned bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
     bool check_atcam_sharing(Table *tbl1, Table *tbl2);
     bool check_slot_sharing(ActionBus::Slot &slot, bitvec &action_bus);
-public:
+
+ public:
     int             lineno;
     ActionBus() : lineno(-1) {}
     ActionBus(Table *, VECTOR(pair_t) &);
@@ -109,9 +124,11 @@ public:
     template<class REGS> void write_immed_regs(REGS &regs, Table *tbl);
     template<class REGS>
     void write_action_regs(REGS &regs, Table *tbl, int homerow, unsigned action_slice);
-    void do_alloc(Table *tbl, ActionBusSource src, unsigned use, int lobyte, int bytes, unsigned offset);
+    void do_alloc(Table *tbl, ActionBusSource src, unsigned use, int lobyte,
+            int bytes, unsigned offset);
     void alloc_field(Table *, ActionBusSource src, unsigned offset, unsigned sizes_needed);
-    void need_alloc(Table *tbl, const ActionBusSource &src, unsigned lo, unsigned hi, unsigned size);
+    void need_alloc(Table *tbl, const ActionBusSource &src, unsigned lo,
+            unsigned hi, unsigned size);
     void need_alloc(Table *tbl, Table *attached, TableOutputModifier mod,
                     unsigned lo, unsigned hi, unsigned size) {
         need_alloc(tbl, ActionBusSource(attached, mod), lo, hi, size); }
@@ -134,4 +151,4 @@ public:
         return rv; }
 };
 
-#endif /* _action_bus_h_ */
+#endif /* BF_ASM_ACTION_BUS_H_ */

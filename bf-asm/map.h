@@ -1,5 +1,5 @@
-#ifndef _map_h_
-#define _map_h_
+#ifndef BF_ASM_MAP_H_
+#define BF_ASM_MAP_H_
 
 #include <map>
 
@@ -136,4 +136,4 @@ template<class M> class MapForKey {
 template<class M> MapForKey<M> ValuesForKey(M &m, typename M::key_type k) {
     return MapForKey<M>(m, k); }
 
-#endif /* _map_h_ */
+#endif /* BF_ASM_MAP_H_ */

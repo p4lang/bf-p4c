@@ -1,5 +1,5 @@
-#ifndef _escape_h_
-#define _escape_h_
+#ifndef BF_ASM_ESCAPE_H_
+#define BF_ASM_ESCAPE_H_
 
 #include <iostream>
 #include <iomanip>
@@ -7,8 +7,8 @@
 
 class escape {
     std::string str;
-public:
-    escape(const std::string &s) : str(s) {}
+ public:
+    explicit escape(const std::string &s) : str(s) {}
     friend std::ostream &operator<<(std::ostream &os, escape e);
 };
 
@@ -26,4 +26,4 @@ inline std::ostream &operator<<(std::ostream &os, escape e) {
     return os;
 }
 
-#endif /* _escape_h_ */
+#endif /* BF_ASM_ESCAPE_H_ */

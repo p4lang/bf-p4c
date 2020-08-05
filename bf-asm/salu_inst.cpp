@@ -1,10 +1,10 @@
 #include <config.h>
+#include <cstring>
 
 #include "instruction.h"
 #include "phv.h"
 #include "tables.h"
 #include "stage.h"
-#include <cstring>
 #include "hex.h"
 
 namespace StatefulAlu {
@@ -12,7 +12,7 @@ namespace StatefulAlu {
 struct operand {
     struct Base {
         int lineno;
-        Base(int line) : lineno(line) {}
+        explicit Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}
         virtual ~Base() {}
         virtual Base *clone() const = 0;
@@ -30,12 +30,12 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
                 return value == a->value;
-            } else return false; }
+            } else { return false; } }
         const char *kind() const override { return "constant"; }
     };
     struct Phv : public Base {
         virtual Phv *clone() const = 0;
-        Phv(int lineno) : Base(lineno) {}
+        explicit Phv(int lineno) : Base(lineno) {}
         virtual int phv_index(StatefulTable *tbl) = 0;
     };
     struct PhvReg : public Phv {
@@ -46,7 +46,7 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvReg *>(a_)) {
                 return reg == a->reg;
-            } else return false; }
+            } else { return false; } }
         const char *kind() const override { return "phv_reg"; }
         void pass1(StatefulTable *tbl) override {
             if (!reg.check()) return;
@@ -73,13 +73,16 @@ struct operand {
     };
     // Operand which directly accesses phv(hi/lo) from Input Xbar
     struct PhvRaw : public Phv {
-        int pi=-1;
+        int pi = -1;
         unsigned mask = ~0U;
         PhvRaw *clone() const override { return new PhvRaw(*this); }
         PhvRaw(gress_t gress, const value_t &v) : Phv(v.lineno) {
-            if (v == "phv_lo") pi = 0;
-            else if (v == "phv_hi") pi = 1;
-            else BUG();
+            if (v == "phv_lo")
+                pi = 0;
+            else if (v == "phv_hi")
+                pi = 1;
+            else
+                BUG();
             if (v.type == tCMD && PCHECKTYPE(v.vec.size == 2, v[1], tRANGE)) {
                 if ((v[1].lo & 7) || ((v[1].hi + 1) & 7))
                     error(lineno, "only byte slices allowed on %s", v[0].s);
@@ -88,13 +91,13 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const PhvRaw *>(a_)) {
                 return pi == a->pi;
-            } else return false; }
+            } else { return false; } }
         const char *kind() const override { return "phv_ixb"; }
         void pass1(StatefulTable *tbl) override {
             int size = tbl->format->begin()->second.size/8U;
             if (mask == ~0U)
                 mask = (1U << size) - 1;
-            else if (mask &~ ((1U << size) - 1))
+            else if (mask & ~((1U << size) - 1))
                 error(lineno, "slice out of range for %d byte value", size);
             tbl->phv_byte_mask |= mask << (size * pi); }
         int phv_index(StatefulTable *tbl) override { return pi; }
@@ -109,7 +112,7 @@ struct operand {
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Memory *>(a_)) {
                 return field == a->field;
-            } else return false; }
+            } else { return false; } }
         const char *kind() const override { return "memory"; }
     };
     struct MathFn;
@@ -137,7 +140,11 @@ struct operand {
         return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
     void dbprint(std::ostream &out) const {
         if (neg) out << '-';
-        if (op) op->dbprint(out); else out << "(null)"; }
+        if (op)
+            op->dbprint(out);
+        else
+            out << "(null)";
+    }
     Base *operator->() { return op->lookup(op); }
     template<class T> T *to() { return dynamic_cast<T *>(op); }
 };
@@ -150,7 +157,7 @@ struct operand::MathFn : public Base {
     bool equiv(const Base *a_) const override {
         if (auto *a = dynamic_cast<const MathFn *>(a_)) {
             return of.op == a->of.op;
-        } else return false; }
+        } else { return false; } }
     const char *kind() const override { return "math fn"; }
     void pass1(StatefulTable *tbl) override { of->pass1(tbl); }
 };
@@ -202,7 +209,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
             op = new Memory(v->lineno, tbl, f);
             return; } }
     if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
-        //operand *opP = new operand(tbl, act, v->vec[1]);
+        // operand *opP = new operand(tbl, act, v->vec[1]);
         op = new MathFn(v->lineno, operand(tbl, act, v->vec[1]));
         return; }
     if (*v == "phv_lo" || *v == "phv_hi") {
@@ -217,16 +224,16 @@ enum salu_slot_use {
     ALUOUT0, ALUOUT1, ALUOUT2, ALUOUT3,
     MINMAX,
     // aliases
-    CMPLO=CMP0, CMPHI=CMP1,
-    ALUOUT=ALUOUT0,
+    CMPLO = CMP0, CMPHI = CMP1,
+    ALUOUT = ALUOUT0,
 };
 
-//Abstract interface class for SALU Instructions
-//SALU Instructions - AluOP, BitOP, CmpOP, OutOP
+// Abstract interface class for SALU Instructions
+// SALU Instructions - AluOP, BitOP, CmpOP, OutOP
 struct SaluInstruction : public Instruction {
-    SaluInstruction(int lineno): Instruction(lineno) {};
-    //Stateful ALU's dont access PHV's directly
-    void phvRead(std::function<void (const Phv::Slice &sl)>) final {};
+    explicit SaluInstruction(int lineno): Instruction(lineno) {}
+    // Stateful ALU's dont access PHV's directly
+    void phvRead(std::function<void(const Phv::Slice &sl)>) final {};
     bool salu_output() const override { return slot >= ALUOUT; }
     static int decode_predicate(const value_t &exp);
 };
@@ -356,8 +363,9 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     } else if (idx == op.size && name == "nop") {
         // allow nop without even a destination -- assume lo
         rv->dest = LO;
-    } else
+    } else {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+    }
     if (operands == NONE) {
         if (idx < op.size)
             error(rv->lineno, "too many operands for %s instruction", op[0].s);
@@ -453,7 +461,7 @@ struct BitOP : public SaluInstruction {
     Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
-    void dbprint(std::ostream &out) const override{
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_REGISTER_SETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
@@ -525,12 +533,17 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                                    const VECTOR(value_t) &op) const {
     auto rv = new CmpOP(this, op[0].lineno);
     if (auto *p = strchr(op[0].s, '.')) {
-        if (type_suffix && !strcmp(p, ".s")) rv->type = 1;
-        else if (type_suffix && !strcmp(p, ".u")) rv->type = 2;
-        else if (type_suffix && !strcmp(p, ".uus")) rv->type = 3;
-        else error(rv->lineno, "Invalid type %s for %s instruction", p+1, name.c_str());
-    } else if (type_suffix)
+        if (type_suffix && !strcmp(p, ".s"))
+            rv->type = 1;
+        else if (type_suffix && !strcmp(p, ".u"))
+            rv->type = 2;
+        else if (type_suffix && !strcmp(p, ".uus"))
+            rv->type = 3;
+        else
+            error(rv->lineno, "Invalid type %s for %s instruction", p+1, name.c_str());
+    } else if (type_suffix) {
         error(rv->lineno, "Missing type for %s instruction", name.c_str());
+    }
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
@@ -542,12 +555,13 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     } else if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
                 sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
                unit < Target::STATEFUL_CMP_UNITS() && op[1].s[len] == 0) {
-        rv->slot = CMP0 + unit ;
-    } else
+        rv->slot = CMP0 + unit;
+    } else {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+    }
     for (int idx = 2; idx < op.size; ++idx) {
         if (!rv->learn) {
-            if (op[idx] == "learn" ) {
+            if (op[idx] == "learn") {
                 rv->learn = true;
                 continue; }
             if (op[idx] == "!" && op[idx].type == tCMD && op[idx].vec.size == 2 &&
@@ -644,11 +658,12 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
          sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
         unit < Target::STATEFUL_TMATCH_UNITS() && op[1].s[len] == 0) {
         rv->slot = CMP0 + unit;
-    } else
+    } else {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
+    }
     for (int idx = 2; idx < op.size; ++idx) {
         if (!rv->learn) {
-            if (op[idx] == "learn" ) {
+            if (op[idx] == "learn") {
                 rv->learn = true;
                 continue; }
             if (op[idx] == "!" && op[idx].type == tCMD && op[idx].vec.size == 2 &&
@@ -707,10 +722,10 @@ Instruction *TMatchOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 }
 #endif  /* HAVE_JBAY */
 
-//Output ALU instruction
+// Output ALU instruction
 struct OutOP : public SaluInstruction {
     struct Decode : public Instruction::Decode {
-        Decode(const char *n) : Instruction::Decode(n, STATEFUL_ALU) {}
+        explicit Decode(const char *n) : Instruction::Decode(n, STATEFUL_ALU) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -754,7 +769,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     // Check optional predicate operand
     if (idx < op.size) {
         // Predicate is an integer
-        if(op[idx].type == tINT) {
+        if (op[idx].type == tINT) {
             rv->predication_encode = op[idx++].i;
         // Predicate is an expression
         } else if (op[idx].startsWith("cmp") || op[idx] == "!" ||
@@ -784,7 +799,7 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 #endif
     // Check mux operand
     if (idx < op.size) {
-        SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]); );
+        SWITCH_FOREACH_TARGET(options.target, rv->decode_output_mux(TARGET(), op[idx]););
         if (rv->output_mux < 0) {
             operand src(tbl, act, op[idx], true);
             if ((rv->output_operand = src.to<operand::Phv>()))
@@ -793,11 +808,12 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                 error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
                       value_desc(op[idx]), op[0].s); }
         idx++;
-    } else
+    } else {
         error(rv->lineno, "too few operands for %s instruction", op[0].s);
+    }
     while (idx < op.size) {
         int err = 0;
-        SWITCH_FOREACH_TARGET(options.target, err = rv->decode_output_option(TARGET(), op[idx]); );
+        SWITCH_FOREACH_TARGET(options.target, err = rv->decode_output_option(TARGET(), op[idx]););
         if (err < 0) break;
         ++idx; }
     if (idx < op.size)
@@ -822,15 +838,15 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *) {
                 error(lineno, "Conflict lmatch output use in stateful %s", tbl->name());
                 error(other->lineno, "conflicting use here"); } }
         tbl->output_lmatch = this; }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
     return this; }
 
 #include "tofino/salu_inst.cpp"
 #if HAVE_JBAY
 #include "jbay/salu_inst.cpp"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/salu_inst.cpp"
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 }  // end namespace StatefulAlu

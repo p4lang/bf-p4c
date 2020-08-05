@@ -1,5 +1,5 @@
-#ifndef _power_ctl_h_
-#define _power_ctl_h_
+#ifndef BF_ASM_POWER_CTL_H_
+#define BF_ASM_POWER_CTL_H_
 
 #include "misc.h"
 
@@ -24,17 +24,17 @@ template <int I>
 void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl, int reg) {
     int side = 0;
     switch (reg/(I*8)) {
-    case 1: // 8 bit
+    case 1:  // 8 bit
         reg -= I*8;
         side = reg / (I*4);
         reg = (reg % (I*4)) + (I*4);
         break;
-    case 2: case 3: // 16 bit
+    case 2: case 3:  // 16 bit
         reg -= I*16;
         side = reg / (I*6);
         reg = (reg % (I*6)) + (I*8);
         break;
-    case 0: // 32 bit
+    case 0:  // 32 bit
         side = reg / (I*4);
         reg = (reg % (I*4));
         break;
@@ -43,4 +43,4 @@ void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl,
     power_ctl[side][reg/I] |= 1U << reg%I;
 }
 
-#endif /* _power_ctl_h_ */
+#endif /* BF_ASM_POWER_CTL_H_ */

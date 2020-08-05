@@ -1,13 +1,13 @@
-#include <errno.h>
-#include <fcntl.h>
-#include "hex.h"
-#include <iostream>
-#include <limits.h>
-#include "log.h"
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
+#include <iostream>
+#include "hex.h"
+#include "log.h"
 
 #include "config.h"
 #ifdef HAVE_EXECINFO_H
@@ -18,9 +18,9 @@
 #endif
 
 static const char *signames[] = {
-    "NONE", "HUP", "INT","QUIT", "ILL","TRAP",  "ABRT", "BUS",  "FPE","KILL",
-    "USR1","SEGV","USR2","PIPE","ALRM","TERM","STKFLT","CHLD", "CONT","STOP",
-    "TSTP","TTIN","TTOU", "URG","XCPU","XFSZ","VTALRM","PROF","WINCH","POLL",
+    "NONE", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "BUS", "FPE", "KILL",
+    "USR1", "SEGV", "USR2", "PIPE", "ALRM", "TERM", "STKFLT", "CHLD", "CONT", "STOP",
+    "TSTP", "TTIN", "TTOU", "URG", "XCPU", "XFSZ", "VTALRM", "PROF", "WINCH", "POLL",
     "PWR" , "SYS"
 };
 
@@ -40,10 +40,9 @@ void register_thread() {
 #define MTONLY(...)     __VA_ARGS__
 #else
 #define MTONLY(...)
-#endif // MULTITHREAD
+#endif  // MULTITHREAD
 
-static void sigint_shutdown(int sig, siginfo_t *info, void *uctxt)
-{
+static void sigint_shutdown(int sig, siginfo_t *info, void *uctxt) {
     LOG1("Exiting with SIG" << signames[sig]);
     _exit(sig + 0x80);
 }
@@ -52,21 +51,23 @@ static void sigint_shutdown(int sig, siginfo_t *info, void *uctxt)
  * call external program addr2line WITHOUT using malloc or stdio or anything
  * else that might be problematic if there's memory corruption or exhaustion
  */
-const char *addr2line(void *addr, const char *text)
-{
+const char *addr2line(void *addr, const char *text) {
     int pfd[2], len;
     pid_t child;
     static char buffer[1024];
     char *p = buffer;
+    const char *end = buffer + sizeof(buffer);
     const char *argv[4] = { "/bin/sh", "-c", buffer, 0 }, *t;
-    strcpy(p, "addr2line "); p += strlen(p);
+    snprintf(p, end-p, "addr2line ");
+    p += strlen(p);
     uintptr_t a = (uintptr_t)addr;
     int shift = (CHAR_BIT * sizeof(uintptr_t) - 1) & ~3;
     while (shift > 0 && (a >> shift) == 0) shift -= 4;
     while (shift >= 0) {
         *p++ = "0123456789abcdef"[(a >> shift) & 0xf];
         shift -= 4; }
-    strcpy(p, " -fsipe $(which "); p += strlen(p);
+    snprintf(p, end-p, " -fsipe $(which ");
+    p += strlen(p);
     if (text && (t = strchr(text, '('))) {
         strncpy(p, text, t-text);
         p += t-text;
@@ -76,19 +77,19 @@ const char *addr2line(void *addr, const char *text)
         // buffer is always null terminated, even when add2line is called
         // multiple times.
         buffer[1023] = 0;
-        p += strlen(p); }
-    else {
-      return nullptr;
+        p += strlen(p);
+    } else {
+       return nullptr;
     }
-    strcpy(p, ") | c++filt");
+    snprintf(p, end-p, ") | c++filt");
     p += strlen(p);
 #ifdef __linux__
     if (pipe2(pfd, O_CLOEXEC) < 0) return 0;
 #else
     // pipe2 is Linux specific
     if (pipe(pfd) < 0) return 0;
-#endif // __linux__
-    while ((child = fork()) == -1 && errno == EAGAIN);
+#endif  // __linux__
+    while ((child = fork()) == -1 && errno == EAGAIN) {}
     if (child == -1) return 0;
     if (child == 0) {
         dup2(pfd[1], 1);
@@ -99,7 +100,7 @@ const char *addr2line(void *addr, const char *text)
     p = buffer;
     while (p < buffer + sizeof(buffer) - 1 &&
            (len = read(pfd[0], p, buffer+sizeof(buffer)-p-1)) > 0 &&
-           (p += len) && !memchr(p-len, '\n', len));
+           (p += len) && !memchr(p-len, '\n', len)) {}
     close(pfd[0]);
     waitpid(child, &len, WNOHANG);
     *p = 0;
@@ -110,8 +111,7 @@ const char *addr2line(void *addr, const char *text)
 }
 
 #ifdef HAVE_UCONTEXT_H
-static void dumpregs(mcontext_t *mctxt)
-{
+static void dumpregs(mcontext_t *mctxt) {
 #if defined(REG_EAX)
     LOG1(" eax=" << hex(mctxt->gregs[REG_EAX], 8, '0') <<
          " ebx=" << hex(mctxt->gregs[REG_EBX], 8, '0') <<
@@ -170,24 +170,26 @@ static void dumpregs(mcontext_t *mctxt)
 }
 #endif
 
-static void crash_shutdown(int sig, siginfo_t *info, void *uctxt)
-{
-    MTONLY( static std::recursive_mutex lock;
-            static int threads_dumped = 0;
-            static bool killed_all_threads = false;
-            lock.lock();
-            if (!killed_all_threads) {
-                killed_all_threads = true;
-                for (int i = 0; i < num_threads; i++)
-                    if (i != my_id-1)
-                        pthread_kill(thread_ids[i], SIGABRT); } )
+static void crash_shutdown(int sig, siginfo_t *info, void *uctxt) {
+    MTONLY(static std::recursive_mutex lock;
+           static int threads_dumped = 0;
+           static bool killed_all_threads = false;
+           lock.lock();
+           if (!killed_all_threads) {
+               killed_all_threads = true;
+               for (int i = 0; i < num_threads; i++) {
+                   if (i != my_id-1) {
+                       pthread_kill(thread_ids[i], SIGABRT);
+                   }
+               }
+            })
     LOG1(MTONLY("Thread #" << my_id << " " <<) "exiting with SIG" <<
           signames[sig] << ", trace:");
     if (sig == SIGILL || sig == SIGFPE || sig == SIGSEGV ||
         sig == SIGBUS || sig == SIGTRAP)
         LOG1("  address = " << hex(info->si_addr));
 #ifdef HAVE_UCONTEXT_H
-    dumpregs(&((ucontext_t *)uctxt)->uc_mcontext);
+    dumpregs(&(static_cast<ucontext_t *>(uctxt))->uc_mcontext);
 #endif
 #ifdef HAVE_EXECINFO_H
     static void *buffer[64];
@@ -204,15 +206,15 @@ static void crash_shutdown(int sig, siginfo_t *info, void *uctxt)
     MTONLY( if (++threads_dumped < num_threads) {
                 lock.unlock();
                 pthread_exit(0);
-            } else
-                lock.unlock(); )
+            } else {
+                lock.unlock();
+            } )
     if (!LOGGING(1))
         std::clog << "exiting with SIG" << signames[sig] << std::endl;
     _exit(sig + 0x80);
 }
 
-void register_exit_signals()
-{
+void register_exit_signals() {
     struct sigaction    sigact;
     sigact.sa_sigaction = sigint_shutdown;
     sigact.sa_flags = SA_SIGINFO;

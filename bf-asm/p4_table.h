@@ -1,10 +1,11 @@
-#ifndef _p4_table_h_
-#define _p4_table_h_
+#ifndef BF_ASM_P4_TABLE_H_
+#define BF_ASM_P4_TABLE_H_
+
+#include <map>
+#include <string>
 
 #include "asm-types.h"
 #include "json.h"
-#include <map>
-#include <string>
 
 class Table;
 class P4Table;
@@ -14,8 +15,8 @@ struct alpm_t {
     unsigned alpm_atcam_table_handle = 0;
     unsigned alpm_pre_classifier_table_handle = 0;
     unsigned set_partition_action_handle = 0;
-    json::map *alpm_atcam_table_cfg = 0; // handle to cjson alpm table
-    json::map *alpm_pre_classifier_table_cfg = 0; // handle to cjson ternary pre classifier table
+    json::map *alpm_atcam_table_cfg = 0;  // handle to cjson alpm table
+    json::map *alpm_pre_classifier_table_cfg = 0;  // handle to cjson ternary pre classifier table
 };
 
 class P4Table {
@@ -26,18 +27,22 @@ class P4Table {
     bool                hidden = false;
     json::map           *config = 0;
     P4Table() {}
-public:
+
+ public:
     bool                disable_atomic_modify = false;
     unsigned            size = 0;
     std::string         match_type, action_profile, how_referenced;
-    enum type { None = 0, MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6, NUM_TABLE_TYPES=7 };
-    enum alpm_type { PreClassifier=1, Atcam=2 };
+    enum type { None = 0, MatchEntry = 1, ActionData = 2, Selection = 3, Statistics = 4,
+        Meter = 5, Stateful = 6, NUM_TABLE_TYPES = 7 };
+    enum alpm_type { PreClassifier = 1, Atcam = 2 };
     static const char *type_name[];
-private:
+
+ private:
     static std::map<unsigned, P4Table *>                        by_handle;
     static std::map<type, std::map<std::string, P4Table *>>     by_name;
     static unsigned                             max_handle[];
-public:
+
+ public:
     static P4Table *get(type t, VECTOR(pair_t) &d);
     static P4Table *alloc(type t, Table *tbl);
     void check(Table *tbl);
@@ -45,7 +50,8 @@ public:
     unsigned get_handle() { return handle; }
     unsigned p4_size() { return size; }
     json::map *base_tbl_cfg(json::vector &out, int size, const Table *table) const;
-    void base_alpm_tbl_cfg(json::map &out, int size, const Table *table, P4Table::alpm_type atype) const;
+    void base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
+            P4Table::alpm_type atype) const;
     bool is_alpm() const {
         if (match_type == "alpm") return true;
         return false; }
@@ -57,4 +63,4 @@ public:
     static std::string direction_name(gress_t);
 };
 
-#endif /* _p4_table_h_ */
+#endif /* BF_ASM_P4_TABLE_H_ */

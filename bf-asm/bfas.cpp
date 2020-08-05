@@ -1,16 +1,16 @@
 #include "bfas.h"
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 #include "sections.h"
 #include "target.h"
 #include "top_level.h"
-#include <fstream>
-#include <iostream>
 #include "indent.h"
 #include "constants.h"
-#include <string>
-#include <vector>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "../bf-p4c/version.h" // for BF_P4C_VERSION
+#include "../bf-p4c/version.h"  // for BF_P4C_VERSION
 #include "misc.h"
 #include "version.h"
 
@@ -30,7 +30,7 @@ option_t options = {
     .gen_json = false,
     .high_availability_enabled = true,
     .match_compiler = false,
-    .multi_parsers = true, // TODO:Remove option after testing
+    .multi_parsers = true,  // TODO Remove option after testing
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     .singlewrite = true,
 #else
@@ -61,14 +61,14 @@ std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     char namebuf[1024], *p = namebuf, *end = namebuf + sizeof(namebuf);
     va_list args;
     if (!options.output_dir.empty())
-        p += sprintf(p, "%s/", options.output_dir.c_str());
+        p += snprintf(p, end-p, "%s/", options.output_dir.c_str());
     va_start(args, name);
     if (p < end)
         p += vsnprintf(p, end-p, name, args);
     va_end(args);
     if (p >= end) {
         std::cerr << "File name too long: " << namebuf << "..." << std::endl;
-        sprintf(namebuf, "/dev/null"); }
+        snprintf(namebuf, sizeof(namebuf), "/dev/null"); }
     return std::unique_ptr<std::ostream>(new std::ofstream(namebuf));
 }
 
@@ -94,9 +94,10 @@ void output_all() {
     json::map ctxtJson;
     const time_t now = time(NULL);
     char build_date[1024];
-    auto lt = localtime(&now);
-    BUG_CHECK(lt);
-    strftime(build_date, 1024, "%c", lt);
+    struct tm lt;
+    localtime_r(&now, &lt);
+    BUG_CHECK(&lt);
+    strftime(build_date, 1024, "%c", &lt);
     ctxtJson["build_date"] = build_date;
     ctxtJson["schema_version"] = SCHEMA_VERSION;
     ctxtJson["compiler_version"] = BF_P4C_VERSION;
@@ -126,7 +127,8 @@ void output_all() {
 
 
 #define MATCH_TARGET_OPTION(TARGET, OPT) \
-    if (!strcasecmp(OPT, Target::TARGET::name)) options.target = Target::TARGET::tag; else
+    if (!strcasecmp(OPT, Target::TARGET::name))  /* NOLINT(readability/braces) */ \
+        options.target = Target::TARGET::tag; else
 #define OUTPUT_TARGET(TARGET)           << " " << Target::TARGET::name
 
 // Do not build main() when BUILDING_FOR_GTEST.
@@ -164,8 +166,9 @@ int main(int ac, char **av) {
             if (options.target && Target::LONG_BRANCH_TAGS() == 0) {
                 error(-1, "target %s does not support --enable-longbranch", Target::name());
                 options.disable_long_branch = true;
-            } else
+            } else {
                 options.disable_long_branch = false;
+            }
         } else if (!strcmp(av[i], "--gen_json")) {
             options.gen_json = true;
             options.binary = NO_BINARY;
@@ -407,11 +410,11 @@ class Version : public Section {
                 } else if (kv.key == "run_id" && kv.value.type == tSTR) {
                     _run_id = kv.value.s;
                 } else if (kv.key == "compiler") {
-                    if (kv.value.type == tSTR)
+                    if (kv.value.type == tSTR) {
                         _compiler = kv.value.s;
-                    else if (kv.value.type == tINT)
+                    } else if (kv.value.type == tINT) {
                         _compiler = std::to_string(kv.value.i);
-                    else if (kv.value.type == tVEC) {
+                    } else if (kv.value.type == tVEC) {
                         const char *sep = "";
                         for (auto &el : kv.value.vec) {
                             _compiler += sep;
@@ -434,9 +437,10 @@ class Version : public Section {
                     } else {
                         error(kv.value.lineno, "Invalid target %s", value_desc(kv.value));
                     }
-                } else
+                } else {
                     warning(kv.key.lineno, "ignoring unknown item %s in version",
                             value_desc(kv.key));
+                }
             }
         } else {
             error(data.lineno, "Invalid version section");
@@ -458,8 +462,9 @@ class Version : public Section {
                 (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
                 error(data.lineno, "Version %" PRId64 ".%" PRId64 " not supported",
                       data[0].i, data[1].i);
-        } else
+        } else {
             error(data.lineno, "Version not understood");
+        }
     }
 
     std::string _run_id, _compiler;

@@ -14,10 +14,10 @@
 #include "tofino/parser.cpp"            // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/parser.cpp"              // jbay template specializations
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/parser.cpp"        // cloudbreak template specializations
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 class AsmParser : public Section {
     std::vector<Parser*> parser[2];     // INGRESS, EGRESS
@@ -32,7 +32,7 @@ class AsmParser : public Section {
     static AsmParser& get_parser() { return singleton_object; }
     AsmParser();
     ~AsmParser() {}
-public:
+ public:
     static AsmParser    singleton_object;
 } AsmParser::singleton_object;
 
@@ -157,28 +157,31 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
         if (args.size > 0) {
             if (args[0] == "ingress" && gress != INGRESS) continue;
             if (args[0] == "egress" && gress != EGRESS) continue;
-        } else if (error_count > 0)
+        } else if (error_count > 0) {
             break;
+        }
         for (auto &kv : MapIterChecked(data.map, true)) {
             if (kv.key == "name" && (kv.value.type == tSTR)) {
                 name = kv.value.s;
                 continue; }
             if (kv.key == "start" && (kv.value.type == tVEC || kv.value.type == tSTR)) {
-                if (kv.value.type == tVEC)
+                if (kv.value.type == tVEC) {
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
                         start_state[i] = kv.value[i];
-                else
+                } else {
                     for (int i = 0; i < 4; i++)
                         start_state[i] = kv.value;
+                }
                 continue; }
             if (kv.key == "priority" && (kv.value.type == tVEC || kv.value.type == tINT)) {
                 if (kv.value.type == tVEC) {
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
                         if (CHECKTYPE(kv.value[i], tINT))
                             priority[i] = kv.value[i].i;
-                } else
+                } else {
                     for (int i = 0; i < 4; i++)
                         priority[i] = kv.value.i;
+                }
                 continue; }
             if (kv.key == "priority_threshold" &&
                 (kv.value.type == tVEC || kv.value.type == tINT)) {
@@ -186,16 +189,18 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                     for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
                         if (CHECKTYPE(kv.value[i], tINT))
                             pri_thresh[i] = kv.value[i].i;
-                } else
+                } else {
                     for (int i = 0; i < 4; i++)
                         pri_thresh[i] = kv.value.i;
+                }
                 continue; }
             if (kv.key == "parser_error") {
                 if (parser_error.lineno >= 0) {
                     error(kv.key.lineno, "Multiple parser_error declarations");
                     warning(parser_error.lineno, "Previous was here");
-                } else
+                } else {
                     parser_error = Phv::Ref(gress, 0, kv.value);
+                }
                 continue; }
             if (kv.key == "bitwise_or") {
                 if (CHECKTYPE(kv.value, tVEC))
@@ -274,31 +279,32 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
 }
 
 void Parser::define_state(gress_t gress, pair_t &kv) {
-   if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) return;
-   const char *name = kv.key.s;
-   match_t stateno = { 0, 0 };
-   if (kv.key.type == tCMD) {
-       name = kv.key[0].s;
-       if (!CHECKTYPE2(kv.key[1], tINT, tMATCH)) return;
-       if (kv.key[1].type == tINT) {
-           if (kv.key[1].i > PARSER_STATE_MASK)
-               error(kv.key.lineno, "Explicit state out of range");
-           stateno.word1 = kv.key[1].i;
-           stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
-       } else {
-           stateno = kv.key[1].m;
-           if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
-               error(kv.key.lineno, "Explicit state out of range");
-           stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
-   if (!CHECKTYPE(kv.value, tMAP)) return;
-   auto n = states.emplace(name, new State(kv.key.lineno, name, gress,
-                                  stateno, kv.value.map));
-   if (n.second)
-       all.push_back(n.first->second);
-   else {
-       error(kv.key.lineno, "State %s already defined in %sgress", name,
-             gress ? "e" : "in");
-       warning(n.first->second->lineno, "previously defined here"); }
+    if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) return;
+    const char *name = kv.key.s;
+    match_t stateno = { 0, 0 };
+    if (kv.key.type == tCMD) {
+        name = kv.key[0].s;
+        if (!CHECKTYPE2(kv.key[1], tINT, tMATCH)) return;
+        if (kv.key[1].type == tINT) {
+            if (kv.key[1].i > PARSER_STATE_MASK)
+                error(kv.key.lineno, "Explicit state out of range");
+            stateno.word1 = kv.key[1].i;
+            stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
+        } else {
+            stateno = kv.key[1].m;
+            if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
+                error(kv.key.lineno, "Explicit state out of range");
+            stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
+    if (!CHECKTYPE(kv.value, tMAP)) return;
+    auto n = states.emplace(name, new State(kv.key.lineno, name, gress,
+                                   stateno, kv.value.map));
+    if (n.second) {
+        all.push_back(n.first->second);
+    } else {
+        error(kv.key.lineno, "State %s already defined in %sgress", name,
+              gress ? "e" : "in");
+        warning(n.first->second->lineno, "previously defined here");
+    }
 }
 
 void Parser::process() {
@@ -312,12 +318,17 @@ void Parser::process() {
             if (!start) {
                 error(lineno, "No %sgress parser start state", gress ? "e" : "in");
                 continue;
-            } else for (int i = 0; i < 4; i++) {
-                start_state[i].name = start->name;
-                start_state[i].lineno = start->lineno;
-                start_state[i].ptr.push_back(start); }
-        } else for (int i = 0; i < 4; i++)
-            start_state[i].check(gress, this, 0);
+            } else {
+                for (int i = 0; i < 4; i++) {
+                    start_state[i].name = start->name;
+                    start_state[i].lineno = start->lineno;
+                    start_state[i].ptr.push_back(start);
+                }
+            }
+        } else {
+                for (int i = 0; i < 4; i++)
+                    start_state[i].check(gress, this, 0);
+        }
         for (int i = 0; i < 4 && !start_state[i]; i++)
             if (!start_state[i]->can_be_start()) {
                 std::string name = std::string("<start") + char('0'+i) + '>';
@@ -360,7 +371,7 @@ void Parser::process() {
 }
 
 void Parser::output_default_ports(json::vector& vec, bitvec port_use) {
-    while(!port_use.empty()) {
+    while (!port_use.empty()) {
         auto idx = port_use.ffs(0);
         vec.push_back(idx);
         port_use.clrbit(idx);
@@ -426,10 +437,14 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
     for (auto &kv : MapIterChecked(data.value.map, true)) {
         if (kv.key == "type") {
             if (CHECKTYPE(kv.value, tSTR)) {
-                     if (kv.value == "VERIFY")   type = 0;
-                else if (kv.value == "RESIDUAL") type = 1;
-                else if (kv.value == "CLOT")     type = 2;
-                else error(kv.value.lineno, "Unknown parser checksum type");
+                if (kv.value == "VERIFY")
+                    type = 0;
+                else if (kv.value == "RESIDUAL")
+                    type = 1;
+                else if (kv.value == "CLOT")
+                    type = 2;
+                else
+                    error(kv.value.lineno, "Unknown parser checksum type");
             }
             if (kv.value == "clot") {
                 if (unit < 2 || unit > 4)
@@ -445,7 +460,8 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
         } else if (kv.key == "dest") {
             if (kv.value.type == tCMD && kv.value == "clot" && kv.value.vec.size == 2)
                 tag = kv.value[1].i;
-            else dest = Phv::Ref(gress, 0, kv.value);
+            else
+                dest = Phv::Ref(gress, 0, kv.value);
         } else if (kv.key == "end_pos") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if (kv.value.i > PARSER_INPUT_BUFFER_SIZE)
@@ -462,9 +478,11 @@ Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno)
                     if (range.type == tRANGE) {
                         lo = range.lo;
                         hi = range.hi;
-                    } else if (range.type == tINT)
+                    } else if (range.type == tINT) {
                         lo = hi = range.i;
-                    else error(kv.value.lineno, "Syntax error, expecting range or int");
+                    } else {
+                        error(kv.value.lineno, "Syntax error, expecting range or int");
+                    }
 
                     if (lo > hi)
                         error(kv.value.lineno, "Invalid parser checksum input");
@@ -497,7 +515,7 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
     if (tag != a.tag) return false;
     if (dest && a.dest) {
         if (dest != a.dest) return false;
-    } else if (dest || a.dest) return false;
+    } else if (dest || a.dest) { return false; }
     return add == a.add && mask == a.mask && swap == a.swap && start == a.start &&
            end == a.end && shift == a.shift && type == a.type;
 }
@@ -506,15 +524,16 @@ void Parser::Checksum::pass1(Parser *parser) {
     if (parser->checksum_use.empty())
         parser->checksum_use.resize(Target::PARSER_CHECKSUM_UNITS());
     if (addr >= 0) {
-        if (addr >= PARSER_CHECKSUM_ROWS)
+        if (addr >= PARSER_CHECKSUM_ROWS) {
             error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);
-        else if (parser->checksum_use[unit][addr]) {
+        } else if (parser->checksum_use[unit][addr]) {
             if (!equiv(*parser->checksum_use[unit][addr])) {
                 error(lineno, "incompatible %sgress parser checksum use at address %d",
                       gress ? "e" : "in", addr);
                 warning(parser->checksum_use[unit][addr]->lineno, "previous use"); }
-        } else
+        } else {
             parser->checksum_use[unit][addr] = this; }
+        }
     if (dest.check() && dest->reg.parser_id() < 0)
         error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
     if (dest && dest->reg.size == 32)
@@ -539,8 +558,9 @@ void Parser::Checksum::pass2(Parser *parser) {
                     addr = i;
                     break;
                 }
-            } else if (avail < 0)
+            } else if (avail < 0) {
                 avail = i;
+            }
         }
         if (addr < 0) {
             if (avail >= 0) {
@@ -572,7 +592,8 @@ void Parser::Checksum::write_tofino_row_config(ROW &row) {
     row.type = type;
 }
 
-Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.lineno), gress(gress) {
+Parser::CounterInit::CounterInit(gress_t gress, pair_t data)
+    : lineno(data.key.lineno), gress(gress) {
     if (!CHECKTYPE2(data.key, tSTR, tCMD)) return;
     if (!CHECKTYPE(data.value, tMAP)) return;
 
@@ -601,17 +622,27 @@ Parser::CounterInit::CounterInit(gress_t gress, pair_t data) : lineno(data.key.l
         } else if (kv.key == "src") {
             if (CHECKTYPE(kv.value, tSTR)) {
                 if (options.target == TOFINO) {
-                         if (kv.value == "half_lo") src = 0;
-                    else if (kv.value == "half_hi") src = 1;
-                    else if (kv.value == "byte0")   src = 2;
-                    else if (kv.value == "byte1")   src = 3;
-                    else error(lineno, "Unexpected counter load source");
+                    if (kv.value == "half_lo")
+                        src = 0;
+                    else if (kv.value == "half_hi")
+                        src = 1;
+                    else if (kv.value == "byte0")
+                        src = 2;
+                    else if (kv.value == "byte1")
+                        src = 3;
+                    else
+                        error(lineno, "Unexpected counter load source");
                 } else if (options.target != TOFINO) {
-                         if (kv.value == "byte0") src = 0;
-                    else if (kv.value == "byte1") src = 1;
-                    else if (kv.value == "byte2") src = 2;
-                    else if (kv.value == "byte3") src = 3;
-                    else error(lineno, "Unexpected counter load source");
+                    if (kv.value == "byte0")
+                        src = 0;
+                    else if (kv.value == "byte1")
+                        src = 1;
+                    else if (kv.value == "byte2")
+                        src = 2;
+                    else if (kv.value == "byte3")
+                        src = 3;
+                    else
+                        error(lineno, "Unexpected counter load source");
                 }
             }
         } else if (kv.key != "push" && kv.key != "update_with_top") {
@@ -633,8 +664,9 @@ void Parser::CounterInit::pass2(Parser *parser) {
                     addr = i;
                     break;
                 }
-            } else if (avail < 0)
+            } else if (avail < 0) {
                 avail = i;
+            }
         }
         if (addr < 0) {
             if (avail >= 0)
@@ -696,14 +728,16 @@ Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
         if (v.type == tINT) {
             pattern.word0 = ~v.i;
             pattern.word1 = v.i;
-        } else
+        } else {
             pattern = v.m;
+        }
         if ((pattern.word0 | pattern.word1) > PARSER_STATE_MASK) {
             error(lineno, "Parser state out of range");
             pattern.word0 &= PARSER_STATE_MASK;
             pattern.word1 &= PARSER_STATE_MASK;
-        } else
+        } else {
             pattern.word1 |= ~(pattern.word0 | pattern.word1) & PARSER_STATE_MASK; }
+        }
     return *this;
 }
 
@@ -875,8 +909,9 @@ void Parser::State::MatchKey::setup(value_t &spec) {
         for (int i = spec.vec.size-1; i >= 0; i--)
             if (setup_match_el(-1, spec[i]) < 0)
                 return;
-    } else
+    } else {
         setup_match_el(-1, spec);
+    }
 
     // For TOFINO, the first match byte pair must be an adjacent 16 bit pair. We
     // check and re-arrange the bytes for a 16 bit extractor. In JBAY this check
@@ -909,8 +944,7 @@ void Parser::State::MatchKey::setup(value_t &spec) {
 }
 
 Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pair_t) &data) :
-    lineno(l), state(s), match(m)
-{
+    lineno(l), state(s), match(m) {
     for (auto &kv : data) {
         if (kv.key == "counter") {
             if (kv.value.type == tMAP) {
@@ -1001,8 +1035,9 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
             if (load.lineno) {
                 error(kv.value.lineno, "Multiple load entries in match");
                 error(load.lineno, "previous specified here");
-            } else
+            } else {
                 load.setup(kv.value);
+            }
         } else if (kv.key == "save") {
             if (options.target == TOFINO)
                 error(kv.key.lineno, "Tofino does not have scratch registers in the parser");
@@ -1013,11 +1048,16 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
             if (CHECKTYPE(kv.value, tVEC)) {
                 for (int i = 0; i < kv.value.vec.size; i++) {
                     if (CHECKTYPE(kv.value[i], tSTR)) {
-                             if (kv.value[i] == "byte0") load.save = 1 << 0;
-                        else if (kv.value[i] == "byte1") load.save = 1 << 1;
-                        else if (kv.value[i] == "byte2") load.save = 1 << 2;
-                        else if (kv.value[i] == "byte3") load.save = 1 << 3;
-                        else error(lineno, "Unexpected parser save source");
+                        if (kv.value[i] == "byte0")
+                            load.save = 1 << 0;
+                        else if (kv.value[i] == "byte1")
+                            load.save = 1 << 1;
+                        else if (kv.value[i] == "byte2")
+                            load.save = 1 << 2;
+                        else if (kv.value[i] == "byte3")
+                            load.save = 1 << 3;
+                        else
+                            error(lineno, "Unexpected parser save source");
                     }
                 }
             }
@@ -1058,8 +1098,7 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
     }
 }
 
-Parser::State::Match::Match(int l, gress_t gress, State *n) : lineno(l)
-{
+Parser::State::Match::Match(int l, gress_t gress, State *n) : lineno(l) {
     /* build a default match for a synthetic start state */
     offset_inc = shift = 0;
     offset_rst = true;
@@ -1077,8 +1116,7 @@ static value_t &extract_save_phv(value_t &data) {
 
 Parser::State::Match::Save::Save(gress_t gress, Match* m,
                                  int l, int h, value_t &data, int flgs) :
-    match(m), lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs)
-{
+    match(m), lo(l), hi(h), where(gress, 0, extract_save_phv(data)), flags(flgs) {
     if (hi < lo || hi-lo > 3 || hi-lo == 2)
         error(data.lineno, "Invalid parser extraction size");
     if (data.type == tVEC) {
@@ -1095,8 +1133,7 @@ Parser::State::Match::Save::Save(gress_t gress, Match* m,
 
 Parser::State::Match::Set::Set(gress_t gress, Match* m,
                                value_t &data, int v, int flgs) :
-    match(m), where(gress, 0, extract_save_phv(data)), what(v), flags(flgs)
-{
+    match(m), where(gress, 0, extract_save_phv(data)), what(v), flags(flgs) {
     if (data.type == tCMD) {
         if (data[0] == "offset")
             flags |= OFFSET;
@@ -1154,25 +1191,30 @@ Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
     } else if (data.type == tRANGE) {
         start = data.lo;
         length = data.hi - data.lo + 1;
-    } else for (auto &kv : data.map) {
-        if (kv.key == "start") {
-            if (CHECKTYPE(kv.value, tINT))
-                start = kv.value.i;
-        } else if (kv.key == "length") {
-            if (kv.value.type == tINT) {
-                length = kv.value.i;
-            } else if (!parse_length(kv.value) || !load_length)
-                error(kv.value.lineno, "Syntax error");
-            if (length_mask < 0) length_mask = 0x3f;
-            if (length_shift < 0) length_shift = 0;
-        } else if (kv.key == "max_length") {
-            if (CHECKTYPE(kv.value, tINT))
-                max_length = kv.value.i;
-        } else if (kv.key == "checksum") {
-            if (CHECKTYPE(kv.value, tINT))
-                csum_unit = kv.value.i;
-        } else
-            error(kv.key.lineno, "Unknown CLOT key %s", value_desc(kv.key)); }
+    } else {
+        for (auto &kv : data.map) {
+            if (kv.key == "start") {
+                if (CHECKTYPE(kv.value, tINT))
+                    start = kv.value.i;
+            } else if (kv.key == "length") {
+                if (kv.value.type == tINT) {
+                    length = kv.value.i;
+                } else if (!parse_length(kv.value) || !load_length) {
+                    error(kv.value.lineno, "Syntax error");
+                }
+                if (length_mask < 0) length_mask = 0x3f;
+                if (length_shift < 0) length_shift = 0;
+            } else if (kv.key == "max_length") {
+                if (CHECKTYPE(kv.value, tINT))
+                    max_length = kv.value.i;
+            } else if (kv.key == "checksum") {
+                if (CHECKTYPE(kv.value, tINT))
+                    csum_unit = kv.value.i;
+            } else {
+                error(kv.key.lineno, "Unknown CLOT key %s", value_desc(kv.key));
+            }
+        }
+    }
     if (start < 0)
         error(data.lineno, "No start in clot %s", name.c_str());
     if (length < 0)
@@ -1207,8 +1249,7 @@ Parser::State::Match::HdrLenIncStop::HdrLenIncStop(const value_t &data) {
 }
 
 Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR(pair_t) &data) :
-    name(n), gress(gr), stateno(sno), def(0), lineno(l)
-{
+    name(n), gress(gr), stateno(sno), def(0), lineno(l) {
     VECTOR(pair_t) default_data = EMPTY_VECTOR_INIT;
     bool have_default = data["default"] != 0;
     for (auto &kv : data) {
@@ -1228,8 +1269,9 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
                     match.back()->value_set_size = kv.key[2].i;
                 else
                     match.back()->value_set_size = 1;
-            } else
+            } else {
                 match.back()->value_set_size = 1;
+            }
         } else if (kv.key.type == tMATCH) {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             match.push_back(new Match(kv.key.lineno, gress, this, kv.key.m, kv.value.map));
@@ -1237,8 +1279,9 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
             if (key.lineno) {
                 error(kv.value.lineno, "Multiple match entries in state %s", n);
                 error(key.lineno, "previous specified here");
-            } else
+            } else {
                 key.setup(kv.value);
+            }
         } else if (kv.key == "default") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             if (def) {
@@ -1249,8 +1292,9 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
                 def = new Match(kv.key.lineno, gress, this, m, kv.value.map); }
         } else if (!have_default) {
             VECTOR_add(default_data, kv);
-        } else
+        } else {
             error(kv.key.lineno, "Syntax error");
+        }
     }
     if (default_data.size) {
         BUG_CHECK(!def);
@@ -1262,9 +1306,9 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
 bool Parser::State::can_be_start() {
     if (match.size()) return false;
     if (!def) return true;
-    //if (def->counter || def->offset || def->shift) return false;
-    //if (def->counter_reset || def->offset_reset) return false;
-    //if (def->save.size() || def->set.size()) return false;
+    // if (def->counter || def->offset || def->shift) return false;
+    // if (def->counter_reset || def->offset_reset) return false;
+    // if (def->save.size() || def->set.size()) return false;
     return true;
 }
 
@@ -1379,10 +1423,10 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
         if (!((saved >> i) & 1)) continue;
         if (data[i].bit < 0 || data[i].byte == USE_SAVED)
             continue;
-        if ((specified >> i) & 1)
+        if ((specified >> i) & 1) {
             error(lineno, "match in %s matcher conflicts with previous state save "
                   "action", Parser::match_key_loc_name(i));
-        else if (move_down(i) < 0) {
+        } else if (move_down(i) < 0) {
             error(lineno, "Ran out of matching space due to preserved values from "
                   "previous states");
             break; } }
@@ -1390,18 +1434,26 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
 
 Parser::State::OutputUse Parser::State::Match::Save::output_use() const {
     OutputUse rv;
-    if (lo == hi) rv.b8++;
-    else if (lo+1 == hi) rv.b16++;
-    else if (lo+3 == hi) rv.b32++;
-    else BUG();
+    if (lo == hi)
+        rv.b8++;
+    else if (lo+1 == hi)
+        rv.b16++;
+    else if (lo+3 == hi)
+        rv.b32++;
+    else
+        BUG();
     return rv;
 }
 Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
     OutputUse rv;
-    if (where->reg.size == 8) rv.b8++;
-    else if (where->reg.size == 16) rv.b16++;
-    else if (where->reg.size == 32) rv.b32++;
-    else BUG();
+    if (where->reg.size == 8)
+        rv.b8++;
+    else if (where->reg.size == 16)
+        rv.b16++;
+    else if (where->reg.size == 32)
+        rv.b32++;
+    else
+        BUG();
     return rv;
 }
 Parser::State::OutputUse Parser::State::Match::output_use() const {
@@ -1494,11 +1546,11 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
 void Parser::State::pass2(Parser *pa) {
     if (!stateno) {
         unsigned s;
-        for (s = 0; pa->state_use[s]; s++);
-        if (s > PARSER_STATE_MASK)
+        for (s = 0; pa->state_use[s]; s++) {}
+        if (s > PARSER_STATE_MASK) {
             error(lineno, "Can't allocate state number for %sgress state %s",
                   gress ? "e" : "in", name.c_str());
-        else {
+        } else {
             stateno.word0 = s ^ PARSER_STATE_MASK;
             stateno.word1 = s;
             pa->state_use[s] = 1; } }
@@ -1556,7 +1608,7 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state,
                       state->gress ? "e" : "in");
             return; }
         ctxt_json["tcam_rows"].to<json::vector>().push_back(row);
-        write_row_config(regs, pa, state, row, def,ctxt_json);
+        write_row_config(regs, pa, state, row, def, ctxt_json);
         pa->match_to_row[this] = row;
     } while (++count < value_set_size);
 }
@@ -1616,7 +1668,8 @@ void Parser::State::Match::write_config(REGS &regs, json::vector &vec) {
  */
 
 template <class REGS>
-void Parser::State::Match::write_saves(REGS &regs, Match* def, void *output_map, int& max_off, unsigned& used) {
+void Parser::State::Match::write_saves(REGS &regs, Match* def, void *output_map,
+        int& max_off, unsigned& used) {
     if (offset_inc) for (auto s : save) s->flags |= OFFSET;
     for (auto s : save)
         max_off = std::max(max_off, s->write_output_config(regs, output_map, used));
@@ -1656,8 +1709,9 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
         const match_t &n = next.pattern ? next.pattern : next->stateno;
         ea_row.nxt_state = n.word1;
         ea_row.nxt_state_mask = ~(n.word0 & n.word1) & PARSER_STATE_MASK;
-    } else
+    } else {
         ea_row.done = 1;
+    }
 
     auto &action_row = regs.memory[state->gress].po_action_row[row];
     for (auto &c : csum) {

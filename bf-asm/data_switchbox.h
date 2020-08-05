@@ -1,5 +1,5 @@
-#ifndef _data_switchbox_h_
-#define _data_switchbox_h_
+#ifndef BF_ASM_DATA_SWITCHBOX_H_
+#define BF_ASM_DATA_SWITCHBOX_H_
 
 #include "stage.h"
 #include "tables.h"
@@ -14,7 +14,8 @@ class DataSwitchboxSetup {
     REGS        &regs;
     Table       *tbl;
     unsigned    home_row, home_row_logical, prev_row, top_ram_row, bottom_ram_row;
-public:
+
+ public:
     unsigned get_home_row() { return home_row; }
     unsigned get_home_row_logical() { return home_row_logical; }
     DataSwitchboxSetup(REGS &regs, Table *t) : regs(regs), tbl(t) {
@@ -55,7 +56,7 @@ public:
                 prev_syn2port_ctl[side].stats_to_vbus_below = 1;
             } else {
                 // If a row is in the middle of possible rows, must program the switchbox
-                // to have data pass through the bottom of the switch box to the top of 
+                // to have data pass through the bottom of the switch box to the top of
                 // the switchbox
                 swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
@@ -89,7 +90,6 @@ public:
             // To determine whether data flows back down.  Doesn't flow down on the lowest row
             syn2port_ctl.synth2port_connect_below = 1;
         }
-
     }
     void setup_row_col(unsigned row, unsigned col, int vpn) {
         int side = col >= 6;
@@ -100,7 +100,7 @@ public:
         auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
         unitram_config.unitram_type = tbl->unitram_type();
         unitram_config.unitram_logical_table = tbl->logical_id;
-        if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+        if (!options.match_compiler)  // FIXME -- compiler doesn't set this?
             unitram_config.unitram_vpn = vpn;
         if (tbl->gress == INGRESS || tbl->gress == GHOST)
             unitram_config.unitram_ingress = 1;
@@ -134,4 +134,4 @@ public:
     }
 };
 
-#endif /* _data_switchbox_h_ */
+#endif /* BF_ASM_DATA_SWITCHBOX_H_ */

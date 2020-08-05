@@ -76,7 +76,10 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                 } else if (v.key.type == tINT && v.key.i >= 0 && v.key.i < 16) {
                     if (CHECKTYPE(v.value, tINT))
                         math_table.data[v.key.i] = v.value.i;
-                } else error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key)); }
+                } else {
+                    error(v.key.lineno, "Unknow item %s in math_table", value_desc(kv.key));
+                }
+            }
 #ifdef HAVE_JBAY
         } else if (options.target >= JBAY && setup_jbay(kv)) {
             /* jbay specific extensions done in setup_jbay */
@@ -85,9 +88,9 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "log_vpn") {
             logvpn_lineno = kv.value.lineno;
             if (CHECKTYPE2(kv.value, tINT, tRANGE)) {
-                if (kv.value.type == tINT)
+                if (kv.value.type == tINT) {
                     logvpn_min = logvpn_max = kv.value.i;
-                else {
+                } else {
                     logvpn_min = kv.value.lo;
                     logvpn_max = kv.value.hi; } }
         } else if (kv.key == "pred_shift") {
@@ -112,9 +115,11 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
                     clear_value.setraw(kv.value.bigi.data, kv.value.bigi.size);
                 if (clear_value.max().index() >= 128)
                     error(kv.value.lineno, "Value too large for 128 bits"); }
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
 }
 
 bool match_table_layouts(Table *t1, Table *t2) {
@@ -145,8 +150,10 @@ void StatefulTable::MathTable::check() {
 
 void StatefulTable::pass1() {
     LOG1("### Stateful table " << name() << " pass1");
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::Stateful, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::Stateful, this);
+    else
+        p4_table->check(this);
     alloc_vpns();
     if (bound_selector.check()) {
         if (layout.empty())
@@ -154,7 +161,7 @@ void StatefulTable::pass1() {
         else if (!match_table_layouts(this, bound_selector))
             error(layout[0].lineno, "Layout in %s does not match selector %s", name(),
                   bound_selector->name());
-        //Add a back reference to this table
+        // Add a back reference to this table
         if (!bound_selector->get_stateful())
             bound_selector->set_stateful(this);
         if (logical_id < 0) logical_id = bound_selector->logical_id;
@@ -181,9 +188,11 @@ void StatefulTable::pass1() {
         switch (idx++) {
         case 0:
             if ((size = fld.second.size) != 1 && size != 8 && size != 16 && size != 32 &&
-                ((size != 64 && size != 128) || options.target == TOFINO))
+                ((size != 64 && size != 128) || options.target == TOFINO)) {
                 error(format->lineno, "invalid size %d for stateful format field %s",
-                      size, fld.first.c_str()); break;
+                      size, fld.first.c_str());
+                break;
+            }
             break;
         case 1:
             if (size != fld.second.size)
@@ -206,8 +215,9 @@ void StatefulTable::pass1() {
                     stop = true;
                     break; } }
             if (stop) break; }
-    } else
+    } else {
         error(lineno, "No actions in stateful table %s", name());
+    }
     if (math_table)
         math_table.check();
     for (auto &r : sbus_learn)
@@ -241,9 +251,9 @@ void StatefulTable::pass2() {
     if (actions)
         actions->stateful_pass2(this);
     if (stateful_counter_mode) {
-        if (logvpn_min < 0)
+        if (logvpn_min < 0) {
             layout_vpn_bounds(logvpn_min, logvpn_max, true);
-        else if (!offset_vpn) {
+        } else if (!offset_vpn) {
             int min, max;
             layout_vpn_bounds(min, max, true);
             if (logvpn_min < min || logvpn_max > max)
@@ -295,9 +305,10 @@ template<class REGS> void StatefulTable::write_action_regs(REGS &regs, const Act
         salu_instr_common.salu_op_dual = is_dual_mode();
     } else if (is_dual_mode()) {
         salu_instr_common.salu_datasize = format->log2size - 1;
-        salu_instr_common.salu_op_dual = 1; }
-    else {
-        salu_instr_common.salu_datasize = format->log2size; }
+        salu_instr_common.salu_op_dual = 1;
+    } else {
+        salu_instr_common.salu_datasize = format->log2size;
+    }
 }
 
 template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable *match,
@@ -504,7 +515,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
                             }
                         } else if (meter_type_arg.type == Call::Arg::Const) {
                             int index = -1;
-                            switch(meter_type_arg.value()) {
+                            switch (meter_type_arg.value()) {
                                 case STATEFUL_INSTRUCTION_0:
                                     index = 0; break;
                                 case STATEFUL_INSTRUCTION_1:
@@ -542,15 +553,15 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) const {
                 // Do not add handle if already present, if stateful spans
                 // multiple stages this can happen as action handles are unique
                 // and this code will get called again
-                for (auto &s: act_to_sful_instr_slot) {
+                for (auto &s : act_to_sful_instr_slot) {
                     auto s_handle = s->to<json::map>()["action_handle"];
                     if (*s_handle->as_number() == a.handle) {
                         act_present = true; break; } }
                 if (act_present) continue;
-		        json::map instr_slot;
-		        instr_slot["action_handle"] = a.handle;
-		        instr_slot["instruction_slot"] = stful_action ? stful_action->code : -1;
-		        act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
+                json::map instr_slot;
+                instr_slot["action_handle"] = a.handle;
+                instr_slot["instruction_slot"] = stful_action ? stful_action->code : -1;
+                act_to_sful_instr_slot.push_back(std::move(instr_slot)); } } }
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);

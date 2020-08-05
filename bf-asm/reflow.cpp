@@ -80,9 +80,9 @@ void reflow(std::istream &in, std::ostream &out) {
 int main(int ac, char **av) {
     if (ac == 2) {
         std::ifstream in(av[1]);
-        if (in)
+        if (in) {
             reflow(in, std::cout);
-        else {
+        } else {
             std::cerr << "Can't open " << av[1] << std::endl;
             return 1; }
     } else if (ac == 1) {

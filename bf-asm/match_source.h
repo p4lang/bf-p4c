@@ -1,3 +1,6 @@
+#ifndef BF_ASM_MATCH_SOURCE_H_
+#define BF_ASM_MATCH_SOURCE_H_
+
 /**
  * A source for a match key of a table.  The source can either be from the input xbar, or from the
  * galois field matrix, as indicated in uArch Section Exact Match Row Vertical/Horizontal (VH)
@@ -21,10 +24,11 @@ class MatchSource {
 class HashMatchSource : public MatchSource {
     int lo = 0;
     int hi = 0;
+
  public:
     int lineno = 0;
     HashMatchSource(int line, int l, int h) : lineno(line), lo(l), hi(h) {}
-    HashMatchSource(value_t value) {
+    explicit HashMatchSource(value_t value) {
         if (CHECKTYPE(value, tCMD)) {
             lineno = value.lineno;
             if (value != "hash_group")
@@ -52,3 +56,5 @@ class HashMatchSource : public MatchSource {
     }
     void dbprint(std::ostream &out) const { out << name() << "(" << lo << ".." << hi << ")"; }
 };
+
+#endif /* BF_ASM_MATCH_SOURCE_H_ */

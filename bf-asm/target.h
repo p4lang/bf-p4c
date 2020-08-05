@@ -1,5 +1,5 @@
-#ifndef _target_h_
-#define _target_h_
+#ifndef BF_ASM_TARGET_H_
+#define BF_ASM_TARGET_H_
 
 #include <config.h>
 #include "bfas.h"
@@ -36,7 +36,7 @@
     M(Tofino, ##__VA_ARGS__)
 #define FOR_ALL_REGISTER_SETS(M, ...) \
     M(Tofino, ##__VA_ARGS__)
-#endif // HAVE_CLOUBREAK/JBAY
+#endif  // HAVE_CLOUBREAK/JBAY
 
 #define EXPAND(...)     __VA_ARGS__
 #define INSTANTIATE_TARGET_TEMPLATE(TARGET, FUNC, ...)  template FUNC(Target::TARGET::__VA_ARGS__);
@@ -330,7 +330,7 @@ class Target::Tofino2U : public Target::JBay {
 
 void emit_parser_registers(const Target::JBay::top_level_regs *regs, std::ostream &);
 
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 
 #if HAVE_CLOUDBREAK
 #include "gen/cloudbreak/memories.cb_mem.h"
@@ -440,13 +440,13 @@ void declare_registers(const Target::Cloudbreak::deparser_regs *regs);
 
 void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::ostream &);
 
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 
 /** Macro to buid a switch table switching on a target_t, expanding to the same
  *  code for each target, with TARGET being a typedef for the target type */
 #define SWITCH_FOREACH_TARGET(VAR, ...)                         \
-        switch(VAR) {                                           \
+        switch (VAR) {                                           \
         FOR_ALL_TARGETS(DO_SWITCH_FOREACH_TARGET, __VA_ARGS__)  \
         default: BUG(); }
 
@@ -456,4 +456,4 @@ void emit_parser_registers(const Target::Cloudbreak::top_level_regs *regs, std::
             __VA_ARGS__                                         \
             break; }
 
-#endif /* _target_h_ */
+#endif /* BF_ASM_TARGET_H_ */

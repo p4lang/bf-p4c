@@ -1,11 +1,11 @@
-#ifndef _widereg_h_
-#define _widereg_h_
+#ifndef BF_ASM_WIDEREG_H_
+#define BF_ASM_WIDEREG_H_
 
 #include <limits.h>
 #include <iostream>
 #include <functional>
-#include "log.h"
 #include <sstream>
+#include "log.h"
 #include "bitvec.h"
 
 void print_regname(std::ostream &out, const void *addr, const void *end);
@@ -18,15 +18,17 @@ struct widereg_base {
     mutable bool        disabled_;
 
     widereg_base() : read(false), write(false), disabled_(false) {}
-    widereg_base(bitvec v) : value(v), reset_value(v), read(false), write(false), disabled_(false) {}
-    widereg_base(uintptr_t v) : value(v), reset_value(v), read(false), write(false),
+    explicit widereg_base(bitvec v) : value(v), reset_value(v), read(false), write(false),
+                             disabled_(false) {}
+    explicit widereg_base(uintptr_t v) : value(v), reset_value(v), read(false), write(false),
                                 disabled_(false) {}
 #if __WORDSIZE == 64
     // For 32-bit systems intptr_t is defined as int
-    widereg_base(intptr_t v) : value(v), reset_value(v), read(false), write(false),
+    explicit widereg_base(intptr_t v) : value(v), reset_value(v), read(false), write(false),
                                disabled_(false) {}
 #endif
-    widereg_base(int v) : value(v), reset_value(v), read(false), write(false), disabled_(false) {}
+    explicit widereg_base(int v) : value(v), reset_value(v), read(false),
+        write(false), disabled_(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
     void set_modified(bool v = true) { write = v; }
@@ -39,7 +41,7 @@ struct widereg_base {
             ERROR("Disabling modified register in " << this);
             return false; }
         disabled_ = true;
-        return disabled_; };
+        return disabled_; }
     void enable() const { disabled_ = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
@@ -68,13 +70,13 @@ template<int N> struct widereg : widereg_base {
             ERROR(value << " out of range for " << N << " bits in " << this);
             value.clrrange(N, value.max().index() - N + 1); }
         return *this; }
-    widereg(bitvec v) : widereg_base(v) { check(); }
-    widereg(uintptr_t v) : widereg_base(v) { check(); }
+    explicit widereg(bitvec v) : widereg_base(v) { check(); }
+    explicit widereg(uintptr_t v) : widereg_base(v) { check(); }
 #if __WORDSIZE == 64
     // For 32-bit systems intptr_t is defined as int
-    widereg(intptr_t v) : widereg_base(v) { check(); }
+    explicit widereg(intptr_t v) : widereg_base(v) { check(); }
 #endif
-    widereg(int v) : widereg_base(v) { check(); }
+    explicit widereg(int v) : widereg_base(v) { check(); }
     widereg(const widereg &) = delete;
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
@@ -106,10 +108,10 @@ template<int N> struct widereg : widereg_base {
     const widereg &set_subfield(uintptr_t v, unsigned bit, unsigned size) {
         if (disabled_)
             ERROR("Writing disabled register value in " << this);
-        if (bit + size > N)
+        if (bit + size > N) {
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
-        else if (auto o = value.getrange(bit, size)) {
+        } else if (auto o = value.getrange(bit, size)) {
             if (write)
                 WARNING("Overwriting subfield(" << bit << ".." << (bit+size-1) <<
                         ") value " << o << " with " << v << " in " << this); }
@@ -122,4 +124,4 @@ template<int N> struct widereg : widereg_base {
         return check(); }
 };
 
-#endif /* _widereg_h_ */
+#endif /* BF_ASM_WIDEREG_H_ */

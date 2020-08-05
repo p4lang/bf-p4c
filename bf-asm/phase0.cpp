@@ -16,9 +16,10 @@ void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "constant_value") {
             if (CHECKTYPE(kv.value, tINT))
                 constant_value = kv.value.i;
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+        }
     if (gress != INGRESS || stage->stageno != 0)
         error(lineno, "Phase 0 match table can only be in stage 0 ingress");
 }

@@ -16,7 +16,7 @@ bfasdir = os.path.join(repo, 'bf-asm')
 class Linter:
     def __init__(self, basedir, verbose = False):
         self._basedir = basedir
-        self._fileSet = re.compile(r'.*\.[cpp,cc,c,h,hpp,ypp,l]')
+        self._fileSet = re.compile(r'.*\.[cpp,cc,h,hpp,ypp,l]')
         self._bfas = re.compile(r'^bf-asm/.*')
         self._verbose = verbose
 
@@ -69,6 +69,5 @@ class Linter:
 p4clint = Linter(p4cdir)
 bfaslint = Linter(bfasdir)
 rc =  p4clint.run()
-# assembler is not ready to run cpplint!!
-# rc += bfaslint.run()
+rc += bfaslint.run()
 sys.exit(rc)

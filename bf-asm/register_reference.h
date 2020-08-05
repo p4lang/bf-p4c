@@ -1,5 +1,5 @@
-#ifndef _register_reference_h_
-#define _register_reference_h_
+#ifndef BF_ASM_REGISTER_REFERENCE_H_
+#define BF_ASM_REGISTER_REFERENCE_H_
 
 #include <iostream>
 #include <functional>
@@ -29,7 +29,8 @@ template<class REG>
 class register_reference {
     REG                 *tree = nullptr;
     std::string         name;
-public:
+
+ public:
     mutable bool        read = false, write = false, disabled_ = false;
     register_reference() {}
     register_reference(const register_reference &) = default;
@@ -55,7 +56,7 @@ public:
     bool modified() const { return write; }
     void set_modified(bool v = true) { write = v; }
     void rewrite() { write = false; }
-    //friend std::ostream &operator<<(std::ostream &out, const register_reference<REG> &u);
+    // friend std::ostream &operator<<(std::ostream &out, const register_reference<REG> &u);
     void enable() { disabled_ = false; }
     bool disabled() const { return disabled_; }
     bool disable_if_unmodified() { return false; }
@@ -77,8 +78,10 @@ inline std::ostream &operator<<(std::ostream &out, const register_reference<REG>
     return out; }
 template<class REG>
 inline std::ostream &operator<<(std::ostream &out, const register_reference<REG> &u) {
-    if (!*u.c_str()) out << 0;
-    else out << '"' << u.c_str() << '"';
+    if (!*u.c_str())
+        out << 0;
+    else
+        out << '"' << u.c_str() << '"';
     return out; }
 
-#endif /* _register_reference_h_ */
+#endif /* BF_ASM_REGISTER_REFERENCE_H_ */

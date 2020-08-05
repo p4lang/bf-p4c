@@ -1,5 +1,5 @@
-#include <string>
 #include <sections.h>
+#include <string>
 
 namespace BFASM {
 
@@ -28,4 +28,4 @@ class FlexibleHeaders : public Section {
     static FlexibleHeaders singleton_flexHeaders;
 } FlexibleHeaders::singleton_flexHeaders;
 
-};  // end namespace BFAS
+};  // namespace BFASM

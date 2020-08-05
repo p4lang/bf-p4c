@@ -1,19 +1,18 @@
 #include "asm-types.h"
-#include "misc.h"
 #include <assert.h>
 #include <stdlib.h>
-#include <stdlib.h>
+#include "misc.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-void VECTOR(pair_t)::push_back(const char *s, value_t &&v) {
+void VECTOR(pair_t)::push_back(const char *s, value_t &&v) {  // NOLINT(whitespace/operators)
     pair_t entry { {tSTR, v.lineno}, v };
     entry.key.s = strdup(s);
     VECTOR_push(*this, entry);
     memset(&v, 0, sizeof(v));
 }
 
-void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {
+void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {  // NOLINT(whitespace/operators)
     m.push_back(s, std::move(v));
 }
 
@@ -36,7 +35,7 @@ void collapse_list_of_maps(value_t &v, bool singleton_only) {
 }
 
 std::unique_ptr<json::obj> toJson(value_t &v) {
-    switch(v.type) {
+    switch (v.type) {
     case tINT:
         return json::mkuniq<json::number>(v.i);
     case tBIGINT:
@@ -138,10 +137,10 @@ const char *value_type_desc[] = {
 
 const char *value_desc(const value_t *p) {
     static char buffer[32];
-    switch(p->type) {
-    case tINT: sprintf(buffer, "%" PRId64 "", p->i); return buffer;
+    switch (p->type) {
+    case tINT: snprintf(buffer, sizeof(buffer), "%" PRId64 "", p->i); return buffer;
     case tBIGINT: return "<bigint>";
-    case tRANGE: sprintf(buffer, "%d..%d", p->lo, p->hi); return buffer;
+    case tRANGE: snprintf(buffer, sizeof(buffer), "%d..%d", p->lo, p->hi); return buffer;
     case tMATCH: return "<pattern>";
     case tSTR: return p->s;
     case tVEC: return "<list>";
@@ -155,7 +154,7 @@ const char *value_desc(const value_t *p) {
 }
 
 void free_value(value_t *p) {
-    switch(p->type) {
+    switch (p->type) {
     case tBIGINT: VECTOR_fini(p->bigi); break;
     case tSTR: free(p->s); break;
     case tVEC: case tCMD:
@@ -184,7 +183,7 @@ bool operator==(const struct value_t &a, const struct value_t &b) {
                 if (a.bigi.data[i]) return false;
             return true; }
         return false; }
-    switch(a.type) {
+    switch (a.type) {
     case tINT: return a.i == b.i;
     case tBIGINT:
         for (i = 0; i < a.bigi.size && i < b.bigi.size; i++)

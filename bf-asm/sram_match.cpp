@@ -41,7 +41,7 @@ static unsigned tofino_bytemask(int lo, int hi) {
 void SRamMatchTable::no_overhead_determine_result_bus_usage() {
     bitvec result_bus_words;
 
-    for (int i = 0; i < (int)group_info.size(); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         BUG_CHECK(group_info[i].overhead_word < 0);
         if (group_info[i].match_group.size() == 1) {
             group_info[i].result_bus_word = group_info[i].match_group.begin()->first;
@@ -49,7 +49,7 @@ void SRamMatchTable::no_overhead_determine_result_bus_usage() {
         }
     }
 
-    for (int i = 0; i < (int)group_info.size(); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         if (group_info[i].overhead_word < 0 && group_info[i].match_group.size() > 1) {
             bool result_bus_set = false;
             for (auto match_group : group_info[i].match_group) {
@@ -115,11 +115,12 @@ void SRamMatchTable::verify_format() {
                 LOG5("Setting overhead word for format : " << word);
                 info.overhead_bit = f.bit(0)%128;
                 info.match_group[word] = -1;
-            } else if (info.overhead_word != (int)word)
+            } else if (info.overhead_word != static_cast<int>(word)) {
                 error(format->lineno, "Match overhead group %d split across words", i);
-            else if (word != f.bit(f.size-1)/128 || f.bit(f.size-1)%128 >= limit)
+            } else if (word != f.bit(f.size-1)/128 || f.bit(f.size-1)%128 >= limit) {
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit);
+            }
             if ((unsigned)info.overhead_bit > f.bit(0)%128)
                 info.overhead_bit = f.bit(0)%128; } }
     if (word_info.empty()) {
@@ -132,25 +133,28 @@ void SRamMatchTable::verify_format() {
                     BUG_CHECK(error_count > 0 || word_info[group_info[i].overhead_word].empty());
                     group_info[i].match_group[group_info[i].overhead_word] = 0;
                     word_info[group_info[i].overhead_word].push_back(i); } } }
-        for (unsigned i = 0; i < group_info.size(); i++)
-            if (group_info[i].match_group.size() > 1)
+        for (unsigned i = 0; i < group_info.size(); i++) {
+            if (group_info[i].match_group.size() > 1) {
                 for (auto &mgrp : group_info[i].match_group) {
                     if (mgrp.second >= 0) continue;
                     if ((mgrp.second = word_info[mgrp.first].size()) > 1)
                         error(format->lineno, "Too many multi-word groups using word %d",
                               mgrp.first);
-                    word_info[mgrp.first].push_back(i); }
+                    word_info[mgrp.first].push_back(i);
+                }
+            }
+        }
     } else {
         if (word_info.size() != fmt_width)
             error(mgm_lineno, "Match group map doesn't match format size");
         for (unsigned i = 0; i < word_info.size(); i++) {
             for (unsigned j = 0; j < word_info[i].size(); j++) {
                 int grp = word_info[i][j];
-                if (grp < 0 || (unsigned)grp >= format->groups())
+                if (grp < 0 || (unsigned)grp >= format->groups()) {
                     error(mgm_lineno, "Invalid group number %d", grp);
-                else if (!group_info[grp].match_group.count(i))
+                } else if (!group_info[grp].match_group.count(i)) {
                     error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
-                else {
+                } else {
                     group_info[grp].match_group[i] = j;
                     auto *next = format->field("next", grp);
                     if (!next && hit_next.size() > 1)
@@ -170,22 +174,24 @@ void SRamMatchTable::verify_format() {
         error(format->lineno, "No 'next' field in format");
     if (error_count > 0) return;
 
-    
 
-    for (int i = 0; i < (int)group_info.size(); i++) {
-        if (group_info[i].match_group.size() == 1)
+
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
+        if (group_info[i].match_group.size() == 1) {
             for (auto &mgrp : group_info[i].match_group) {
                 if (mgrp.second >= 0) continue;
                 if ((mgrp.second = word_info[mgrp.first].size()) > 4)
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
-                word_info[mgrp.first].push_back(i); }
+                word_info[mgrp.first].push_back(i);
+            }
+        }
         // Determining the result bus word, where the overhead is supposed to be
     }
 
 
     bool has_overhead_word = false;
     bool overhead_word_set = false;
-    for (int i = 0; i < (int)group_info.size(); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         if (overhead_word_set)
             BUG_CHECK((group_info[i].overhead_word >= 0) == has_overhead_word);
         if (group_info[i].overhead_word >= 0) {
@@ -208,7 +214,7 @@ void SRamMatchTable::verify_format() {
      * in the function result_bus_words
      */
 
-    for (int i = 0; i < (int)group_info.size(); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
         for (auto &mgrp : group_info[i].match_group)
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first);
@@ -260,7 +266,6 @@ bool SRamMatchTable::verify_match_key() {
         for (auto ixbar_element : *input_xbar) {
             match.emplace_back(new Phv::Ref(ixbar_element.second.what));
         }
-
     }
     return error_count == 0;
 }
@@ -282,8 +287,9 @@ std::unique_ptr<json::map>
         if (way.mask != (1 << (hi+1)) - (1 << lo)) {
             warning(way.lineno, "driver does not support discontinuous bits in a way mask");
             mra["hash_select_bit_mask"] = way.mask >> lo; }
-    } else
+    } else {
         mra["hash_select_bit_lo"] = mra["hash_select_bit_hi"] = 40;
+    }
     mra["number_select_bits"] = bitcount(way.mask);
     json::vector mem_units;
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
@@ -361,7 +367,7 @@ void SRamMatchTable::add_hash_functions(json::map &stage_tbl) const {
         auto *hash_group = input_xbar->get_hash_group(hash_group_no);
         if (hash_group) {
             // Process only hash tables used per hash group
-            for (unsigned hash_table_id: bitvec(hash_group->tables)) {
+            for (unsigned hash_table_id : bitvec(hash_group->tables)) {
                 auto hash_table = input_xbar->get_hash_table(hash_table_id);
                 gen_hash_bits(hash_table, hash_table_id, hash_bits, hash_group_no, entry.second);
             }
@@ -392,13 +398,13 @@ void SRamMatchTable::verify_match(unsigned fmt_width) {
         for (auto &piece : match->bits) {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
-            while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+            while (mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
                 if ((piece.lo + mw->first - bit) % 8U != (mw->second->slicelobit() % 8U))
                     error(mw->second->get_lineno(), "bit within byte misalignment matching %s in "
                           "match group %d of table %s", mw->second->name(), i, name());
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 BUG_CHECK((unsigned)piece.lo/128 < fmt_width);
-                //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
+                // merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
 
                 if (auto phv_p = dynamic_cast<Phv::Ref *>(mw->second)) {
                     auto phv_ref = *phv_p;
@@ -491,7 +497,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     int group = word_info[word][word_group];
     auto &merge = regs.rams.match.merge;
     for (auto &st : attached.stats) {
-        if (group_info[group].result_bus_word == (int)word) {
+        if (group_info[group].result_bus_word == static_cast<int>(word)) {
             merge.mau_stats_adr_exact_shiftcount[bus][word_group]
                 = st->to<CounterTable>()->determine_shiftcount(st, group, word, 0);
         } else if (options.match_compiler) {
@@ -500,7 +506,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
         }
         break; /* all must be the same, only config once */ }
     for (auto &m : attached.meters) {
-        if (group_info[group].overhead_word == (int)word
+        if (group_info[group].overhead_word == static_cast<int>(word)
             || group_info[group].overhead_word == -1) {
             int shiftcount = m->to<MeterTable>()->determine_shiftcount(m, group, word, 0);
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = shiftcount;
@@ -520,7 +526,7 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
         }
         break; /* all must be the same, only config once */ }
     for (auto &s : attached.statefuls) {
-        if (group_info[group].overhead_word == (int)word
+        if (group_info[group].overhead_word == static_cast<int>(word)
             || group_info[group].overhead_word == -1) {
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                 s->to<StatefulTable>()->determine_shiftcount(s, group, word, 0);
@@ -542,7 +548,8 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
                 w[1].i >= EXACT_HASH_ADR_GROUPS || w[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
                 error(w.lineno, "invalid way descriptor");
                 continue; }
-            ways.emplace_back(Way{w.lineno, (int)w[0].i, (int)w[1].i, (int)w[2].i, {}});
+            ways.emplace_back(Way{w.lineno, static_cast<int>(w[0].i), static_cast<int>(w[1].i),
+                static_cast<int>(w[2].i), {}});
             if (w.vec.size > 3) {
                 for (int i = 3; i < w.vec.size; i++) {
                     if (!CHECKTYPE(w[i], tVEC)) return;
@@ -577,9 +584,10 @@ void SRamMatchTable::common_sram_setup(pair_t &kv, const VECTOR(pair_t) &data) {
                     for (auto &v : kv.value[i].vec)
                         if (CHECKTYPE(v, tINT))
                             word_info[i].push_back(v.i); } }
-    } else
+    } else {
         warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                 value_desc(kv.key), name());
+    }
 }
 
 void SRamMatchTable::common_sram_checks() {
@@ -630,9 +638,9 @@ void SRamMatchTable::setup_hash_function_ids() {
 
 void SRamMatchTable::setup_ways() {
     unsigned fmt_width = (format->size + 127)/128;
-    if (ways.empty())
+    if (ways.empty()) {
         error(lineno, "No ways defined in table %s", name());
-    else if (ways[0].rams.empty()) {
+    } else if (ways[0].rams.empty()) {
         for (auto &w : ways)
             if (!w.rams.empty()) {
                 error(w.lineno, "Must specify rams for all ways in tabls %s, or none",
@@ -678,7 +686,7 @@ void SRamMatchTable::setup_ways() {
                           name());
             } else {
                 // Allowed to not fully match, as the partition index can be set from the
-                // control plane 
+                // control plane
                 if (!((w.rams.size() <= (1U << bitcount(w.mask)) * fmt_width) &&
                      (w.rams.size() % fmt_width) == 0))
                     error(w.lineno, "RAMs in ATCAM is not a legal multiple of the format width %s",
@@ -827,11 +835,11 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 word = way.word;
                 setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
                 first = false;
-            } else if (hash_group != ways[way.way].group || (int)word != way.word) {
+            } else if (hash_group != ways[way.way].group || static_cast<int>(word) != way.word) {
                 auto first_way = way_map[std::make_pair(row.row, row.cols[0])];
                 error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
                       "(%d.%d) but different %s", name(), first_way.way, way.way, row.row,
-                      row.bus, (int)word == way.word ? "hash groups" : "word order");
+                      row.bus, static_cast<int>(word) == way.word ? "hash groups" : "word order");
                 hash_group = ways[way.way].group;
                 word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
@@ -853,7 +861,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     if (group_info[group].result_bus_word != way.word) continue;
                     int pos = (next->by_group[group]->bit(0) % 128) - 1;
                     auto &n = ram.match_next_table_bitpos;
-                    switch(group_info[group].result_bus_word_group()) {
+                    switch (group_info[group].result_bus_word_group()) {
                     case 0: break;
                     case 1: n.match_next_table1_bitpos = pos; break;
                     case 2: n.match_next_table2_bitpos = pos; break;
@@ -968,7 +976,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
         if (format && word < word_info.size()) {
             for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
                 int group = word_info[word][word_group];
-                if (group_info[group].result_bus_word == (int)word) {
+                if (group_info[group].result_bus_word == static_cast<int>(word)) {
                     BUG_CHECK(r_bus >= 0);
                     if (format->immed) {
                         BUG_CHECK(format->immed->by_group[group]->bit(0)/128U == word);
@@ -989,14 +997,14 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 }
                 /* FIXME -- factor this where possible with ternary match code */
                 if (action) {
-                    if (group_info[group].result_bus_word == (int)word) {
+                    if (group_info[group].result_bus_word == static_cast<int>(word)) {
                         BUG_CHECK(r_bus >= 0);
                         merge.mau_actiondata_adr_exact_shiftcount[r_bus][word_group]
                             = action->determine_shiftcount(action, group, word, 0);
                     }
                 }
                 if (attached.selector) {
-                    if (group_info[group].result_bus_word == (int)word) {
+                    if (group_info[group].result_bus_word == static_cast<int>(word)) {
                         BUG_CHECK(r_bus >= 0);
                         auto sel = get_selector();
                         merge.mau_meter_adr_exact_shiftcount[r_bus][word_group] =
@@ -1010,7 +1018,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                     }
                 }
                 if (idletime) {
-                    if (group_info[group].result_bus_word == (int)word) {
+                    if (group_info[group].result_bus_word == static_cast<int>(word)) {
                         BUG_CHECK(r_bus >= 0);
                         merge.mau_idletime_adr_exact_shiftcount[r_bus][word_group] =
                             idletime->direct_shiftcount();
@@ -1037,10 +1045,11 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 }
                 ++word_group;
             }
-            /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
-                           layout[index+word].row*2 + layout[index+word].bus); */ }
-        //if (gress == EGRESS)
-        //    merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
+            // setup_muxctl(merge.col[col].hitmap_output_map[bus],
+            //                layout[index+word].row*2 + layout[index+word].bus);
+        }
+        // if (gress == EGRESS)
+        //     merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
         if (r_bus >= 0) {
             merge.exact_match_phys_result_en[r_bus/8U] |= 1U << (r_bus%8U);
             merge.exact_match_phys_result_thread[r_bus/8U] |= timing_thread(gress) << (r_bus%8U);
@@ -1078,7 +1087,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
         int lsb_mem_word_idx = piece.lo / MEM_WORD_WIDTH;
         int msb_mem_word_idx = piece.hi / MEM_WORD_WIDTH;
         int offset = piece.lo % MEM_WORD_WIDTH;
-        while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+        while (mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
             std::string source = "";
             std::string immediate_name = "";
             std::string mw_name = mw->second->name();
@@ -1114,7 +1123,7 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                 BUG();
             }
 
-            field_list.push_back( json::map {
+            field_list.push_back(json::map {
                     { "field_name", json::string(key_name) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
@@ -1122,9 +1131,9 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
                     { "msb_mem_word_idx", json::number(msb_mem_word_idx) },
-                    //FIXME-JSON
+                    // FIXME-JSON
                     { "match_mode", json::string(match_mode) },
-                    { "enable_pfe", json::False() }, //FIXME-JSON
+                    { "enable_pfe", json::False() },  // FIXME-JSON
                     { "field_width", json::number(mw->second->size()) }});
             offset += mw->second->size();
             lo = 0;
@@ -1133,12 +1142,13 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
 }
 
 void SRamMatchTable::add_action_cfgs(json::map &tbl, json::map &stage_tbl) const {
-   if (actions) {
-       actions->gen_tbl_cfg(tbl["actions"]);
-       actions->add_action_format(this, stage_tbl);
-   } else if (action && action->actions) {
-       action->actions->gen_tbl_cfg(tbl["actions"]);
-       action->actions->add_action_format(this, stage_tbl); }
+    if (actions) {
+        actions->gen_tbl_cfg(tbl["actions"]);
+        actions->add_action_format(this, stage_tbl);
+    } else if (action && action->actions) {
+        action->actions->gen_tbl_cfg(tbl["actions"]);
+        action->actions->add_action_format(this, stage_tbl);
+    }
 }
 
 unsigned SRamMatchTable::get_format_width() const {
@@ -1158,7 +1168,7 @@ json::map* SRamMatchTable::add_common_sram_tbl_cfgs(json::map &tbl,
     common_tbl_cfg(tbl);
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
-    json::map *stage_tbl_ptr=
+    json::map *stage_tbl_ptr =
         add_stage_tbl_cfg(match_attributes, stage_table_type.c_str() , get_number_entries());
     json::map &stage_tbl = *stage_tbl_ptr;
     // This is a only a glass required field, as it is only required when no default action

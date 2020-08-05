@@ -1,5 +1,5 @@
-#ifndef _constants_h_
-#define _constants_h_
+#ifndef BF_ASM_CONSTANTS_H_
+#define BF_ASM_CONSTANTS_H_
 
 enum {
     /* global constants related to MAU stage */
@@ -77,7 +77,7 @@ enum {
     FIELD_HANDLE_START = (0x21 << TYPE_ENUM_SHIFT),
     PER_FLOW_ENABLE_BITS = 1,
     METER_TYPE_BITS = 3,
-    //Order is METER_TYPE, METER_PFE, METER_ADDRESS
+    // Order is METER_TYPE, METER_PFE, METER_ADDRESS
     METER_TYPE_START_BIT = 24,
     METER_LOWER_HUFFMAN_BITS = 7,
     METER_ADDRESS_BITS = 23,
@@ -132,86 +132,86 @@ enum METER_ACCESS_TYPE {
 #include <math.h>
 #undef OVERFLOW         /* get rid of global preproc define from math.h */
 namespace UnitRam {
-    enum {
-        MATCH = 1,
-        ACTION = 2,
-        STATISTICS = 3,
-        METER = 4,
-        STATEFUL = 5,
-        TERNARY_INDIRECTION = 6,
-        SELECTOR = 7,
-        HASH_ACTION = 8,
-    };
-    namespace DataMux {
-        enum {
-            STATISTICS = 0,
-            METER = 1,
-            OVERFLOW = 2,
-            OVERFLOW2 = 3,
-            ACTION = 4,
-            NONE = 7,
-        };
-    }
-    namespace AdrMux {
-        enum {
-            ACTION = 1,
-            TERNARY_INDIRECTION = 2,
-            OVERFLOW = 4,
-            STATS_METERS = 5,
-            SELECTOR_ALU = 6,
-            SELECTOR_OVERFLOW = 7,
-            SELECTOR_ACTION_OVERFLOW = 8,
-        };
-    }
-}
+enum {
+    MATCH = 1,
+    ACTION = 2,
+    STATISTICS = 3,
+    METER = 4,
+    STATEFUL = 5,
+    TERNARY_INDIRECTION = 6,
+    SELECTOR = 7,
+    HASH_ACTION = 8,
+};
+namespace DataMux {
+enum {
+    STATISTICS = 0,
+    METER = 1,
+    OVERFLOW = 2,
+    OVERFLOW2 = 3,
+    ACTION = 4,
+    NONE = 7,
+};
+}  // namespace DataMux
+namespace AdrMux {
+enum {
+    ACTION = 1,
+    TERNARY_INDIRECTION = 2,
+    OVERFLOW = 4,
+    STATS_METERS = 5,
+    SELECTOR_ALU = 6,
+    SELECTOR_OVERFLOW = 7,
+    SELECTOR_ACTION_OVERFLOW = 8,
+};
+}  // namespace AdrMux
+}  // namespace UnitRam
 namespace AdrDist {
-    enum {
-        ACTION = 0,
-        STATISTICS = 1,
-        METER = 2,
-        OVERFLOW = 3,
-    };
-}
+enum {
+    ACTION = 0,
+    STATISTICS = 1,
+    METER = 2,
+    OVERFLOW = 3,
+};
+}  // namespace AdrDist
 namespace MapRam {
-    enum {
-        STATISTICS = 1,
-        METER = 2,
-        STATEFUL = 3,
-        IDLETIME = 4,
-        COLOR = 5,
-        SELECTOR_SIZE = 6,
-    };
-    namespace Mux {
-        enum {
-            SYSTEM = 0,
-            SYNTHETIC_TWO_PORT = 1,
-            IDLETIME = 2,
-            COLOR = 3,
-        };
-    }
-    namespace ColorBus {
-        enum {
-            NONE = 0,
-            COLOR = 1,
-            OVERFLOW = 2,
-            OVERFLOW_2 = 3,
-        };
-    };
-}
+enum {
+    STATISTICS = 1,
+    METER = 2,
+    STATEFUL = 3,
+    IDLETIME = 4,
+    COLOR = 5,
+    SELECTOR_SIZE = 6,
+};
+namespace Mux {
+enum {
+    SYSTEM = 0,
+    SYNTHETIC_TWO_PORT = 1,
+    IDLETIME = 2,
+    COLOR = 3,
+};
+}  // namespace Mux
+namespace ColorBus {
+enum {
+    NONE = 0,
+    COLOR = 1,
+    OVERFLOW = 2,
+    OVERFLOW_2 = 3,
+};
+}  // namespace ColorBus
+}  // namespace MapRam
 namespace BusHashGroup {
-    enum {
-        SELECTOR_MOD = 0,
-        METER_ADDRESS = 1,
-        STATISTICS_ADDRESS = 2,
-        ACTION_DATA_ADDRESS = 3,
-        IMMEDIATE_DATA = 4,
-    };
-}
+enum {
+    SELECTOR_MOD = 0,
+    METER_ADDRESS = 1,
+    STATISTICS_ADDRESS = 2,
+    ACTION_DATA_ADDRESS = 3,
+    IMMEDIATE_DATA = 4,
+};
+}  // namespace BusHashGroup
 namespace MoveReg {
-    enum {
-        STATS = 0,
-        METER = 1,
-        IDLE = 2,
-    };
-}
-#endif /* _constants_h_ */
+enum {
+    STATS = 0,
+    METER = 1,
+    IDLE = 2,
+};
+}  // namespace MoveReg
+#endif /* BF_ASM_CONSTANTS_H_ */

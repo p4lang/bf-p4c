@@ -8,10 +8,10 @@
 #include "tofino/counter.cpp"            // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/counter.cpp"              // jbay template specializations
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/counter.cpp"        // cloudbreak template specializations
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 DEFINE_TABLE_TYPE(CounterTable)
 
@@ -28,7 +28,8 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
                 type = PACKETS;
             else if (kv.value == "both" || kv.value == "packets_and_bytes")
                 type = BOTH;
-            else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
+            else
+                error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
         } else if (kv.key == "teop") {
             if (!Target::SUPPORT_TRUE_EOP())
                 error(kv.value.lineno, "tEOP is not available on device");
@@ -58,9 +59,11 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT)) {
                 bytecount_adjust = kv.value.i;
             }
-        } else
+        } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name());
+        }
+    }
     if (teop >= 0 && type != BYTES && type != BOTH)
         error(lineno, "tEOP bus can only used when counting bytes");
     alloc_rams(true, stage->sram_use);
@@ -78,22 +81,26 @@ CounterTable::lrt_params::lrt_params(const value_t &m)
             } else if (kv.key == "interval") {
                 if (CHECKTYPE(kv.value, tINT))
                     interval = kv.value.i;
-            } else
+            } else {
                 warning(kv.key.lineno, "ignoring unknown item %s in lrt params",
-                        value_desc(kv.key)); }
+                        value_desc(kv.key));
+            }
+        }
         if (threshold < 0) error(m.lineno, "No threshold in lrt params");
         if (interval < 0) error(m.lineno, "No interval in lrt params"); }
 }
 
 void CounterTable::pass1() {
     LOG1("### Counter table " << name() << " pass1");
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::Statistics, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::Statistics, this);
+    else
+        p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    //stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
+    // stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
@@ -177,7 +184,7 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
         adr_default = (1U << STATISTICS_PER_FLOW_ENABLE_START_BIT);
     } else if (args[1].type == Table::Call::Arg::Field) {
         if (args[0].type == Table::Call::Arg::Field) {
-            per_entry_en_mux_ctl = args[1].field()->bit(0) - args[0].field()->bit(0) ;
+            per_entry_en_mux_ctl = args[1].field()->bit(0) - args[0].field()->bit(0);
             per_entry_en_mux_ctl += counter_shifts[format->groups()];
         } else if (args[0].type == Table::Call::Arg::HashDist) {
             per_entry_en_mux_ctl = 0;
@@ -254,10 +261,10 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                 }
                 stat_ctl.stats_bytecount_adjust = bytecount_adjust & stats_bytecount_adjust_mask;
             }
-            stat_ctl.stats_alu_error_enable = 0; // TODO
+            stat_ctl.stats_alu_error_enable = 0;  // TODO
             if (logical_id >= 0)
                 regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
-                //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
+                // setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
@@ -307,10 +314,12 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
                 regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
             movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
         }
-        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << (4 + stats_group_index);
+        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
+            |= 1 << (4 + stats_group_index);
     } else {
         adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
-        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << stats_group_index;
+        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
+            |= 1 << stats_group_index;
     }
     if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);

@@ -143,14 +143,14 @@ void HashActionTable::add_hash_functions(json::map &stage_tbl) const {
             bits_to_xor.push_back(std::move(field));
             hash_bits.push_back(std::move(hash_bit));
             hash_bit_index++;
-        } 
+        }
     }
     hash_function["hash_function_number"] = 0;
     hash_functions.push_back(std::move(hash_function));
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) const {
-    //FIXME: Support multiple hash_dist's
+    // FIXME: Support multiple hash_dist's
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
     const char *stage_tbl_type = "match_with_no_key";

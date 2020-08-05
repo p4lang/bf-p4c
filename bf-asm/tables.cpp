@@ -11,9 +11,9 @@
 std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
-Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
-    name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
-{
+Table::Table(int line,
+        std::string &&n, gress_t gr, Stage *s, int lid) :  // NOLINT(whitespace/operators)
+    name_(n), stage(s), gress(gr), lineno(line), logical_id(lid) {
     static int uid_counter;
     uid = uid_counter++;
     if (lineno >= 0) {
@@ -31,7 +31,7 @@ Table::~Table() {
         stage->all_refs.erase(&stage);
 }
 
-Table::Type::Type(std::string &&name) {
+Table::Type::Type(std::string &&name) {  // NOLINT(whitespace/operators)
     if (!all) all = new std::map<std::string, Type *>();
     if (get(name)) {
         fprintf(stderr, "Duplicate table type %s\n", name.c_str());
@@ -122,9 +122,9 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
     Ref::operator=(val[0]);
     for (int i = 1; i < val.vec.size; i++) {
         int mode;
-        if (val[i].type == tINT)
+        if (val[i].type == tINT) {
             args.emplace_back(val[i].i);
-        else if (val[i].type == tCMD && val[i] == "hash_dist") {
+        } else if (val[i].type == tCMD && val[i] == "hash_dist") {
             if (PCHECKTYPE(val[i].vec.size > 1, val[i][1], tINT)) {
                 if (auto hd = tbl->find_hash_dist(val[i][1].i))
                     args.emplace_back(hd);
@@ -135,7 +135,7 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
         } else if ((mode = StatefulTable::parse_counter_mode(val[i])) >= 0) {
             args.emplace_back(Arg::Counter, mode);
         } else if (!CHECKTYPE(val[i], tSTR)) {
-            ;  // syntax error message emit by CHEKCTYPE
+            // syntax error message emit by CHEKCTYPE
         } else if (auto arg = tbl->lookup_field(val[i].s)) {
             if (arg->bits.size() != 1)
                 error(val[i].lineno, "arg fields can't be split in format");
@@ -146,7 +146,7 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
 }
 
 unsigned Table::Call::Arg::size() const {
-    switch(type) {
+    switch (type) {
     case Field:
         return fld ? fld->size : 0;
     case HashDist:
@@ -168,9 +168,9 @@ static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
 
 static int add_rows(std::vector<Table::Layout> &layout, const value_t &rows) {
     if (!CHECKTYPE2(rows, tINT, tRANGE)) return 1;
-    if (rows.type == tINT)
+    if (rows.type == tINT) {
         add_row(rows.lineno, layout, rows.i);
-    else {
+    } else {
         int step = rows.lo > rows.hi ? -1 : 1;
         for (int i = rows.lo; i != rows.hi; i += step)
             add_row(rows.lineno, layout, i);
@@ -195,8 +195,9 @@ static int add_cols(Table::Layout &row, const value_t &cols) {
             if (col.type == tVEC) {
                 error(col.lineno, "Column shape doesn't match rows");
                 rv |= 1;
-            } else
+            } else {
                 rv |= add_cols(row, col); }
+            }
         return rv; }
     if (!CHECKTYPE2(cols, tINT, tRANGE)) return 1;
     if (cols.type == tINT) return add_col(cols.lineno, row, cols.i);
@@ -235,14 +236,15 @@ int Table::setup_layout_attrib(std::vector<Layout> &layout, const value_t &data,
     if (!CHECKTYPE2(data, tINT, tVEC)) {
         return 1;
     } else if (data.type == tVEC) {
-        if (data.vec.size != (int)layout.size()) {
+        if (data.vec.size != static_cast<int>(layout.size())) {
             error(data.lineno, "%s shape doesn't match rows", what);
             return 1;
         } else {
             for (int i = 0; i < data.vec.size; i++) {
                 if (CHECKTYPE(data.vec[i], tINT))
                     layout[i].*attr = data.vec[i].i;
-                else return 1;
+                else
+                    return 1;
             }
         }
     } else {
@@ -268,7 +270,7 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
         err |= add_rows(layout, *row);
     if (err) return;
     if (auto *col = get(data, "column")) {
-        if (col->type == tVEC && col->vec.size == (int)layout.size()) {
+        if (col->type == tVEC && col->vec.size == static_cast<int>(layout.size())) {
             for (int i = 0; i < col->vec.size; i++)
                 err |= add_cols(layout[i], col->vec[i]);
         } else {
@@ -291,10 +293,12 @@ void Table::setup_layout(std::vector<Layout> &layout, const VECTOR(pair_t) &data
         for (auto j = i+1; j != layout.end(); j++)
             if (i->row == j->row && i->bus == j->bus && i->result_bus == j->result_bus &&
                 i->word == j->word) {
-                char bus[16] = { 0 };
-                if (i->bus >= 0) sprintf(bus, " bus %d", i->bus);
+#define __BUS_SIZ 16
+                char bus[__BUS_SIZ] = { 0 };
+                if (i->bus >= 0) snprintf(bus, __BUS_SIZ, " bus %d", i->bus);
                 error(i->lineno, "row %d%s duplicated in table %s%s", i->row, bus,
                       name(), subname); }
+#undef __BUS_SIZ
 }
 
 void Table::setup_logical_id() {
@@ -331,8 +335,10 @@ void Table::setup_maprams(value_t &v) {
                 tmp.data = &maprow; }
         } else if (CHECKTYPE(maprow, tVEC)) {
             maprow_rams = &maprow.vec;
-        } else continue;
-        if (maprow_rams->size != (int)row.cols.size()) {
+        } else {
+            continue;
+        }
+        if (maprow_rams->size != static_cast<int>(row.cols.size())) {
             error(r->lineno, "Mapram layout doesn't match table layout");
             continue; }
         for (auto mapcol : *maprow_rams)
@@ -397,7 +403,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
     int word = width;
     Layout *firstrow = 0;
     auto vpniter = vpn ? vpn->begin() : 0;
-    int vpn_ctr[period];
+    int *vpn_ctr = new int[period];
     std::fill_n(vpn_ctr, period, get_start_vpn());
     std::vector<bitvec> used_vpns(period);
     bool on_repeat = false;
@@ -423,11 +429,11 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 if (CHECKTYPE2(*vpniter, tVEC, tINT)) {
                     if (vpniter->type == tVEC) {
                         if (!vpncoliter) {
-                            if ((int)row.vpns.size() != vpniter->vec.size) {
+                            if (static_cast<int>(row.vpns.size()) != vpniter->vec.size) {
                                 error(vpniter->lineno, \
                                 "Vpn entries for row %d is %d not equal to column "
                                 "entries %d", row.row, vpniter->vec.size,
-                                (int)row.vpns.size());
+                                static_cast<int>(row.vpns.size()));
                                 continue;
                             } else {
                                 vpncoliter = vpniter->vec.begin();
@@ -452,6 +458,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 if (row.word < 0) row.word = word;
                 el = vpn_ctr[row.word];
                 if ((vpn_ctr[row.word] += period) == depth) vpn_ctr[row.word] = 0; } } }
+    delete []vpn_ctr;
 }
 
 void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
@@ -496,15 +503,15 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                 default_action = kv.value.s;
     } else if (kv.key == "default_action_parameters") {
         if (CHECKTYPE(kv.value, tMAP))
-            for(auto &v : kv.value.map)
+            for (auto &v : kv.value.map)
                 if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tSTR))
                     default_action_parameters[v.key.s] = v.value.s;
     } else if (kv.key == "default_action_handle") {
         default_action_handle = kv.value.i;
     } else if (kv.key == "hit") {
-        if (!hit_next.empty())
+        if (!hit_next.empty()) {
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-        else if (kv.value.type == tVEC) {
+        } else if (kv.value.type == tVEC) {
             for (auto &v : kv.value.vec)
                 hit_next.emplace_back(v);
         } else {
@@ -562,7 +569,9 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             p.start_bit = w.value.i;
                         else if (w.key == "context_json" && CHECKTYPE(w.value, tMAP))
                             p.context_json = toJson(w.value.map);
-                        else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); }
+                        else
+                            error(lineno, "Incorrect param type %s in p4_param_order", w.key.s);
+                    }
                     // Determine position in p4_param_order. Repeated fields get
                     // the same position which is set on first occurrence.
                     // Driver relies on position to order fields. The case when
@@ -573,7 +582,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                     // the same slice.
                     bool ppFound = false;
                     for (auto &pp : p4_params_list) {
-                        if ((pp.name == p.name) && (pp.key_name == p.key_name)){
+                        if ((pp.name == p.name) && (pp.key_name == p.key_name)) {
                             ppFound = true;
                             p.position = pp.position;
                             break; } }
@@ -581,8 +590,9 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                     p4_params_list.emplace_back(std::move(p)); } } }
     } else if (kv.key == "context_json") {
         setup_context_json(kv.value);
-    } else
+    } else {
         return false;
+    }
     return true;
 }
 
@@ -602,9 +612,11 @@ void Table::setup_context_json(value_t &v) {
  * FIXME -- a compatible way
  */
 bool Table::allow_ram_sharing(const Table *t1, const Table *t2) {
-    if (t1->table_type() == STATEFUL && t2->table_type() == SELECTION && t1->to<StatefulTable>()->bound_selector == t2)
+    if (t1->table_type() == STATEFUL && t2->table_type() == SELECTION
+            && t1->to<StatefulTable>()->bound_selector == t2)
         return true;
-    if (t2->table_type() == STATEFUL && t1->table_type() == SELECTION && t2->to<StatefulTable>()->bound_selector == t1)
+    if (t2->table_type() == STATEFUL && t1->table_type() == SELECTION
+            && t2->to<StatefulTable>()->bound_selector == t1)
         return true;
     return false;
 }
@@ -623,7 +635,7 @@ bool Table::allow_bus_sharing(Table *t1, Table *t2) {
         // Check if action tables are attached to atcam's
         auto *m1 = t1->to<ActionTable>()->get_match_table();
         auto *m2 = t2->to<ActionTable>()->get_match_table();
-        if (m1 && m2){
+        if (m1 && m2) {
             if ((m1->table_type() == ATCAM) && (m2->table_type() == ATCAM))
                 return true; } }
     return false;
@@ -642,8 +654,9 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
                         error(lineno, "Table %s trying to use (%d,%d) which is already in use "
                               "by table %s", name(), row.row, col, old->name());
                     }
-                } else
+                } else {
                     use[r][c] = this;
+                }
             } catch(const char *oob) {
                 error(lineno, "Table %s using out-of-bounds (%d,%d)", name(),
                       row.row, col);
@@ -654,7 +667,9 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
                 if (old != this && old->p4_name() != p4_name())
                     error(lineno, "Table %s trying to use bus %d on row %d which is already in "
                           "use by table %s", name(), row.bus, row.row, old->name());
-            } else (*bus_use)[row.row][row.bus] = this;
+            } else {
+                (*bus_use)[row.row][row.bus] = this;
+            }
         }
     }
 }
@@ -667,24 +682,23 @@ void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
             else if (bus_use[row.row][1] == this)
                 row.bus = 1;
             else if (!bus_use[row.row][0])
-                bus_use[row.row][row.bus=0] = this;
+                bus_use[row.row][row.bus = 0] = this;
             else if (!bus_use[row.row][1])
-                bus_use[row.row][row.bus=1] = this;
+                bus_use[row.row][row.bus = 1] = this;
             else
                 error(lineno, "No bus available on row %d for table %s",
                       row.row, name()); } }
 }
 
 void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
-                     bool order, Alloc1Dbase<Table *> &use)
-{
+                     bool order, Alloc1Dbase<Table *> &use) {
     if (id >= 0) {
         next_id = id;
         return; }
-    while (++next_id < max_id && use[next_id]);
+    while (++next_id < max_id && use[next_id]) {}
     if (next_id >= max_id && !order) {
         next_id = -1;
-        while (++next_id < max_id && use[next_id]); }
+        while (++next_id < max_id && use[next_id]) {} }
     if (next_id < max_id)
         use[id = next_id] = this;
     else
@@ -713,8 +727,8 @@ void Table::alloc_maprams() {
                     if (!allow_ram_sharing(this, old))
                         error(lineno, "Table %s trying to use mapram %d,%d which is use by "
                               "table %s", name(), sram_row, mapcol, old->name());
-                } else
-                    stage->mapram_use[sram_row][mapcol] = this; } } }
+                } else {
+                    stage->mapram_use[sram_row][mapcol] = this; } } } }
 }
 
 void Table::alloc_vpns() {
@@ -807,8 +821,8 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
             min_id = p->logical_id + 1;
     for_all_next([&max_id, this](const Ref &n) {
         if (n && n->stage->stageno == stage->stageno &&
-            n->logical_id >= 0 && n->logical_id <= max_id)
-            max_id = n->logical_id - 1; });
+            n->logical_id >= 0 && n->logical_id <= max_id) {
+            max_id = n->logical_id - 1; } });
     for (int id = min_id; id <= max_id; ++id) {
         if (!stage->logical_id_use[id]) {
             logical_id = id;
@@ -818,21 +832,21 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
     return false;
 }
 
-void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname)
-{
+void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname) {
     if (use[idx] && use[idx] != this) {
         error(lineno, "%s bus conflict on row %d between tables %s and %s", busname, idx,
               name(), use[idx]->name());
         error(use[idx]->lineno, "%s defined here", use[idx]->name());
-    } else
+    } else {
         use[idx] = this;
+    }
 }
 
 bitvec Table::compute_reachable_tables() {
     reachable_tables_[uid] = 1;
     for_all_next([this](const Ref &t) {
-        if (t)
-            reachable_tables_ |= t->reachable_tables(); });
+        if (t) {
+            reachable_tables_ |= t->reachable_tables(); } });
     return reachable_tables_;
 }
 
@@ -892,8 +906,7 @@ void Table::pass1() {
 
 static void overlap_test(int lineno,
     unsigned a_bit, ordered_map<std::string, Table::Format::Field>::iterator a,
-    unsigned b_bit, ordered_map<std::string, Table::Format::Field>::iterator b)
-{
+    unsigned b_bit, ordered_map<std::string, Table::Format::Field>::iterator b) {
     if (b_bit <= a->second.hi(a_bit)) {
         if (a->second.group || b->second.group)
             error(lineno, "Field %s(%d) overlaps with %s(%d)",
@@ -982,7 +995,7 @@ Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : 
     for (size_t i = 1; i < fmt.size(); i++)
         if (!equiv(fmt[0], fmt[i]))
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
-    for (log2size = 0; (1U << log2size) < size; log2size++);
+    for (log2size = 0; (1U << log2size) < size; log2size++) {}
     if (error_count > 0) return;
     for (auto &f : fmt[0]) {
         f.second.by_group = new Field *[fmt.size()];
@@ -1023,11 +1036,13 @@ void Table::Format::pass1(Table *tbl) {
         return; }
     immed_size = hi + 1 - lo;
     for (unsigned i = 1; i < fmt.size(); i++) {
-        int delta = (int)immed->by_group[i]->bits[0].lo - (int)immed->bits[0].lo;
+        int delta = static_cast<int>(immed->by_group[i]->bits[0].lo)
+            - static_cast<int>(immed->bits[0].lo);
         for (auto &f : fmt[0]) {
             if (!(f.second.flags & Field::USED_IMMED))
                 continue;
-            if (delta != (int)f.second.by_group[i]->bits[0].lo - (int)f.second.bits[0].lo) {
+            if (delta != static_cast<int>(f.second.by_group[i]->bits[0].lo)
+                    - static_cast<int>(f.second.bits[0].lo)) {
                 error(lineno, "Immediate data field %s for table %s does not match across "
                       "ways in a ram", f.first.c_str(), tbl->name());
                 break; } } }
@@ -1073,7 +1088,7 @@ void Table::Format::pass2(Table *tbl) {
 
 std::ostream &operator<<(std::ostream &out, const Table::Format::Field &f) {
     out << "(size = " << f.size << " ";
-    for (auto b: f.bits) out << "[" << b.lo << ".." << b.hi << "]";
+    for (auto b : f.bits) out << "[" << b.lo << ".." << b.hi << "]";
     out << ")";
     return out;
 }
@@ -1142,9 +1157,9 @@ Table::Actions::Action::alias_t::alias_t(value_t &data) {
         } else if (data.type == tCMD) {
             name = data.vec[0].s;
             if (CHECKTYPE2(data.vec[1], tINT, tRANGE)) {
-                if (data.vec[1].type == tINT)
+                if (data.vec[1].type == tINT) {
                     lo = hi = data.vec[1].i;
-                else {
+                } else {
                     lo = data.vec[1].lo;
                     hi = data.vec[1].hi; } }
         } else {
@@ -1202,8 +1217,9 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                 error(kv.key[2].lineno, "Invalid instruction address %d", addr); }
     } else if (kv.key.type == tINT) {
         name = std::to_string((code = kv.key.i));
-    } else
+    } else {
         name = kv.key.s;
+    }
     if (code >= 0) {
         if (actions->code_use[code]) {
             if (!equivVLIW(actions->by_code[code]))
@@ -1285,12 +1301,12 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv, int pos
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
                             auto k = alias.find(a.key.s);
-                            if (k == alias.end())
+                            if (k == alias.end()) {
                                 alias.emplace(a.key.s, a.value);
-                            else {
+                            } else {
                                 k->second.is_constant = true;
                                 k->second.value = a.value.i; }
-                        } else alias.emplace(a.key.s, a.value); } }
+                        } else { alias.emplace(a.key.s, a.value); } } }
 
         } else if (CHECKTYPE2(i, tSTR, tCMD)) {
             VECTOR(value_t) tmp;
@@ -1424,7 +1440,7 @@ void Table::Actions::Action::check_next(Table *tbl) {
 void Table::Actions::Action::pass1(Table *tbl) {
     // The compiler generates all action handles which must be specified in the
     // assembly, if not we throw an error.
-    if ((handle == 0) && tbl->needs_handle()){
+    if ((handle == 0) && tbl->needs_handle()) {
         error(lineno,
             "No action handle specified for table - %s, action - %s", tbl->name(), name.c_str());
     }
@@ -1481,7 +1497,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
                 error(a.second.lineno,
                         "alias for %s:%s(%d:%d) has out of range index from allowed %s:%s(%d:%d)",
                         a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
-                        a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
+                        a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi);
                 break; }
             a.second.name = rec.name; }
         if (auto *f = tbl->lookup_field(a.second.name, name)) {
@@ -1491,10 +1507,12 @@ void Table::Actions::Action::pass1(Table *tbl) {
             // nothing to be done for now.  lo..hi is the hash dist index rather than
             // a bit index, which will cause problems if we want to later slice the alias
             // to access only some bits of it.
-        } else
+        } else {
             error(a.second.lineno, "No field %s(%d:%d) in table %s",
-                    a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }
-    //Update default value for params if default action parameters present
+                    a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name());
+        }
+    }
+    // Update default value for params if default action parameters present
     for (auto &p : p4_params_list) {
         if (auto def_act_params = tbl->get_default_action_parameters()) {
             if (def_act_params->count(p.name) > 0) {
@@ -1651,18 +1669,20 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
         if (act.code < 0 && !act.default_only) {
-            if (code < 0 && !code_use[act.addr])
+            if (code < 0 && !code_use[act.addr]) {
                 act.code = act.addr;
-            else if (act.instr.empty() && !use_code_for_next && code0_is_noop)
+            } else if (act.instr.empty() && !use_code_for_next && code0_is_noop) {
                 act.code = 0;
-            else {
+            } else {
                 while (code >= 0 && code_use[code]) code++;
-                act.code = code; } }
-        else if (code < 0 && act.code != act.addr && !act.default_only) {
+                act.code = code;
+            }
+        } else if (code < 0 && act.code != act.addr && !act.default_only) {
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than %d actions", ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH);
             if (act.code < 0)
-                warning(act.lineno, "Code %d is already in use by another action", act.addr); }
+                warning(act.lineno, "Code %d is already in use by another action", act.addr);
+        }
         if (act.code >= 0) {
             by_code[act.code] = &act;
             code_use[act.code] = true; }
@@ -1673,10 +1693,10 @@ void Table::Actions::pass2(Table *tbl) {
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });
     if (!tbl->default_action.empty()) {
-        if (!exists(tbl->default_action))
+        if (!exists(tbl->default_action)) {
             error(tbl->default_action_lineno, "no action %s in table %s",
                   tbl->default_action.c_str(), tbl->name());
-        else {
+        } else {
             auto &defact = actions.at(tbl->default_action);
             if (!defact.default_allowed) {
                 // FIXME -- should be an error, but the compiler currently does this?
@@ -1706,9 +1726,9 @@ void Table::Actions::stateful_pass2(Table *tbl) {
     BUG_CHECK(tbl->table_type() == STATEFUL);
     auto *stbl = tbl->to<StatefulTable>();
     for (auto &act : *this) {
-        if (act.code >= 4)
+        if (act.code >= 4) {
             error(act.lineno, "Only 4 actions in a stateful table");
-        else if (act.code >= 0) {
+        } else if (act.code >= 0) {
             if (code_use[act.code]) {
                 error(act.lineno, "duplicate use of code %d in SALU", act.code);
                 warning(by_code[act.code]->lineno, "previous use here"); }
@@ -1785,7 +1805,8 @@ static void gen_override(json::map &cfg, const Table::Call &att) {
     for (auto &arg : att.args) {
         ++idx;
         if (arg.type == Table::Call::Arg::Name) {
-            if (strcmp(arg.name(), "$hash_dist") == 0 || strcmp(arg.name(), "$stful_counter") == 0) {
+            if (strcmp(arg.name(), "$hash_dist") == 0 || strcmp(arg.name(),
+                        "$stful_counter") == 0) {
                 override_addr = true;
             } else if (auto *st = att->to<StatefulTable>()) {
                 if (auto *act = st->actions->action(arg.name())) {
@@ -1827,13 +1848,14 @@ bool Table::Actions::Action::is_color_aware() const {
     return false;
 }
 
-void Table::Actions::Action::check_and_add_resource(json::vector &resources, json::map &resource) const {
+void Table::Actions::Action::check_and_add_resource(json::vector &resources,
+        json::map &resource) const {
         // Check if resource already exists in the json::vector. For tables
         // spanning multiple stages, the same resource gets added as an attached
         // resource for every stage. To avoid duplication only add when not
         // present in the resource array
         bool found = false;
-        for (auto &r: resources) {
+        for (auto &r : resources) {
             if (resource == r->to<json::map>()) {
                 found = true;
                 break;
@@ -1843,14 +1865,16 @@ void Table::Actions::Action::check_and_add_resource(json::vector &resources, jso
             resources.push_back(std::move(resource));
 }
 
-void Table::Actions::Action::add_direct_resources(json::vector &direct_resources, const Call &att) const {
+void Table::Actions::Action::add_direct_resources(json::vector &direct_resources,
+        const Call &att) const {
     json::map direct_resource;
     direct_resource["resource_name"] = att->p4_name();
     direct_resource["handle"] = att->handle();
     check_and_add_resource(direct_resources, direct_resource);
 }
 
-void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources, const Call &att) const {
+void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources,
+        const Call &att) const {
     auto addr_arg = att.args.back();
     json::map indirect_resource;
     if (addr_arg.type == Table::Call::Arg::Name) {
@@ -1885,17 +1909,20 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         json::map &action_cfg = *action_ptr;
 
         action_cfg["name"] = act.name;
-        action_cfg["handle"] = act.handle; //FIXME-JSON
+        action_cfg["handle"] = act.handle;  // FIXME-JSON
         if (act.instr.empty() || action_cfg.count("primitives") == 0)
             action_cfg["primitives"] = json::vector();
         auto &direct_resources = action_cfg["direct_resources"] = json::vector();
         auto &indirect_resources = action_cfg["indirect_resources"] = json::vector();
         for (auto &att : act.attached) {
-            if (att.is_direct_call()) act.add_direct_resources(direct_resources, att);
-            else act.add_indirect_resources(indirect_resources, att);
+            if (att.is_direct_call())
+                act.add_direct_resources(direct_resources, att);
+            else
+                act.add_indirect_resources(indirect_resources, att);
         }
         if (!act.hit_allowed && !act.default_allowed)
-          error(act.lineno, "Action %s must be allowed to be hit and/or default action.", act.name.c_str());
+          error(act.lineno, "Action %s must be allowed to be hit and/or default action.",
+                  act.name.c_str());
         action_cfg["allowed_as_hit_action"] = act.hit_allowed;
         // XXX(amresh): allowed_as_default_action info is directly passed through assembly
         // This will be 'false' for following conditions:
@@ -2002,9 +2029,9 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
 
         std::string next_table_name = "--END_OF_PIPELINE--";
         if (!act.default_only) {
-            if (act.next_table_encode >= 0)
+            if (act.next_table_encode >= 0) {
                 next_table = static_cast<unsigned>(act.next_table_encode);
-            else {
+            } else {
                 // The RAM value is only 8 bits, for JBay must be solved by table placement
                 next_table = act.next_table_ref.next_table_id() & 0xff;
                 next_table_name = act.next_table_ref.next_table_name();
@@ -2048,7 +2075,8 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
             action_format_per_action["next_table_long_brch"] =
                 act.next_table_miss_ref.long_branch_tags(); }
         action_format_per_action["vliw_instruction"] = act.code;
-        action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
+        action_format_per_action["vliw_instruction_full"]
+            = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
 
         json::vector &next_tables = action_format_per_action["next_tables"] = json::vector();
         for (auto n : act.next_table_ref) {
@@ -2064,7 +2092,7 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
             json::string name = a.first;
             int lo = remove_name_tail_range(name);
             json::string immed_name = a.second.name;
-            if (immed_name != "immediate") continue; // output only immediate fields
+            if (immed_name != "immediate") continue;  // output only immediate fields
             if (!(act.has_param(name) || a.second.is_constant))
                 continue;   // and fields that are parameters or constants
             json::map action_format_per_action_imm_field;
@@ -2073,7 +2101,8 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
             if (a.second.is_constant) {
                 action_format_per_action_imm_field["param_type"] = "constant";
                 action_format_per_action_imm_field["const_value"] = a.second.value;
-                action_format_per_action_imm_field["param_name"] = "constant_" + std::to_string(a.second.value);
+                action_format_per_action_imm_field["param_name"]
+                    = "constant_" + std::to_string(a.second.value);
             }
             action_format_per_action_imm_field["param_shift"] = lo;
             action_format_per_action_imm_field["dest_start"] = a.second.lo;
@@ -2084,7 +2113,8 @@ void Table::Actions::add_action_format(const Table *table, json::map &tbl) const
                 action_format_per_action_imm_field["mod_field_conditionally_mask_field_name"]
                     = condition;
             }
-            action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field));
+            action_format_per_action_imm_fields.push_back(
+                    std::move(action_format_per_action_imm_field));
         }
         action_format.push_back(std::move(action_format_per_action));
     }
@@ -2101,7 +2131,7 @@ std::ostream &operator<<(std::ostream &out, const Table::Actions::Action::alias_
 std::ostream &operator<<(std::ostream &out, const Table::Actions::Action &a) {
     out << a.name << "(";
     auto indent = a.name.length() + 10;
-    for (auto &p: a.p4_params_list)
+    for (auto &p : a.p4_params_list)
         out << p << std::endl << std::setw(indent);
     out << ")";
     return out;
@@ -2133,23 +2163,23 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
             json::string immed_name = a.second.name;
             if (immed_name == "immediate") immed_name = "--immediate--";
             int lo = remove_name_tail_range(name);
-            map.push_back( json::vector { json::map {
+            map.push_back(json::vector { json::map {
                 { "name", std::move(name) },
                 { "parameter_least_significant_bit", json::number(lo) },
                 { "parameter_most_significant_bit", json::number(lo + a.second.hi - a.second.lo) },
                 { "immediate_least_significant_bit", json::number(a.second.lo) },
                 { "immediate_most_significant_bit", json::number(a.second.hi) },
-                { "field_called", std::move(immed_name) } } } ); } }
+                { "field_called", std::move(immed_name) } } }); } }
 }
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     auto &mapram_config = regs.rams.map_alu.row[row].adrmux.mapram_config[col];
-    //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
+    // auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
     mapram_config.mapram_type = type;
     mapram_config.mapram_logical_table = logical_id;
     mapram_config.mapram_vpn_members = 0;
-    if (!options.match_compiler) // FIXME -- glass doesn't set this?
+    if (!options.match_compiler)  // FIXME -- glass doesn't set this?
         mapram_config.mapram_vpn = vpn;
     if (gress == INGRESS)
         mapram_config.mapram_ingress = 1;
@@ -2200,16 +2230,20 @@ void Table::need_on_actionbus(const ActionBusSource &src, int lo, int hi, int si
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {
-    if (input_xbar)
+    if (input_xbar) {
         if (auto *i = input_xbar->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             BUG_CHECK(bit < 128);
-            return bit/8; }
+            return bit/8;
+        }
+    }
     for (auto *in : stage->ixbar_use[InputXbar::Group(InputXbar::Group::EXACT, group)]) {
         if (auto *i = in->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             BUG_CHECK(bit < 128);
-            return bit/8; } }
+            return bit/8;
+        }
+    }
     return -1;
 }
 
@@ -2230,10 +2264,11 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
     for (auto &row : layout) {
         int word = row.word >= 0 ? row.word : 0;
         auto vpn_itr = row.vpns.begin();
-        for (auto col: row.cols) {
+        for (auto col : row.cols) {
             if (vpn_itr == row.vpns.end())
                 no_vpns = true;
-            else vpn_ctr = *vpn_itr++;
+            else
+                vpn_ctr = *vpn_itr++;
             if (size_t(vpn_ctr) >= mem_units.size())
                 mem_units.resize(vpn_ctr + 1);
             // Create a vector indexed by vpn no where each element is a map
@@ -2341,7 +2376,7 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) 
         // Dont add ref table if already present in table_refs vector
         for (auto &tref : table_refs) {
             auto tref_name = tref->to<json::map>()["name"];
-            if (!strcmp(tref_name->as_string()->c_str(),t_name)) return; }
+            if (!strcmp(tref_name->as_string()->c_str(), t_name)) return; }
         json::map table_ref;
         std::string hr = c->to<AttachedTable>()->how_referenced();
         if (hr.empty())
@@ -2391,7 +2426,8 @@ void Table::canon_field_list(json::vector &field_list) const {
  * field.  Do not like string matching, and this should potentially be determined by looking
  * through a list of fields, but this will work in the short term
  */
-void Table::get_cjson_source(const std::string &field_name, std::string &source, int &start_bit) const {
+void Table::get_cjson_source(const std::string &field_name, std::string &source,
+        int &start_bit) const {
     source = "spec";
     if (field_name == "hash_group") {
         source = "proxy_hash";
@@ -2460,8 +2496,7 @@ void Table::get_cjson_source(const std::string &field_name, std::string &source,
  */
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
-                                     const Table::Actions::Action *act) const
-{
+                                     const Table::Actions::Action *act) const {
     decltype(act->reverse_alias()) aliases;
     if (act) aliases = act->reverse_alias();
     auto alias = get(aliases, name);
@@ -2477,8 +2512,9 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             if (a->second.hi != -1) {
                 unsigned fieldSize = a->second.hi - a->second.lo + 1;
                 if (field.bits.size() > 1) warning(0, "multiple bit ranges for %s", name.c_str());
-                newField = Table::Format::Field(field.fmt, fieldSize, a->second.lo + field.bits[0].lo,
-                                                static_cast<Format::Field::flags_t>(field.flags));
+                newField = Table::Format::Field(field.fmt, fieldSize,
+                        a->second.lo + field.bits[0].lo,
+                        static_cast<Format::Field::flags_t>(field.flags));
             }
             act->check_conditional(newField);
 
@@ -2515,8 +2551,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
                                         std::string source,
                                         int start_bit,
                                         const Table::Format::Field &field,
-                                        unsigned value) const
-{
+                                        unsigned value) const {
     unsigned add_width = 0;
     bool pfe_enable = false;
     unsigned indirect_addr_start_bit = 0;
@@ -2545,11 +2580,11 @@ void Table::output_field_to_pack_format(json::vector &field_list,
             field_entry["is_mod_field_conditionally_value"] = true;
             field_entry["mod_field_conditionally_mask_field_name"] = json::string(field.condition);
         }
-        //field_entry["immediate_name"] = json::string(immediate_name);
-        //if (this->to<ExactMatchTable>())
+        // field_entry["immediate_name"] = json::string(immediate_name);
+        // if (this->to<ExactMatchTable>())
         if (this->to<SRamMatchTable>()) {
-            //FIXME-JSON : match_mode only matters for ATCAM's not clear if
-            //'unused' or 'exact' is used by driver
+            // FIXME-JSON : match_mode only matters for ATCAM's not clear if
+            // 'unused' or 'exact' is used by driver
             std::string match_mode = "unused";
             // For version bits field match mode is set to "s1q0" (to match
             // glass)
@@ -2581,7 +2616,8 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
                 format->add_field(f, "--padding--");
         } else {
             error(lineno,
-                "Adding zero padding to a non action table which has no action entries in format"); }
+                "Adding zero padding to a non action table "
+                "which has no action entries in format"); }
         return; }
     decltype(act->reverse_alias()) alias;
     if (act) alias = act->reverse_alias();
@@ -2599,8 +2635,8 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             int lo = remove_name_tail_range(param_name);
             if (act->has_param(param_name) || a->second.is_constant) {
                 auto newField = Table::Format::Field(field.second.fmt, a->second.size(),
-                                                     a->second.lo + field.second.bits[0].lo,
-                                                     static_cast<Format::Field::flags_t>(field.second.flags));
+                    a->second.lo + field.second.bits[0].lo,
+                    static_cast<Format::Field::flags_t>(field.second.flags));
                 newField.set_field_bits(padbits);
             }
         }
@@ -2639,7 +2675,8 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
         Target::PHASE0_FORMAT_WIDTH() : format ? format->get_table_word_width() : MEM_WORD_WIDTH;
     pack_fmt["table_word_width"] = table_word_width;
     pack_fmt["entries_per_table_word"] = format ? format->get_entries_per_table_word() : 1;
-    pack_fmt["number_memory_units_per_table_word"] = format ? format->get_mem_units_per_table_word() : 1;
+    pack_fmt["number_memory_units_per_table_word"]
+        = format ? format->get_mem_units_per_table_word() : 1;
 
     /**
      * Entry number has to be unique for all tables.  However, for ATCAM tables specifically,
@@ -2662,7 +2699,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
                     add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
-                entry_list.push_back( json::map {
+                entry_list.push_back(json::map {
                         { "entry_number", json::number(entry_number) },
                         { "fields", std::move(field_list) }}); }
         } else {
@@ -2673,7 +2710,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 json::vector field_list;
                 for (auto &field : *format)
                     add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
-                entry_list.push_back( json::map {
+                entry_list.push_back(json::map {
                         { "entry_number", json::number(entry_number) },
                         { "fields", std::move(field_list) }});
                 basebit -= 1 << format->log2size; } } }
@@ -2707,7 +2744,7 @@ void Table::common_tbl_cfg(json::map &tbl) const {
     // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
     // when choosing the action encoding.  But we should be able to choose something else
     tbl["default_next_table_default"] = 0;
-    //FIXME-JSON: PD related, check glass examples for false (ALPM)
+    // FIXME-JSON: PD related, check glass examples for false (ALPM)
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false;
     if (p4_table && p4_table->disable_atomic_modify)

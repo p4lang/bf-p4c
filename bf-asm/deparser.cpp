@@ -112,7 +112,7 @@ struct Deparser::FDEntry {
             if (Parser::clot_tag(gress, tag) < 0) error(lineno, "No tag for clot %s", tag.c_str());
             unsigned next = 0;
             ::Phv::Ref *prev = nullptr;
-            for (auto &r: phv_replace) {
+            for (auto &r : phv_replace) {
                 if (r.first < next) {
                     error(r.second.lineno, "Overlapping phvs in clot");
                     error(prev->lineno, "%s and %s", prev->name(), r.second.name()); }
@@ -152,12 +152,12 @@ struct Deparser::Intrinsic::Type {
     std::string name;
     int         max;
     static std::map<std::string, Type *> all[TARGET_INDEX_LIMIT][2];
-protected:
+ protected:
     Type(target_t t, gress_t gr, const char *n, int m) : target(t), gress(gr), name(n), max(m) {
         BUG_CHECK(!all[t][gr].count(name));
         all[target][gress][name] = this; }
     ~Type() { all[target][gress].erase(name); }
-public:
+ public:
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
                          Intrinsic &vals) { BUG_CHECK(!"target mismatch"); }
@@ -184,13 +184,13 @@ struct Deparser::Digest::Type {
     int         count;
     bool        can_shift = false;
     static std::map<std::string, Type *> all[TARGET_INDEX_LIMIT][2];
-protected:
+ protected:
     Type(target_t t, gress_t gr, const char *n, int cnt)
     : target(t), gress(gr), name(n), count(cnt) {
         BUG_CHECK(!all[target][gress].count(name));
         all[target][gress][name] = this; }
     ~Type() { all[target][gress].erase(name); }
-public:
+ public:
 #define VIRTUAL_TARGET_METHODS(TARGET)                                                  \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
                          Deparser::Digest &data) { BUG_CHECK(!"target mismatch"); }
@@ -213,13 +213,13 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         } else if (l.key == "context_json") {
             if (CHECKTYPE(l.value, tMAP))
                 context_json = toJson(l.value.map);
-        } else if (!CHECKTYPE(l.key, tINT))
+        } else if (!CHECKTYPE(l.key, tINT)) {
             continue;
-        else if (l.key.i < 0 || l.key.i >= t->count)
+        } else if (l.key.i < 0 || l.key.i >= t->count) {
             error(l.key.lineno, "%s index %" PRId64 " out of range", t->name.c_str(), l.key.i);
-        else if (l.value.type != tVEC)
+        } else if (l.value.type != tVEC) {
             layout[l.key.i].emplace_back(t->gress, DEPARSER_STAGE, l.value);
-        else {
+        } else {
             // XXX(amresh) : Need an empty layout entry if no values are present to
             // set the config registers correctly
             layout.emplace(l.key.i, std::vector<Phv::Ref>());
@@ -256,8 +256,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
         if (args.size > 0) {
             if (args[0] == "ingress" && gress != INGRESS) continue;
             if (args[0] == "egress" && gress != EGRESS) continue;
-        } else if (error_count > 0)
+        } else if (error_count > 0) {
             break;
+        }
         for (auto &kv : MapIterChecked(data.map, true)) {
             if (kv.key == "dictionary") {
                 if (kv.value.type == tVEC && kv.value.vec.size == 0) continue;
@@ -271,21 +272,24 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     pov_order[gress].emplace_back(gress, DEPARSER_STAGE, ent);
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
-                    kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS())
+                    kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS()) {
                     error(kv.key.lineno, "Invalid deparser checksum unit number");
-                else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
+                } else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
                     collapse_list_of_maps(kv.value);
                     int unit = kv.key[1].i;
                     if (unit < 0) error(kv.key.lineno, "Invalid checksum unit %d", unit);
                     for (auto &ent : kv.value.map) {
                         if (ent.key == "pov") {
-                           checksum_unit[gress][unit].pov = ::Phv::Ref(gress, DEPARSER_STAGE, ent.value);
+                           checksum_unit[gress][unit].pov
+                               = ::Phv::Ref(gress, DEPARSER_STAGE, ent.value);
                         } else if (ent.key == "zeros_as_ones") {
                            checksum_unit[gress][unit].zeros_as_ones_en = ent.value.i;
                         } else if (ent.key == "clot") {
-                            checksum_unit[gress][unit].entries.emplace_back(gress, ent.key[1].i, ent.value);
+                            checksum_unit[gress][unit].entries.emplace_back(gress,
+                                    ent.key[1].i, ent.value);
                         } else {
-                            checksum_unit[gress][unit].entries.emplace_back(gress, ent.key, ent.value);
+                            checksum_unit[gress][unit].entries.emplace_back(gress,
+                                    ent.key, ent.value);
                         }
                     }
                 }
@@ -306,8 +310,9 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                                             value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
-            } else
+            } else {
                 error(kv.key.lineno, "Unknown deparser tag %s", value_desc(&kv.key));
+            }
         }
     }
 }
@@ -380,11 +385,12 @@ void Deparser::process() {
 }
 
 template<class ENTRIES> static
-void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id, const char* name = "entry") {
+void write_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int id,
+        const char* name = "entry") {
     BUG_CHECK(swap == 0 || swap == 1);
     BUG_CHECK(mask == 0 || mask & 3);
     if (entry.modified())
-        error(1,"%s appears multiple times in checksum %d", name, id);
+        error(1, "%s appears multiple times in checksum %d", name, id);
     entry.swap = swap;
     // CSR: The order of operation: data is swapped or not and then zeroed or not
     if (swap)
@@ -437,7 +443,7 @@ void write_field_name_in_json(const Phv::Register* phv, const Phv::Register* pov
 void write_csum_const_in_json(int deparserPhvIdx,
                               json::map& chunk_byte, gress_t gress) {
     if (options.target == Target::Tofino::tag) {
-        if  (deparserPhvIdx >= 224 && deparserPhvIdx <= 235 ) {
+        if (deparserPhvIdx >= 224 && deparserPhvIdx <= 235) {
             chunk_byte["Checksum"] = deparserPhvIdx - 224 - gress * 6;
         }
     } else if (options.target == Target::JBay::tag) {
@@ -459,10 +465,10 @@ void write_csum_const_in_json(int deparserPhvIdx,
 #include "tofino/deparser.cpp"    // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/deparser.cpp"      // jbay template specializations
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/deparser.cpp"      // cloudbreak template specializations
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 /* The following uses of specialized templates must be after the specialization... */
 void Deparser::output(json::map& map) {
@@ -491,7 +497,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
         auto &names = *(namevec->as_vector());
         auto digentry = digest.context_json->begin();
         // Iterate on names. for each name, get the corresponding digest entry and fill in
-        for(auto &tname : names) {
+        for (auto &tname : names) {
             BUG_CHECK(digentry != digest.context_json->end());
             json::map quanta;
             quanta["name"] = (*tname).c_str();

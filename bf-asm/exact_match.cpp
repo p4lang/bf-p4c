@@ -48,15 +48,15 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                     }
                 }
             }
-            if(stash_rows.size() == 0) {
+            if (stash_rows.size() == 0) {
                 error(kv.value.lineno,
                     "No 'row' attribute for stash info in exact match table %s", name());
                 return; }
-            if(stash_cols.size() == 0) {
+            if (stash_cols.size() == 0) {
                 error(kv.value.lineno,
                     "No 'col' attribute for stash info in exact match table %s", name());
                 return; }
-            if(stash_units.size() == 0) {
+            if (stash_units.size() == 0) {
                 error(kv.value.lineno,
                     "No 'unit' attribute for stash info in exact match table %s", name());
                 return; }
@@ -68,7 +68,10 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             }
         } else if (kv.key == "search_bus" || kv.key == "result_bus") {
             // already dealt with in Table::setup_layout via common_init_setup
-        } else common_sram_setup(kv, data); }
+        } else {
+            common_sram_setup(kv, data);
+        }
+    }
     common_sram_checks();
 }
 
@@ -78,7 +81,7 @@ void ExactMatchTable::pass1() {
     // Check if stashes are allocated (only for exact match tables). Note
     // stashes are disabled on JBAY
     if (stash_rows.size() == 0 && options.target == TOFINO)
-        error(lineno, "No stashes allocated for exact match table %s in stage %d", 
+        error(lineno, "No stashes allocated for exact match table %s in stage %d",
             name(), stage->stageno);
 }
 
@@ -158,7 +161,7 @@ void ExactMatchTable::determine_ghost_bits() {
                         // in the hash column, as an even number of appearances would
                         // xor each other out, and cancel the hash out.  This check
                         // should be done on all hash bits
-			            if (ghost_bit_impact[key].getbit(hash_bit)) {
+                        if (ghost_bit_impact[key].getbit(hash_bit)) {
                             error(input_xbar->lineno, "Ghost bit %s:%d appears multiple times "
                                   "in the same hash col %d", key.first.c_str(), key.second,
                                   way_index);

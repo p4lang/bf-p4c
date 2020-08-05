@@ -1,5 +1,5 @@
-#ifndef _bitops_h_
-#define _bitops_h_
+#ifndef BF_ASM_MASK_COUNTER_H_
+#define BF_ASM_MASK_COUNTER_H_
 
 #include <limits.h>
 #include "bitvec.h"
@@ -7,8 +7,8 @@
 class MaskCounter {
     unsigned    mask, val;
     bool        oflo;
-public:
-    MaskCounter(unsigned m) : mask(m), val(0), oflo(false) {}
+ public:
+    explicit MaskCounter(unsigned m) : mask(m), val(0), oflo(false) {}
     explicit operator bool() const { return !oflo; }
     operator unsigned() const { return val; }
     bool operator==(const MaskCounter &a) const {
@@ -29,4 +29,4 @@ public:
     MaskCounter &overflow(bool v = true) { oflo = v; return *this; }
 };
 
-#endif /* _bitops_h_ */
+#endif /* BF_ASM_MASK_COUNTER_H_ */

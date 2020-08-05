@@ -30,7 +30,10 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
                 bins_per_partition = kv.value.i;
         } else if (kv.key == "search_bus" || kv.key == "result_bus") {
             // already dealt with in Table::setup_layout via common_init_setup
-        } else common_sram_setup(kv, data); }
+        } else {
+            common_sram_setup(kv, data);
+        }
+    }
     common_sram_checks();
 }
 
@@ -129,7 +132,7 @@ void AlgTcamMatchTable::setup_column_priority() {
  */
 void AlgTcamMatchTable::verify_entry_priority() {
     int result_bus_word = -1;
-    for (int i = 0; i < (int)group_info.size(); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         BUG_CHECK(group_info[i].result_bus_word >= 0);
         if (result_bus_word == -1) {
             result_bus_word = group_info[i].result_bus_word;
@@ -137,7 +140,7 @@ void AlgTcamMatchTable::verify_entry_priority() {
             error(format->lineno, "ATCAM tables can at most have only one overhead word");
             return;
         }
-        auto mg_it = group_info[i].match_group.find(result_bus_word); 
+        auto mg_it = group_info[i].match_group.find(result_bus_word);
         if (mg_it == group_info[i].match_group.end() || mg_it->second != i) {
             error(format->lineno, "Each ATCAM entry must coordinate its entry with the "
                                   "correct priority");
@@ -150,14 +153,12 @@ void AlgTcamMatchTable::verify_entry_priority() {
         return;
     }
 
-    for (int i = 0; i < (int)word_info[result_bus_word].size(); i++) {
+    for (int i = 0; i < static_cast<int>(word_info[result_bus_word].size()); i++) {
         if (i != word_info[result_bus_word][i]) {
             error(format->lineno, "ATCAM priority not correctly formatted in the compiler");
             return;
         }
     }
-
-
 }
 
 /**
@@ -170,7 +171,7 @@ void AlgTcamMatchTable::no_overhead_determine_result_bus_usage() {
     for (int i = group_info.size() - 1; i >= 0; i--) {
         if (result_bus_word == -1) {
             result_bus_word = group_info[i].match_group.begin()->first;
-        } 
+        }
         bool is_shared_group = false;
 
         if (group_info[i].match_group.size() > 1)
@@ -189,7 +190,7 @@ void AlgTcamMatchTable::no_overhead_determine_result_bus_usage() {
     }
 
     word_info[result_bus_word].clear();
-    for (int i = 0; i < (int)(group_info.size()); i++) {
+    for (int i = 0; i < static_cast<int>(group_info.size()); i++) {
         word_info[result_bus_word].push_back(i);
     }
 
@@ -323,8 +324,10 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
             auto &way = way_map[std::make_pair(row.row, col)];
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable =
-                version_nibble_mask.getrange(way.word*32U, 32) &~ s1q0_nibbles.getrange(way.word*32U, 32);
-            ram.match_nibble_s1q0_enable = 0xffffffffUL &~ s0q1_nibbles.getrange(way.word*32U, 32); } }
+                version_nibble_mask.getrange(way.word*32U, 32)
+                & ~s1q0_nibbles.getrange(way.word*32U, 32);
+            ram.match_nibble_s1q0_enable
+                = 0xffffffffUL & ~s0q1_nibbles.getrange(way.word*32U, 32); } }
 }
 
 std::unique_ptr<json::vector> AlgTcamMatchTable::gen_memory_resource_allocation_tbl_cfg() const {
@@ -379,11 +382,13 @@ std::string AlgTcamMatchTable::get_match_mode(const Phv::Ref &pref, int offset) 
 void AlgTcamMatchTable::gen_unit_cfg(json::vector &units, int size) const {
     json::map tbl;
     tbl["direction"] = P4Table::direction_name(gress);
-    tbl["handle"] = p4_table ? is_alpm() ? p4_table->get_alpm_atcam_table_handle(): p4_table->get_handle() : 0;
+    tbl["handle"] = p4_table ?
+        is_alpm() ? p4_table->get_alpm_atcam_table_handle(): p4_table->get_handle() : 0;
     tbl["name"] = name();
     tbl["size"] = size;
     tbl["table_type"] = "match";
-    json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "algorithmic_tcam_unit", "algorithmic_tcam_match");
+    json::map &stage_tbl
+        = *add_common_sram_tbl_cfgs(tbl, "algorithmic_tcam_unit", "algorithmic_tcam_match");
     // Assuming atcam next hit table cannot be multiple tables
     stage_tbl["default_next_table"] = !hit_next.empty()
                                     ? hit_next[0].next_table_id() : Target::END_OF_PIPE();

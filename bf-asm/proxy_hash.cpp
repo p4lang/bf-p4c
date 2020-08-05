@@ -74,7 +74,7 @@ void ProxyHashMatchTable::pass2() {
     LOG1("### Proxy Hash table " << name() << " pass2");
     input_xbar->pass2();
     setup_word_ixbar_group();
-     
+
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
@@ -96,7 +96,6 @@ template<class REGS> void ProxyHashMatchTable::write_regs(REGS &regs) {
             auto &ram = rams_row.ram[col];
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
             ram.match_nibble_s1q0_enable = UINT64_C(0xffffffff); } }
-
 }
 
 /**
@@ -131,7 +130,7 @@ void ProxyHashMatchTable::gen_tbl_cfg(json::vector &out) const {
     json::map &tbl = *base_tbl_cfg(out, "match", size);
     json::map &stage_tbl = *add_common_sram_tbl_cfgs(tbl, "exact", "proxy_hash_match");
     stage_tbl["memory_resource_allocation"] = nullptr;
-    //FIXME: stash_allocation being null is a placeholder until implemented.
+    // FIXME: stash_allocation being null is a placeholder until implemented.
     stage_tbl["stash_allocation"] = nullptr;
     add_pack_format(stage_tbl, format, true, false);
     json::map &match_attributes = tbl["match_attributes"];
@@ -153,7 +152,7 @@ void ProxyHashMatchTable::gen_tbl_cfg(json::vector &out) const {
         }
     }
     add_proxy_hash_function(stage_tbl);
-    stage_tbl["proxy_hash_algorithm"] = proxy_hash_alg; 
+    stage_tbl["proxy_hash_algorithm"] = proxy_hash_alg;
     int proxy_hash_width = 0;
     for (auto m : match) {
         proxy_hash_width += m->size();

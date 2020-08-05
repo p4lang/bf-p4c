@@ -1,5 +1,7 @@
 #include <config.h>
 
+#include <unordered_map>
+
 #include "action_bus.h"
 #include "algorithm.h"
 #include "input_xbar.h"
@@ -7,9 +9,6 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
-#include "misc.h"
-
-#include <unordered_map>
 
 Table::Format::Field *MatchTable::lookup_field(const std::string &n, const std::string &act) const {
     auto *rv = format ? format->field(n) : nullptr;
@@ -63,28 +62,38 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)
                 attached.stats.emplace_back(v, this);
-        else attached.stats.emplace_back(kv.value, this);
+        else
+            attached.stats.emplace_back(kv.value, this);
         return true; }
     if (kv.key == "meter") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)
                 attached.meters.emplace_back(v, this);
-        else attached.meters.emplace_back(kv.value, this);
+        else
+            attached.meters.emplace_back(kv.value, this);
         return true; }
     if (kv.key == "stateful") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)
                 attached.statefuls.emplace_back(v, this);
-        else attached.statefuls.emplace_back(kv.value, this);
+        else
+            attached.statefuls.emplace_back(kv.value, this);
         return true; }
     if (kv.key == "table_counter") {
-        if (kv.value == "table_miss") table_counter = TABLE_MISS;
-        else if (kv.value == "table_hit") table_counter = TABLE_HIT;
-        else if (kv.value == "gateway_miss") table_counter = GATEWAY_MISS;
-        else if (kv.value == "gateway_hit") table_counter = GATEWAY_HIT;
-        else if (kv.value == "gateway_inhibit") table_counter = GATEWAY_INHIBIT;
-        else if (kv.value == "disabled") table_counter = DISABLED;
-        else error(kv.value.lineno, "Invalid table counter %s", value_desc(kv.value));
+        if (kv.value == "table_miss")
+            table_counter = TABLE_MISS;
+        else if (kv.value == "table_hit")
+            table_counter = TABLE_HIT;
+        else if (kv.value == "gateway_miss")
+            table_counter = GATEWAY_MISS;
+        else if (kv.value == "gateway_hit")
+            table_counter = GATEWAY_HIT;
+        else if (kv.value == "gateway_inhibit")
+            table_counter = GATEWAY_INHIBIT;
+        else if (kv.value == "disabled")
+            table_counter = DISABLED;
+        else
+            error(kv.value.lineno, "Invalid table counter %s", value_desc(kv.value));
         return true; }
     return false;
 }
@@ -144,8 +153,10 @@ void MatchTable::pass0() {
 
 void MatchTable::pass1() {
     Table::pass1();
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
-    else p4_table->check(this);
+    if (!p4_table)
+        p4_table = P4Table::alloc(P4Table::MatchEntry, this);
+    else
+        p4_table->check(this);
     // Set up default action. This will look up action and/or tind for default
     // action if the match_table doesnt have one specified
     if (default_action.empty()) default_action = get_default_action();
@@ -180,17 +191,17 @@ void MatchTable::pass3() {
 }
 
 void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {
-   if (idletime)
-       idletime->gen_stage_tbl_cfg(stage_tbl);
+    if (idletime)
+        idletime->gen_stage_tbl_cfg(stage_tbl);
 }
 
 #include "tofino/match_table.cpp"
 #if HAVE_JBAY
 #include "jbay/match_table.cpp"
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
 #if HAVE_CLOUDBREAK
 #include "cloudbreak/match_table.cpp"
-#endif // HAVE_CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
 
 template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_regs &regs,
                                                           int type, Table *result) {
@@ -230,7 +241,6 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         actions = result->action && result->action->actions ? result->action->actions
                                                             : result->actions;
         for (auto &row : result->layout) {
-
             if (row.result_bus < 0)
                 continue;
             int r_bus = row.row*2 | (row.result_bus & 1);
@@ -428,22 +438,22 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
     // future. This particular register would only be set if the compiler chose
     // to allocate action parameters in match overhead.
     //
-    //if (default_action_parameters.size() > 0)
-    //    merge.mau_immediate_data_miss_value[logical_id] = default_action_parameters[0];
-    //else if (result->default_action_parameters.size() > 0)
-    //    merge.mau_immediate_data_miss_value[logical_id] = result->default_action_parameters[0];
+    // if (default_action_parameters.size() > 0)
+    //     merge.mau_immediate_data_miss_value[logical_id] = default_action_parameters[0];
+    // else if (result->default_action_parameters.size() > 0)
+    //     merge.mau_immediate_data_miss_value[logical_id] = result->default_action_parameters[0];
 
     if (input_xbar) input_xbar->write_regs(regs);
 
     if (gress == EGRESS)
         regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
     if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
-        return; // skip the rest
+        return;  // skip the rest
 
     if (table_counter) {
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             table_counter, 3 * (logical_id%8U), 3);
-    } else { // Set to TABLE_HIT by default
+    } else {  // Set to TABLE_HIT by default
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             TABLE_HIT, 3 * (logical_id%8U), 3); }
 }
@@ -452,7 +462,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     BUG_CHECK(huffman_ones < 7);
     int rv = (1 << huffman_ones) - 1;
-    rv = ((rv << 10) & 0xf8000) | ( rv & 0x1f);
+    rv = ((rv << 10) & 0xf8000) | (rv & 0x1f);
     if (!per_flow_enable)
         rv |= 1 << 22;
     return rv;
@@ -483,7 +493,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
 void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
         unsigned hash_table_id, json::vector &hash_bits, unsigned hash_group_no,
         bitvec hash_bits_used) const {
-    for (auto &col: hash_table) {
+    for (auto &col : hash_table) {
         if (!hash_bits_used.getbit(col.first))
             continue;
         json::map hash_bit;
@@ -494,11 +504,11 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
             if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
                 bits_to_xor = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
                 hash_bit_added = true; } }
-	if (!hash_bit_added)
-	    bits_to_xor = &(hash_bit["bits_to_xor"] = json::vector());
+        if (!hash_bit_added)
+            bits_to_xor = &(hash_bit["bits_to_xor"] = json::vector());
         hash_bit["hash_bit"] = col.first;
         hash_bit["seed"] = input_xbar->get_seed_bit(hash_group_no, col.first);
-        for (const auto &bit: col.second.data) {
+        for (const auto &bit : col.second.data) {
             if (auto ref = input_xbar->get_hashtable_bit(hash_table_id, bit)) {
                 std::string field_name = ref.name();
 
@@ -517,11 +527,11 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 // FIXME: input_xbar->get_group_bit(input_xbar->get_group() col.first);
 
                 bits_to_xor->push_back(json::map{
-		    {"field_bit", json::number(field_bit)},
-		    {"field_name", json::string(key_name)},
-		    {"hash_match_group", json::number(hash_table_id / 2)},
-		    {"hash_match_group_bit", json::number((hash_table_id % 2) * 64 + bit)}
-		    });
+                    {"field_bit", json::number(field_bit)},
+                    {"field_name", json::string(key_name)},
+                    {"hash_match_group", json::number(hash_table_id / 2)},
+                    {"hash_match_group_bit", json::number((hash_table_id % 2) * 64 + bit)}
+                    });
             }
         }
         if (!hash_bit_added)

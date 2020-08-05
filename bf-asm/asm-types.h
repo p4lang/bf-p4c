@@ -1,18 +1,23 @@
-#ifndef _asm_types_h_
-#define _asm_types_h_
+#ifndef BF_ASM_ASM_TYPES_H_
+#define BF_ASM_ASM_TYPES_H_
 
 #include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sstream>
 #include <bitops.h>
 #include <bitvec.h>
+
+#include <sstream>
+#include <functional>
+#include <iostream>
+
 #include "json.h"
 #include "mask_counter.h"
 #include "vector.h"
 #include "bfas.h"
+#include "map.h"
 
 enum gress_t { INGRESS, EGRESS, GHOST, NONE };
 
@@ -45,7 +50,7 @@ DECLARE_VECTOR3(value_t, value_t,
     value_t *end() const; )
 DECLARE_VECTOR3(pair_t, pair_t,
 public:
-    void push_back(const char *, value_t &&);
+    void push_back(const char *, value_t &&);  // NOLINT(whitespace/operators)
     pair_t &operator[](int) const;
     pair_t *operator[](const char *) const;
     pair_t *begin() const { return data; }
@@ -139,7 +144,8 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 
 /* can't call VECTOR(pair_t)::push_back directly except from the compilation unit where
  * it is defined, due to gcc bug.  Workaround via global function */
-extern void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v);
+extern void push_back(VECTOR(pair_t) &m, const char *s,
+        value_t &&v);  // NOLINT(whitespace/operators)
 
 inline void fini(value_t &v) { free_value(&v); }
 inline void fini(pair_t &p) { free_pair(&p); }
@@ -216,25 +222,28 @@ template<> inline void parse_vector(std::vector<int64_t> &vec, const VECTOR(valu
 template<> inline void parse_vector(std::vector<std::string> &vec, const VECTOR(value_t) &data) {
     for (auto &v : data) if (CHECKTYPE(v, tSTR)) vec.emplace_back(v.s); }
 template<class T> inline void parse_vector(std::vector<T> &vec, const value_t &data) {
-    if (data.type == tVEC) parse_vector(vec, data.vec);
-    else vec.emplace_back(data); }
+    if (data.type == tVEC)
+        parse_vector(vec, data.vec);
+    else
+        vec.emplace_back(data); }
 template<> inline void parse_vector(std::vector<int> &vec, const value_t &data) {
     if (CHECKTYPE2(data, tINT, tVEC)) {
-        if (data.type == tVEC) parse_vector(vec, data.vec);
-        else vec.push_back(data.i); } }
+        if (data.type == tVEC)
+            parse_vector(vec, data.vec);
+        else
+            vec.push_back(data.i); } }
 template<> inline void parse_vector(std::vector<int64_t> &vec, const value_t &data) {
     if (CHECKTYPE2(data, tINT, tVEC)) {
-        if (data.type == tVEC) parse_vector(vec, data.vec);
-        else vec.push_back(data.i); } }
+        if (data.type == tVEC)
+            parse_vector(vec, data.vec);
+        else
+            vec.push_back(data.i); } }
 template<> inline void parse_vector(std::vector<std::string> &vec, const value_t &data) {
     if (CHECKTYPE2(data, tSTR, tVEC)) {
-        if (data.type == tVEC) parse_vector(vec, data.vec);
-        else vec.push_back(data.s); } }
-
-#include <functional>
-#include <iostream>
-#include "map.h"
-#include "bfas.h"
+        if (data.type == tVEC)
+            parse_vector(vec, data.vec);
+        else
+            vec.push_back(data.s); } }
 
 std::ostream &operator<<(std::ostream &out, match_t m);
 void print_match(FILE *fp, match_t m);
@@ -243,7 +252,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     switch (gress) {
     case INGRESS: out << "ingress"; break;
     case EGRESS: out << "egress"; break;
-    default: out << "(invalid gress " << (int)gress << ")"; }
+    default: out << "(invalid gress " << static_cast<int>(gress) << ")"; }
     return out; }
 
 template<typename T> inline std::string to_string(T val) {
@@ -273,15 +282,16 @@ class MapIterChecked {
                     continue; }
                 self->keys_seen[p->key.s] = p->key.lineno;
                 break; } }
-    public:
+     public:
         iter(MapIterChecked *s, pair_t *p_) : self(s), p(p_) {}
         pair_t &operator*() const { return *p; }
         pair_t *operator->() const { return p; }
         bool operator==(iter &a) const { return p == a.p; }
         iter &operator++() { p++; check(); return *this; } };
-public:
-    MapIterChecked(const VECTOR(pair_t) &map_, bool o=false) : map(map_), allow(o),
-        keys_seen([](const char *a, const char *b) { return strcmp(a,b)<0; }) {}
+
+ public:
+    explicit MapIterChecked(const VECTOR(pair_t) &map_, bool o = false) : map(map_), allow(o),
+        keys_seen([](const char *a, const char *b) { return strcmp(a, b) < 0; }) {}
     iter begin() { return iter(this, map.begin()); }
     iter end() { return iter(this, map.end()); }
 };
@@ -291,15 +301,15 @@ class MatchIter {
     match_t     m;
     class iter : public MaskCounter {
         MatchIter       *self;
-    public:
-        iter(MatchIter *s) : MaskCounter(s->m.word0 & s->m.word1), self(s) {
+     public:
+        explicit iter(MatchIter *s) : MaskCounter(s->m.word0 & s->m.word1), self(s) {
             if (!(self->m.word1 | self->m.word0)) overflow(); }
         unsigned operator *() const {
-            return this->operator unsigned() | (self->m.word1 & ~ self->m.word0); }
+            return this->operator unsigned() | (self->m.word1 & ~self->m.word0); }
         iter &end() { overflow();  return *this; }
     };
-public:
-    MatchIter(match_t m_) : m(m_) {}
+ public:
+    explicit MatchIter(match_t m_) : m(m_) {}
     iter begin() { return iter(this); }
     iter end() { return iter(this).end(); }
 };
@@ -307,10 +317,10 @@ public:
 class SrcInfo {
     int lineno;
     friend std::ostream &operator<<(std::ostream &, const SrcInfo &);
-public:
-    SrcInfo(int l) : lineno(l) {}
+ public:
+    explicit SrcInfo(int l) : lineno(l) {}
 };
 
 #endif /* __cplusplus */
 
-#endif /* _asm_types_h_ */
+#endif /* BF_ASM_ASM_TYPES_H_ */
