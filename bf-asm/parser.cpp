@@ -968,6 +968,11 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
 
                 if (from_ctr_init_ram) {
                     ctr_ld_src = 1;
+                    if (ctr_instr) {
+                        error(kv.key.lineno, 
+                                "Tofino does not allow multiple counters on a match");
+                        continue;
+                    }
                     ctr_instr = new CounterInit(gress, kv);
                 } else {  // load from immediate
                     for (auto &kkv : MapIterChecked(kv.value.map, true)) {

@@ -350,6 +350,7 @@ class Table {
                 a.type = Const; }
             Arg &operator=(const Arg &a) {
                 if (a == *this) return *this;
+                if (&a == this) return *this;
                 if (type == Name) free(str);
                 memcpy(this, &a, sizeof(*this));
                 if (type == Name) str = strdup(str);

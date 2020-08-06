@@ -243,7 +243,7 @@ void AttachedTable::determine_meter_merge_regs(MatchTable *match, int type, int 
 
     unsigned max_address = (1U << METER_ADDRESS_BITS) - 1;
     BUG_CHECK(args.size() == 3);
-    if (args[0].type == Table::Call::Arg::Name && strcmp(args[0].name(), "$DIRECT") == 0) {
+    if (args[0] == "$DIRECT") {
         adr_mask |= (((1U << max_ptr_bits) - 1) << address_shift()) & max_address;
     } else if (auto addr = args[0].field()) {
         adr_mask |= (((1U << addr->size) - 1) << address_shift()) & max_address;

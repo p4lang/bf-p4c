@@ -547,7 +547,8 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    unsigned unit, len;
+    unsigned unit;
+    int len;
     if (op[1] == "lo") {
         rv->slot = CMPLO;
     } else if (op[1] == "hi") {
@@ -653,7 +654,8 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
     if (op.size < 1 || op[1].type != tSTR) {
         error(rv->lineno, "invalid destination for %s instruction", op[0].s);
         return rv; }
-    unsigned unit, len;
+    unsigned unit;
+    int len;
     if ((sscanf(op[1].s, "p%u%n", &unit, &len) >= 1 ||
          sscanf(op[1].s, "cmp%u%n", &unit, &len) >= 1) &&
         unit < Target::STATEFUL_TMATCH_UNITS() && op[1].s[len] == 0) {

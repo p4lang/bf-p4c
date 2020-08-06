@@ -151,7 +151,12 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
         unsigned *alpm_table_handle = nullptr;
         auto *alpm = &alpms[this];
         if (alpm) {
-            std::string name = p4_name();
+            auto p4Name = p4_name();
+            if (!p4Name) {
+                error(table->lineno, "No p4 table found for alpm table : %s", table->name());
+                return;
+            }
+            std::string name = p4Name;
             if (atype == P4Table::PreClassifier) {
                 alpm_cfg = &alpm->alpm_pre_classifier_table_cfg;
                 alpm_table_handle = &alpm->alpm_pre_classifier_table_handle;

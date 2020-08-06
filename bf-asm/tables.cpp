@@ -2371,8 +2371,13 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) const {
     if (c) {
         auto t_name = c->name();
-        if (c->p4_table && c->p4_table->p4_name())
+        if (c->p4_table) {
             t_name = c->p4_table->p4_name();
+            if (!t_name) {
+                error(-1, "No p4 table name found for table : %s", c->name());
+                return;
+            }
+        }
         // Dont add ref table if already present in table_refs vector
         for (auto &tref : table_refs) {
             auto tref_name = tref->to<json::map>()["name"];

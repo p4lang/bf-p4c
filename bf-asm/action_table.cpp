@@ -705,7 +705,12 @@ void ActionTable::gen_tbl_cfg(json::vector &out) const {
     for (auto &act : pack_actions) {
         auto *fmt = ::get(action_formats, act.first);
         add_pack_format(stage_tbl, fmt ? fmt : format, true, true, act.second);
-        std::string tbl_name = p4_name();
+        auto p4Name = p4_name();
+        if (!p4Name) {
+            error(lineno, "No p4 table name found for table : %s", name());
+            continue;
+        }
+        std::string tbl_name = p4Name;
         std::string act_name = act.second->name;
         if (actions_in_json.count(tbl_name) == 0) {
             actions_in_json[tbl_name].insert(act_name);
