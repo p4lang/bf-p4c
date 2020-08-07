@@ -352,7 +352,8 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
             }
             return (new IR::Argument(arg->srcInfo, list));
         }
-    } else if (extName == "Digest" || extName == "Mirror" || extName == "Resubmit") {
+    } else if (extName == "Digest" || extName == "Mirror"
+            || extName == "Resubmit" || extName == "Hash") {
         const IR::Type_StructLike *type = nullptr;
         if (auto path = arg->expression->to<IR::PathExpression>()) {
             if (path->type->is<IR::Type_StructLike>()) {
