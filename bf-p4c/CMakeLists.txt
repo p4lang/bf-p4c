@@ -1088,6 +1088,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
 
@@ -1098,4 +1099,5 @@ if (ENABLE_TESTING)
     COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c
     WORKING_DIRECTORY ${P4C_BINARY_DIR})
   set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)
+
 endif(ENABLE_TESTING)

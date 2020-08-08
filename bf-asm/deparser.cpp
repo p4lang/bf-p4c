@@ -452,12 +452,14 @@ void write_csum_const_in_json(int deparserPhvIdx,
         } else {
             chunk_byte["Checksum"] = deparserPhvIdx - 232;
         }
+#if HAVE_CLOUDBREAK
     } else if (options.target == Target::Cloudbreak::tag) {
         if (deparserPhvIdx > 224 && deparserPhvIdx < 240) {
             chunk_byte["Constant"] = Deparser::get_constant(gress, deparserPhvIdx - 224);
         } else {
             chunk_byte["Checksum"] = deparserPhvIdx - 240;
         }
+#endif
     }
     return;
 }

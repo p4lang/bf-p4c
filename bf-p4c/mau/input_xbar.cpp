@@ -1325,6 +1325,8 @@ bool IXBar::find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
     do {
         bool possible = calculate_sizes(alloc_use, ternary, total_bytes_needed, groups_needed,
                                         nibbles_needed, hm_reqs.requires_versioning);
+        LOG6("total byte needed " << total_bytes_needed << " group needed " << groups_needed
+             << " nibbles_needed " << nibbles_needed << " hm_req " << hm_reqs.requires_versioning);
         if (!possible)
             break;
         if (hm_reqs.max_search_buses > 0 && groups_needed > hm_reqs.max_search_buses)
@@ -1675,6 +1677,19 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &
             [](const FieldInfo &a, const FieldInfo &b) {
             return a.cont_lo < b.cont_lo;
         });
+    }
+
+    // Used to print initialization information for gtest
+    for (auto &byte : bytes) {
+        LOG5("Allocate " << byte.name << " lo " << byte.lo
+             << " bit_use " << byte.bit_use
+             << " flag " << byte.flags
+             << " non_zero_bits " << byte.non_zero_bits
+             << " specialities " << byte.specialities
+             << " search_bus " << byte.search_bus
+             << " match_index " << byte.match_index
+             << " range_index " << byte.range_index
+             << " proxy_hash " << byte.proxy_hash);
     }
 }
 
@@ -4130,6 +4145,13 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             auto hm_reqs = match_hash_reqs(lo, start, last, ternary);
             auto max_hm_reqs = hash_matrix_reqs::max(false, ternary);
 
+            // Used to print initialization information for gtest
+            LOG5("hm_reqs.max_search_buses=" << hm_reqs.max_search_buses << ";");
+            LOG5("hm_reqs.index_groups=" << hm_reqs.index_groups << ";");
+            LOG5("hm_reqs.select_bits=" << hm_reqs.select_bits << ";");
+            LOG5("hm_reqs.hash_dist=" << hm_reqs.hash_dist << ";");
+            LOG5("hm_reqs.requires_versioning=" << hm_reqs.requires_versioning << ";");
+
             if (!(allocMatch(ternary, tbl, phv, next_alloc, alloced, hm_reqs)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last, hm_reqs))
                 && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, max_hm_reqs)
@@ -4140,6 +4162,9 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             } else {
                fill_out_use(alloced, ternary);
             }
+            for (auto need : alloced) {
+                LOG6("alloced " << need->name << " " << need->lo << " " << need->loc);
+            }
             alloced.clear();
             all_tbl_allocs.push_back(next_alloc);
             if (last == lo->way_sizes.size())
@@ -4147,6 +4172,25 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         }
         for (auto a : all_tbl_allocs) {
             alloc.match_ixbar.add(a);
+        }
+
+        // Used to print initialization information for gtest
+        for (auto row = 0; row < use(ternary).rows(); row++) {
+            for (auto col = 0; col < use(ternary).cols(); col++) {
+                if (!use(ternary)[row][col].first)
+                    continue;
+                LOG5("use[" << row << "][" << col << "]="
+                     << "{\"" << use(ternary)[row][col].first << "\", "
+                     << use(ternary)[row][col].second << "};"
+                     << "  // byte(" << toIXBarOutputByte(ternary, row, col) << ")");
+            }
+        }
+
+        int index = 0;
+        for (auto grp = byte_group_use.begin(); grp != byte_group_use.end(); grp++) {
+            LOG5("byte_group_use[" << index << "]={\""
+                 << grp->first << "\", " << grp->second << "};");
+            index++;
         }
     } else if (tbl->layout.atcam) {
         safe_vector<IXBar::Use::Byte *> alloced;

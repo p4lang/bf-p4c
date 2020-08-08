@@ -236,6 +236,23 @@ struct IXBar {
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
 
+    /* API for unit tests */
+ public:
+    Alloc2Dbase<std::pair<cstring, int>> &get_exact_use() { return exact_use; }
+    Alloc2Dbase<std::pair<cstring, int>> &get_ternary_use() { return ternary_use; }
+    Alloc1D<std::pair<cstring, int>, BYTE_GROUPS> &get_byte_group_use() { return byte_group_use; }
+
+    // map (type, group, byte) coordinate to linear xbar output space
+    unsigned toIXBarOutputByte(bool ternary, int group, int byte) {
+        unsigned offset = 0;
+        if (ternary) {
+            unsigned mid_byte_count = (group / 2) + (group % 2);
+            offset = (group / 2) * 10  + (group % 2) * 5 + byte + mid_byte_count;
+        } else {
+            offset = group * 16 + byte;
+        }
+        return offset;
+    }
 
  public:
     /** attached tables that have been accounted for in the current IXBar state -- since
@@ -803,6 +820,10 @@ struct IXBar {
         return nullptr; }
     unsigned find_balanced_group(Use &alloc, int way_size);
 
+    bool find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
+        safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs,
+        unsigned byte_mask = ~0U);
+
  private:
     bitvec can_use_from_flags(int flags) const;
     int groups(bool ternary) const;
@@ -813,8 +834,6 @@ struct IXBar {
         bool requires_versioning);
     bool calculate_sizes(safe_vector<Use::Byte> &alloc_use, bool ternary, int &total_bytes_needed,
         int &groups_needed, int &mid_bytes_needed, bool requires_versioning);
-    bool find_alloc(safe_vector<Use::Byte> &alloc_use, bool ternary,
-        safe_vector<Use::Byte> &alloced, hash_matrix_reqs &hm_reqs, unsigned byte_mask = ~0U);
     void initialize_orders(safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
         bool ternary);
     void setup_byte_vectors(safe_vector<Use::Byte> &alloc_use, bool ternary,
@@ -864,9 +883,6 @@ struct IXBar {
         bool ternary, bool prefer_found, safe_vector<grp_use> &order,
         safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate, int groups_needed,
         bool hash_dist, unsigned byte_mask);
-    bool find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use, bool ternary,
-        safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs,
-        unsigned byte_mask = ~0U);
     hash_matrix_reqs match_hash_reqs(const LayoutOption *lo, size_t start, size_t end,
         bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,
