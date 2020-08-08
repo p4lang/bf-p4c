@@ -2137,10 +2137,19 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
          PHV::Container container, cstring action_name) {
     int ad_params = 0;
     ActionParam *speciality_read = nullptr;
+    const IR::Expression *param = nullptr;
     for (auto field_action : field_actions) {
         for (auto &read : field_action.reads) {
-            if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
-                ad_params++;
+            if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT) {
+                auto *expr = read.expr;
+                if (auto *slice = expr->to<IR::Slice>()) {
+                    expr = slice->e0;
+                }
+                if (expr != param) {
+                    param = expr;
+                    ad_params++;
+                }
+            }
 
             if (read.speciality != ActionParam::NO_SPECIAL) {
                 speciality_read = &read;

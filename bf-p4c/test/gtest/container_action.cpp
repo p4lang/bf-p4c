@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -64,6 +65,42 @@ void add_set(IR::MAU::Action* act,
         new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
     set->operands.push_back(
         new IR::MAU::ActionArg(IR::Type::Bits::get(dst->size), "act", param));
+
+    act->action.push_back(set);
+}
+
+void add_set_from_meter(IR::MAU::Action* act,
+                        const PHV::Field* dst,
+                        cstring meter) {
+    auto set = new IR::MAU::Instruction("set");
+
+    set->operands.push_back(
+        new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
+    set->operands.push_back(
+        new IR::Slice(
+            new IR::MAU::AttachedOutput(IR::Type::Bits::get(dst->size),
+                                        new IR::MAU::Meter(meter)),
+        dst->size - 1, 0));
+
+    act->action.push_back(set);
+}
+
+void add_set_from_meter(IR::MAU::Action* act,
+                        const PHV::Field* dst,
+                        int slice_hi,
+                        int slice_lo,
+                        cstring meter) {
+    auto set = new IR::MAU::Instruction("set");
+
+    set->operands.push_back(
+        new IR::Slice(
+            new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name),
+            slice_hi, slice_lo));
+    set->operands.push_back(
+        new IR::Slice(
+            new IR::MAU::AttachedOutput(IR::Type::Bits::get(slice_hi - slice_lo + 1),
+                                        new IR::MAU::Meter(meter)),
+            slice_hi - slice_lo, 0));
 
     act->action.push_back(set);
 }
@@ -134,6 +171,14 @@ Result analyze_container_actions(const IR::MAU::Table* tbl, const PhvInfo& phv) 
 #define NOK                                          \
     auto rv = analyze_container_actions(tbl, phv);   \
     ASSERT_TRUE(rv.error);
+
+#define NOK_UNIMPLEMENTED(err_msg)                          \
+    try {                                                   \
+        auto rv = analyze_container_actions(tbl, phv);      \
+        ASSERT_FALSE(rv.error);                             \
+    } catch (const Util::CompilerUnimplemented e) {         \
+        ASSERT_THAT(e.what(), testing::HasSubstr(err_msg)); \
+    }
 
 TEST_F(ContainerAction, sanity) {
     PHV::Field *f1, *f2;
@@ -456,6 +501,50 @@ TEST_F(SlidesExamples, c6) {
     NOK;
     // XXX(zma) this can be supported if compiler can pad zero param1 and param2
     // to byte alignment on the action RAM
+}
+
+
+// Verification for P4C-2491.
+// Test whether an action use multiple action parameters if
+// all action parameters are from the same meter.
+//
+// A single 8b field is used, but the allocation is split
+// into 2 x 4b pieces.
+class P4C_2491 : public ContainerAction {
+ protected:
+    void SetUp() override {
+        FIELD(f1, 8);
+
+        ALLOC(f1, "B0", 0, 0, 4);
+        ALLOC(f1, "B0", 4, 4, 4);
+    }
+
+    PHV::Field *f1;
+};
+
+// Test 1: Regular set from a parameter
+// Expectation: OK -- no speciality
+TEST_F(P4C_2491, p4c_2491_1) {
+    add_set(act, f1, "param1");
+
+    OK;
+}
+
+// Test 2: Set from meter
+// Expectation: OK - sourced from the same meter
+TEST_F(P4C_2491, p4c_2491_2) {
+    add_set_from_meter(act, f1, "meter1");
+
+    OK;
+}
+
+// Test 3: Set from two meters
+// Expectation: EXCEPTION -- setting from multiple speciality sources
+TEST_F(P4C_2491, p4c_2491_3) {
+    add_set_from_meter(act, f1, 3, 0, "meter1");
+    add_set_from_meter(act, f1, 7, 4, "meter2");
+
+    NOK_UNIMPLEMENTED("packing is too complicated");
 }
 
 
