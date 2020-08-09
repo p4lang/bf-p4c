@@ -1865,7 +1865,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-    "was not correctly converted in Instruction Selection"
+  "was not correctly converted in Instruction Selection"
   ../glass/testsuite/p4_tests/mau/test_config_183_sample_e2e.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device 0, port 3"
+  p4c_3005
+)
