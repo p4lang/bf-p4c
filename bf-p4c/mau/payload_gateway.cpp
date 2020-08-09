@@ -518,9 +518,7 @@ bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
         const TableResourceAlloc *alloc, const IR::MAU::Table::Layout *layout) {
     bitvec payload;
     auto &tf = alloc->table_format;
-    if (tbl->entries_list) {
-        BUG_CHECK(tbl->entries_list->entries.size() == tf.match_groups.size(), "Not every payload "
-                  "is accounted for");
+    if (tbl->entries_list && tbl->entries_list->entries.size() == tf.match_groups.size()) {
         int entry_idx = 0;
         for (auto entry : tbl->entries_list->entries) {
             cstring act_name;
@@ -553,6 +551,9 @@ bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
             break;
         }
         return determine_match_group_payload(tbl, alloc, hit_act, payload_args, 0);
+    } else if (tbl->entries_list) {
+        BUG_CHECK(tbl->entries_list->entries.size() == tf.match_groups.size(), "Not every payload "
+                  "is accounted for");
     }
     BUG("Unreachable");
     return bitvec();

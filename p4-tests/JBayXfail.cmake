@@ -399,12 +399,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
 
-# P4C-2896
-p4c_add_xfail_reason("tofino2"
-  "Not every payload is accounted for"
-  p4_16_internal_p4_16_t2na_static_entry
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino2"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
@@ -413,7 +407,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-2799
 p4c_add_xfail_reason("tofino2"
-  "Not every payload is accounted for"
+  "error: PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2.p4
 )
 
