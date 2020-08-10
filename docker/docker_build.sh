@@ -223,7 +223,8 @@ WORKDIR /tmp
 
 # Dependencies for testing.
 apt-get install -y net-tools
-pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging pyinstaller prettytable ctypesgen
+pip install --upgrade pip
+pip install jsl pexpect crc16 crcmod simplejson tenjin ipaddress packaging prettytable ctypesgen
 
 # Install ply 3.9 for compatibility with p4c-tofino
 pip install ply==3.9
