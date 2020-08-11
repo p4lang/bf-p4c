@@ -12,12 +12,14 @@ class GreedyClotAllocator : public Visitor {
     const PhvInfo& phvInfo;
     const CollectParserInfo& parserInfo;
     Logging::FileLog* log = nullptr;
+    const bool logAllocation;
 
  public:
-    explicit GreedyClotAllocator(const PhvInfo& phvInfo, ClotInfo& clotInfo) :
+    explicit GreedyClotAllocator(const PhvInfo& phvInfo, ClotInfo& clotInfo, bool logAllocation) :
         clotInfo(clotInfo),
         phvInfo(phvInfo),
-        parserInfo(clotInfo.parserInfo) { }
+        parserInfo(clotInfo.parserInfo),
+        logAllocation(logAllocation) { }
 
  private:
     typedef std::map<const Pseudoheader*,
@@ -964,8 +966,9 @@ class GreedyClotAllocator : public Visitor {
             allocate(candidates, field_extract_info, header_removals);
         }
 
-        if (auto *pipe = root->to<IR::BFN::Pipe>())
-            Logging::FileLog parserLog(pipe->id, "clot_allocation.log");
+        if (logAllocation)
+            if (auto *pipe = root->to<IR::BFN::Pipe>())
+                Logging::FileLog parserLog(pipe->id, "clot_allocation.log");
 
         LOG2(clotInfo.print());
 
@@ -982,14 +985,14 @@ class GreedyClotAllocator : public Visitor {
     }
 };
 
-AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses) :
+AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses, bool log) :
 clotInfo(clotInfo) {
     addPasses({
         &uses,
         &clotInfo.parserInfo,
         LOGGING(3) ? new DumpParser("before_clot_allocation") : nullptr,
         new CollectClotInfo(phv, clotInfo),
-        new GreedyClotAllocator(phv, clotInfo)
+        new GreedyClotAllocator(phv, clotInfo, log)
     });
 }
 

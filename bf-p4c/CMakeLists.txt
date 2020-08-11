@@ -1049,6 +1049,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/add_always_run.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/clot.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp

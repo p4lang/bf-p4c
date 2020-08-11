@@ -103,6 +103,8 @@ class ClotInfo {
 
     const Clot* parser_state_to_clot(const IR::BFN::LoweredParserState *state, unsigned tag) const;
 
+    const std::vector<Clot*>& clots() { return clots_; }
+
     /// @return a map from overwrite offsets to corresponding containers.
     std::map<int, PHV::Container>
     get_overwrite_containers(const Clot* clot, const PhvInfo& phv) const;
