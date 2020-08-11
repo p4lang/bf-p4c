@@ -2,11 +2,12 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-CollectHeaderStackInfo::CollectHeaderStackInfo() { }
+CollectHeaderStackInfo::CollectHeaderStackInfo() {
+    stacks = new BFN::HeaderStackInfo; }
 
 Visitor::profile_t CollectHeaderStackInfo::init_apply(const IR::Node* root) {
     auto rv = Modifier::init_apply(root);
-    stacks = new BFN::HeaderStackInfo;
+    stacks->info.clear();
     LOG3("Begin CollectHeaderStackInfo");
     return rv;
 }

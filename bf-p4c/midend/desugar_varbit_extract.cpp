@@ -211,6 +211,8 @@ void CollectVarbitExtract::enumerate_varbit_field_values(
         }
     }
 
+    if (!varbit_field) return;
+
     const IR::Expression* encode_var = nullptr;
     std::map<unsigned, unsigned> match_to_length;
     std::map<unsigned, unsigned> length_to_match;
@@ -789,6 +791,8 @@ bool RewriteVarbitUses::preorder(IR::ListExpression* list) {
     bool has_varbit = false;
 
     IR::Vector<IR::Type> varbit_types;
+
+    if (!mc) return false;
 
     for (auto c : list->components) {
         if (auto member = c->to<IR::Member>()) {

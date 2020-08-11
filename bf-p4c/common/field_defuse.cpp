@@ -188,6 +188,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
         LOG1("Ignoring implicit initialization for " << f.name);
         auto* parser_begin = p->start;
         const PHV::Field* f_p = phv.field(f.id);
+        BUG_CHECK(f_p != nullptr, "Deferencing a invalidate field id");
         IR::Expression* dummy_expr = new ImplicitParserInit(f_p);
         auto& info = field(f_p);
         parser_zero_inits.emplace(parser_begin, dummy_expr);
@@ -306,10 +307,13 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
             sz += 2;
         if (maxw < sz) maxw = sz; }
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
+        auto field = a.phv.field(i);
+        if (!field) continue;
+        auto name = field->name;
         if (!a.defuse.count(i))
-            out << '[' << std::setw(maxw-2) << std::left << a.phv.field(i)->name << ']';
+            out << '[' << std::setw(maxw-2) << std::left << name << ']';
         else
-            out << std::setw(maxw) << std::left << a.phv.field(i)->name;
+            out << std::setw(maxw) << std::left << name;
         out << ' ';
         for (unsigned j = 0; j <= i; j++)
             out << (a.conflict[i][j] ? '1' : '0');

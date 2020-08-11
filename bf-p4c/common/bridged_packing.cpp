@@ -924,6 +924,7 @@ void CollectConstraints::end_apply() {
     for (auto align : alignmentConstraints) {
         // update PhvInfo& with inferred alignment constraint
         PHV::Field* f = phv.field(align.first->name);
+        BUG_CHECK(f, "De-referencing invalid field %s", align.first->name);
 
         // if related fields impose no alignment constraints on bridged field,
         // then the bridged field can be packed to any offset in bridged
@@ -954,6 +955,7 @@ void CollectConstraints::end_apply() {
 
     for (auto pack : noPackConstraints) {
         PHV::Field* f = phv.field(pack.first->name);
+        BUG_CHECK(f, "De-referencing invalid field %s", pack.first->name);
         f->set_solitary(pack.second);
     }
 }
@@ -1299,12 +1301,13 @@ ConstraintSolver::insert_padding(std::vector<std::pair<unsigned, std::string>>& 
         auto f = phv.field(p.second);
         offset_and_fields.push_back(std::make_pair(p.first, f));
 
+        BUG_CHECK(f != nullptr, "Dereferencing invalid field %s", p.second);
         // debug info
         if (LOGGING(3)) {
             auto pos = p.second.find("$");
             if (pos != std::string::npos) {
                 LOG3("Placing " << p.second << " at [" << p.first << ".."
-                        << p.first + phv.field(p.second)->size - 1 << "]"); } }
+                        << p.first + f->size - 1 << "]"); } }
     }
 
     // sort by first element in pair
@@ -1462,6 +1465,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     // XXX(HanW): mirror digest has 'session_id' in the first element, which is not
     // part of the mirror field list.
     auto digest = findContext<const IR::BFN::Digest>();
+    if (!digest) return false;
     auto iter = d->sources.begin();
     if (digest->name == "mirror") {
         iter++; }

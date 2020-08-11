@@ -1118,7 +1118,7 @@ void AttachTables::InitializeStatefulAlus
             int ram_lines = SelectorRAMLinesPerEntry(sel);
             ram_lines = ((ram_lines * sel->num_pools + 1023) / 1024) * 1024;
             salu->size = ram_lines * 128;
-        } else if (regtype->toString().startsWith("Register<")) {
+        } else if (regtype != nullptr && regtype->toString().startsWith("Register<")) {
             salu->direct = false;
             salu->size = getConstant(reg->arguments->at(0));
         } else {
@@ -1196,12 +1196,14 @@ void AttachTables::InitializeStatefulAlus
         salu->chain_vpn = true;
         return; }
     auto tbl = findContext<IR::MAU::Table>();
-    LOG6("  - table " << (tbl ? tbl->name : "<no table>"));
+    auto tbl_name = tbl ? tbl->name : "<no table>";
+    LOG6("  - table " << tbl_name);
     auto act = findContext<IR::MAU::Action>();
-    LOG6("  - action " << (act ? act->name : "<no action>"));
-    auto ta_pair = tbl->name + "-" + act->name.originalName;
+    auto act_name = act ? act->name : "<no action>";
+    LOG6("  - action " << act_name);
+    auto ta_pair = tbl_name + "-" + act_name.originalName;
     if (!salu->action_map.emplace(ta_pair, ext->name).second)
-        error("%s: multiple calls to execute in action %s", gref->srcInfo, act->name);
+        error("%s: multiple calls to execute in action %s", gref->srcInfo, act_name);
 }
 
 bool AttachTables::isSaluActionType(const IR::Type *type) {
@@ -1715,7 +1717,9 @@ cstring BackendConverter::getPipelineName(const IR::P4Program* program, int inde
     // If no declaration found (anonymous instantiation) we get the pipe name
     // from arch definition
     auto main = toplevel->getMain();
+    BUG_CHECK(main, "Cannot find main block");
     auto cparams = main->getConstructorParameters();
+    BUG_CHECK(cparams, "Main block does not have constructor parameter");
     auto idxParam = cparams->getParameter(index);
     BUG_CHECK(idxParam, "No constructor parameter found for index %d in main", index);
     return idxParam->name;
