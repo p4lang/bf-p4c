@@ -2153,7 +2153,7 @@ void TnaProgramStructure::addBridgedFieldsFromChecksumUpdate(
                     expr = mem;
                 else if (auto mem = op->right->to<IR::Member>())
                     expr = mem;
-                ERROR_CHECK(expr != nullptr, ErrorType::ERR_INVALID, "condition ", uov.cond);
+                BUG_CHECK(expr, "Invalid condition %s", uov.cond);
                 auto linearizer = new BFN::PathLinearizer();
                 expr->apply(*linearizer);
                 auto path = *linearizer->linearPath;

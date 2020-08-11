@@ -82,6 +82,7 @@ const IR::Node* RewriteActionSelector::postorder(IR::Declaration_Instance *di) {
 // rewrite 'implementation = as'
 const IR::Node* RewriteActionSelector::postorder(IR::ExpressionValue* ev) {
     auto prop = findContext<IR::Property>();
+    if (!prop) return ev;
     if (prop->name != "implementation")
         return ev;
     auto pval = ev->expression;

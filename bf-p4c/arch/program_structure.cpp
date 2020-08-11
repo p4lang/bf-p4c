@@ -48,6 +48,7 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *ve
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
+            pclose(file);
             return;
         }
 

@@ -66,8 +66,7 @@ struct ProgramStructure : BFN::ProgramStructure {
 
     ordered_map<cstring, TranslationMap> methodcalls;
 
-    const IR::Type* bridgedType;
-    const IR::Type* metadataType;
+    const IR::Type* metadataType = nullptr;
 
     PacketPathInfo resubmit;
     PacketPathInfo clone_i2e;

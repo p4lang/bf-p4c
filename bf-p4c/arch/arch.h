@@ -126,7 +126,7 @@ using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 using DefaultPortMap = std::map<int, std::vector<int>>;
 
 class ParseTna : public Inspector {
-    const IR::PackageBlock*   mainBlock;
+    const IR::PackageBlock*   mainBlock = nullptr;
  public:
     ParseTna() { }
 
@@ -225,7 +225,7 @@ class ApplyEvaluator : public PassManager {
  public:
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
-    const IR::ToplevelBlock *toplevel;
+    const IR::ToplevelBlock *toplevel = nullptr;
 
     ApplyEvaluator() {
         refMap = new P4::ReferenceMap;

@@ -34,6 +34,7 @@ class AnalyzeProgram : public Inspector {
     template<class P4Type, class BlockType>
     void analyzeArchBlock(cstring gressName, cstring blockName, cstring type) {
         auto main = structure->toplevel->getMain();
+        CHECK_NULL(main);
         auto gress = main->findParameterValue(gressName);
         CHECK_NULL(gress);
         auto gressPackage = gress->to<IR::PackageBlock>();

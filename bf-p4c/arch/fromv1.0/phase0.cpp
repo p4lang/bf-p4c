@@ -710,6 +710,7 @@ bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
         if (extFuncExpr &&
             extFuncExpr->toString() == BFN::ExternPortMetadataUnpackString) {
             auto parser = findOrigCtxt<IR::BFN::TnaParser>();
+            if (!parser) return false;
             ERROR_CHECK(parser->thread == INGRESS,
                         "Phase0 Extern %1% cannot be set in egress",
                         BFN::ExternPortMetadataUnpackString);

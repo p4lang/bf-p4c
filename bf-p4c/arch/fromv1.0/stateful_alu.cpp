@@ -35,7 +35,7 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Expression *math_input = nullptr;
     const IR::Expression *pred = nullptr;
     const IR::Statement *output = nullptr;
-    const Util::SourceInfo *applyLoc;
+    const Util::SourceInfo *applyLoc = nullptr;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
     bool saturating = false;
     bool convert_to_saturating = false;
@@ -335,7 +335,7 @@ class CreateMathUnit : public Inspector {
     bool have_unit = false;
     const IR::BoolLiteral *exp_invert = nullptr;
     const IR::Constant *exp_shift = nullptr, *output_scale = nullptr;
-    const IR::ExpressionListValue *table;
+    const IR::ExpressionListValue *table = nullptr;
 
     bool preorder(const IR::Property *prop) {
         if (prop->name == "math_unit_exponent_invert") {
@@ -593,6 +593,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         auto info = getRegInfo(structure, ext, structure->declarations);
         rtype = info.utype;
         target = info.reg;
+        BUG_CHECK(info.reg, "Extern %s has no associated register", et);
         direct = info.reg->instance_count < 0;
         // P4C-2771 : Frontend fix required before using correct index width
         // reg_index_width = info.reg->index_width();
