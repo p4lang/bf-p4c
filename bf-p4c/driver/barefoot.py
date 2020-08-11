@@ -334,8 +334,10 @@ class BarefootBackend(BackendDriver):
             self.runVerifiers = False
         self._ir_to_json = opts.ir_to_json
 
-        if opts.pretty_print is not None:
-            self.runVerifiers = False
+        # Developer only option
+        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
+            if opts.pretty_print is not None:
+                self.runVerifiers = False
 
         if opts.disable_egress_latency_padding:
             self.add_command_option('assembler', '--disable-egress-latency-padding')
