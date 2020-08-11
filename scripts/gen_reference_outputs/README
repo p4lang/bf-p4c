@@ -1,0 +1,22 @@
+This README serves for sample programs for P4I. It lists various edge cases useful for GUI development.
+
+* Unallocated fields:
+    * without constraints: tofino_leaf (example: llc_header.$valid::egress)
+    * with constraints: tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
+* Partially allocated fields:
+    * PHV allocated: **No example yet**
+    * CLOT allocated: tofino2_1585_b2 (example: hdr.ethernet.src_addr::ingress)
+* Fully CLOT allocated fields:
+    * tofino2_1585_b2 (example: hdr.nsh_extr_underlay.version::ingress)
+
+> NOTE: You can spot CLOT-allocated fields by finding fields that are allocated but have no phv slices.
+
+## Constraints
+
+ * Solitary
+    * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
+    * last_byte - tofino2_1585_b2 (example: ig_intr_md_for_dprsr.digest_type::ingress)
+    * learning_digest - **No example yet**
+    * mirror - **No example yet**
+ * DifferentContainer
+    * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)

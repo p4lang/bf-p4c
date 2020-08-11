@@ -93,6 +93,7 @@ PHV::Field::AllocState PhvLogging::getAllocatedState(
     bitvec allocatedBits;
     bitvec phvAllocatedBits;
     bitvec clotAllocatedBits;
+
     f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
         bitvec sliceBits(alloc.field_slice().lo, alloc.width());
         phvAllocatedBits |= sliceBits;
@@ -110,21 +111,32 @@ PHV::Field::AllocState PhvLogging::getAllocatedState(
     allocatedBits = phvAllocatedBits | clotAllocatedBits;
     PHV::Field::AllocState rv = PHV::Field::EMPTY;
     if (!info.uses.is_referenced(f)) return rv;
-    if (clotAllocatedBits.popcount() != 0) rv |= PHV::Field::HAS_CLOT_ALLOCATION;
-    if (phvAllocatedBits.popcount() < f->size) rv |= PHV::Field::HAS_PHV_ALLOCATION;
+    // TODO: clot-allocated fields will be reported as partly allocated or allocated
+    // maybe should think about terminology
+    if (0 < clotAllocatedBits.popcount() && clotAllocatedBits.popcount() < f->size) {
+        rv |= PHV::Field::HAS_PHV_ALLOCATION;
+        rv |= PHV::Field::HAS_CLOT_ALLOCATION;
+    }
+    if (clotAllocatedBits.popcount() == f->size) {
+        rv |= PHV::Field::FULLY_PHV_ALLOCATED;
+        rv |= PHV::Field::HAS_CLOT_ALLOCATION;
+    }
+    if (0 < phvAllocatedBits.popcount() && phvAllocatedBits.popcount() < f->size) {
+        rv |= PHV::Field::HAS_PHV_ALLOCATION;
+    }
     if (phvAllocatedBits.popcount() == f->size) rv |= PHV::Field::FULLY_PHV_ALLOCATED;
+    if (allocatedBits.popcount() == f->size) rv |= PHV::Field::FULLY_PHV_ALLOCATED;
     return (rv | PHV::Field::REFERENCED);
 }
 
 ordered_map<cstring, ordered_set<const PHV::Field*>> PhvLogging::getFields() {
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields;
 
-    /* Determine set of all allocated fields and the headers to which they belong */
-    for (const auto& f : phv)
-        f.foreach_alloc([&](const PHV::AllocSlice& alloc) {
-            (void)alloc;
-            fields[f.header()].insert(&f);
-        });
+    /* Map fields to headers to which they belong */
+    for (const auto& f : phv) {
+        fields[f.header()].insert(&f);
+    }
+
     return fields;
 }
 
@@ -201,6 +213,72 @@ PhvLogging::logContainerSlice(const PHV::AllocSlice& sl,
     return cs;
 }
 
+void PhvLogging::extractConstraints(Constraint *c, const PHV::Field *f,
+                                    const ordered_set<const PHV::Field*> &fields) {
+    auto s_loc = new SourceLocation("DummyFile", -1);
+    if (f->srcInfo != boost::none) {
+        s_loc = new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
+                                    f->srcInfo->toPosition().sourceLine);
+    }
+
+    // Solitary Constraints
+    if (f->is_solitary()) {
+        if (f->deparsed_bottom_bits()) {
+            auto sc = new SolitaryConstraint("last_byte",
+                "SOLITARY_LAST_BYTE: Can not pack field with any other field"
+                " in its non-full last byte",
+                        s_loc);
+            c->append(sc);
+        } else {
+            if (f->getSolitaryConstraint().isALU()) {
+                auto sc = new SolitaryConstraint("alu",
+                    "SOLITARY: Can not pack field with any other field",
+                            s_loc);
+                c->append(sc);
+            } else if (f->getSolitaryConstraint().isDigest()) {
+                if (f->getDigestConstraint().isMirror()) {
+                    auto sc = new SolitaryConstraint("mirror",
+                    "SOLITARY_MIRROR: Cannot pack this field instance with"
+                    " any field that is mirrored",
+                            s_loc);
+                    c->append(sc);
+                } else if (f->getDigestConstraint().isLearning()) {
+                    auto sc = new SolitaryConstraint("learning_digest",
+                    "SOLITARY_EXCEPT_DIGEST: Cannot pack this field with"
+                    " any other field that does not belong to the same"
+                    " digest field lists",
+                            s_loc);
+                    c->append(sc);
+                }
+            }
+        }
+    }
+
+    // Different Container Constraint
+    if (f->is_solitary() && f->getSolitaryConstraint().isALU()) {
+        for (const auto* f2 : fields) {
+            if (f == f2) continue;
+            if (phv.isFieldNoPack(f, f2)) {
+                std::string fieldNamePack(stripThreadPrefix(f2->name));
+                auto fPack = new FieldInfo(f2->size, getFieldType(f2),
+                                    fieldNamePack, getGress(f2), "");
+                auto s_loc_Pack = new SourceLocation("DummyFile", -1);
+                if (f2->srcInfo != boost::none) {
+                    s_loc_Pack = new SourceLocation(
+                                    std::string(f2->srcInfo->toPosition().fileName),
+                                    f2->srcInfo->toPosition().sourceLine);
+                }
+                auto dcc = new DifferentContainerConstraint(fPack, s_loc_Pack,
+                            "alu",
+                            "DIFFERENT_CONTAINER: This field instance cannot"
+                            " be packed with another field instance",
+                            s_loc);
+                c->append(dcc);
+            }
+        }
+    }
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -218,7 +296,7 @@ void PhvLogging::logFields() {
                 f = aliases[f];
             }
 
-            auto state = "";
+            std::string state = "";
             PHV::Field::AllocState allocState = getAllocatedState(f);
             if (!f->isReferenced(allocState)) state = "unreferenced";
             else if (!f->hasAllocation(allocState)) state = "unallocated";
@@ -226,6 +304,8 @@ void PhvLogging::logFields() {
                 state = "partially allocated";
             else if (f->fullyPhvAllocated(allocState))
                 state = "allocated";
+            else
+                BUG("Unhandled field allocation state: %d", allocState);
 
             LOG3("Field: " << fieldName << ", allocState: " <<
                 allocState << ", state: " << state);
@@ -239,69 +319,16 @@ void PhvLogging::logFields() {
                 field->append_phv_slices(logContainerSlice(sl, use_alias));
 
                 auto c = new Constraint(fs);
-                auto s_loc = new SourceLocation("DummyFile", -1);
+                extractConstraints(c, f, kv.second);
 
-                if (f->srcInfo != boost::none) {
-                    s_loc = new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
-                                              f->srcInfo->toPosition().sourceLine);
-                }
+                if (c->get_ConstraintReason().size() > 0)
+                    field->append_constraints(c);
+            }
 
-                // Solitary Constraints
-                if (sl.field()->is_solitary()) {
-                    if (sl.field()->deparsed_bottom_bits()) {
-                        auto sc = new SolitaryConstraint("last_byte",
-                            "SOLITARY_LAST_BYTE: Can not pack field with any other field"
-                            " in its non-full last byte",
-                                    s_loc);
-                        c->append(sc);
-                    } else {
-                        if (sl.field()->getSolitaryConstraint().isALU()) {
-                            auto sc = new SolitaryConstraint("alu",
-                                "SOLITARY: Can not pack field with any other field",
-                                        s_loc);
-                            c->append(sc);
-                        } else if (sl.field()->getSolitaryConstraint().isDigest()) {
-                            if (sl.field()->getDigestConstraint().isMirror()) {
-                                auto sc = new SolitaryConstraint("mirror",
-                                "SOLITARY_MIRROR: Cannot pack this field instance with"
-                                " any field that is mirrored",
-                                        s_loc);
-                                c->append(sc);
-                            } else if (sl.field()->getDigestConstraint().isLearning()) {
-                                auto sc = new SolitaryConstraint("learning_digest",
-                                "SOLITARY_EXCEPT_DIGEST: Cannot pack this field with"
-                                " any other field that does not belong to the same"
-                                " digest field lists",
-                                        s_loc);
-                                c->append(sc);
-                            }
-                        }
-                    }
-                }
-
-                // Different Container Constraint
-                if (sl.field()->is_solitary() && sl.field()->getSolitaryConstraint().isALU()) {
-                    for (const auto* f2 : kv.second) {
-                        if (sl.field() == f2) continue;
-                        if (phv.isFieldNoPack(sl.field(), f2)) {
-                            std::string fieldNamePack(stripThreadPrefix(f2->name));
-                            auto fPack = new FieldInfo(f2->size, getFieldType(f2),
-                                             fieldNamePack, getGress(f2), "");
-                            auto s_loc_Pack = new SourceLocation("DummyFile", -1);
-                            if (f2->srcInfo != boost::none) {
-                                s_loc_Pack = new SourceLocation(
-                                                std::string(f2->srcInfo->toPosition().fileName),
-                                                f2->srcInfo->toPosition().sourceLine);
-                            }
-                            auto dcc = new DifferentContainerConstraint(fPack, s_loc_Pack,
-                                       "alu",
-                                       "DIFFERENT_CONTAINER: This field instance cannot"
-                                       " be packed with another field instance",
-                                       s_loc);
-                            c->append(dcc);
-                        }
-                    }
-                }
+            if (state == "unallocated") {
+                auto fs = logFieldSlice(f, use_alias);
+                auto c = new Constraint(fs);
+                extractConstraints(c, f, kv.second);
 
                 if (c->get_ConstraintReason().size() > 0)
                     field->append_constraints(c);

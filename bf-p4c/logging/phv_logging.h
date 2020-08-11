@@ -202,6 +202,10 @@ class PhvLogging : public MauInspector {
     /// Add container-specific information to the logger object.
     void logContainers();
 
+    /// Extract constraints from a field
+    void extractConstraints(Constraint *c, const PHV::Field *f,
+                            const ordered_set<const PHV::Field*> &fields);
+
  public:
     explicit PhvLogging(const char *filename,
                         const PhvInfo &p,

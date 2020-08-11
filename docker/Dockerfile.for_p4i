@@ -1,2 +1,3 @@
 FROM barefootnetworks/scratch:latest
 COPY --from=bf-p4c-compilers_for_p4i:latest /bfn/bf-p4c-compilers/scripts/gen_reference_outputs/results results
+COPY --from=bf-p4c-compilers_for_p4i:latest /bfn/bf-p4c-compilers/scratch/gen_reference_outputs/README results
