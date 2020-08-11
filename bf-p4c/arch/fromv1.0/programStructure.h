@@ -665,9 +665,11 @@ class ParserCounterSelectCaseConverter : public Transform {
 
         if (right->to<IR::Constant>() || right->to<IR::Member>()) {
             // Load operation (immediate or field)
-            methodCall = new IR::MethodCallStatement(
-                    stmt->srcInfo, new IR::Member(parserCounter, "set"),
-                    { new IR::Argument(stmt->right) });
+            methodCall = new IR::MethodCallStatement(stmt->srcInfo,
+                new IR::MethodCallExpression(stmt->srcInfo,
+                    new IR::Member(parserCounter, "set"),
+                    new IR::Vector<IR::Type>({ stmt->right->type }),
+                    new IR::Vector<IR::Argument>({ new IR::Argument(stmt->right) })));
         } else if (auto add = right->to<IR::Add>()) {
             auto member = add->left->to<IR::Member>();
 
@@ -691,14 +693,16 @@ class ParserCounterSelectCaseConverter : public Transform {
                                 Device::currentDevice() == Device::TOFINO ? 7 : 255);
                         auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
-                        methodCall = new IR::MethodCallStatement(
-                                stmt->srcInfo,
+                        methodCall = new IR::MethodCallStatement(stmt->srcInfo,
+                            new IR::MethodCallExpression(stmt->srcInfo,
                                 new IR::Member(parserCounter, "set"),
-                                { new IR::Argument(member),
-                                new IR::Argument(max),
-                                new IR::Argument(shr),
-                                new IR::Argument(mask),
-                                new IR::Argument(add) });
+                                new IR::Vector<IR::Type>({ member->type }),
+                                new IR::Vector<IR::Argument>({
+                                    new IR::Argument(member),
+                                    new IR::Argument(max),
+                                    new IR::Argument(shr),
+                                    new IR::Argument(mask),
+                                    new IR::Argument(add) })));
                     } else if (auto* shl = add->left->to<IR::Shl>()) {
                         if (auto* rot = shl->right->to<IR::Constant>()) {
                             auto left = shl->left;
@@ -726,14 +730,16 @@ class ParserCounterSelectCaseConverter : public Transform {
                                             rot_hi : (1 << (rot_hi + 1)) - 1);
                                 auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
-                                methodCall = new IR::MethodCallStatement(
-                                        stmt->srcInfo,
+                                methodCall = new IR::MethodCallStatement(stmt->srcInfo,
+                                    new IR::MethodCallExpression(stmt->srcInfo,
                                         new IR::Member(parserCounter, "set"),
-                                        { new IR::Argument(field),
-                                        new IR::Argument(max),
-                                        new IR::Argument(shr),
-                                        new IR::Argument(mask),
-                                        new IR::Argument(add) }); } } } } } }
+                                        new IR::Vector<IR::Type>({ field->type }),
+                                        new IR::Vector<IR::Argument>({
+                                            new IR::Argument(field),
+                                            new IR::Argument(max),
+                                            new IR::Argument(shr),
+                                            new IR::Argument(mask),
+                                            new IR::Argument(add) }))); } } } } } }
         if (!methodCall)
             ::error("Unsupported syntax for parser counter: %1%", stmt);
         return methodCall;
@@ -1014,7 +1020,9 @@ class ModifyParserForChecksum : public Modifier {
             }
             for (auto e : exprList) {
                 auto mce = new IR::MethodCallExpression(
-                    new IR::Member(new IR::PathExpression(checksum.at(path)), "subtract"), { e });
+                    new IR::Member(new IR::PathExpression(checksum.at(path)), "subtract"),
+                    new IR::Vector<IR::Type>({ e->type }),
+                    new IR::Vector<IR::Argument>({ new IR::Argument(e) }));
                 auto subtractCall = new IR::MethodCallStatement(mce);
                 statements->push_back(subtractCall);
             }
@@ -1023,7 +1031,8 @@ class ModifyParserForChecksum : public Modifier {
                 auto destField = csum.destField->apply(cloner);
                 auto mce = new IR::MethodCallExpression(
                         new IR::Member(new IR::PathExpression(checksum.at(path)), "subtract"),
-                        { destField });
+                        new IR::Vector<IR::Type>({ destField->type }),
+                        new IR::Vector<IR::Argument>({ new IR::Argument(destField) }));
                 auto subtractCall = new IR::MethodCallStatement(mce);
                 statements->push_back(subtractCall);
 
@@ -1031,13 +1040,14 @@ class ModifyParserForChecksum : public Modifier {
                 if (csum.with_payload) {
                     BUG_CHECK(csum.residulChecksumName != boost::none,
                             "residual checksum field name cannot be empty");
-                    auto* rmember = new IR::Member(
+                    auto* rmember = new IR::Member(IR::Type::Bits::get(16),
                             new IR::Member(new IR::PathExpression("meta"),
                                 IR::ID("bridged_header")), IR::ID(*csum.residulChecksumName));
                     auto* mce = new IR::MethodCallExpression(
                             new IR::Member(new IR::PathExpression(checksum.at(path)),
                                                           "subtract_all_and_deposit"),
-                            {rmember});
+                            new IR::Vector<IR::Type>({ rmember->type }),
+                            new IR::Vector<IR::Argument>({ new IR::Argument(rmember) }));
                     auto* deposit = new IR::MethodCallStatement(mce);
                     std::cout << member->member << std::endl;
                     structure->checksumDepositToHeader[gress][member->member] = deposit;
@@ -1086,7 +1096,8 @@ class ModifyParserForChecksum : public Modifier {
                if (belongsTo(f->to<IR::Member>(), member)) {
                     auto mce = new IR::MethodCallExpression(
                         new IR::Member(new IR::PathExpression(checksum.at(path)), "add"),
-                        { f->apply(cloner) });
+                        new IR::Vector<IR::Type>({ f->type }),
+                        new IR::Vector<IR::Argument>({ new IR::Argument(f->apply(cloner)) }));
 
                     auto addCall = new IR::MethodCallStatement(mce);
                     statements->push_back(addCall);
@@ -1097,8 +1108,9 @@ class ModifyParserForChecksum : public Modifier {
             auto destField = csum.destField->apply(cloner);
             if (belongsTo(destField->to<IR::Member>(), member)) {
                 auto mce = new IR::MethodCallExpression(
-                        new IR::Member(new IR::PathExpression(checksum.at(path)), "add"),
-                        { destField->apply(cloner) });
+                    new IR::Member(new IR::PathExpression(checksum.at(path)), "add"),
+                    new IR::Vector<IR::Type>({ destField->type }),
+                    new IR::Vector<IR::Argument>({ new IR::Argument(destField->apply(cloner)) }));
                 auto addCall = new IR::MethodCallStatement(mce);
                 statements->push_back(addCall);
                 structure->ingressVerifyChecksumToStates[csumInst].insert(state);

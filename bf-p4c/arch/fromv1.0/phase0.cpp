@@ -628,8 +628,9 @@ struct RewritePhase0IfPresent : public Transform {
             // placeholders.
             state->components.clear();
 
+            auto* typeArgs = new IR::Vector<IR::Type>({ new IR::Type_Name("__phase0_header") });
             auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-            auto* callExpr = new IR::MethodCallExpression(method, args);
+            auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
             auto* extract = new IR::MethodCallStatement(callExpr);
             LOG4("Generated extract for phase 0 data: " << extract);
             state->components.push_back(extract);

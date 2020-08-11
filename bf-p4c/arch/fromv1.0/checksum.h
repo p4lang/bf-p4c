@@ -299,8 +299,10 @@ class InsertParserChecksums : public Inspector {
             for (auto extract : extracts) {
                 if (belongsTo(f->to<IR::Member>(), extract)) {
                     auto addCall = new IR::MethodCallStatement(mc->srcInfo,
-                        new IR::Member(new IR::PathExpression(decl->name), "add"),
-                                                              { new IR::Argument(f) });
+                        new IR::MethodCallExpression(mc->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name), "add"),
+                            new IR::Vector<IR::Type>({ f->type }),
+                            new IR::Vector<IR::Argument>({ new IR::Argument(f) })));
 
                     structure->ingressParserStatements[stateName].push_back(addCall);
                     translate->ingressVerifyDeclToStates[decl].insert(state->name);
@@ -313,8 +315,10 @@ class InsertParserChecksums : public Inspector {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
                 auto addCall = new IR::MethodCallStatement(mc->srcInfo,
+                    new IR::MethodCallExpression(mc->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"),
-                                                              { new IR::Argument(destfield) });
+                        new IR::Vector<IR::Type>({ destfield->type }),
+                        new IR::Vector<IR::Argument>({ new IR::Argument(destfield) })));
 
                 structure->ingressParserStatements[stateName].push_back(addCall);
                 translate->ingressVerifyDeclToStates[decl].insert(state->name);
@@ -371,8 +375,8 @@ class InsertParserChecksums : public Inspector {
             residualFieldName << "residual_checksum_";
             residualFieldName << residualChecksumCnt++;
 
-            auto* residualChecksum = new IR::Member(compilerMetadataPath,
-                                              residualFieldName.str().c_str());
+            auto* residualChecksum = new IR::Member(IR::Type::Bits::get(16),
+                        compilerMetadataPath, residualFieldName.str().c_str());
 
             compilerMetadataDecl->fields.push_back(
                 new IR::StructField(residualFieldName.str().c_str(),
@@ -429,25 +433,30 @@ class InsertParserChecksums : public Inspector {
                 }
                 for (auto e : exprList) {
                     auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
-                                    new IR::Member(new IR::PathExpression(decl->name), "subtract"),
-                                    { new IR::Argument(e)});
+                        new IR::MethodCallExpression(mc->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name), "subtract"),
+                            new IR::Vector<IR::Type>({ e->type }),
+                            new IR::Vector<IR::Argument>({ new IR::Argument(e) })));
 
                     parserStatements->push_back(subtractCall);
                }
 
                 if (belongsTo(destfield->to<IR::Member>(), extract)) {
                     auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
-                        new IR::Member(new IR::PathExpression(decl->name), "subtract"),
-                                                              { new IR::Argument(destfield) });
+                        new IR::MethodCallExpression(mc->srcInfo,
+                            new IR::Member(new IR::PathExpression(decl->name), "subtract"),
+                            new IR::Vector<IR::Type>({ destfield->type }),
+                            new IR::Vector<IR::Argument>({ new IR::Argument(destfield) })));
 
                     parserStatements->push_back(subtractCall);
                     auto* residualChecksum = translate->residualChecksums.at(destfield);
 
-                    auto* deposit = new IR::MethodCallStatement(
-                            mc->srcInfo,
+                    auto* deposit = new IR::MethodCallStatement(mc->srcInfo,
+                        new IR::MethodCallExpression(mc->srcInfo,
                             new IR::Member(new IR::PathExpression(decl->name),
                                                           "subtract_all_and_deposit"),
-                            {new IR::Argument(residualChecksum)});
+                            new IR::Vector<IR::Type>({ residualChecksum->type }),
+                            new IR::Vector<IR::Argument>({ new IR::Argument(residualChecksum) })));
 
                     translate->checksumDepositToHeader[location][extract->member] = deposit;
                     if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {

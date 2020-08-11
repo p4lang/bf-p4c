@@ -64,8 +64,11 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
 
     if (right->to<IR::Constant>() || right->to<IR::Member>()) {
         // Load operation (immediate or field)
-        methodCall = new IR::MethodCallStatement(
-            stmt->srcInfo, new IR::Member(parserCounter, "set"), { new IR::Argument(stmt->right) });
+        methodCall = new IR::MethodCallStatement(stmt->srcInfo,
+            new IR::MethodCallExpression(stmt->srcInfo,
+                new IR::Member(parserCounter, "set"),
+                new IR::Vector<IR::Type>({ stmt->right->type }),
+                new IR::Vector<IR::Argument>({ new IR::Argument(stmt->right) })));
     } else if (auto add = right->to<IR::Add>()) {
         auto member = add->left->to<IR::Member>();
 
@@ -87,14 +90,16 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
                                     Device::currentDevice() == Device::TOFINO ? 7 : 255);
                     auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
-                    methodCall = new IR::MethodCallStatement(
-                                stmt->srcInfo,
-                                new IR::Member(parserCounter, "set"),
-                                { new IR::Argument(member),
-                                  new IR::Argument(max),
-                                  new IR::Argument(shr),
-                                  new IR::Argument(mask),
-                                  new IR::Argument(add) });
+                    methodCall = new IR::MethodCallStatement(stmt->srcInfo,
+                        new IR::MethodCallExpression(stmt->srcInfo,
+                            new IR::Member(parserCounter, "set"),
+                            new IR::Vector<IR::Type>({ member->type }),
+                            new IR::Vector<IR::Argument>({
+                                new IR::Argument(member),
+                                new IR::Argument(max),
+                                new IR::Argument(shr),
+                                new IR::Argument(mask),
+                                new IR::Argument(add) })));
                 } else if (auto* shl = add->left->to<IR::Shl>()) {
                     if (auto* rot = shl->right->to<IR::Constant>()) {
                         auto* field = shl->left->to<IR::Member>();
@@ -123,14 +128,16 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
 
                             auto add = new IR::Constant(counterWidth, amt->asUnsigned());
 
-                            methodCall = new IR::MethodCallStatement(
-                                stmt->srcInfo,
-                                new IR::Member(parserCounter, "set"),
-                                { new IR::Argument(field),
-                                  new IR::Argument(max),
-                                  new IR::Argument(shr),
-                                  new IR::Argument(mask),
-                                  new IR::Argument(add) });
+                            methodCall = new IR::MethodCallStatement( stmt->srcInfo,
+                                new IR::MethodCallExpression(stmt->srcInfo,
+                                    new IR::Member(parserCounter, "set"),
+                                    new IR::Vector<IR::Type>({ field->type }),
+                                    new IR::Vector<IR::Argument>({
+                                        new IR::Argument(field),
+                                        new IR::Argument(max),
+                                        new IR::Argument(shr),
+                                        new IR::Argument(mask),
+                                        new IR::Argument(add) })));
                         }
                     }
                 }

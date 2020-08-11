@@ -1106,9 +1106,12 @@ class ConstructSymbolTable : public Inspector {
                   "digest() can only be used in %1%",
                   structure->getBlockName(ProgramStructure::INGRESS));
         IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
-        auto mem = new IR::Member(path, "digest_type");
-        auto stmt = new IR::MethodCallStatement(node->srcInfo, IR::ID(node->srcInfo, "invalidate"),
-                                                { new IR::Argument(mem) } );
+        auto mem = new IR::Member(IR::Type::Bits::get(3), path, "digest_type");
+        auto stmt = new IR::MethodCallStatement(node->srcInfo,
+            new IR::MethodCallExpression(node->srcInfo,
+                new IR::PathExpression(IR::ID(node->srcInfo, "invalidate")),
+                new IR::Vector<IR::Type>({ mem->type }),
+                new IR::Vector<IR::Argument>({ new IR::Argument(mem) })));
         structure->_map.emplace(node, stmt);
     }
 
@@ -1433,6 +1436,7 @@ class ConstructSymbolTable : public Inspector {
         auto dstWidth = pDest->type->width_bits();
         // Add data unconditionally.
         auto args = new IR::Vector<IR::Argument>({ mce->arguments->at(3) });
+        auto typeArgs = new IR::Vector<IR::Type>({ mce->arguments->at(3)->expression->type });
         if (pMax->to<IR::Constant>() == nullptr || pBase->to<IR::Constant>() == nullptr)
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
@@ -1450,7 +1454,8 @@ class ConstructSymbolTable : public Inspector {
             }
         }
         auto member = new IR::Member(new IR::PathExpression(hashName), "get");
-        IR::Expression* methodCall = new IR::MethodCallExpression(node->srcInfo, member, args);
+        IR::Expression* methodCall =
+            new IR::MethodCallExpression(node->srcInfo, member, typeArgs, args);
         // only introduce slice if
         // hash.get() returns value that is wider than the specified max width.
         if (bit_size != 0 && hashWidth > bit_size)
@@ -1762,6 +1767,7 @@ class ConstructSymbolTable : public Inspector {
             auto updateCall = new IR::MethodCallExpression(
                               mc->srcInfo,
                               new IR::Member(new IR::PathExpression(decl->name), "update"),
+                              new IR::Vector<IR::Type>({ list->type }),
                               arguments);
             IR::Statement* stmt = new IR::AssignmentStatement(destfield, updateCall);
 
@@ -2335,16 +2341,14 @@ bool AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
                 || (declName == "DirectCounter") || (declName == "DirectMeter")) {
                 auto* new_abc_member = new IR::Member(new IR::PathExpression("meta"),
                                                         IR::ID("__bfp4c_bridged_metadata"));
-                auto new_abc_arg = new IR::Argument(new_abc_member);
-                auto new_abc_args = new IR::Vector<IR::Argument>();
-                new_abc_args->push_back(new_abc_arg);
                 auto new_abc_method = new IR::PathExpression(IR::Type::Bits::get(32),
                                                                 new IR::Path("sizeInBytes"));
-                auto new_abc_expr = new IR::MethodCallExpression(new_abc_method, new_abc_args);
-
+                auto new_abc_expr = new IR::MethodCallExpression(new_abc_method,
+                    new IR::Vector<IR::Type>({
+                        new IR::Type_Name("__bfp4c_bridged_metadata_header") }),
+                    new IR::Vector<IR::Argument>({ new IR::Argument(new_abc_member) }));
                 decl->annotations = decl->annotations->addAnnotation("adjust_byte_count",
                                                                         new_abc_expr);
-
                 LOG3("Adding annotation "
                     "'@adjust_byte_count(sizeInBytes(meta.__bfp4c_bridge_metadata))' to decl: "
                         << decl);

@@ -130,6 +130,7 @@ p4c_add_xfail_reason("tofino"
   "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_16_samples/issue1765-1-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
+  testdata/p4_16_samples/checksum-l4-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1258,6 +1259,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/checksum1-bmv2.p4
   testdata/p4_16_samples/issue1025-bmv2.p4
+  testdata/p4_16_samples/issue2147-bmv2.p4
   testdata/p4_16_samples/issue2176-bmv2.p4
   testdata/p4_16_samples/issue2225-bmv2.p4
   testdata/p4_16_samples/issue2383-bmv2.p4

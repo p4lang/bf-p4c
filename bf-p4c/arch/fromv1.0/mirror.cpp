@@ -205,7 +205,7 @@ class AddMirroredFieldListParser : public Transform {
         auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
         auto packetInParam = parser->tnaParams.at("pkt");
         statements->push_back(decl);
-        statements->push_back(createExtractCall(packetInParam, tmp));
+        statements->push_back(createExtractCall(packetInParam, header, tmp));
 
         /**
          * copy extract tmp header to metadata;

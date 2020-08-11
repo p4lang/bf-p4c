@@ -387,12 +387,14 @@ Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
 static IR::MethodCallStatement*
 create_extract_statement(const IR::BFN::TnaParser* parser,
                          const IR::PathExpression* path,
+                         const IR::Type *type,
                          cstring header) {
     auto packetInParam = parser->tnaParams.at("pkt");
     auto method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
+    auto typeArgs = new IR::Vector<IR::Type>({ type });
     auto args = new IR::Vector<IR::Argument>(
-         { new IR::Argument(new IR::Member(path, header)) });
-    auto *callExpr = new IR::MethodCallExpression(method, args);
+         { new IR::Argument(new IR::Member(type, path, header)) });
+    auto *callExpr = new IR::MethodCallExpression(method, typeArgs, args);
     return new IR::MethodCallStatement(callExpr);
 }
 
@@ -407,7 +409,8 @@ create_add_statement(const IR::Member* method,
     }
     auto args = new IR::Vector<IR::Argument>({ new IR::Argument(
                 new IR::ListExpression(listVec))});
-    auto addCall = new IR::MethodCallExpression(method, args);
+    auto typeArgs = new IR::Vector<IR::Type>({ args->at(0)->expression->type });
+    auto addCall = new IR::MethodCallExpression(method, typeArgs, args);
     return new IR::MethodCallStatement(addCall);
 }
 
@@ -431,7 +434,7 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     auto path = cve.varbit_field_to_extract_call_path.at(varbit_field);
 
     auto varbit_hdr_inst = create_instance_name(header->name);
-    auto extract = create_extract_statement(parser, path, varbit_hdr_inst);
+    auto extract = create_extract_statement(parser, path, header, varbit_hdr_inst);
     statements.push_back(extract);
 
     if (cve.state_to_csum_add.count(state)) {
@@ -503,7 +506,7 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
         varbit_field_to_post_header_type[varbit_field] = post_hdr;
 
         auto post_hdr_inst = create_instance_name(post_hdr_name);
-        auto extract = create_extract_statement(parser, path, post_hdr_inst);
+        auto extract = create_extract_statement(parser, path, post_hdr, post_hdr_inst);
 
         statements.push_back(extract);
     }
@@ -696,10 +699,12 @@ bool RewriteVarbitUses::preorder(IR::MethodCallExpression* call) {
 }
 
 static IR::MethodCallStatement*
-create_emit_statement(const IR::Member* method, const IR::Expression* path, cstring header) {
+create_emit_statement(const IR::Member* method, const IR::Type *type,
+                      const IR::Expression* path, cstring header) {
+    auto typeArgs = new IR::Vector<IR::Type>({ type });
     auto args = new IR::Vector<IR::Argument>(
-        { new IR::Argument(new IR::Member(path, header)) } );
-    auto call = new IR::MethodCallExpression(method, args);
+        { new IR::Argument(new IR::Member(type, path, header)) } );
+    auto call = new IR::MethodCallExpression(method, typeArgs, args);
     auto emit = new IR::MethodCallStatement(call);
     return emit;
 }
@@ -725,14 +730,14 @@ bool RewriteVarbitUses::preorder(IR::BlockStatement* block) {
                             auto path = arg->expression->to<IR::Member>()->expr;
 
                             for (auto& kv : varbit_field_to_header_types.at(varbit_field)) {
-                                auto emit = create_emit_statement(method, path,
+                                auto emit = create_emit_statement(method, kv.second, path,
                                                    create_instance_name(kv.second->name));
                                 components.push_back(emit);
                             }
 
                             if (varbit_field_to_post_header_type.count(varbit_field)) {
                                 auto type = varbit_field_to_post_header_type.at(varbit_field);
-                                auto emit = create_emit_statement(method, path,
+                                auto emit = create_emit_statement(method, type, path,
                                                    create_instance_name(type->name));
                                 components.push_back(emit);
                             }

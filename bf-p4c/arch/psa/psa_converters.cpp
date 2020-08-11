@@ -14,19 +14,23 @@ const IR::Node* HashConverter::postorder(IR::MethodCallExpression* node) {
               "unexpected Hash method %1%", member->member);
     auto method = new IR::Member(node->srcInfo, member->expr, "get");
 
+    auto typeArgs = new IR::Vector<IR::Type>();
     auto args = new IR::Vector<IR::Argument>();
     auto args_size = node->arguments->size();
         ERROR_CHECK(args_size == 1 || args_size == 3, "incorrect number of arguments"
                                                       "to the get_hash() method");
     if (args_size == 1) {
+        typeArgs->push_back(node->arguments->at(0)->expression->type);
         args->push_back(node->arguments->at(0));
     } else if (args_size == 3) {
         // tna swapped argument 0 and 1
+        // FIXME -- TNA has no 3 arg get?
+        typeArgs->push_back(node->arguments->at(0)->expression->type);
         args->push_back(node->arguments->at(1));
         args->push_back(node->arguments->at(0));
         args->push_back(node->arguments->at(2));
     }
-    return new IR::MethodCallExpression(node->srcInfo, method, args);
+    return new IR::MethodCallExpression(node->srcInfo, method, typeArgs, args);
 }
 
 const IR::Node* RandomConverter::postorder(IR::MethodCallExpression* node) {

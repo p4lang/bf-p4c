@@ -35,7 +35,7 @@ const IR::Statement* createSetMetadata(cstring param, cstring header,
 const IR::Statement* createSetMetadata(const IR::Expression* dest,
         cstring header, cstring field);
 const IR::Statement* createSetValid(const Util::SourceInfo &, cstring header, cstring field);
-const IR::Statement* createExtractCall(cstring pkt, cstring hdr);
+const IR::Statement* createExtractCall(cstring pkt, cstring type, cstring hdr);
 const IR::Statement* createExtractCall(cstring pkt, IR::Expression* member);
 const IR::Statement* createExtractCall(cstring pkt, cstring typeName, IR::Expression* member);
 const IR::Expression* createLookaheadExpr(cstring pkt, int bits);
@@ -97,7 +97,8 @@ static void addIngressMetadata(IR::BFN::TnaParser *parser) {
     auto *igMetadataState =
         createGeneratedParserState("ingress_metadata", {
                 createSetMetadata("ig_intr_md_from_prsr", "parser_err", 16, 0),
-                createExtractCall(packetInParam, parser->tnaParams.at("ig_intr_md"))
+                createExtractCall(packetInParam, "ingress_intrinsic_metadata_t",
+                                  parser->tnaParams.at("ig_intr_md"))
         }, checkResubmitState->name);
     parser->states.push_back(igMetadataState);
 
@@ -178,7 +179,8 @@ static void addEgressMetadata(IR::BFN::TnaParser *parser,
         createGeneratedParserState("egress_metadata", {
             createSetMetadata("eg_intr_md_from_prsr", "parser_err", 16, 0),
             // createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
-            createExtractCall(packetInParam, parser->tnaParams.at("eg_intr_md"))
+            createExtractCall(packetInParam, "egress_intrinsic_metadata_t",
+                              parser->tnaParams.at("eg_intr_md"))
         }, checkMirroredState->name);
     parser->states.push_back(egMetadataState);
 

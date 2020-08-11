@@ -1361,7 +1361,8 @@ TnaProgramStructure::createIngressParserStates() {
 
     // This state handles the extraction of ingress intrinsic metadata.
     IR::IndexedVector<IR::StatOrDecl> statements;
-    statements.push_back(BFN::createExtractCall("pkt", "ig_intr_md"));
+    statements.push_back(BFN::createExtractCall("pkt", "ingress_intrinsic_metadata_t",
+                                                "ig_intr_md"));
 
     auto *igMetadataState =
         BFN::createGeneratedParserState("ingress_metadata", std::move(statements),
@@ -1393,7 +1394,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     auto tmp = cstring::to_cstring(gress) + "_mirror_" + std::to_string(index);
     auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(headerType));
     statements->push_back(decl);
-    statements->push_back(BFN::createExtractCall("pkt", tmp));
+    statements->push_back(BFN::createExtractCall("pkt", headerType, tmp));
 
     // Construct a `clone_src` value. The first bit indicates that the
     // packet is mirrored; the second bit indicates whether it originates
@@ -1511,7 +1512,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     auto tmp = cstring::to_cstring(gress) + "_resubmit_" + std::to_string(index);
     auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(headerType));
     statements->push_back(decl);
-    statements->push_back(BFN::createExtractCall("pkt", tmp));
+    statements->push_back(BFN::createExtractCall("pkt", headerType, tmp));
 
     // Create a state that extracts the fields in this field list.
     cstring name = "parse_" + cstring::to_cstring(gress) + "_resubmit_header_" +
@@ -1634,7 +1635,7 @@ TnaProgramStructure::createEgressParserStates() {
 
     auto *egMetadataState =
         BFN::createGeneratedParserState("egress_metadata", {
-                BFN::createExtractCall("pkt", "eg_intr_md")
+                BFN::createExtractCall("pkt", "egress_intrinsic_metadata_t", "eg_intr_md")
                 }, "__check_mirrored");
     parsers.add("__egress_metadata");
     parsers.calls("__egress_metadata", "__check_mirrored");

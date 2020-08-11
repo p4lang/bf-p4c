@@ -312,10 +312,10 @@ class TranslateProgram : public Inspector {
         if (em->method->name == "add" || em->method->name == "subtract") {
             auto sourceList = (*em->expr->arguments)[0]->
                                    expression->to<IR::ListExpression>();
-            auto args = new IR::Vector<IR::Argument>();
-            args->push_back(new IR::Argument(sourceList));
+            auto typeArgs = new IR::Vector<IR::Type>({ sourceList->type });
+            auto args = new IR::Vector<IR::Argument>({ new IR::Argument(sourceList) });
             auto mce = new IR::MethodCallExpression(
-                new IR::Member(new IR::PathExpression(declName), em->method->name), args);
+                new IR::Member(new IR::PathExpression(declName), em->method->name), typeArgs, args);
             auto csumCall = new IR::MethodCallStatement(mce);
             structure->_map.emplace(stmt, csumCall);
         }
@@ -356,10 +356,11 @@ class TranslateProgram : public Inspector {
                 if (nameExpr == "InternetChecksum" && emExpr->method->name == "get") {
                     auto declName = emExpr->object->to<IR::Declaration_Instance>()->name;
                     auto list = new IR::ListExpression({member});
-                    auto args = new IR::Vector<IR::Argument>();
-                    args->push_back(new IR::Argument(list));
+                    auto typeArgs = new IR::Vector<IR::Type>({ list->type });
+                    auto args = new IR::Vector<IR::Argument>({ new IR::Argument(list) });
                     auto mce = new IR::MethodCallExpression(
-                               new IR::Member(new IR::PathExpression(declName), "add"), args);
+                               new IR::Member(new IR::PathExpression(declName), "add"),
+                               typeArgs, args);
                     auto addCall = new IR::MethodCallStatement(mce);
                     structure->_map.emplace(stmt, addCall);
                     auto verify = new IR::MethodCallExpression(new IR::Member(
@@ -487,12 +488,13 @@ class TranslateProgram : public Inspector {
                             auto decl = new IR::Declaration_Instance(declName,
                                    new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
                             auto list = new IR::ListExpression(fieldListMap.at(declName));
-                            auto args = new IR::Vector<IR::Argument>();
+                            auto typeArgs = new IR::Vector<IR::Type>({ list->type });
+                            auto args = new IR::Vector<IR::Argument>({ new IR::Argument(list) });
                             structure->_map.emplace(em->object->to<IR::Declaration_Instance>(),
                                                                                         decl);
-                            args->push_back(new IR::Argument(list));
                             auto update = new IR::MethodCallExpression(new IR::Member(
-                                           new IR::PathExpression(declName), "update"), args);
+                                           new IR::PathExpression(declName), "update"),
+                                           typeArgs, args);
                             auto assignUpdate = new IR::AssignmentStatement(member, update);
                             structure->_map.emplace(assignStmt, assignUpdate);
                         }

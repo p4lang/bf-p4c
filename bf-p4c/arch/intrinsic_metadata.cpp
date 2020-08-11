@@ -146,12 +146,13 @@ const IR::Statement* createSetValid(const Util::SourceInfo &si, cstring header, 
 }
 
 /// @return an `extract()` call that extracts the given header.
-const IR::Statement* createExtractCall(cstring pkt, cstring hdr) {
+const IR::Statement* createExtractCall(cstring pkt, cstring type, cstring hdr) {
     auto *method = new IR::Member(new IR::PathExpression(pkt),
                                   IR::ID("extract"));
+    auto *typeArgs = new IR::Vector<IR::Type>({ new IR::Type_Name(IR::ID(type)) });
     auto *args = new IR::Vector<IR::Argument>(
-        { new IR::Argument(new IR::PathExpression(IR::ID(hdr))) });
-    auto *callExpr = new IR::MethodCallExpression(method, args);
+        { new IR::Argument(new IR::PathExpression(new IR::Type_Name(type), new IR::Path(hdr))) });
+    auto *callExpr = new IR::MethodCallExpression(method, typeArgs, args);
     return new IR::MethodCallStatement(callExpr);
 }
 
@@ -159,8 +160,9 @@ const IR::Statement* createExtractCall(cstring pkt, cstring hdr) {
 const IR::Statement* createExtractCall(cstring pkt, IR::Expression* member) {
     auto *method = new IR::Member(new IR::PathExpression(pkt),
                                   IR::ID("extract"));
+    auto *typeArgs = new IR::Vector<IR::Type>({ member->type });
     auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
-    auto *callExpr = new IR::MethodCallExpression(method, args);
+    auto *callExpr = new IR::MethodCallExpression(method, typeArgs, args);
     return new IR::MethodCallStatement(callExpr);
 }
 
