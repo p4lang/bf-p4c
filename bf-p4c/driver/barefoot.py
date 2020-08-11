@@ -334,6 +334,9 @@ class BarefootBackend(BackendDriver):
             self.runVerifiers = False
         self._ir_to_json = opts.ir_to_json
 
+        if opts.pretty_print is not None:
+            self.runVerifiers = False
+
         if opts.disable_egress_latency_padding:
             self.add_command_option('assembler', '--disable-egress-latency-padding')
 
@@ -383,9 +386,10 @@ class BarefootBackend(BackendDriver):
         if opts.bf_rt_schema is not None:
             self.add_command_option('compiler', '--bf-rt-schema {}'.format(opts.bf_rt_schema))
 
-            self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
-            if 'compiler' in self._commandsEnabled:
-                self._commandsEnabled.append('bf-rt-verifier')
+            if self.runVerifiers:
+                self.add_command_option('bf-rt-verifier', opts.bf_rt_schema)
+                if 'compiler' in self._commandsEnabled:
+                    self._commandsEnabled.append('bf-rt-verifier')
 
         if opts.p4runtime_force_std_externs:
             self.add_command_option('compiler', '--p4runtime-force-std-externs')
@@ -750,10 +754,6 @@ class BarefootBackend(BackendDriver):
         rc = BackendDriver.run(self)
         self.compilation_time = time.time() - start_t
 
-        rmc = 0
-        if run_manifest_verifier:
-            rmc = self.checkAndRunCmd('manifest-verifier')
-
         # Error codes defined in p4c-barefoot.cpp:main
         if rc is None: rc = 1
         if rc > 1 or rc < 0:
@@ -774,10 +774,6 @@ class BarefootBackend(BackendDriver):
         # print pragmas also needs to exit early, it's just like help
         if self._ir_to_json is not None or self.pragmas_help:
             return rc
-
-        if rmc != 0:
-            print("Manifest validation failed")
-            return rmc
 
         # we ran the compiler, now we need to parse the manifest and run the assembler
         # for each P4-16 pipe
@@ -844,6 +840,15 @@ class BarefootBackend(BackendDriver):
                 pipeNames = [ p['pipe_name'] for p in self._pipes ]
             self.add_command_option('p4c-gen-conf', '--pipe {}'.format(' '.join(pipeNames)))
             rc += self.checkAndRunCmd('p4c-gen-conf')
+
+        # Chech manifest only after all changes have been made to it
+        rmc = 0
+        if run_manifest_verifier:
+            rmc = self.checkAndRunCmd('manifest-verifier')
+
+        if rmc != 0:
+            print("Manifest validation failed")
+            return rmc
 
         # Cleanup temp files
         if run_cleaner: self.runCleaner()
