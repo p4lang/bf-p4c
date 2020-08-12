@@ -416,8 +416,17 @@ int main(int ac, char **av) {
 #if BFP4C_CATCH_EXCEPTIONS
     // catch all exceptions here
     } catch (const Util::CompilerBug &e) {
-        std::cerr << e.what() << std::endl;
-        return COMPILER_ERROR;
+#ifdef BAREFOOT_INTERNAL
+        bool barefootInternal = true;
+#else
+        bool barefootInternal = false;
+#endif
+
+        if (std::string(e.what()).find(".p4(") != std::string::npos || barefootInternal)
+            std::cerr << e.what() << std::endl;
+        std::cerr << "Internal compiler error. Please submit a bug report with your code."
+              << std::endl;
+        return INTERNAL_COMPILER_ERROR;
     } catch (const Util::CompilerUnimplemented &e) {
         std::cerr << e.what() << std::endl;
         return COMPILER_ERROR;
