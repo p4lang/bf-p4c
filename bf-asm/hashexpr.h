@@ -37,6 +37,7 @@ class HashExpr {
     bool operator!=(const HashExpr &a) const { return !operator==(a); }
     virtual void dbprint(std::ostream & out) const {}
     virtual Phv::Ref *get_ghost_slice() { return nullptr; }
+    virtual ~HashExpr() {}
 };
 
 #endif /* BF_ASM_HASHEXPR_H_ */
