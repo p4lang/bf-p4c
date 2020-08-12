@@ -48,13 +48,14 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node> *ve
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
-            pclose(file);
+            options.closeInput(file);
             return;
         }
 
         auto code = P4::P4ParserDriver::parse(file, options.file);
         if (code == nullptr || ::errorCount() > 0) {
             ::error("Failed to load architecture file %1%", options.file);
+            options.closeInput(file);
             return;
         }
         code = code->apply(BFN::ParseAnnotations());
