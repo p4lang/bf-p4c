@@ -9,7 +9,9 @@
 RunId::RunId() {
     const time_t now = time(NULL);
     char input[1024];
-    auto len = strftime(input, 1024, "%c", localtime(&now));
+    struct tm tmp;
+    localtime_r(&now, &tmp);
+    auto len = strftime(input, 1024, "%c", &tmp);
     input[len] = '\0';
     // introduce more entropy: the process id
     snprintf(input + len, 1023-len, "%d", getpid());
