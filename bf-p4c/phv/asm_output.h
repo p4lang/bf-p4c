@@ -22,8 +22,8 @@ class PhvAsmOutput {
         gress_t gress;
         int live_start;
         int live_end;
-        std::set<cstring> mutex_fields;
-        FieldUse(cstring n, gress_t g, int s, int e, std::set<cstring> m)
+        ordered_set<cstring> mutex_fields;
+        FieldUse(cstring n, gress_t g, int s, int e, ordered_set<cstring> m)
             : name(n), gress(g), live_start(s), live_end(e), mutex_fields(m) {}
         std::string get_live_stage(int stage, int maxStages) {
             if (stage == -1) return "parser";

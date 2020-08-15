@@ -655,9 +655,8 @@ struct ComputeLoweredParserIR : public ParserInspector {
                          const IR::BFN::ParserState* state,
                          const std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums) {
         IR::Vector<IR::BFN::LoweredParserChecksum> loweredChecksums;
-        std::map<cstring,
+        ordered_map<cstring,
                  std::vector<const IR::BFN::ParserChecksumPrimitive*>> csum_to_prims;
-
         for (auto prim : checksums)
             csum_to_prims[prim->declName].push_back(prim);
 
@@ -843,7 +842,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
         ExtractSimplifier simplifier(phv, clotInfo);
-
         for (auto prim : state->statements) {
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
                 simplifier.add(extract);

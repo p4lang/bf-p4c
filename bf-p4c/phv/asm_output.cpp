@@ -27,7 +27,7 @@ void PhvAsmOutput::getLiveRanges(LiveRangePerContainer &lr) const {
         f->foreach_alloc([&](const PHV::AllocSlice& alloc) {
             auto c = alloc.container();
             cstring fname = cstring::to_cstring(canon_name(f->externalName()));
-            std::set<cstring> mutex_fields;
+            ordered_set<cstring> mutex_fields;
             for (const auto* f2 : phv.fields_in_container(c)) {
                 if (phv.isFieldMutex(f, f2)) {
                     cstring mfname = cstring::to_cstring(canon_name(f2->externalName()));

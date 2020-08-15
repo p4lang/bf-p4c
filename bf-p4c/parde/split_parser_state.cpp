@@ -712,7 +712,7 @@ struct AllocateParserState : public ParserTransform {
             }
 
             void allocate() override {
-                std::map<cstring,
+                ordered_map<cstring,
                          std::vector<const IR::BFN::ParserChecksumPrimitive*>> decl_to_checksums;
 
                 for (auto c : sa.checksums)
