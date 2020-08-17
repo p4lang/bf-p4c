@@ -138,7 +138,7 @@ class BfRtSchemaGenerator {
         BF_RT_DATA_SNAPSHOT_TABLE_ID,
         BF_RT_DATA_SNAPSHOT_TABLE_NAME,
         BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
-        BF_RT_DATA_SNAPSHOT_MATCH_HIT_ADDRESS,
+        BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE,
         BF_RT_DATA_SNAPSHOT_TABLE_HIT,
         BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED,
         BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED,
@@ -1915,7 +1915,7 @@ BfRtSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson, const Snapshot& sn
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_ADDRESS, "$SNAPSHOT_MATCH_HIT_ADDRESS",
+                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE, "$SNAPSHOT_MATCH_HIT_HANDLE",
                     makeTypeInt("uint32"), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
