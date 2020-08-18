@@ -447,7 +447,9 @@ class GetBackendParser {
 struct ResolveHeaderStackIndex : public Transform {
     IR::BFN::ParserState* state;
     const std::map<cstring, IR::BFN::ParserState*> backendStates;
-    const ordered_set<const IR::ParserState*>* topoAncestors = nullptr;
+    const ordered_map<cstring, const IR::ParserState*>* topoAncestors = nullptr;
+    std::set<cstring> stridedStates;
+    P4ParserGraphs* pg;
     AncestorStates* ancestors = nullptr;
 
     /// Local map of header to stack index.
@@ -462,8 +464,9 @@ struct ResolveHeaderStackIndex : public Transform {
 
     ResolveHeaderStackIndex(IR::BFN::ParserState* s,
             const std::map<cstring, IR::BFN::ParserState*>& bs,
-            const ordered_set<const IR::ParserState*>* ans) :
-        state(s), backendStates(bs), topoAncestors(ans) { }
+            const ordered_map<cstring, const IR::ParserState*>* ans,
+            P4ParserGraphs* pg) :
+        state(s), backendStates(bs), topoAncestors(ans), pg(pg) { }
 
     bool isStackOutOfBound(const IR::HeaderStackItemRef* ref, int index) {
         auto stackSize = ref->base()->type->to<IR::Type_Stack>()
@@ -506,32 +509,57 @@ struct ResolveHeaderStackIndex : public Transform {
         }
     };
 
-    int getCurrentIndexFromTopoAncestors(cstring header) {
-        std::map<int, std::set<const IR::ParserState*>> resolves;
-
-        for (auto anc : *topoAncestors) {
-            GetHeaderStackIndex getHeaderStackIndex(header);
-            anc->apply(getHeaderStackIndex);
-
-            if (getHeaderStackIndex.rv != -1)
-                resolves[getHeaderStackIndex.rv].insert(anc);
+    // In order to decide the index of headerstack reference, we need to look into its preceding
+    // state and then decide its index. Of all preceding states we need to look into closest
+    // state that extracts the same header stack in every path. The function recursively
+    // looks through each path and determines if the given state is the closest state that extracts
+    // the same header stack.
+    bool addPrecedingExtractIdx(const IR::ParserState* state,
+                    std::map<int, std::set<const IR::ParserState*>>& indexToState,
+                    cstring header) {
+        GetHeaderStackIndex getHeaderStackIndex(header);
+        state->apply(getHeaderStackIndex);
+        if (getHeaderStackIndex.rv == -1) return false;
+        bool addInResolve = true;
+        for (auto succ : pg->succs[state->name]) {
+            if (topoAncestors->count(succ)) {
+                if (addPrecedingExtractIdx(topoAncestors->at(succ), indexToState, header)) {
+                    addInResolve = false;
+                } else {
+                    addInResolve = true;
+                    break;
+                }
+            }
         }
+        if (addInResolve) {
+            indexToState[getHeaderStackIndex.rv].insert(state);
+        }
+        return true;
+    }
 
+    int getCurrentIndexFromTopoAncestors(cstring header) {
+        std::map<int, std::set<const IR::ParserState*>> indexToState;
+        for (auto &anc : *topoAncestors) {
+            addPrecedingExtractIdx(anc.second, indexToState, header);
+        }
         // multiple reaching indices, we need to mark all ancestors as strided
-        if (resolves.size() > 1) {
+        if (indexToState.size() > 1) {
             LOG3("unable to consistently resolve header index for " << header);
 
-            for (auto& kv : resolves) {
+            for (auto& kv : indexToState) {
                 for (auto s : kv.second) {
-                    auto* state = backendStates.at(s->name);
-                    state->stride = true;
+                    auto* backendState = backendStates.at(s->name);
+                    stridedStates.insert(s->name);
+                    backendState->stride = true;
                     LOG3("mark " << s->name << " as strided");
                 }
             }
-
+            stridedStates.insert(state->p4State->name);
+            state->stride = true;
+            LOG3("mark " << state->p4State->name << " as strided");
             return 0;
-        } else if (resolves.size() == 1) {
-            return resolves.begin()->first + 1;
+        } else if (indexToState.size() == 1) {
+            return indexToState.begin()->first + 1;
         } else {
             return 0;
         }
@@ -587,6 +615,7 @@ struct ResolveHeaderStackIndex : public Transform {
 
     IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
         auto ref = findContext<IR::HeaderStackItemRef>();
+        auto state = findContext<IR::ParserState>();
         auto header = ref->baseRef()->name;
 
         int currentIndex = getCurrentIndex(header);
@@ -599,7 +628,7 @@ struct ResolveHeaderStackIndex : public Transform {
             stackOutOfBound = true;
 
         LOG4("resolved " << header << " stack index " << unresolved->index
-                         << " to " << currentIndex);
+                         << " to " << currentIndex << " in state " << state->name);
 
         resolvedHeaders.insert(header);
 
@@ -616,6 +645,31 @@ struct ResolveHeaderStackIndex : public Transform {
             }
         }
 
+        return resolved;
+    }
+};
+
+
+// This will reset the unresolved header stack references of the state.
+// The first hdr.stack.next of the state will be resolve to zero and the other references
+// in that state will be resolved only with respect to the first next reference.
+// This should be done for state that is marked as strided.
+struct ResetHeaderStackIndex : public Transform {
+    int currentIndex = 0;
+    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+        auto ref = findContext<IR::HeaderStackItemRef>();
+        auto state = findContext<IR::ParserState>();
+        auto header = ref->baseRef()->name;
+        IR::Constant* resolved = nullptr;
+        if (unresolved->index == "last") {
+            resolved = new IR::Constant(currentIndex - 1);
+        } else if (unresolved->index == "next") {
+            resolved = new IR::Constant(currentIndex++);
+        } else {
+            ::error("Unhandled header stack reference");
+        }
+        LOG4("resolved " << header << " stack index " << unresolved->index
+                         << " to " << resolved << " in state " << state->name);
         return resolved;
     }
 };
@@ -673,25 +727,36 @@ GetBackendParser::createBackendParser() {
             if (backendStates.count(name)) {
                 auto* state = backendStates[name];
 
-                ordered_set<const IR::ParserState*> ancestors;
+                ordered_map<cstring, const IR::ParserState*> ancestors;
 
                 for (auto anc : pg.get_all_ancestors(state->p4State)) {
                     if (resolved_map.count(anc->name))
-                        ancestors.insert(resolved_map.at(anc->name));
+                        ancestors[anc->name] = resolved_map.at(anc->name);
                 }
 
-                ResolveHeaderStackIndex resolveHeaderStackIndex(state, backendStates, &ancestors);
+                ResolveHeaderStackIndex resolveHeaderStackIndex(state, backendStates,
+                                                                       &ancestors, &pg);
                 auto resolved = state->p4State->apply(resolveHeaderStackIndex)
                                      ->to<IR::ParserState>();
-
                 if (resolveHeaderStackIndex.stackOutOfBound) {
                     LOG4("stack out of bound at " << state->name);
                     resolved = nullptr;
                 } else {
-                    state->p4State = resolved;
                     resolved_map[resolved->name] = resolved;
                 }
+                for (auto stridedState : resolveHeaderStackIndex.stridedStates) {
+                    if (stridedState == name) continue;
+                    auto resolved_stride = backendStates.at(stridedState)->p4State
+                                          ->apply(ResetHeaderStackIndex())->to<IR::ParserState>();
+                    resolved_map[resolved_stride->name] = resolved_stride;
+                }
             }
+        }
+        for (auto &backendState : backendStates) {
+             auto* state = backendState.second;
+             if (resolved_map.count(state->p4State->name)) {
+                 state->p4State = resolved_map.at(state->p4State->name);
+             }
         }
     }
 

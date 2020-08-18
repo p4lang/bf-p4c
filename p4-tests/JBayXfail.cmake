@@ -430,6 +430,7 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
 )
 
 # Negative test, expected xfail

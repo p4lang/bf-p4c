@@ -1037,6 +1037,23 @@ struct AllocateParserState : public ParserTransform {
         bool spill_selects = false;
     };
 
+    struct ResetHeaderStackExtraction : public Modifier {
+        std::map<int, int> orig_idx_to_new_idx;
+        int current_idx = 0;
+        bool header_stack_present = false;
+        bool preorder(IR::HeaderStackItemRef* hs) override {
+            header_stack_present = true;
+            int orig_idx = hs->index_->to<IR::Constant>()->asInt();
+            if (orig_idx_to_new_idx.count(orig_idx)) {
+                hs->index_ = new IR::Constant(orig_idx_to_new_idx.at(orig_idx));
+            } else {
+                orig_idx_to_new_idx[orig_idx] = current_idx;
+                hs->index_ = new IR::Constant(current_idx++);
+            }
+            return false;
+        }
+    };
+
     class ParserStateSplitter {
         const PhvInfo& phv;
         ClotInfo& clot;
@@ -1188,10 +1205,23 @@ struct AllocateParserState : public ParserTransform {
 
             state->statements = alloc.current_statements;
             split->statements = *(alloc.spilled_statements.apply(ShiftPacketRVal(max_shift)));
-
             split->selects = *(state->selects.apply(ShiftPacketRVal(max_shift, true)));
-            state->selects = {};
 
+            state->selects = {};
+            // Determine if the current state and spilled extracts any strided header stacks
+            // Reset the header stack indices and mark the appropriate state as strided.
+            if (state->stride) {
+                ResetHeaderStackExtraction split_rhse;
+                split->statements = *(split->statements.apply(split_rhse));
+                if (split_rhse.header_stack_present) {
+                    split->stride = true;
+                }
+                ResetHeaderStackExtraction orig_rhse;
+                state->statements.apply(orig_rhse);
+                if (!orig_rhse.header_stack_present) {
+                    state->stride = false;
+                }
+            }
             // move state's transitions to split state
             for (auto t : state->transitions) {
                 auto shifted = shift_transition(t, max_shift);

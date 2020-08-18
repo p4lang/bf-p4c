@@ -9,12 +9,13 @@ void Parser::Checksum::write_row_config(ROW &row) {
 }
 
 template <> void Parser::Checksum::write_config(Target::JBay::parser_regs &regs, Parser *parser) {
-         if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    if (unit == 0) write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
     else if (unit == 1) write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
     else if (unit == 2) write_row_config(regs.memory[gress].po_csum_ctrl_2_row[addr]);
     else if (unit == 3) write_row_config(regs.memory[gress].po_csum_ctrl_3_row[addr]);
     else if (unit == 4) write_row_config(regs.memory[gress].po_csum_ctrl_4_row[addr]);
-    else error(lineno, "invalid unit for parser checksum");
+    else
+        error(lineno, "invalid unit for parser checksum");
 }
 
 template <>
@@ -72,13 +73,15 @@ template<> void Parser::State::Match::write_lookup_config(Target::JBay::parser_r
     if (state->key.ctr_zero >= 0) {
         row.w0_ctr_zero = (match.word0 >> state->key.ctr_zero) & 1;
         row.w1_ctr_zero = (match.word1 >> state->key.ctr_zero) & 1;
-    } else
+    } else {
         row.w0_ctr_zero = row.w1_ctr_zero = 1;
+    }
     if (state->key.ctr_neg >= 0) {
         row.w0_ctr_neg = (match.word0 >> state->key.ctr_neg) & 1;
         row.w1_ctr_neg = (match.word1 >> state->key.ctr_neg) & 1;
-    } else
+    } else {
         row.w0_ctr_neg = row.w1_ctr_neg = 1;
+    }
     row.w0_ver_0 = row.w1_ver_0 = 1;
     row.w0_ver_1 = row.w1_ver_1 = 1;
 }
@@ -172,12 +175,14 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
 
     int bytemask = (mask >> 2) & 3;
     if (bytemask) {
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask, flags & OFFSET);
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest+1, bytemask,
+                                                                          flags & OFFSET);
         lo += bitcount(mask & 0xc); }
 
     bytemask = mask & 3;
     if (bytemask)
-        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask, flags & OFFSET);
+        write_output_slot(where.lineno, row, used, lo + (bytemask == 2), dest, bytemask,
+                                                                         flags & OFFSET);
     return hi;
 }
 
@@ -204,8 +209,9 @@ static void write_output_const_slot(
     if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
     unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
-    write_output_slot(lineno, row, tmpused, 62 - 2*cslot + (bytemask == 1), dest, bytemask, flags);
-    used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
+    write_output_slot(lineno, row, tmpused, 62 - 2*cslot + (bytemask == 1), dest, bytemask,
+                                                                   flags & 1 /*OFFSET*/);
+    used |= tmpused & ~SAVE_ONLY_USED_SLOTS;
 }
 
 static void setup_jbay_ownership(bitvec phv_use[2],
@@ -294,7 +300,7 @@ static void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
         auto id = Phv::reg(i)->parser_id();
         allow_multi_write_ids.insert(id);
 
-        if (Phv::reg(i)->size == 32) 
+        if (Phv::reg(i)->size == 32)
             allow_multi_write_ids.insert(++id);
     }
 
@@ -305,8 +311,7 @@ static void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
 }
 
 template <> void Parser::State::Match::Set::write_output_config(Target::JBay::parser_regs &regs,
-            void *_row, unsigned &used) const
-{
+            void *_row, unsigned &used) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
         (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
     int dest = where->reg.parser_id();
@@ -379,7 +384,7 @@ template<> void Parser::State::Match::write_counter_config(
         }
     } else if (ctr_stack_pop) {
         ea_row.ctr_op = 1;
-    } else { // add
+    } else {  // add
         ea_row.ctr_op = 0;
     }
 
@@ -406,7 +411,8 @@ void jbay2717_workaround(Parser* parser, Target::JBay::parser_regs &regs) {
     }
 }
 
-template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
+template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map &ctxt_json,
+                                                                        bool single_parser) {
     if (single_parser) {
         for (auto st : all)
             st->write_config(regs, this, ctxt_json[st->gress == EGRESS ? "egress" : "ingress"]);
@@ -443,7 +449,6 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
         regs.egress.epbreg.chan5_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
         regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
-
     }
 
     setup_jbay_ownership(phv_use,
@@ -535,12 +540,14 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
                                             "egress");
                 regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json"));
             } else {
-                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.%02x.cfg.json", parser_no),
-                                               "ingress");
-                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.%02x.cfg.json", parser_no),
-                                              "egress");
-                regs.ingress.emit_json(*open_output("regs.parser.ingress.%02x.cfg.json", parser_no));
-                regs.egress.emit_json(*open_output("regs.parser.egress.%02x.cfg.json", parser_no));
+                regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.%02x.cfg.json",
+                                                            parser_no), "ingress");
+                regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.%02x.cfg.json",
+                                                           parser_no), "egress");
+                regs.ingress.emit_json(*open_output("regs.parser.ingress.%02x.cfg.json",
+                                                    parser_no));
+                regs.egress.emit_json(*open_output("regs.parser.egress.%02x.cfg.json",
+                                                   parser_no));
                 regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
                                              "ingress");
                 regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
@@ -552,16 +559,16 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs, json::map 
     if (gress == INGRESS) {
         for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem.size();
              options.singlewrite ? i += 4 : i += 1) {
-            TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set("memories.parser.ingress",
-                                                                             &regs.memory[INGRESS]);
+            TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem[i].set(
+                                               "memories.parser.ingress", &regs.memory[INGRESS]);
         }
     }
 
     if (gress == EGRESS) {
         for (unsigned i = 0; i < TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem.size();
              options.singlewrite ? i += 4 : i += 1) {
-            TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set("memories.parser.egress",
-                                                                             &regs.memory[EGRESS]);
+            TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem[i].set(
+                                                "memories.parser.egress", &regs.memory[EGRESS]);
         }
     }
 

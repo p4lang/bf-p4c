@@ -37,6 +37,8 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
     ".* expected packet.* on port .* not seen|shorter than expected"
     extensions/p4_tests/p4_16/stf/parser_loop_3.p4
     extensions/p4_tests/p4_16/stf/parser_loop_4.p4
+    extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+    extensions/p4_tests/p4_16/stf/header_stack_strided_alloc1.p4
   )
 
   p4c_add_xfail_reason("tofino3"
