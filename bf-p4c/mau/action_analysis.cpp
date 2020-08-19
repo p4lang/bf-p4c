@@ -429,6 +429,7 @@ bool ActionAnalysis::preorder(const IR::Member *mem) {
  *  later.
  */
 void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
+    LOG1("ActionAnalysis postorder on instruction : " << instr);
     if (!field_action.write_found) {
         ERROR("Nothing written in the instruction " << instr);
     }
@@ -453,9 +454,11 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action(instr->name, tbl);
                 container_actions_map->emplace(container, cont_action);
+                LOG5("  Adding container " << container << " to container_action_map");
             }
             if (!split) {
                 (*container_actions_map)[container].field_actions.push_back(field_action);
+                LOG5("  Adding field action " << field_action << " to container " << container);
             } else {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
@@ -472,6 +475,8 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                     field_action_split.reads.back().is_conditional = read.is_conditional;
                 }
                 (*container_actions_map)[container].field_actions.push_back(field_action_split);
+                LOG5("  Adding field action split " << field_action_split
+                                << " to container " << container);
             }
         });
     } else {

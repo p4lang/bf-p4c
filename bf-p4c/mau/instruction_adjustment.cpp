@@ -64,6 +64,7 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
  *  on all instructions.
  */
 const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
+    LOG1("ConstantsToActionData preorder on action: " << act);
     container_actions_map.clear();
     constant_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
@@ -78,6 +79,7 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
         if (cont_action.convert_constant_to_actiondata()) {
             proceed = true;
             constant_containers.insert(container);
+            LOG3("  adding constant container : " << container);
         }
     }
     if (!proceed) {
@@ -96,9 +98,11 @@ const IR::Node *ConstantsToActionData::preorder(IR::Node *node) {
 }
 
 const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
+    LOG1("ConstantsToActionData preorder on instruction : " << instr);
     write_found = false;
     has_constant = false;
     constant_rename_key.action_name = findContext<IR::MAU::Action>()->name;
+    LOG3("  Setting constant_rename_key action name : : " << constant_rename_key.action_name);
     return instr;
 }
 
@@ -112,22 +116,26 @@ const IR::Primitive *ConstantsToActionData::preorder(IR::Primitive *prim) {
 }
 
 const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
+    LOG1("ConstantsToActionData preorder on constant : " << constant);
     has_constant = true;
     unsigned constant_value = static_cast<unsigned>(constant->value);
     ActionData::Parameter *param = new ActionData::Constant(constant_value,
                                                             constant->type->width_bits());
     constant_rename_key.param = param;
+    LOG3("  Setting constant_rename_key param: : " << constant_rename_key.param);
     return constant;
 }
 
 void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
-        le_bitrange bits;
+    le_bitrange bits;
     auto *field = phv.field(expr, &bits);
 
     if (field == nullptr)
         return;
 
+    LOG3("  analyzing phv field " << field);
     if (isWrite()) {
+        LOG3("  analyzing phv field for writes ");
         if (write_found)
             BUG("Multiple writes found within a single field instruction");
 
@@ -140,6 +148,7 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
             write_count++;
             container_bits = alloc.container_slice();
             container = alloc.container();
+            LOG3("  writing " << container_bits << " on container " << container);
         });
 
         if (write_count != 1)
@@ -152,6 +161,7 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
 }
 
 const IR::Slice *ConstantsToActionData::preorder(IR::Slice *sl) {
+    LOG1(" ConstantsToActionData preorder on Slice " << sl);
     if (phv.field(sl))
         analyze_phv_field(sl);
 
@@ -190,6 +200,7 @@ const IR::MAU::HashDist *ConstantsToActionData::preorder(IR::MAU::HashDist *hd) 
 /** Replace any constant in these particular instructions with the an IR::MAU::ActionDataConstant
  */
 const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instruction *instr) {
+    LOG1(" ConstantsToActionData postorder on instruction " << instr);
     if (!write_found)
         BUG("No write found in an instruction in ConstantsToActionData?");
 
@@ -198,6 +209,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     if (!has_constant)
         return instr;
 
+    LOG1("   instruction has constant : " << has_constant);
     auto tbl = findContext<IR::MAU::Table>();
     auto &action_format = tbl->resources->action_format;
 
@@ -224,6 +236,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
 }
 
 const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
+    LOG1(" ConstantsToActionData postorder on action " << act);
     return act;
 }
 

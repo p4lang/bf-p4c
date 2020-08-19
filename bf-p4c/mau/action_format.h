@@ -423,6 +423,11 @@ struct ALUParameter {
 
     ALUParameter(const Parameter *p, le_bitrange pb)
         : param(p), phv_bits(pb), right_shift(0) {}
+
+    friend std::ostream &operator<<(std::ostream &out, const ALUParameter& p) {
+        out << "ALU Param : { " << p.param << ", phv bits : "
+            << p.phv_bits << ", right_shift : " << p.right_shift << " } ";
+    }
 };
 
 enum ALUOPConstraint_t { ISOLATED, BITMASKED_SET, DEPOSIT_FIELD, BYTE_ROTATE_MERGE };
@@ -562,6 +567,22 @@ class ALUOperation {
         return has_param<MeterColor>() || has_param<MeterALU>();
     }
     bool right_shift_set() const { return _right_shift_set; }
+
+    friend std::ostream &operator<<(std::ostream &out, const ALUOperation& op) {
+        out << " ALU Operation : "
+            << " params : " << op._params
+            << " phv bits : " << op._phv_bits
+            << " right_shift : " << op._right_shift
+            << " right_shift_set : " << op._right_shift_set
+            << " container : " << op._container
+            << " op constraint : " << op._constraint
+            << " alias : " << op._alias
+            << " mask alias : " << op._mask_alias
+            << " mask params : " << op._mask_params
+            << " mask bits : " << op._mask_bits
+            << " action name : " << op._action_name;
+        return out;
+    }
 };
 
 struct SharedParameter {
@@ -813,6 +834,14 @@ struct ALUPosition {
  public:
     ALUPosition(const ALUOperation *ao, Location_t l, size_t sb)
         : alu_op(ao), loc(l), start_byte(sb) { }
+
+    friend std::ostream &operator<<(std::ostream &out, const ALUPosition& pos) {
+        out << "ALU Position { op : " << *pos.alu_op
+                        << ", loc : " << pos.loc
+                        << ", start_byte : " << pos.start_byte
+                        << " } ";
+        return out;
+    }
 };
 
 using RamSec_vec_t = safe_vector<const RamSection *>;

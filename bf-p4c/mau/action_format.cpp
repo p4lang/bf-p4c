@@ -910,10 +910,10 @@ int PackingConstraint::bit_rotation_position(int bit_width, int init_bit, int fi
  * The return value is supposed to be the low to high range of the read bits of the action
  * data source.  This leads to the following scenarios:
  *
- * 
+ *
  *
  *     1. If the number of read bits < container.size()
- *         a. If the read bits are contiguous, a single bitrange [read_bit_lo..read_bit_hi]. 
+ *         a. If the read bits are contiguous, a single bitrange [read_bit_lo..read_bit_hi].
  *         b. If the read bits are discontiguous, as it could be in a deposit-field where the
  *            action data is rotated around the boundary, then the following.  Let's say the write
  *            bits are from M..N, and the read bits are then discontiguous.  The read bits
@@ -1106,7 +1106,7 @@ cstring ALUOperation::wrapped_constant() const {
 
 /**
  * Given an Argument, and its corresponding static value, calculate the action data
- * RAM value of this ALUOperation that correspond to that argument. 
+ * RAM value of this ALUOperation that correspond to that argument.
  */
 bitvec ALUOperation::static_entry_of_arg(const Argument *arg, bitvec value) const {
     bitvec my_op;
@@ -1141,7 +1141,7 @@ bitvec ALUOperation::static_entry_of_arg(const Argument *arg, bitvec value) cons
 
 /**
  * Given an ALUOperation, return the action data RAM value of all of the constants saved
- * on the RAM. 
+ * on the RAM.
  */
 bitvec ALUOperation::static_entry_of_constants() const {
     bitvec my_op;
@@ -2116,7 +2116,10 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
 
     auto action_alu_positions = alu_positions.at(key.action_name);
     const ALUParameter *rv = nullptr;
+    LOG3("  Finding ALU Param with container "
+            << key.container << " for action " << key.action_name);
     for (auto alu_position : action_alu_positions) {
+        LOG3("    " << alu_position);
         if (alu_position.alu_op->container() != key.container)
             continue;
         auto *loc = alu_position.alu_op->find_param_alloc(key);
@@ -2126,6 +2129,11 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
         rv = loc;
         if (alu_pos_p)
             *alu_pos_p = new ALUPosition(alu_position);
+    }
+    if (!rv) {
+        LOG3("    No ALU Param Found");
+    } else {
+        LOG3("    ALU Param Found : " << *rv);
     }
     return rv;
 }
@@ -3458,6 +3466,7 @@ void Format::build_single_ram_sect(RamSectionPosition &ram_sect, Location_t loc,
                                                             : ad_alu->size();
         byte_sz /= 8;
         alu_positions.emplace_back(ad_alu, loc, start_byte);
+        LOG5("  Adding " << alu_positions.back());
         // Validation on the BusInputs
 
         if (ad_alu->valid()) {

@@ -52,17 +52,21 @@ const IR::Expression *MakeSliceSource(const IR::Expression *read, int lo, int hi
     LOG6("\tLo: " << lo << ", Hi: " << hi);
     LOG6("\tMakeSliceSource Destination: " << write);
 
-    if (read->is<IR::MAU::MultiOperand>())
-        return new IR::Slice(read, hi, lo);
-    if (auto k = read->to<IR::Constant>()) {
-        auto rv = sliceConstant(k, lo, hi);
-        LOG6("\tReturning a constant" << rv);
-        return rv;
-    }
-
     // Extract the lo and hi slice bits for both the source and destination expressions
     std::pair<int, int> readLoHi = getSliceLoHi(read);
     std::pair<int, int> writeLoHi = getSliceLoHi(write);
+
+    if (read->is<IR::MAU::MultiOperand>())
+        return new IR::Slice(read, hi, lo);
+    if (auto k = read->to<IR::Constant>()) {
+        auto sliceLo = lo - writeLoHi.first;
+        auto sliceHi = hi - lo + sliceLo;
+        LOG6("\tSliceLo: " << sliceLo << ", SliceHi: " << sliceHi);
+        auto rv = sliceConstant(k, sliceLo, sliceHi);
+        LOG6("\tReturning a constant :" << rv);
+        return rv;
+    }
+
     LOG6("\tsrc_lo : " << readLoHi.first << ", src_hi : " << readLoHi.second);
     LOG6("\tdest_lo: " << writeLoHi.first << ", dest_hi: " << writeLoHi.second);
     lo = lo - (writeLoHi.first - readLoHi.first);
