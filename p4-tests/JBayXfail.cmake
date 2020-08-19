@@ -78,6 +78,8 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  # P4C-2743
+  extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
   testdata/p4_14_samples/source_routing.p4
 )
 
