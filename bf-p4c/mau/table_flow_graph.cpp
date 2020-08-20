@@ -16,35 +16,49 @@ std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
         auto dst = boost::target(*edges, fg.g);
         const IR::MAU::Table* target = fg.get_vertex(dst);
         auto desc = fg.get_ctrl_dependency_info(*edges);
-        out << "    " << (source ? source->name : "SINK") <<
-            (src == fg.v_source ? " (SOURCE)" : "") << " -- " << desc << " --> " <<
-            (target ? target->name : "SINK") << std::endl;
+        out << "    " << (source ? source->name : "DEPARSER") <<
+            (src == fg.v_source ? " (PARSER)" : "") << " -- " << desc << " --> " <<
+            (target ? target->name : "DEPARSER") << std::endl;
     }
     return out;
 }
 
-void FlowGraph::dump_viz(std::ostream &out, const FlowGraph &fg) {
-    auto all_vertices = boost::vertices(fg.g);
+std::string FlowGraph::viz_node_name(const IR::MAU::Table* tbl) {
+    std::string name = std::string(tbl ? tbl->name : "DEPARSER");
+    std::replace(name.begin(), name.end(), '-', '_');
+    std::replace(name.begin(), name.end(), '.', '_');
+    return name;
+}
+
+void FlowGraph::dump_viz(std::ostream &out, const FlowGraph::DumpTableDetails* details) {
+    auto all_vertices = boost::vertices(g);
     if (++all_vertices.first == all_vertices.second) {
         out << "digraph empty {\n}" << std::endl;
         return;
     }
-    auto source_gress = fg.get_vertex(fg.v_source)->gress;
+    auto source_gress = get_vertex(v_source)->gress;
     out << "digraph " << source_gress << " {" << std::endl;
+
+    FlowGraph::Graph::vertex_iterator nodes, nodes_end;
+    for (boost::tie(nodes, nodes_end) = boost::vertices(g); nodes != nodes_end; ++nodes) {
+        auto t = vertexToTable.at(boost::vertex(*nodes, g));
+        if (t && details)
+            details->dump(out, t);
+    }
+
     FlowGraph::Graph::edge_iterator edges, edges_end;
-    for (boost::tie(edges, edges_end) = boost::edges(fg.g); edges != edges_end; ++edges) {
-        auto src = boost::source(*edges, fg.g);
-        const IR::MAU::Table* source = fg.get_vertex(src);
-        auto dst = boost::target(*edges, fg.g);
-        const IR::MAU::Table* target = fg.get_vertex(dst);
-        std::string src_name = std::string(source ? source->name : "SINK");
-        std::string dst_name = std::string(target ? target->name : "SINK");
-        std::replace(src_name.begin(), src_name.end(), '-', '_');
-        std::replace(dst_name.begin(), dst_name.end(), '-', '_');
-        std::replace(src_name.begin(), src_name.end(), '.', '_');
-        std::replace(dst_name.begin(), dst_name.end(), '.', '_');
-        out << "    " << src_name.c_str() << (src == fg.v_source ? "_SOURCE" : "") << " -> " <<
-            dst_name.c_str() << std::endl;
+    for (boost::tie(edges, edges_end) = boost::edges(g); edges != edges_end; ++edges) {
+        auto src = boost::source(*edges, g);
+        const IR::MAU::Table* source = get_vertex(src);
+
+        auto dst = boost::target(*edges, g);
+        const IR::MAU::Table* target = get_vertex(dst);
+
+        std::string src_name = viz_node_name(source);
+        std::string dst_name = viz_node_name(target);
+
+        if (src == v_source) out << "    PARSER -> " << src_name << std::endl;
+        out << "    " << src_name << " -> " << dst_name << std::endl;
     }
     out << "}" << std::endl;
 }
@@ -222,7 +236,7 @@ bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
             // This will sometimes be null, which will cause an edge to be added to v_sink
             dst = next_table;
         }
-        auto dst_name = dst ? dst->name : "SINK";
+        auto dst_name = dst ? dst->name : "DEPARSER";
         LOG1("Parent : " << t->name << " --> " << action_name << " --> " << dst_name);
         fg.add_edge(t, dst, action_name);
     }
@@ -233,7 +247,7 @@ bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
     auto n = next_incomplete(t);
     LOG3("next - " << n.first << ":" << n.second);
     if (n.first) {
-        auto dst_name = next_table ? next_table->name : "SINK";
+        auto dst_name = next_table ? next_table->name : "DEPARSER";
         LOG1("Parent : " << t->name << " --> " << n.second << " --> " << dst_name);
         // This will sometimes be null, which will cause an edge to be added to v_sink
         fg.add_edge(t, next_table, n.second);
@@ -266,7 +280,7 @@ void FindFlowGraph::end_apply() {
 
     LOG4(fg);
     if (LOGGING(4))
-        FlowGraph::dump_viz(std::cout, fg);
+        fg.dump_viz(std::cout);
 }
 
 Visitor::profile_t FindFlowGraphs::init_apply(const IR::Node* root) {

@@ -53,6 +53,7 @@
 #include "bf-p4c/phv/finalize_stage_allocation.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/phv/analysis/dark.h"
+#include "bf-p4c/phv/dump_table_flow_graph.h"
 
 namespace BFN {
 
@@ -207,6 +208,7 @@ Backend::Backend(const BFN_Options& options, int pipe_id) :
         // Do PHV allocation.  Cannot run CollectPhvInfo afterwards, as that
         // will clear the allocation.
         new DumpPipe("Before phv_analysis"),
+        new DumpTableFlowGraph(phv),
         PHV_Analysis,
         // Validate results of PHV allocation.
         new PHV::ValidateAllocation(phv, clot, doNotPrivatize),

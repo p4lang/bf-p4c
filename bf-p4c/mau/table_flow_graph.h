@@ -144,6 +144,9 @@ struct FlowGraph {
     /// Maps each table to its associated graph vertex.
     std::map<const IR::MAU::Table*, typename Graph::vertex_descriptor> tableToVertex;
 
+    /// Reverse map of above
+    std::map<typename Graph::vertex_descriptor, const IR::MAU::Table*> vertexToTable;
+
     /// Determines whether this graph is empty.
     bool is_empty() const {
         auto all_vertices = boost::vertices(g);
@@ -160,6 +163,7 @@ struct FlowGraph {
         reachability.clear();
         tableToVertexIndex.clear();
         tableToVertex.clear();
+        vertexToTable.clear();
         tables.clear();
         emptyFlowGraph = true;
     }
@@ -236,6 +240,7 @@ struct FlowGraph {
         // Create new vertex.
         auto v = boost::add_vertex(table, g);
         tableToVertex[table] = v;
+        vertexToTable[v] = table;
         if (table) tables.insert(table);
 
         // If the vertex being added corresponds to a real table (not the sink), then the flow
@@ -288,7 +293,13 @@ struct FlowGraph {
     }
 
     friend std::ostream &operator<<(std::ostream &, const FlowGraph&);
-    static void dump_viz(std::ostream &out, const FlowGraph &fg);
+
+    struct DumpTableDetails {
+        virtual void dump(std::ostream&, const IR::MAU::Table*) const { }
+    };
+
+    static std::string viz_node_name(const IR::MAU::Table* tbl);
+    void dump_viz(std::ostream &out, const DumpTableDetails* details = nullptr);
 };
 
 /// Computes a table control-flow graph for the IR.

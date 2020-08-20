@@ -518,6 +518,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_SRCS}")
 build_unified(BF_P4C_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_PHV_HDRS
+  phv/dump_table_flow_graph.h
   phv/constraints/constraints.h
   phv/action_phv_constraints.h
   phv/add_initialization.h
