@@ -845,7 +845,6 @@ bool CoreAllocation::satisfies_constraints(
         for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
             auto other = phvSpec.idToContainer(cid);
             auto cs = alloc.getStatus(other);
-
             if (c == other)
                 continue;
 
@@ -858,22 +857,20 @@ bool CoreAllocation::satisfies_constraints(
 
                     for (auto e : field_to_parser_states_i.field_to_extracts.at(sl.field())) {
                         other_write_mode = e->write_mode;
-                        auto es = field_to_parser_states_i.extract_to_state.at(e);
-
-                        for (auto x : field_to_parser_states_i.field_to_extracts.at(f)) {
-                            auto xs = field_to_parser_states_i.extract_to_state.at(x);
-
-                            if (es == xs && e->source->equiv(*x->source)) {
-                                // see P4C-2794, fields in same state have same source and one of
-                                // the field has subsequent write in a later state. In this case,
-                                // we cannot allocate both fields to the same parser group.
-                                if (*write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-                                    LOG5("        constraint: container " << c <<
-                                      " has parser write mode " << *write_mode << " but "
-                                      << other << " in parser group has same extraction source");
-                                    return false;
-                                }
-                            }
+                        // See P4C-3033 for more details
+                        // In tofino2, all extractions happen using 16b extracts.
+                        // So a 16-bit parser extractor extracts over a pair of even and
+                        // odd phv 8-bit containers to perforn 8-bit extraction.
+                        // If any of 8 -bit containers in the pair  are in CLEAR_ON_WRITE mode,
+                        // then both containers will be cleared everytime an extraction happens.
+                        // In order to avoid this corruption, if one container in the
+                        // pair in in CLEAR_ON_WRITE mode, the other is not used in parser.
+                        if (*other_write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+                            LOG5("        constraint: container " << c <<
+                              " has parser write mode " << *write_mode << " but "
+                              << other << " has parser write mode " << *other_write_mode <<
+                              " which is conflicting");
+                            return false;
                         }
                     }
 

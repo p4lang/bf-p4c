@@ -1,0 +1,131 @@
+--------------------------------------------------------------------------------
+General
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Parser
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+MAU Pipeline
+--------------------------------------------------------------------------------
+
+Derek: NSH Header & Ingress Metadata relationship
+
+In the ingress side of the chip, the nsh header travels in metadata, as well as
+in hdr data.  This is because we don't want to alter the packet -- otherwise we
+break ingress mirroring.  Thus if there is no nsh header and the sfc wants to add
+one, it adds it to the metadata, not the hdr data.  Or if the sf wants to
+reclassify the nsh header, it modifies the metadata, not the hdr data.
+
+In the egress side of the chip we don't have this mirroring problem, and so it
+only travels in the hdr data.
+
+Note: This behavior mimics how switch.p4 works...using a 'lkp' structure on
+ingress, but not on egress.
+
+--------------------------------------------------------------------------------
+
+Derek: Tenant_ID
+
+The code uses switch.p4's >>ig_md.bd<< (i.e. bridge domain) for the vpn_id field.
+This field gets set in a couple of places in switch.p4...
+
+Step 1:
+-------
+
+There are a couple of tables in port.p4 that can map vlan to ig_md.bd.  See the
+tables:
+
+	file				tunnel type					table
+	------------------- --------------------------- -------------------
+	port.p4				n/a							port_vlan_to_bd_mapping
+	port.p4				n/a							vlan_to_bd_mapping
+	port.p4				n/a							cpu_to_bd_mapping
+
+Step 2:
+-------
+
+In the case of a tunnel, there are a couple of tables in tunnel.p4 that can
+***override*** the value from Step 1 and map ig_md.tunnel.id to ig_md.bd
+(depending on the tunnel type).  See the tables:
+
+	file				tunnel type					table
+	------------------- --------------------------- -------------------
+	tunnel.p4			other (ip_in_ip, etc)		dst_vtep
+	tunnel.p4			vxlan, nvgre, gtp			vni_to_bd_mapping
+
+Thus for tunnels, it is important to understand where >>ig_md.tunnel.id<< comes from:
+
+	file				tunnel_type		equation
+	------------------- --------------- --------------------------------
+	npb_ing_parser.p4	vxlan			ig_md.tunnel.id = hdr.vxlan.vni;
+	npb_ing_parser.p4	nvgre			ig_md.tunnel.id = hdr.nvgre.vsid;
+	npb_ing_parser.p4	gtp c/u			ig_md.tunnel.id = hdr.gtp_v1_v2_teid.teid;
+
+--------------------------------------------------------------------------------
+
+Derek: Tunneling
+
+The ingress parser currently strips the l2 header, so we can't do rewrites of
+this header at each hop in the sfc chain -- we need to do encaps instead.  If
+the ingress parser changes in the future to not do this, we can change to doing
+rewrites instead.
+
+Note also that the prevents us from doing any checks on the l2 da to make sure
+the packet is really addressed to us.  We have to always assume it is and thus
+process it.
+
+--------------------------------------------------------------------------------
+
+Derek: Tunneling
+
+Design is currently capable of doing decaps and encaps as follows:
+
+    - Decaps: 2 Decaps.  The design can simultaneously do:
+
+        - Decap NSH    chain.
+
+        - Decap normal tunnel.
+
+    - Encaps: 1 Encap.  The design can either do:
+
+        - Encap NSH    chain.
+
+        - Encap normal tunnel.
+
+Note that these two things can be done simultaneously.  Thus the maximum changes
+to a packet that can be done "at once" are a double decap and a single encap.
+
+It is believed that this supports the design requirements as they are currently
+given.  In particular, when a packet reaches the end of an NSH chain, the design
+can strip the header and also terminate the tunnel -- so as to forward the
+packet based on the inner header.
+
+--------------------------------------------------------------------------------
+
+Derek: Nexthop Table
+
+The nexthop table could potentially be removed in order to free up space,
+assuming we're always going to use l2 forwarding.  The nexthop table is really
+there for l3 forwarding.  If this table is removed, be sure to use the sff's
+"dmac_hit" action in all tests (rather than using "dmac_redirect" action like
+is currently being used).
+
+Update: Never mind.  The tunnel_index comes from the nexthop table, so it is
+essential and can't be removed.
+
+--------------------------------------------------------------------------------
+
+Derek BUGS / OPEN ISSUES:
+
+1. Bug in compiler is preventing vpn_id extraction (really ig_md.tunnel.id
+   extraction) in the ingress parser.  This is filed as bug #9230.
+
+2. Bug in compiler is preventing saturating subtracts from being used on each of
+   the 3 service function SI decrements.  This is filed as bug #9719.
+
+The design's code should be changed to enable these when the above compiler bugs
+are fixed.
+
+--------------------------------------------------------------------------------

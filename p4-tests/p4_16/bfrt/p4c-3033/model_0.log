@@ -1,0 +1,1446 @@
+:08-10 13:38:26.175878:    PORT UP asic 0 port 2
+:08-10 13:38:26.175906:    Setting logging fn
+:08-10 13:38:26.175989:    Registering handler for tx
+:08-10 13:38:26.175993:    PORT UP asic 0 port 8
+:08-10 13:38:26.176028:    PORT UP asic 0 port 9
+:08-10 13:38:26.176060:    PORT UP asic 0 port 10
+:08-10 13:38:26.176074:    PORT UP asic 0 port 11
+:08-10 13:38:26.176087:    PORT UP asic 0 port 12
+:08-10 13:38:26.176105:    PORT UP asic 0 port 13
+:08-10 13:38:26.176121:    PORT UP asic 0 port 14
+:08-10 13:38:26.176134:    PORT UP asic 0 port 15
+:08-10 13:38:26.176148:    PORT UP asic 0 port 16
+:08-10 13:38:26.176165:    PORT UP asic 0 port 17
+:08-10 13:38:26.176181:    PORT UP asic 0 port 18
+:08-10 13:38:26.176199:    PORT UP asic 0 port 19
+:08-10 13:38:26.176216:    PORT UP asic 0 port 20
+:08-10 13:38:26.176233:    PORT UP asic 0 port 21
+:08-10 13:38:26.176250:    PORT UP asic 0 port 22
+:08-10 13:38:26.176267:    PORT UP asic 0 port 23
+:08-10 13:38:26.176283:    PORT UP asic 0 port 24
+:08-10 13:38:26.648619:    :-:-:<0,0,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.648675:    :-:-:<0,0,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.650166:    :-:-:<0,1,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.650198:    :-:-:<0,1,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.651756:    :-:-:<0,2,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.651848:    :-:-:<0,2,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.653439:    :-:-:<0,3,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:26.653514:    :-:-:<0,3,->:LearningFilter::clear : Excessive clearing of filter 1 !!! Nothing to clear
+:08-10 13:38:27.063515:     Updating model log flags: clearing 0xffffffff ffffffff, setting 0x00000000 0000000f
+:08-10 13:38:27.071462:    :-:-:<0,0,0>:Updating p4 log flags: clearing 0xffffffff ffffffff, setting 0x00000000 0000007f
+:08-10 13:38:27.079142:    :-:-:<0,0,0>:Updating tofino log flags: clearing 0xffffffff ffffffff, setting 0x00000000 0000007f
+:08-10 13:38:27.086786:    :-:-:<0,0,0>:Updating packet log flags: clearing 0xffffffff ffffffff, setting 0x00000000 0000007f
+:08-10 13:38:32.811514:    :-:-:<0,0,0>:Begin packet processing
+:08-10 13:38:32.811674:    :0x1:-:<0,0,0>:========== Ingress Pkt from port 8 (154 bytes)  ==========
+:08-10 13:38:32.811716:    :0x1:-:<0,0,0>:Packet :
+:08-10 13:38:32.811726:        :0x1:-:<0,0,0>:22 22 22 22 22 22 11 11 11 11 11 11 08 00 45 00 
+:08-10 13:38:32.811751:        :0x1:-:<0,0,0>:00 88 00 01 00 00 40 2f f8 f2 c0 a8 00 01 c0 a8 
+:08-10 13:38:32.811759:        :0x1:-:<0,0,0>:00 02 10 00 88 be 00 00 00 00 10 00 00 00 00 00 
+:08-10 13:38:32.811766:        :0x1:-:<0,0,0>:00 00 00 01 02 03 04 05 00 06 07 08 09 0a 08 00 
+:08-10 13:38:32.811786:    :0x1:-:<0,0,->:========== Packet to input parser: from port 8 (186 bytes)  ==========
+:08-10 13:38:32.811813:    :0x1:-:<0,0,->:Packet :
+:08-10 13:38:32.811821:        :0x1:-:<0,0,->:00 08 00 01 8b 89 53 00 00 02 00 00 00 00 00 00 
+:08-10 13:38:32.811842:        :0x1:-:<0,0,->:00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+:08-10 13:38:32.811849:        :0x1:-:<0,0,->:22 22 22 22 22 22 11 11 11 11 11 11 08 00 45 00 
+:08-10 13:38:32.811858:        :0x1:-:<0,0,->:00 88 00 01 00 00 40 2f f8 f2 c0 a8 00 01 c0 a8 
+:08-10 13:38:32.847258:    :0x1:-:<0,0,4>:Ingress Parser state '$entry_point'
+:08-10 13:38:32.847401:        :0x1:-:<0,0,4>:Ingress Parser state '$entry_point': extracted     0x0008,  setting PHV word 141 to value     0x0008 I [ig_md.port[8:0], hdr.bridged_md.__pad_3[6:0], hdr.bridged_md.base_ingress_port[8:0]]
+:08-10 13:38:32.847489:        :0x1:-:<0,0,4>:Ingress Parser state '$entry_point': extracted     0x5300,  setting PHV word   1 to value 0x53000000 I [ig_md.port_lag_index[9:0], ig_md.nexthop[11:0], ig_md.flags.rmac_hit[0:0], ig_md.nsh_md.start_of_path[0:0], ig_md.nsh_md.end_of_path[0:0], hdr.bridged_md.__pad_1[0:0], hdr.bridged_md.base_nsh_md_end_of_path[0:0], hdr.bridged_md.base_nsh_md_start_of_path[0:0], hdr.bridged_md.base_rmac_hit[0:0], hdr.bridged_md.base_nexthop[11:0], hdr.bridged_md.__pad_2[5:0], hdr.bridged_md.base_ingress_port_lag_index[9:0]]
+:08-10 13:38:32.847520:        :0x1:-:<0,0,4>:Ingress Parser state '$entry_point': extracted     0x0002,  setting PHV word   1 to value 0x53000002 I [ig_md.port_lag_index[9:0], ig_md.nexthop[11:0], ig_md.flags.rmac_hit[0:0], ig_md.nsh_md.start_of_path[0:0], ig_md.nsh_md.end_of_path[0:0], hdr.bridged_md.__pad_1[0:0], hdr.bridged_md.base_nsh_md_end_of_path[0:0], hdr.bridged_md.base_nsh_md_start_of_path[0:0], hdr.bridged_md.base_rmac_hit[0:0], hdr.bridged_md.base_nexthop[11:0], hdr.bridged_md.__pad_2[5:0], hdr.bridged_md.base_ingress_port_lag_index[9:0]]
+:08-10 13:38:32.847572:        :0x1:-:<0,0,4>:Ingress Parser state '$entry_point': extracted     0x0200, updating PHV word 160 to value     0x0200 I [ig_md.outer_nexthop[11:0], ig_md.tunnel_0.terminate[0:0], ig_md.nsh_md.l2_fwd_en[0:0], hdr.bridged_md.__pad_0[1:0], hdr.bridged_md.tunnel_terminate_0[0:0], hdr.bridged_md.tunnel_outer_nexthop[11:0], hdr.bridged_md.base_nsh_md_l2_fwd_en[0:0]]
+:08-10 13:38:32.847613:    :0x1:-:<0,0,4>:Ingress Parser state 'start.$oob_stall_0'
+:08-10 13:38:32.847674:    :0x1:-:<0,0,4>:Ingress Parser state 'start.$split_0'
+:08-10 13:38:32.847815:    :0x1:-:<0,0,4>:Ingress Parser state 'check_my_mac_lo'
+:08-10 13:38:32.847931:    :0x1:-:<0,0,4>:Ingress Parser state 'check_my_mac_hi'
+:08-10 13:38:32.848048:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet'
+:08-10 13:38:32.848177:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1004,  setting PHV word   1 to value 0x53000002 I [ig_md.port_lag_index[9:0], ig_md.nexthop[11:0], ig_md.flags.rmac_hit[0:0], ig_md.nsh_md.start_of_path[0:0], ig_md.nsh_md.end_of_path[0:0], hdr.bridged_md.__pad_1[0:0], hdr.bridged_md.base_nsh_md_end_of_path[0:0], hdr.bridged_md.base_nsh_md_start_of_path[0:0], hdr.bridged_md.base_rmac_hit[0:0], hdr.bridged_md.base_nexthop[11:0], hdr.bridged_md.__pad_2[5:0], hdr.bridged_md.base_ingress_port_lag_index[9:0]]
+:08-10 13:38:32.848332:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x0400, updating PHV word 136 to value     0x0004 I [POV]
+:08-10 13:38:32.848429:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word  29 to value 0x22220000 I [ig_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.848544:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word  29 to value 0x22222222 I [ig_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.848638:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word  28 to value 0x22220000 I [ig_md.lkp_2.mac_dst_addr[47:16]]
+:08-10 13:38:32.848709:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word  28 to value 0x22222222 I [ig_md.lkp_2.mac_dst_addr[47:16]]
+:08-10 13:38:32.848799:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word 173 to value     0x2222 I [ig_md.lkp_1.mac_dst_addr[15:0]]
+:08-10 13:38:32.848918:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x2222,  setting PHV word 172 to value     0x2222 I [ig_md.lkp_2.mac_dst_addr[15:0]]
+:08-10 13:38:32.849027:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word  15 to value 0x11110000 I [ig_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.849099:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word  15 to value 0x11111111 I [ig_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.849177:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word  14 to value 0x11110000 I [ig_md.lkp_2.mac_src_addr[47:16]]
+:08-10 13:38:32.849251:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word  14 to value 0x11111111 I [ig_md.lkp_2.mac_src_addr[47:16]]
+:08-10 13:38:32.849339:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word 159 to value     0x1111 I [ig_md.lkp_1.mac_src_addr[15:0]]
+:08-10 13:38:32.849426:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x1111,  setting PHV word 158 to value     0x1111 I [ig_md.lkp_2.mac_src_addr[15:0]]
+:08-10 13:38:32.849515:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x0800,  setting PHV word 175 to value     0x0800 I [ig_md.lkp_1.mac_type[15:0]]
+:08-10 13:38:32.849605:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ethernet': extracted     0x0800,  setting PHV word 174 to value     0x0800 I [ig_md.lkp_2.mac_type[15:0]]
+:08-10 13:38:32.849671:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4'
+:08-10 13:38:32.849782:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4': extracted     0x8000, updating PHV word 136 to value     0x8004 I [POV]
+:08-10 13:38:32.849869:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4': extracted     0xc0a8,  setting PHV word  45 to value 0xc0a80000 I [hdr.transport.nsh_type1.ver[7:0], hdr.transport.nsh_type1.reserved3[7:0], hdr.transport.nsh_type1.lag_hash[15:0], hdr.transport.ipv4.src_addr[31:0]]
+:08-10 13:38:32.849937:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4': extracted     0x0001,  setting PHV word  45 to value 0xc0a80001 I [hdr.transport.nsh_type1.ver[7:0], hdr.transport.nsh_type1.reserved3[7:0], hdr.transport.nsh_type1.lag_hash[15:0], hdr.transport.ipv4.src_addr[31:0]]
+:08-10 13:38:32.850016:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4': extracted     0xc0a8,  setting PHV word  61 to value 0xc0a80000 I [hdr.transport.nsh_type1.timestamp[31:0], hdr.transport.ipv4.dst_addr[31:0]]
+:08-10 13:38:32.850082:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_ipv4': extracted     0x0002,  setting PHV word  61 to value 0xc0a80002 I [hdr.transport.nsh_type1.timestamp[31:0], hdr.transport.ipv4.dst_addr[31:0]]
+:08-10 13:38:32.850146:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_gre'
+:08-10 13:38:32.850291:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_gre': extracted     0x0100, updating PHV word  70 to value       0x01 I [ig_md.tunnel_2.terminate[0:0], ig_md.nsh_md.truncate_enable[0:0], ig_md.nsh_md.sfc_enable[0:0], hdr.transport.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.850370:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_gre': extracted     0x0801,  setting PHV word  79 to value       0x08 I [ig_md.lkp_0.tunnel_type[3:0]]
+:08-10 13:38:32.850454:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_gre': extracted     0x0801,  setting PHV word  78 to value       0x00 I [ig_md.lkp_1.pcp[2:0]]
+:08-10 13:38:32.850521:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_erspan_t2'
+:08-10 13:38:32.850633:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_erspan_t2': extracted     0x0600, updating PHV word  70 to value       0x07 I [ig_md.tunnel_2.terminate[0:0], ig_md.nsh_md.truncate_enable[0:0], ig_md.nsh_md.sfc_enable[0:0], hdr.transport.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.850702:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_erspan_t2': extracted     0x0706,  setting PHV word  79 to value       0x07 I [ig_md.lkp_0.tunnel_type[3:0]]
+:08-10 13:38:32.850768:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_transport_erspan_t2': extracted     0x0706,  setting PHV word  78 to value       0x00 I [ig_md.lkp_1.pcp[2:0]]
+:08-10 13:38:32.850793:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet'
+:08-10 13:38:32.850863:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0001,  setting PHV word  62 to value 0x00010000 I [hdr.outer.ethernet.dst_addr[47:16]]
+:08-10 13:38:32.850896:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0203,  setting PHV word  62 to value 0x00010203 I [hdr.outer.ethernet.dst_addr[47:16]]
+:08-10 13:38:32.850923:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0001,  setting PHV word  29 to value 0x00012222 I [ig_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.850947:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0203,  setting PHV word  29 to value 0x00010203 I [ig_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.850976:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0001,  setting PHV word  28 to value 0x00012222 I [ig_md.lkp_2.mac_dst_addr[47:16]]
+:08-10 13:38:32.851002:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0203,  setting PHV word  28 to value 0x00010203 I [ig_md.lkp_2.mac_dst_addr[47:16]]
+:08-10 13:38:32.851050:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0405, updating PHV word 207 to value     0x0405 I [hdr.outer.ethernet.dst_addr[15:0]]
+:08-10 13:38:32.851078:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0405,  setting PHV word 173 to value     0x0405 I [ig_md.lkp_1.mac_dst_addr[15:0]]
+:08-10 13:38:32.851105:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0405,  setting PHV word 172 to value     0x0405 I [ig_md.lkp_2.mac_dst_addr[15:0]]
+:08-10 13:38:32.851142:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0006,  setting PHV word  63 to value 0x00060000 I [hdr.outer.ethernet.src_addr[47:16]]
+:08-10 13:38:32.851170:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0708,  setting PHV word  63 to value 0x00060708 I [hdr.outer.ethernet.src_addr[47:16]]
+:08-10 13:38:32.851196:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0006,  setting PHV word  15 to value 0x00061111 I [ig_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.851223:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0708,  setting PHV word  15 to value 0x00060708 I [ig_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.851250:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0006,  setting PHV word  14 to value 0x00061111 I [ig_md.lkp_2.mac_src_addr[47:16]]
+:08-10 13:38:32.851276:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0708,  setting PHV word  14 to value 0x00060708 I [ig_md.lkp_2.mac_src_addr[47:16]]
+:08-10 13:38:32.851320:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x090a, updating PHV word 171 to value     0x090a I [hdr.outer.ethernet.src_addr[15:0]]
+:08-10 13:38:32.851348:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x090a,  setting PHV word 159 to value     0x090a I [ig_md.lkp_1.mac_src_addr[15:0]]
+:08-10 13:38:32.851374:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x090a,  setting PHV word 158 to value     0x090a I [ig_md.lkp_2.mac_src_addr[15:0]]
+:08-10 13:38:32.851416:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0800, updating PHV word 137 to value     0x0800 I [hdr.outer.ethernet.ether_type[15:0]]
+:08-10 13:38:32.851443:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet': extracted     0x0800,  setting PHV word 175 to value     0x0800 I [ig_md.lkp_1.mac_type[15:0]]
+:08-10 13:38:32.851469:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_0'
+:08-10 13:38:32.851557:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_0': extracted     0x0800, updating PHV word  65 to value       0x08 I [hdr.outer.vlan_tag.$stkvalid[1:0], hdr.inner.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.851588:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_0': extracted     0x0000,  setting PHV word  78 to value       0x00 I [ig_md.lkp_1.pcp[2:0]]
+:08-10 13:38:32.851617:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_0': extracted     0x0000,  setting PHV word  79 to value       0x00 I [ig_md.lkp_0.tunnel_type[3:0]]
+:08-10 13:38:32.851645:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_0': extracted     0x0800,  setting PHV word 174 to value     0x0800 I [ig_md.lkp_2.mac_type[15:0]]
+:08-10 13:38:32.851672:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_1'
+:08-10 13:38:32.851735:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_1': extracted     0x0000,  setting PHV word 157 to value     0x0000 I [ig_md.lkp_1.vid[11:0]]
+:08-10 13:38:32.851775:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_1': extracted     0x0000,  setting PHV word  77 to value       0x00 I [ig_md.lkp_2.pcp[2:0]]
+:08-10 13:38:32.851828:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_1': extracted     0x0000,  setting PHV word  76 to value       0x00 E [eg_intr_md_for_dprsr.mirror_type[3:0]]
+:08-10 13:38:32.851853:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_2'
+:08-10 13:38:32.851916:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ethernet.$split_2': extracted     0x0000,  setting PHV word 156 to value     0x0000 I [ig_md.lkp_2.vid[11:0]]
+:08-10 13:38:32.851952:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4'
+:08-10 13:38:32.852056:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0200, updating PHV word  67 to value       0x02 I [POV]
+:08-10 13:38:32.852111:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0000, updating PHV word 112 to value       0x00 I [hdr.outer.ipv4.tos[7:0], hdr.outer.ipv6.tos[3:0], hdr.outer.ipv6.flow_label[19:16]]
+:08-10 13:38:32.852165:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0056, updating PHV word 193 to value     0x0056 I [ig_md.lkp_1.ip_len[15:0]]
+:08-10 13:38:32.852219:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0100, updating PHV word 202 to value     0x0100 I [ig_md.lkp_1.ip_flags[2:0]]
+:08-10 13:38:32.852268:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x11f9, updating PHV word 123 to value       0x11 I [ig_md.lkp_1.ip_proto[7:0]]
+:08-10 13:38:32.852309:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0xc0a8,  setting PHV word  22 to value 0xc0a80000 I [ig_md.lkp_1.ip_src_addr[31:0], ig_md.lkp_1.ip_src_addr_v4[31:0]]
+:08-10 13:38:32.852343:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0001,  setting PHV word  22 to value 0xc0a80001 I [ig_md.lkp_1.ip_src_addr[31:0], ig_md.lkp_1.ip_src_addr_v4[31:0]]
+:08-10 13:38:32.852391:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0xc0a8,  setting PHV word  35 to value 0xc0a80000 I [ig_md.lkp_1.ip_dst_addr[31:0], ig_md.lkp_1.ip_dst_addr_v4[31:0]]
+:08-10 13:38:32.852426:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0002,  setting PHV word  35 to value 0xc0a80002 I [ig_md.lkp_1.ip_dst_addr[31:0], ig_md.lkp_1.ip_dst_addr_v4[31:0]]
+:08-10 13:38:32.852482:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0xa800, updating PHV word 205 to value     0xa800 I [hdr.outer.ipv4.dst_addr[23:8], hdr.outer.ipv6.dst_addr[15:0]]
+:08-10 13:38:32.852534:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4': extracted     0x0204, updating PHV word 114 to value       0x02 I [hdr.outer.ipv4.dst_addr[7:0], hdr.outer.ipv6.version[3:0], hdr.outer.ipv6.tos[7:4]]
+:08-10 13:38:32.852568:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_ipv4_no_options_frags'
+:08-10 13:38:32.852639:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_udp'
+:08-10 13:38:32.852726:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_udp': extracted     0x0400, updating PHV word  67 to value       0x06 I [POV]
+:08-10 13:38:32.852801:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_udp': extracted     0x04d2, updating PHV word 223 to value     0x04d2 I [ig_md.lkp_1.l4_src_port[15:0]]
+:08-10 13:38:32.852869:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_outer_udp': extracted     0x0050, updating PHV word 182 to value     0x0050 I [ig_md.lkp_1.l4_dst_port[15:0]]
+:08-10 13:38:32.852906:    :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf'
+:08-10 13:38:32.852975:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x2000, updating PHV word 136 to value     0x8024 I [POV]
+:08-10 13:38:32.853022:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0001,  setting PHV word  16 to value 0x00010000 I [hdr.udf.opaque[127:96]]
+:08-10 13:38:32.853061:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0203,  setting PHV word  16 to value 0x00010203 I [hdr.udf.opaque[127:96]]
+:08-10 13:38:32.853106:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0405,  setting PHV word  11 to value 0x04050000 I [hdr.udf.opaque[95:64]]
+:08-10 13:38:32.853145:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0607,  setting PHV word  11 to value 0x04050607 I [hdr.udf.opaque[95:64]]
+:08-10 13:38:32.853189:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0809,  setting PHV word  10 to value 0x08090000 I [hdr.udf.opaque[63:32]]
+:08-10 13:38:32.853228:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0a0b,  setting PHV word  10 to value 0x08090a0b I [hdr.udf.opaque[63:32]]
+:08-10 13:38:32.853272:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0c0d,  setting PHV word   9 to value 0x0c0d0000 I [hdr.udf.opaque[31:0]]
+:08-10 13:38:32.853310:        :0x1:-:<0,0,4>:Ingress Parser state 'parse_udf': extracted     0x0e0f,  setting PHV word   9 to value 0x0c0d0e0f I [hdr.udf.opaque[31:0]]
+:08-10 13:38:32.853335:        :0x1:-:<0,0,->:Ingress Headers:
+:08-10 13:38:32.854277:        :0x1:-:<0,0,->:Header hdr.outer.ethernet.$valid is valid
+:08-10 13:38:32.854291:        :0x1:-:<0,0,->:Header hdr.outer.ipv4.$valid is valid
+:08-10 13:38:32.854299:        :0x1:-:<0,0,->:Header hdr.outer.udp.$valid is valid
+:08-10 13:38:32.854310:        :0x1:-:<0,0,->:Header hdr.transport.erspan_type2.$valid is valid
+:08-10 13:38:32.854318:        :0x1:-:<0,0,->:Header hdr.transport.ethernet.$valid is valid
+:08-10 13:38:32.854328:        :0x1:-:<0,0,->:Header hdr.transport.gre.$valid is valid
+:08-10 13:38:32.854335:        :0x1:-:<0,0,->:Header hdr.transport.gre_sequence.$valid is valid
+:08-10 13:38:32.854345:        :0x1:-:<0,0,->:Header hdr.transport.ipv4.$valid is valid
+:08-10 13:38:32.854353:        :0x1:-:<0,0,->:Header hdr.udf.$valid is valid
+:08-10 13:38:32.854511:    :0x1:-:<0,0,->:------------ Stage 0 ------------
+:08-10 13:38:32.857403:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.inner.ipv6.$valid == 1)) not matched.
+:08-10 13:38:32.857420:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_set_lkp59
+:08-10 13:38:32.857429:    :0x1:-:<0,0,0>:Ingress : Associated table tbl_npb_ing_set_lkp59 is executed
+:08-10 13:38:32.857436:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.857445:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.857466:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.outer.ipv6.$valid == 1)) not matched.
+:08-10 13:38:32.857478:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_set_lkp49
+:08-10 13:38:32.857488:    :0x1:-:<0,0,0>:Ingress : Associated table tbl_npb_ing_set_lkp49 is executed
+:08-10 13:38:32.857495:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.857505:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.857528:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.inner.ipv4.$valid == 1)) not matched.
+:08-10 13:38:32.857540:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_set_lkp32
+:08-10 13:38:32.857553:    :0x1:-:<0,0,0>:Ingress : Associated table tbl_npb_ing_set_lkp32 is executed
+:08-10 13:38:32.857563:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.857577:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.857603:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.outer.ipv4.$valid == 1)) matched.
+:08-10 13:38:32.857615:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_set_lkp25
+:08-10 13:38:32.857624:    :0x1:-:<0,0,0>:Ingress : Table tbl_npb_ing_set_lkp25 is inhibited by a gateway condition
+:08-10 13:38:32.857639:        :0x1:-:<0,0,0>:Execute Default Action: npb_ing_set_lkp25
+:08-10 13:38:32.857758:        :0x1:-:<0,0,0>:Action Results:
+:08-10 13:38:32.857769:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.857778:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.857789:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.857796:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.857806:        :0x1:-:<0,0,0>:	ig_md.lkp_1.ip_type[1:0] = 0x1
+:08-10 13:38:32.857814:        :0x1:-:<0,0,0>:	mask=0x3
+:08-10 13:38:32.857824:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.857834:        :0x1:-:<0,0,0>:	Val=0x1
+:08-10 13:38:32.857845:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.857860:    :0x1:-:<0,0,0>:Ingress : Table tbl_npb_ing_set_lkp27 is not active(inhibited/skipped)
+:08-10 13:38:32.857887:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.inner.ipv6.$valid == 1)) not matched.
+:08-10 13:38:32.857898:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_set_lkp34
+:08-10 13:38:32.857905:    :0x1:-:<0,0,0>:Ingress : Associated table tbl_npb_ing_set_lkp34 is executed
+:08-10 13:38:32.857912:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.857921:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.857938:    :0x1:-:<0,0,0>:Ingress : Table SwitchIngress.ingress_port_mapping.port_mapping is hit
+:08-10 13:38:32.857949:        :0x1:-:<0,0,0>:Key:
+:08-10 13:38:32.857984:        :0x1:-:<0,0,0>:	--validity_check--hdr.cpu.$valid = 0x0
+:08-10 13:38:32.857996:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.nsh_type1.$valid = 0x0
+:08-10 13:38:32.858004:        :0x1:-:<0,0,0>:	ig_md.port[8:0] = 0x8
+:08-10 13:38:32.858028:        :0x1:-:<0,0,0>:Execute Action: SwitchIngress.ingress_port_mapping.set_port_properties_without_nsh
+:08-10 13:38:32.858214:        :0x1:-:<0,0,0>:Action Results:
+:08-10 13:38:32.858226:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858233:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858243:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858255:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858266:        :0x1:-:<0,0,0>:	ig_intr_md_for_tm.level2_exclusion_id[8:0] = 0x0
+:08-10 13:38:32.858278:        :0x1:-:<0,0,0>:	mask=0x1FF
+:08-10 13:38:32.858289:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858300:        :0x1:-:<0,0,0>:	exclusion_id=action_param
+:08-10 13:38:32.858309:        :0x1:-:<0,0,0>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.858320:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858332:        :0x1:-:<0,0,0>:	ig_intr_md_for_tm.level2_exclusion_id.$valid=header
+:08-10 13:38:32.858343:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858353:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858363:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858378:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858389:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.sap[15:0] = 0x0
+:08-10 13:38:32.858398:        :0x1:-:<0,0,0>:	mask=0xF
+:08-10 13:38:32.858404:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858412:        :0x1:-:<0,0,0>:	Val=0x0
+:08-10 13:38:32.858419:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858426:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858432:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858439:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858445:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.sap[15:0] = 0x0
+:08-10 13:38:32.858455:        :0x1:-:<0,0,0>:	mask=0xFFF
+:08-10 13:38:32.858462:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858468:        :0x1:-:<0,0,0>:	sap=action_param
+:08-10 13:38:32.858475:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858482:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858488:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858495:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858501:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.vpn[15:0] = 0x1
+:08-10 13:38:32.858508:        :0x1:-:<0,0,0>:	mask=0xF
+:08-10 13:38:32.858515:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858521:        :0x1:-:<0,0,0>:	Val=0x0
+:08-10 13:38:32.858528:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858534:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858542:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858549:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858556:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.vpn[15:0] = 0x1
+:08-10 13:38:32.858562:        :0x1:-:<0,0,0>:	mask=0xFFF
+:08-10 13:38:32.858569:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858576:        :0x1:-:<0,0,0>:	vpn=action_param
+:08-10 13:38:32.858582:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858589:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858597:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858603:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858610:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.spi[23:0] = 0x4
+:08-10 13:38:32.858617:        :0x1:-:<0,0,0>:	mask=0xFFFFFF
+:08-10 13:38:32.858626:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858635:        :0x1:-:<0,0,0>:	spi=action_param
+:08-10 13:38:32.858643:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858649:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858656:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858663:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858670:        :0x1:-:<0,0,0>:	hdr.transport.nsh_type1.si[7:0] = 0x5
+:08-10 13:38:32.858676:        :0x1:-:<0,0,0>:	mask=0xFF
+:08-10 13:38:32.858683:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858690:        :0x1:-:<0,0,0>:	si=action_param
+:08-10 13:38:32.858697:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858703:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858710:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858716:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858723:        :0x1:-:<0,0,0>:	ig_md.nsh_md.si_predec[7:0] = 0x5
+:08-10 13:38:32.858730:        :0x1:-:<0,0,0>:	mask=0xFF
+:08-10 13:38:32.858736:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858742:        :0x1:-:<0,0,0>:	si_predec=action_param
+:08-10 13:38:32.858752:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.858781:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((ig_md.flags.rmac_hit == 0 && ig_md.nsh_md.l2_fwd_en == 1)) not matched.
+:08-10 13:38:32.858792:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_sfc_top235
+:08-10 13:38:32.858799:    :0x1:-:<0,0,0>:Ingress : Table tbl_npb_ing_sfc_top235 is inhibited by a gateway condition
+:08-10 13:38:32.858812:        :0x1:-:<0,0,0>:Execute Default Action: npb_ing_sfc_top235
+:08-10 13:38:32.858922:        :0x1:-:<0,0,0>:Action Results:
+:08-10 13:38:32.858932:        :0x1:-:<0,0,0>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.858939:        :0x1:-:<0,0,0>:	Operation:
+:08-10 13:38:32.858945:        :0x1:-:<0,0,0>:	set
+:08-10 13:38:32.858952:        :0x1:-:<0,0,0>:	Destination:
+:08-10 13:38:32.858959:        :0x1:-:<0,0,0>:	ig_md.tunnel_0.terminate[0:0] = 0x1
+:08-10 13:38:32.858965:        :0x1:-:<0,0,0>:	mask=0x1
+:08-10 13:38:32.858972:        :0x1:-:<0,0,0>:	Source 1:
+:08-10 13:38:32.858979:        :0x1:-:<0,0,0>:	Val=0x1
+:08-10 13:38:32.858988:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859017:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.cpu.$valid == 1)) not matched.
+:08-10 13:38:32.859029:    :0x1:-:<0,0,0>:Ingress : Associated table SwitchIngress.ingress_port_mapping.port_vlan_to_bd_mapping is executed
+:08-10 13:38:32.859036:    :0x1:-:<0,0,0>:Ingress : Table SwitchIngress.ingress_port_mapping.port_vlan_to_bd_mapping is miss
+:08-10 13:38:32.859043:        :0x1:-:<0,0,0>:Key:
+:08-10 13:38:32.859068:        :0x1:-:<0,0,0>:	--validity_check--hdr.outer.vlan_tag$0.$valid = 0x0
+:08-10 13:38:32.859080:        :0x1:-:<0,0,0>:	hdr.outer.vlan_tag$0.vid[11:0] = 0x0
+:08-10 13:38:32.859087:        :0x1:-:<0,0,0>:	ig_md.port_lag_index[9:0] = 0x2
+:08-10 13:38:32.859100:        :0x1:-:<0,0,0>:Execute Default Action: NoAction
+:08-10 13:38:32.859201:        :0x1:-:<0,0,0>:Action Results:
+:08-10 13:38:32.859211:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859222:    :0x1:-:<0,0,0>:Ingress : Table SwitchIngress.IngressHdrStackCounters.transport_stack_hdr_cntr_tbl is miss
+:08-10 13:38:32.859229:        :0x1:-:<0,0,0>:Key:
+:08-10 13:38:32.859268:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.erspan_type2.$valid = 0x1
+:08-10 13:38:32.859278:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.ethernet.$valid = 0x1
+:08-10 13:38:32.859285:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.gre.$valid = 0x1
+:08-10 13:38:32.859292:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.gre_sequence.$valid = 0x1
+:08-10 13:38:32.859299:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.ipv4.$valid = 0x1
+:08-10 13:38:32.859306:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.nsh_type1.$valid = 0x0
+:08-10 13:38:32.859316:        :0x1:-:<0,0,0>:	--validity_check--hdr.transport.vlan_tag$0.$valid = 0x0
+:08-10 13:38:32.859331:        :0x1:-:<0,0,0>:Execute Default Action: NoAction
+:08-10 13:38:32.859431:        :0x1:-:<0,0,0>:Action Results:
+:08-10 13:38:32.859441:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859474:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.transport.nsh_type1.$valid == 1)) not matched.
+:08-10 13:38:32.859486:    :0x1:-:<0,0,0>:Ingress : Gateway attached to tbl_npb_ing_sfc_top146
+:08-10 13:38:32.859493:    :0x1:-:<0,0,0>:Ingress : Associated table tbl_npb_ing_sfc_top146 is executed
+:08-10 13:38:32.859500:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.859510:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859523:    :0x1:-:<0,0,0>:Ingress : Table SwitchIngress.ingress_port_mapping.cpu_to_bd_mapping is not active(inhibited/skipped)
+:08-10 13:38:32.859556:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((hdr.transport.vlan_tag[0].$valid == 1)) not matched.
+:08-10 13:38:32.859566:    :0x1:-:<0,0,0>:Ingress : Table SwitchIngress.ingress_port_mapping.vlan_to_bd_mapping is inhibited by a gateway condition
+:08-10 13:38:32.859574:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.859583:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859601:    :0x1:-:<0,0,0>:Ingress : Gateway table condition ((!(hdr.outer.ethernet.$valid == 1))) not matched.
+:08-10 13:38:32.859613:    :0x1:-:<0,0,0>:Ingress : Gateway attached to cond-165
+:08-10 13:38:32.859622:    :0x1:-:<0,0,0>:Ingress : Associated table cond-165 is executed
+:08-10 13:38:32.859629:    :0x1:-:<0,0,0>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.859636:        :0x1:-:<0,0,0>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.859646:    :0x1:-:<0,0,0>:Ingress : Table tbl_tunnel930 is not active(inhibited/skipped)
+:08-10 13:38:32.859655:    :0x1:-:<0,0,0>:Ingress : Table tbl_tunnel932 is not active(inhibited/skipped)
+:08-10 13:38:32.859669:    :0x1:-:<0,0,->:------------ Stage 1 ------------
+:08-10 13:38:32.860263:    <0,1> WARN MAU_PRED<1> get_next_table(ingress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.861038:    :0x1:-:<0,0,1>:Ingress : Gateway table condition ((hdr.inner.ipv4.$valid == 1)) not matched.
+:08-10 13:38:32.861054:    :0x1:-:<0,0,1>:Ingress : Gateway attached to tbl_npb_ing_set_lkp63
+:08-10 13:38:32.861064:    :0x1:-:<0,0,1>:Ingress : Associated table tbl_npb_ing_set_lkp63 is executed
+:08-10 13:38:32.861071:    :0x1:-:<0,0,1>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.861080:        :0x1:-:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.861121:    :0x1:-:<0,0,1>:Ingress : Gateway table condition ((hdr.outer.ipv4.$valid == 1)) matched.
+:08-10 13:38:32.861133:    :0x1:-:<0,0,1>:Ingress : Gateway attached to tbl_npb_ing_set_lkp53
+:08-10 13:38:32.861141:    :0x1:-:<0,0,1>:Ingress : Table tbl_npb_ing_set_lkp53 is inhibited by a gateway condition
+:08-10 13:38:32.861153:        :0x1:-:<0,0,1>:Execute Default Action: npb_ing_set_lkp53
+:08-10 13:38:32.862203:        :0x1:-:<0,0,1>:Action Results:
+:08-10 13:38:32.862217:        :0x1:-:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.862225:        :0x1:-:<0,0,1>:	Operation:
+:08-10 13:38:32.862232:        :0x1:-:<0,0,1>:	set
+:08-10 13:38:32.862238:        :0x1:-:<0,0,1>:	Destination:
+:08-10 13:38:32.862245:        :0x1:-:<0,0,1>:	ig_md.lkp_1.ip_tos[3:0] = 0x0
+:08-10 13:38:32.862252:        :0x1:-:<0,0,1>:	ig_md.lkp_1.ip_tos[7:4] = 0x0
+:08-10 13:38:32.862259:        :0x1:-:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.862266:        :0x1:-:<0,0,1>:	Source 1:
+:08-10 13:38:32.862275:        :0x1:-:<0,0,1>:	hdr.outer.ipv4.tos[7:0] = 0x0
+:08-10 13:38:32.862284:        :0x1:-:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.862297:    :0x1:-:<0,0,1>:Ingress : Table tbl_npb101 is miss
+:08-10 13:38:32.862306:        :0x1:-:<0,0,1>:Key:
+:08-10 13:38:32.862321:        :0x1:-:<0,0,1>:Execute Default Action: npb101
+:08-10 13:38:32.862433:        :0x1:-:<0,0,1>:Action Results:
+:08-10 13:38:32.862444:        :0x1:-:<0,0,1>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.862451:        :0x1:-:<0,0,1>:	Destination:
+:08-10 13:38:32.862458:        :0x1:-:<0,0,1>:	ig_intr_md_for_dprsr.drop_ctl.$valid=header
+:08-10 13:38:32.862466:        :0x1:-:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.862482:    :0x1:-:<0,0,->:------------ Stage 2 ------------
+:08-10 13:38:32.864424:    :0x1:-:<0,0,2>:Ingress : Gateway table condition ((hdr.transport.nsh_type1.scope == 0)) matched.
+:08-10 13:38:32.864440:    :0x1:-:<0,0,2>:Ingress : Gateway attached to tbl_scoper41
+:08-10 13:38:32.864449:    :0x1:-:<0,0,2>:Ingress : Associated table tbl_scoper41 is executed
+:08-10 13:38:32.864456:    :0x1:-:<0,0,2>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.864466:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.864483:    :0x1:-:<0,0,2>:Ingress : Table tbl_npb_ing_sfc_top160 is miss
+:08-10 13:38:32.864492:        :0x1:-:<0,0,2>:Key:
+:08-10 13:38:32.865434:        :0x1:-:<0,0,2>:Execute Default Action: npb_ing_sfc_top160
+:08-10 13:38:32.865582:        :0x1:-:<0,0,2>:Action Results:
+:08-10 13:38:32.865594:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.865601:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.865608:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.865614:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.865623:        :0x1:-:<0,0,2>:	ig_md.nsh_md.start_of_path[0:0] = 0x1
+:08-10 13:38:32.865631:        :0x1:-:<0,0,2>:	mask=0x1
+:08-10 13:38:32.865639:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.865645:        :0x1:-:<0,0,2>:	Val=0x1
+:08-10 13:38:32.865652:        :0x1:-:<0,0,2>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.865659:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.865665:        :0x1:-:<0,0,2>:	hdr.transport.nsh_type1.$valid=header
+:08-10 13:38:32.865672:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.865679:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.865686:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.865693:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.865703:        :0x1:-:<0,0,2>:	hdr.transport.nsh_type1.next_proto[7:0] = 0x3
+:08-10 13:38:32.865711:        :0x1:-:<0,0,2>:	mask=0xFF
+:08-10 13:38:32.865717:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.865724:        :0x1:-:<0,0,2>:	Val=0x0
+:08-10 13:38:32.865731:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.865740:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.865748:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.865754:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.865761:        :0x1:-:<0,0,2>:	hdr.transport.nsh_type1.scope[7:0] = 0x0
+:08-10 13:38:32.865768:        :0x1:-:<0,0,2>:	mask=0xFF
+:08-10 13:38:32.865776:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.865784:        :0x1:-:<0,0,2>:	Val=0x0
+:08-10 13:38:32.865790:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.865797:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.865804:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.865810:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.865817:        :0x1:-:<0,0,2>:	hdr.transport.nsh_type1.sfc_data[15:0] = 0x0
+:08-10 13:38:32.865824:        :0x1:-:<0,0,2>:	mask=0xFFFF
+:08-10 13:38:32.865830:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.865837:        :0x1:-:<0,0,2>:	Val=0x0
+:08-10 13:38:32.865846:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.865860:    :0x1:-:<0,0,2>:Ingress : Table tbl_npb_ing_top53 is miss
+:08-10 13:38:32.865868:        :0x1:-:<0,0,2>:Key:
+:08-10 13:38:32.865883:        :0x1:-:<0,0,2>:Execute Default Action: npb_ing_top53
+:08-10 13:38:32.866003:        :0x1:-:<0,0,2>:Action Results:
+:08-10 13:38:32.866014:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.866022:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.866028:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.866035:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.866044:        :0x1:-:<0,0,2>:	ig_intr_md_for_tm.level2_exclusion_id[8:0] = 0x0
+:08-10 13:38:32.866052:        :0x1:-:<0,0,2>:	mask=0x1FF
+:08-10 13:38:32.866058:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.866065:        :0x1:-:<0,0,2>:	Val=0x0
+:08-10 13:38:32.866072:        :0x1:-:<0,0,2>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.866079:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.866085:        :0x1:-:<0,0,2>:	ig_intr_md_for_tm.level2_exclusion_id.$valid=header
+:08-10 13:38:32.866092:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.866099:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.866107:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.866115:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.866123:        :0x1:-:<0,0,2>:	ig_md.tunnel_1.terminate[0:0] = 0x0
+:08-10 13:38:32.866130:        :0x1:-:<0,0,2>:	mask=0x1
+:08-10 13:38:32.866136:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.866143:        :0x1:-:<0,0,2>:	Val=0x0
+:08-10 13:38:32.866150:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.866161:    :0x1:-:<0,0,2>:Ingress : Table SwitchIngress.IngressHdrStackCounters.udf_hdr_cntr_tbl is miss
+:08-10 13:38:32.866169:        :0x1:-:<0,0,2>:Key:
+:08-10 13:38:32.866186:        :0x1:-:<0,0,2>:	--validity_check--hdr.udf.$valid = 0x1
+:08-10 13:38:32.866204:        :0x1:-:<0,0,2>:Execute Default Action: NoAction
+:08-10 13:38:32.866306:        :0x1:-:<0,0,2>:Action Results:
+:08-10 13:38:32.866315:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.866326:    :0x1:-:<0,0,2>:Ingress : Table tbl_npb_ing_hdr_stack_counters1697 is miss
+:08-10 13:38:32.866333:        :0x1:-:<0,0,2>:Key:
+:08-10 13:38:32.866349:        :0x1:-:<0,0,2>:Execute Default Action: npb_ing_hdr_stack_counters1697
+:08-10 13:38:32.866466:        :0x1:-:<0,0,2>:Action Results:
+:08-10 13:38:32.866478:        :0x1:-:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.866486:        :0x1:-:<0,0,2>:	Operation:
+:08-10 13:38:32.866493:        :0x1:-:<0,0,2>:	set
+:08-10 13:38:32.866500:        :0x1:-:<0,0,2>:	Destination:
+:08-10 13:38:32.866509:        :0x1:-:<0,0,2>:	IngressHdrStackCounters_hdr_outer_ipv6_isValid[0:0] = 0x0
+:08-10 13:38:32.866516:        :0x1:-:<0,0,2>:	mask=0x1
+:08-10 13:38:32.866523:        :0x1:-:<0,0,2>:	Source 1:
+:08-10 13:38:32.866530:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.866542:    :0x1:-:<0,0,2>:Ingress : Table SwitchIngress.IngressHdrStackCounters.inner_stack_hdr_cntr_tbl is miss
+:08-10 13:38:32.866552:        :0x1:-:<0,0,2>:Key:
+:08-10 13:38:32.866606:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.ethernet.$valid = 0x0
+:08-10 13:38:32.866616:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.gre.$valid = 0x0
+:08-10 13:38:32.866624:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.gtp_v1_base.$valid = 0x0
+:08-10 13:38:32.866631:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.gtp_v1_optional.$valid = 0x0
+:08-10 13:38:32.866639:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.ipv4.$valid = 0x0
+:08-10 13:38:32.866648:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.ipv6.$valid = 0x0
+:08-10 13:38:32.866655:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.sctp.$valid = 0x0
+:08-10 13:38:32.866662:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.tcp.$valid = 0x0
+:08-10 13:38:32.866668:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.udp.$valid = 0x0
+:08-10 13:38:32.866675:        :0x1:-:<0,0,2>:	--validity_check--hdr.inner.vlan_tag$0.$valid = 0x0
+:08-10 13:38:32.866688:        :0x1:-:<0,0,2>:Execute Default Action: NoAction
+:08-10 13:38:32.866791:        :0x1:-:<0,0,2>:Action Results:
+:08-10 13:38:32.866802:        :0x1:-:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.866815:    :0x1:-:<0,0,->:------------ Stage 3 ------------
+:08-10 13:38:32.867736:    <0,3> WARN MAU_PRED<3> get_next_table(ingress,2)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.868985:    :0x1:-:<0,0,3>:Ingress : Gateway table condition ((hdr.transport.ethernet.$valid == 1)) matched.
+:08-10 13:38:32.869000:    :0x1:-:<0,0,3>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_outer.sap_tcam is inhibited by a gateway condition
+:08-10 13:38:32.869008:    :0x1:-:<0,0,3>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.869018:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.869089:    :0x1:-:<0,0,3>:Ingress : Gateway table condition ((hdr.transport.ipv4.$valid == 1)) matched.
+:08-10 13:38:32.869100:    :0x1:-:<0,0,3>:Ingress : Associated table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep is executed
+:08-10 13:38:32.869106:    :0x1:-:<0,0,3>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep is miss
+:08-10 13:38:32.869113:        :0x1:-:<0,0,3>:Key:
+:08-10 13:38:32.870084:        :0x1:-:<0,0,3>:	hdr.transport.ipv4.src_addr[31:0] = 0xC0A80001
+:08-10 13:38:32.870098:        :0x1:-:<0,0,3>:	ig_md.lkp_0.tunnel_type[3:0] = 0x0
+:08-10 13:38:32.870113:        :0x1:-:<0,0,3>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep_miss
+:08-10 13:38:32.870218:        :0x1:-:<0,0,3>:Action Results:
+:08-10 13:38:32.870228:        :0x1:-:<0,0,3>:	----- CountPrimitive -----
+:08-10 13:38:32.870236:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.870246:    :0x1:-:<0,0,3>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep is miss
+:08-10 13:38:32.870254:        :0x1:-:<0,0,3>:Key:
+:08-10 13:38:32.870282:        :0x1:-:<0,0,3>:	hdr.transport.ipv4.dst_addr[31:0] = 0xC0A80002
+:08-10 13:38:32.870293:        :0x1:-:<0,0,3>:	ig_md.lkp_0.tunnel_type[3:0] = 0x0
+:08-10 13:38:32.870307:        :0x1:-:<0,0,3>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_transport.NoAction_
+:08-10 13:38:32.870417:        :0x1:-:<0,0,3>:Action Results:
+:08-10 13:38:32.870428:        :0x1:-:<0,0,3>:	----- CountPrimitive -----
+:08-10 13:38:32.870436:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.870446:    :0x1:-:<0,0,3>:Ingress : Table SwitchIngress.IngressHdrStackCounters.outer_stack_hdr_cntr_tbl is miss
+:08-10 13:38:32.870454:        :0x1:-:<0,0,3>:Key:
+:08-10 13:38:32.870525:        :0x1:-:<0,0,3>:	IngressHdrStackCounters_hdr_outer_ipv6_isValid[0:0] = 0x0
+:08-10 13:38:32.870537:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.e_tag.$valid = 0x0
+:08-10 13:38:32.870544:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.ethernet.$valid = 0x1
+:08-10 13:38:32.870555:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.gre.$valid = 0x0
+:08-10 13:38:32.870564:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.gre_optional.$valid = 0x0
+:08-10 13:38:32.870574:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.gtp_v1_base.$valid = 0x0
+:08-10 13:38:32.870581:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.gtp_v1_optional.$valid = 0x0
+:08-10 13:38:32.870588:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.ipv4.$valid = 0x1
+:08-10 13:38:32.870595:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.nvgre.$valid = 0x0
+:08-10 13:38:32.870602:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.sctp.$valid = 0x0
+:08-10 13:38:32.870609:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.tcp.$valid = 0x0
+:08-10 13:38:32.870616:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.udp.$valid = 0x1
+:08-10 13:38:32.870623:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.vlan_tag$0.$valid = 0x0
+:08-10 13:38:32.870632:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.vlan_tag$1.$valid = 0x0
+:08-10 13:38:32.870642:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.vn_tag.$valid = 0x0
+:08-10 13:38:32.870653:        :0x1:-:<0,0,3>:	--validity_check--hdr.outer.vxlan.$valid = 0x0
+:08-10 13:38:32.870672:        :0x1:-:<0,0,3>:Execute Default Action: NoAction
+:08-10 13:38:32.870780:        :0x1:-:<0,0,3>:Action Results:
+:08-10 13:38:32.870791:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.870803:    :0x1:-:<0,0,3>:Ingress : Table tbl_tunnel935 is miss
+:08-10 13:38:32.870812:        :0x1:-:<0,0,3>:Key:
+:08-10 13:38:32.870830:        :0x1:-:<0,0,3>:Execute Default Action: tunnel935
+:08-10 13:38:32.870936:        :0x1:-:<0,0,3>:Action Results:
+:08-10 13:38:32.870946:        :0x1:-:<0,0,3>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.870953:        :0x1:-:<0,0,3>:	Destination:
+:08-10 13:38:32.870960:        :0x1:-:<0,0,3>:	hdr.outer.ethernet.$valid=header
+:08-10 13:38:32.870970:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.871056:    :0x1:-:<0,0,3>:Ingress : Gateway table condition ((ig_intr_md_for_tm.bypass_egress == 0)) matched.
+:08-10 13:38:32.871069:    :0x1:-:<0,0,3>:Ingress : Gateway attached to tbl_add_bridged_md
+:08-10 13:38:32.871077:    :0x1:-:<0,0,3>:Ingress : Table tbl_add_bridged_md is inhibited by a gateway condition
+:08-10 13:38:32.871096:        :0x1:-:<0,0,3>:Execute Default Action: add_bridged_md
+:08-10 13:38:32.871209:        :0x1:-:<0,0,3>:Action Results:
+:08-10 13:38:32.871220:        :0x1:-:<0,0,3>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.871227:        :0x1:-:<0,0,3>:	Destination:
+:08-10 13:38:32.871234:        :0x1:-:<0,0,3>:	hdr.bridged_md.$valid=header
+:08-10 13:38:32.871242:        :0x1:-:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.871263:    :0x1:-:<0,0,->:------------ Stage 4 ------------
+:08-10 13:38:32.871896:    <0,4> WARN MAU_PRED<4> get_next_table(ingress,0)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.872048:    <0,4> WARN MAU_PRED<4> get_next_table(ingress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.873552:    :0x1:-:<0,0,4>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_network.sap is miss
+:08-10 13:38:32.873566:        :0x1:-:<0,0,4>:Key:
+:08-10 13:38:32.874536:        :0x1:-:<0,0,4>:	hdr.transport.nsh_type1.sap[15:0] = 0x0
+:08-10 13:38:32.874550:        :0x1:-:<0,0,4>:	ig_md.lkp_0.tunnel_id[31:0] = 0x0
+:08-10 13:38:32.874557:        :0x1:-:<0,0,4>:	ig_md.lkp_0.tunnel_type[3:0] = 0x0
+:08-10 13:38:32.874570:        :0x1:-:<0,0,4>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_network.NoAction_
+:08-10 13:38:32.874673:        :0x1:-:<0,0,4>:Action Results:
+:08-10 13:38:32.874682:        :0x1:-:<0,0,4>:	----- CountPrimitive -----
+:08-10 13:38:32.874689:        :0x1:-:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.874767:    :0x1:-:<0,0,4>:Ingress : Gateway table condition ((ig_md.bypass & 2 == 0)) matched.
+:08-10 13:38:32.874779:    :0x1:-:<0,0,4>:Ingress : Associated table SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel is executed
+:08-10 13:38:32.874787:    :0x1:-:<0,0,4>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel is miss
+:08-10 13:38:32.874794:        :0x1:-:<0,0,4>:Key:
+:08-10 13:38:32.874817:        :0x1:-:<0,0,4>:	hdr.transport.nsh_type1.si[7:0] = 0x5
+:08-10 13:38:32.874827:        :0x1:-:<0,0,4>:	hdr.transport.nsh_type1.spi[23:0] = 0x4
+:08-10 13:38:32.874840:        :0x1:-:<0,0,4>:Execute Default Action: NoAction
+:08-10 13:38:32.874949:        :0x1:-:<0,0,4>:Action Results:
+:08-10 13:38:32.874959:        :0x1:-:<0,0,4>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.874966:        :0x1:-:<0,0,4>:	Operation:
+:08-10 13:38:32.874973:        :0x1:-:<0,0,4>:	set
+:08-10 13:38:32.874979:        :0x1:-:<0,0,4>:	Destination:
+:08-10 13:38:32.874986:        :0x1:-:<0,0,4>:	ig_md.nsh_md.sfc[11:0] = 0x0
+:08-10 13:38:32.874993:        :0x1:-:<0,0,4>:	mask=0xFFF
+:08-10 13:38:32.874999:        :0x1:-:<0,0,4>:	Source 1:
+:08-10 13:38:32.875006:        :0x1:-:<0,0,4>:	Val=0x0
+:08-10 13:38:32.875014:        :0x1:-:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.875024:    :0x1:-:<0,0,4>:Ingress : Table tbl_acl813 is not active(inhibited/skipped)
+:08-10 13:38:32.875035:    :0x1:-:<0,0,4>:Ingress : Table tbl_npb_ing_sf_npb_basic_adv_top234 is not active(inhibited/skipped)
+:08-10 13:38:32.875050:    :0x1:-:<0,0,4>:Ingress : Table SwitchIngress.HashMask.hash_sel is miss
+:08-10 13:38:32.875058:        :0x1:-:<0,0,4>:Key:
+:08-10 13:38:32.875077:        :0x1:-:<0,0,4>:	ig_md.egress_port_lag_hash_sel[3:0] = 0x0
+:08-10 13:38:32.875091:        :0x1:-:<0,0,4>:Execute Default Action: NoAction
+:08-10 13:38:32.875201:        :0x1:-:<0,0,4>:Action Results:
+:08-10 13:38:32.875212:        :0x1:-:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.875224:    :0x1:-:<0,0,4>:Ingress : Table SwitchIngress.IngressHdrStackCounters.cpu_hdr_cntr_tbl is miss
+:08-10 13:38:32.875233:        :0x1:-:<0,0,4>:Key:
+:08-10 13:38:32.875254:        :0x1:-:<0,0,4>:	--validity_check--hdr.cpu.$valid = 0x0
+:08-10 13:38:32.875272:        :0x1:-:<0,0,4>:Execute Default Action: NoAction
+:08-10 13:38:32.875376:        :0x1:-:<0,0,4>:Action Results:
+:08-10 13:38:32.875386:        :0x1:-:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.875402:    :0x1:-:<0,0,->:------------ Stage 5 ------------
+:08-10 13:38:32.876808:    :0x1:-:<0,0,5>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_exm is miss
+:08-10 13:38:32.876822:        :0x1:-:<0,0,5>:Key:
+:08-10 13:38:32.877792:        :0x1:-:<0,0,5>:	hdr.transport.nsh_type1.sap[15:0] = 0x0
+:08-10 13:38:32.877806:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_id[23:0] = 0x0
+:08-10 13:38:32.877813:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_id[31:24] = 0x0
+:08-10 13:38:32.877820:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_type[3:0] = 0x0
+:08-10 13:38:32.877833:        :0x1:-:<0,0,5>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.NoAction_exm
+:08-10 13:38:32.877935:        :0x1:-:<0,0,5>:Action Results:
+:08-10 13:38:32.877944:        :0x1:-:<0,0,5>:	----- CountPrimitive -----
+:08-10 13:38:32.877954:        :0x1:-:<0,0,5>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.877971:    :0x1:-:<0,0,5>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam is miss
+:08-10 13:38:32.877985:        :0x1:-:<0,0,5>:Key:
+:08-10 13:38:32.878019:        :0x1:-:<0,0,5>:	hdr.transport.nsh_type1.sap[15:0] = 0x0
+:08-10 13:38:32.878030:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_id[23:0] = 0x0
+:08-10 13:38:32.878037:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_id[31:24] = 0x0
+:08-10 13:38:32.878045:        :0x1:-:<0,0,5>:	ig_md.lkp_1.tunnel_type[3:0] = 0x0
+:08-10 13:38:32.878063:        :0x1:-:<0,0,5>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sfc_top.tunnel_inner.NoAction_tcam
+:08-10 13:38:32.878171:        :0x1:-:<0,0,5>:Action Results:
+:08-10 13:38:32.878180:        :0x1:-:<0,0,5>:	----- CountPrimitive -----
+:08-10 13:38:32.878190:        :0x1:-:<0,0,5>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.878209:    :0x1:-:<0,0,->:------------ Stage 6 ------------
+:08-10 13:38:32.880859:    :0x1:-:<0,0,6>:Ingress : Gateway table condition ((npb_ing_top_npb_ing_sfc_top_tunnel_inner_scope == 1)) not matched.
+:08-10 13:38:32.880875:    :0x1:-:<0,0,6>:Ingress : Gateway attached to cond-150
+:08-10 13:38:32.880883:    :0x1:-:<0,0,6>:Ingress : Associated table cond-150 is executed
+:08-10 13:38:32.880889:    :0x1:-:<0,0,6>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.880896:        :0x1:-:<0,0,6>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.880907:    :0x1:-:<0,0,6>:Ingress : Table tbl_scoper41_1 is not active(inhibited/skipped)
+:08-10 13:38:32.881007:    :0x1:-:<0,0,6>:Ingress : Gateway table condition ((npb_ing_top_npb_ing_sfc_top_tunnel_inner_terminate == 1)) not matched.
+:08-10 13:38:32.881019:    :0x1:-:<0,0,6>:Ingress : Gateway attached to tbl_tunnel856
+:08-10 13:38:32.881028:    :0x1:-:<0,0,6>:Ingress : Associated table tbl_tunnel856 is executed
+:08-10 13:38:32.881039:    :0x1:-:<0,0,6>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.881055:        :0x1:-:<0,0,6>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.881073:    :0x1:-:<0,0,6>:Ingress : Table tbl_tunnel858 is not active(inhibited/skipped)
+:08-10 13:38:32.881087:    :0x1:-:<0,0,6>:Ingress : Table tbl_tunnel883 is not active(inhibited/skipped)
+:08-10 13:38:32.881102:    :0x1:-:<0,0,->:------------ Stage 7 ------------
+:08-10 13:38:32.881561:    <0,7> WARN MAU_PRED<7> No LTs powered for lookup!
+:08-10 13:38:32.881577:    <0,7> WARN MAU_PRED<7> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.881791:    <0,7> WARN MAU_PRED<7> get_next_table(ingress,0)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.882002:    <0,7> WARN MAU_PRED<7> get_next_table(ingress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.882216:    <0,7> WARN MAU_PRED<7> get_next_table(ingress,2)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.882902:    :0x1:-:<0,0,->:------------ Stage 8 ------------
+:08-10 13:38:32.883360:    <0,8> WARN MAU_PRED<8> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.884483:    :0x1:-:<0,0,8>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class is miss
+:08-10 13:38:32.884498:        :0x1:-:<0,0,8>:Key:
+:08-10 13:38:32.885475:        :0x1:-:<0,0,8>:	hdr.transport.nsh_type1.vpn[15:0] = 0x1
+:08-10 13:38:32.885489:        :0x1:-:<0,0,8>:	ig_md.lkp_1.ip_proto[7:0] = 0x11
+:08-10 13:38:32.885497:        :0x1:-:<0,0,8>:	ig_md.lkp_1.l4_dst_port[15:0] = 0x50
+:08-10 13:38:32.885503:        :0x1:-:<0,0,8>:	ig_md.lkp_1.l4_src_port[15:0] = 0x4D2
+:08-10 13:38:32.885509:        :0x1:-:<0,0,8>:	ig_md.lkp_1.mac_type[15:0] = 0x800
+:08-10 13:38:32.885523:        :0x1:-:<0,0,8>:Execute Default Action: NoAction
+:08-10 13:38:32.885649:        :0x1:-:<0,0,8>:Action Results:
+:08-10 13:38:32.885661:        :0x1:-:<0,0,8>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.885668:        :0x1:-:<0,0,8>:	Operation:
+:08-10 13:38:32.885675:        :0x1:-:<0,0,8>:	set
+:08-10 13:38:32.885682:        :0x1:-:<0,0,8>:	Destination:
+:08-10 13:38:32.885688:        :0x1:-:<0,0,8>:	mask=0x3
+:08-10 13:38:32.885695:        :0x1:-:<0,0,8>:	Source 1:
+:08-10 13:38:32.885702:        :0x1:-:<0,0,8>:	Val=0x0
+:08-10 13:38:32.885709:        :0x1:-:<0,0,8>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.885715:        :0x1:-:<0,0,8>:	Operation:
+:08-10 13:38:32.885722:        :0x1:-:<0,0,8>:	set
+:08-10 13:38:32.885730:        :0x1:-:<0,0,8>:	Destination:
+:08-10 13:38:32.885741:        :0x1:-:<0,0,8>:	mask=0xFF
+:08-10 13:38:32.885752:        :0x1:-:<0,0,8>:	Source 1:
+:08-10 13:38:32.885762:        :0x1:-:<0,0,8>:	Val=0x0
+:08-10 13:38:32.885778:        :0x1:-:<0,0,8>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.885801:    :0x1:-:<0,0,->:------------ Stage 9 ------------
+:08-10 13:38:32.886249:    <0,9> WARN MAU_PRED<9> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.887440:    :0x1:-:<0,0,9>:Ingress : Gateway table condition (true(always hit)) matched.
+:08-10 13:38:32.887457:    :0x1:-:<0,0,9>:Ingress : Gateway attached to tbl_npb_ing_top_npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1_compute_hash
+:08-10 13:38:32.887465:    :0x1:-:<0,0,9>:Ingress : Associated table tbl_npb_ing_top_npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1_compute_hash is executed
+:08-10 13:38:32.887471:    :0x1:-:<0,0,9>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.887485:        :0x1:-:<0,0,9>:Execute Action: SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.compute_hash
+:08-10 13:38:32.888534:        :0x1:-:<0,0,9>:Action Results:
+:08-10 13:38:32.888548:        :0x1:-:<0,0,9>:	----- SetFieldToHashIndexPrimitive -----
+:08-10 13:38:32.888555:        :0x1:-:<0,0,9>:	Destination:
+:08-10 13:38:32.888561:        :0x1:-:<0,0,9>:	ig_md.nsh_md.hash_1[7:0] = 0x2
+:08-10 13:38:32.888567:        :0x1:-:<0,0,9>:	ig_md.nsh_md.hash_1[15:8] = 0xC0
+:08-10 13:38:32.888574:        :0x1:-:<0,0,9>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.888593:    :0x1:-:<0,0,->:------------ Stage 10 ------------
+:08-10 13:38:32.889034:    <0,10> WARN MAU_PRED<10> No LTs powered for lookup!
+:08-10 13:38:32.889050:    <0,10> WARN MAU_PRED<10> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.889792:    :0x1:-:<0,0,->:------------ Stage 11 ------------
+:08-10 13:38:32.890264:    <0,11> WARN MAU_PRED<11> No LTs powered for lookup!
+:08-10 13:38:32.890280:    <0,11> WARN MAU_PRED<11> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.890999:    :0x1:-:<0,0,->:------------ Stage 12 ------------
+:08-10 13:38:32.891473:    <0,12> WARN MAU_PRED<12> No LTs powered for lookup!
+:08-10 13:38:32.891488:    <0,12> WARN MAU_PRED<12> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.892201:    :0x1:-:<0,0,->:------------ Stage 13 ------------
+:08-10 13:38:32.892649:    <0,13> WARN MAU_PRED<13> No LTs powered for lookup!
+:08-10 13:38:32.892664:    <0,13> WARN MAU_PRED<13> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.893451:    :0x1:-:<0,0,->:------------ Stage 14 ------------
+:08-10 13:38:32.893905:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.894555:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.894884:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,2)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.895211:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,3)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.895542:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.895875:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,5)=7 but LT 7 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.896234:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,7)=8 but LT 8 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.896563:    <0,14> WARN MAU_PRED<14> get_next_table(ingress,8)=9 but LT 9 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.897554:    :0x1:-:<0,0,14>:Ingress : Gateway table condition ((ig_md.nsh_md.sfc_enable == 1)) not matched.
+:08-10 13:38:32.897572:    :0x1:-:<0,0,14>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd is inhibited by a gateway condition
+:08-10 13:38:32.897581:    :0x1:-:<0,0,14>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.897595:        :0x1:-:<0,0,14>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.897617:    :0x1:-:<0,0,->:------------ Stage 15 ------------
+:08-10 13:38:32.898072:    <0,15> WARN MAU_PRED<15> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.901948:    :0x1:-:<0,0,15>:Ingress : Gateway table condition ((ig_md.bypass & 4 == 0)) matched.
+:08-10 13:38:32.901963:    :0x1:-:<0,0,15>:Ingress : Associated table SwitchIngress.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel is executed
+:08-10 13:38:32.901971:    :0x1:-:<0,0,15>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel is miss
+:08-10 13:38:32.901978:        :0x1:-:<0,0,15>:Key:
+:08-10 13:38:32.902955:        :0x1:-:<0,0,15>:	hdr.transport.nsh_type1.si[7:0] = 0x5
+:08-10 13:38:32.902970:        :0x1:-:<0,0,15>:	hdr.transport.nsh_type1.spi[23:0] = 0x4
+:08-10 13:38:32.902986:        :0x1:-:<0,0,15>:Execute Default Action: SwitchIngress.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel_miss
+:08-10 13:38:32.903085:        :0x1:-:<0,0,15>:Action Results:
+:08-10 13:38:32.903095:        :0x1:-:<0,0,15>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.903275:    :0x1:-:<0,0,15>:Ingress : Gateway table condition ((ig_md.tunnel_1.terminate)) not matched.
+:08-10 13:38:32.903288:    :0x1:-:<0,0,15>:Ingress : Gateway attached to tbl_tunnel1071
+:08-10 13:38:32.903295:    :0x1:-:<0,0,15>:Ingress : Associated table tbl_tunnel1071 is executed
+:08-10 13:38:32.903301:    :0x1:-:<0,0,15>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.903310:        :0x1:-:<0,0,15>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.903323:    :0x1:-:<0,0,15>:Ingress : Table tbl_tunnel1057 is not active(inhibited/skipped)
+:08-10 13:38:32.903332:    :0x1:-:<0,0,15>:Ingress : Table tbl_npb_ing_sf_multicast_top92 is not active(inhibited/skipped)
+:08-10 13:38:32.903506:    :0x1:-:<0,0,15>:Ingress : Gateway table condition ((ig_md.lkp_1.ip_type == 0)) not matched.
+:08-10 13:38:32.903518:    :0x1:-:<0,0,15>:Ingress : Gateway attached to tbl_util125
+:08-10 13:38:32.903525:    :0x1:-:<0,0,15>:Ingress : Table tbl_util125 is inhibited by a gateway condition
+:08-10 13:38:32.903534:        :0x1:-:<0,0,15>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.903717:    :0x1:-:<0,0,15>:Ingress : Gateway table condition ((ig_md.lkp_1.ip_type == 1)) matched.
+:08-10 13:38:32.903729:    :0x1:-:<0,0,15>:Ingress : Gateway attached to tbl_util88
+:08-10 13:38:32.903738:    :0x1:-:<0,0,15>:Ingress : Associated table tbl_util88 is executed
+:08-10 13:38:32.903748:    :0x1:-:<0,0,15>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.903769:        :0x1:-:<0,0,15>:Execute Action: util88
+:08-10 13:38:32.903888:        :0x1:-:<0,0,15>:Action Results:
+:08-10 13:38:32.903900:        :0x1:-:<0,0,15>:	----- SetFieldToHashIndexPrimitive -----
+:08-10 13:38:32.903908:        :0x1:-:<0,0,15>:	Destination:
+:08-10 13:38:32.903917:        :0x1:-:<0,0,15>:	ig_md.hash[15:0] = 0xBD68
+:08-10 13:38:32.903929:        :0x1:-:<0,0,15>:	ig_md.hash[31:16] = 0xC9D4
+:08-10 13:38:32.903941:        :0x1:-:<0,0,15>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.903959:    :0x1:-:<0,0,15>:Ingress : Table tbl_util108 is not active(inhibited/skipped)
+:08-10 13:38:32.903979:    :0x1:-:<0,0,15>:Ingress : Table SwitchIngress.npb_ing_top.TunnelDecapScopeDecrement.scope_dec is hit
+:08-10 13:38:32.903989:        :0x1:-:<0,0,15>:Key:
+:08-10 13:38:32.904026:        :0x1:-:<0,0,15>:	hdr.transport.nsh_type1.scope[7:0] = 0x0
+:08-10 13:38:32.904038:        :0x1:-:<0,0,15>:	ig_md.tunnel_1.terminate[0:0] = 0x0
+:08-10 13:38:32.904045:        :0x1:-:<0,0,15>:	ig_md.tunnel_2.terminate[0:0] = 0x0
+:08-10 13:38:32.904070:        :0x1:-:<0,0,15>:Execute Action: SwitchIngress.npb_ing_top.TunnelDecapScopeDecrement.new_scope
+:08-10 13:38:32.904191:        :0x1:-:<0,0,15>:Action Results:
+:08-10 13:38:32.904203:        :0x1:-:<0,0,15>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.904210:        :0x1:-:<0,0,15>:	Operation:
+:08-10 13:38:32.904218:        :0x1:-:<0,0,15>:	set
+:08-10 13:38:32.904227:        :0x1:-:<0,0,15>:	Destination:
+:08-10 13:38:32.904237:        :0x1:-:<0,0,15>:	hdr.transport.nsh_type1.scope[7:0] = 0x0
+:08-10 13:38:32.904248:        :0x1:-:<0,0,15>:	mask=0xFF
+:08-10 13:38:32.904259:        :0x1:-:<0,0,15>:	Source 1:
+:08-10 13:38:32.904269:        :0x1:-:<0,0,15>:	scope_new=action_param
+:08-10 13:38:32.904282:        :0x1:-:<0,0,15>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.904307:    :0x1:-:<0,0,->:------------ Stage 16 ------------
+:08-10 13:38:32.905151:    <0,16> WARN MAU_PRED<16> get_next_table(ingress,0)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.906609:    :0x1:-:<0,0,16>:Ingress : Gateway table condition ((ig_md.bypass & 8 == 0)) matched.
+:08-10 13:38:32.906624:    :0x1:-:<0,0,16>:Ingress : Associated table SwitchIngress.npb_ing_top.npb_ing_sff_top.ing_sff_fib is executed
+:08-10 13:38:32.906632:    :0x1:-:<0,0,16>:Ingress : Table SwitchIngress.npb_ing_top.npb_ing_sff_top.ing_sff_fib is hit
+:08-10 13:38:32.906639:        :0x1:-:<0,0,16>:Key:
+:08-10 13:38:32.907596:        :0x1:-:<0,0,16>:	hdr.transport.nsh_type1.spi[23:0] = 0x4
+:08-10 13:38:32.907609:        :0x1:-:<0,0,16>:	ig_md.nsh_md.si_predec[7:0] = 0x5
+:08-10 13:38:32.907628:        :0x1:-:<0,0,16>:Execute Action: SwitchIngress.npb_ing_top.npb_ing_sff_top.unicast
+:08-10 13:38:32.907763:        :0x1:-:<0,0,16>:Action Results:
+:08-10 13:38:32.907775:        :0x1:-:<0,0,16>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.907783:        :0x1:-:<0,0,16>:	Operation:
+:08-10 13:38:32.907789:        :0x1:-:<0,0,16>:	set
+:08-10 13:38:32.907799:        :0x1:-:<0,0,16>:	Destination:
+:08-10 13:38:32.907808:        :0x1:-:<0,0,16>:	ig_md.nexthop[11:0] = 0x0
+:08-10 13:38:32.907818:        :0x1:-:<0,0,16>:	mask=0xFFF
+:08-10 13:38:32.907828:        :0x1:-:<0,0,16>:	Source 1:
+:08-10 13:38:32.907837:        :0x1:-:<0,0,16>:	nexthop_index=action_param
+:08-10 13:38:32.907848:        :0x1:-:<0,0,16>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.907859:        :0x1:-:<0,0,16>:	Operation:
+:08-10 13:38:32.907866:        :0x1:-:<0,0,16>:	set
+:08-10 13:38:32.907873:        :0x1:-:<0,0,16>:	Destination:
+:08-10 13:38:32.907882:        :0x1:-:<0,0,16>:	ig_md.nsh_md.end_of_path[0:0] = 0x0
+:08-10 13:38:32.907890:        :0x1:-:<0,0,16>:	mask=0x1
+:08-10 13:38:32.907901:        :0x1:-:<0,0,16>:	Source 1:
+:08-10 13:38:32.907910:        :0x1:-:<0,0,16>:	end_of_chain=action_param
+:08-10 13:38:32.907921:        :0x1:-:<0,0,16>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.907940:    :0x1:-:<0,0,16>:Ingress : Table tbl_set_ig_intr_md is miss
+:08-10 13:38:32.907952:        :0x1:-:<0,0,16>:Key:
+:08-10 13:38:32.907972:        :0x1:-:<0,0,16>:Execute Default Action: set_ig_intr_md
+:08-10 13:38:32.908103:        :0x1:-:<0,0,16>:Action Results:
+:08-10 13:38:32.908115:        :0x1:-:<0,0,16>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.908123:        :0x1:-:<0,0,16>:	Destination:
+:08-10 13:38:32.908131:        :0x1:-:<0,0,16>:	ig_intr_md_for_tm.mcast_grp_b.$valid=header
+:08-10 13:38:32.908140:        :0x1:-:<0,0,16>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.908148:        :0x1:-:<0,0,16>:	Operation:
+:08-10 13:38:32.908158:        :0x1:-:<0,0,16>:	set
+:08-10 13:38:32.908169:        :0x1:-:<0,0,16>:	Destination:
+:08-10 13:38:32.908179:        :0x1:-:<0,0,16>:	ig_intr_md_for_tm.level2_mcast_hash[12:0] = 0x9D4
+:08-10 13:38:32.908188:        :0x1:-:<0,0,16>:	mask=0x1FFF
+:08-10 13:38:32.908199:        :0x1:-:<0,0,16>:	Source 1:
+:08-10 13:38:32.908209:        :0x1:-:<0,0,16>:	ig_md.hash[15:0] = 0xBD68
+:08-10 13:38:32.908219:        :0x1:-:<0,0,16>:	ig_md.hash[31:16] = 0xC9D4
+:08-10 13:38:32.908229:        :0x1:-:<0,0,16>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.908244:        :0x1:-:<0,0,16>:	Destination:
+:08-10 13:38:32.908253:        :0x1:-:<0,0,16>:	ig_intr_md_for_tm.level2_mcast_hash.$valid=header
+:08-10 13:38:32.908265:        :0x1:-:<0,0,16>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.908286:    :0x1:-:<0,0,->:------------ Stage 17 ------------
+:08-10 13:38:32.909143:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,0)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.909509:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.909866:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,6)=7 but LT 7 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.910232:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,7)=8 but LT 8 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.910596:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,8)=9 but LT 9 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.910964:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,9)=10 but LT 10 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.911330:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,10)=11 but LT 11 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.911704:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,11)=12 but LT 12 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.912073:    <0,17> WARN MAU_PRED<17> get_next_table(ingress,12)=13 but LT 13 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.913750:    :0x1:-:<0,0,17>:Ingress : Table SwitchIngress.nexthop.nexthop is hit
+:08-10 13:38:32.913764:        :0x1:-:<0,0,17>:Key:
+:08-10 13:38:32.914709:        :0x1:-:<0,0,17>:	ig_md.nexthop[11:0] = 0x0
+:08-10 13:38:32.914734:        :0x1:-:<0,0,17>:Execute Action: SwitchIngress.nexthop.set_tunnel_properties
+:08-10 13:38:32.914866:        :0x1:-:<0,0,17>:Action Results:
+:08-10 13:38:32.914878:        :0x1:-:<0,0,17>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.914885:        :0x1:-:<0,0,17>:	Operation:
+:08-10 13:38:32.914891:        :0x1:-:<0,0,17>:	set
+:08-10 13:38:32.914897:        :0x1:-:<0,0,17>:	Destination:
+:08-10 13:38:32.914904:        :0x1:-:<0,0,17>:	ig_md.tunnel_0.index[15:0] = 0x4
+:08-10 13:38:32.914911:        :0x1:-:<0,0,17>:	mask=0xFFFF
+:08-10 13:38:32.914921:        :0x1:-:<0,0,17>:	Source 1:
+:08-10 13:38:32.914932:        :0x1:-:<0,0,17>:	tunnel_index=action_param
+:08-10 13:38:32.914944:        :0x1:-:<0,0,17>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.914956:        :0x1:-:<0,0,17>:	Operation:
+:08-10 13:38:32.914967:        :0x1:-:<0,0,17>:	set
+:08-10 13:38:32.914979:        :0x1:-:<0,0,17>:	Destination:
+:08-10 13:38:32.914990:        :0x1:-:<0,0,17>:	ig_md.egress_port_lag_index[9:0] = 0x0
+:08-10 13:38:32.915000:        :0x1:-:<0,0,17>:	mask=0x3FF
+:08-10 13:38:32.915007:        :0x1:-:<0,0,17>:	Source 1:
+:08-10 13:38:32.915016:        :0x1:-:<0,0,17>:	Val=0x0
+:08-10 13:38:32.915029:        :0x1:-:<0,0,17>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.915241:    :0x1:-:<0,0,17>:Ingress : Gateway table condition ((ig_md.tunnel_2.terminate)) not matched.
+:08-10 13:38:32.915255:    :0x1:-:<0,0,17>:Ingress : Gateway attached to tbl_tunnel1219
+:08-10 13:38:32.915263:    :0x1:-:<0,0,17>:Ingress : Associated table tbl_tunnel1219 is executed
+:08-10 13:38:32.915271:    :0x1:-:<0,0,17>:Ingress : Gateway did provide payload.
+:08-10 13:38:32.915285:        :0x1:-:<0,0,17>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.915305:    :0x1:-:<0,0,17>:Ingress : Table tbl_tunnel1214 is not active(inhibited/skipped)
+:08-10 13:38:32.915325:    :0x1:-:<0,0,->:------------ Stage 18 ------------
+:08-10 13:38:32.916213:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,0)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.916598:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,1)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.916989:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,3)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.917369:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.917761:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.918149:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,6)=11 but LT 11 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.918556:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,11)=12 but LT 12 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.918952:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,12)=13 but LT 13 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.919356:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,13)=14 but LT 14 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.919753:    <0,18> WARN MAU_PRED<18> get_next_table(ingress,14)=15 but LT 15 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.920715:    :0x1:-:<0,0,18>:Ingress : Table SwitchIngress.outer_fib.fib is hit
+:08-10 13:38:32.920729:        :0x1:-:<0,0,18>:Key:
+:08-10 13:38:32.921675:        :0x1:-:<0,0,18>:	ig_md.tunnel_0.index[15:0] = 0x4
+:08-10 13:38:32.921699:        :0x1:-:<0,0,18>:Execute Action: SwitchIngress.outer_fib.set_nexthop_properties
+:08-10 13:38:32.921832:        :0x1:-:<0,0,18>:Action Results:
+:08-10 13:38:32.921845:        :0x1:-:<0,0,18>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.921852:        :0x1:-:<0,0,18>:	Operation:
+:08-10 13:38:32.921859:        :0x1:-:<0,0,18>:	set
+:08-10 13:38:32.921868:        :0x1:-:<0,0,18>:	Destination:
+:08-10 13:38:32.921879:        :0x1:-:<0,0,18>:	ig_md.outer_nexthop[11:0] = 0x5
+:08-10 13:38:32.921889:        :0x1:-:<0,0,18>:	mask=0xFFF
+:08-10 13:38:32.921896:        :0x1:-:<0,0,18>:	Source 1:
+:08-10 13:38:32.921903:        :0x1:-:<0,0,18>:	nexthop_index=action_param
+:08-10 13:38:32.921910:        :0x1:-:<0,0,18>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.921917:        :0x1:-:<0,0,18>:	Operation:
+:08-10 13:38:32.921923:        :0x1:-:<0,0,18>:	set
+:08-10 13:38:32.921930:        :0x1:-:<0,0,18>:	Destination:
+:08-10 13:38:32.921937:        :0x1:-:<0,0,18>:	ig_md.egress_port_lag_index[9:0] = 0x3
+:08-10 13:38:32.921943:        :0x1:-:<0,0,18>:	mask=0x3FF
+:08-10 13:38:32.921949:        :0x1:-:<0,0,18>:	Source 1:
+:08-10 13:38:32.921955:        :0x1:-:<0,0,18>:	port_lag_index=action_param
+:08-10 13:38:32.921963:        :0x1:-:<0,0,18>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.921980:    :0x1:-:<0,0,->:------------ Stage 19 ------------
+:08-10 13:38:32.922423:    <0,19> WARN MAU_PRED<19> get_next_table(ingress,-1)=0 but LT 0 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.923274:    <0,19> WARN MAU_PRED<19> get_next_table(ingress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.923686:    <0,19> WARN MAU_PRED<19> get_next_table(ingress,2)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.924087:    <0,19> WARN MAU_PRED<19> get_next_table(ingress,3)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.924498:    <0,19> WARN MAU_PRED<19> get_next_table(ingress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.925715:    :0x1:-:<0,0,19>:Ingress : Gateway table condition ((ig_md.egress_port_lag_index == 1023)) not matched.
+:08-10 13:38:32.925732:    :0x1:-:<0,0,19>:Ingress : Associated table SwitchIngress.lag.lag is executed
+:08-10 13:38:32.925740:    :0x1:-:<0,0,19>:Ingress : Table SwitchIngress.lag.lag is hit
+:08-10 13:38:32.925746:        :0x1:-:<0,0,19>:Key:
+:08-10 13:38:32.926689:        :0x1:-:<0,0,19>:	ig_md.egress_port_lag_index[9:0] = 0x3
+:08-10 13:38:32.926713:        :0x1:-:<0,0,19>:Execute Action: SwitchIngress.lag.set_lag_port
+:08-10 13:38:32.926832:        :0x1:-:<0,0,19>:Action Results:
+:08-10 13:38:32.926843:        :0x1:-:<0,0,19>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.926850:        :0x1:-:<0,0,19>:	Operation:
+:08-10 13:38:32.926857:        :0x1:-:<0,0,19>:	set
+:08-10 13:38:32.926864:        :0x1:-:<0,0,19>:	Destination:
+:08-10 13:38:32.926871:        :0x1:-:<0,0,19>:	ig_intr_md_for_tm.ucast_egress_port[8:0] = 0x8
+:08-10 13:38:32.926878:        :0x1:-:<0,0,19>:	mask=0x1FF
+:08-10 13:38:32.926885:        :0x1:-:<0,0,19>:	Source 1:
+:08-10 13:38:32.926891:        :0x1:-:<0,0,19>:	port=action_param
+:08-10 13:38:32.926898:        :0x1:-:<0,0,19>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.926905:        :0x1:-:<0,0,19>:	Destination:
+:08-10 13:38:32.926912:        :0x1:-:<0,0,19>:	ig_intr_md_for_tm.ucast_egress_port.$valid=header
+:08-10 13:38:32.926919:        :0x1:-:<0,0,19>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.927456:    <0,3> ERROR MauAddrDist::vpn_range_check: Logrow=1 AddrType=STATS,Addr=0xffffc with VPN=63,index=1023 NOT within Synth2Port Base/Limit - DISCARDING.
+:08-10 13:38:32.929612:        :0x1:-:<0,0,->:Ingress Deparser Headers:
+:08-10 13:38:32.929648:        :0x1:-:<0,0,->:Header hdr.bridged_md.$valid is valid
+:08-10 13:38:32.929657:        :0x1:-:<0,0,->:Header hdr.outer.ethernet.$valid is valid
+:08-10 13:38:32.929665:        :0x1:-:<0,0,->:Header hdr.outer.ipv4.$valid is valid
+:08-10 13:38:32.929671:        :0x1:-:<0,0,->:Header hdr.outer.udp.$valid is valid
+:08-10 13:38:32.929679:        :0x1:-:<0,0,->:Header hdr.transport.erspan_type2.$valid is valid
+:08-10 13:38:32.929685:        :0x1:-:<0,0,->:Header hdr.transport.ethernet.$valid is valid
+:08-10 13:38:32.929692:        :0x1:-:<0,0,->:Header hdr.transport.gre.$valid is valid
+:08-10 13:38:32.929702:        :0x1:-:<0,0,->:Header hdr.transport.gre_sequence.$valid is valid
+:08-10 13:38:32.929713:        :0x1:-:<0,0,->:Header hdr.transport.ipv4.$valid is valid
+:08-10 13:38:32.929723:        :0x1:-:<0,0,->:Header hdr.transport.nsh_type1.$valid is valid
+:08-10 13:38:32.929733:        :0x1:-:<0,0,->:Header hdr.udf.$valid is valid
+:08-10 13:38:32.929743:        :0x1:-:<0,0,->:Header ig_intr_md_for_dprsr.drop_ctl.$valid is valid
+:08-10 13:38:32.929754:        :0x1:-:<0,0,->:Header ig_intr_md_for_tm.level2_exclusion_id.$valid is valid
+:08-10 13:38:32.929764:        :0x1:-:<0,0,->:Header ig_intr_md_for_tm.level2_mcast_hash.$valid is valid
+:08-10 13:38:32.929775:        :0x1:-:<0,0,->:Header ig_intr_md_for_tm.mcast_grp_b.$valid is valid
+:08-10 13:38:32.929784:        :0x1:-:<0,0,->:Header ig_intr_md_for_tm.ucast_egress_port.$valid is valid
+:08-10 13:38:32.930399:    :-:0x1:<0,0,0>:========== Egress Pkt from TM to port 8 (tm 142, real 142 bytes) ==========
+:08-10 13:38:32.930414:    :-:0x1:<0,0,0>:Packet :
+:08-10 13:38:32.930427:        :-:0x1:<0,0,0>:00 00 00 04 00 00 20 0a 30 00 00 02 00 08 00 00 
+:08-10 13:38:32.930438:        :-:0x1:<0,0,0>:00 03 00 00 04 05 c0 a8 00 01 00 01 00 00 00 00 
+:08-10 13:38:32.930449:        :-:0x1:<0,0,0>:00 00 c0 a8 00 02 00 01 02 03 04 05 00 06 07 08 
+:08-10 13:38:32.930461:        :-:0x1:<0,0,0>:09 0a 08 00 45 00 00 56 00 01 00 00 40 11 f9 42 
+:08-10 13:38:32.930473:    WARN Epb::prepend_metadata_hdr - kFlagAppPoolCongestion currently unmodeled
+:08-10 13:38:32.930486:    :-:0x1:<0,0,->:========== Packet to egress parser: to port 8 (170 bytes)  ==========
+:08-10 13:38:32.930495:    :-:0x1:<0,0,->:Packet :
+:08-10 13:38:32.930507:        :-:0x1:<0,0,->:00 08 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+:08-10 13:38:32.930518:        :-:0x1:<0,0,->:00 00 01 00 00 00 00 00 00 00 9a 00 00 00 00 04 
+:08-10 13:38:32.930532:        :-:0x1:<0,0,->:00 00 20 0a 30 00 00 02 00 08 00 00 00 03 00 00 
+:08-10 13:38:32.930543:        :-:0x1:<0,0,->:04 05 c0 a8 00 01 00 01 00 00 00 00 00 00 c0 a8 
+:08-10 13:38:32.930600:    :-:0x1:<0,0,4>:Egress Parser state '$entry_point'
+:08-10 13:38:32.930741:        :-:0x1:<0,0,4>:Egress Parser state '$entry_point': extracted     0x0100, updating PHV word 144 to value     0x0001 E [hdr.transport.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.930793:        :-:0x1:<0,0,4>:Egress Parser state '$entry_point': extracted     0x0008, updating PHV word 145 to value     0x0008 E [eg_intr_md.egress_port[8:0]]
+:08-10 13:38:32.930849:        :-:0x1:<0,0,4>:Egress Parser state '$entry_point': extracted     0x0100, updating PHV word 196 to value     0x0100 E [eg_intr_md.egress_rid[15:8]]
+:08-10 13:38:32.930901:        :-:0x1:<0,0,4>:Egress Parser state '$entry_point': extracted     0x0000, updating PHV word 185 to value     0x0000 E [eg_intr_md.egress_rid[7:0]]
+:08-10 13:38:32.930924:    :-:0x1:<0,0,4>:Egress Parser state 'start.$oob_stall_0'
+:08-10 13:38:32.930958:    :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0'
+:08-10 13:38:32.931027:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0400,  setting PHV word  46 to value 0x04000000 E [hdr.cpu.reason_code[15:0], hdr.cpu.ether_type[15:0]]
+:08-10 13:38:32.931053:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0020,  setting PHV word  46 to value 0x04000020 E [hdr.cpu.reason_code[15:0], hdr.cpu.ether_type[15:0]]
+:08-10 13:38:32.931101:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0000, updating PHV word  99 to value       0x00 E [eg_md.cpu_reason[7:0]]
+:08-10 13:38:32.931155:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0000, updating PHV word 221 to value     0x0000 E [hdr.cpu.ingress_bd[15:0]]
+:08-10 13:38:32.931202:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0020, updating PHV word  98 to value       0x00 E [eg_md.bd[7:0]]
+:08-10 13:38:32.931256:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x200a, updating PHV word 198 to value     0x200a E [eg_md.outer_nexthop[11:0]]
+:08-10 13:38:32.931305:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x200a, updating PHV word 130 to value     0x200a E [eg_md.nsh_md.l2_fwd_en[0:0]]
+:08-10 13:38:32.931367:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x3000, updating PHV word 186 to value     0x3000 E [eg_md.nexthop[11:0], eg_md.flags.rmac_hit[0:0], eg_md.nsh_md.start_of_path[0:0], eg_md.nsh_md.end_of_path[0:0], npb_egr_top_npb_egr_sf_proxy_top_npb_egr_sf_proxy_hdr_edit_hdr_1_e_tag_isEtypeStag[0:0]]
+:08-10 13:38:32.931421:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0002, updating PHV word 165 to value     0x0002 E [eg_md.port_lag_index[9:0], __pad_4[5:0]]
+:08-10 13:38:32.931474:        :-:0x1:<0,0,4>:Egress Parser state 'start.$split_0': extracted     0x0008, updating PHV word 178 to value     0x0008 E [eg_md.ingress_port[8:0], __pad_3[6:0]]
+:08-10 13:38:32.931524:    :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh'
+:08-10 13:38:32.931615:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x2000, updating PHV word 144 to value     0x2001 E [hdr.transport.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.931705:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0000, updating PHV word 167 to value     0x0000 E [hdr.transport.nsh_type1.version[1:0], hdr.transport.nsh_type1.o[0:0], hdr.transport.nsh_type1.reserved[0:0], hdr.transport.nsh_type1.ttl[5:0], hdr.transport.nsh_type1.len[5:0]]
+:08-10 13:38:32.931784:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0003, updating PHV word  97 to value       0x00 E [hdr.transport.nsh_type1.reserved2[3:0], hdr.transport.nsh_type1.md_type[3:0]]
+:08-10 13:38:32.931864:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0000, updating PHV word 177 to value     0x0000 E [hdr.transport.nsh_type1.spi[23:8]]
+:08-10 13:38:32.931943:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0405, updating PHV word 120 to value       0x04 E [hdr.transport.nsh_type1.spi[7:0]]
+:08-10 13:38:32.932018:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x05c0, updating PHV word  85 to value       0x05 E [hdr.transport.nsh_type1.si[7:0]]
+:08-10 13:38:32.932099:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0xc0a8,  setting PHV word   7 to value 0xc0a80000 E [hdr.transport.nsh_type1.ver[7:0], hdr.transport.nsh_type1.reserved3[7:0], hdr.transport.nsh_type1.lag_hash[15:0]]
+:08-10 13:38:32.932152:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0001,  setting PHV word   7 to value 0xc0a80001 E [hdr.transport.nsh_type1.ver[7:0], hdr.transport.nsh_type1.reserved3[7:0], hdr.transport.nsh_type1.lag_hash[15:0]]
+:08-10 13:38:32.932232:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0000, updating PHV word 154 to value     0x0000 E [hdr.transport.nsh_type1.reserved4[7:0], hdr.transport.nsh_type1.scope[7:0]]
+:08-10 13:38:32.932304:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0xc0a8,  setting PHV word  18 to value 0xc0a80000 E [hdr.transport.nsh_type1.timestamp[31:0]]
+:08-10 13:38:32.932355:        :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh': extracted     0x0002,  setting PHV word  18 to value 0xc0a80002 E [hdr.transport.nsh_type1.timestamp[31:0]]
+:08-10 13:38:32.932405:    :-:0x1:<0,0,4>:Egress Parser state 'parse_transport_nsh.$oob_stall_0'
+:08-10 13:38:32.932458:    :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0'
+:08-10 13:38:32.932505:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0800, updating PHV word 144 to value     0x2009 E [hdr.transport.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.932553:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0001,  setting PHV word  44 to value 0x00010000 E [eg_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.932577:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0203,  setting PHV word  44 to value 0x00010203 E [eg_md.lkp_1.mac_dst_addr[47:16]]
+:08-10 13:38:32.932630:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0405,  setting PHV word 188 to value     0x0405 E [eg_md.lkp_1.mac_dst_addr[15:0]]
+:08-10 13:38:32.932675:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0006,  setting PHV word  31 to value 0x00060000 E [eg_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.932699:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0708,  setting PHV word  31 to value 0x00060708 E [eg_md.lkp_1.mac_src_addr[47:16]]
+:08-10 13:38:32.932748:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x090a,  setting PHV word 143 to value     0x090a E [eg_md.lkp_1.mac_src_addr[15:0]]
+:08-10 13:38:32.932772:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x090a,  setting PHV word  46 to value 0x0d0a0020 E [hdr.cpu.reason_code[15:0], hdr.cpu.ether_type[15:0]]
+:08-10 13:38:32.932796:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0800,  setting PHV word  46 to value 0x0d0a0820 E [hdr.cpu.reason_code[15:0], hdr.cpu.ether_type[15:0]]
+:08-10 13:38:32.932844:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0a08, updating PHV word 124 to value       0x0a E [hdr.outer.ethernet.src_addr[7:0]]
+:08-10 13:38:32.932895:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0800, updating PHV word 149 to value     0x0800 E [hdr.outer.ethernet.ether_type[15:0]]
+:08-10 13:38:32.932951:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ethernet_scope0': extracted     0x0800,  setting PHV word 189 to value     0x0800 E [eg_md.lkp_1.mac_type[15:0]]
+:08-10 13:38:32.932984:    :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0'
+:08-10 13:38:32.933097:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x4000, updating PHV word  72 to value       0x40 E [hdr.outer.vlan_tag.$stkvalid[1:0], hdr.inner.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.933156:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x4500, updating PHV word 152 to value     0x4500 E [eg_md.lkp_1.ip_tos[7:0]]
+:08-10 13:38:32.933222:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x0056, updating PHV word 195 to value     0x0056 E [eg_md.lkp_1.ip_len[15:0], npb_egr_top_npb_egr_sf_proxy_top_npb_egr_sf_proxy_hdr_edit_hdr_1_vn_tag_isEtypeStag[0:0]]
+:08-10 13:38:32.933283:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x0100, updating PHV word 210 to value     0x0100 E [eg_md.lkp_1.ip_flags[2:0]]
+:08-10 13:38:32.933344:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x4011, updating PHV word 203 to value     0x4011 E [protocol_outer_0[7:0], tunnel_rewrite_smac_index[15:8]]
+:08-10 13:38:32.933399:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x11f9, updating PHV word 127 to value       0x11 E [eg_md.lkp_1.ip_proto[7:0]]
+:08-10 13:38:32.933462:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0xf942, updating PHV word 150 to value     0xf942 E [hdr.outer.ipv4.hdr_checksum[15:0], hdr.outer.ipv6.version[3:0], hdr.outer.ipv6.tos[7:0], hdr.outer.ipv6.flow_label[19:16]]
+:08-10 13:38:32.933514:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0xc0a8,  setting PHV word  17 to value 0xc0a80000 E [eg_md.lkp_1.ip_src_addr[31:0], eg_md.lkp_1.ip_src_addr_v4[31:0]]
+:08-10 13:38:32.933544:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x0001,  setting PHV word  17 to value 0xc0a80001 E [eg_md.lkp_1.ip_src_addr[31:0], eg_md.lkp_1.ip_src_addr_v4[31:0]]
+:08-10 13:38:32.933596:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0xc0a8,  setting PHV word  49 to value 0xc0a80000 E [eg_md.lkp_1.ip_dst_addr[31:0], eg_md.lkp_1.ip_dst_addr_v4[31:0]]
+:08-10 13:38:32.933626:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x0002,  setting PHV word  49 to value 0xc0a80002 E [eg_md.lkp_1.ip_dst_addr[31:0], eg_md.lkp_1.ip_dst_addr_v4[31:0]]
+:08-10 13:38:32.933691:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0xa800, updating PHV word 220 to value     0xa800 E [hdr.outer.ipv4.dst_addr[23:8], hdr.outer.ipv6.dst_addr[23:8]]
+:08-10 13:38:32.933749:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_ipv4_scope0': extracted     0x0204, updating PHV word 126 to value       0x02 E [hdr.outer.ipv4.dst_addr[7:0], hdr.outer.ipv6.dst_addr[7:0]]
+:08-10 13:38:32.933779:    :-:0x1:<0,0,4>:Egress Parser state 'branch_outer_l3_protocol_scope0'
+:08-10 13:38:32.933835:    :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_udp_scope0'
+:08-10 13:38:32.933903:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_udp_scope0': extracted     0x8000, updating PHV word  72 to value       0xc0 E [hdr.outer.vlan_tag.$stkvalid[1:0], hdr.inner.vlan_tag.$stkvalid[0:0], POV]
+:08-10 13:38:32.933974:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_udp_scope0': extracted     0x04d2, updating PHV word 184 to value     0x04d2 E [eg_md.lkp_1.l4_src_port[15:0]]
+:08-10 13:38:32.934046:        :-:0x1:<0,0,4>:Egress Parser state 'parse_outer_udp_scope0': extracted     0x0050, updating PHV word 187 to value     0x0050 E [eg_md.lkp_1.l4_dst_port[15:0], npb_egr_top_npb_egr_sf_proxy_top_npb_egr_sf_proxy_hdr_edit_hdr_1_ethernet_isEtypeStag[0:0]]
+:08-10 13:38:32.934067:        :-:0x1:<0,0,->:Egress Headers:
+:08-10 13:38:32.934803:        :-:0x1:<0,0,->:Header eg_intr_md.egress_port.$valid is valid
+:08-10 13:38:32.934817:        :-:0x1:<0,0,->:Header hdr.outer.ethernet.$valid is valid
+:08-10 13:38:32.934828:        :-:0x1:<0,0,->:Header hdr.outer.ipv4.$valid is valid
+:08-10 13:38:32.934838:        :-:0x1:<0,0,->:Header hdr.outer.udp.$valid is valid
+:08-10 13:38:32.934848:        :-:0x1:<0,0,->:Header hdr.transport.nsh_type1.$valid is valid
+:08-10 13:38:32.935000:    :-:0x1:<0,0,->:------------ Stage 0 ------------
+:08-10 13:38:32.935854:    :-:0x1:<0,0,->:------------ Stage 1 ------------
+:08-10 13:38:32.941343:    :-:0x1:<0,0,1>:Egress : Table SwitchEgress.egress_port_mapping.port_mapping is hit
+:08-10 13:38:32.941360:        :-:0x1:<0,0,1>:Key:
+:08-10 13:38:32.942086:        :-:0x1:<0,0,1>:	eg_intr_md.egress_port[8:0] = 0x8
+:08-10 13:38:32.942113:        :-:0x1:<0,0,1>:Execute Action: SwitchEgress.egress_port_mapping.port_normal
+:08-10 13:38:32.942237:        :-:0x1:<0,0,1>:Action Results:
+:08-10 13:38:32.942249:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.942261:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.942271:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.942282:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.942291:        :-:0x1:<0,0,1>:	eg_md.port_lag_index[9:0] = 0x3
+:08-10 13:38:32.942303:        :-:0x1:<0,0,1>:	mask=0x3FF
+:08-10 13:38:32.942312:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.942323:        :-:0x1:<0,0,1>:	port_lag_index=action_param
+:08-10 13:38:32.942335:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.942355:    :-:0x1:<0,0,1>:Egress : Table SwitchEgress.egress_port_mapping.port_mirror.port_mirror is miss
+:08-10 13:38:32.942366:        :-:0x1:<0,0,1>:Key:
+:08-10 13:38:32.942396:        :-:0x1:<0,0,1>:	eg_intr_md.egress_port[8:0] = 0x8
+:08-10 13:38:32.942415:        :-:0x1:<0,0,1>:Execute Default Action: NoAction
+:08-10 13:38:32.942558:        :-:0x1:<0,0,1>:Action Results:
+:08-10 13:38:32.942571:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.942582:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.942592:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.942601:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.942611:        :-:0x1:<0,0,1>:	tunnel_rewrite_smac_index[15:8] = 0x0
+:08-10 13:38:32.942622:        :-:0x1:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.942631:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.942641:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.942650:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.942660:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.942670:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.942680:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.942689:        :-:0x1:<0,0,1>:	eg_md.ingress_port[8:0] = 0x0
+:08-10 13:38:32.942699:        :-:0x1:<0,0,1>:	mask=0x1FF
+:08-10 13:38:32.942709:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.942719:        :-:0x1:<0,0,1>:	eg_md.ingress_port[8:0] = 0x8
+:08-10 13:38:32.942729:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.942738:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.942750:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.942759:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.942769:        :-:0x1:<0,0,1>:	mask=0x3FF
+:08-10 13:38:32.942779:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.942788:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.942798:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.942808:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.942818:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.942827:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.942838:        :-:0x1:<0,0,1>:	tunnel_rewrite_smac_index[15:8] = 0x0
+:08-10 13:38:32.942849:        :-:0x1:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.942862:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.942874:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.942886:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.942929:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((eg_intr_md.egress_rid != 0)) matched.
+:08-10 13:38:32.942942:    :-:0x1:<0,0,1>:Egress : Table SwitchEgress.multicast_replication.rid is inhibited by a gateway condition
+:08-10 13:38:32.942951:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.942966:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.942997:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((eg_md.flags.rmac_hit == 0 && eg_md.nsh_md.l2_fwd_en == 1)) not matched.
+:08-10 13:38:32.943015:    :-:0x1:<0,0,1>:Egress : Gateway attached to cond-208
+:08-10 13:38:32.943027:    :-:0x1:<0,0,1>:Egress : Associated table cond-208 is executed
+:08-10 13:38:32.943036:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.943043:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.943062:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((eg_md.bypass & 4 == 0)) matched.
+:08-10 13:38:32.943071:    :-:0x1:<0,0,1>:Egress : Gateway attached to cond-209
+:08-10 13:38:32.943078:    :-:0x1:<0,0,1>:Egress : Associated table cond-209 is executed
+:08-10 13:38:32.943085:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.943092:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.943147:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((eg_md.nsh_md.start_of_path == 0)) not matched.
+:08-10 13:38:32.943158:    :-:0x1:<0,0,1>:Egress : Table SwitchEgress.npb_egr_top.npb_egr_sff_top_part1.npb_egr_sff_dec_ttl is inhibited by a gateway condition
+:08-10 13:38:32.943165:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.943175:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.943191:    :-:0x1:<0,0,1>:Egress : Table tbl_npb_egr_sff_top174 is miss
+:08-10 13:38:32.943204:        :-:0x1:<0,0,1>:Key:
+:08-10 13:38:32.943227:        :-:0x1:<0,0,1>:Execute Default Action: npb_egr_sff_top174
+:08-10 13:38:32.943441:        :-:0x1:<0,0,1>:Action Results:
+:08-10 13:38:32.943453:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943460:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943467:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943474:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943481:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.version[1:0] = 0x0
+:08-10 13:38:32.943493:        :-:0x1:<0,0,1>:	mask=0x3
+:08-10 13:38:32.943504:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943517:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943528:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943540:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943549:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943561:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943573:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.o[0:0] = 0x0
+:08-10 13:38:32.943585:        :-:0x1:<0,0,1>:	mask=0x1
+:08-10 13:38:32.943598:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943607:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943614:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943623:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943630:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943637:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943647:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.reserved[0:0] = 0x0
+:08-10 13:38:32.943655:        :-:0x1:<0,0,1>:	mask=0x1
+:08-10 13:38:32.943662:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943668:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943674:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943681:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943688:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943694:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943701:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.ttl[5:0] = 0x3F
+:08-10 13:38:32.943709:        :-:0x1:<0,0,1>:	mask=0x3F
+:08-10 13:38:32.943716:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943723:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943729:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943739:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943746:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943752:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943759:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.len[5:0] = 0x6
+:08-10 13:38:32.943766:        :-:0x1:<0,0,1>:	mask=0x3F
+:08-10 13:38:32.943775:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943784:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943794:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943801:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943808:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943817:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943824:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.reserved2[3:0] = 0x0
+:08-10 13:38:32.943831:        :-:0x1:<0,0,1>:	mask=0xF
+:08-10 13:38:32.943838:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943845:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943851:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943857:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943864:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943870:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943879:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.md_type[3:0] = 0x1
+:08-10 13:38:32.943887:        :-:0x1:<0,0,1>:	mask=0xF
+:08-10 13:38:32.943894:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943901:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943907:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943915:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943925:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.943935:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.943945:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.ver[7:0] = 0x2
+:08-10 13:38:32.943954:        :-:0x1:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.943963:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.943972:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.943981:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.943988:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.943995:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.944002:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.944008:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.reserved3[7:0] = 0x0
+:08-10 13:38:32.944015:        :-:0x1:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.944022:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.944029:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.944036:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.944047:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.944057:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.944067:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.944076:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.lag_hash[15:0] = 0x0
+:08-10 13:38:32.944086:        :-:0x1:<0,0,1>:	mask=0xFFFF
+:08-10 13:38:32.944096:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.944105:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.944115:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.944124:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.944134:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.944141:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.944148:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.reserved4[7:0] = 0x0
+:08-10 13:38:32.944155:        :-:0x1:<0,0,1>:	mask=0xFF
+:08-10 13:38:32.944162:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.944171:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.944180:        :-:0x1:<0,0,1>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.944188:        :-:0x1:<0,0,1>:	Operation:
+:08-10 13:38:32.944197:        :-:0x1:<0,0,1>:	set
+:08-10 13:38:32.944206:        :-:0x1:<0,0,1>:	Destination:
+:08-10 13:38:32.944215:        :-:0x1:<0,0,1>:	hdr.transport.nsh_type1.timestamp[31:0] = 0x0
+:08-10 13:38:32.944223:        :-:0x1:<0,0,1>:	mask=0x0
+:08-10 13:38:32.944232:        :-:0x1:<0,0,1>:	Source 1:
+:08-10 13:38:32.944241:        :-:0x1:<0,0,1>:	Val=0x0
+:08-10 13:38:32.944254:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.944276:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((hdr.transport.nsh_type1.scope == 0)) matched.
+:08-10 13:38:32.944292:    :-:0x1:<0,0,1>:Egress : Gateway attached to cond-204
+:08-10 13:38:32.944302:    :-:0x1:<0,0,1>:Egress : Associated table cond-204 is executed
+:08-10 13:38:32.944311:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.944319:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.944335:    :-:0x1:<0,0,1>:Egress : Table tbl_npb_egr_set_lkp63 is not active(inhibited/skipped)
+:08-10 13:38:32.944384:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((hdr.outer.ipv6.$valid == 1)) not matched.
+:08-10 13:38:32.944395:    :-:0x1:<0,0,1>:Egress : Gateway attached to tbl_npb_egr_set_lkp53
+:08-10 13:38:32.944403:    :-:0x1:<0,0,1>:Egress : Associated table tbl_npb_egr_set_lkp53 is executed
+:08-10 13:38:32.944409:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.944419:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.944439:    :-:0x1:<0,0,1>:Egress : Gateway table condition ((hdr.transport.nsh_type1.scope == 0)) matched.
+:08-10 13:38:32.944451:    :-:0x1:<0,0,1>:Egress : Gateway attached to cond-199
+:08-10 13:38:32.944463:    :-:0x1:<0,0,1>:Egress : Associated table cond-199 is executed
+:08-10 13:38:32.944473:    :-:0x1:<0,0,1>:Egress : Gateway did provide payload.
+:08-10 13:38:32.944483:        :-:0x1:<0,0,1>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.944500:    :-:0x1:<0,0,1>:Egress : Table tbl_npb_egr_set_lkp33 is not active(inhibited/skipped)
+:08-10 13:38:32.944519:    :-:0x1:<0,0,->:------------ Stage 2 ------------
+:08-10 13:38:32.948381:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((eg_md.bypass & 2 == 0)) matched.
+:08-10 13:38:32.948397:    :-:0x1:<0,0,2>:Egress : Associated table SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel is executed
+:08-10 13:38:32.948404:    :-:0x1:<0,0,2>:Egress : Table SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel is miss
+:08-10 13:38:32.948411:        :-:0x1:<0,0,2>:Key:
+:08-10 13:38:32.949145:        :-:0x1:<0,0,2>:	hdr.transport.nsh_type1.si[7:0] = 0x5
+:08-10 13:38:32.949159:        :-:0x1:<0,0,2>:	hdr.transport.nsh_type1.spi[7:0] = 0x4
+:08-10 13:38:32.949168:        :-:0x1:<0,0,2>:	hdr.transport.nsh_type1.spi[23:8] = 0x0
+:08-10 13:38:32.949188:        :-:0x1:<0,0,2>:Execute Default Action: SwitchEgress.npb_egr_top.npb_egr_sf_proxy_top.egr_sf_action_sel_miss
+:08-10 13:38:32.949304:        :-:0x1:<0,0,2>:Action Results:
+:08-10 13:38:32.949315:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.949326:    :-:0x1:<0,0,2>:Egress : Table tbl_npb_egr_sf_proxy_top245 is not active(inhibited/skipped)
+:08-10 13:38:32.949389:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((hdr.outer.ipv4.$valid == 1)) matched.
+:08-10 13:38:32.949402:    :-:0x1:<0,0,2>:Egress : Gateway attached to tbl_npb_egr_set_lkp26
+:08-10 13:38:32.949412:    :-:0x1:<0,0,2>:Egress : Table tbl_npb_egr_set_lkp26 is inhibited by a gateway condition
+:08-10 13:38:32.949428:        :-:0x1:<0,0,2>:Execute Default Action: npb_egr_set_lkp26
+:08-10 13:38:32.949541:        :-:0x1:<0,0,2>:Action Results:
+:08-10 13:38:32.949552:        :-:0x1:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.949560:        :-:0x1:<0,0,2>:	Operation:
+:08-10 13:38:32.949568:        :-:0x1:<0,0,2>:	set
+:08-10 13:38:32.949576:        :-:0x1:<0,0,2>:	Destination:
+:08-10 13:38:32.949583:        :-:0x1:<0,0,2>:	eg_md.lkp_1.ip_type[1:0] = 0x1
+:08-10 13:38:32.949591:        :-:0x1:<0,0,2>:	mask=0x3
+:08-10 13:38:32.949598:        :-:0x1:<0,0,2>:	Source 1:
+:08-10 13:38:32.949604:        :-:0x1:<0,0,2>:	Val=0x1
+:08-10 13:38:32.949612:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.949622:    :-:0x1:<0,0,2>:Egress : Table tbl_npb_egr_set_lkp28 is not active(inhibited/skipped)
+:08-10 13:38:32.949633:    :-:0x1:<0,0,2>:Egress : Table tbl_npb259 is miss
+:08-10 13:38:32.949642:        :-:0x1:<0,0,2>:Key:
+:08-10 13:38:32.949660:        :-:0x1:<0,0,2>:Execute Default Action: npb259
+:08-10 13:38:32.949785:        :-:0x1:<0,0,2>:Action Results:
+:08-10 13:38:32.949797:        :-:0x1:<0,0,2>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.949804:        :-:0x1:<0,0,2>:	Destination:
+:08-10 13:38:32.949812:        :-:0x1:<0,0,2>:	eg_intr_md_for_dprsr.drop_ctl.$valid=header
+:08-10 13:38:32.949822:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.949897:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((eg_md.bypass & 16 == 0)) matched.
+:08-10 13:38:32.949909:    :-:0x1:<0,0,2>:Egress : Associated table SwitchEgress.rewrite.nexthop_rewrite is executed
+:08-10 13:38:32.949916:    :-:0x1:<0,0,2>:Egress : Table SwitchEgress.rewrite.nexthop_rewrite is hit
+:08-10 13:38:32.949925:        :-:0x1:<0,0,2>:Key:
+:08-10 13:38:32.949942:        :-:0x1:<0,0,2>:	eg_md.nexthop[11:0] = 0x0
+:08-10 13:38:32.949969:        :-:0x1:<0,0,2>:Execute Action: SwitchEgress.rewrite.rewrite_l2_with_tunnel
+:08-10 13:38:32.950100:        :-:0x1:<0,0,2>:Action Results:
+:08-10 13:38:32.950112:        :-:0x1:<0,0,2>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.950120:        :-:0x1:<0,0,2>:	Operation:
+:08-10 13:38:32.950127:        :-:0x1:<0,0,2>:	set
+:08-10 13:38:32.950133:        :-:0x1:<0,0,2>:	Destination:
+:08-10 13:38:32.950140:        :-:0x1:<0,0,2>:	eg_md.tunnel_0.type[3:0] = 0x5
+:08-10 13:38:32.950150:        :-:0x1:<0,0,2>:	mask=0xF
+:08-10 13:38:32.950162:        :-:0x1:<0,0,2>:	Source 1:
+:08-10 13:38:32.950173:        :-:0x1:<0,0,2>:	type=action_param
+:08-10 13:38:32.950183:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.950210:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((eg_md.bypass & 16 == 0)) matched.
+:08-10 13:38:32.950225:    :-:0x1:<0,0,2>:Egress : Gateway attached to cond-253
+:08-10 13:38:32.950236:    :-:0x1:<0,0,2>:Egress : Associated table cond-253 is executed
+:08-10 13:38:32.950249:    :-:0x1:<0,0,2>:Egress : Gateway did provide payload.
+:08-10 13:38:32.950261:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.950339:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((hdr.transport.vlan_tag[0].$valid == 1)) not matched.
+:08-10 13:38:32.950355:    :-:0x1:<0,0,2>:Egress : Gateway attached to tbl_l2l240
+:08-10 13:38:32.950366:    :-:0x1:<0,0,2>:Egress : Associated table tbl_l2l240 is executed
+:08-10 13:38:32.950381:    :-:0x1:<0,0,2>:Egress : Gateway did provide payload.
+:08-10 13:38:32.950397:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.950424:    :-:0x1:<0,0,2>:Egress : Gateway table condition ((eg_md.bypass & 4 == 0)) matched.
+:08-10 13:38:32.950436:    :-:0x1:<0,0,2>:Egress : Gateway attached to cond-249
+:08-10 13:38:32.950445:    :-:0x1:<0,0,2>:Egress : Associated table cond-249 is executed
+:08-10 13:38:32.950457:    :-:0x1:<0,0,2>:Egress : Gateway did provide payload.
+:08-10 13:38:32.950465:        :-:0x1:<0,0,2>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.950482:    :-:0x1:<0,0,->:------------ Stage 3 ------------
+:08-10 13:38:32.950941:    <0,3> WARN MAU_PRED<3> get_next_table(egress,-1)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.952663:    :-:0x1:<0,0,3>:Egress : Gateway table condition ((eg_md.tunnel_0.type != 0)) not matched.
+:08-10 13:38:32.952681:    :-:0x1:<0,0,3>:Egress : Associated table SwitchEgress.tunnel_rewrite.nexthop_rewrite is executed
+:08-10 13:38:32.952691:    :-:0x1:<0,0,3>:Egress : Table SwitchEgress.tunnel_rewrite.nexthop_rewrite is hit
+:08-10 13:38:32.952701:        :-:0x1:<0,0,3>:Key:
+:08-10 13:38:32.953603:        :-:0x1:<0,0,3>:	eg_md.outer_nexthop[11:0] = 0x5
+:08-10 13:38:32.953633:        :-:0x1:<0,0,3>:Execute Action: SwitchEgress.tunnel_rewrite.rewrite_tunnel
+:08-10 13:38:32.953793:        :-:0x1:<0,0,3>:Action Results:
+:08-10 13:38:32.953809:        :-:0x1:<0,0,3>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.953818:        :-:0x1:<0,0,3>:	Operation:
+:08-10 13:38:32.953831:        :-:0x1:<0,0,3>:	set
+:08-10 13:38:32.953839:        :-:0x1:<0,0,3>:	Destination:
+:08-10 13:38:32.953850:        :-:0x1:<0,0,3>:	eg_md.bd[7:0] = 0x6
+:08-10 13:38:32.953864:        :-:0x1:<0,0,3>:	mask=0xFF
+:08-10 13:38:32.953872:        :-:0x1:<0,0,3>:	Source 1:
+:08-10 13:38:32.953880:        :-:0x1:<0,0,3>:	bd=action_param
+:08-10 13:38:32.953891:        :-:0x1:<0,0,3>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.953900:        :-:0x1:<0,0,3>:	Operation:
+:08-10 13:38:32.953907:        :-:0x1:<0,0,3>:	set
+:08-10 13:38:32.953917:        :-:0x1:<0,0,3>:	Destination:
+:08-10 13:38:32.953926:        :-:0x1:<0,0,3>:	hdr.transport.ethernet.dst_addr[15:0] = 0x2222
+:08-10 13:38:32.953937:        :-:0x1:<0,0,3>:	hdr.transport.ethernet.dst_addr[47:16] = 0x22222222
+:08-10 13:38:32.953946:        :-:0x1:<0,0,3>:	mask=0xFFFF
+:08-10 13:38:32.953956:        :-:0x1:<0,0,3>:	Source 1:
+:08-10 13:38:32.953966:        :-:0x1:<0,0,3>:	dmac=action_param
+:08-10 13:38:32.953976:        :-:0x1:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.954062:    :-:0x1:<0,0,3>:Egress : Gateway table condition ((eg_md.nsh_md.end_of_path == 0)) matched.
+:08-10 13:38:32.954077:    :-:0x1:<0,0,3>:Egress : Gateway attached to tbl_npb_egr_sff_top268
+:08-10 13:38:32.954087:    :-:0x1:<0,0,3>:Egress : Associated table tbl_npb_egr_sff_top268 is executed
+:08-10 13:38:32.954096:    :-:0x1:<0,0,3>:Egress : Gateway did provide payload.
+:08-10 13:38:32.954107:        :-:0x1:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.954189:    :-:0x1:<0,0,3>:Egress : Gateway table condition ((eg_md.tunnel_0.type != 0)) not matched.
+:08-10 13:38:32.954201:    :-:0x1:<0,0,3>:Egress : Associated table SwitchEgress.tunnel_encap.tunnel is executed
+:08-10 13:38:32.954209:    :-:0x1:<0,0,3>:Egress : Table SwitchEgress.tunnel_encap.tunnel is hit
+:08-10 13:38:32.954218:        :-:0x1:<0,0,3>:Key:
+:08-10 13:38:32.954240:        :-:0x1:<0,0,3>:	eg_md.tunnel_0.type[3:0] = 0x5
+:08-10 13:38:32.954261:        :-:0x1:<0,0,3>:Execute Action: SwitchEgress.tunnel_encap.rewrite_mac_in_mac
+:08-10 13:38:32.954384:        :-:0x1:<0,0,3>:Action Results:
+:08-10 13:38:32.954395:        :-:0x1:<0,0,3>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.954403:        :-:0x1:<0,0,3>:	Destination:
+:08-10 13:38:32.954411:        :-:0x1:<0,0,3>:	hdr.transport.ethernet.$valid=header
+:08-10 13:38:32.954422:        :-:0x1:<0,0,3>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.954429:        :-:0x1:<0,0,3>:	Operation:
+:08-10 13:38:32.954436:        :-:0x1:<0,0,3>:	set
+:08-10 13:38:32.954443:        :-:0x1:<0,0,3>:	Destination:
+:08-10 13:38:32.954450:        :-:0x1:<0,0,3>:	hdr.transport.ethernet.ether_type[15:0] = 0x894F
+:08-10 13:38:32.954456:        :-:0x1:<0,0,3>:	mask=0xFFFF
+:08-10 13:38:32.954463:        :-:0x1:<0,0,3>:	Source 1:
+:08-10 13:38:32.954470:        :-:0x1:<0,0,3>:	Val=0x0
+:08-10 13:38:32.954478:        :-:0x1:<0,0,3>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.954496:    :-:0x1:<0,0,->:------------ Stage 4 ------------
+:08-10 13:38:32.954871:    <0,4> WARN MAU_PRED<4> get_next_table(egress,-1)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.955026:    <0,4> WARN MAU_PRED<4> get_next_table(egress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.955180:    <0,4> WARN MAU_PRED<4> get_next_table(egress,6)=7 but LT 7 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.956630:    :-:0x1:<0,0,4>:Egress : Gateway table condition ((eg_md.tunnel_0.type != 0)) not matched.
+:08-10 13:38:32.956645:    :-:0x1:<0,0,4>:Egress : Associated table SwitchEgress.tunnel_rewrite.egress_bd.bd_mapping is executed
+:08-10 13:38:32.956652:    :-:0x1:<0,0,4>:Egress : Table SwitchEgress.tunnel_rewrite.egress_bd.bd_mapping is hit
+:08-10 13:38:32.956659:        :-:0x1:<0,0,4>:Key:
+:08-10 13:38:32.957396:        :-:0x1:<0,0,4>:	eg_md.bd[7:0] = 0x6
+:08-10 13:38:32.957420:        :-:0x1:<0,0,4>:Execute Action: SwitchEgress.tunnel_rewrite.egress_bd.set_bd_properties
+:08-10 13:38:32.957539:        :-:0x1:<0,0,4>:Action Results:
+:08-10 13:38:32.957550:        :-:0x1:<0,0,4>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.957560:        :-:0x1:<0,0,4>:	Operation:
+:08-10 13:38:32.957568:        :-:0x1:<0,0,4>:	set
+:08-10 13:38:32.957574:        :-:0x1:<0,0,4>:	Destination:
+:08-10 13:38:32.957581:        :-:0x1:<0,0,4>:	tunnel_rewrite_smac_index[7:0] = 0x7
+:08-10 13:38:32.957589:        :-:0x1:<0,0,4>:	tunnel_rewrite_smac_index[15:8] = 0x0
+:08-10 13:38:32.957596:        :-:0x1:<0,0,4>:	mask=0xFFFF
+:08-10 13:38:32.957603:        :-:0x1:<0,0,4>:	Source 1:
+:08-10 13:38:32.957611:        :-:0x1:<0,0,4>:	smac_index=action_param
+:08-10 13:38:32.957619:        :-:0x1:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.957711:    :-:0x1:<0,0,4>:Egress : Gateway table condition ((eg_md.bypass & 16 == 0)) matched.
+:08-10 13:38:32.957722:    :-:0x1:<0,0,4>:Egress : Associated table SwitchEgress.vlan_xlate.port_bd_to_vlan_mapping is executed
+:08-10 13:38:32.957733:    :-:0x1:<0,0,4>:Egress : Table SwitchEgress.vlan_xlate.port_bd_to_vlan_mapping is miss
+:08-10 13:38:32.957743:        :-:0x1:<0,0,4>:Key:
+:08-10 13:38:32.957771:        :-:0x1:<0,0,4>:	eg_md.bd[7:0] = 0x6
+:08-10 13:38:32.957782:        :-:0x1:<0,0,4>:	eg_md.port_lag_index[9:0] = 0x3
+:08-10 13:38:32.957800:        :-:0x1:<0,0,4>:Execute Default Action: SwitchEgress.vlan_xlate.set_vlan_untagged
+:08-10 13:38:32.957903:        :-:0x1:<0,0,4>:Action Results:
+:08-10 13:38:32.957914:        :-:0x1:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.957929:    :-:0x1:<0,0,4>:Egress : Table SwitchEgress.vlan_xlate.bd_to_vlan_mapping is miss
+:08-10 13:38:32.957938:        :-:0x1:<0,0,4>:Key:
+:08-10 13:38:32.957960:        :-:0x1:<0,0,4>:	eg_md.bd[7:0] = 0x6
+:08-10 13:38:32.957977:        :-:0x1:<0,0,4>:Execute Default Action: SwitchEgress.vlan_xlate.set_vlan_untagged
+:08-10 13:38:32.958080:        :-:0x1:<0,0,4>:Action Results:
+:08-10 13:38:32.958090:        :-:0x1:<0,0,4>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.958108:    :-:0x1:<0,0,->:------------ Stage 5 ------------
+:08-10 13:38:32.959677:    :-:0x1:<0,0,5>:Egress : Table SwitchEgress.tunnel_rewrite.smac_rewrite is hit
+:08-10 13:38:32.959693:        :-:0x1:<0,0,5>:Key:
+:08-10 13:38:32.960436:        :-:0x1:<0,0,5>:	tunnel_rewrite_smac_index[7:0] = 0x7
+:08-10 13:38:32.960450:        :-:0x1:<0,0,5>:	tunnel_rewrite_smac_index[15:8] = 0x0
+:08-10 13:38:32.960474:        :-:0x1:<0,0,5>:Execute Action: SwitchEgress.tunnel_rewrite.rewrite_smac
+:08-10 13:38:32.960593:        :-:0x1:<0,0,5>:Action Results:
+:08-10 13:38:32.960606:        :-:0x1:<0,0,5>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.960617:        :-:0x1:<0,0,5>:	Operation:
+:08-10 13:38:32.960626:        :-:0x1:<0,0,5>:	set
+:08-10 13:38:32.960635:        :-:0x1:<0,0,5>:	Destination:
+:08-10 13:38:32.960645:        :-:0x1:<0,0,5>:	hdr.transport.ethernet.src_addr[47:16] = 0x11111111
+:08-10 13:38:32.960654:        :-:0x1:<0,0,5>:	mask=0xFFFF
+:08-10 13:38:32.960661:        :-:0x1:<0,0,5>:	Source 1:
+:08-10 13:38:32.960669:        :-:0x1:<0,0,5>:	smac=action_param
+:08-10 13:38:32.960676:        :-:0x1:<0,0,5>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.960695:    :-:0x1:<0,0,->:------------ Stage 6 ------------
+:08-10 13:38:32.961062:    <0,6> WARN MAU_PRED<6> No LTs powered for lookup!
+:08-10 13:38:32.963110:    :-:0x1:<0,0,->:------------ Stage 7 ------------
+:08-10 13:38:32.963481:    <0,7> WARN MAU_PRED<7> get_next_table(egress,-1)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.963732:    <0,7> WARN MAU_PRED<7> get_next_table(egress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.963956:    <0,7> WARN MAU_PRED<7> get_next_table(egress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.964421:    <0,7> WARN MAU_PRED<7> get_next_table(egress,7)=8 but LT 8 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.965802:    :-:0x1:<0,0,7>:Egress : Gateway table condition ((eg_md.tunnel_1.terminate)) not matched.
+:08-10 13:38:32.965818:    :-:0x1:<0,0,7>:Egress : Gateway attached to tbl_tunnel1071_0
+:08-10 13:38:32.965830:    :-:0x1:<0,0,7>:Egress : Associated table tbl_tunnel1071_0 is executed
+:08-10 13:38:32.965837:    :-:0x1:<0,0,7>:Egress : Gateway did provide payload.
+:08-10 13:38:32.965847:        :-:0x1:<0,0,7>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.965862:    :-:0x1:<0,0,7>:Egress : Table SwitchEgress.npb_egr_top.TunnelDecapScopeDecrement.scope_dec is hit
+:08-10 13:38:32.965871:        :-:0x1:<0,0,7>:Key:
+:08-10 13:38:32.966584:        :-:0x1:<0,0,7>:	eg_md.tunnel_1.terminate[0:0] = 0x0
+:08-10 13:38:32.966598:        :-:0x1:<0,0,7>:	eg_md.tunnel_2.terminate[0:0] = 0x0
+:08-10 13:38:32.966606:        :-:0x1:<0,0,7>:	hdr.transport.nsh_type1.scope[7:0] = 0x0
+:08-10 13:38:32.966626:        :-:0x1:<0,0,7>:Execute Action: SwitchEgress.npb_egr_top.TunnelDecapScopeDecrement.new_scope
+:08-10 13:38:32.966745:        :-:0x1:<0,0,7>:Action Results:
+:08-10 13:38:32.966758:        :-:0x1:<0,0,7>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.966767:        :-:0x1:<0,0,7>:	Operation:
+:08-10 13:38:32.966776:        :-:0x1:<0,0,7>:	set
+:08-10 13:38:32.966784:        :-:0x1:<0,0,7>:	Destination:
+:08-10 13:38:32.966792:        :-:0x1:<0,0,7>:	hdr.transport.nsh_type1.scope[7:0] = 0x0
+:08-10 13:38:32.966800:        :-:0x1:<0,0,7>:	mask=0xFF
+:08-10 13:38:32.966808:        :-:0x1:<0,0,7>:	Source 1:
+:08-10 13:38:32.966816:        :-:0x1:<0,0,7>:	scope_new=action_param
+:08-10 13:38:32.966827:        :-:0x1:<0,0,7>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.966843:    :-:0x1:<0,0,7>:Egress : Table tbl_set_eg_intr_md is miss
+:08-10 13:38:32.966854:        :-:0x1:<0,0,7>:Key:
+:08-10 13:38:32.966871:        :-:0x1:<0,0,7>:Execute Default Action: set_eg_intr_md
+:08-10 13:38:32.966997:        :-:0x1:<0,0,7>:Action Results:
+:08-10 13:38:32.967007:        :-:0x1:<0,0,7>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.967015:        :-:0x1:<0,0,7>:	Operation:
+:08-10 13:38:32.967022:        :-:0x1:<0,0,7>:	set
+:08-10 13:38:32.967028:        :-:0x1:<0,0,7>:	Destination:
+:08-10 13:38:32.967035:        :-:0x1:<0,0,7>:	eg_intr_md_for_dprsr.mirror_type[3:0] = 0x0
+:08-10 13:38:32.967042:        :-:0x1:<0,0,7>:	mask=0xF
+:08-10 13:38:32.967052:        :-:0x1:<0,0,7>:	Source 1:
+:08-10 13:38:32.967061:        :-:0x1:<0,0,7>:	eg_md.mirror.type[7:0] = 0x0
+:08-10 13:38:32.967070:        :-:0x1:<0,0,7>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.967078:        :-:0x1:<0,0,7>:	Destination:
+:08-10 13:38:32.967085:        :-:0x1:<0,0,7>:	eg_intr_md_for_dprsr.mirror_type.$valid=header
+:08-10 13:38:32.967093:        :-:0x1:<0,0,7>:	----- ModifyFieldPrimitive -----
+:08-10 13:38:32.967101:        :-:0x1:<0,0,7>:	Operation:
+:08-10 13:38:32.967109:        :-:0x1:<0,0,7>:	set
+:08-10 13:38:32.967117:        :-:0x1:<0,0,7>:	Destination:
+:08-10 13:38:32.967124:        :-:0x1:<0,0,7>:	eg_intr_md_for_dprsr.mirror_io_select[0:0] = 0x1
+:08-10 13:38:32.967132:        :-:0x1:<0,0,7>:	mask=0x1
+:08-10 13:38:32.967142:        :-:0x1:<0,0,7>:	Source 1:
+:08-10 13:38:32.967150:        :-:0x1:<0,0,7>:	Val=0x1
+:08-10 13:38:32.967159:        :-:0x1:<0,0,7>:	----- AddHeaderPrimitive -----
+:08-10 13:38:32.967167:        :-:0x1:<0,0,7>:	Destination:
+:08-10 13:38:32.967174:        :-:0x1:<0,0,7>:	eg_intr_md_for_dprsr.mirror_io_select.$valid=header
+:08-10 13:38:32.967184:        :-:0x1:<0,0,7>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.967199:    :-:0x1:<0,0,->:------------ Stage 8 ------------
+:08-10 13:38:32.967571:    <0,8> WARN MAU_PRED<8> get_next_table(egress,-1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.968923:    :-:0x1:<0,0,8>:Egress : Gateway table condition ((hdr.transport.nsh_type1.ttl == 0 || hdr.transport.nsh_type1.si == 0)) not matched.
+:08-10 13:38:32.968941:    :-:0x1:<0,0,8>:Egress : Gateway attached to tbl_npb_egr_sff_top260
+:08-10 13:38:32.968951:    :-:0x1:<0,0,8>:Egress : Associated table tbl_npb_egr_sff_top260 is executed
+:08-10 13:38:32.968960:    :-:0x1:<0,0,8>:Egress : Gateway did provide payload.
+:08-10 13:38:32.968971:        :-:0x1:<0,0,8>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.969099:    :-:0x1:<0,0,8>:Egress : Gateway table condition () matched.
+:08-10 13:38:32.969113:    :-:0x1:<0,0,8>:Egress : Gateway attached to SwitchEgress.tunnel_encap.encap_outer
+:08-10 13:38:32.969123:    :-:0x1:<0,0,8>:Egress : Associated table SwitchEgress.tunnel_encap.encap_outer is executed
+:08-10 13:38:32.969131:    :-:0x1:<0,0,8>:Egress : Gateway did provide payload.
+:08-10 13:38:32.969147:        :-:0x1:<0,0,8>:Execute Action: SwitchEgress.tunnel_encap.rewrite_inner_ipv4_udp
+:08-10 13:38:32.969252:        :-:0x1:<0,0,8>:Action Results:
+:08-10 13:38:32.969264:        :-:0x1:<0,0,8>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.969283:    :-:0x1:<0,0,->:------------ Stage 9 ------------
+:08-10 13:38:32.969653:    <0,9> WARN MAU_PRED<9> No LTs powered for lookup!
+:08-10 13:38:32.969669:    <0,9> WARN MAU_PRED<9> get_next_table(egress,-1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.970414:    :-:0x1:<0,0,->:------------ Stage 10 ------------
+:08-10 13:38:32.970786:    <0,10> WARN MAU_PRED<10> No LTs powered for lookup!
+:08-10 13:38:32.970802:    <0,10> WARN MAU_PRED<10> get_next_table(egress,-1)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.971511:    :-:0x1:<0,0,->:------------ Stage 11 ------------
+:08-10 13:38:32.971884:    <0,11> WARN MAU_PRED<11> get_next_table(egress,-1)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.972172:    <0,11> WARN MAU_PRED<11> get_next_table(egress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.972428:    <0,11> WARN MAU_PRED<11> get_next_table(egress,6)=7 but LT 7 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.972693:    <0,11> WARN MAU_PRED<11> get_next_table(egress,7)=8 but LT 8 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.972952:    <0,11> WARN MAU_PRED<11> get_next_table(egress,8)=9 but LT 9 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.973221:    <0,11> WARN MAU_PRED<11> get_next_table(egress,9)=10 but LT 10 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.973485:    <0,11> WARN MAU_PRED<11> get_next_table(egress,10)=11 but LT 11 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.973757:    <0,11> WARN MAU_PRED<11> get_next_table(egress,11)=12 but LT 12 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.974024:    <0,11> WARN MAU_PRED<11> get_next_table(egress,12)=13 but LT 13 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.975447:    :-:0x1:<0,0,11>:Egress : Gateway table condition ((eg_md.tunnel_2.terminate)) not matched.
+:08-10 13:38:32.975465:    :-:0x1:<0,0,11>:Egress : Gateway attached to tbl_tunnel1219_0
+:08-10 13:38:32.975475:    :-:0x1:<0,0,11>:Egress : Associated table tbl_tunnel1219_0 is executed
+:08-10 13:38:32.975484:    :-:0x1:<0,0,11>:Egress : Gateway did provide payload.
+:08-10 13:38:32.975496:        :-:0x1:<0,0,11>:Next Table = --END_OF_PIPELINE--
+:08-10 13:38:32.975513:    :-:0x1:<0,0,11>:Egress : Table tbl_tunnel1214_0 is not active(inhibited/skipped)
+:08-10 13:38:32.975529:    :-:0x1:<0,0,->:------------ Stage 12 ------------
+:08-10 13:38:32.975900:    <0,12> WARN MAU_PRED<12> No LTs powered for lookup!
+:08-10 13:38:32.975916:    <0,12> WARN MAU_PRED<12> get_next_table(egress,-1)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.976189:    <0,12> WARN MAU_PRED<12> get_next_table(egress,1)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.976499:    <0,12> WARN MAU_PRED<12> get_next_table(egress,3)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.976783:    <0,12> WARN MAU_PRED<12> get_next_table(egress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.977071:    <0,12> WARN MAU_PRED<12> get_next_table(egress,5)=6 but LT 6 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.977354:    <0,12> WARN MAU_PRED<12> get_next_table(egress,6)=11 but LT 11 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.977648:    <0,12> WARN MAU_PRED<12> get_next_table(egress,11)=12 but LT 12 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.977936:    <0,12> WARN MAU_PRED<12> get_next_table(egress,12)=13 but LT 13 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.978233:    <0,12> WARN MAU_PRED<12> get_next_table(egress,13)=14 but LT 14 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.978528:    <0,12> WARN MAU_PRED<12> get_next_table(egress,14)=15 but LT 15 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.979291:    :-:0x1:<0,0,->:------------ Stage 13 ------------
+:08-10 13:38:32.979662:    <0,13> WARN MAU_PRED<13> No LTs powered for lookup!
+:08-10 13:38:32.979678:    <0,13> WARN MAU_PRED<13> get_next_table(egress,-1)=1 but LT 1 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.979977:    <0,13> WARN MAU_PRED<13> get_next_table(egress,1)=2 but LT 2 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.980305:    <0,13> WARN MAU_PRED<13> get_next_table(egress,2)=3 but LT 3 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.980607:    <0,13> WARN MAU_PRED<13> get_next_table(egress,3)=4 but LT 4 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.980918:    <0,13> WARN MAU_PRED<13> get_next_table(egress,4)=5 but LT 5 is unpowered so unavailable for table lookup (will appear to always MISS)
+:08-10 13:38:32.981683:    :-:0x1:<0,0,->:------------ Stage 14 ------------
+:08-10 13:38:32.982514:    :-:0x1:<0,0,->:------------ Stage 15 ------------
+:08-10 13:38:32.983338:    :-:0x1:<0,0,->:------------ Stage 16 ------------
+:08-10 13:38:32.984162:    :-:0x1:<0,0,->:------------ Stage 17 ------------
+:08-10 13:38:32.984984:    :-:0x1:<0,0,->:------------ Stage 18 ------------
+:08-10 13:38:32.985805:    :-:0x1:<0,0,->:------------ Stage 19 ------------
+:08-10 13:38:32.989043:        :-:0x1:<0,0,->:Egress Deparser Headers:
+:08-10 13:38:32.989075:        :-:0x1:<0,0,->:Header eg_intr_md.egress_port.$valid is valid
+:08-10 13:38:32.989086:        :-:0x1:<0,0,->:Header eg_intr_md_for_dprsr.drop_ctl.$valid is valid
+:08-10 13:38:32.989095:        :-:0x1:<0,0,->:Header eg_intr_md_for_dprsr.mirror_io_select.$valid is valid
+:08-10 13:38:32.989104:        :-:0x1:<0,0,->:Header eg_intr_md_for_dprsr.mirror_type.$valid is valid
+:08-10 13:38:32.989113:        :-:0x1:<0,0,->:Header hdr.outer.ethernet.$valid is valid
+:08-10 13:38:32.989122:        :-:0x1:<0,0,->:Header hdr.outer.ipv4.$valid is valid
+:08-10 13:38:32.989131:        :-:0x1:<0,0,->:Header hdr.outer.udp.$valid is valid
+:08-10 13:38:32.989140:        :-:0x1:<0,0,->:Header hdr.transport.ethernet.$valid is valid
+:08-10 13:38:32.989149:        :-:0x1:<0,0,->:Header hdr.transport.nsh_type1.$valid is valid
+:08-10 13:38:32.989330:    :-:0x1:<0,0,->:---- Mirroring session Slice0/0 : egress  ----
+:08-10 13:38:32.989344:        :-:0x1:<0,0,->:Mirroring session Slice0/0 is not enabled
+:08-10 13:38:32.989380:    :-:0x1:<0,0,0>:========== Tx Pkt to port 8 (142 bytes) ==========
+:08-10 13:38:32.989390:    :-:0x1:<0,0,0>:Packet :
+:08-10 13:38:32.989400:        :-:0x1:<0,0,0>:22 22 22 22 22 22 11 11 11 11 11 11 89 4f 0f c6 
+:08-10 13:38:32.989410:        :-:0x1:<0,0,0>:01 03 00 00 04 05 02 00 00 00 00 01 00 00 00 00 
+:08-10 13:38:32.989420:        :-:0x1:<0,0,0>:00 00 00 00 00 00 00 01 02 03 04 05 00 06 07 08 
+:08-10 13:38:32.989432:        :-:0x1:<0,0,0>:09 0a 08 00 45 00 00 56 00 01 00 00 40 11 f9 42 
+:08-10 13:38:32.989779:    :-:-:<0,0,0>:Waiting for packets to process
