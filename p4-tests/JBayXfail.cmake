@@ -330,7 +330,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Extracted range.*doesn't match destination container"
+  "PHV allocation is invalid for container"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
 )
 

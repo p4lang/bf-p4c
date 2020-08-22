@@ -298,9 +298,8 @@ struct ExtractSimplifier {
         auto extractedSizeBits = bufferRange.toUnit<RangeUnit::Bit>().size();
 
         BUG_CHECK(size_t(extractedSizeBits) == container.size(),
-                  "Extracted range %1% with size %2% doesn't match "
-                  "destination container %3% with size %4%", bufferRange,
-                  extractedSizeBits, container, container.size());
+            "PHV allocation is invalid for container %1%"
+            " (number of extracted bits does not match container size).", container);
 
         // Create a single combined extract that implements all of the
         // component extracts. Each merged extract writes to an entire container.
