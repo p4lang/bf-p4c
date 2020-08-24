@@ -93,15 +93,17 @@ int GenerateParserP4iJson::getStateId(cstring state) {
 
 /// Assign a tcam id for this match, higher the number, higher the priority.
 int GenerateParserP4iJson::getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress) {
+    auto* pvs = match->value->to<IR::BFN::ParserPvsMatchValue>();
     if (!tcam_ids[gress].count(match)) {
-        int id = Device::pardeSpec().numTcamRows() - tcam_ids[gress].size() - 1;
-        tcam_ids[gress][match] = id;
+        tcam_ids[gress][match] = next_tcam_id[gress];
+        next_tcam_id[gress] -= pvs ? pvs->size : 1;  // pvs uses multiple TCAM rows
     }
+
     return tcam_ids[gress].at(match);
 }
 
-P4iParserStateTransition
-GenerateParserP4iJson::generateStateTransitionByMatch(
+std::vector<P4iParserStateTransition>
+GenerateParserP4iJson::generateStateTransitionsByMatch(
         cstring next_state,
         const IR::BFN::LoweredParserState* prev_state,
         const IR::BFN::LoweredParserMatch* match) {
@@ -120,7 +122,19 @@ GenerateParserP4iJson::generateStateTransitionByMatch(
         state_transition.previous_state_name = prev_state->name;
     }
 
-    return state_transition;
+    std::vector<P4iParserStateTransition> ret_states = {state_transition};
+    // Duplicate the node iff we are working with parser set values, this is important
+    // due to the right count of the used TCAM values.
+    if (auto* pvs = match->value->to<IR::BFN::ParserPvsMatchValue>()) {
+        const int dup_count = pvs->size - 1;
+        for (int dup_i = 0; dup_i < dup_count; dup_i++) {
+            // The copy of the P4iParserStateTransition is created during the push_back
+            state_transition.tcam_row--;
+            ret_states.push_back(state_transition);
+        }
+    }
+
+    return ret_states;
 }
 
 P4iParserClot
@@ -196,8 +210,8 @@ bool GenerateParserP4iJson::preorder(const IR::BFN::LoweredParserState* state) {
             next_state = match->loop;
         else
             next_state = "END";
-        auto t = generateStateTransitionByMatch(stripThreadPrefix(next_state), state, match);
-        p->states.push_back(t);
+        auto states = generateStateTransitionsByMatch(stripThreadPrefix(next_state), state, match);
+        p->states.insert(p->states.end(), states.begin(), states.end());
     }
 
     if ((Device::numClots() > 0) && BackendOptions().use_clot) {

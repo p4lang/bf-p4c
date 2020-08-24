@@ -20,6 +20,7 @@ class GenerateParserP4iJson : public ParserInspector {
 
     std::map<cstring, int> state_ids;
     std::map<const IR::BFN::LoweredParserMatch*, int> tcam_ids[2];
+    int next_tcam_id[2];  // Next TCAM ID value array
 
     int getStateId(cstring state);
     int getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress);
@@ -32,8 +33,8 @@ class GenerateParserP4iJson : public ParserInspector {
 
     std::vector<P4iParserExtract> generateExtracts(const IR::BFN::LoweredParserMatch* match);
 
-    P4iParserStateTransition
-    generateStateTransitionByMatch(cstring next_state,
+    std::vector<P4iParserStateTransition>
+    generateStateTransitionsByMatch(cstring next_state,
                          const IR::BFN::LoweredParserState* prev_state,
                          const IR::BFN::LoweredParserMatch* match);
 
@@ -55,6 +56,11 @@ class GenerateParserP4iJson : public ParserInspector {
     explicit GenerateParserP4iJson(const ClotInfo& clotInfo)
         : clotInfo(clotInfo), clot_usage(2), collected(false) {
         bool using_clots = Device::numClots() > 0 && BackendOptions().use_clot;
+
+        // Setup TCAM IDs (maximal index by default)
+        int tcam_rows_init = Device::pardeSpec().numTcamRows() - 1;
+        next_tcam_id[0] = tcam_rows_init;
+        next_tcam_id[1] = tcam_rows_init;
 
         // Once Multi Parser support is added in T2NA, clot support will have
         // ClotInfo per parser and the code below should change to use a vector
