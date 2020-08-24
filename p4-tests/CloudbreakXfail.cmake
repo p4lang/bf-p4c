@@ -26,10 +26,8 @@ if (HARLYN_STF_cb AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway4.p4
   )
 
-  # P4C-2141
   p4c_add_xfail_reason("tofino3"
-    "error: deposit-field dest can't be dark or mocha phv|mismatch from expected"
-    extensions/p4_tests/p4_14/stf/parser_error.p4
+    "mismatch from expected"
     extensions/p4_tests/p4_16/stf/parser_error.p4)
 
   # needs strided CLOT alloc
@@ -492,4 +490,10 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason ("tofino3"
   "error: tofino3 supports up to 20 stages, using 23"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
+)
+
+# P4C-2141
+p4c_add_xfail_reason("tofino3"
+  "PHV allocation creates an invalid container action within a Tofino ALU"
+  extensions/p4_tests/p4_14/stf/parser_error.p4
 )

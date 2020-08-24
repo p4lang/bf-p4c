@@ -47,24 +47,24 @@ struct TofinoPipeTestCase {
     const IR::P4Program* frontendProgram;
 };
 
-/// A GTest fixture for Tofino tests.
-class TofinoBackendTest : public ::testing::Test {
- public:
-    TofinoBackendTest() : autoBFNContext(new BFNContext()) {
-        Device::init("Tofino"); }
+/// A GTest fixture base class for backend targets.
+class BackendTest : public ::testing::Test {
+ protected:
+    BackendTest() : autoBFNContext(new BFNContext()) { }
 
- private:
     AutoCompileContext autoBFNContext;
 };
 
-/// A GTest fixture for JBay tests.
-class JBayBackendTest : public ::testing::Test {
+/// A GTest fixture for Tofino tests.
+class TofinoBackendTest : public BackendTest {
  public:
-    JBayBackendTest() : autoBFNContext(new BFNContext()) {
-        Device::init("Tofino2"); }
+    TofinoBackendTest() { Device::init("Tofino"); }
+};
 
- private:
-    AutoCompileContext autoBFNContext;
+/// A GTest fixture for JBay tests.
+class JBayBackendTest : public BackendTest {
+ public:
+    JBayBackendTest() { Device::init("Tofino2"); }
 };
 
 }  // namespace Test

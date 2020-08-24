@@ -17,10 +17,8 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway4.p4
   )
 
-  # P4C-2141
   p4c_add_xfail_reason("tofino2"
-    "error: deposit-field dest can't be dark or mocha phv|mismatch from expected"
-    extensions/p4_tests/p4_14/stf/parser_error.p4
+    "mismatch from expected"
     extensions/p4_tests/p4_16/stf/parser_error.p4)
 
   # needs strided CLOT alloc
@@ -297,6 +295,12 @@ p4c_add_xfail_reason("tofino2"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
+)
+
+# P4C-2141
+p4c_add_xfail_reason("tofino2"
+  "PHV allocation creates an invalid container action within a Tofino ALU"
+  extensions/p4_tests/p4_14/stf/parser_error.p4
 )
 
 p4c_add_xfail_reason("tofino2"

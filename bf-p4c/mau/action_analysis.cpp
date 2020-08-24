@@ -98,7 +98,8 @@ std::set<unsigned> ActionAnalysis::ContainerAction::codesForErrorCases =
       PHV_AND_ACTION_DATA,
       MULTIPLE_SHIFTS,
       ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT,
-      BIT_COLLISION_SET };
+      BIT_COLLISION_SET,
+      ILLEGAL_MOCHA_OR_DARK_WRITE };
 
 /** Calculates a total container constant, given which constants wrote to which fields in the
  *  operation
