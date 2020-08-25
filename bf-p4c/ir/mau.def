@@ -946,7 +946,7 @@ class IXBarExpression : Expression {
     int                 bit;    // where in the ixbar output
 
 #noconstructor
-    IXBarExpression(Expression e) : Expression(e->srcInfo, e->type), expr(e) {}
+    IXBarExpression(Expression e, int b = 0) : Expression(e->srcInfo, e->type), expr(e), bit(b) {}
     dbprint { out << "ixbar(" << expr << ")"; }
 }
 

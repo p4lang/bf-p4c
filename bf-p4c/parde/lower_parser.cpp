@@ -744,10 +744,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         }
 
         auto csum = new IR::BFN::LoweredParserChecksum(
-            id, masked_ranges, swap, start, end, end_pos, type);
-        if (mul2) {
-            csum->multiply_2 = mul2;
-        }
+            id, masked_ranges, swap, start, end, end_pos, type, mul2);
         std::vector<PHV::AllocSlice> slices;
 
         // FIXME(zma) this code could use some cleanup, what a mess ...

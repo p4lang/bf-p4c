@@ -425,8 +425,8 @@ struct ALUParameter {
         : param(p), phv_bits(pb), right_shift(0) {}
 
     friend std::ostream &operator<<(std::ostream &out, const ALUParameter& p) {
-        out << "ALU Param : { " << p.param << ", phv bits : "
-            << p.phv_bits << ", right_shift : " << p.right_shift << " } ";
+        return out << "ALU Param : { " << p.param << ", phv bits : "
+                   << p.phv_bits << ", right_shift : " << p.right_shift << " } ";
     }
 };
 
