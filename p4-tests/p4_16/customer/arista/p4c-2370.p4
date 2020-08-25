@@ -3127,6 +3127,7 @@ control Chatom(inout Ramos Corvallis, inout Mausdale Bridger, in ingress_intrins
         }
         size = 512;
         requires_versioning = false;
+        meters = Danbury;
         default_action = NoAction();
     }
     @disable_atomic_modify(1) @name(".Yatesboro") table Yatesboro {
@@ -5262,6 +5263,7 @@ control August(inout Ramos Corvallis, inout Mausdale Bridger, in egress_intrinsi
             @defaultonly NoAction();
         }
         size = 2048;
+        counters = Kinston;
         default_action = NoAction();
     }
     apply {
@@ -5290,6 +5292,7 @@ control Almeria(inout Ramos Corvallis, inout Mausdale Bridger, in egress_intrins
             @defaultonly NoAction();
         }
         size = 1024;
+        counters = Burgdorf;
         default_action = NoAction();
     }
     apply {

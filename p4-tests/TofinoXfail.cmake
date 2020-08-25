@@ -179,7 +179,6 @@ p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1458-a.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2143.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2189.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2191.p4
@@ -223,7 +222,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-243/comp243.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-546/switch_comp546.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2012.p4
-  extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
   extensions/p4_tests/p4_16/customer/arista/p4c-2257.p4
 )
 
@@ -241,6 +239,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
+  ../glass/testsuite/p4_tests/arista/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
 )
 
@@ -504,9 +503,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/kpn/COMPILER-896/case5546.p4
   ../glass/testsuite/p4_tests/mau/COMPILER-1160/comp_1160.p4
   ../glass/testsuite/p4_tests/phv/COMPILER-1094/comp_1094.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
-  ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
 
   ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
   ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
@@ -1153,6 +1149,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Fields involved in the same MAU operations have conflicting PARDE alignment requirements"
   extensions/p4_tests/p4_16/customer/arista/p4c-2226.p4
+  extensions/p4_tests/p4_16/customer/arista/p4c-2178.p4
 )
 
 # P4C-1396
@@ -1397,6 +1394,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Tofino does not support nested checksum updates"
   extensions/p4_tests/p4_14/stf/update_checksum_7.p4
+  ../glass/testsuite/p4_tests/alibaba/COMPILER-1039/comp_1039.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129/comp_1129.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1129b/comp_1129b.p4
   ../glass/testsuite/p4_tests/alibaba/COMPILER-1130/comp_1130b.p4
@@ -1691,7 +1689,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4c-2581
 p4c_add_xfail_reason("tofino"
-  "PHV allocation requires the following field slices to be packed together"
+  "PHV allocation requires the following field slices to be packed together|./p4c TIMEOUT"
   extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4
 )
 
@@ -1804,6 +1802,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-2612
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: Overwriting definitions"
+  ../glass/testsuite/p4_tests/mimetrix/COMPILER-1058/comp_1058.p4
   ../glass/testsuite/p4_tests/mau/test_config_163_stateful_table_math_unit.p4
 )
 
@@ -1874,4 +1873,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received on device 0, port 3"
   p4c_3005
+)
+
+p4c_add_xfail_reason("tofino"
+  "actions cannot have parameters with type int"
+  ../glass/testsuite/p4_tests/microsoft/COMPILER-623/case3375.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "Unable to pack bridged header"
+  ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
+  ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
 )

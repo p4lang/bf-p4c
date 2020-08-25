@@ -4006,6 +4006,7 @@ control OnetMappingAndLearning(
             kvtep_onets_miss;
         }
         const default_action = kvtep_onets_miss;
+        counters = kvtep_onets_cntr;
         size = kvtep_onets_table_size;
     }
 

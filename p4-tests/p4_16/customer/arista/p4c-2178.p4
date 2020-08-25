@@ -2799,6 +2799,7 @@ control Skene(inout Stennett Ramos, inout Dairyland Provencal, in ingress_intrin
             Provencal.SourLake.Harbor         : ternary;
         }
         size = 512;
+        meters = Lewellen;
         default_action = NoAction();
     }
     @ways(2) Hash<bit<51>>(HashAlgorithm_t.IDENTITY) Brodnax;
@@ -4611,6 +4612,7 @@ control Walland(inout Stennett Ramos, inout Dairyland Provencal, in egress_intri
             @defaultonly NoAction();
         }
         size = 512;
+        counters = Melrose;
         default_action = NoAction();
     }
     apply {
@@ -4639,6 +4641,7 @@ control Wells(inout Stennett Ramos, inout Dairyland Provencal, in egress_intrins
             @defaultonly NoAction();
         }
         size = 512;
+        counters = Edinburgh;
         default_action = NoAction();
     }
     apply {
