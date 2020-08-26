@@ -1871,11 +1871,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device 0, port 3"
-  p4c_3005
-)
-
-p4c_add_xfail_reason("tofino"
   "actions cannot have parameters with type int"
   ../glass/testsuite/p4_tests/microsoft/COMPILER-623/case3375.p4
 )

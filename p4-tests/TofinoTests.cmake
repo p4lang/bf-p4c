@@ -218,6 +218,7 @@ set (P4FACTORY_REGRESSION_TESTS
   basic_switching
   # # # bf-diags
   fast_reconfig
+  ha
   mirror_test
   multicast_test
   pcie_pkt_test
@@ -252,6 +253,9 @@ set (P4FACTORY_PROGRAMS_PATH "extensions/p4_tests/p4-programs/programs")
 
 bfn_set_pd_build_flag("tofino" "${P4FACTORY_PROGRAMS_PATH}/perf_test_alpm/perf_test_alpm.p4"
   "\"--gen-perf-test-pd\"")
+
+bfn_set_ptf_ports_json_file("tofino" "extensions/p4_tests/p4-programs/programs/ha/ha.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/ptf-tests/ha/ports.json")
+bfn_set_pd_build_flag("tofino" "extensions/p4_tests/p4-programs/programs/ha/ha.p4" "\"--gen-hitless-ha-test-pd\"")
 
 # Pick a set of tests for the tests that are timing out:
 bfn_set_ptf_test_spec("tofino" "${P4FACTORY_PROGRAMS_PATH}/multicast_test/multicast_test.p4"

@@ -19,7 +19,9 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("tofino2"
     "mismatch from expected"
-    extensions/p4_tests/p4_16/stf/parser_error.p4)
+    extensions/p4_tests/p4_16/stf/parser_error.p4
+    extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+  )
 
   # needs strided CLOT alloc
   p4c_add_xfail_reason("tofino2"
@@ -400,12 +402,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
 )
 
-# DRV-3549
-p4c_add_xfail_reason("tofino2"
-  "InvalidDevportMgrOperation: InvalidDevportMgrOperation"
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino2"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
@@ -444,7 +440,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/stf/parser_loop_2.p4
   extensions/p4_tests/p4_16/stf/parser_counter_12.p4
   extensions/p4_tests/p4_16/stf/parser_loop_1.p4
-  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
 )
 
 # Negative test, expected xfail
@@ -456,4 +451,10 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason ("tofino2"
   "error: tofino2 supports up to 20 stages, using 23"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
+)
+
+# DRV-3528
+p4c_add_xfail_reason ("tofino2"
+  "TTransportException: TSocket read 0 bytes"
+  extensions/p4_tests/p4-programs/programs/ha/ha.p4
 )
