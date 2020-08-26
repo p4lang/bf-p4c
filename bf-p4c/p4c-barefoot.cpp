@@ -9,11 +9,10 @@
 #include "asm.h"
 #include "backend.h"
 #include "backends/graphs/controls.h"
-#include "bf-p4c-options.h"
 #include "bf-p4c/backend.h"
-#include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/frontend.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/logging/filelog.h"
 #include "bf-p4c/logging/phv_logging.h"
@@ -24,18 +23,12 @@
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"
-#include "frontends/p4/frontend.h"
 #include "frontends/p4/createBuiltins.h"
 #include "frontends/p4/validateParsedProgram.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
-#include "frontends/p4/fromv1.0/converters.h"
-#include "frontends/common/applyOptionsPragmas.h"
-#include "frontends/common/parseInput.h"
-#include "arch/fromv1.0/programStructure.h"
 #include "arch/bridge.h"
-#include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/compile_context.h"
 #include "lib/crash.h"
@@ -284,23 +277,7 @@ int main(int ac, char **av) {
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS
-    auto hook = options.getDebugHook();
-
-    const IR::P4Program* program = nullptr;
-    if (options.arch == "tna" && options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
-        program = P4::parseP4File<P4V1::TnaConverter>(options);
-    } else {
-        // XXX(hanw): used by 14-to-v1model path, to be removed
-        P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
-        program = P4::parseP4File(options);
-    }
-    if (!program || ::errorCount() > 0)
-        return PROGRAM_ERROR;
-
-    BFNOptionPragmaParser optionsPragmaParser;
-    program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
-
-    program = P4::FrontEnd(BFN::ParseAnnotations(), hook).run(options, program, options.skip_seo);
+    auto* program = run_frontend();
 
     // If there was an error in the frontend, we are likely to end up
     // with an invalid program for serialization, so we bail out here.
@@ -317,6 +294,7 @@ int main(int ac, char **av) {
     if (::errorCount() > 0)
         return PROGRAM_ERROR;
 
+    auto hook = options.getDebugHook();
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook, true);
 

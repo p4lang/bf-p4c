@@ -788,9 +788,57 @@ build_unified(P4C_BAREFOOT_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 add_library(tofinobackend ${BF_P4C_SOURCES})
 add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
 
-add_executable(p4c-barefoot ${P4C_BAREFOOT_SRCS})
-target_link_libraries (p4c-barefoot tofinobackend bfn_p4runtime
+add_library(bfp4c ${P4C_BAREFOOT_SRCS})
+target_link_libraries (bfp4c tofinobackend bfn_p4runtime
   ${P4C_LIBRARIES} ${P4C_LIB_DEPS} ${CMAKE_THREAD_LIBS_INIT})
+
+# XXX These compile definitions and include directories should be inherited
+# XXX from bfp4c's dependencies, but these CMake files aren't very modular.
+target_compile_definitions(bfp4c
+  INTERFACE "-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP"
+  INTERFACE "-DMAX_LOGGING_LEVEL=${MAX_LOGGING_LEVEL}"
+  INTERFACE "-DPHV_SCHEMA_VERSION=\"${PHV_SCHEMA_VERSION}\""
+  INTERFACE "-DCONFIG_PREFIX=\"${CMAKE_INSTALL_PREFIX}\""
+  INTERFACE "-DCONFIG_PKGDATADIR=\"${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}\""
+)
+if (ENABLE_JBAY)
+  target_compile_definitions(bfp4c
+    INTERFACE "-DHAVE_JBAY=1"
+  )
+endif()
+if (ENABLE_CLOUDBREAK)
+  target_compile_definitions(bfp4c
+    INTERFACE "-DHAVE_CLOUDBREAK=1"
+  )
+endif()
+if (ENABLE_BAREFOOT_INTERNAL)
+  target_compile_definitions(bfp4c
+    INTERFACE "-DBAREFOOT_INTERNAL=1"
+  )
+endif()
+target_include_directories(bfp4c
+  INTERFACE ${LIBDYNHASH_INCLUDE_DIR}
+  INTERFACE ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include
+  INTERFACE ${PROTOBUF_INCLUDE_DIRS}
+  INTERFACE ${P4C_SOURCE_DIR}/frontends
+  INTERFACE ${P4C_SOURCE_DIR}/backends
+  INTERFACE ${P4C_SOURCE_DIR}/extensions
+  INTERFACE ${P4C_SOURCE_DIR}
+  INTERFACE ${P4C_SOURCE_DIR}/test/frameworks/gtest/googletest/include
+  INTERFACE ${P4C_BINARY_DIR}
+  INTERFACE ${BFN_P4C_SOURCE_DIR}
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_include_directories(bfp4c
+  SYSTEM INTERFACE ${P4C_BINARY_DIR}/control-plane
+)
+target_include_directories(bfp4c
+  INTERFACE logging
+  INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/logging
+)
+
+add_executable(p4c-barefoot p4c-barefoot.cpp)
+target_link_libraries(p4c-barefoot bfp4c)
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
