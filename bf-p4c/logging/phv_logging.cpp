@@ -84,6 +84,7 @@ void PhvLogging::end_apply(const IR::Node *root) {
     logHeaders();
     logFields();
     logContainers();
+    logConstraintReasons();
     logger.log();
     Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->id, "phv", "phv.json");
 }
@@ -213,70 +214,133 @@ PhvLogging::logContainerSlice(const PHV::AllocSlice& sl,
     return cs;
 }
 
-void PhvLogging::extractConstraints(Constraint *c, const PHV::Field *f,
-                                    const ordered_set<const PHV::Field*> &fields) {
-    auto s_loc = new SourceLocation("DummyFile", -1);
-    if (f->srcInfo != boost::none) {
-        s_loc = new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
-                                    f->srcInfo->toPosition().sourceLine);
+namespace SchemaComparators {
+    using FieldInfo = ::Logging::Phv_Schema_Logger::FieldInfo;
+    using SourceLoc = ::Logging::Phv_Schema_Logger::SourceLocation;
+    using Slice = ::Logging::Phv_Schema_Logger::Slice;
+    using FieldGroupItem = ::Logging::Phv_Schema_Logger::FieldGroupItem;
+
+    bool equal(const FieldInfo *f1, const FieldInfo *f2) {
+        return f1->get_bit_width() == f2->get_bit_width()
+            && f1->get_field_class() == f2->get_field_class()
+            && f1->get_field_name() == f2->get_field_name()
+            && f1->get_gress() == f2->get_gress()
+            && f1->get_format_type() == f2->get_format_type();
     }
+
+    bool equal(const SourceLoc *s1, const SourceLoc *s2) {
+        return s1->get_line() == s2->get_line()
+            && s1->get_file() == s2->get_file();
+    }
+
+    bool equal(const Slice *s1, const Slice *s2) {
+        if (s1 == nullptr && s2 == nullptr) return true;  // both are nullptr
+        if (s1 == nullptr || s2 == nullptr) return false;  // only one of them is
+        return s1->get_msb() == s2->get_msb()
+            && s1->get_lsb() == s2->get_lsb();
+    }
+
+    bool equal(const FieldGroupItem *i1, const FieldGroupItem *i2) {
+        return equal(i1->get_field_info(), i2->get_field_info())
+            && equal(i1->get_source(), i2->get_source())
+            && equal(i1->get_slice(), i2->get_slice());
+    }
+
+    bool equal(const std::vector<int> &a, const std::vector<int> &b) {
+        return a == b;
+    }
+}  // namespace SchemaComparators
+
+template<typename T>
+int PhvLogging::getDatabaseIndex(std::vector<T> &db, T item) {
+    using namespace SchemaComparators;
+
+    std::size_t i = 0;
+    for (; i < db.size(); i++) {
+        if (equal(db[i], item)) break;
+    }
+
+    if (i == db.size()) {
+        db.push_back(item);
+    }
+
+    return static_cast<int>(i);
+}
+
+void PhvLogging::extractFieldConstraints(Constraint *c, const PHV::Field *f,
+                                    const ordered_set<const PHV::Field*> &fields) {
+    auto getSourceLoc = [this] (const PHV::Field *f) {
+        if (f->srcInfo == boost::none)
+            return new SourceLocation("DummyFile", -1);
+        return new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
+                                    f->srcInfo->toPosition().sourceLine);
+    };
+
+    auto getFieldInfo = [this] (const PHV::Field *f) {
+        return new FieldInfo(f->size, getFieldType(f), std::string(stripThreadPrefix(f->name)),
+            getGress(f), "");
+    };
+
+    // Field properties
+    auto fieldInfo = getFieldInfo(f);
+    auto srcLoc = getSourceLoc(f);
 
     // Solitary Constraints
     if (f->is_solitary()) {
         if (f->deparsed_bottom_bits()) {
-            auto sc = new SolitaryConstraint("last_byte",
-                "SOLITARY_LAST_BYTE: Can not pack field with any other field"
-                " in its non-full last byte",
-                        s_loc);
+            auto sc = new BoolConstraint(
+                false, int(ConstraintReason::SolitaryLastByte), "Solitary", srcLoc);
             c->append(sc);
         } else {
             if (f->getSolitaryConstraint().isALU()) {
-                auto sc = new SolitaryConstraint("alu",
-                    "SOLITARY: Can not pack field with any other field",
-                            s_loc);
+                auto sc = new BoolConstraint(
+                    false, int(ConstraintReason::SolitaryAlu), "Solitary", srcLoc);
                 c->append(sc);
             } else if (f->getSolitaryConstraint().isDigest()) {
                 if (f->getDigestConstraint().isMirror()) {
-                    auto sc = new SolitaryConstraint("mirror",
-                    "SOLITARY_MIRROR: Cannot pack this field instance with"
-                    " any field that is mirrored",
-                            s_loc);
+                    auto sc = new BoolConstraint(
+                        false, int(ConstraintReason::SolitaryMirror), "Solitary", srcLoc);
                     c->append(sc);
                 } else if (f->getDigestConstraint().isLearning()) {
-                    auto sc = new SolitaryConstraint("learning_digest",
-                    "SOLITARY_EXCEPT_DIGEST: Cannot pack this field with"
-                    " any other field that does not belong to the same"
-                    " digest field lists",
-                            s_loc);
+                    auto sc = new BoolConstraint(
+                        false, int(ConstraintReason::SolitaryExceptSameDigest), "Solitary", srcLoc);
                     c->append(sc);
                 }
             }
         }
     }
 
-    // Different Container Constraint
-    if (f->is_solitary() && f->getSolitaryConstraint().isALU()) {
-        for (const auto* f2 : fields) {
-            if (f == f2) continue;
-            if (phv.isFieldNoPack(f, f2)) {
-                std::string fieldNamePack(stripThreadPrefix(f2->name));
-                auto fPack = new FieldInfo(f2->size, getFieldType(f2),
-                                    fieldNamePack, getGress(f2), "");
-                auto s_loc_Pack = new SourceLocation("DummyFile", -1);
-                if (f2->srcInfo != boost::none) {
-                    s_loc_Pack = new SourceLocation(
-                                    std::string(f2->srcInfo->toPosition().fileName),
-                                    f2->srcInfo->toPosition().sourceLine);
-                }
-                auto dcc = new DifferentContainerConstraint(fPack, s_loc_Pack,
-                            "alu",
-                            "DIFFERENT_CONTAINER: This field instance cannot"
-                            " be packed with another field instance",
-                            s_loc);
-                c->append(dcc);
-            }
+    auto &fieldGroupItems = logger.get_field_group_items();
+    auto &fieldGroups = logger.get_field_groups();
+
+    // List constraints
+    auto diffContainerConstraint = new ListConstraint(
+        {}, int(ConstraintReason::DifferentContainer), "DifferentContainer", srcLoc);
+
+    for (const auto* f2 : fields) {
+        if (f == f2) continue;
+        // Different container
+        if (phv.isFieldNoPack(f, f2)) {
+            auto otherFieldInfo = getFieldInfo(f2);
+            auto otherSrcLoc = getSourceLoc(f2);
+
+            auto groupItem = new FieldGroupItem(fieldInfo, srcLoc);
+            auto otherGroupItem = new FieldGroupItem(otherFieldInfo, otherSrcLoc);
+
+            int index1 = getDatabaseIndex(fieldGroupItems, groupItem);
+            int index2 = getDatabaseIndex(fieldGroupItems, otherGroupItem);
+
+            std::vector<int> group = {index1, index2};
+            // Groups always have to be sorted to prevent duplicates
+            std::sort(group.begin(), group.end());
+
+            int gi = getDatabaseIndex(fieldGroups, group);
+            diffContainerConstraint->append(gi);
         }
     }
+
+    if (diffContainerConstraint->get_lists().size() > 0)
+        c->append(diffContainerConstraint);
 }
 
 void PhvLogging::logFields() {
@@ -314,28 +378,68 @@ void PhvLogging::logFields() {
             auto field = new Field(fi, state, headerName);
 
             for (auto& sl : f->get_alloc()) {
-                auto fs = logFieldSlice(sl, use_alias);
                 field->append_field_slices(logFieldSlice(sl, use_alias));
                 field->append_phv_slices(logContainerSlice(sl, use_alias));
-
-                auto c = new Constraint(fs);
-                extractConstraints(c, f, kv.second);
-
-                if (c->get_ConstraintReason().size() > 0)
-                    field->append_constraints(c);
             }
 
-            if (state == "unallocated") {
-                auto fs = logFieldSlice(f, use_alias);
-                auto c = new Constraint(fs);
-                extractConstraints(c, f, kv.second);
+            // Log constraints applied to a field as whole
+            auto c = new Constraint();
+            extractFieldConstraints(c, f, kv.second);
 
-                if (c->get_ConstraintReason().size() > 0)
+            if (c->get_base_constraint().size() > 0)
                     field->append_constraints(c);
-            }
+
+            // TODO: extract per slice constraints
 
             logger.append_fields(field);
         }
+    }
+}
+
+void PhvLogging::logConstraintReasons() {
+    const std::map<ConstraintReason, std::string> reasons = {
+        {
+            ConstraintReason::SolitaryAlu,
+            "Solitary (ALU): This field cannot be packed with anything else due to ALU operation"
+        }, {
+            ConstraintReason::SolitaryIntrinsic,
+            "Solitary (Intrinsic): This field cannot be packed with anything else due to"
+            " hardware requirement."
+        }, {
+            ConstraintReason::SolitaryChecksum,
+            "Solitary (Checksum): This field cannot be packed with anything else because it is"
+            " used as a checksum calculation result."
+        }, {
+            ConstraintReason::SolitaryLastByte,
+            "Solitary (Last byte): This field cannot be packed with anything else in its non-full"
+            " last byte."
+        }, {
+            ConstraintReason::SolitaryMirror,
+            "Solitary (Mirror): This field cannot be packed with any field that is mirrored."
+        }, {
+            ConstraintReason::SolitaryContainerSize,
+            "Solitary (Container size): This field was constrained with pa_container_size pragma"
+            " in a way that requires it to be solitary."
+        }, {
+            ConstraintReason::SolitaryPragma,
+            "Solitary (Pragma): This field was constrained by pa_solitary pragma."
+        }, {
+            ConstraintReason::SolitaryExceptSameDigest,
+            "Solitary (Except same digest): This field cannot be packed with anything else that"
+            " does not belong to the same digest field list."
+        }, {
+            ConstraintReason::SolitaryAfterStage,
+            "Solitary (After stage): This field cannot be packed with anything else"
+            " after a program point."
+        }, {
+            ConstraintReason::DifferentContainer,
+            "Different Container: This field cannot be packed into same container with listed"
+            " fields or their slices."
+        }
+    };
+
+    for (auto &pair : reasons) {
+        logger.append_constraint_reasons(pair.second);
     }
 }
 

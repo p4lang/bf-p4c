@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include "logging.h"
 #include "phv_schema.h"
 
@@ -11,7 +12,7 @@ int main() {
                              12,                 // nStages
                              "test_phv_schema",  // program name
                              "run_id",           // runId
-                             "2.0.0",            // schema version
+                             "3.0.0",            // schema version
                              "tofino");          // target
 
     using Structure = Phv_Schema_Logger::Structure;
@@ -20,15 +21,21 @@ int main() {
     using FieldInfo = Phv_Schema_Logger::FieldInfo;
     using Slice = Phv_Schema_Logger::Slice;
     using FieldSlice = Phv_Schema_Logger::FieldSlice;
+    using FieldGroupItem = Phv_Schema_Logger::FieldGroupItem;
     using SourceLocation = Phv_Schema_Logger::SourceLocation;
-    using SolitaryConstraint = Phv_Schema_Logger::SolitaryConstraint;
-    using SolitaryBeforeStageConstraint = Phv_Schema_Logger::SolitaryBeforeStageConstraint;
+    using BoolConstraint = Phv_Schema_Logger::BoolConstraint;
+    using IntConstraint = Phv_Schema_Logger::IntConstraint;
+    using ListConstraint = Phv_Schema_Logger::ListConstraint;
     using Constraint = Phv_Schema_Logger::Constraint;
     using Access = Phv_Schema_Logger::Access;
     using MAULocation = Phv_Schema_Logger::MAULocation;
     using ParserLocation = Phv_Schema_Logger::ParserLocation;
     using DeparserLocation = Phv_Schema_Logger::DeparserLocation;
     using ContainerSlice = Phv_Schema_Logger::ContainerSlice;
+
+    enum class ConstraintReason : std::size_t {
+        Bool, Int, List
+    };
 
     // Structures
     auto structure1 = new Structure("ingress", "h1", "header");
@@ -42,8 +49,10 @@ int main() {
 
     // Field1
     auto f1_info = new FieldInfo(32, "pkt", "f1", "ingress", "");
+    auto f1_info_dup = new FieldInfo(32, "pkt", "f1", "ingress", "");
     auto field1 = new Field(f1_info, "allocated", "h1");
     auto slice1 = new Slice(0, 7);
+    auto slice1_dup = new Slice(0, 7);
     auto f1_slice1 = new FieldSlice("f1", slice1);
     field1->append_field_slices(f1_slice1);
     auto f1_phv_sl1 = new Slice(8, 15);
@@ -55,18 +64,20 @@ int main() {
     auto constraint_field_slice1 = new FieldSlice("f1", constraint_slice1);
     auto f1_constraints = new Constraint(constraint_field_slice1);
     auto src_location1 = new SourceLocation("test.p4", 56);
+    auto src_location1_dup = new SourceLocation("test.p4", 56);
     auto pipeline_location1 = new Access(MAULocation("xbar", 2, "mau", "m_action1", "m_table1"));
-    auto solitary_constraint1 = new SolitaryConstraint("alu",
-                                        "Can not pack field with any other field",
-                                        src_location1, pipeline_location1);
-    f1_constraints->append(solitary_constraint1);
+    auto bool_constraint = new BoolConstraint(false, int(ConstraintReason::Bool), "TestBool",
+                                                    src_location1, pipeline_location1);
+    f1_constraints->append(bool_constraint);
     field1->append_constraints(f1_constraints);
     logger.append_fields(field1);
 
     // Field2
     auto f2_info = new FieldInfo(16, "pkt", "f2", "ingress", "");
+    auto f2_info_dup = new FieldInfo(16, "pkt", "f2", "ingress", "");
     auto field2 = new Field(f2_info, "partially allocated", "h1");
     auto slice2 = new Slice(0, 15);
+    auto slice2_dup = new Slice(0, 15);
     auto f2_slice1 = new FieldSlice("f2", slice2);
     field2->append_field_slices(f2_slice1);
     auto f2_phv_sl2 = new Slice(0, 8);
@@ -78,11 +89,21 @@ int main() {
     auto constraint_field_slice2 = new FieldSlice("f2", constraint_slice2);
     auto f2_constraints = new Constraint(constraint_field_slice2);
     auto src_location2 = new SourceLocation("test.p4", 34);
+    auto src_location2_dup = new SourceLocation("test.p4", 34);
     auto pipeline_location2 = new Access(DeparserLocation("pkt", "deparser"));
-    auto sbs_constraint2 = new SolitaryBeforeStageConstraint(1, "alu",
-        "Can not pack field with any other fields or slices after a program point", src_location2,
-        pipeline_location2);
-    f2_constraints->append(sbs_constraint2);
+    auto int_constraint = new IntConstraint(1, int(ConstraintReason::Int), "TestInt",
+                                            src_location2, pipeline_location2);
+
+    auto group_item_1 = new FieldGroupItem(f1_info_dup, src_location1_dup, slice1_dup);
+    auto group_item_2 = new FieldGroupItem(f2_info_dup, src_location2_dup, slice2_dup);
+    logger.get_field_group_items().push_back(group_item_1);
+    logger.get_field_group_items().push_back(group_item_2);
+    logger.get_field_groups().push_back({0, 1});
+
+    auto list_constraint = new ListConstraint({1}, int(ConstraintReason::List), "TestList",
+                                            src_location2, pipeline_location2);
+    f2_constraints->append(int_constraint);
+    f2_constraints->append(list_constraint);
     field2->append_constraints(f2_constraints);
     logger.append_fields(field2);
 
@@ -111,6 +132,21 @@ int main() {
     container_slice2->append_reads(read_access2);
     container2->append(container_slice2);
     logger.append_containers(container2);
+
+    // Constraints reason
+    const std::map<ConstraintReason, std::string> test_reasons = {
+        {
+            ConstraintReason::Bool, "Reason for bool constraint."
+        }, {
+            ConstraintReason::Int,  "Reason for int constraint"
+        }, {
+            ConstraintReason::List, "Reason for list constraint"
+        }
+    };
+
+    for (auto &pair : test_reasons) {
+        logger.append_constraint_reasons(pair.second);
+    }
 
     logger.log();
     return 0;

@@ -39,24 +39,6 @@ def getTitle(name):
     else:
         return name.title()
 
-# To convert the constraint name from Title form to underscore separated lowercase form
-# Eg: 'SolitaryBeforeStageConstraint' to 'solitary_before_stage'
-def getReasonType(name):
-    if 'Constraint' in name:
-        name = name.split('Constraint')[0]
-    reason_parts = re.findall('[A-Z][^A-Z]*', name)
-    reason_type = ''
-    for i, part in enumerate(reason_parts):
-        # To handle constraints like MAUGroup which split to ['M', 'A', 'U', 'Group']
-        if len(part) < 2:
-            if (i + 1) < len(reason_parts) and len(reason_parts[i + 1]) > 1:
-                reason_type = reason_type + part.lower() + '_'
-            else:
-                reason_type = reason_type + part.lower()
-        else:
-            reason_type = reason_type + part.lower() + '_'
-    return reason_type[:-1]
-
 
 class DataMember(object):
     def __init__(self, name, typeName = None, body = None, isOptional = False):
@@ -439,19 +421,36 @@ class ArrayDataMember(DataMember):
     def genAccessor(self, generator):
         generator.write(self.cppType() + '& get' + self.memberName() + '() { ')
         generator.write('return ' + self.memberName() + '; }\n', None)
+    def genNestedArraySerializer(self, generator, this, src):
+        if this.elemType.isObjectType():
+            generator.write(src + '->serialize(writer);\n', generator.indentIncr)
+        elif this.elemType.isArrayType():
+            generator.incrIndent()
+            generator.write('{\n')
+            generator.incrIndent()
+
+            itrName = chr(ord(src) + 1)
+
+            generator.write('writer.StartArray();\n')
+            generator.write('for ( auto ' + itrName + ' : ' + src + ' )\n')
+            self.genNestedArraySerializer(generator, this.elemType, itrName)
+            generator.write('writer.EndArray();\n')
+
+            generator.decrIndent()
+            generator.write('}\n')
+            generator.decrIndent()
+        else:
+            # Custom data type (array of one of classes)
+            if this.elemType.jsonType() == this.elemType.cppType():
+                generator.write(this.elemType.serializeMember('writer') + '\n', generator.indentIncr)
+            else:
+                generator.write('writer.' + this.elemType.jsonType() + '(' +
+                            this.elemType.serializeMember(src) + ');\n', generator.indentIncr)
     def genSerializer(self, generator, writeKey = True, isPtr = False):
         if writeKey: generator.write('writer.Key("' + self.name + '");\n')
         generator.write('writer.StartArray();\n')
         generator.write('for ( auto e : ' + self.memberName() + ')\n')
-        if self.elemType.isObjectType():
-            generator.write('e->serialize(writer);\n', generator.indentIncr)
-        else:
-            # Custom data type (array of one of classes)
-            if self.elemType.jsonType() == self.elemType.cppType():
-                generator.write(self.elemType.serializeMember('writer') + '\n', generator.indentIncr)
-            else:
-                generator.write('writer.' + self.elemType.jsonType() + '(' +
-                            self.elemType.serializeMember('e') + ');\n', generator.indentIncr)
+        self.genNestedArraySerializer(generator, self, 'e')
         generator.write('writer.EndArray();\n')
     def genSetter(self, generator, unique = True):
         methodName = 'append'
@@ -698,7 +697,7 @@ class ClassGenerator:
             if d.getDescription() is not None:
                 self.write(d.getDescription() + '\n')
             if d.isObjectType(): self.write('const ')
-            self.write(d.memberDecl() + ';\n');
+            self.write(d.memberDecl() + ';\n')
 
         self.write('public:\n', indent = -2)
 
@@ -761,7 +760,7 @@ class ClassGenerator:
     def genConstructor(self, superClasses):
         self.write('// Constructor\n')
         self.write(self.cppClassName + '(')
-        argIndent = len(self.cppClassName) + 1;
+        argIndent = len(self.cppClassName) + 1
         indent = self.generator.indent + argIndent
         first = self.root is None
         if self.root is not None:
@@ -829,8 +828,8 @@ class ClassGenerator:
         self.write('}\n')
 
     def serializeSuperClass(self):
-        self.write('writer.Key("reason_type");\n')
-        self.write('writer.String("' + getReasonType(self.cppClassName) + '");\n')
+        self.write('writer.Key("constraint_type");\n')
+        self.write('writer.String("' + self.cppClassName + '");\n')
         self.write(self.superClasses[0].name + '::internalSerialize(writer);\n')
 
 class Generator:

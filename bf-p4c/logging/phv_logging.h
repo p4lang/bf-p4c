@@ -73,13 +73,14 @@ class PhvLogging : public MauInspector {
     using Structure = Phv_Schema_Logger::Structure;
     using Container = Phv_Schema_Logger::Container;
     using FieldInfo = Phv_Schema_Logger::FieldInfo;
+    using FieldGroupItem = Phv_Schema_Logger::FieldGroupItem;
     using Field = Phv_Schema_Logger::Field;
     using Slice = Phv_Schema_Logger::Slice;
     using FieldSlice = Phv_Schema_Logger::FieldSlice;
     using SourceLocation = Phv_Schema_Logger::SourceLocation;
-    using SolitaryConstraint = Phv_Schema_Logger::SolitaryConstraint;
-    using AlignmentConstraint = Phv_Schema_Logger::AlignmentConstraint;
-    using MaxSplitConstraint = Phv_Schema_Logger::MaxSplitConstraint;
+    using BoolConstraint = Phv_Schema_Logger::BoolConstraint;
+    using IntConstraint = Phv_Schema_Logger::IntConstraint;
+    using ListConstraint = Phv_Schema_Logger::ListConstraint;
     using Constraint = Phv_Schema_Logger::Constraint;
     using ParserLocation = Phv_Schema_Logger::ParserLocation;
     using DeparserLocation = Phv_Schema_Logger::DeparserLocation;
@@ -87,7 +88,6 @@ class PhvLogging : public MauInspector {
     using ContainerSlice = Phv_Schema_Logger::ContainerSlice;
     using Access = Phv_Schema_Logger::Access;
     using Resources = Phv_Schema_Logger::Resources;
-    using DifferentContainerConstraint = Phv_Schema_Logger::DifferentContainerConstraint;
     struct PardeInfo {
         std::string unit;
         std::string parserState;
@@ -104,6 +104,19 @@ class PhvLogging : public MauInspector {
 
         explicit PardeInfo(std::string u, std::string name = "")
             : unit(u), parserState(name) { }
+    };
+
+    enum class ConstraintReason : std::size_t {
+        SolitaryAlu = 0,
+        SolitaryIntrinsic,
+        SolitaryChecksum,
+        SolitaryLastByte,
+        SolitaryMirror,
+        SolitaryContainerSize,
+        SolitaryPragma,
+        SolitaryExceptSameDigest,
+        SolitaryAfterStage,
+        DifferentContainer
     };
 
  private:
@@ -202,8 +215,18 @@ class PhvLogging : public MauInspector {
     /// Add container-specific information to the logger object.
     void logContainers();
 
-    /// Extract constraints from a field
-    void extractConstraints(Constraint *c, const PHV::Field *f,
+    // Add database of constraint reasons
+    void logConstraintReasons();
+
+    // Looks up item in db. If item is not there, it is added.
+    // Index of the item is then returned.
+    // This template is supposed to be used with FieldGroupItem
+    // and FieldGroups
+    template<typename T>
+    int getDatabaseIndex(std::vector<T> &db, T item);
+
+    /// Extract constraints applied to a field
+    void extractFieldConstraints(Constraint *c, const PHV::Field *f,
                             const ordered_set<const PHV::Field*> &fields);
 
  public:
