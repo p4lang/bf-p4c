@@ -13,6 +13,9 @@ cstring MatchRegister::toString() const {
     return tmp.str();
 }
 
+MatchRegister::MatchRegister() : name(""), size(0), id(0) {
+}
+
 MatchRegister::MatchRegister(cstring n) : name(n), id(s_id++) {
     if (name.find("byte"))
         size = 1;

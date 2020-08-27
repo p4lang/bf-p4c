@@ -30,9 +30,10 @@ struct MarshaledFrom {
     void toJSON(JSONGenerator& json) const;
     static MarshaledFrom fromJSON(JSONLoader& json);
 
-    MarshaledFrom() { }
+    MarshaledFrom()
+        : gress(INGRESS), field_name(""), pre_padding(0) { }
     MarshaledFrom(gress_t gress, cstring name)
-        : gress(gress), field_name(name) { }
+        : gress(gress), field_name(name), pre_padding(0) { }
     MarshaledFrom(gress_t gress, cstring name, size_t pre_padding)
         : gress(gress), field_name(name), pre_padding(pre_padding) { }
 };

@@ -31,7 +31,7 @@ class ExtractDeparser : public DeparserInspector {
     P4::TypeMap                                 *typeMap;
     P4::ReferenceMap                            *refMap;
     IR::BFN::Pipe                               *rv;
-    IR::BFN::Deparser                           *dprsr;
+    IR::BFN::Deparser                           *dprsr = nullptr;
     const IR::Expression                        *pred = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
     ordered_map<cstring, cstring>               nameMap;

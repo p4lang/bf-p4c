@@ -14,7 +14,7 @@
 
 class AddJBayMetadataPOV : public Transform {
     const PhvInfo &phv;
-    const IR::BFN::Deparser *dp;
+    const IR::BFN::Deparser *dp = nullptr;
     bool equiv(const IR::Expression *a, const IR::Expression *b) {
         if (auto field = phv.field(a))
             return field == phv.field(b);

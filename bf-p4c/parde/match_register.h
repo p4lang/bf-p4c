@@ -9,7 +9,7 @@ class JSONLoader;
 
 class MatchRegister {
  public:
-    MatchRegister() { }
+    MatchRegister();
     explicit MatchRegister(cstring);
 
     cstring toString() const;
