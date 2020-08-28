@@ -779,6 +779,7 @@ set (BF_P4C_SOURCES
 
 set (P4C_BAREFOOT_SRCS
   p4c-barefoot.cpp
+  frontend.cpp
   ${BF_P4C_BACKEND_CONV_SRCS}
   ${BF_P4C_GRAPHS_SRCS}
   )
