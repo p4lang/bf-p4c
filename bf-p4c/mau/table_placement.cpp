@@ -178,7 +178,7 @@ class TablePlacement::SetupInfo : public Inspector {
         for (auto &att : self.attached_to) {
             if (att.second.size() == 1) continue;
             if (att.first->direct)
-                error("direct %s attached to multiple match tables", att.first); }
+                self.error("direct %s attached to multiple match tables", att.first); }
         for (auto &seq : Values(self.seqInfo))
             for (auto *tbl : seq.refs)
                 seq.parents.setbit(self.tblInfo.at(tbl).uid);
@@ -2908,14 +2908,16 @@ IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
 
 IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
-        std::sort(seq->tables.begin(), seq->tables.end(),
+        std::stable_sort(seq->tables.begin(), seq->tables.end(),
             // Always Run Action will appear logically after all tables in its stage but before
             // all tables in subsequent stages
             [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
                 bool a_always_run = a->is_always_run_action();
                 bool b_always_run = b->is_always_run_action();
-                if (!a_always_run && !b_always_run)
-                    return *(a->global_id()) < *(b->global_id());
+                if (!a_always_run && !b_always_run) {
+                    auto a_id = a->global_id();
+                    auto b_id = b->global_id();
+                    return a_id ? b_id ? *a_id < *b_id : true : false; }
                 if (a->stage() != b->stage())
                     return a->stage() < b->stage();
                 if (!a_always_run || !b_always_run)

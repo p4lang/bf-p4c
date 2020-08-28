@@ -129,6 +129,11 @@ class TablePlacement : public PassManager {
 
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
+
+    template <class... Args> void error(Args... args) {
+        auto &ctxt = BaseCompileContext::get();
+        summary.addPlacementError(ctxt.errorReporter().format_message(args...)); }
+    int errorCount() const { return ::errorCount() + summary.placementErrorCount(); }
 };
 
 
@@ -157,10 +162,8 @@ class DecidePlacement : public MauInspector {
     IR::MAU::Table *create_starter_table(gress_t gress);
     const TablePlacement::Placed *place_table(ordered_set<const GroupPlace *>&work,
         const TablePlacement::Placed *pl);
-    template <class... Args> void error(Args... args) {
-        auto &ctxt = BaseCompileContext::get();
-        self.summary.addPlacementError(ctxt.errorReporter().format_message(args...)); }
-    int errorCount() const { return ::errorCount() + self.summary.placementErrorCount(); }
+    template <class... Args> void error(Args... args) { self.error(args...); }
+    int errorCount() const { return self.errorCount(); }
 };
 
 class TransformTables : public MauTransform {
@@ -182,6 +185,8 @@ class TransformTables : public MauTransform {
     IR::Vector<IR::MAU::Table> *break_up_dleft(IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed, int stage_table = -1);
     void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *res, int entries);
+    template <class... Args> void error(Args... args) { self.error(args...); }
+    int errorCount() const { return self.errorCount(); }
 };
 
 
@@ -246,6 +251,9 @@ class MergeAlwaysRunActions : public PassManager {
         auto set = ar_tables_per_stage.at(ark);
         return *(set.begin());
     }
+
+    template <class... Args> void error(Args... args) { self.error(args...); }
+    int errorCount() const { return self.errorCount(); }
 
  public:
     explicit MergeAlwaysRunActions(TablePlacement &s) : self(s) {

@@ -726,7 +726,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not place table .* The table .* could not fit within a single input crossbar in an MAU stage"
   ../glass/testsuite/p4_tests/phv/COMPILER-423/diag_power.p4
-  ../glass/testsuite/p4_tests/mau/COMPILER-572/hct.p4
 )
 
 p4c_add_xfail_reason("tofino"
