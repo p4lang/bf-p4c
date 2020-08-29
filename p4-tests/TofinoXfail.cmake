@@ -620,6 +620,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
   testdata/p4_16_samples/psa-example-register2-bmv2.p4
   testdata/p4_16_samples/psa-register-read-write-bmv2.p4
+  testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
 )
 
@@ -1055,7 +1056,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unexpected type for constant"
   ../glass/testsuite/p4_tests/mau/COMPILER-556/variable.p4
-  testdata/p4_16_samples/issue2261.p4
   )
 
 # P4C-539
@@ -1439,7 +1439,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "header fields cannot be used in wide arithmetic ops"
+  #"header fields cannot be used in wide arithmetic ops"
+  "error: Expression cast is too complex to handle, consider simplifying the nested casts"
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
 )
 
@@ -1761,6 +1762,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/nested_if_lvalue_dependencies.p4
   testdata/p4_16_samples/nested_if_else.p4
   testdata/p4_16_samples/nested_if_statement.p4
+  testdata/p4_16_samples/proliferation1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1879,4 +1881,11 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/rdp/COMPILER-510/case2682.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-514/balancer_one.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-537/case2834.p4
+)
+
+# PSA on tofino new failures
+p4c_add_xfail_reason("tofino"
+  "Cannot unify PortId_t to bit<32>"
+  testdata/p4_16_samples/psa-multicast-basic-2-bmv2.p4
+  testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
 )
