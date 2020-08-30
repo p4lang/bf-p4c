@@ -403,13 +403,14 @@ double WalkPowerGraph::estimate_power_tofino() {
     }
 
     auto& spec = Device::mauPowerSpec();
-    int mau_latency = mau_features_->compute_pipe_latency(g);
-    int deparser_scaling_starts_at = spec.get_deparser_throughput_scaling_starts();
-    int power_scale_factor = 1.0;
-    if (mau_latency > 0 && mau_latency > deparser_scaling_starts_at) {
-      power_scale_factor =  spec.get_deparser_max_phv_valid() /
-         (mau_latency + spec.get_pmarb_cycles_from_receive_credit_to_issue_phv_to_mau());
-      LOG4("Pipeline latency scaling factor: " << float2str(power_scale_factor * 100.0) << "%");
+    double mau_latency = mau_features_->compute_pipe_latency(g);
+    double deparser_scaling_starts_at = spec.get_deparser_throughput_scaling_starts();
+    double power_scale_factor = 1.0;
+    if (mau_latency > 0.0 && mau_latency > deparser_scaling_starts_at) {
+        double deparser_max_phv_valid = spec.get_deparser_max_phv_valid();
+        double pmarb_cycles = spec.get_pmarb_cycles_from_receive_credit_to_issue_phv_to_mau();
+        power_scale_factor =  deparser_max_phv_valid / (mau_latency + pmarb_cycles);
+        LOG4("Pipeline latency scaling factor: " << float2str(power_scale_factor * 100.0) << "%");
     }
     worst_power *= power_scale_factor;
     LOG4("Worst case power for " << toString(g) << ": " << float2str(worst_power) << "W.");
