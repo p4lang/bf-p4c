@@ -1522,7 +1522,6 @@ class AddIntrinsicConstraints : public Inspector {
         static std::vector<cstring> rv = {
             "ig_intr_md_for_tm.mcast_grp_a",
             "ig_intr_md_for_tm.mcast_grp_b",
-            "eg_intr_md.egress_port",
             "ig_intr_md_for_tm.ucast_egress_port",
             "ig_intr_md_for_dprsr.resubmit_type",
             "ig_intr_md_for_dprsr.digest_type",
