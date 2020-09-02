@@ -23,6 +23,10 @@ class AsmStage : public Section {
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output(json::map &);
+
+    /// Propagates group_table_use to adjacent stages that are not match-dependent.
+    void propagate_group_table_use();
+
     unsigned compute_latency(gress_t gress);
     AsmStage();
     ~AsmStage() {}
@@ -294,8 +298,10 @@ void AsmStage::output(json::map &ctxt_json) {
             if (stage[i].stage_dep[gress] == Stage::MATCH_DEP)
                 set_regs = stage[i].action_set[gress];
             else
-                set_regs |= stage[i].action_set[gress]; }
-        stage[0].group_table_use[gress] = stage[0].table_use[gress]; }
+                set_regs |= stage[i].action_set[gress]; } }
+
+    // Propagate group_table_use so we can estimate latencies.
+    propagate_group_table_use();
 
     // In Tofino, add match-dependent stages if latency is not the minimum
     // egress latency. There is no such requirement for JBAY - COMPILER-757
@@ -329,15 +335,8 @@ void AsmStage::output(json::map &ctxt_json) {
         }
     }
 
-    /* propagate group_table_use to adjacent stages that are not match-dependent */
-    for (gress_t gress : Range(INGRESS, EGRESS)) {
-        for (unsigned i = 1; i < stage.size(); i++) {
-            stage[i].group_table_use[gress] = stage[i].table_use[gress];
-            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
-                stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
-        for (int i = stage.size()-1; i > 0; i--)
-            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
-                stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
+    // Re-propagate group_table_use to account for any stages that may now be match dependent.
+    propagate_group_table_use();
 
     for (unsigned i = 0; i < stage.size(); i++)
         SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
@@ -352,6 +351,18 @@ void AsmStage::output(json::map &ctxt_json) {
             hash_out.close();
         }
     }
+}
+
+void AsmStage::propagate_group_table_use() {
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        stage[0].group_table_use[gress] = stage[0].table_use[gress];
+        for (unsigned i = 1; i < stage.size(); i++) {
+            stage[i].group_table_use[gress] = stage[i].table_use[gress];
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
+        for (int i = stage.size()-1; i > 0; i--)
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
 }
 
 unsigned AsmStage::compute_latency(gress_t gress) {
