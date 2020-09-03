@@ -36,7 +36,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
             &action_mutex,
             &siaa,
             new DumpPipe("Before TablePlacement"),
-            new TablePlacement(options, &deps, mutex, phv, lc, siaa, att_info, summary),
+            new TablePlacement(options, deps, mutex, phv, lc, siaa, att_info, summary),
             new DumpPipe("After TablePlacement"),
             new CheckTableNameDuplicate,
             new TableFindSeqDependencies(phv),  // not needed?

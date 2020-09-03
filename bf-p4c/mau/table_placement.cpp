@@ -103,11 +103,10 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
         cstring fileName = "table_dep_graph_placement_" + std::to_string(invocation++);
         std::ofstream dotStream(graphsDir + "/" + fileName + ".dot", std::ios_base::out);
-        DependencyGraph::dump_viz(dotStream, *deps);
+        DependencyGraph::dump_viz(dotStream, deps);
         Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
                                                   INGRESS);  // this should be both really!
     }
-    LOG7(PhvInfo::reportMinStages());
     return rv;
 }
 
@@ -556,7 +555,7 @@ TablePlacement::GatewayMergeChoices
             // One could possibly fold this into TableSeqDeps, but only if initialization
             // happens in flow order, as the TableSeqDeps works with a LTBitMatrix
             for (auto t2 : it->second->tables) {
-                if (deps->happens_logi_before(t2, t)) should_skip = true;
+                if (deps.happens_logi_before(t2, t)) should_skip = true;
             }
 
             // If we have dependence ordering problems
@@ -1099,15 +1098,15 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         } else if (p->stage == rv->stage) {
             if (options.forced_placement)
                 continue;
-            if (deps->happens_phys_before(p->table, rv->table)) {
+            if (deps.happens_phys_before(p->table, rv->table)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and table advances stage");
                 rv->stage_advance_log = "dependency on table " + p->table->name;
-            } else if (rv->gw && deps->happens_phys_before(p->table, rv->gw)) {
+            } else if (rv->gw && deps.happens_phys_before(p->table, rv->gw)) {
                 rv->stage++;
                 LOG2("  - dependency between " << p->table->name << " and gateway advances stage");
                 rv->stage_advance_log = "gateway dependency on table " + p->table->name;
-            } else if (deps->container_conflict(p->table, rv->table)) {
+            } else if (deps.container_conflict(p->table, rv->table)) {
                 if (!ignoreContainerConflicts) {
                     rv->stage++;
                     LOG2("  - action dependency between " << p->table->name << " and table " <<
@@ -1119,14 +1118,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 for (auto ctbl : tables_with_shared) {
                     // FIXME -- once we can put shared attached tables in different stages, we
                     // probably don't want to do this any more...
-                    if (deps->happens_phys_before(p->table, ctbl)) {
+                    if (deps.happens_phys_before(p->table, ctbl)) {
                         rv->stage++;
                         LOG2("  - dependency between " << p->table->name << " and " <<
                              ctbl->name << " advances stage");
                         rv->stage_advance_log = "shared table " + ctbl->name +
                             " depends on table " + p->table->name;
                         break;
-                    } else if (deps->container_conflict(p->table, ctbl)) {
+                    } else if (deps.container_conflict(p->table, ctbl)) {
                         if (!ignoreContainerConflicts) {
                             rv->stage++;
                             LOG2("  - action dependency between " << p->table->name << " and "
@@ -1443,7 +1442,7 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
     TablePlacement::Placed *place_before = nullptr;
     for (const TablePlacement::Placed **p = &done; *p && (*p)->stage == done->stage; ) {
         if (!(*p)->table->created_during_tp && !self.mutex(tbl, (*p)->table) &&
-            self.deps->container_conflict(tbl, (*p)->table)) {
+            self.deps.container_conflict(tbl, (*p)->table)) {
             LOG4("  can't backfill due to container conflict with " << (*p)->name);
             return nullptr; }
         auto clone = new TablePlacement::Placed(**p);
@@ -1712,8 +1711,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
          ", provided stage " << a->table->get_provided_stage(&a->stage) <<
          ", priority " << a->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.first);
-    LOG5("        local dep score " << deps->stage_info.at(a_table_to_use).dep_stages_control_anti);
-    LOG5("        dom frontier " << deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier);
+    LOG5("        local dep score " << deps.stage_info.at(a_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier " << deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier);
     LOG5("        can place cds in stage "
           << ddm.can_place_cds_in_stage(a_table_to_use, already_placed_a));
 
@@ -1722,8 +1721,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
          ", provided stage " << b->table->get_provided_stage(&b->stage) <<
          ", priority " << b->table->get_placement_priority_int());
     LOG5("        downward prop score " << down_score.second);
-    LOG5("        local dep score " << deps->stage_info.at(b_table_to_use).dep_stages_control_anti);
-    LOG5("        dom frontier " << deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier);
+    LOG5("        local dep score " << deps.stage_info.at(b_table_to_use).dep_stages_control_anti);
+    LOG5("        dom frontier " << deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier);
     LOG5("        can place cds in stage "
           << ddm.can_place_cds_in_stage(b_table_to_use, already_placed_b));
 
@@ -1776,16 +1775,16 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     ///> Downward Dominance Frontier - for definition,
     ///> see TableDependencyGraph::DepStagesThruDomFrontier
     choice = DOWNWARD_DOM_FRONTIER;
-    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier == 0 &&
-        deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier != 0)
+    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier == 0 &&
+        deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier != 0)
         return true;
-    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0 &&
-        deps->stage_info.at(b_table_to_use).dep_stages_dom_frontier == 0)
+    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0 &&
+        deps.stage_info.at(b_table_to_use).dep_stages_dom_frontier == 0)
         return false;
 
     ///> Direct Dependency Chain without propagation
-    int a_local = deps->stage_info.at(a_table_to_use).dep_stages_control_anti;
-    int b_local = deps->stage_info.at(b_table_to_use).dep_stages_control_anti;
+    int a_local = deps.stage_info.at(a_table_to_use).dep_stages_control_anti;
+    int b_local = deps.stage_info.at(b_table_to_use).dep_stages_control_anti;
     choice = LOCAL_DSC;
     if (a_local > b_local) return true;
     if (a_local < b_local) return false;
@@ -1807,7 +1806,7 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     if (b->need_more_match && !a->need_more_match) return true;
     if (a->need_more_match && !b->need_more_match) return false;
 
-    if (deps->stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0) {
+    if (deps.stage_info.at(a_table_to_use).dep_stages_dom_frontier != 0) {
         choice = CDS_PLACE_COUNT;
         int comp = ddm.placeable_cds_count(a_table_to_use, already_placed_a) -
                    ddm.placeable_cds_count(b_table_to_use, already_placed_b);
@@ -1816,8 +1815,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
     }
 
     ///> Original dependency metric.  Feels like it should be deprecated
-    int a_deps_stages = deps->stage_info.at(a_table_to_use).dep_stages;
-    int b_deps_stages = deps->stage_info.at(b_table_to_use).dep_stages;
+    int a_deps_stages = deps.stage_info.at(a_table_to_use).dep_stages;
+    int b_deps_stages = deps.stage_info.at(b_table_to_use).dep_stages;
     choice = LOCAL_DS;
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
@@ -1852,8 +1851,8 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b, choice_t& choic
 
     ///> Local dependencies
     choice = LOCAL_TD;
-    int a_total_deps = deps->happens_before_dependences(a->table).size();
-    int b_total_deps = deps->happens_before_dependences(b->table).size();
+    int a_total_deps = deps.happens_before_dependences(a->table).size();
+    int b_total_deps = deps.happens_before_dependences(b->table).size();
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
@@ -1980,7 +1979,7 @@ bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl,
         if (cd_tbl->uses_gateway()) continue;
         non_cd_gw_tbls++;
         bool any_prev_unaccounted = false;
-        for (auto prev : self.deps->happens_logi_after_map.at(cd_tbl)) {
+        for (auto prev : self.deps.happens_logi_after_map.at(cd_tbl)) {
             if (prev->uses_gateway()) continue;   // Check #3 from comments
             if (placed && placed->is_placed(prev)) continue;   // Check #1 from comments
             if (self.ntp.control_dom_set.at(tbl).count(prev)) continue;   // Check #2 from comments
@@ -2088,7 +2087,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
 
                 bool should_skip = false;  // flag to continue; outer loop;
                 for (auto& grp_tbl : grp->seq->tables) {
-                    if (self.deps->happens_before_control(t, grp_tbl) &&
+                    if (self.deps.happens_before_control(t, grp_tbl) &&
                         (!placed || !(placed->is_placed(grp_tbl)))) {
                         LOG3("  - skipping " << t->name << " due to in-sequence control" <<
                             " dependence on " << grp_tbl->name);
@@ -2104,7 +2103,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                     done = false;
                     continue;
                 }
-                for (auto *prev : self.deps->happens_logi_after_map.at(t)) {
+                for (auto *prev : self.deps.happens_logi_after_map.at(t)) {
                     if (!placed || !placed->is_placed(prev)) {
                         LOG3("  - skipping " << t->name << " because it depends on " << prev->name);
                         done = false;
@@ -2123,7 +2122,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 for (auto mc : gmc) {
                     // Iterate through all of this merge choice's happens afters and make sure
                     // they're placed
-                    for (auto* prev : self.deps->happens_logi_after_map.at(mc.first)) {
+                    for (auto* prev : self.deps.happens_logi_after_map.at(mc.first)) {
                         if (prev == t)
                             continue;
                         if (!placed || !placed->is_placed(prev)) {
@@ -2949,6 +2948,8 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
     if (tbl->is_always_run_action()) {
         AlwaysRunKey ark(tbl->stage(), tbl->gress);
         self.ar_tables_per_stage[ark].insert(tbl);
+        LOG7("\t Merge Scan - ARA Table: " << tbl->name <<  "    Gress " << tbl->gress
+             << "  phys stage:" << tbl->stage());
     }
     return true;
 }
@@ -2956,19 +2957,21 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
 bool MergeAlwaysRunActions::Scan::preorder(const IR::Primitive *prim) {
     auto *tbl = findContext<IR::MAU::Table>();
     if (tbl != nullptr && tbl->is_always_run_action()) {
-        for (int idx = 0; idx < prim->operands.size(); ++idx) {
+        for (uint32_t idx = 0; idx < prim->operands.size(); ++idx) {
             auto expr = prim->operands.at(idx);
             le_bitrange bits;
             PHV::Field* exp_f = self.self.phv.field(expr, &bits);
+            if (!exp_f) continue;
+
             PHV::FieldSlice fslice = PHV::FieldSlice(exp_f, bits);
 
             if (idx != 0)
                 self.read_fldSlice[tbl].insert(fslice);
             else
-                self.writen_fldSlice[tbl].insert(fslice);
+                self.written_fldSlice[tbl].insert(fslice);
         }
 
-        LOG5("\tPrimitive " << *prim << "\n\t\t writen slices: " << self.writen_fldSlice <<
+        LOG5("\tPrimitive " << *prim << "\n\t\t written slices: " << self.written_fldSlice <<
          "\n\t\t read slices: "  << self.read_fldSlice);
     }
 
@@ -2992,6 +2995,7 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         std::set<int> minDgStages;
         // Should really only be an Action and an instr_mem allocation
         for (auto tbl : tables) {
+            LOG7("Physical stage for merge-scan table " << tbl->name << " : " << tbl->stage());
             BUG_CHECK(tbl->actions.size() == 1, "Always run tables can only have one action");
             const IR::MAU::Action *local_act = *(Values(tbl->actions).begin());
             for (auto instr : local_act->action)
@@ -3005,7 +3009,9 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         merged_table->actions.emplace("$always_run_act", act);
         merged_table->resources = resources;
         self.merge_per_stage.emplace(araKey, merged_table);
+        self.mergedARAwitNewStage = self.mergedARAwitNewStage || (minDgStages.size() > 1);
         self.merged_ar_minStages[araKey] = minDgStages;
+        LOG7("\t Status of mergedARAwitNewStage:" << self.mergedARAwitNewStage);
     }
 }
 
@@ -3024,19 +3030,16 @@ const IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(IR::MAU::Table *tb
 }
 
 void MergeAlwaysRunActions::Update::end_apply() {
-    // MinSTage status before updating slice liveranges and merged table minStage
-    LOG7(PhvInfo::reportMinStages());
-
     // Print Fields involved in Always Run Actions
     for (auto pr : self.read_fldSlice) {
-        LOG7("\t  Read slices for" << *(pr.first));
+        LOG7("\t  Read slices for " << *(pr.first));
         for (auto sl : pr.second) {
             LOG7("\t\t" << *(sl.field()) << " num allocs: " << sl.field()->alloc_size());
         }
     }
 
-    for (auto pr : self.writen_fldSlice) {
-        LOG7("\t  Writen slices for" << *(pr.first));
+    for (auto pr : self.written_fldSlice) {
+        LOG7("\t  Written slices for " << *(pr.first));
         for (auto sl : pr.second) {
             LOG7("\t\t" << *(sl.field()) << " num allocs: " << sl.field()->alloc_size());
         }
@@ -3046,6 +3049,15 @@ void MergeAlwaysRunActions::Update::end_apply() {
     for (auto entry : self.ar_tables_per_stage) {
         const AlwaysRunKey& araKey = entry.first;
         auto& tables = entry.second;
+        BUG_CHECK(self.merged_ar_minStages.count(araKey),
+                  "No minStage info for ARA tables in stage %1% of gress %2%",
+                  araKey.stage,
+                  araKey.gress);
+
+        LOG7("\t Merge Update - Phys stage (gress): " << araKey.stage
+             << "(" << entry.first.gress << ") "
+             << " #ARA tables: " << tables.size()
+             << " #minStages:" << self.merged_ar_minStages[araKey].size());
 
         // Nothing to do if stage does not contain merged Always Run Action tables
         if (tables.size() <= 1)
@@ -3056,7 +3068,7 @@ void MergeAlwaysRunActions::Update::end_apply() {
             continue;
 
         // Get table that will be replaced by merged table
-        auto *merged_tbl = *(tables.begin());
+        auto *merged_tbl = self.merge_per_stage.at(araKey);
 
         // Get max minStage of merged tables - This will be used as
         // the new minStage of the merged table
@@ -3079,58 +3091,44 @@ void MergeAlwaysRunActions::Update::end_apply() {
             for (auto fslice : self.read_fldSlice.at(tbl)) {
                 PHV::Field *fld = const_cast<PHV::Field*>(fslice.field());
                 le_bitrange rng = fslice.range();
-                safe_vector<PHV::AllocSlice>& alc_slices = fld->get_alloc();
 
-                for (auto &alc_slice : alc_slices) {
-                    if (!(alc_slice.field_slice().overlaps(fslice.range())))
+                for (auto &alc_slice : fld->get_alloc()) {
+                    if (!(alc_slice.field_slice().overlaps(rng)))
                         continue;
 
                     // The AlwaysRunAction table may be the last live stage of the slice or ...
-                    if (alc_slice.getLatestLiveness().first == oldStg) {
+                    if ((alc_slice.getLatestLiveness().first == oldStg) &&
+                        (alc_slice.getLatestLiveness().second.isRead())) {
                         alc_slice.setLatestLiveness(
                             std::make_pair(newStg, alc_slice.getLatestLiveness().second));
 
                         LOG7("\tUpdate last stage from " << oldStg << " to " << newStg <<
                              " for read slice: " << alc_slice);
-                    }
-
-                    // ... the ARA table may be the first live stage of the slice
-                    if (alc_slice.getEarliestLiveness().first == oldStg) {
-                        alc_slice.setEarliestLiveness(
-                            std::make_pair(newStg, alc_slice.getEarliestLiveness().second));
-
-                        LOG7("\tUpdate first stage from " << oldStg << " to " << newStg <<
-                             " for read slice: " << alc_slice);
+                        // Keep track of original slice LR END before merge
+                        self.premergeLRend[&alc_slice][merged_tbl] = oldStg;
                     }
                 }
             }
 
-            // Then look into the writen slices
-            for (auto fslice : self.writen_fldSlice.at(tbl)) {
+            // Then look into the written slices
+            for (auto fslice : self.written_fldSlice.at(tbl)) {
                 PHV::Field *fld = const_cast<PHV::Field*>(fslice.field());
                 le_bitrange rng = fslice.range();
-                safe_vector<PHV::AllocSlice>& alc_slices = fld->get_alloc();
 
-                for (auto &alc_slice : alc_slices) {
-                    if (!(alc_slice.field_slice().overlaps(fslice.range())))
+                for (auto &alc_slice : fld->get_alloc()) {
+                    if (!(alc_slice.field_slice().overlaps(rng)))
                         continue;
 
                     // The AlwaysRunAction table may be the first live stage of the slice or ...
-                    if (alc_slice.getEarliestLiveness().first == oldStg) {
+                    if ((alc_slice.getEarliestLiveness().first == oldStg) &&
+                        (alc_slice.getEarliestLiveness().second.isWrite())) {
                         alc_slice.setEarliestLiveness(
                             std::make_pair(newStg, alc_slice.getEarliestLiveness().second));
 
                         LOG7("\tUpdate first stage from " << oldStg << " to " << newStg <<
-                             " for writen slice: " << alc_slice);
-                    }
-
-                    // ... the ARA table may be the last live stage of the slice
-                    if (alc_slice.getLatestLiveness().first == oldStg) {
-                        alc_slice.setLatestLiveness(
-                            std::make_pair(newStg, alc_slice.getLatestLiveness().second));
-
-                        LOG7("\tUpdate last stage from " << oldStg << " to " << newStg <<
                              " for written slice: " << alc_slice);
+                        // Keep track of original slice LR START before merge
+                        self.premergeLRstart[&alc_slice][merged_tbl] = oldStg;
                     }
                 }
             }
@@ -3141,8 +3139,308 @@ void MergeAlwaysRunActions::Update::end_apply() {
         PhvInfo::addMinStageEntry(merged_tbl, newStg, true);
     }
 
+    LOG7("\t premergeLRend: ");
+    for (auto slTblStg : self.premergeLRend) {
+        LOG7("\t\t AllocSlice: " << slTblStg.first);
+        for (auto tblStg : slTblStg.second) {
+            LOG7("\t\t table " << tblStg.first->name << "  old LREnd stage: " << tblStg.second);
+        }
+    }
+
+    LOG7("\t premergeLRstart: ");
+    for (auto slTblStg : self.premergeLRstart) {
+        LOG7("\t\t AllocSlice: " << slTblStg.first);
+        for (auto tblStg : slTblStg.second) {
+            LOG7("\t\t table " << tblStg.first->name << "  old LRStart stage: " << tblStg.second);
+        }
+    }
+
     // MinSTage status after updating slice liveranges and merged table minStage
+    LOG7("MIN STAGE DEPARSER stage: " << self.self.phv.getDeparserStage());
     LOG7(PhvInfo::reportMinStages());
+    LOG7("DG DEPARSER stage: " << (self.self.deps.max_min_stage + 1));
+    LOG7(self.self.deps);
+}
+
+bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::MAU::Table *tbl) {
+    if (!PhvInfo::hasMinStageEntry(tbl) || !self.mergedARAwitNewStage)
+        return false;
+
+    revisit_visited();
+
+    int oldMinStage = *(PhvInfo::minStage(tbl).begin());
+    int newMinStage = self.self.deps.min_stage(tbl);
+
+    tableMinStageShifts[tbl] = std::make_pair(oldMinStage, newMinStage);
+    LOG4("\t\tMerge-affected table:" << tbl->name << " old minStage: " << oldMinStage <<
+         " --> new minStage: " << newMinStage);
+    return true;
+}
+
+// Go through IR Expression's to identify slices that need their liverange updated
+// ---
+bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::Expression *t_expr) {
+    if (!self.mergedARAwitNewStage)
+        return false;
+
+    auto *tbl = findContext<IR::MAU::Table>();
+    if (tbl == nullptr) {
+        LOG4("\t\t\t" << tableMinStageShifts.count(tbl) << " tables found for Expression "
+             << *t_expr);
+        return false;
+    }
+    bool is_write = isWrite();
+
+    LOG4("  ---> Visiting "
+         << (is_write ? "written" : "") <<" expr " << *t_expr);
+
+    revisit_visited();
+
+    LOG4("\t  - wrt table: " << tbl->name);
+
+    // 1. Get field and bitrange
+    le_bitrange bits;
+    PHV::Field* exp_f = self.self.phv.field(t_expr, &bits);
+    if (!exp_f) return true;
+
+    LOG7("\t  - range " << bits << "  " << *exp_f);
+
+    int oldStg = tableMinStageShifts.at(tbl).first;
+    int newStg = tableMinStageShifts.at(tbl).second;
+    auto deparsStg = PhvInfo::getDeparserStage();
+    // PHV::FieldUse(PHV::FieldUse::WRITE));
+    LOG7("\t  - oldStg " << oldStg);
+    LOG7("\t  - newStg " << newStg);
+    LOG7("\t  - oldDeparseStg " << deparsStg);
+
+    // 2. Iterate over AllocSlices
+    for (auto & sl : exp_f->get_alloc()) {
+        if (!(sl.field_slice().overlaps(bits)))
+            continue;
+
+        bool modifyStart = false;
+        bool modifyEnd = false;
+        bool modifyDepars = false;
+        bool singlePointLR = (sl.getEarliestLiveness() == sl.getLatestLiveness());
+        int mergOldStg = oldStg;
+        bool mergeAffectedSlice = false;
+        bool no_tbl_LRstart_overlap = false;
+        bool no_tbl_LRend_overlap = false;
+        bool no_tbl_LR_overlap = false;
+
+        LOG7("\t  - minLR " << sl.getEarliestLiveness());
+        LOG7("\t  - maxLR " << sl.getLatestLiveness());
+
+        // Check if AllocSlice LR has been affected by table merge
+        PHV::StageAndAccess LRstart = sl.getEarliestLiveness();
+        PHV::StageAndAccess LRend  = sl.getLatestLiveness();
+
+        // Mark if slice's liverange is modified due to table merging;
+        // if it is, update the slice liverange and the table old
+        // stage to the pre-merge values (to avoid overlapping of the
+        // liveranges of different allocated slices corresponding to
+        // the same field slice.
+        if (self.premergeLRstart.count(&sl)) {
+            mergeAffectedSlice = true;
+            if (self.premergeLRstart[&sl].count(tbl)) {
+                LRstart.first = mergOldStg = self.premergeLRstart[&sl][tbl];
+                LOG7("\t  - premerge LRstart oldStg " <<  mergOldStg);
+            } else {
+                no_tbl_LRstart_overlap = true;
+            }
+        }
+        if (self.premergeLRend.count(&sl)) {
+            mergeAffectedSlice = true;
+            if (self.premergeLRend[&sl].count(tbl)) {
+                LRend.first = mergOldStg =  self.premergeLRend[&sl][tbl];
+                LOG7("\t  - premerge LRend oldStg " <<  mergOldStg);
+            } else {
+                no_tbl_LRend_overlap = true;
+            }
+        }
+
+        // For allocated slices of field slices  that are not
+        // originally accessed by merged tables set no_tbl_LR_overlap.
+        // This helps bypass the liverange extension used to handle (non merged)
+        // intermediate tables accessing field slices.
+        if (!mergeAffectedSlice) {
+            for (auto slTblStg : self.premergeLRstart) {
+                if (slTblStg.second.count(tbl)) {
+                    no_tbl_LR_overlap = true;
+                }
+            }
+            for (auto slTblStg : self.premergeLRend) {
+                if (slTblStg.second.count(tbl)) {
+                    no_tbl_LR_overlap = true;
+                }
+            }
+        }
+
+        // Check first if maxStage is set to Deparser and mark for update
+        // Then check if min/max stage matches oldStg and mark accordingly
+        if ((deparsStg != (self.self.deps.max_min_stage + 1)) &&
+            LRend.first == deparsStg &&
+            (LRend.second.isWrite() || exp_f->deparsed())) {
+            LOG7("\tUpdate last (deparser) stage from " << sl.getLatestLiveness() << " to " <<
+                 (self.self.deps.max_min_stage+1) << " for slice: " << sl);
+            modifyDepars = true;
+        }
+
+        if (!no_tbl_LR_overlap) {
+            if (is_write) {
+                if ((LRend.first == mergOldStg) &&
+                    LRend.second.isWrite() &&
+                    !tbl->is_always_run_action()) {
+                    LOG7("\tUpdate last stage from " << mergOldStg << " to " << newStg <<
+                         " for WRITTEN slice: " << sl);
+                    modifyEnd = true;
+                }
+
+                if (singlePointLR && modifyEnd) {
+                    LOG4("\tNot modifying LR start (same as end) for AllocSlice: " << sl);
+                } else {
+                    if (!no_tbl_LRstart_overlap &&
+                        (LRstart.first == mergOldStg) &&
+                        LRstart.second.isWrite()) {
+                        LOG7("\tUpdate first stage from " << mergOldStg << " to " << newStg <<
+                             " for WRITTEN slice: " << sl);
+                        modifyStart = true;
+                    }
+                }
+
+            } else {
+                if (!no_tbl_LRend_overlap &&
+                    (LRend.first == mergOldStg) &&
+                    LRend.second.isRead()) {
+                    LOG7("\tUpdate last stage from " << mergOldStg << " to " << newStg <<
+                         " for  READ slice: " << sl);
+                    modifyEnd = true;
+                }
+
+                if (singlePointLR && modifyEnd) {
+                    LOG4("\tNot modifying LR start (same as end) for AllocSlice: " << sl);
+                } else {
+                    if ((LRstart.first == mergOldStg) &&
+                        LRstart.second.isRead() &&
+                        !tbl->is_always_run_action()) {
+                        LOG7("\tUpdate first stage from " << mergOldStg << " to " << newStg <<
+                             " for READ slice: " << sl);
+                        modifyStart = true;
+                    }
+                }
+            }
+        }
+
+        // Store liverange updates in order to apply all of them later
+        auto sl_LR = std::make_pair(LRstart.first, LRend.first);
+        auto sl_mod = std::make_pair(false, false);
+        bool prvStart = false;
+        bool prvEnd = false;
+
+        if (sliceLRmodifies.count(&sl)) {
+            sl_mod = sliceLRmodifies.at(&sl);
+
+            if (sl_mod.first) {
+                sl_LR.first = sliceLRshifts.at(&sl).first;
+                prvStart = true;
+            }
+            if (sl_mod.second) {
+                sl_LR.second = sliceLRshifts.at(&sl).second;
+                prvEnd = true;
+            }
+        }
+
+        if (modifyStart) {
+            if (!prvStart) {
+                sl_LR.first = newStg;
+                sl_mod.first = true;
+            } else if (sl_LR.first > newStg) {
+                // extend LR if previous update was due to table
+                // access in the middle of the LR
+                sl_LR.first = newStg;
+                sl_mod.first = true;
+            }
+        }
+
+        if (modifyDepars) {
+            sl_LR.second = (self.self.deps.max_min_stage + 1);
+            sl_mod.second = true;
+        } else if (modifyEnd) {
+            if (!prvEnd) {
+                sl_LR.second = newStg;
+                sl_mod.second = true;
+            } else if (sl_LR.second < newStg) {
+                // extend LR if previous update was due to table
+                // access in the middle of the LR
+                sl_LR.second = newStg;
+                sl_mod.second = true;
+            }
+        }
+
+        sliceLRshifts[&sl] = sl_LR;
+        sliceLRmodifies[&sl] = sl_mod;
+        LOG7("   <--- Storing LR for " << sl << "  ===  [" << sl_LR.first << " : "
+             << sl_LR.second << "]");
+        LOG7("\t\t      mod: " <<  "  ===  [" << (sl_mod.first ? "vld" : " - ") <<
+             " , " << (sl_mod.second ? "vld" : " - ") << "]");
+    }  // for (auto & sl ...
+
+    return false;
+}
+
+// Apply updates to table stages and slice liveranges
+// ---
+void MergeAlwaysRunActions::UpdateAffectedTableMinStage::end_apply() {
+    if (!self.mergedARAwitNewStage)
+        return;
+
+    // Update the minStage of all tables affected by table merging
+    // (stored in tableMinStageShifts)
+    LOG4("\t Updating " << tableMinStageShifts.size() << " merge-affected tables:");
+
+    for (auto entry : tableMinStageShifts) {
+        int newStg = entry.second.second;
+
+        PhvInfo::addMinStageEntry(entry.first, newStg, true);
+    }
+
+    // Update the liverange of all slices affected by table merging
+    // (stored in sliceLRshifts)
+    LOG4("\t Updating merge-affected slices:");
+
+    for (auto entry : sliceLRshifts) {
+        auto *sl = entry.first;
+
+        LOG4("\t Modifying LR for slice " << *sl);
+
+        sl->setLiveness(std::make_pair(entry.second.first, sl->getEarliestLiveness().second),
+                        std::make_pair(entry.second.second, sl->getLatestLiveness().second));
+
+        LOG4("\t\t ... to: " << sl->getEarliestLiveness() << " , " << sl->getLatestLiveness());
+    }
+
+    // Update the deparser-based liverange of slices not updated previously
+    for (auto& fld : self.self.phv) {
+        for (auto& sl : fld.get_alloc()) {
+            if (sl.getLatestLiveness().first == self.self.phv.getDeparserStage()) {
+                if (sliceLRshifts.count(&sl)) {
+                    LOG5("\t WARNING: Modified LR still has old deparser LR stage for slice: " <<
+                         sl);
+                }
+                sl.setLatestLiveness(
+                    std::make_pair((self.self.deps.max_min_stage + 1),
+                                   sl.getLatestLiveness().second));
+            }
+        }
+    }
+
+    // Update the deparser stage in minStages
+    self.self.phv.setDeparserStage(self.self.deps.max_min_stage + 1);
+
+    LOG7("MIN STAGE DEPARSER stage: " << self.self.phv.getDeparserStage());
+    LOG7(PhvInfo::reportMinStages());
+    LOG7("DG DEPARSER stage: " << (self.self.deps.max_min_stage + 1));
+    LOG7(self.self.deps);
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator
@@ -3160,18 +3458,18 @@ TablePlacement::find_placed(cstring name) const {
 void dump(const ordered_set<const DecidePlacement::GroupPlace *> &work) {
     std::cout << work << std::endl; }
 
-TablePlacement::TablePlacement(const BFN_Options &opt, const DependencyGraph* d,
+TablePlacement::TablePlacement(const BFN_Options &opt, DependencyGraph &d,
                                const TablesMutuallyExclusive &m, PhvInfo &p,
                                LayoutChoices &l, const SharedIndirectAttachedAnalysis &s,
                                SplitAttachedInfo &sia, TableSummary &summary_)
-: options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s), ddm(ntp, con_paths, *d), att_info(sia),
-  summary(summary_) {
+    : options(opt), deps(d), mutex(m), phv(p), lc(l), siaa(s),
+      ddm(ntp, con_paths, d), att_info(sia), summary(summary_) {
      addPasses({
          &ntp,
          &con_paths,
          new SetupInfo(*this),
          new DecidePlacement(*this),
-         new TransformTables(*this),
-         new MergeAlwaysRunActions(*this)
+         new TransformTables(*this)
+         // new MergeAlwaysRunActions(*this)
      });
 }

@@ -329,12 +329,16 @@ void InjectDarkAntiDependencies::end_apply() {
                 auto curr_table = id_to_table.at(orig_id);
                 dg.add_edge(curr_table, curr_ar_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+                LOG6("\t\tInjectDarkAntiDependence(1): " << curr_table->name << " --> " <<
+                     curr_ar_table->name);
             }
 
             for (auto orig_id : pair.second.second) {
                 auto curr_table = id_to_table.at(orig_id);
                 dg.add_edge(curr_ar_table, curr_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
+                LOG6("\t\tInjectDarkAntiDependence(2): " << curr_ar_table->name << " --> " <<
+                     curr_table->name);
             }
         }
     }

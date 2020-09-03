@@ -87,6 +87,12 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
             mauasm.power_and_mpr->emit_stage_asm(out, stage.first.first, stage.first.second);
         }
+
+        // Use a stringstream to collect all AlwaysRun Action
+        // instruction within a single always_run_action section per stage
+        std::stringstream ara_out;
+        bool found_ara_tables = false;
+
         for (auto &tbl : stage.second) {
             switch (tbl.tableInfo->always_run) {
             case IR::MAU::AlwaysRun::NONE:
@@ -96,10 +102,18 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
                 break;
 
             case IR::MAU::AlwaysRun::ACTION:
-                mauasm.emit_always_run_action(out, tbl.tableInfo, stage.first.second /* stage */,
-                    stage.first.first /* gress */);
+                if (!found_ara_tables) {
+                    ara_out << indent << "always_run_action:" << std::endl;
+                    found_ara_tables = true;
+                }
+
+                mauasm.emit_always_run_action(ara_out, tbl.tableInfo,
+                                              stage.first.second /* stage */,
+                                              stage.first.first /* gress */);
             }
         }
+
+        out << ara_out;
     }
     if (mauasm.by_stage.empty() && !phase0OutputAsm) {
         // minimal pipe config for empty program
@@ -2356,7 +2370,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
 /// is replaced with an always_run_action header.
 class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
     bool preorder(const IR::MAU::Action *act) override {
-        out << indent++ << "always_run_action:" << std::endl;
+        indent++;
         is_empty = true;
         act->visit_children(*this);
         return false;

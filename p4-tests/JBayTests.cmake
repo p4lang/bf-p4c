@@ -83,7 +83,8 @@ p4c_add_ptf_test_with_ptfdir (
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_1587" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587/p4c_1587.p4"
-    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2000" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587")
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_1587")
+set_tests_properties("tofino2/p4c_1587" PROPERTIES TIMEOUT 1200)
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c_2527" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_2527/npb.p4"

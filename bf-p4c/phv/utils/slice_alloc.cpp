@@ -198,11 +198,37 @@ std::ostream &operator<<(std::ostream &out, const PHV::DarkInitPrimitive& prim) 
         else
             out << " = " << *source;
     }
-    if (prim.mustInitInLastMAUStage()) {
-        out << " : always_run Stage " << (PhvInfo::getDeparserStage() - 1);
+    if (prim.mustInitInLastMAUStage())
+        out << "  : always_run last Stage ";
+    if (prim.isAlwaysRunActionPrim())
+        out << "  : always_run_action prim";
+
+    const auto& actions = prim.getInitPoints();
+    out << "  :  " << actions.size() << " actions";
+
+    auto priorUnts = prim.getARApriorUnits();
+    auto postUnts  = prim.getARApostUnits();
+
+    if (!priorUnts.size()) {
+        out << "  : No prior units";
     } else {
-        const auto& actions = prim.getInitPoints();
-        out << "  :  " << actions.size() << " actions";
+        out << "  Prior units:";
+        for (auto node : priorUnts) {
+            const auto* tbl = node->to<IR::MAU::Table>();
+            if (!tbl) {out << "\t non-table unit"; continue; }
+            out << "\t " << tbl->name;
+        }
+    }
+
+    if (!postUnts.size()) {
+        out << "  : No post units";
+    } else {
+        out << "  Post units:";
+        for (auto node : postUnts) {
+            const auto* tbl = node->to<IR::MAU::Table>();
+            if (!tbl) {out << "\t non-table unit"; continue; }
+            out << "\t " << tbl->name;
+        }
     }
     return out;
 }

@@ -185,6 +185,7 @@ class DarkInitPrimitive {
          postUnits.insert(units.begin(), units.end());
      }
      void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
+     void setAlwaysRunActionPrim() { alwaysRunActionPrim = true; }
      bool isNOP() const { return nop; }
      bool destAssignedToZero() const { return assignZeroToDestination; }
      bool mustInitInLastMAUStage() const { return alwaysInitInLastMAUStage; }
@@ -210,6 +211,7 @@ class DarkInitEntry {
      void addSource(AllocSlice sl) { initInfo.addSource(sl); }
      void setNop() { initInfo.setNop(); }
      void setLastStageAlwaysInit() { initInfo.setLastStageAlwaysInit(); }
+     void setAlwaysRunInit() { initInfo.setAlwaysRunActionPrim(); }
      bool isNOP() const { return initInfo.isNOP(); }
      bool destAssignedToZero() const { return initInfo.destAssignedToZero(); }
      bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }

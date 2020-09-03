@@ -621,6 +621,10 @@ void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remo
     }
 }
 
+bool PhvInfo::hasMinStageEntry(const IR::MAU::Table *table) {
+    return table_to_min_stage.count(TableSummary::getTableName(table));
+}
+
 cstring PhvInfo::reportMinStages() {
     std::stringstream ss;
     ss << "  TABLES MIN STAGES:";
@@ -714,6 +718,9 @@ bool PHV::Field::checkContext(
     // If no context is provided, or if the target is Tofino, we do not have stage-based allocation,
     // so the slice is valid across all contexts.
     if (ctxt == nullptr || Device::currentDevice() == Device::TOFINO) return true;
+
+    LOG7("\tCheckContext for slice: " << slice);
+
     switch (ctxt->type) {
     case AllocContext::Type::TABLE: {
             auto tbl = ctxt->table;

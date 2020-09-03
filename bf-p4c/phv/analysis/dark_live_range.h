@@ -148,6 +148,30 @@ class DarkLiveRange : public Inspector {
         bool operator != (const OrderedFieldInfo& other) const {
             return !(*this == other);
         }
+
+        // Return min unit stage for tables in units; Return -1 if no tables found
+        int get_min_stage(const DependencyGraph& dg) const {
+            int stage = -1;
+            int dg_stage = -1;
+
+            for (auto unit : units) {
+                const auto* tbl = unit->to<IR::MAU::Table>();
+                if (!tbl) continue;
+                for (auto stg_val : PhvInfo::minStage(tbl)) {
+                    if (stage < 0) stage = stg_val;
+                    else
+                        stage = std::min(stage, stg_val);
+                }
+                if (dg_stage < 0) dg_stage = dg.min_stage(tbl);
+                else
+                    dg_stage = std::min(dg_stage, dg.min_stage(tbl));
+
+                LOG6("\t\t\tTable: " << tbl->externalName() << ", phvInfo min-stage: " << stage);
+                LOG6("\t\t\tTable: " << tbl->externalName() << ", DG min-stage: " << dg_stage);
+            }
+
+            return std::min(stage, dg_stage);
+        }
     };
 
     using OrderedFieldSummary = std::vector<OrderedFieldInfo>;

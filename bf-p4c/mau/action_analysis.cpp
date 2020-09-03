@@ -446,7 +446,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         });
 
         BUG_CHECK(split_count > 0 || is_allowed_unalloc(field_action.write.expr),
-                  "PHV not allocated for field %s", field);
+                  "PHV not allocated for field %s wrt table %s", field, (tbl ? tbl->name : "null"));
         bool split = (split_count != 1);
 
         field->foreach_alloc(bits, tbl, &use,

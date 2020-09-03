@@ -746,16 +746,26 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     if (!lastMutexSatisfied || !currentMutexSatisfied) return boost::none;
 
     PHV::DarkInitEntry* prevSlice = nullptr;
+    int cur_min_stage = currentField.get_min_stage(dg);
+    BUG_CHECK(cur_min_stage >= 0, "Found invalid min_stage for slice %1%", currentField.field);
+
+    boost::optional<PHV::DarkInitEntry> lastFieldInit;
 
     // Check if moving lastField to dark container (if required) is possible.
     if (moveLastFieldToDark) {
-        auto lastFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
+        lastFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
                                                        currentField.maxStage);
         if (!lastFieldInit) return boost::none;
         LOG3("\t\t\tA. Creating dark init primitive for moving last field to dark : " <<
              *lastFieldInit);
+        // Update prior and post table constraints for injection during AddDarkInitialization pass
+        lastFieldInit->addPriorUnits(lastField.units);
+        lastFieldInit->addPostUnits(currentField.units);
 
+        // Tag spill to dark initialization as AlwaysRunAction
+        lastFieldInit->setAlwaysRunInit();
         rv.push_back(*lastFieldInit);
+
         auto srcSlice = lastFieldInit->getSourceSlice();
         if (srcSlice) {
             if (initMap.size() > 0) {
@@ -785,16 +795,25 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     // Check if there is an allocation for field currentField. If there is, then it must be in a
     // dark container, which can then be moved back into this container (c).
     boost::optional<PHV::DarkInitEntry> currentFieldInit;
-    if (initializeCurrentField && initializeFromDark)
+    if (initializeCurrentField && initializeFromDark) {
         currentFieldInit = getInitForCurrentFieldFromDark(c, t, currentField, initMap, alloc);
-    else if (initializeCurrentField && !initializeFromDark)
+    } else if (initializeCurrentField && !initializeFromDark) {
         currentFieldInit = getInitForCurrentFieldWithZero(c, t, currentField, alloc);
+        if (lastFieldInit) {
+            auto drkInit = &rv[rv.size() - 1];
+            drkInit->addPostUnits({t});
+            LOG5("\t\t\t\tAdding table " << t->name << " to post-units of last DarkInitEntry: " <<
+                 "\n" << *drkInit);
+        }
+    }
+
     if (!currentFieldInit) return boost::none;
     rv.push_back(*currentFieldInit);
 
     if (prevSlice != nullptr) {
-        PHV::StageAndAccess newLatestStage = std::make_pair(dg.min_stage(t), PHV::FieldUse(READ));
+        PHV::StageAndAccess newLatestStage = std::make_pair(cur_min_stage, PHV::FieldUse(READ));
         prevSlice->setDestinationLatestLiveness(newLatestStage);
+        LOG5("\t\tSetting latest liveness for previous slice : " << prevSlice);
     }
 
     return rv;
@@ -880,6 +899,12 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
     LOG5("\t\t\t\tCreated source slice " << srcSlice << " live between [" << field.minStage.first <<
          field.minStage.second << ", " << dg.min_stage(t) << PHV::FieldUse(READ) << "]");
 
+    if (field.minStage.first > dg.min_stage(t)) {
+        LOG5("\t\t\tfield.minStage (" << field.minStage.first << ")  dg.min_stage (" <<
+             dg.min_stage(t) << "  table: " << t->name);
+        return boost::none;
+    }
+
     PHV::AllocSlice dstSlice(field.field.field(), darkCandidate, field.field.field_slice(),
             field.field.container_slice());
     // Set maximum liveness for this slice.
@@ -889,6 +914,13 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
             std::make_pair(darkStage, PHV::FieldUse(READ)));
     LOG5("\t\t\t\tCreated destination slice " << dstSlice << " live between [" << dg.min_stage(t) <<
          PHV::FieldUse(WRITE) << ", " << darkStage << PHV::FieldUse(READ) << "]");
+
+    if (darkStage <= dg.min_stage(t)) {
+        LOG5("\t\t\tdarkStage (" << darkStage << ")  dg.min_stage (" <<
+             dg.min_stage(t) << "  table: " << t->name);
+        return boost::none;
+    }
+
     PHV::DarkInitEntry rv(dstSlice, srcSlice, *moveActions);
     return rv;
 }

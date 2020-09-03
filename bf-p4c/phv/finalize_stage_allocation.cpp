@@ -50,7 +50,7 @@ void FinalizeStageAllocation::summarizeUseDefs(
                 }
             } else {
                 stageToTables[dg.min_stage(t)][t].insert(bits);
-                LOG5("\tUsed in table " << t->name << " (Stage " << dg.min_stage(t) << ") : " <<
+                LOG5("\tUsed in table " << t->name << " (DG Stage " << dg.min_stage(t) << ") : " <<
                      f->name << "[" << bits.hi << ":" << bits.lo << "]");
             }
         } else {
@@ -107,6 +107,7 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
     }
     LOG5("PHV Allocation stage info for field: \n" << ss.str());
 
+    // Find the earliest alive slice per field bitrange and store it in minStageAccount
     ordered_map<le_bitrange, PHV::StageAndAccess> minStageAccount;
     for (auto& alloc : f->get_alloc()) {
         le_bitrange range = alloc.field_slice();
@@ -120,6 +121,8 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
              candidate.second > alloc.getEarliestLiveness().second))
             minStageAccount[range] = alloc.getEarliestLiveness();
     }
+
+    // Map minStage liverange to physical liverange and update each AllocSlice
     for (auto& alloc : f->get_alloc()) {
         if (parserMin == alloc.getEarliestLiveness() && deparserMax == alloc.getLatestLiveness()) {
             // Change max stage to deparser in the physical stage list.
@@ -185,16 +188,16 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                         return alloc.field_slice().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
-                    int stage = kv.first->stage();
-                    LOG3("\t\t  Read table: " << kv.first->name << ", stage: " << stage);
+                    int physStage = kv.first->stage();
+                    LOG3("\t\t  Read table: " << kv.first->name << ", Phys stage: " << physStage);
                     if (minPhysicalRead == NOTSET && maxPhysicalRead == NOTSET) {
                         // Initial value not set.
-                        minPhysicalRead = stage;
-                        maxPhysicalRead = stage;
+                        minPhysicalRead = physStage;
+                        maxPhysicalRead = physStage;
                         continue;
                     }
-                    if (stage < minPhysicalRead) minPhysicalRead = stage;
-                    if (stage > maxPhysicalRead) maxPhysicalRead = stage;
+                    if (physStage < minPhysicalRead) minPhysicalRead = physStage;
+                    if (physStage > maxPhysicalRead) maxPhysicalRead = physStage;
                 }
             }
         }
@@ -214,17 +217,18 @@ void UpdateFieldAllocation::updateAllocation(PHV::Field* f) {
                         return alloc.field_slice().overlaps(range);
                     });
                     if (!foundFieldBits) continue;
-                    int stage = kv.first->stage();
-                    LOG3("\t\t  Written table: " << kv.first->name << ", stage: " << stage);
+                    int physStage = kv.first->stage();
+                    LOG3("\t\t  Written table: " << kv.first->name <<
+                         ", Phys stage: " << physStage);
                     if (minPhysicalWrite == NOTSET && maxPhysicalWrite == NOTSET) {
                         // Initial value not set, so this stage is both maximum and minimum.
-                        minPhysicalWrite = stage;
-                        maxPhysicalWrite = stage;
+                        minPhysicalWrite = physStage;
+                        maxPhysicalWrite = physStage;
                         continue;
                     }
 
-                    if (stage < minPhysicalWrite) minPhysicalWrite = stage;
-                    if (stage > maxPhysicalWrite) maxPhysicalWrite = stage;
+                    if (physStage < minPhysicalWrite) minPhysicalWrite = physStage;
+                    if (physStage > maxPhysicalWrite) maxPhysicalWrite = physStage;
                 }
             }
         }

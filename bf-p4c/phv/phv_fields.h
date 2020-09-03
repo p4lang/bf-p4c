@@ -1272,6 +1272,8 @@ class PhvInfo {
     static void addMinStageEntry(const IR::MAU::Table *tbl, int stage,
                                  bool remove_prev_stages = false);
 
+    static bool hasMinStageEntry(const IR::MAU::Table *tbl);
+
     static cstring reportMinStages();
 
     // When a gateway and a table is merged together, we need to make sure that the slices used in

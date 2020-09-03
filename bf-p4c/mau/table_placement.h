@@ -24,7 +24,7 @@ class TablePlacement : public PassManager {
  public:
     typedef ordered_map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
     const BFN_Options &options;
-    const DependencyGraph* deps;
+    DependencyGraph   &deps;
     const TablesMutuallyExclusive &mutex;
     PhvInfo &phv;
     LayoutChoices &lc;
@@ -64,9 +64,9 @@ class TablePlacement : public PassManager {
     std::map<const IR::MAU::AttachedMemory *, std::set<const IR::MAU::Table *>> attached_to;
     class SetupInfo;
 
-    TablePlacement(const BFN_Options &, const DependencyGraph *, const TablesMutuallyExclusive &,
-                   PhvInfo &, LayoutChoices &, const SharedIndirectAttachedAnalysis &,
-                   SplitAttachedInfo &, TableSummary &);
+    TablePlacement(const BFN_Options &, DependencyGraph &,
+                   const TablesMutuallyExclusive &, PhvInfo &, LayoutChoices &,
+                   const SharedIndirectAttachedAnalysis &, SplitAttachedInfo &, TableSummary &);
 
     struct RedoTablePlacement : public Backtrack::trigger {
         RedoTablePlacement() : Backtrack::trigger(OK) {}
@@ -212,16 +212,34 @@ class MergeAlwaysRunActions : public PassManager {
     std::map<AlwaysRunKey, ordered_set<const IR::MAU::Table *>> ar_tables_per_stage;
     std::map<AlwaysRunKey, const IR::MAU::Table *> merge_per_stage;
     std::map<AlwaysRunKey, std::set<int>> merged_ar_minStages;
-    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> writen_fldSlice;
+    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> written_fldSlice;
     std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> read_fldSlice;
+
+    // Keep the original start and end of AllocSlice liveranges that have
+    // shifted due to table merging
+    typedef std::map<const IR::MAU::Table*, int> premerge_table_stg_t;
+    ordered_map<PHV::AllocSlice*, premerge_table_stg_t> premergeLRstart;
+    ordered_map<PHV::AllocSlice*, premerge_table_stg_t> premergeLRend;
+
+    bool mergedARAwitNewStage;
 
     profile_t init_apply(const IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
         ar_tables_per_stage.clear();
         merge_per_stage.clear();
         merged_ar_minStages.clear();
-        writen_fldSlice.clear();
+        written_fldSlice.clear();
         read_fldSlice.clear();
+        premergeLRstart.clear();
+        premergeLRend.clear();
+        mergedARAwitNewStage = false;
+
+        // MinSTage status before updating slice liveranges and merged table minStage
+        LOG7("MIN STAGE DEPARSER stage: " << self.phv.getDeparserStage());
+        LOG7(PhvInfo::reportMinStages());
+        LOG7("DG DEPARSER stage: " << (self.deps.max_min_stage + 1));
+        LOG7(self.deps);
+
         return rv;
     }
 
@@ -244,6 +262,26 @@ class MergeAlwaysRunActions : public PassManager {
         explicit Update(MergeAlwaysRunActions &s) : self(s) {}
     };
 
+    // After merging of ARA tables and updating the dependency graph
+    // this class updates the minStage info of tables that have dependence
+    // relationship to the merged tables that have changed stage. In
+    // addition the liveranges of the affected allocated slices (AllocSlice)
+    // are also updated.
+    class UpdateAffectedTableMinStage : public MauInspector, public TofinoWriteContext {
+        MergeAlwaysRunActions &self;
+        // Map affected tables to pair of <old, new> minStages
+        std::map<const IR::MAU::Table*, std::pair<int, int>> tableMinStageShifts;
+        std::map<PHV::AllocSlice*, std::pair<int, int>> sliceLRshifts;
+        std::map<PHV::AllocSlice*, std::pair<bool, bool>> sliceLRmodifies;
+
+        bool preorder(const IR::MAU::Table *) override;
+        bool preorder(const IR::Expression *) override;
+        void end_apply() override;
+
+     public:
+        explicit UpdateAffectedTableMinStage(MergeAlwaysRunActions &s) : self(s) {}
+    };
+
     const IR::MAU::Table *ar_replacement(int st, gress_t gress) {
         AlwaysRunKey ark(st, gress);
         if (ar_tables_per_stage.count(ark) == 0)
@@ -256,10 +294,12 @@ class MergeAlwaysRunActions : public PassManager {
     int errorCount() const { return self.errorCount(); }
 
  public:
-    explicit MergeAlwaysRunActions(TablePlacement &s) : self(s) {
+        explicit MergeAlwaysRunActions(TablePlacement &s) : self(s) {
         addPasses({
             new Scan(*this),
-            new Update(*this)
+            new Update(*this),
+            new FindDependencyGraph(self.phv, self.deps),
+            new UpdateAffectedTableMinStage(*this)
         });
     }
 };

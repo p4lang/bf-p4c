@@ -178,6 +178,21 @@ void ComputeDarkInitialization::computeInitInstruction(
     actionToInsertedInsts[key].insert(prim);
 }
 
+int ComputeDarkInitialization::calcMinStage(const PHV::AllocSlice &sl_prev,
+                                            const PHV::AllocSlice &sl_current,
+                                            int prior_max_stage, int post_min_stage) {
+    int ara_stg = sl_prev.getLatestLiveness().first;
+
+    BUG_CHECK(ara_stg == sl_current.getEarliestLiveness().first,
+              "prev slice end stage (%1%) != cur slice start stage (%2%)",
+              ara_stg, sl_current.getEarliestLiveness().first);
+    BUG_CHECK(prior_max_stage <= ara_stg, "prior_max_stage (%1%) > dominator stage (%2%)",
+              prior_max_stage, ara_stg);
+    BUG_CHECK(ara_stg <= post_min_stage, "post_min_stage (%1%) < dominator stage (%2%)",
+              post_min_stage, ara_stg);
+
+    return ara_stg;
+}
 
 int ComputeDarkInitialization::ARA_table_id = 0;
 
@@ -187,20 +202,23 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     std::set<UniqueId> post_tables;
 
     int prior_max_stage = -1;
+    LOG6("\tPrior Tables: ");
     for (auto node : alloc_sl.getInitPrimitive()->getARApriorUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
-        LOG6("Prior Table: " << tbl->externalName() << ", stage: " << phv.minStage(tbl));
         prior_tables.insert(tbl->pp_unique_id());
-        for (auto ms : phv.minStage(tbl))
-            prior_max_stage = std::max(prior_max_stage, ms);
+        for (auto minStg : phv.minStage(tbl))
+            prior_max_stage = std::max(prior_max_stage, minStg);
     }
 
-
+    int post_min_stage = PhvInfo::deparser_stage;
+    LOG6("\tPost Tables: ");
     for (auto node : alloc_sl.getInitPrimitive()->getARApostUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         post_tables.insert(tbl->pp_unique_id());
+        for (auto minStg : phv.minStage(tbl))
+            post_min_stage = std::min(post_min_stage, minStg);
     }
 
     auto constraints = std::make_pair(prior_tables, post_tables);
@@ -218,7 +236,9 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     BUG_CHECK(alloc_sl.getInitPrimitive()->getSourceSlice(),
               "No source slice defined for allocated slice %1%", alloc_sl);
     LOG4("\tAdd ARA initialization in action " << act->name << " for: " << alloc_sl);
-    LOG4("\t  Initialize from: " << *(alloc_sl.getInitPrimitive()->getSourceSlice()));
+    auto prev_sl = alloc_sl.getInitPrimitive()->getSourceSlice();
+    if (prev_sl)
+        LOG4("\t  Initialize from: " << *prev_sl);
     auto prim = fieldToExpr.generateInitInstruction(alloc_sl,
         *(alloc_sl.getInitPrimitive()->getSourceSlice()));
     LOG4("\t\tAdded initialization: " << prim);
@@ -227,15 +247,47 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     ara_tbl->actions.emplace(cstring(ara_name.str()), act);
 
     // Update phvInfo::table_to_min_stage (required during ActionAnalysis)
-    phv.addMinStageEntry(ara_tbl, prior_max_stage);
+    BUG_CHECK(post_min_stage >= prior_max_stage,
+              "Conflicting prior (%1%) and post (%2%) table minStages!",
+              prior_max_stage, post_min_stage);
+    int ara_stg = calcMinStage((prev_sl ? *prev_sl : alloc_sl), alloc_sl,
+                               prior_max_stage, post_min_stage);
+    LOG4("\t Prior max stage:" << prior_max_stage << "  Post min stage: " << post_min_stage <<
+         "  ARA stage: " << ara_stg);
+
+    phv.addMinStageEntry(ara_tbl, ara_stg);
 
     // 3. Insert ARA table and constraints into alwaysRunTables
     bool no_existing_cnstrs = phv.add_table_constraints(ara_gress, ara_tbl, constraints);
     BUG_CHECK(no_existing_cnstrs, "Table %1% has existing constraints", ara_tbl->externalName());
+
+    // 4. Insert ARA table into post units of source alloc slice
+    if (prev_sl) {
+        auto *fld = const_cast<PHV::Field*>(prev_sl->field());
+        for (auto &slc : fld->get_alloc()) {
+            if (*prev_sl == slc) {
+                slc.getInitPrimitive()->addPostUnits({ara_tbl});
+                LOG4("\t  Adding " << ara_tbl->name << " to source slice " << slc);
+                for (auto *unit : slc.getInitPrimitive()->getARApostUnits()) {
+                    const auto* tbl = unit->to<IR::MAU::Table>();
+                    if (!tbl) continue;
+                    LOG4("\t\tPostUnit:" << tbl->name);
+                }
+            }
+        }
+    }
 }
 
 
+
 void ComputeDarkInitialization::end_apply() {
+    // *XXX* ALEX: Use forced_placement to revert back to using regular tables for
+    // the spilling part of dark overlays. The main reason is program
+    // p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4
+    // which uses '--placement pragma' and '@pragma stage * 'for most tables
+    // P4C-3079 is filed to modify the program to not reuire these pragmas.
+    bool forcedPlacement = BackendOptions().forced_placement;
+
     for (const auto& f : phv) {
         for (const auto& slice : f.get_alloc()) {
             // Ignore NOP initializations
@@ -244,6 +296,11 @@ void ComputeDarkInitialization::end_apply() {
             // Initialization in last MAU stage will be handled directly by another pass.
             // Here we create AlwaysRunAction tables with related placement constraints
             if (slice.getInitPrimitive()->mustInitInLastMAUStage()) {
+                if (slice.getInitPrimitive()->getARApriorUnits().size() ||
+                    slice.getInitPrimitive()->getARApostUnits().size()) {
+                    createAlwaysRunTable(slice);
+                }
+            } else if (!forcedPlacement && slice.getInitPrimitive()->isAlwaysRunActionPrim()) {
                 if (slice.getInitPrimitive()->getARApriorUnits().size() ||
                     slice.getInitPrimitive()->getARApostUnits().size()) {
                     createAlwaysRunTable(slice);
@@ -398,6 +455,8 @@ Visitor::profile_t ComputeDependencies::init_apply(const IR::Node* root) {
                 // Check live range here.
                 auto liverange1 = livemap.at(f->id);
                 auto liverange2 = livemap.at(sl.field()->id);
+                // If the fields to be initialized has an earlier
+                // liverange --> no initization is needed
                 if (liverange1.first <= liverange2.first || liverange1.second <= liverange2.first) {
                     LOG3("\t  Ignoring field " << sl.field()->name << " (" << liverange2.first <<
                          ", " << liverange2.second << ") overlapping with " << f->name << " (" <<

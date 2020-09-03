@@ -97,6 +97,13 @@ class ComputeDarkInitialization : public Inspector {
         const PHV::AllocSlice& slice,
         const IR::MAU::Action* act);
 
+    // Calculate the minStage for the ARA table moving a slice between
+    // normal/dark PHVs
+    // *ALEX* Ths will need to be updated with more detailed analysis when
+    //        the initialization injection stops using the dominator analysis
+    int calcMinStage(const PHV::AllocSlice &sl_prev, const PHV::AllocSlice &sl_current,
+                     int prior_max_stage, int post_min_stage);
+
     // Create new MOVE instruction and place it into new Action which
     // is added into new AlwaysRunAction Table. Use prior and post
     // Tables from @alloc_sl to set the minStage for the new AlwaysRunAction Table

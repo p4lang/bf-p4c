@@ -44,7 +44,13 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
             tablesByUniqueId[table->pp_unique_id()] = table;
         }
 
-        // Add tables to the flow graph.
+        // Add the always-run tables to the index and to the flow graph.
+        for (auto& table : Keys(constraintMap)) {
+            tablesByUniqueId[table->pp_unique_id()] = table;
+            flowGraph.add_vertex(table);
+        }
+
+        // Add dependency edges between the tables to the flow graph.
         for (auto& table_constraints : constraintMap) {
             auto& table = table_constraints.first;
 
@@ -58,8 +64,6 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
             }
 
             auto& constraints = table_constraints.second;
-
-            flowGraph.add_vertex(table);
 
             auto& tableIdsBefore = constraints.first;
             auto& tableIdsAfter = constraints.second;
