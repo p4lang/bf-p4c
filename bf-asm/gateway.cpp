@@ -820,15 +820,29 @@ void GatewayTable::write_regs(REGS &regs) {
                            layout[1].result_bus & 1);
     }
     if (Table *tbl = match_table) {
-        // bool tind_bus = false;
+        bool tind_bus = false;
         auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl);
         if (tmatch) {
-        //     tind_bus = true;
+            tind_bus = true;
             tbl = tmatch->indirect;
-        // } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl)) {
-        //     tind_bus = hashaction->layout[0].bus >= 2;
+        } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl)) {
+            tind_bus = hashaction->layout[0].bus >= 2;
         }
-        if (!tbl) {
+        if (tbl) {
+            for (auto &row : tbl->layout) {
+                BUG_CHECK(row.result_bus_initialized());
+                if (row.result_bus >= 0) {
+                    auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row * 2 + row.result_bus];
+                    if (tind_bus) {
+                        xbar_ctl.tind_logical_select = logical_id;
+                        xbar_ctl.tind_inhibit_enable = 1;
+                    } else {
+                        xbar_ctl.exact_logical_select = logical_id;
+                        xbar_ctl.exact_inhibit_enable = 1;
+                    }
+                }
+            }
+        } else {
             BUG_CHECK(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];
             xbar_ctl.tind_logical_select = logical_id;
