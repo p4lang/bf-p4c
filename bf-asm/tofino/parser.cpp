@@ -1,11 +1,18 @@
 /* parser template specializations for tofino -- #included directly in top-level parser.cpp */
 
+#include <initializer_list>
+#include <set>
+#include <map>
+
 #include "misc.h"
 
 template <> void Parser::Checksum::write_config(Target::Tofino::parser_regs &regs, Parser *parser) {
-         if (unit == 0) write_tofino_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
-    else if (unit == 1) write_tofino_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
-    else error(lineno, "invalid unit for parser checksum");
+    if (unit == 0)
+        write_tofino_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1)
+        write_tofino_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
+    else
+        error(lineno, "invalid unit for parser checksum");
 }
 
 template <> void Parser::CounterInit::write_config(Target::Tofino::parser_regs &regs,
@@ -46,13 +53,17 @@ template<> void Parser::State::Match::write_lookup_config(Target::Tofino::parser
     if (state->key.ctr_zero >= 0) {
         word0.ctr_zero = (match.word0 >> state->key.ctr_zero) & 1;
         word1.ctr_zero = (match.word1 >> state->key.ctr_zero) & 1;
-    } else
+    } else {
         word0.ctr_zero = word1.ctr_zero = 1;
+    }
+
     if (state->key.ctr_neg >= 0) {
         word0.ctr_neg = (match.word0 >> state->key.ctr_neg) & 1;
         word1.ctr_neg = (match.word1 >> state->key.ctr_neg) & 1;
-    } else
+    } else {
         word0.ctr_neg = word1.ctr_neg = 1;
+    }
+
     word0.ver_0 = word1.ver_0 = 1;
     word0.ver_1 = word1.ver_1 = 1;
 }
@@ -163,23 +174,27 @@ phv_8b_slots[] = {
 static phv_use_slots* get_phv_use_slots(int size) {
     phv_use_slots *usable_slots = nullptr;
 
-         if (size == 32) usable_slots = phv_32b_slots;
-    else if (size == 16) usable_slots = phv_16b_slots;
-    else if (size == 8)  usable_slots = phv_8b_slots;
-    else BUG();
+    if (size == 32)
+        usable_slots = phv_32b_slots;
+    else if (size == 16)
+        usable_slots = phv_16b_slots;
+    else if (size == 8)
+        usable_slots = phv_8b_slots;
+    else
+        BUG();
 
     return usable_slots;
 }
 
 template <>
-void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa, void *_map, unsigned &used) const
-{
+void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Parser *pa,
+                                           void *_map, unsigned &used) const {
     if (type != 0 || !dest) return;
 
     // checksum verification requires the last extractor to be a dummy (to work around a RTL bug)
     // see MODEL-210 for discussion.
 
-    tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
+    tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
     phv_use_slots *usable_slots = get_phv_use_slots(dest->reg.size);
 
@@ -193,9 +208,9 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
 }
 
 template <>
-int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
-{
-    tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
+int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs &regs, void *_map,
+                                                    unsigned &used) const {
+    tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
     int slot_size = (hi-lo+1)*8;
     phv_use_slots *usable_slots = get_phv_use_slots(slot_size);
@@ -237,7 +252,7 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
 
 static int encode_constant_for_slot(int slot, unsigned val) {
     if (val == 0) return val;
-    switch(slot) {
+    switch (slot) {
     case phv_32b_0: case phv_32b_1: case phv_32b_2: case phv_32b_3:
         for (int i = 0; i < 32; i++) {
             if ((val & 1) && (0x7 & val) == val)
@@ -261,9 +276,9 @@ static int encode_constant_for_slot(int slot, unsigned val) {
 }
 
 template <>
-void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs, void *_map, unsigned &used) const
-{
-    tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
+void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs &regs, void *_map,
+                                                    unsigned &used) const {
+    tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
 
     phv_use_slots *usable_slots = get_phv_use_slots(where->reg.size);
 
@@ -361,7 +376,7 @@ template <> void *Parser::setup_phv_output_map(Target::Tofino::parser_regs &regs
 
 template <> void Parser::mark_unused_output_map(Target::Tofino::parser_regs &regs,
             void *_map, unsigned used) {
-    tofino_phv_output_map *map = (tofino_phv_output_map *)_map;
+    tofino_phv_output_map *map = reinterpret_cast<tofino_phv_output_map *>(_map);
     for (int i = 0; i < tofino_phv_output_map_size; i++)
         if (!(used & (1U << i)))
             *map[i].dst = 0x1ff;
@@ -409,16 +424,94 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
 }
 
+enum class AnalysisType {BIT8, BIT16};
+const auto phv_8bit_extractors =  { phv_8b_0, phv_8b_1, phv_8b_2, phv_8b_3 };
+const auto phv_16bit_extractors =  { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 };
+
+/// Count the number of extractions for a given \ref match.
+/// The method takes the \p elems list which holds PHV indexes to check
+// (accepted lists are \ref phv_8bit_extractors and \ref phv_16_bit_extractors).
+int count_number_of_extractions(Parser* parser,
+                                Target::Tofino::parser_regs &regs,
+                                Parser::State::Match* match,
+                                const AnalysisType type) {
+    int used = 0;
+    int row = parser->match_to_row.at(match);
+    auto map =  reinterpret_cast<tofino_phv_output_map *>(
+        parser->setup_phv_output_map(regs, parser->gress, row));
+
+    auto elems = type == AnalysisType::BIT8 ? phv_8bit_extractors : phv_16bit_extractors;
+    for (auto i : elems) {
+        if (map[i].dst->value != 511) {
+            used++;
+        }
+    }
+
+    return used;
+}
+
+/// Helping cache to remember the maximal depth of the node
+class ExtractionCountCache {
+ public:
+    void insert(const Parser::State* state, AnalysisType type, int val) {
+        m_cache[state][type] = val;
+    }
+
+    bool has(const Parser::State* state, AnalysisType type) {
+        if (m_cache.count(state) == 0) return false;
+        if (m_cache[state].count(type) == 0) return false;
+
+        return true;
+    }
+
+    int get(const Parser::State* state, AnalysisType type) {
+        return m_cache[state][type];
+    }
+
+ private:
+    std::map<const Parser::State*,
+            std::map<AnalysisType, int>> m_cache;
+};
+
+int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &regs,
+            Parser::State::Match* match, AnalysisType type,
+            std::set<Parser::State*> &visited, ExtractionCountCache& cache) {
+    // Check if we already visit the node
+    if (visited.count(match->state)) {
+        return 0;
+    }
+
+    // Check the cache if we know the result
+    if (cache.has(match->state, type)) {
+        return cache.get(match->state, type);
+    }
+
+    // Mark node as visited and run the analysis
+    visited.insert(match->state);
+    int extractions = count_number_of_extractions(parser, regs, match, type);
+    int pred_extractions = 0;
+    for (auto pred : match->state->pred) {
+        pred_extractions = std::max(pred_extractions,
+            analyze_worst_extractor_path(parser, regs, pred, type, visited, cache));
+    }
+
+    // Insert the result into the cache and unmark the node as visited
+    visited.erase(match->state);
+    int extraction_result = extractions + pred_extractions;
+    cache.insert(match->state, type, extraction_result);
+    return extraction_result;
+}
+
 void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
                                Parser::State::Match* match) {
     int row = parser->match_to_row.at(match);
-    auto map = (tofino_phv_output_map *)parser->setup_phv_output_map(regs, parser->gress, row);
+    auto map = reinterpret_cast<tofino_phv_output_map *>(
+        parser->setup_phv_output_map(regs, parser->gress, row));
 
     unsigned used = 0;
     int used_idx = -1, unused_idx = -1;
 
     // find an used extractor and use its dest to issue a dummy write
-
     for (auto i : { phv_16b_0, phv_16b_1, phv_16b_2, phv_16b_3 }) {
         if (map[i].dst->value != 511) {
             used++;
@@ -490,7 +583,8 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
 void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
                               Parser::State::Match* match) {
     int row = parser->match_to_row.at(match);
-    auto map = (tofino_phv_output_map *)parser->setup_phv_output_map(regs, parser->gress, row);
+    auto map = reinterpret_cast<tofino_phv_output_map *>(
+        parser->setup_phv_output_map(regs, parser->gress, row));
 
     unsigned used = 0;
     int used_idx = -1;
@@ -543,7 +637,63 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
     }
 }
 
+/// Add the padding to child nodes matches, added padding is controlled via the
+/// template \p use_8bit parameter
+template<bool use_8bit>
+void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int node_count,
+                            Parser::State::Match* match, std::set<Parser::State*> &visited) {
+    if (node_count == 0 || !match) {
+        LOG4("Node count or nullptr match was reached");
+        return;
+    }
+
+    const std::string log_pad = use_8bit ? "8b" : "16b";
+    if (visited.count(match->state)) {
+        LOG4("State " << match->state << " was already visited in " << log_pad << " padding.");
+        return;
+    }
+
+    visited.insert(match->state);
+    LOG3("Padding " << log_pad << " extracts - state = " << match->state->name << ", " <<
+         "remaining " << log_pad << " states to pad is " << node_count);
+
+    // We need to be sure that we will not be passing data to 2x16bit busses. Therefore, we have
+    // to pad the bus entirely for 16bit extractions. In addition, we need to see node_cout 16bit
+    // extactions - due to possible FIFO stalls. If the node doesn't contain the required
+    // extraction, we don't decrement the node_count value.
+    int new_node_count = node_count;
+    auto phv_type = use_8bit ? AnalysisType::BIT16 : AnalysisType::BIT8;
+    if (count_number_of_extractions(parser, regs, match, phv_type)) {
+        if (use_8bit)
+            pad_to_16b_extracts_to_2n(parser, regs, match);
+        else
+            pad_to_8b_extracts_to_4n(parser, regs, match);
+
+        new_node_count--;
+    }
+
+    for (auto state : match->next) {
+        for (auto next_match : state->match) {
+            pad_nodes_extracts<use_8bit>(parser, regs, new_node_count, next_match, visited);
+        }
+    }
+
+    visited.erase(match->state);
+}
+
+// Helping aliases for padding functions
+const auto pad_nodes_8b_extracts = pad_nodes_extracts<true>;
+const auto pad_nodes_16b_extracts = pad_nodes_extracts<false>;
+
+/// Compute the \p val / \p div and ceil it to the nearest upper value. The result
+/// will be wrapped to the 16 (FIFO size in parser).
+int ceil_and_wrap_to_fifo_size(int val, int div) {
+    int fifo_items = val > 16 ? 16 : val;
+    return (fifo_items + div - 1) / div;
+}
+
 void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_regs &regs) {
+    // 1] Apply narrow-to-wide constraints to all predecessors
     std::set<Parser::State::Match*> narrow_to_wide_matches;
 
     for (auto& kv : parser->match_to_row) {
@@ -563,9 +713,33 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
         pad_to_16b_extracts_to_2n(parser, regs, p);
         pad_to_8b_extracts_to_4n(parser, regs, p);
     }
+
+    // 2] Apply the narrow-to-wide constraints to a given number
+    // of child nodes.
+    ExtractionCountCache cache;
+    for (auto m : narrow_to_wide_matches) {
+        // Each method removes all inserted nodes to the set
+        std::set<Parser::State*> visited_states;
+        int extracts_16b = analyze_worst_extractor_path(parser, regs, m, AnalysisType::BIT16,
+            visited_states, cache);
+        int extracts_8b  = analyze_worst_extractor_path(parser, regs, m, AnalysisType::BIT8,
+            visited_states, cache);
+
+        // Count the number of nodes we need to take, the arbiter is taking 4x8bit chunks
+        // and 2x16b chunks of data. The result will be ceiled to 16 because that is the
+        // depth of the FIFO. After that, we need to apply the 16b padding to a computed number
+        // of nodes and the same for 8b padding.
+        int pass_16b_nodes = ceil_and_wrap_to_fifo_size(extracts_16b, 2);
+        int pass_8b_nodes = ceil_and_wrap_to_fifo_size(extracts_8b, 4);
+
+        pad_nodes_16b_extracts(parser, regs, pass_16b_nodes, m, visited_states);
+        pad_nodes_8b_extracts(parser, regs, pass_8b_nodes, m, visited_states);
+    }
 }
 
-template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json, bool single_parser) {
+template<>
+void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_json,
+                          bool single_parser) {
     /// remove after 8.7 release
     if (single_parser) {
         for (auto st : all) {
@@ -648,7 +822,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
     //     // regs.memory[EGRESS].disable_if_reset_value();
     //     regs.ingress.disable_if_reset_value();
     //     regs.egress.disable_if_reset_value();
-    //     regs.merge.disable_if_reset_value(); 
+    //     regs.merge.disable_if_reset_value();
     // }
 
     // Handles the constraint when using narrow extractors to generate wide values
@@ -665,23 +839,28 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         if (single_parser) {
             if (gress == INGRESS) {
                 regs.memory[INGRESS].emit_json(
-                        *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
+                    *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
                 regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
             } else if (gress == EGRESS) {
                 regs.memory[EGRESS].emit_json(
-                        *open_output("memories.all.parser.egress.cfg.json"), "egress");
+                    *open_output("memories.all.parser.egress.cfg.json"), "egress");
                 regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
             }
             regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
         } else {
             if (gress == INGRESS) {
                 regs.memory[INGRESS].emit_json(
-                        *open_output("memories.all.parser.ingress.%02x.cfg.json", parser_no), "ingress");
-                regs.ingress.emit_json(*open_output("regs.all.parser.ingress.%02x.cfg.json", parser_no)); }
+                    *open_output("memories.all.parser.ingress.%02x.cfg.json", parser_no),
+                        "ingress");
+                regs.ingress.emit_json(*open_output("regs.all.parser.ingress.%02x.cfg.json",
+                        parser_no));
+            }
             if (gress == EGRESS) {
                 regs.memory[EGRESS].emit_json(
-                        *open_output("memories.all.parser.egress.%02x.cfg.json", parser_no), "egress");
-                regs.egress.emit_json(*open_output("regs.all.parser.egress.%02x.cfg.json", parser_no)); }
+                    *open_output("memories.all.parser.egress.%02x.cfg.json", parser_no),
+                        "egress");
+                regs.egress.emit_json(*open_output("regs.all.parser.egress.%02x.cfg.json",
+                    parser_no)); }
             regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
         }
     }
@@ -719,7 +898,8 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
         int start_bit = port_use.ffs();
         do {
             int end_bit = port_use.ffz(start_bit);
-            std::cout << "set memories and regs from " << start_bit << " to " << end_bit - 1 << std::endl;
+            std::cout << "set memories and regs from " << start_bit
+            << " to " << end_bit - 1 << std::endl;
             for (auto i = start_bit; i <= end_bit - 1; i++) {
                 TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i]
                         .set("memories.all.parser.ingress", &regs.memory[INGRESS]);
@@ -735,7 +915,8 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs, json::ma
 #endif
     }
     // all parsers share the same parser_merge configuration.
-    TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg.set("regs.all.parse_merge", &regs.merge);
+    TopLevel::regs<Target::Tofino>()->
+        reg_pipe.pmarb.prsr_reg.set("regs.all.parse_merge", &regs.merge);
 }
 
 template<>
