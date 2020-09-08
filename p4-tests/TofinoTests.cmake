@@ -40,6 +40,7 @@ set (P16_TNA_ARISTA_FILES
   "obfuscated-ref-nat-static.p4"
   "obfuscated-ref-nat-static_2.p4"
   "obfuscated-ref-nat-static_3.p4"
+  "obfuscated-ref-packet-filter.p4"
   "obfuscated-ref-qinq.p4"
   "obfuscated-ref-small-scale-test.p4"
   "obfuscated-ref-stateless-load-balance.p4"

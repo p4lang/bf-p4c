@@ -412,6 +412,8 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: PHV allocation was not successful"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2.p4
+  # P4C-3043
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -426,6 +428,8 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Currently the field .* in action .* is read in a way too complex for the compiler to currently handle.  Please consider simplifying this action around this parameter"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
+  # P4C-3091 
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4
 )
 
 # P4C-2836
