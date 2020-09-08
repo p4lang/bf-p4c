@@ -70,6 +70,7 @@ class PHV_AnalysisPass : public Logging::PassManager {
     MapTablesToIDs table_ids;
     /// Collect header stacks that need strided allocation
     CollectStridedHeaders strided_headers;
+    CollectParserInfo  parser_info;
 
  public:
     PHV_AnalysisPass(

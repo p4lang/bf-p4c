@@ -204,6 +204,8 @@ class CoreAllocation {
 
     const MapFieldToParserStates& field_to_parser_states_i;
     const CalcParserCriticalPath& parser_critical_path_i;
+    const CollectParserInfo& parser_info_i;
+    const CollectStridedHeaders& strided_headers_i;
 
     // Alignment failure fields. Right now, this will only contain bridged metadata fields if PHV
     // allocation fails due to alignment reasons. Used to backtrack to bridged metadata packing.
@@ -242,12 +244,15 @@ class CoreAllocation {
                    DarkOverlay& dark,
                    const MapFieldToParserStates& field_to_parser_states,
                    const CalcParserCriticalPath& parser_critical_path,
-                   const MauBacktracker& alloc)
+                   const MauBacktracker& alloc,
+                   const CollectParserInfo& parser_info,
+                   const CollectStridedHeaders& strided_headers)
         : mutex_i(mutex), /* clustering_i(clustering), */ uses_i(uses), defuse_i(defuse),
           clot_i(clot), phv_i(phv), actions_i(actions), pragmas_i(pragmas), meta_init_i(meta),
           dark_init_i(dark), disableMetadataInit(alloc.disableMetadataInitialization()),
           field_to_parser_states_i(field_to_parser_states),
-          parser_critical_path_i(parser_critical_path) { }
+          parser_critical_path_i(parser_critical_path), parser_info_i(parser_info),
+          strided_headers_i(strided_headers) { }
 
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
@@ -690,9 +695,10 @@ class AllocatePHV : public Inspector {
                 LiveRangeShrinking& meta_init,
                 DarkOverlay& dark,
                 const MapTablesToIDs& t,
-                const CollectStridedHeaders& hs)
+                const CollectStridedHeaders& hs,
+                const CollectParserInfo& parser_info)
         : core_alloc_i(phv.field_mutex(), clustering, uses, defuse, clot, pragmas, phv, actions,
-                meta_init, dark, field_to_parser_states, parser_critical_path, alloc),
+           meta_init, dark, field_to_parser_states, parser_critical_path, alloc, parser_info, hs),
           phv_i(phv), uses_i(uses), clot_i(clot),
           clustering_i(clustering), alloc_i(alloc),
           mutex_i(phv.field_mutex()), pragmas_i(pragmas),

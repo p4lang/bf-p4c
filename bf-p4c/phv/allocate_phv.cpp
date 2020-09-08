@@ -764,6 +764,76 @@ bool CoreAllocation::satisfies_constraints(
             }
         } }
 
+    bool isExtracted = false;
+    for (auto slice : slices) {
+        if (uses_i.is_extracted(slice.field())) {
+            isExtracted = true;
+            break;
+        }
+    }
+    // Check if two different fields are extracted in different mutex states
+    // - Two different field can be extracted in same state
+    // - Same field can be extracted in two non-mutex state(This includes clear-on-writes,
+    //   and local parser variables)
+    // - Constant extracts and strided headers are excluded
+    int container_size = 0;
+    if (isExtracted) {
+        ordered_map<const IR::BFN::ParserState*, bitvec> state_to_vec;
+        cstring prev_field;
+        for (auto slice : slices) {
+            auto field = slice.field();
+            container_size = slice.container().size();
+            if (field->padding || field->pov || field->is_solitary())
+                continue;
+            if (!field_to_parser_states_i.field_to_extracts.count(slice.field()))
+                continue;
+            if (strided_headers_i.get_strided_group(field))
+                continue;
+            for (auto extract : field_to_parser_states_i.field_to_extracts.at(field)) {
+                auto state = field_to_parser_states_i.extract_to_state.at(extract);
+                if ((extract->write_mode) == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE)
+                    continue;
+                if (auto range = extract->source->to<IR::BFN::PacketRVal>()) {
+                    if (!state_to_vec.count(state) && prev_field != field->name) {
+                       auto parser = field_to_parser_states_i.state_to_parser.at(state);
+                       for (auto &sv : state_to_vec) {
+                           if (!parser_info_i.graph(parser).is_mutex(sv.first, state)) {
+                               LOG5("    ...fields in the slice list are extracted"
+                                    " in non-mutex states " << sv.first->name << " and "
+                                    << state->name);
+                               return false;
+                           }
+                       }
+                    }
+                    auto extract_field = extract->dest->to<IR::BFN::FieldLVal>();
+                    auto slice_range = slice.field_slice();
+                    // If extraction happens over a field slice, then find if this
+                    // particular slice is being extracted or not
+                    if (auto extract_slice = extract_field->field->to<IR::Slice>()) {
+                        int min = std::min(slice_range.hi,
+                                      extract_slice->e1->to<IR::Constant>()->asInt());
+                        int max = std::max(slice_range.lo,
+                                      extract_slice->e2->to<IR::Constant>()->asInt());
+                        // overlap range of field_slice and extract_slice is [max,min]
+                        if (max <= min) {
+                            state_to_vec[state].setrange(range->range.lo + max, (min - max));
+                        }
+                    } else {
+                        state_to_vec[state].setrange(range->range.hi - slice.field_slice().hi,
+                                                 slice.width());
+                    }
+                }
+                prev_field = field->name;
+            }
+        }
+        for (auto& sv : state_to_vec) {
+            if (sv.second.max().index() - sv.second.min().index() + 1 > container_size) {
+                LOG5("    ...extraction size exceeds container size. Illegal extraction");
+                return false;
+            }
+        }
+    }
+
     // If there are no fields that have the max container bytes constraints, then return true.
     if (containerBytesFields.size() == 0) return true;
 
@@ -809,7 +879,6 @@ bool CoreAllocation::satisfies_constraints(
         ordered_set<PHV::AllocSlice>& initFields) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
-
     // Check gress.
     auto containerGress = alloc.gress(c);
     if (containerGress && *containerGress != f->gress) {
@@ -820,6 +889,7 @@ bool CoreAllocation::satisfies_constraints(
     // Check parser group constraints.
     auto parserGroupGress = alloc.parserGroupGress(c);
     bool isExtracted = uses_i.is_extracted(f);
+
     if (isExtracted && parserGroupGress) {
         // Check 1: all containers within parser group must have same gress assignment
         if (*parserGroupGress != f->gress) {
@@ -841,7 +911,6 @@ bool CoreAllocation::satisfies_constraints(
         }
 
         BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
-
         for (unsigned cid : phvSpec.parserGroup(slice_cid)) {
             auto other = phvSpec.idToContainer(cid);
             auto cs = alloc.getStatus(other);

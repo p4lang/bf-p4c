@@ -113,12 +113,12 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             &table_ids,
 
             &strided_headers,
-
+            &parser_info,
             phvLoggingInfo,
             new AllocatePHV(clustering, uses, defuse, clot, pragmas, phv, action_constraints,
                     field_to_parser_states, parser_critical_path, critical_path_clusters,
                     table_alloc, meta_init, dark_live_range, table_ids,
-                    strided_headers),
+                    strided_headers, parser_info),
             new AddSliceInitialization(phv, defuse, deps, meta_live_range),
             &defuse,
             phvLoggingInfo
