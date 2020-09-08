@@ -357,6 +357,7 @@ void GeneratePrimitiveInfo::gen_action_json(const IR::MAU::Action *act,
         if (!is_stful_dest) add_primitive(_primitives, _primitive);
     }
     _action->emplace("primitives", _primitives);
+    LOG5("Generated PrimitiveInfo : " << _primitives->toString());
 }
 
 void GeneratePrimitiveInfo::validate_add_op_json(Util::JsonObject *_primitive,
@@ -397,7 +398,6 @@ bool GeneratePrimitiveInfo::preorder(const IR::MAU::Table *tbl) {
     auto _table = new Util::JsonObject();
     auto _actions = new Util::JsonArray();
     for (auto act : Values(tbl->actions)) {
-        if (act->miss_only()) continue;
         auto _action = new Util::JsonObject();
         _action->emplace("name", canon_name(act->name));
         gen_action_json(act, _action);
