@@ -80,7 +80,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   # P4C-2743
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
-  testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -186,6 +185,9 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: Ran out of chunks in field dictionary"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
+
+  # P4C-2555
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
 # These tests fail at runtime with the driver
@@ -338,11 +340,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "PHV allocation is invalid for container"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
-)
-
-# bridge packing induced phv failure
-p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
   p4c_1585_b
 )
 
@@ -390,12 +387,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
 )
 
-# P4C-2555
-p4c_add_xfail_reason("tofino2"
-  "error: Ran out of chunks in field dictionary"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
-)
-
 # P4C-2572
 p4c_add_xfail_reason("tofino2"
   "parser error allocated to multiple containers?"
@@ -411,26 +402,24 @@ p4c_add_xfail_reason("tofino2"
 # P4C-2799
 p4c_add_xfail_reason("tofino2"
   "error: PHV allocation was not successful"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2.p4
   # P4C-3043
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
 )
 
+# P4C-2953
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation was not successful"
-  # P4C-2827
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
-  # P4C-2953
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4 
+  "invalid SuperCluster was formed"
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
 )
 
 # P4C-2800
 p4c_add_xfail_reason("tofino2"
-  "Currently the field .* in action .* is read in a way too complex for the compiler to currently handle.  Please consider simplifying this action around this parameter"
+  "read in a way too complex for the compiler to currently handle"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
-  # P4C-3091 
+  # P4C-3091
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4
 )
+
 
 # P4C-2836
 p4c_add_xfail_reason("tofino2"
@@ -461,4 +450,32 @@ p4c_add_xfail_reason ("tofino2"
 p4c_add_xfail_reason ("tofino2"
   "TTransportException: TSocket read 0 bytes"
   extensions/p4_tests/p4-programs/programs/ha/ha.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "error: Cannot find a slicing to satisfy @pa_container_size"
+  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "invalid SuperCluster was formed"
+  # digest fields related failures.
+  testdata/p4_14_samples/source_routing.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Could not place table .* The table .* could not fit"
+  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+)
+
+# P4C-3059
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received on device 0, port 2"
+  p4c_1587
+)
+
+# P4C-3060
+p4c_add_xfail_reason("tofino2"
+  "error: PHV allocation creates an invalid container action within a Tofino ALU"
+  p4c_2527
 )

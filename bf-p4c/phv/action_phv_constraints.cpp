@@ -513,7 +513,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         const PHV::Allocation &alloc,
         PHV::Allocation::MutuallyLiveSlices container_state,
         const IR::MAU::Action* action,
-        ActionPhvConstraints::PackingConstraints& packing_constraints) {
+        ActionPhvConstraints::PackingConstraints& packing_constraints) const {
     ordered_set<PHV::Container> containerList;
     ordered_map<PHV::FieldSlice, PHV::FieldSlice> readSlices;
     size_t num_unallocated = 0;
@@ -595,7 +595,7 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(
         const PHV::Allocation &alloc,
         const std::vector<PHV::AllocSlice>& slices,
         PHV::AllocSlice& slice,
-        const IR::MAU::Action* action) {
+        const IR::MAU::Action* action) const {
     LOG5("\t\t\t\tgetSourcePHVSlices for action: " << action->name << " and slice " << slice);
     int stage = min_stage(action);
     auto *field = slice.field();
@@ -996,7 +996,7 @@ bool ActionPhvConstraints::pack_slices_together(
         ActionPhvConstraints::PackingConstraints& packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only,  /*If true, only unallocated slices will be packed together*/
-        bool ad_source_present /* action data/constant source present */) {
+        bool ad_source_present /* action data/constant source present */) const {
     const PHV::Field* no_pack_source_field = nullptr;
     if (pack_unallocated_only)
         LOG5("\t\t\t\t\tPack all unallocated slices together. All bits in container are occupied.");
@@ -1177,15 +1177,57 @@ bool ActionPhvConstraints::pack_conflicts_present(
     // If the supercluster is not sliceable, this is all we check.
     if (!sc.isSliceable()) return false;
 
+    // Note that the above isSliceable() check is sufficient because
+    // Assume there is pack conflict between f1 and f2.
+    // For header [f1<1>, f2<3>, f3<12>]
+    // It allows [f1<1>, f2<3>, f3<12>[0:3]], [f3<12>[4:11]]
+    // but disallow [f1<1>, f2<3>, f3<12>].
+    // However, both of them will create a pack conflict.
+    // This is one of the bug that make allocation be short of 8-bit containers.
+    UnionFind<const PHV::Field*> same_byte_fields;
+    sc.forall_fieldslices([&](const PHV::FieldSlice& fs) { same_byte_fields.insert(fs.field()); });
+    for (const auto* sl : sc.slice_lists()) {
+        if (!sl->front().field()->exact_containers()) {
+            continue;
+        }
+        int offset = 0;
+        for (auto itr = sl->begin(); itr != sl->end(); offset += itr->size(), itr++) {
+            // If the end of fs reaches a byte boundary, skip.
+            if ((offset + itr->size()) % 8 != 0) {
+                const int byte_num = (offset + itr->size()) / 8;
+                // skip fields in the same byte, because no_pack is a soft constraints, when
+                // fields are in a same byte, then it's impossible to allocate them without
+                // violating this constraint.
+                auto next = std::next(itr);
+                int next_offset = offset + itr->size();
+                while (next != sl->end() && next_offset / 8 == byte_num) {
+                    same_byte_fields.makeUnion(itr->field(), next->field());
+                    next_offset += next->size();
+                    next++;
+                }
+            }
+        }
+    }
+
     // If the supercluster is further sliceable, we also check the pack conflicts between slices
     // within the candidate set.
     for (auto sl1 : slices) {
         for (auto sl2 : slices) {
-            if (sl1.field() == sl2.field()) continue;
-            if (hasPackConflict(sl1.field(), sl2.field())) {
-                LOG5("\t\t\tAllocation candidate " << sl1.field()->name << " cannot be packed in "
-                     "the same stage with " << sl2.field()->name);
-                return true; } } }
+            auto* f1 = sl1.field();
+            auto* f2 = sl2.field();
+            if (f1 == f2) continue;
+            if (same_byte_fields.contains(f1) && same_byte_fields.contains(f2) &&
+                same_byte_fields.find(f1) == same_byte_fields.find(f2))
+                continue;
+            if (hasPackConflict(f1, f2)) {
+                LOG5("\t\t\tAllocation candidate " << sl1.field()->name
+                                                   << " cannot be packed in "
+                                                      "the same stage with "
+                                                   << sl2.field()->name);
+                return true;
+            }
+        }
+    }
     return false;
 }
 
@@ -1297,7 +1339,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
         ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
         ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
         ActionPhvConstraints::PackingConstraints& copacking_constraints,
-        const PHV::Allocation::LiveRangeShrinkingMap& initActions) {
+        const PHV::Allocation::LiveRangeShrinkingMap& initActions) const {
     // Special packing constraints are introduced when number of source containers > 2 and
     // number of allocated containers is less than or equal to 2.
     // At this point of the loop, sources.num_allocated <= 2, sources.num_unallocated may be any
@@ -1530,7 +1572,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         std::vector<PHV::AllocSlice>& slices,
         PHV::Allocation::MutuallyLiveSlices& original_container_state,
         const PHV::Allocation::LiveRangeShrinkingMap& initActions,
-        const PHV::SuperCluster& sc) {
+        const PHV::SuperCluster& sc) const {
     PHV::Allocation::ConditionalConstraints rv;
     // Allocating zero slices always succeeds...
     if (slices.size() == 0)
@@ -1550,8 +1592,8 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     LOG4("\t\tOriginal existing container state: ");
     for (auto slice : original_container_state) {
         LOG4("\t\t\t" << slice);
-        auto IsDisjoint = [&](const PHV::AllocSlice& sl) {
-            return slice.isLiveRangeDisjoint(sl);
+        auto IsDisjoint = [&](const PHV::AllocSlice& alloc_slice) {
+            return slice.isLiveRangeDisjoint(alloc_slice);
         };
         if (std::all_of(slices.begin(), slices.end(), IsDisjoint)) {
             LOG4("\t\t\t  Ignoring original slice because its live range is disjoint with all "
@@ -1737,9 +1779,9 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         // Check the validity of packing for move operations, and generate intermediate structures
         // that will be used to create conditional constraints.
         if (operationType[action] == OperandInfo::MOVE) {
-            if (!check_and_generate_constraints_for_move_with_unallocated_sources(alloc, action, c,
-                    container_state, sources, has_ad_constant_sources, phvMustBeAligned,
-                    numSourceContainers, copacking_constraints, initActions))
+            if (!check_and_generate_constraints_for_move_with_unallocated_sources(
+                    alloc, action, c, container_state, sources, has_ad_constant_sources,
+                    phvMustBeAligned, numSourceContainers, copacking_constraints, initActions))
                 return std::make_tuple(CanPackErrorCode::MOVE_AND_UNALLOCATED_SOURCE, boost::none);
         } else if (operationType[action] == OperandInfo::BITWISE) {
             // Check the validity of bitwise operations and generate intermediate structures that
@@ -1752,7 +1794,9 @@ CanPackReturnType ActionPhvConstraints::can_pack(
                 return std::make_tuple(CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE,
                         boost::none);
         } else if (operationType[action] != OperandInfo::WHOLE_CONTAINER_SAME_FIELD) {
-            BUG("Operation type other than BITWISE and MOVE encountered."); } }
+            BUG("Operation type other than BITWISE and MOVE encountered.");
+        }
+    }
 
     LOG1("copacking constraint " << copacking_constraints.size());
 
@@ -2113,7 +2157,7 @@ bool ActionPhvConstraints::creates_container_conflicts(
 boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_unallocated_slice(
         const PHV::Allocation& alloc,
         const UnionFind<PHV::FieldSlice>& copacking_constraints,
-        const ordered_set<PHV::FieldSlice>& container_state) {
+        const ordered_set<PHV::FieldSlice>& container_state) const {
     // Get unallocated sources, excluding both allocated sources as well as slices that are being
     // packed in the container_State. Since those slices are in the contianer_state, they must be
     // assumed to be allocated already.
@@ -2138,7 +2182,7 @@ boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_unallocated_slice(
 boost::optional<PHV::FieldSlice> ActionPhvConstraints::get_smaller_source_slice(
         const PHV::Allocation& alloc,
         const UnionFind<PHV::FieldSlice>& copacking_constraints,
-        const ordered_set<PHV::FieldSlice>& container_state) {
+        const ordered_set<PHV::FieldSlice>& container_state) const {
     // Get unallocated sources, excluding both allocated sources as well as slices that
     // are being packed in the container_state. Since those slices are in the container_state, they
     // are assumed to be allocated already.
@@ -2272,7 +2316,7 @@ ActionPhvConstraints::verify_two_container_alignment(
         const PHV::Allocation::MutuallyLiveSlices& container_state,
         const IR::MAU::Action* action,
         const PHV::Container destination,
-        ordered_set<const IR::MAU::Action*>& unallocatedSourceRequiresAlignment) {
+        ordered_set<const IR::MAU::Action*>& unallocatedSourceRequiresAlignment) const {
     ClassifiedSources rm;
     bool firstContainerSet = false;
     bool secondContainerSet = false;
@@ -2434,7 +2478,7 @@ ActionPhvConstraints::verify_two_container_alignment(
 bool ActionPhvConstraints::assign_containers_to_unallocated_sources(
         const PHV::Allocation& alloc,
         const UnionFind<PHV::FieldSlice>& copacking_constraints,
-        ordered_map<PHV::FieldSlice, PHV::Container>& req_container) {
+        ordered_map<PHV::FieldSlice, PHV::Container>& req_container) const {
     // For each set in copacking_constraints, check if any sources are allocated and if yes, all
     // unallocated sources in that set have to have the same container number
     for (auto* set : copacking_constraints) {

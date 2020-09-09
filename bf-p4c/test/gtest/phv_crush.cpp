@@ -1,111 +1,21 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
+#include "lib/bitvec.h"
+#include "test/gtest/helpers.h"
+
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/allocate_phv.h"
-#include "bf-p4c/phv/utils/slicing_iterator.h"
+#include "bf-p4c/phv/slicing/phv_slicing_split.h"
 #include "bf-p4c/phv/utils/utils.h"
-#include "lib/bitvec.h"
-#include "test/gtest/helpers.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 
 class TofinoBitvec : public TofinoBackendTest {};
 
-TEST_F(TofinoBitvec, inc) {
-    bitvec bv;
-    EXPECT_EQ(-1, *bv.min());
-    EXPECT_EQ(-1, *bv.max());
-
-    // 1
-    PHV::inc(bv);
-    EXPECT_EQ(0, *bv.min());
-    EXPECT_EQ(1, bv.getbit(0));
-    EXPECT_EQ(0, *bv.max());
-
-    // 10
-    PHV::inc(bv);
-    EXPECT_EQ(1, *bv.min());
-    EXPECT_EQ(0, bv[0]);
-    EXPECT_EQ(1, bv[1]);
-    EXPECT_EQ(1, *bv.max());
-
-    // 11
-    PHV::inc(bv);
-    EXPECT_EQ(0, *bv.min());
-    EXPECT_EQ(1, bv[0]);
-    EXPECT_EQ(1, bv[1]);
-    EXPECT_EQ(1, *bv.max());
-
-    // 100 (special)
-    PHV::inc(bv);
-    EXPECT_EQ(2, *bv.min());
-    EXPECT_EQ(0, bv[0]);
-    EXPECT_EQ(0, bv[1]);
-    EXPECT_EQ(1, bv[2]);
-    EXPECT_EQ(2, *bv.max());
-}
-
 class TofinoPhvCrush : public TofinoBackendTest {};
-
-TEST_F(TofinoPhvCrush, enforce_container_sizes) {
-    bitvec bv;
-    bitvec rv;
-
-    // 0 --> 0
-    rv = bitvec();
-    PHV::enforce_container_sizes(rv, 1, bitvec(), bitvec(), bitvec(0, 1), bitvec());
-    EXPECT_EQ(rv, bitvec());
-
-    // 00 --> 01
-    rv = bitvec();
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2), bitvec());
-    EXPECT_EQ(rv, bitvec(0, 1));
-
-    // 01 --> 01
-    rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 2, bitvec(), bitvec(), bitvec(0, 2), bitvec());
-    EXPECT_EQ(rv, bitvec(0, 1));
-
-    // 001 --> 010
-    rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(), bitvec(0, 3), bitvec());
-    EXPECT_EQ(rv, bitvec(1, 1));
-
-    // 001 | 001 --> 010 | 010
-    rv = bitvec();
-    rv.setbit(0);
-    rv.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), bitvec(), bitvec(0, 6), bitvec());
-
-    bv = bitvec();
-    bv.setbit(1);
-    bv.setbit(4);
-    EXPECT_EQ(rv, bv);
-
-    // 00R --> 01R
-    rv = bitvec(0, 1);
-    PHV::enforce_container_sizes(rv, 3, bitvec(), bitvec(0, 1), bitvec(0, 3), bitvec());
-    EXPECT_EQ(rv, bitvec(0, 2));
-
-    // 00R | 00R --> 01R | 01R
-    rv = bitvec();
-    rv.setbit(0);
-    rv.setbit(3);
-    auto req = bitvec();
-    req.setbit(0);
-    req.setbit(3);
-    PHV::enforce_container_sizes(rv, 6, bitvec(3, 1), req, bitvec(0, 6), bitvec());
-
-    bv = bitvec();
-    bv.setbit(0);
-    bv.setbit(1);
-    bv.setbit(3);
-    bv.setbit(4);
-    EXPECT_EQ(rv, bv);
-}
 
 /// Make a SuperCluster with slice lists (@lists), with each slice in each
 /// list in its own RotationalCluster.
@@ -163,7 +73,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     // Test 16b -> 8b, 8b slicing.
     schemas.clear();
     schemas[list] = bitvec(8, 1);
-    auto res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+    auto res = PHV::Slicing::split(make_sc(list), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
     // Comparison with boost::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!
@@ -177,7 +87,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas.clear();
     list = new PHV::SuperCluster::SliceList({ *slices_by_size.at(24) });
     schemas[list] = bitvec(16, 1);
-    res = PHV::SlicingIterator::split_super_cluster(make_sc(list), schemas);
+    res = PHV::Slicing::split(make_sc(list), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
     // Comparison with boost::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!
@@ -193,7 +103,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
     schemas[list].setbit(8);
     schemas[list].setbit(16);
     schemas[list2] = bitvec(8, 1);
-    res = PHV::SlicingIterator::split_super_cluster(make_sc({ list, list2 }), schemas);
+    res = PHV::Slicing::split(make_sc({ list, list2 }), schemas);
 #if !(__GNUC__ == 4 && __GNUC_MINOR__ == 9)
     // Comparison with boost::optional triggers an undefined reference
     // for basic_stream with GCC 4.9 !!!

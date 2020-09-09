@@ -67,6 +67,13 @@ class PragmaContainerSize : public Inspector {
     const ordered_map<const PHV::Field*, std::vector<PHV::Size>>&
     field_to_sizes() const { return pa_container_sizes_i; }
 
+    // field_to_layout return the container layout of the field.
+    // e.g.
+    // "f1" => [8,8,8,8], @pa_container_size("f1<32>", 8)
+    // "f2" => [8, 16], @pa_container_size("f2<16>", 8, 16).
+    ordered_map<const PHV::Field*, std::vector<int>>
+    field_to_layout() const;
+
     bool is_specified(const PHV::Field* field) const {
         return pa_container_sizes_i.count(field); }
 

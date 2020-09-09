@@ -83,7 +83,6 @@ p4c_add_xfail_reason("tofino3"
 p4c_add_xfail_reason("tofino3"
   "PHV allocation was not successful"
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
-  testdata/p4_14_samples/source_routing.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -181,6 +180,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2573-spine.p4
   extensions/p4_tests/p4_16/customer/kaloom/p4c-2410-spine.p4
+  extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
 )
 
 p4c_add_xfail_reason("tofino3"
@@ -469,12 +469,6 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
 )
 
-# Compiler Bug:                     Did not find initial offset.
-p4c_add_xfail_reason("tofino3"
-  "Did not find initial offset."
-  extensions/p4_tests/p4_16/customer/kaloom/spine-app.p4
-)
-
 # P4C-2886
 p4c_add_xfail_reason("tofino3"
   "CRASH with signal 6"
@@ -498,4 +492,10 @@ p4c_add_xfail_reason ("tofino3"
 p4c_add_xfail_reason("tofino3"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_14/stf/parser_error.p4
+)
+
+# digest fields related failures or expected to fail.
+p4c_add_xfail_reason("tofino3"
+  "invalid SuperCluster was formed"
+  testdata/p4_14_samples/source_routing.p4
 )

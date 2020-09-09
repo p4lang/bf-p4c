@@ -8,16 +8,17 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/analysis/critical_path_clusters.h"
+#include "bf-p4c/phv/analysis/dark_live_range.h"
+#include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/collect_strided_headers.h"
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/mau_backtracker.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
-#include "bf-p4c/phv/analysis/critical_path_clusters.h"
-#include "bf-p4c/phv/analysis/dark_live_range.h"
-#include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/phv/slicing/types.h"
 #include "bf-p4c/phv/utils/tables_to_ids.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/bitvec.h"
@@ -322,6 +323,10 @@ class CoreAllocation {
         int max_alignment_tries,
         const AllocContext& score_ctx) const;
 
+    boost::optional<const PHV::SuperCluster::SliceList*> find_first_unallocated_slicelist(
+        const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
+        PHV::SuperCluster& cluster, const AllocContext& score_ctx) const;
+
     /** Helper function that tries to allocate all fields in the deparser zero supercluster
       * @cluster to containers B0 (for ingress) and B16 (for egress). The DeparserZero analysis
       * earlier in PHV allocation already ensures that these fields can be safely allocated to the
@@ -469,31 +474,22 @@ struct BruteForceStrategyConfig {
 
 class BruteForceAllocationStrategy : public AllocationStrategy {
  private:
+    const PHV::Allocation& empty_alloc_i;
     const CalcParserCriticalPath& parser_critical_path_i;
     const CalcCriticalPathClusters& critical_path_clusters_i;
     const ClotInfo& clot_i;
     const CollectStridedHeaders& strided_headers_i;
     const PhvUse& uses_i;
     const BruteForceStrategyConfig& config_i;
+    PHV::Slicing::PackConflictChecker has_pack_conflict_i;
     int pipe_id_i;  /// used for logging purposes
 
  public:
-    BruteForceAllocationStrategy(
-        const cstring name,
-        const CoreAllocation& alloc,
-        const CalcParserCriticalPath& ccp,
-        const CalcCriticalPathClusters& cpc,
-        const ClotInfo& clot,
-        const CollectStridedHeaders& hs,
-        const PhvUse& uses,
-        const BruteForceStrategyConfig& config,
-        int pipeId)
-        : AllocationStrategy(name, alloc), parser_critical_path_i(ccp),
-          critical_path_clusters_i(cpc), clot_i(clot),
-          strided_headers_i(hs),
-          uses_i(uses),
-          config_i(config),
-          pipe_id_i(pipeId) { }
+    BruteForceAllocationStrategy(const PHV::Allocation& empty_alloc, const cstring name,
+                                 const CoreAllocation& alloc, const CalcParserCriticalPath& ccp,
+                                 const CalcCriticalPathClusters& cpc, const ClotInfo& clot,
+                                 const CollectStridedHeaders& hs, const PhvUse& uses,
+                                 const BruteForceStrategyConfig& config, int pipeId);
 
     AllocResult
     tryAllocation(const PHV::Allocation &alloc,
@@ -593,6 +589,11 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
             PHV::Transaction& rst,
             std::list<PHV::SuperCluster*>& cluster_groups,
             const std::list<PHV::ContainerGroup *>& container_groups);
+
+    boost::optional<const PHV::SuperCluster::SliceList*> diagnose_slicing(
+        const std::list<PHV::SuperCluster*>& slicing,
+        const std::list<PHV::ContainerGroup*>& container_groups,
+        const AllocContext& score_ctx) const;
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to

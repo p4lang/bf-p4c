@@ -397,7 +397,7 @@ class ActionPhvConstraints : public Inspector {
       */
     NumContainers num_container_sources(const PHV::Allocation& alloc,
             PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
-            PackingConstraints& copacking_constraints);
+            PackingConstraints& copacking_constraints) const;
 
     /** Return the first allocated (in @alloc) or proposed (in @slices) source
      * of an instruction in @action that writes to @slice, if any.  There may
@@ -408,7 +408,7 @@ class ActionPhvConstraints : public Inspector {
         const PHV::Allocation& alloc,
         const std::vector<PHV::AllocSlice>& slices,
         PHV::AllocSlice& dst,
-        const IR::MAU::Action* action);
+        const IR::MAU::Action* action) const;
 
     /** @returns true if @slices packed in the same container read from action
      * data or from constant in action @act
@@ -479,7 +479,7 @@ class ActionPhvConstraints : public Inspector {
         PackingConstraints& packing_constraints,
         const IR::MAU::Action* action,
         bool pack_unallocated_only,
-        bool has_ad_source = false);
+        bool has_ad_source = false) const;
 
     /** Check that at least one container in a two source PHV instruction is aligned with the
       * destination
@@ -489,7 +489,7 @@ class ActionPhvConstraints : public Inspector {
             const PHV::Allocation::MutuallyLiveSlices& container_state,
             const IR::MAU::Action* action,
             const PHV::Container destination,
-            ordered_set<const IR::MAU::Action*>& unalignedSourceRequiresAlignment);
+            ordered_set<const IR::MAU::Action*>& unalignedSourceRequiresAlignment) const;
 
     /** Returns offset (difference between lo bits) by which slice @a differs from slice @b
       * offset = (a.lo - b.lo) % b.container().size()
@@ -537,7 +537,7 @@ class ActionPhvConstraints : public Inspector {
     bool assign_containers_to_unallocated_sources(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
-            ordered_map<PHV::FieldSlice, PHV::Container>& req_container);
+            ordered_map<PHV::FieldSlice, PHV::Container>& req_container) const;
 
     //  (xxx)Deep [Specific Case Alert]: This will probably be subsumed by another function that
     //  handles the general case of producing conditional constraints for n unallocated sources
@@ -554,12 +554,12 @@ class ActionPhvConstraints : public Inspector {
     boost::optional<PHV::FieldSlice> get_smaller_source_slice(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
-            const ordered_set<PHV::FieldSlice>& container_state);
+            const ordered_set<PHV::FieldSlice>& container_state) const;
 
     boost::optional<PHV::FieldSlice> get_unallocated_slice(
             const PHV::Allocation& alloc,
             const UnionFind<PHV::FieldSlice>& copacking_constraints,
-            const ordered_set<PHV::FieldSlice>& container_state);
+            const ordered_set<PHV::FieldSlice>& container_state) const;
 
     /// (xxx)Deep [Artificial Constraint]: Right now action bus allocation requires any destination
     /// written by meter colors to be allocated to a 8-bit PHV. This set keeps a track of all such
@@ -593,7 +593,7 @@ class ActionPhvConstraints : public Inspector {
             ordered_map<const IR::MAU::Action*, bool>& phvMustBeAligned,
             ordered_map<const IR::MAU::Action*, size_t>& numSourceContainers,
             PackingConstraints& copacking_constraints,
-            const PHV::Allocation::LiveRangeShrinkingMap& initActions);
+            const PHV::Allocation::LiveRangeShrinkingMap& initActions) const;
 
     /// Generates conditional constraints for bitwise operations. Client for
     /// check_and_generate_constraints_for_bitwise_op_with_unallocated_sources.
@@ -740,7 +740,7 @@ class ActionPhvConstraints : public Inspector {
             std::vector<PHV::AllocSlice>& slices,
             PHV::Allocation::MutuallyLiveSlices& original_container_state,
             const PHV::Allocation::LiveRangeShrinkingMap& initActions,
-            const PHV::SuperCluster& sc);
+            const PHV::SuperCluster& sc) const;
 
     /** @returns true if this packing would create container conflicts because of metadata
       * initialization issues.

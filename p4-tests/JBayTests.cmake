@@ -14,7 +14,7 @@ set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CM
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na).p4" "main|common_tna_test")
-set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "p4c-1323-b\\.p4" "TOFINO1_ONLY" "<built-in>")
+set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "p4c-1323-b\\.p4" "TOFINO1_ONLY" "<built-in>" "p4c-2555-2\\.p4")
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" P16_JNA_TESTS INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
@@ -62,6 +62,9 @@ p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/custome
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4" PROPERTIES TIMEOUT 1200)
+
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2555-2.p4" "-to 1800")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4" PROPERTIES TIMEOUT 1800)
 
 set (testExtraArgs "${testExtraArgs} -tofino2")
 

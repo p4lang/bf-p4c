@@ -134,6 +134,7 @@ set (P16_TNA_ARISTA_NO_POWER_CHECK_FILES
   "obfuscated-ref-nat.p4"
   "obfuscated-ref-nat_2.p4"
   "obfuscated-ref-nat-static.p4"
+  "obfuscated-ref-nat-static_2.p4"
 )
 
 cmake_policy(SET CMP0057 NEW)

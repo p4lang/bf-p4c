@@ -241,6 +241,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2200.p4
+
 )
 
 p4c_add_xfail_reason("tofino"
@@ -459,19 +460,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  testdata/p4_16_samples/issue1713-bmv2.p4
-  testdata/p4_16_samples/strength6.p4
 
   # Expected to fail, which means that action analysis is working correctly.
   extensions/p4_tests/p4_14/compile_only/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_2.p4
 
-  # Expected to fail, until we have better user-facing messages.
-  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
-
   # Expected to fail, which means that constraint conflicts are being correctly detected.
-  extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
   extensions/p4_tests/p4_14/compile_only/mau_test_neg_test.p4
 
   # p4smith mask issues - P4C-2093
@@ -481,7 +475,6 @@ p4c_add_xfail_reason("tofino"
   # broke by flexible packing PR
   extensions/p4_tests/p4_16/compile_only/lrn1.p4
 
-  ba101_20-simple_l2
 
   # P4C-1778
   # fit if
@@ -507,7 +500,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-1152/case8686.p4
   ../glass/testsuite/p4_tests/arista/MODEL-475/case9192.p4
 
-  testdata/p4_14_samples/source_routing.p4
+  extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -856,6 +849,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/ptf/int_transit.p4
+  testdata/p4_16_samples/strength6.p4
+  testdata/p4_16_samples/issue1713-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -890,6 +885,7 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/arista/COMPILER-1114/case8156.p4
   ../glass/testsuite/p4_tests/phv/test_config_275_match_key_range.p4
   ../glass/testsuite/p4_tests/phv/test_config_593_reduce_extraction_bandwidth_32.p4
+  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
   )
 
 # Valid XFAIL
@@ -1008,7 +1004,6 @@ p4c_add_xfail_reason("tofino"
 # Could not place table capture_timestamp_1_0: The table capture_timestamp_1_1 could not fit within a single input crossbar in an MAU stage
 p4c_add_xfail_reason("tofino"
   "Could not place table"
-  ../glass/testsuite/p4_tests/mau/COMPILER-268/netflow_3.p4
   ../glass/testsuite/p4_tests/noviflow/COMPILER-1175/comp_1175.p4
   )
 
@@ -1477,11 +1472,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "The table .* could not fit within a single input crossbar in an MAU stage"
-  extensions/p4_tests/p4_14/compile_only/p4c-2271.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Invalid args to MakeSlice"
   ../glass/testsuite/p4_tests/mau/adb_issue_from_faster.p4
 )
@@ -1687,20 +1677,9 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4
 )
 
-# p4c-2581
-p4c_add_xfail_reason("tofino"
-  "PHV allocation requires the following field slices to be packed together|./p4c TIMEOUT"
-  extensions/p4_tests/p4_16/customer/arista/p4c-2534.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "This program violates action constraints imposed by Tofino"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
-  extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
 )
 
 # power.p4 PTF failure
@@ -1837,12 +1816,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-nat-static_2.p4
 )
 
-# P4C-2836
-p4c_add_xfail_reason("tofino"
-  "error: Some fields cannot be allocated because of unsatisfiable constraints."
-  extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "error: PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
@@ -1888,4 +1861,41 @@ p4c_add_xfail_reason("tofino"
   "Cannot unify PortId_t to bit<32>"
   testdata/p4_16_samples/psa-multicast-basic-2-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
+  )
+
+# digest fields related failures or expected to fail.
+p4c_add_xfail_reason("tofino"
+  "invalid SuperCluster was formed"
+  # digest fields related failures.
+  testdata/p4_14_samples/source_routing.p4
+  ba101_20-simple_l2
+
+  # Expected to fail, which means that constraint conflicts are being correctly detected.
+  extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
+  extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
+
+  # Expected to fail, until we have better user-facing messages.
+  extensions/p4_tests/p4_16/stf/cast_widening_add.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "mismatch from expected"
+  extensions/p4_tests/p4_16/stf/header_stack_strided_alloc2.p4
+)
+
+# P4C-3036
+p4c_add_xfail_reason("tofino"
+  "AssertionError: Expected packet was not received on device 0, port 0"
+  p4c_2249
+)
+
+# P4C-3044
+p4c_add_xfail_reason("tofino"
+  "Entry not found in table:pipe.ParserI.vs Object not found"
+  p4_16_programs_tna_pvs
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Power worst case estimated budget exceeded"
+  ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
 )

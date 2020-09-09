@@ -391,8 +391,6 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
         return;
     headers_i.insert(struct_info.first_field_id);
 
-    auto& sizesMap = self.pragma_i.field_to_sizes();
-
     // Build slice lists.  All slices of the same field go in the same slice
     // list.  Additionally, non-byte aligned fields are grouped together in the
     // smallest byte-aligned chunk.  Use reverse order, because types list
@@ -685,37 +683,12 @@ void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
                   cstring::to_cstring(field), field->size, field_slice_list_size);
 
         // Break off the slice list holding this field if it has a solitary
-        // constraint, or if the list has reached a byte multiple of at least
-        // 32b.
-        bool is_multiple = accumulator_bits % int(PHV::Size::b8) == 0 && accumulator_bits >= 32;
-        if (is_multiple || (accumulator_bits % int(PHV::Size::b8) == 0
-                && !self.uses_i.is_referenced(field))) {
-            bool startNewSliceList = true;
-            unsigned nextSliceSizes = 0;
-            for (unsigned j = i + 1; j < fields_in_header.size(); j++) {
-                PHV::Field* nextField = fields_in_header[j];
-                nextSliceSizes += nextField->size;
-                LOG5("\t\tSubsequent slice: " << nextField->name);
-                if (nextField->is_marshaled() && nextField->exact_containers()) {
-                    startNewSliceList = false;
-                    break;
-                }
-                if (!sizesMap.count(nextField)) continue;
-                int totalSizeReqd = 0;
-                for (auto sz : sizesMap.at(nextField))
-                    totalSizeReqd += static_cast<int>(sz);
-                LOG5("\t\t  totalSizeReqd: " << totalSizeReqd << ", bits after: " <<
-                        bitsAfterField.at(nextField));
-                if (totalSizeReqd > bitsAfterField.at(nextField) &&
-                    totalSizeReqd != nextField->size) {
-                    startNewSliceList = false;
-                    break;
-                }
-                if (nextSliceSizes >= 32) break;
-            }
-            if (startNewSliceList) {
-                StartNewSliceList();
-                LOG5("Starting new slice list:"); } } }
+        // constraint.
+        if (accumulator_bits % int(PHV::Size::b8) == 0 && !self.uses_i.is_referenced(field)) {
+            StartNewSliceList();
+            LOG5("Starting new slice list:");
+        }
+    }
 
     if (accumulator->size())
         slice_lists_i.insert(accumulator);

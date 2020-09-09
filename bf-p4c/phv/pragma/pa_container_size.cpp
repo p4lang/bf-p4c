@@ -501,3 +501,26 @@ void PragmaContainerSize::adjust_requirements(const std::list<PHV::SuperCluster*
                 field_slice_req_i[fs] = static_cast<PHV::Size>(req_size);
         } }
 }
+
+ordered_map<const PHV::Field*, std::vector<int>> PragmaContainerSize::field_to_layout()
+    const {
+    ordered_map<const PHV::Field*, std::vector<int>> rst;
+    for (const auto& kv : pa_container_sizes_i) {
+        const auto* field = kv.first;
+        const auto& sizes = kv.second;
+        rst[field] = {};
+        if (sizes.size() == 1) {
+            int sz_int = static_cast<int>(sizes.front());
+            int rest_width = field->size;
+            while (rest_width > 0) {
+                rst[field].push_back(sz_int);
+                rest_width -= sz_int;
+            }
+        } else {
+            for (const auto& sz : sizes) {
+                rst[field].push_back(static_cast<int>(sz));
+            }
+        }
+    }
+    return rst;
+}

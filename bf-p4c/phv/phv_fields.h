@@ -923,7 +923,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     explicit FieldSlice(const Field* field)
     : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
 
-    /// Creates a subslice of @slice from @range.lo to @range.hi.
+    /// Creates a subslice of the field of @slice from @range.lo to @range.hi.
     FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
         BUG_CHECK(slice.range().contains(range),
                   "Trying to create field sub-slice larger than the original slice");
