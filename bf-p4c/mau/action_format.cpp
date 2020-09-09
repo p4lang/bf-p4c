@@ -1165,7 +1165,6 @@ bitvec ALUOperation::static_entry_of_constants() const {
 
 int ALUOperation::hw_right_shift() const {
     BUG_CHECK(is_right_shift_from_hw(), "Illegal call of hw_right_shift");
-        return 0;
 
     int calculated_right_shift = -1;
     for (auto param : _params) {
