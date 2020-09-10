@@ -687,21 +687,6 @@ int PHV::Field::container_bytes(boost::optional<le_bitrange> optBits) const {
 //***********************************************************************************
 //
 
-void PHV::Field::foreach_byte(
-        le_bitrange range,
-        std::function<void(const PHV::FieldSlice&)> fn) const {
-    le_bitrange window = StartLen(range.lo, 8);
-    while (window.overlaps(range)) {
-        // Create a Slice of the window intersected with the range.
-        PHV::FieldSlice slice(this, *toClosedRange(window.intersectWith(range)));
-
-        // Apply @fn.
-        fn(slice);
-
-        // Advance the window.
-        window = window.shiftedByBits(8); }
-}
-
 const PHV::AllocSlice &PHV::Field::for_bit(int bit) const {
     for (auto &sl : alloc_slice_i)
         if (bit >= sl.field_slice().lo && bit < sl.field_slice().lo + sl.width())

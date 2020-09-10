@@ -631,9 +631,10 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
 
 bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
     unsigned row = 0;
-    BUG_CHECK(info.empty(), "reusing CollectGatewayFields");
+    BUG_CHECK(info.empty() && !this->tbl , "reusing CollectGatewayFields");
     if (tbl->uses_gateway())
         LOG5("CollectGatewayFields for table " << tbl->name);
+    this->tbl = tbl;
     for (auto &gw : tbl->gateway_rows) {
         if (++row > row_limit)
             return false;
@@ -707,13 +708,14 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first.size() > b->first.size(); });
+    PHV::FieldUse use_read(PHV::FieldUse::READ);
     for (auto &i : this->info) {
         auto &field = i.first;
         auto &info = i.second;
         for (auto &xor_with : info.xor_with) {
             auto &with = this->info[xor_with];
             int shift = field.range().lo - xor_with.range().lo;
-            xor_with.foreach_byte([&](const PHV::AllocSlice &sl) {
+            xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U, sl.field_slice());
                 info.xor_offsets.emplace_back(bytes*8U + sl.container_slice().lo%8U,
                                               sl.field_slice().shiftedByBits(shift));
@@ -751,7 +753,7 @@ bool CollectGatewayFields::compute_offsets() {
             LOG5("  bit " << bits + 32 << " " << field);
             bits += field.size();
         } else {
-            field.foreach_byte([&](const PHV::AllocSlice &sl) {
+            field.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 if (size_t(field_bits.ffs(sl.field_slice().lo)) > size_t(sl.field_slice().hi)) {
                     LOG5(DBPrint::Brief << sl << " already done via hash" << DBPrint::Reset);
                     return; }

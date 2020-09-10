@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <sstream>
+
+#include "gtest/gtest.h"
 
 #include "bf-p4c/device.h"
 #include "lib/bitvec.h"
@@ -50,7 +50,8 @@ TEST_F(TofinoField, foreach_byte) {
         PHV::AllocSlice(f, c16, 8, 8, 8) };
 
     count = 0;
-    f->foreach_byte(StartLen(0, 16), [&](const PHV::AllocSlice& slice) {
+    f->foreach_byte(StartLen(0, 16), static_cast<PHV::AllocContext *>(nullptr), nullptr,
+                    [&](const PHV::AllocSlice& slice) {
         EXPECT_EQ(expected_slices[count], slice);
         count++;
     });
@@ -66,7 +67,8 @@ TEST_F(TofinoField, foreach_byte) {
         PHV::AllocSlice(f, c16, 8, 8, 7) };
 
     count = 0;
-    f->foreach_byte(FromTo(1, 14), [&](const PHV::AllocSlice& slice) {
+    f->foreach_byte(FromTo(1, 14), static_cast<PHV::AllocContext *>(nullptr), nullptr,
+                    [&](const PHV::AllocSlice& slice) {
         EXPECT_EQ(expected_slices[count], slice);
         count++;
     });
@@ -83,7 +85,8 @@ TEST_F(TofinoField, foreach_byte) {
         PHV::AllocSlice(f, c8, 8, 0, 8) };
 
     count = 0;
-    f->foreach_byte(StartLen(0, 16), [&](const PHV::AllocSlice& slice) {
+    f->foreach_byte(StartLen(0, 16), static_cast<PHV::AllocContext *>(nullptr), nullptr,
+                    [&](const PHV::AllocSlice& slice) {
         EXPECT_EQ(expected_slices[count], slice);
         count++;
     });
@@ -102,7 +105,8 @@ TEST_F(TofinoField, foreach_byte) {
         PHV::AllocSlice(f, c8, 8, 0, 8) };
 
     count = 0;
-    f->foreach_byte(StartLen(0, 16), [&](const PHV::AllocSlice& slice) {
+    f->foreach_byte(StartLen(0, 16), static_cast<PHV::AllocContext *>(nullptr), nullptr,
+                    [&](const PHV::AllocSlice& slice) {
         EXPECT_EQ(expected_slices[count], slice);
         count++;
     });
@@ -123,7 +127,8 @@ TEST_F(TofinoField, foreach_byte) {
     };
 
     count = 0;
-    f->foreach_byte(FromTo(1, 14), [&](const PHV::AllocSlice& slice) {
+    f->foreach_byte(FromTo(1, 14), static_cast<PHV::AllocContext *>(nullptr), nullptr,
+                    [&](const PHV::AllocSlice& slice) {
         EXPECT_EQ(expected_slices[count], slice);
         count++;
     });

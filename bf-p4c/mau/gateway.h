@@ -55,6 +55,7 @@ class CanonGatewayExpr : public MauTransform {
 class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
     const IXBar::Use    *ixbar = nullptr;
+    const IR::MAU::Table *tbl = nullptr;
     unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
     PHV::FieldSlice     xor_match;
     bool preorder(const IR::MAU::Table *tbl) override;

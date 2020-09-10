@@ -505,22 +505,10 @@ class Field : public LiftLess<Field> {
             const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use) const;
 
-    /// Apply @fn to each byte-sized subslice of the slice @range of @this
-    /// field, starting at bit @range.lo.  If @range is not a byte multiple,
-    /// then the last slice will be smaller than 8 bits.
-    void foreach_byte(le_bitrange range, std::function<void(const FieldSlice &)> fn) const;
-
-    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
-     *
-     * @see foreach_byte(le_bitrange, std::function<void(const FieldSlice &)>).
-     */
-    void foreach_byte(std::function<void(const FieldSlice &)> fn) const {
-        foreach_byte(StartLen(0, this->size), fn);
-    }
-
     /// @returns the PHV::AllocSlice in which field @bit is allocated.  Fails
     /// catastrophically if @bit is not allocated or not within the range of @this
     /// field's size.
+    /// FIXME -- should take an AllocContext and FieldUse like foreach_byte below?
     const PHV::AllocSlice &for_bit(int bit) const;
 
     /** For each byte-aligned container byte of each allocated slice of this
@@ -545,52 +533,29 @@ class Field : public LiftLess<Field> {
      */
     void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn) const;
-
     void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
-    }
-
-    void foreach_byte(le_bitrange r, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r, (PHV::AllocContext*) nullptr, nullptr, fn);
-    }
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(StartLen(0, this->size), ctxt, use, fn);
-    }
-
+        foreach_byte(StartLen(0, this->size), ctxt, use, fn); }
     void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn);
-    }
+        foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     /** Equivalent to `foreach_byte(*r, fn)`, or `foreach_byte(StartLen(0,
      * this->size), fn)` when @r is null.
      *
      * @see foreach_byte(le_bitrange, std::function<void(const PHV::AllocSlice&)>).
      */
-    void foreach_byte(const le_bitrange *r, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r ? *r : StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
-    }
 
     void foreach_byte(const le_bitrange* r, const PHV::AllocContext* ctxt,
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn);
-    }
-
+        foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn); }
     void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn);
-    }
-
-    /** Equivalent to `foreach_byte(StartLen(0, this->size), fn)`.
-     *
-     * @see foreach_byte(le_bitrange, std::function<void(const PHV::AllocSlice&)>).
-     */
-    void foreach_byte(std::function<void(const PHV::AllocSlice&)> fn) const {
-        foreach_byte(StartLen(0, this->size), (PHV::AllocContext*) nullptr, nullptr, fn);
-    }
+        foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     /// @returns a vector of PHV::AllocSlice, such that multiple PHV::AllocSlice within the same
     /// byte of the same container are combined into the same new PHV::AllocSlice.
@@ -1009,7 +974,13 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
     // methods that just forward to the underlying PHV::Field method
     int container_bytes() const { return field_i->container_bytes(range_i); }
-    template<class FN> void foreach_byte(FN fn) const { field_i->foreach_byte(range_i, fn); }
+    template<class FN>
+    void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use, FN fn) const {
+        field_i->foreach_byte(range_i, ctxt, use, fn); }
+    template<class FN>
+    void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use, FN fn) const {
+        field_i->foreach_byte(range_i, PHV::AllocContext::of_unit(ctxt), use, fn); }
+
     bool is_unallocated() const { return field_i->is_unallocated(); }
 };
 
