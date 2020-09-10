@@ -190,8 +190,8 @@ class DoInstructionSelection : public MauTransform, TofinoWriteContext {
  */
 class StatefulAttachmentSetup : public PassManager {
     const PhvInfo &phv;
-    const IR::TempVar *saved_tempvar;
-    const IR::MAU::HashDist *saved_hashdist;
+    const IR::TempVar *saved_tempvar = nullptr;
+    const IR::MAU::HashDist *saved_hashdist = nullptr;
     typedef std::pair<const IR::MAU::AttachedMemory *, const IR::MAU::Table *> HashDistKey;
     typedef std::pair<const IR::MAU::StatefulCall *, const IR::MAU::Table*> StatefulCallKey;
     ordered_set<cstring> remove_tempvars;
@@ -276,7 +276,7 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
         FieldImpact(le_bitrange db, const IR::Expression *r) : dest_bits(db), read(r) { }
     };
     ordered_map<const PHV::Field *, safe_vector<FieldImpact>> copy_propagation_replacements;
-    bool elem_copy_propagated;
+    bool elem_copy_propagated = false;
 
     const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override;

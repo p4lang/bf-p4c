@@ -35,7 +35,8 @@ struct FlowGraph {
     class BFSPathFinder : public boost::default_bfs_visitor {
         /// Maps each visited node to its parent when the node is first discovered as the
         /// destination of an edge.
-        std::map<typename Graph::vertex_descriptor, typename Graph::vertex_descriptor>* parent;
+        std::map<typename Graph::vertex_descriptor,
+                 typename Graph::vertex_descriptor>* parent = nullptr;
 
         /// Used as an exception to finish the BFS early when we find our target.
         struct done{};

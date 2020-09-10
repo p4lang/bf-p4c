@@ -55,7 +55,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::Declaration_Instance      *reg_action = nullptr;
     cstring                             action_type_name;
     enum class param_t { VALUE, OUTPUT, HASH, LEARN, MATCH };
-    const std::vector<param_t>          *param_types;
+    const std::vector<param_t>          *param_types = nullptr;
     IR::MAU::SaluAction                 *action = nullptr;
     const IR::ParameterList             *params = nullptr;
     struct LocalVar {
@@ -85,10 +85,10 @@ class CreateSaluInstruction : public Inspector {
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
     IR::Vector<IR::Expression>                  operands, pred_operands;
-    int                                         output_index;
+    int                                         output_index = -1;
     std::vector<const IR::MAU::SaluInstruction *> cmp_instr;
     const IR::MAU::SaluInstruction              *divmod_instr = nullptr, *minmax_instr = nullptr;
-    int                                         minmax_width;  // 0 = min/max8, 1 = min/max16
+    int                                         minmax_width = -1;  // 0 = min/max8, 1 = min/max16
     const IR::Expression                        *predicate = nullptr;
     const IR::MAU::SaluInstruction              *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl

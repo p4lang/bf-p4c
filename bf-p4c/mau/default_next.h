@@ -10,7 +10,7 @@
 #include "next_table.h"
 
 class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisitor {
-    int id;
+    int id = -1;
     static int id_counter;
     bool long_branch_disabled = false;
     std::set<cstring> *errors;

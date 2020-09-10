@@ -57,12 +57,14 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Concat *c) {
 
 void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration_Instance *decl,
         const IR::ListExpression *le, IR::MAU::HashFunction hf, LTBitMatrix *sym_keys) {
-    auto gress = findContext<IR::MAU::Table>()->gress;
+    auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl) return;
+
     safe_vector<const IR::Expression *> field_list;
     for (auto expr : le->components) {
         field_list.push_back(expr);
     }
-    VerifySymmetricHashPairs(self.phv, field_list, decl->annotations, gress, hf, sym_keys);
+    VerifySymmetricHashPairs(self.phv, field_list, decl->annotations, tbl->gress, hf, sym_keys);
 }
 
 /**
@@ -401,7 +403,10 @@ Visitor::profile_t DoInstructionSelection::init_apply(const IR::Node *root) {
 IR::Member *DoInstructionSelection::genIntrinsicMetadata(gress_t gress,
                                                        cstring header, cstring field) {
     auto metadataName = cstring::to_cstring(gress) + "::" + header;
-    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
+    auto* pipe = findContext<IR::BFN::Pipe>();
+    if (!pipe) return nullptr;
+
+    auto* meta = pipe->metadata[metadataName];
     if (!meta) {
         BUG("Unable to find metadata %s", metadataName);
         return nullptr;
@@ -996,7 +1001,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {
             error(ErrorType::ERR_INVALID, "mask of %1% must be a constant", prim);
-        } else if (1L << dest->type->width_bits() == mask + 1) {
+        } else if (dest && (1L << dest->type->width_bits() == mask + 1)) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", dest, prim->operands[1]);
         } else if (isDepositMask(mask)) {
             return makeDepositField(prim, mask);
@@ -1292,6 +1297,7 @@ void StatefulAttachmentSetup::Scan::simpl_concat(std::vector<const IR::Expressio
 void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *index_expr,
         const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
         const IR::MAU::StatefulCall *call) {
+    if (!synth2port) return;
     const IR::Expression* simpl_expr = nullptr;
     std::vector<const IR::Expression*> expressions;
     if (index_expr->is<IR::Concat>()) {
@@ -1301,6 +1307,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
             simpl_expr = expressions.at(0);
         } else {
             ::error("Complex expression is not yet supported: %1%", index_expr);
+            return;
         }
     } else {
         simpl_expr = index_expr;
@@ -1386,6 +1393,8 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
                 // typechecking is unable to check this without a good bit more work
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             }
+
+            if (!synth2port) continue;
 
             auto index_op = index_operand(prim);
             if (index_op < 0) {
@@ -1490,8 +1499,10 @@ void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
     BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
     auto input = prim->operands[input_index];
     auto *field = self.phv.field(input);
-    if (!field)
+    if (!field) {
         error("%1%: Not a phv field in the lpf execute: %2%", prim->srcInfo, input);
+        return;
+    }
 
     if (self.update_lpfs.count(mtr) == 0) {
         self.update_lpfs[mtr] = input;
@@ -1499,8 +1510,11 @@ void MeterSetup::Scan::find_input(const IR::Primitive *prim) {
     }
 
     auto *act = findContext<IR::MAU::Action>();
+    if (!act) return;
     auto *tbl = findContext<IR::MAU::Table>();
+    if (!tbl) return;
     auto *other_field = self.phv.field(self.update_lpfs.at(mtr));
+    if (!other_field) return;
 
     ERROR_CHECK(field == other_field, "%s: The call of this lpf.execute in action %s has "
                 "a different input %s than another lpf.execute on %s in the same table %s. "
@@ -1740,6 +1754,8 @@ bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAtt
     }
 
     auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No associated table found for attached table - %1%", ba);
+
     bool direct = at_mem->direct;
     bool from_hash = ba->hash_dist != nullptr;
 
@@ -2176,6 +2192,7 @@ bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr)
     auto field = self.phv.field(write, &bits);
     if (field == nullptr) {
         auto *act = findContext<IR::MAU::Action>();
+        BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
         ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
                 act->name);
         return false;
@@ -2255,6 +2272,7 @@ bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
 
         if (!write_field && !field) {
             auto act = findContext<IR::MAU::Action>();
+            BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
             ::error("%sA write of an instruction in action %s is not a PHV field", instr->srcInfo,
                     act->name);
             return false;

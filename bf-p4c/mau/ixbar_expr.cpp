@@ -316,6 +316,8 @@ void BuildP4HashFunction::end_apply() {
 
 bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
     auto *tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No associated table found for ixbar expr - %1%", e);
+
     if (!tbl->resources) {
         // no allocation for table -- can happen it TablePlacement failed
         return false; }

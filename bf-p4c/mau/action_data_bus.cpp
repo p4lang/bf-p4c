@@ -307,6 +307,7 @@ void ActionDataBus::initialize_action_ixbar() {
     ActionIXBar action_ixbar;
     int type_ref = 0;
     for (int i = 0; i < ADB_BYTES; i += CSR_RANGE) {
+        if (type_ref >= ActionData::SLOT_TYPES) break;
         if (i == IMMED_DIVIDES[type_ref])
             type_ref++;
         ActionData::SlotType_t type = (ActionData::SlotType_t) type_ref;
@@ -340,6 +341,8 @@ bool ActionDataBus::find_location(bitvec combined_adjacent, int diff,
             break;
     }
 
+    BUG_CHECK(type < ActionData::SLOT_TYPES,
+        "Invalid type to find location on action data bus, must be BYTE, HALF or FULL");
 
     switch (loc_alg) {
         case FIND_FULL_HALF:
@@ -833,6 +836,9 @@ bool ActionDataBus::alloc_unshared_immed(Use &use, ActionData::SlotType_t type, 
 
     auto paired_layout = paired_immediate(layout, type);
     int upper_type = static_cast<int>(type) + 1;
+    BUG_CHECK((upper_type < ActionData::SLOT_TYPES && type < ActionData::SLOT_TYPES),
+        "Invalid type to allocate unshared immediate on action data bus, "
+        "must be BYTE, HALF or FULL");
     if (layout == paired_layout) {
         bool found = false;
         if (!reserved_immed[upper_type])

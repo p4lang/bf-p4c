@@ -59,7 +59,7 @@ class WalkPowerGraph : public MauInspector {
   MauFeatures* mau_features_;
   std::map<gress_t, MprSettings*>& mpr_settings_;
   // created
-  PowerLogging *logger_;
+  PowerLogging *logger_ = nullptr;
   // Temporarily use this variable until can turn MPR on by default.
   bool disable_mpr_config_ = false;
   /**

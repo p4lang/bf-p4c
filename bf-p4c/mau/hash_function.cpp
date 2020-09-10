@@ -336,6 +336,7 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
  * would be a recursive hash function.
  */
 bool IR::MAU::HashFunction::setup(const Expression *e) {
+    if (!e) return false;
     memset(this, 0, sizeof *this);
     srcInfo = e->srcInfo;
     size = 0;

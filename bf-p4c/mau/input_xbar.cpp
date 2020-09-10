@@ -708,6 +708,7 @@ void IXBar::calculate_free(safe_vector<grp_use> &order,
  */
 void IXBar::found_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced, bool ternary,
                        int &match_bytes_placed, int search_bus) {
+    if (!grp) return;
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     int found_bytes = grp->found.popcount();
@@ -755,6 +756,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
     bool ternary, int &match_bytes_placed, int search_bus, bool &prefer_nibble,
     bool only_alloc_nibble) {
     auto &fields = this->fields(ternary);
+    if (!mb_grp) return;
     if (!mb_grp->found[0]) return;
     int found_bytes = 1;
     int ixbar_bytes_placed = 0;
@@ -795,6 +797,7 @@ void IXBar::found_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *
 void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
                       safe_vector<IXBar::Use::Byte *> &alloced,
                       bool ternary, bool hash_dist, int &match_bytes_placed, int search_bus) {
+    if (!grp) return;
     int ixbar_bytes_placed = 0;
     int free_bytes = grp->max_free().popcount();
     int total_match_bytes = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
@@ -846,6 +849,7 @@ void IXBar::free_bytes(grp_use *grp, safe_vector<IXBar::Use::Byte *> &unalloced,
 void IXBar::free_mid_bytes(mid_byte_use *mb_grp, safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<Use::Byte *> &alloced, int &match_bytes_placed, int search_bus,
         bool &prefer_nibble, bool only_alloc_nibble) {
+    if (!mb_grp) return;
     if (!mb_grp->max_free().getbit(0))
         return;
 
@@ -1257,6 +1261,7 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
             }
         }
 
+        if (!selected_grp) continue;
         LOG5("       Group selected was " << selected_grp->group << " bytes left "
              << unalloced.size());
         found_bytes(selected_grp, unalloced, ternary, match_bytes_placed, search_bus);
@@ -1440,6 +1445,7 @@ static void add_use(IXBar::ContByteConversion &map_alloc, const PHV::Field *fiel
    can be within a single column.  Thus it may need a second hash group */
 void IXBar::layout_option_calculation(const LayoutOption *layout_option,
                                       size_t &start, size_t &last) {
+    if (!layout_option) return;
     if (layout_option->layout.ternary) {
         start = 0; last = 0; return;
     }
@@ -2073,7 +2079,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
     }
     for (int bit = 0; bit < IXBar::get_hash_single_bits(); bit++) {
         for (auto ht : bitvec(hash_table_input)) {
-            if ((1 << ht) & hash_index_inuse[bit]) {
+            if ((1 << ht) & hash_single_bit_inuse[bit]) {
                 unavailable_bits.setbit(bit + RAM_SELECT_BIT_START);
             }
         }
@@ -2171,6 +2177,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
  */
 bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
         Use &alloc, Use &proxy_hash_alloc) {
+    if (!lo) return false;
     safe_vector<IXBar::Use::Byte *> alloced;
     safe_vector<Use> all_tbl_allocs;
     bool finished = false;
@@ -2221,6 +2228,7 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
 bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
         const LayoutOption *layout_option, size_t start, size_t last,
         const hash_matrix_reqs &hm_reqs) {
+    if (!layout_option) return false;
     if (ternary)
         return true;
     unsigned local_hash_table_input = alloc.compute_hash_tables();
@@ -3901,9 +3909,9 @@ void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunc
         le_bitrange *bits) {
     BuildP4HashFunction builder(phv);
     hd->expr->apply(builder);
-    *func = builder.func();
     BUG_CHECK(func != nullptr, "%s: Could not generate hash function in table %s", hd->srcInfo,
               tbl->name);
+    *func = builder.func();
 
     if (bits)
         (*func)->slice(*bits);

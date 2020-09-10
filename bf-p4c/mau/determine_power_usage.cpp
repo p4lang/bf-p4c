@@ -116,6 +116,7 @@ bool DeterminePowerUsage::preorder(const IR::MAU::Meter *m) {
   bool runs_at_eop = m->color_output();
   bool is_lpf_or_wred = m->alu_output();
   auto tbl = findContext<IR::MAU::Table>();
+  BUG_CHECK(tbl != nullptr, "No associated table found for Meter %1%", m);
   auto uniq_id = tbl->unique_id(m);
   mau_features_->meter_runs_at_eop_.emplace(uniq_id, runs_at_eop);
   mau_features_->meter_is_lpf_or_wred_.emplace(uniq_id, is_lpf_or_wred);
@@ -126,6 +127,7 @@ bool DeterminePowerUsage::preorder(const IR::MAU::Counter *c) {
   bool runs_at_eop = c->type == IR::MAU::DataAggregation::BYTES ||
                      c->type == IR::MAU::DataAggregation::BOTH;
   auto tbl = findContext<IR::MAU::Table>();
+  BUG_CHECK(tbl != nullptr, "No associated table found for Counter %1%", c);
   auto uniq_id = tbl->unique_id(c);
   mau_features_->counter_runs_at_eop_.emplace(uniq_id, runs_at_eop);
   return true;
@@ -133,6 +135,7 @@ bool DeterminePowerUsage::preorder(const IR::MAU::Counter *c) {
 
 bool DeterminePowerUsage::preorder(const IR::MAU::Selector *sel) {
   auto tbl = findContext<IR::MAU::Table>();
+  BUG_CHECK(tbl != nullptr, "No associated table found for Selector %1%", sel);
   auto uniq_id = tbl->unique_id(sel);
   mau_features_->selector_group_size_.emplace(uniq_id, sel->max_pool_size);
   return true;
@@ -153,6 +156,7 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
         for (auto byte : use.use) {
           for (auto fi : byte.field_bytes) {
               auto field = phv_.field(fi.field);
+              if (!field) continue;
               le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);
               bool saw_mocha = false;
               field->foreach_alloc(range, t, &READ, [&](const PHV::AllocSlice &slice) {
@@ -170,6 +174,7 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
           for (auto byte : hash_dist_use.use.use) {
             for (auto fi : byte.field_bytes) {
                 auto field = phv_.field(fi.field);
+                if (!field) continue;
                 le_bitrange range = StartLen(fi.lo, fi.hi - fi.lo + 1);
                 bool saw_mocha = false;
                 field->foreach_alloc(range, t, &READ, [&](const PHV::AllocSlice &slice) {

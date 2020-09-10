@@ -47,7 +47,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
              speciality = NO_SPECIAL;
         bool is_conditional = false;
 
-        ActionParam() : expr(nullptr) {}
+        ActionParam() : expr(nullptr), type(PHV) {}
         ActionParam(type_t t, const IR::Expression *e)
             : type(t), expr(e) {}
 

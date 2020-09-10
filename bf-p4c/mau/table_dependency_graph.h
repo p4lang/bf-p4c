@@ -234,7 +234,7 @@ struct DependencyGraph {
 
     // Json variables
     cstring passContext;
-    bool placed;
+    bool placed = false;
 
     DependencyGraph(void) {
         finalized = false;

@@ -101,8 +101,10 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
     if (findContext<IR::MAU::StatefulAlu>())
         return false;
     auto tbl = findContext<IR::MAU::Table>();
-    safe_vector<const IR::Expression *> sel_key_vec;
+    if (!tbl) return false;
+    BUG_CHECK(tbl != nullptr, "No associated table found for Selector - %1%", sel);
 
+    safe_vector<const IR::Expression *> sel_key_vec;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection())
             continue;

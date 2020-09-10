@@ -86,6 +86,7 @@ bool SplitAlpm::values_through_pragmas(const IR::MAU::Table *tbl,
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
         ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid %s "
                 "for table %s", tbl->srcInfo, ALGORITHMIC_LPM_PARTITIONS, tbl->name);
+        if (!pragma_val) return false;
 
         auto alg_lpm_partitions_value = static_cast<unsigned>(pragma_val->value);
         if (valid_partition_values.find(alg_lpm_partitions_value) != valid_partition_values.end()) {
@@ -103,6 +104,7 @@ bool SplitAlpm::values_through_pragmas(const IR::MAU::Table *tbl,
         auto pragma_val = s->expr.at(0)->to<IR::Constant>();
         ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid %s "
                 "for table %s", tbl->srcInfo, ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, tbl->name);
+        if (!pragma_val) return false;
 
         auto alg_lpm_subtrees_value = static_cast<int>(pragma_val->value);
         if (alg_lpm_subtrees_value <= 10) {

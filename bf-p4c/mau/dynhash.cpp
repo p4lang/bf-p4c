@@ -559,8 +559,9 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use &ixbar_use,
         for (auto a : algorithms->names) {
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
+            auto srcInfo = hashAlgo ? &hashAlgo->srcInfo : new Util::SourceInfo();
             auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(
-                    hashAlgo->srcInfo, a.name, nullptr);
+                    *srcInfo, a.name, nullptr);
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 Util::JsonObject *_algo = new Util::JsonObject();

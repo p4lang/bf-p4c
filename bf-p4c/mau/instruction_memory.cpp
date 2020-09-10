@@ -135,6 +135,7 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
 bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked) {
     const Use *cached_use = nullptr;
     const IR::MAU::ActionData *ad = nullptr;
+    const IR::MAU::ActionData *ad_use = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
         ad = at->to<IR::MAU::ActionData>();
@@ -142,10 +143,11 @@ bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool
         if (shared_action_profiles.count(ad)) {
             LOG2("Already shared through the action profile");
             cached_use = shared_action_profiles.at(ad);
+            ad_use = ad;
         }
     }
 
-    if (cached_use == nullptr)
+    if (ad_use == nullptr || cached_use == nullptr)
         return false;
 
     int hit_actions = tbl->hit_actions();
@@ -157,7 +159,8 @@ bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool
     for (auto action : Values(tbl->actions)) {
         auto instr_pos = cached_use->all_instrs.find(action->name);
         BUG_CHECK(instr_pos != cached_use->all_instrs.end(), "%s: Error when programming action "
-                  "%s on shared action profile %s and table %s", ad->srcInfo, ad->name, tbl->name);
+                  "%s on shared action profile %s and table %s",
+                  ad_use->srcInfo, ad_use->name, tbl->name);
 
         Use::VLIW_Instruction single_instr = instr_pos->second;
         single_instr.mem_code = -1;

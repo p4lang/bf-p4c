@@ -154,8 +154,8 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     PHV::FieldSlice             match_field;
-    uint64_t                    andmask, ormask, cmplmask;
-    int                         shift;
+    uint64_t                    andmask = 0, ormask = 0, cmplmask = 0;
+    int                         shift = 0;
 
  public:
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);

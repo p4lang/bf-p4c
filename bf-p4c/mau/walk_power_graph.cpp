@@ -219,7 +219,7 @@ void WalkPowerGraph::compute_mpr() {
                 } else if (t->stage() == p->stage() + 1) {
                   // trigger via global exec
                   glob_exec |= (1 << *t->logical_id);
-                } else {
+                } else if (next_table_properties_) {
                   // trigger via long branch or next table
                   int tag = next_table_properties_->long_branch_tag_for(p_uid, t->unique_id());
                   if (tag >= 0) {
@@ -588,11 +588,14 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
     myfile << std::endl;
 
     const time_t now = time(NULL);
-    char build_date[1024];
-    strftime(build_date, 1024, "%c", localtime(&now));
+    struct tm tmp;
+    BUG_CHECK(localtime_r(&now, &tmp), "Error calling localtime_r: %1%", strerror(errno));
 
+    char build_date[1024];
+    strftime(build_date, 1024, "%c", &tmp);
     myfile << "|  Created: " << build_date;
     myfile << std::endl;
+
     myfile << "|  Run ID: " << RunId::getId().c_str();
     myfile << std::endl;
     myfile << "+-----------------------------------------------------------+";

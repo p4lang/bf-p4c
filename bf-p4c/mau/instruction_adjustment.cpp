@@ -101,8 +101,10 @@ const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction
     LOG1("ConstantsToActionData preorder on instruction : " << instr);
     write_found = false;
     has_constant = false;
-    constant_rename_key.action_name = findContext<IR::MAU::Action>()->name;
-    LOG3("  Setting constant_rename_key action name : : " << constant_rename_key.action_name);
+    if (auto act = findContext<IR::MAU::Action>()) {
+        constant_rename_key.action_name = act->name;
+        LOG3("  Setting constant_rename_key action name : : " << constant_rename_key.action_name);
+    }
     return instr;
 }
 
@@ -210,7 +212,10 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
         return instr;
 
     LOG1("   instruction has constant : " << has_constant);
+
     auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No associated table found for instruction - %1%", instr);
+
     auto &action_format = tbl->resources->action_format;
 
     auto *alu_parameter = action_format.find_param_alloc(constant_rename_key, nullptr);
@@ -277,10 +282,15 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
     PHV::Container container;
     ActionData::UniqueLocationKey expr_lookup;
 
-    expr_lookup.action_name = findContext<IR::MAU::Action>()->name;
-    auto tbl = findContext<IR::MAU::Table>();
-    PHV::FieldUse use(PHV::FieldUse::WRITE);
+    auto act = findContext<IR::MAU::Action>();
+    BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
 
+    expr_lookup.action_name = act->name;
+
+    auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No associated table found for instruction - %1%", instr);
+
+    PHV::FieldUse use(PHV::FieldUse::WRITE);
     int write_count = 0;
     write_expr->foreach_alloc(bits, tbl, &use, [&](const PHV::AllocSlice &alloc) {
         write_count++;
@@ -518,6 +528,8 @@ const IR::Constant *MergeInstructions::find_field_action_constant(
 const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
     auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No table found while building action data for hash operands");
+
     auto &adi = cont_action.adi;
     BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST) &&
               adi.specialities.popcount() == 1,
@@ -580,6 +592,8 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
 const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
     auto tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr, "No table found for building action data for random operands");
+
     auto &adi = cont_action.adi;
     BUG_CHECK(adi.specialities.getbit(ActionAnalysis::ActionParam::RANDOM) &&
               adi.specialities.popcount() == 1,
@@ -1026,7 +1040,11 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     }
 
     auto tbl = findContext<IR::MAU::Table>();
+    if (!tbl) return expr;
+
     auto salu = findContext<IR::MAU::StatefulAlu>();
+    if (!salu) return expr;
+
     auto &salu_ixbar = tbl->resources->salu_ixbar;
     bool is_hi = false;
     if (!salu_ixbar.meter_alu_hash.allocated) {
