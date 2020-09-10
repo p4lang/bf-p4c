@@ -1,6 +1,7 @@
 #ifndef _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
 #define _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
 
+#include <string.h>
 #include <time.h>
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -8,6 +9,7 @@
 #include <fstream>
 
 #include "common/run_id.h"
+#include "p4c/lib/exceptions.h"
 
 namespace Logging {
 
@@ -43,8 +45,11 @@ class Logger : public rapidjson::Document {
 
     static const std::string buildDate(void) {
       const time_t now = time(NULL);
+      struct tm tmp;
+      BUG_CHECK(localtime_r(&now, &tmp), "Error calling localtime_r: %1%", strerror(errno));
+
       char bdate[1024];
-      strftime(bdate, 1024, "%c", localtime(&now));
+      strftime(bdate, 1024, "%c", &tmp);
       return bdate;
     }
 };

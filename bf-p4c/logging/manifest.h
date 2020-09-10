@@ -154,7 +154,7 @@ class Manifest : public Inspector {
     InputFiles                        _programInputs;
     /// reference to ProgramThreads to generate the architecture configuration
     BFN::ProgramThreads        _threads;
-    int                        _pipeId;  /// the current pipe id (for the visitor methods)
+    int                        _pipeId = -1;  /// the current pipe id (for the visitor methods)
     /// to generate parser and control graphs
     P4::ReferenceMap *         _refMap = nullptr;
     P4::TypeMap *              _typeMap = nullptr;
