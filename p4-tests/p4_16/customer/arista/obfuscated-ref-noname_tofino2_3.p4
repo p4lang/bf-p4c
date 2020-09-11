@@ -22902,6 +22902,38 @@ control Edmeston(inout Neponset Tofte, inout Boonsboro Jerico, in ingress_intrin
 }
 
 control Corder(inout Neponset Tofte, inout Boonsboro Jerico, in ingress_intrinsic_metadata_t Hearne, in ingress_intrinsic_metadata_from_parser_t Wabbaseka, inout ingress_intrinsic_metadata_for_deparser_t Clearmont, inout ingress_intrinsic_metadata_for_tm_t Moultrie) {
+#ifndef P4C_2800
+    @name(".LaHoma") action LaHoma() {
+        {
+            Tofte.Kinde.setValid();
+            Moultrie.bypass_egress = (bit<1>)1w1;
+        }
+        {
+            Tofte.Bronwood.setValid();
+            Tofte.Bronwood.Riner = Jerico.Moultrie.Vichy;
+        }
+    }
+    @name(".Albin") action Albin(PortId_t Varna) {
+        Moultrie.ucast_egress_port = Varna;
+
+        LaHoma();
+    }
+    @name(".Folcroft") action Folcroft(PortId_t Elliston) {
+        Moultrie.ucast_egress_port[8:7] = Elliston[8:7];
+        Moultrie.ucast_egress_port[6:3] = Jerico.Crump.Pawtucket[6:3];
+        Moultrie.ucast_egress_port[2:0] = (bit<3>)3w0;
+
+        LaHoma();
+    }
+
+    @name(".Manakin") action Manakin() {
+        Moultrie.ucast_egress_port[8:8] = (bit<1>)1w1;
+        Moultrie.ucast_egress_port[7:3] = Jerico.Hearne.Bledsoe[7:3];
+        Moultrie.ucast_egress_port[2:0] = (bit<3>)3w0;
+
+        LaHoma();
+    }
+#else
     @name(".LaHoma") action LaHoma(PortId_t Varna) {
         {
             Tofte.Kinde.setValid();
@@ -22930,6 +22962,7 @@ control Corder(inout Neponset Tofte, inout Boonsboro Jerico, in ingress_intrinsi
         Varna[2:0] = (bit<3>)3w0;
         LaHoma(Varna);
     }
+#endif
     @disable_atomic_modify(1) @name(".Tontogany") table Tontogany {
         actions = {
             @tableonly Albin();

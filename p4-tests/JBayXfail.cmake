@@ -406,20 +406,15 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
 )
 
-# P4C-2953
 p4c_add_xfail_reason("tofino2"
   "invalid SuperCluster was formed"
+  # P4C-2953
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
-)
-
-# P4C-2800
-p4c_add_xfail_reason("tofino2"
-  "read in a way too complex for the compiler to currently handle"
+  # P4C-2800 
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
   # P4C-3091
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4
 )
-
 
 # P4C-2836
 p4c_add_xfail_reason("tofino2"

@@ -22949,6 +22949,36 @@ control Sargent(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intri
 }
 
 control Downs(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrinsic_metadata_t Covert, in ingress_intrinsic_metadata_from_parser_t Frederika, inout ingress_intrinsic_metadata_for_deparser_t Saugatuck, inout ingress_intrinsic_metadata_for_tm_t Ekwok) {
+#ifndef P4C_3091
+    @name(".Emigrant") action Emigrant() {
+        {
+            Wanamassa.Yorkshire.setValid();
+            Ekwok.bypass_egress = (bit<1>)1w1;
+        }
+        {
+            Wanamassa.Longwood.setValid();
+        }
+    }
+    @name(".Pearce") action Pearce(PortId_t Ancho) {
+        Ekwok.ucast_egress_port = Ancho;
+
+        Emigrant();
+    }
+    @name(".Belfalls") action Belfalls(PortId_t Clarendon) {
+        Ekwok.ucast_egress_port[8:7] = Clarendon[8:7];
+        Ekwok.ucast_egress_port[6:3] = Peoria.Newhalem.McGonigle[6:3];
+        Ekwok.ucast_egress_port[2:0] = (bit<3>)3w0;
+
+        Emigrant();
+    }
+    @name(".Slayden") action Slayden() {
+        Ekwok.ucast_egress_port[8:8] = (bit<1>)1w1;
+        Ekwok.ucast_egress_port[7:3] = Peoria.Covert.Bayshore[7:3];
+        Ekwok.ucast_egress_port[2:0] = (bit<3>)3w0;
+
+        Emigrant();
+    }
+#else
     @name(".Emigrant") action Emigrant(PortId_t Ancho) {
         {
             Wanamassa.Yorkshire.setValid();
@@ -22976,6 +23006,7 @@ control Downs(inout Lookeba Wanamassa, inout Martelle Peoria, in ingress_intrins
         Ancho[2:0] = (bit<3>)3w0;
         Emigrant(Ancho);
     }
+#endif
     @disable_atomic_modify(1) @name(".Edmeston") table Edmeston {
         actions = {
             @tableonly Pearce();

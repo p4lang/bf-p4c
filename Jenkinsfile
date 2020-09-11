@@ -29,12 +29,10 @@ node ('compiler-nodes') {
                     dir('p4factory') {
                         sh "echo 'p4factory current commit:'"
                         sh "git log -1 --stat"
-                        //switch_16_branch = sh (
-                        //    script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
-                        //    returnStdout: true
-                        //).trim()
-                        // TODO: Reset it to p4factory master once top sanity is cleared.
-                        switch_16_branch = "master"
+                        switch_16_branch = sh (
+                            script: "git ls-files -s submodules/bf-switch | cut -d' ' -f2",
+                            returnStdout: true
+                        ).trim()
                         sh "echo 'bf-switch last working p4factory commit: ' $switch_16_branch"
                     }
                 }
