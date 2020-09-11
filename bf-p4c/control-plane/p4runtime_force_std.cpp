@@ -39,6 +39,8 @@ class P4RuntimeStdConverter {
           {::barefoot::P4Ids::METER, std::bind(&C::convertMeter, this, _1, _2)},
           {::barefoot::P4Ids::DIRECT_METER, std::bind(&C::convertDirectMeter, this, _1, _2)},
           {::barefoot::P4Ids::DIGEST, std::bind(&C::convertDigest, this, _1, _2)},
+          {::barefoot::P4Ids::REGISTER, std::bind(&C::convertRegister, this, _1, _2)},
+          {::barefoot::P4Ids::DIRECT_REGISTER, std::bind(&C::convertDirectRegister, this, _1, _2)},
         };
 
         static const std::unordered_set<P4Id> suppressWarnings = {
@@ -262,6 +264,25 @@ class P4RuntimeStdConverter {
         auto* digestStd = p4info->add_digests();
         setPreamble(externInstance, p4configv1::P4Ids::DIGEST, digestStd);
         digestStd->mutable_type_spec()->CopyFrom(digest.type_spec());
+    }
+
+    void convertRegister(p4configv1::P4Info* p4info,
+                       const p4configv1::ExternInstance& externInstance) {
+        ::barefoot::Register reg;
+        unpackExternInstance(externInstance, &reg);
+        auto* regStd = p4info->add_registers();
+        setPreamble(externInstance, p4configv1::P4Ids::REGISTER, regStd);
+        regStd->set_size(reg.size());
+        regStd->mutable_type_spec()->CopyFrom(reg.type_spec());
+    }
+
+    void convertDirectRegister(p4configv1::P4Info* p4info,
+                       const p4configv1::ExternInstance& externInstance) {
+        ::barefoot::DirectRegister reg;
+        unpackExternInstance(externInstance, &reg);
+        auto* regStd = p4info->add_registers();
+        setPreamble(externInstance, p4configv1::P4Ids::REGISTER, regStd);
+        regStd->mutable_type_spec()->CopyFrom(reg.type_spec());
     }
 
     void updateTables(p4configv1::P4Info* p4info) {
