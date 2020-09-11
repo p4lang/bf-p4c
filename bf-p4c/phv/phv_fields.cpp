@@ -13,6 +13,22 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/stringref.h"
 
+namespace {
+
+bitvec remove_non_byte_boundary_starts(const PHV::Field* field, const bitvec& startPositions) {
+    bitvec cloned = startPositions;
+    for (int i : startPositions) {
+        if (i % 8 != 0) {
+            LOG3("setStartBits non-byte boundary " << i << " of checksummed metadata " << field
+                                                   << ", ignored. ");
+            cloned.clrbit(i);
+        }
+    }
+    return cloned;
+}
+
+}  // namespace
+
 FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
     : align(7 - bitLayout.hi % 8)
 { }
@@ -1006,6 +1022,9 @@ void PHV::Field::eraseAlignment() {
 }
 
 void PHV::Field::setStartBits(PHV::Size size, bitvec startPositions) {
+    if (metadata && is_checksummed() && !alignment) {
+        startPositions = remove_non_byte_boundary_starts(this, startPositions);
+    }
     startBitsByContainerSize_i[size] = startPositions;
 }
 
@@ -1049,9 +1068,18 @@ PHV::FieldSlice::FieldSlice(
     // equal the valid bits for the field shifted by X mod C.  For example,
     // if a 12b field f can start at bits 0 and 8 in a 16b container, then
     // f[11:8] can start at bits 0 and 8.
-    for (auto size : Device::phvSpec().containerSizes())
-        for (auto idx : field->getStartBits(size))
-            startBitsByContainerSize_i[size].setbit((idx + range.lo) % int(size));
+    const int checksum_bit_in_byte = range.lo % 8;
+    for (auto size : Device::phvSpec().containerSizes()) {
+        for (auto idx : field->getStartBits(size)) {
+            int bit_idx = (idx + range.lo) % int(size);
+            // XXX(yumin): checksummed metadata can only start at byte boundary.
+            if (field->is_checksummed() && field->metadata && !field->alignment &&
+                bit_idx % 8 != checksum_bit_in_byte) {
+                continue;
+            }
+            startBitsByContainerSize_i[size].setbit(bit_idx);
+        }
+    }
 
     // Calculate valid container range for this slice by shrinking
     // the valid range of the field by the size of the "tail"
@@ -1098,6 +1126,9 @@ PHV::FieldSlice::FieldSlice(
 }
 
 void PHV::FieldSlice::setStartBits(PHV::Size size, bitvec startPositions) {
+    if (field_i->metadata && field_i->is_checksummed() && !field_i->alignment) {
+        startPositions = remove_non_byte_boundary_starts(field_i, startPositions);
+    }
     startBitsByContainerSize_i[size] = startPositions;
 }
 
