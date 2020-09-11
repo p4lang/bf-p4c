@@ -904,6 +904,8 @@ bool CoreAllocation::satisfies_constraints(
         ordered_set<PHV::AllocSlice>& initFields) const {
     const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
+    auto container_status = alloc.getStatus(c);
+
     // Check gress.
     auto containerGress = alloc.gress(c);
     if (containerGress && *containerGress != f->gress) {
@@ -912,6 +914,7 @@ bool CoreAllocation::satisfies_constraints(
         return false; }
 
     // Check parser group constraints.
+
     auto parserGroupGress = alloc.parserGroupGress(c);
     bool isExtracted = uses_i.is_extracted(f);
 
@@ -928,6 +931,28 @@ bool CoreAllocation::satisfies_constraints(
         unsigned slice_cid = phvSpec.containerToId(slice.container());
 
         boost::optional<IR::BFN::ParserWriteMode> write_mode;
+        for (auto sl : (*container_status).slices) {
+            auto container_field = sl.field();
+            if (container_field == f) {
+                continue;
+            }
+            if (!field_to_parser_states_i.field_to_extracts.count(container_field))
+                continue;
+            for (auto ef : field_to_parser_states_i.field_to_extracts.at(f)) {
+                auto ef_state = field_to_parser_states_i.extract_to_state.at(ef);
+                for (auto esl : field_to_parser_states_i.field_to_extracts.at(container_field)) {
+                    auto esl_state = field_to_parser_states_i.extract_to_state.at(esl);
+                    // A container cannot have same extract in same state
+                    if (esl_state == ef_state && ef->source->equiv(*esl->source) &&
+                         ef->source->is<IR::BFN::PacketRVal>()) {
+                        LOG5("Slices of field " << f << " and " << container_field <<
+                             " have same extract source in the same state " << esl_state->name
+                             << " which is illegal");
+                        return false;
+                    }
+                }
+            }
+        }
 
         if (field_to_parser_states_i.field_to_extracts.count(f)) {
             for (auto e : field_to_parser_states_i.field_to_extracts.at(f)) {
