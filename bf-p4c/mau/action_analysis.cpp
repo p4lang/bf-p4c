@@ -395,7 +395,7 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
     } else if (isStrengthReducible(sl)) {
         // ignore, will be strength reduced
     } else {
-        ERROR("Slice is of IR structure not handled by ActionAnalysis");
+        LOG1("ERROR: Slice is of IR structure not handled by ActionAnalysis");
     }
     // Constants should not be in slices ever, they should just be either refactored into
     // action data, or already separately split constants with different values
@@ -432,7 +432,7 @@ bool ActionAnalysis::preorder(const IR::Member *mem) {
 void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
     LOG1("ActionAnalysis postorder on instruction : " << instr);
     if (!field_action.write_found) {
-        ERROR("Nothing written in the instruction " << instr);
+        LOG1("ERROR: Nothing written in the instruction " << instr);
     }
 
     if (phv_alloc) {

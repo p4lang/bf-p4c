@@ -79,7 +79,7 @@ const IR::Node* ControlConverter::postorder(IR::Property* p) {
     else if (p->name.name == "psa_idle_timeout")
         newName = "idle_timeout";
     else if (p->name.name == "psa_empty_group_action")
-        ERROR("psa_empty_group_action is not supported");
+        LOG1("ERROR: psa_empty_group_action is not supported");
     if (newName != boost::none)
         return new IR::Property(p->srcInfo, *newName, p->annotations, p->value, p->isConstant);
     return p;

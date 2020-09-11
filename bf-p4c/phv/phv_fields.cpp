@@ -691,7 +691,7 @@ const PHV::AllocSlice &PHV::Field::for_bit(int bit) const {
     for (auto &sl : alloc_slice_i)
         if (bit >= sl.field_slice().lo && bit < sl.field_slice().lo + sl.width())
             return sl;
-    ERROR("No allocation for bit " << bit << " in " << name);
+    LOG1("ERROR: No allocation for bit " << bit << " in " << name);
     static PHV::AllocSlice invalid(nullptr, PHV::Container(), 0, 0, 0);
     return invalid;
 }

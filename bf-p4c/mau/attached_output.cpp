@@ -108,7 +108,7 @@ void Format::create_alu_ops_for_action(
                 container_bits = alloc.container_slice();
                 BUG_CHECK(container_bits.lo >= 0, "Invalid negative container bit");
                 if (!alloc.container())
-                    ERROR("Phv field " << write_field->name << " written in action "
+                    LOG1("ERROR: Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
             });
             if (write_count > 1)

@@ -826,8 +826,9 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                     ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
                     break; }
                 if (!(bytemask & 1))
-                    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
-                            "byte " << byte << " even though bit in bytemask is not set");
+                    LOG1("WARNING: " << SrcInfo(lineno) << ": putting " << el.second.name <<
+                         " on action bus byte " << byte << " even though bit in bytemask is "
+                         "not set");
                 action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
                 bytemask >>= 1; }
             break;
@@ -892,8 +893,8 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
         default:
             BUG(); }
         if (bytemask)
-            WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
-                    " set in bytemask for " << el.second.name);
+            LOG1("WARNING: " << SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
+                 " set in bytemask for " << el.second.name);
     }
 }
 FOR_ALL_REGISTER_SETS(INSTANTIATE_TARGET_TEMPLATE,

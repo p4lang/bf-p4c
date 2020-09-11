@@ -418,6 +418,7 @@ p4c_add_xfail_reason("tofino"
   "condition too complex"
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-corrected-bmv2.p4
+  testdata/p4_16_samples/psa-i2e-cloning-basic-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1249,7 +1250,7 @@ p4c_add_xfail_reason("tofino"
   ".* expected packet.* on port .* not seen"
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/checksum1-bmv2.p4
-  testdata/p4_16_samples/issue1025-bmv2.p4
+  #testdata/p4_16_samples/issue1025-bmv2.p4
   testdata/p4_16_samples/issue2147-bmv2.p4
   testdata/p4_16_samples/issue2176-bmv2.p4
   testdata/p4_16_samples/issue2225-bmv2.p4
@@ -1257,6 +1258,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2375-1-bmv2.p4
   testdata/p4_16_samples/issue2375-bmv2.p4
   testdata/p4_16_samples/issue2392-bmv2.p4
+)
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  testdata/p4_16_samples/issue1025-bmv2.p4
 )
 
 # These should be compilation errors due to Tofino's lack of support
@@ -1748,6 +1753,7 @@ p4c_add_xfail_reason("tofino"
   "Compiler Bug.*: .*expected a method call"
   testdata/p4_16_samples/issue2287-bmv2.p4
   testdata/p4_16_samples/issue2205-bmv2.p4
+  testdata/p4_16_samples/issue2488-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1861,7 +1867,8 @@ p4c_add_xfail_reason("tofino"
   "Cannot unify PortId_t to bit<32>"
   testdata/p4_16_samples/psa-multicast-basic-2-bmv2.p4
   testdata/p4_16_samples/psa-unicast-or-drop-bmv2.p4
-  )
+  testdata/p4_16_samples/psa-end-of-ingress-test-bmv2.p4
+)
 
 # digest fields related failures or expected to fail.
 p4c_add_xfail_reason("tofino"

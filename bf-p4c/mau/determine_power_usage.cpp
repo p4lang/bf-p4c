@@ -443,7 +443,7 @@ void DeterminePowerUsage::add_unattached_memory_accesses() {
 
           // LOG4("Found attached memory access\n" << attached_mem_access);
         } else {
-          WARNING("Unable to find shared resource memory usage for " << t->name << ".");
+          LOG1("WARNING: Unable to find shared resource memory usage for " << t->name << ".");
   } } } }
 }
 

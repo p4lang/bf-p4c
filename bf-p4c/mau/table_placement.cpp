@@ -1350,13 +1350,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             }
 
             if (!try_alloc_adb(rv)) {
-                ERROR("Action Data Bus Allocation error after previous allocation?");
+                LOG1("ERROR: Action Data Bus Allocation error after previous allocation?");
                 advance_to_next_stage = true;
                 break;
             }
 
             if (!try_alloc_imem(rv)) {
-                ERROR("Instruction Memory Allocation error after previous allocation?");
+                LOG1("ERROR: Instruction Memory Allocation error after previous allocation?");
                 advance_to_next_stage = true;
                 break;
             }

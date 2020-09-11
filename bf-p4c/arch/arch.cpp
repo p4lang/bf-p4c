@@ -16,9 +16,9 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
             passes.push_back(new BFN::TnaArchTranslation(refMap, typeMap, options));
         }
         if (Device::currentDevice() == Device::JBAY) {
-            WARNING("TNA architecture is not supported on a Tofino2 device."
-                    "The compilation may produce wrong binary."
-                    "Consider invoking the compiler with --arch t2na.");
+            LOG1("WARNING: TNA architecture is not supported on a Tofino2 device."
+                 "The compilation may produce wrong binary."
+                 "Consider invoking the compiler with --arch t2na.");
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
     } else if (options.arch == "t2na") {

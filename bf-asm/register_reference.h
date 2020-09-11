@@ -41,9 +41,9 @@ class register_reference {
 
     register_reference &set(const char *a, REG *r) {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (write)
-            WARNING("Overwriting \"" << name << "\" with \"" << a <<
+            LOG1("WARNING: Overwriting \"" << name << "\" with \"" << a <<
                     "\" in " << this);
         name = a;
         tree = r;
@@ -64,7 +64,7 @@ class register_reference {
     bool disable_if_reset_value() { return false; }
     bool disable() {
         if (!name.empty()) {
-            ERROR("Disabling modified register in " << this);
+            LOG1("ERROR: Disabling modified register in " << this);
             return false; }
         tree = nullptr;
         disabled_ = true;

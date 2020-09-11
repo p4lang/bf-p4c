@@ -5,7 +5,7 @@
 // Helpfull inline functions
 ////////////////////////////////////////////////////////////////////////////////
 void print_error(std::string str) {
-    ERROR("SuperClusterBuilder :" + str);
+    LOGN(-1, "ERROR: SuperClusterBuilder :" + str);
 }
 
 std::string get_token(std::istream &fs) {

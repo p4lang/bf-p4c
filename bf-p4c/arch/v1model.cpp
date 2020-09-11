@@ -1843,7 +1843,7 @@ class ConstructSymbolTable : public Inspector {
                         structure->pathsThread.emplace(node, EGRESS);
                         structure->pathsToDo.emplace(node, node);
                     } else {
-                        WARNING("path " << node << " in "
+                        LOG1("WARNING: path " << node << " in "
                                         << gress->name.name << " is not translated");
                     }
                 }
@@ -1852,7 +1852,7 @@ class ConstructSymbolTable : public Inspector {
                 CHECK_NULL(tn);
                 structure->typeNamesToDo.emplace(node, node);
             } else {
-                WARNING("Unable to translate path " << node);
+                LOG1("WARNING: Unable to translate path " << node);
             }
         }
         auto parser = findOrigCtxt<IR::P4Parser>();
@@ -1884,14 +1884,14 @@ class ConstructSymbolTable : public Inspector {
                 } else if (expr->type->is<IR::Type_Struct>()) {
                     structure->pathsToDo.emplace(node, node);
                 } else {
-                    WARNING("metadata " << node << " is not converted");
+                    LOG1("WARNING: metadata " << node << " is not converted");
                 }
             } else if (auto expr = node->expr->to<IR::TypeNameExpression>()) {
                 auto tn = expr->typeName->to<IR::Type_Name>();
                 CHECK_NULL(tn);
                 structure->typeNamesToDo.emplace(node, node);
             } else {
-                WARNING("Expression " << node << " is not converted");
+                LOG1("WARNING: Expression " << node << " is not converted");
             }
         }
     }
@@ -1906,7 +1906,7 @@ class ConstructSymbolTable : public Inspector {
         auto size = node->arguments->at(0)->expression->to<IR::Constant>()->asInt();
         auto* args = new IR::Vector<IR::Argument>();
         if (size == 0) {
-            WARNING("action_profile " << node->name.name << "is specified with size 0, "
+            LOG1("WARNING: action_profile " << node->name.name << "is specified with size 0, "
                                                        "default to 1024.");
             size = 1024;  // default size is set to 1024, to be consistent with glass
             args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
@@ -1987,7 +1987,7 @@ class ConstructSymbolTable : public Inspector {
         args = new IR::Vector<IR::Argument>();
         auto size = node->arguments->at(1)->expression->to<IR::Constant>()->asInt();
         if (size == 0) {
-            WARNING("action_profile " << node->name.name << "is specified with size 0, "
+            LOG1("WARNING: action_profile " << node->name.name << "is specified with size 0, "
                                                        "default to 1024.");
             size = 1024;  // default size is set to 1024, to be consistent with glass
             args->push_back(new IR::Argument(new IR::Constant(IR::Type_Bits::get(32), size)));
@@ -2006,7 +2006,7 @@ class ConstructSymbolTable : public Inspector {
             else if (mode->value != "fair" && mode->value != "non_resilient")
                 BUG("Selector mode provided for the selector is not supported", node);
         } else {
-            WARNING("No mode specified for the selector %s. Assuming fair" << node);
+            LOG1("WARNING: No mode specified for the selector %s. Assuming fair" << node);
         }
         args->push_back(new IR::Argument(sel_mode));
 
@@ -2025,7 +2025,7 @@ class ConstructSymbolTable : public Inspector {
         } else {
             auto min_width = IR::Type::Bits::get(64);  // Do not impose LRT
             typeArgs->push_back(min_width);
-            WARNING("Could not infer min_width for counter %s, using bit<64>" << node);
+            LOG1("WARNING: Could not infer min_width for counter %s, using bit<64>" << node);
         }
         // type<S>
         if (auto type = node->type->to<IR::Type_Specialized>()) {
@@ -2068,7 +2068,7 @@ class ConstructSymbolTable : public Inspector {
             // Do not impose LRT
             auto min_width = IR::Type::Bits::get(64);
             typeArgs->push_back(min_width);
-            WARNING("Could not infer min_width for counter %s, using bit<64>" << node);
+            LOG1("WARNING: Could not infer min_width for counter %s, using bit<64>" << node);
         }
         auto specializedType = new IR::Type_Specialized(
             new IR::Type_Name("DirectCounter"), typeArgs);

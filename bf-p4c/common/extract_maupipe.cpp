@@ -780,7 +780,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 // Byte count adjustment is always subtracted
                 mtr->bytecount_adjust -= getConstant(anno);
             else
-                WARNING("Unknown annotation " << anno->name << " on " << tname);
+                LOG1("WARNING: Unknown annotation " << anno->name << " on " << tname);
         }
         if (mtr->true_egress_accounting)
             check_true_egress_accounting(mtr, match_table);

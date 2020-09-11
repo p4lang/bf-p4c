@@ -31,7 +31,7 @@ struct ubits_base {
     bool disable_if_reset_value() { return value == reset_value ? disabled_ = true : false; }
     bool disable() const {
         if (write) {
-            ERROR("Disabling modified register in " << this);
+            LOG1("ERROR: Disabling modified register in " << this);
             return false; }
         disabled_ = true;
         return disabled_; }
@@ -51,7 +51,7 @@ template<int N> struct ubits : ubits_base {
     ubits() : ubits_base() {}
     const ubits &check(std::true_type) {
         if (value >= (uint64_t(1) << N)) {
-            ERROR(value << " out of range for " << N << " bits in " << this);
+            LOG1("ERROR:  out of range for " << N << " bits in " << this);
             value &= (uint64_t(1) << N) - 1; }
         return *this; }
     const ubits &check(std::false_type) { return *this; }
@@ -62,9 +62,10 @@ template<int N> struct ubits : ubits_base {
     ubits(ubits &&) = default;
     uint64_t operator=(uint64_t v) override {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (write)
-            ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
+            LOG1((value != v ? "ERROR:" : "WARNING:") << " Overwriting " << value <<
+                 " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
@@ -75,40 +76,37 @@ template<int N> struct ubits : ubits_base {
     unsigned size() override { return N; }
     const ubits &operator|=(uint64_t v) override {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (write)
-            WARNING("Overwriting " << value << " with " << (v|value) <<
-                    " in " << this);
+            LOG1("WARNING: Overwriting " << value << " with " << (v|value) << " in " << this);
         value |= v;
         write = true;
         log("|=", v);
         return check(); }
     const ubits &operator+=(uint64_t v) {
         if (disabled_)
-            ERROR("Overwriting disabled register value in " << this);
+            LOG1("ERROR: Overwriting disabled register value in " << this);
         value += v;
         write = true;
         log("+=", v);
         return check(); }
     const ubits &operator^=(uint64_t v) {
         if (disabled_)
-            ERROR("Overwriting disabled register value in " << this);
+            LOG1("ERROR: Overwriting disabled register value in " << this);
         value ^= v;
         write = true;
         log("^=", v);
         return check(); }
     const ubits &set_subfield(uint64_t v, unsigned bit, unsigned size) {
         if (disabled_)
-            ERROR("Overwriting disabled register value in " << this);
+            LOG1("ERROR: Overwriting disabled register value in " << this);
         if (bit + size > N)
-            ERROR("subfield " << bit << ".." << (bit+size-1) <<
-                  " out of range in " << this);
+            LOG1("ERROR: subfield " << bit << ".." << (bit+size-1) << " out of range in " << this);
         else if (write && ((value >> bit) & ((1U << size)-1)))
-            WARNING("Overwriting subfield(" << bit << ".." << (bit+size-1) <<
-                    ") value " << ((value >> bit) & ((1U << size)-1)) <<
-                    " with " << v << " in " << this);
+            LOG1("WARNING: Overwriting subfield(" << bit << ".." << (bit+size-1) << ") value " <<
+                 ((value >> bit) & ((1U << size)-1)) << " with " << v << " in " << this);
         if (v >= (1U << size))
-            ERROR("Subfield value " << v << " too large for " << size <<
+            LOG1("ERROR: Subfield value " << v << " too large for " << size <<
                   " bits in " << this);
         value |= v << bit;
         write = true;

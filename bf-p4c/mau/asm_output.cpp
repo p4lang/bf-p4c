@@ -2130,7 +2130,8 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
                     });
                 }
             } else {
-                ERROR(expr << " does not have a PHV allocation though it is used in an action");
+                LOG1("ERROR: " << expr << " does not have a PHV allocation though it is used "
+                     "in an action");
                 out << sep;
             }
             sep = ", ";
@@ -2688,7 +2689,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             else if (cond_tables.count("$torf"))
                 out << gw_indent << "false: " << cond_tables["$torf"] << std::endl; }
     } else {
-        WARNING("Failed to fit gateway expression for " << tbl->name);
+        LOG1("WARNING: Failed to fit gateway expression for " << tbl->name);
     }
     return gw_can_miss;
 }

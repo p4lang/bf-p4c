@@ -30,7 +30,7 @@ std::ostream &operator<<(std::ostream &out, const Slice &sl) {
         for (auto &alloc : sl.field->get_alloc()) {
             if (sl.lo < alloc.field_slice().lo) continue;
             if (sl.hi > alloc.field_slice().hi)
-                WARNING("Slice not contained within a single PHV container");
+                LOG1("WARNING: Slice not contained within a single PHV container");
             if (alloc.field_slice().lo != 0 || alloc.width() != sl.field->size)
                 out << '.' << alloc.field_slice().lo << '-' << alloc.field_slice().hi;
             if (sl.lo != alloc.field_slice().lo || sl.hi != alloc.field_slice().hi) {

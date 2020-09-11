@@ -38,7 +38,7 @@ struct widereg_base {
     bool disable_if_reset_value() { return value == reset_value ? disabled_ = true : false; }
     bool disable() const {
         if (write) {
-            ERROR("Disabling modified register in " << this);
+            LOG1("ERROR: Disabling modified register in " << this);
             return false; }
         disabled_ = true;
         return disabled_; }
@@ -67,7 +67,7 @@ template<int N> struct widereg : widereg_base {
     widereg() : widereg_base() {}
     const widereg &check() {
         if (value.max().index() >= N) {
-            ERROR(value << " out of range for " << N << " bits in " << this);
+            LOG1("ERROR: out of range for " << N << " bits in " << this);
             value.clrrange(N, value.max().index() - N + 1); }
         return *this; }
     explicit widereg(bitvec v) : widereg_base(v) { check(); }
@@ -81,9 +81,9 @@ template<int N> struct widereg : widereg_base {
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (write)
-            WARNING("Overwriting " << value << " with " << v << " in " << this);
+            LOG1("WARNING: Overwriting " << value << " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
@@ -97,9 +97,9 @@ template<int N> struct widereg : widereg_base {
     unsigned size() { return N; }
     const widereg &operator|=(bitvec v) {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (write)
-            WARNING("Overwriting " << value << " with " << (v|value) <<
+            LOG1("WARNING: Overwriting " << value << " with " << (v|value) <<
                     " in " << this);
         value |= v;
         write = true;
@@ -107,16 +107,16 @@ template<int N> struct widereg : widereg_base {
         return check(); }
     const widereg &set_subfield(uintptr_t v, unsigned bit, unsigned size) {
         if (disabled_)
-            ERROR("Writing disabled register value in " << this);
+            LOG1("ERROR: Writing disabled register value in " << this);
         if (bit + size > N) {
-            ERROR("subfield " << bit << ".." << (bit+size-1) <<
+            LOG1("ERROR: subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
         } else if (auto o = value.getrange(bit, size)) {
             if (write)
-                WARNING("Overwriting subfield(" << bit << ".." << (bit+size-1) <<
+                LOG1("WARNING: Overwriting subfield(" << bit << ".." << (bit+size-1) <<
                         ") value " << o << " with " << v << " in " << this); }
         if (v >= (1U << size))
-            ERROR("Subfield value " << v << " too large for " << size <<
+            LOG1("ERROR: Subfield value " << v << " too large for " << size <<
                   " bits in " << this);
         value.putrange(bit, size, v);
         write = true;

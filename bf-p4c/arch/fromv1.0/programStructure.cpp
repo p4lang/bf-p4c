@@ -189,7 +189,7 @@ TnaProgramStructure::convertDirectCounter(const IR::Counter* c, cstring newName)
         // Do not impose LRT
         auto min_width = IR::Type::Bits::get(64);
         typeArgs->push_back(min_width);
-        WARNING("Could not infer min_width for counter %s, using bit<64>" << c); }
+        LOG1("WARNING: Could not infer min_width for counter %s, using bit<64>" << c); }
 
     // keep max_width as annotation
     if (c->max_width >= 0) {
@@ -537,7 +537,7 @@ TnaProgramStructure::convertActionProfile(const IR::ActionProfile* action_profil
     if (action_selector) {
         type = new IR::Type_Name(new IR::Path("ActionSelector"));
         if (action_profile->size == 0)
-            WARNING("action_profile " << action_profile->name << "is specified with 0 size, "
+            LOG1("WARNING: action_profile " << action_profile->name << "is specified with 0 size, "
                     "setting default value to 1024.");
         auto size = new IR::Constant(action_profile->srcInfo,
                 IR::Type_Bits::get(32),
@@ -564,7 +564,7 @@ TnaProgramStructure::convertActionProfile(const IR::ActionProfile* action_profil
     } else {
         type = new IR::Type_Name(new IR::Path("ActionProfile"));
         if (action_profile->size == 0)
-            WARNING("action_profile " << action_profile->name << "is specified with 0 size, "
+            LOG1("WARNING: action_profile " << action_profile->name << "is specified with 0 size, "
                     "setting default value to 1024.");
         auto size = new IR::Constant(action_profile->srcInfo,
                 IR::Type_Bits::get(32),

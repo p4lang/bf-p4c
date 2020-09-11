@@ -525,7 +525,7 @@ class TranslateProgram : public Inspector {
 
                         structure->pathsToDo.emplace(node, node);
                     } else {
-                        WARNING("path " << node << " in "
+                        LOG1("WARNING: path " << node << " in "
                                         << gress->name.name << " is not translated");
                     }
                 }
@@ -557,7 +557,7 @@ class TranslateProgram : public Inspector {
                 }
                 structure->typeNamesToDo.emplace(node, node);
             } else {
-                WARNING("Unable to translate path " << node);
+                LOG1("WARNING: Unable to translate path " << node);
             }
         }
         auto parser = findOrigCtxt<IR::P4Parser>();
@@ -571,14 +571,14 @@ class TranslateProgram : public Inspector {
                 if (expr->type->is<IR::Type_Struct>()) {
                     structure->pathsToDo.emplace(node, node);
                 } else {
-                    WARNING("metadata " << node << " is not converted");
+                    LOG1("WARNING: metadata " << node << " is not converted");
                 }
             } else if (auto expr = node->expr->to<IR::TypeNameExpression>()) {
                 auto tn = expr->typeName->to<IR::Type_Name>();
                 CHECK_NULL(tn);
                 structure->typeNamesToDo.emplace(node, node);
             } else {
-                WARNING("Expression " << node << " is not converted");
+                LOG1("WARNING: Expression " << node << " is not converted");
             }
         }
     }
@@ -617,7 +617,7 @@ class TranslateProgram : public Inspector {
             else if (mode->value != "fair" && mode->value != "non_resilient")
                 BUG("Selector mode provided for the selector is not supported", node);
         } else {
-            WARNING("No mode specified for the selector %s. Assuming fair" << node);
+            LOG1("WARNING: No mode specified for the selector %s. Assuming fair" << node);
         }
         args->push_back(new IR::Argument(sel_mode));
 
@@ -697,7 +697,7 @@ class TranslateProgram : public Inspector {
             cstring name = em->actualExternType->name;
             addExternMethodCall(name, node);
         } else if (mi->is<P4::ExternFunction>()) {
-            WARNING("extern function translation is not supported");
+            LOG1("WARNING: extern function translation is not supported");
         }
     }
 
@@ -717,7 +717,7 @@ class TranslateProgram : public Inspector {
             }
             addExternMethodCall(name, node);
         } else if (mi->is<P4::ExternFunction>()) {
-            WARNING("extern function translation is not supported");
+            LOG1("WARNING: extern function translation is not supported");
         }
     }
 };

@@ -4,6 +4,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/gen_deparser.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "ir/pattern.h"
 
 namespace BFN {
 
@@ -297,6 +298,7 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         digest->fieldLists.push_back(fieldList);
     } else if (auto* initializer = expr->to<IR::StructExpression>()) {
         for (auto *item : initializer->components) {
+            Pattern::Match<IR::Expression> e1;
             if (item->expression->is<IR::Concat>()) {
                 process_concat(sources, item->expression->to<IR::Concat>());
             } else if (auto cst = item->expression->to<IR::Constant>()) {
@@ -307,6 +309,9 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
                     ::error(ErrorType::ERR_UNSUPPORTED,
                             "Non-zero constant value %1% in digest field list"
                             " is not supported on tofino.", cst);
+            } else if ((e1 == 1).match(item->expression) && e1->type->width_bits() == 1) {
+                /* explicit comparison of a bit<1> to 1 -- just use the bit<1> directly */
+                sources.push_back(new IR::BFN::FieldLVal(e1));
             } else {
                 sources.push_back(new IR::BFN::FieldLVal(item->expression)); }
         }

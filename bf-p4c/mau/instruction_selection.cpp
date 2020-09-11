@@ -1038,7 +1038,7 @@ const IR::Node *DoInstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::MAU::Instruction(prim->srcInfo, op, new IR::TempVar(prim->type),
                                             prim->operands.at(0), prim->operands.at(1)); }
     } else {
-        WARNING("unhandled in InstSel: " << *prim); }
+        LOG1("WARNING: unhandled in InstSel: " << *prim); }
     return prim;
 }
 

@@ -734,8 +734,8 @@ void CollectConstraints::computeNoSplitConstraints(
                 else if (max_split_size <= 32)
                     setNoSplitContainerSize(field, 32);
                 else
-                    ERROR("Cannot apply no_split constraint on field " << field << " that is"
-                            "more than 32 bit wide");
+                    LOG1("ERROR: Cannot apply no_split constraint on field " << field << " that is"
+                         "more than 32 bit wide");
             }
         }
     };
