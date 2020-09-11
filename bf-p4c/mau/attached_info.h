@@ -14,7 +14,7 @@ class ValidateAttachedOfSingleTable : public MauInspector {
     const IR::MAU::Table *tbl;
     TypeToAddressMap &ind_addrs;
 
-    std::map<addr_type_t, const IR::MAU::AttachedMemory *> users;
+    std::map<addr_type_t, const IR::MAU::BackendAttached *> users;
 
     cstring addr_type_name(addr_type_t type) {
         switch (type) {
@@ -25,7 +25,8 @@ class ValidateAttachedOfSingleTable : public MauInspector {
         }
     }
 
-    bool free_address(const IR::MAU::AttachedMemory *am, addr_type_t type);
+    bool compatible(const IR::MAU::BackendAttached *, const IR::MAU::BackendAttached *);
+    void free_address(const IR::MAU::AttachedMemory *am, addr_type_t type);
 
     bool preorder(const IR::MAU::Counter *cnt) override;
     bool preorder(const IR::MAU::Meter *mtr) override;

@@ -6,7 +6,7 @@ DEFINE_TABLE_TYPE(ProxyHashMatchTable)
 
 void ProxyHashMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "proxy_hash_group") {
             if (CHECKTYPE(kv.value, tINT)) {

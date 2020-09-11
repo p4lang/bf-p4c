@@ -5,32 +5,54 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 
-/** The purpose of this function is to determine whether or not the tables using stateful
- *  tables are allowed within Tofino.  Essentially the constraints are the following:
+/** The purpose of the ValidateAttachedOfSingleTable pass is to determine whether or not the
+ * tables using stateful tables are allowed within Tofino.  Essentially the constraints are
+ * the following:
  *  - Multiple counters, meters, or registers can be found on a table if they use the
  *    same exact addressing scheme.
  *  - A table can only have a meter, a stateful alu, or a selector, as they use
  *    the same address in match central
  *  - Indirect addresses for twoport tables require a per flow enable bit as well
  */
-bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *am,
+
+/* check if two attachments of the same type use identical addressing schemes and are the same
+ * kind of table */
+bool ValidateAttachedOfSingleTable::compatible(const IR::MAU::BackendAttached *ba1,
+                                               const IR::MAU::BackendAttached *ba2) {
+    if (typeid(*ba1->attached) != typeid(*ba2->attached)) return false;
+    if (ba1->attached->direct != ba2->attached->direct) return false;
+    if (ba1->addr_location != ba2->addr_location) return false;
+    if (ba1->pfe_location != ba2->pfe_location) return false;
+    if (ba1->type_location != ba2->type_location) return false;
+    if (ba1->attached->direct) return true;
+    if (auto *a1 = ba1->attached->to<IR::MAU::Synth2Port>()) {
+        auto *a2 = ba2->attached->to<IR::MAU::Synth2Port>();
+        if (a1->width != a2->width) return false; }
+    // for indirect need to check that address expressions and enables are identical in
+    // each action.  We do this in SetupAttachedAddressing::ScanActions as we don't have
+    // the necessary information here
+    return true;
+}
+
+void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *am,
         addr_type_t type) {
     IR::MAU::Table::IndirectAddress ia;
     auto ba = findContext<IR::MAU::BackendAttached>();
     if (users[type] != nullptr) {
-        ::error(ErrorType::ERR_INVALID,
-                "overlap. Both %1% and %2% require the %3% address hardware, and cannot be on "
-                "the same table %4%.",
-                am, users[type]->name, addr_type_name(type), tbl->externalName());
-        return false;
+        if (!compatible(users[type], ba))
+            ::error(ErrorType::ERR_INVALID,
+                    "overlap. Both %1% and %2% require the %3% address hardware, and cannot be on "
+                    "the same table %4%.",
+                    am, users[type]->attached->name, addr_type_name(type), tbl->externalName());
+        return;
     }
-    users[type] = am;
+    users[type] = ba;
 
     if (!am->direct) {
         if (am->size <= 0) {
             ::error(ErrorType::ERR_NOT_FOUND,
                     "indirect attached table %1%. Does not have a size.", am);
-            return false;
+            return;
         }
     }
 
@@ -54,7 +76,7 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
                         "When an attached memory %1% is addressed by hash and requires "
                         "per action enabling, then the table %2% must have match data",
                          am, tbl->externalName());
-                return false;
+                return;
             }
         }
         ia.per_flow_enable = true;
@@ -67,13 +89,12 @@ bool ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
                         "When an attached memory %1% is addressed by hash and requires "
                         "multiple meter_type, then the table %2% must have match data",
                         am, tbl->externalName());
-                return false;
+                return;
             }
         }
         ia.meter_type_bits = 3;
     }
     ind_addrs[type] = ia;
-    return true;
 }
 
 bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::Counter *cnt) {

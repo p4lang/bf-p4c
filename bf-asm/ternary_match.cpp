@@ -131,7 +131,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                 match.emplace_back(*m);
         }
     }
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "match") {
             /* done above to be done before vpns */
@@ -982,7 +982,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     } else {
         error(lineno, "No format specified in table %s", name());
     }
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))

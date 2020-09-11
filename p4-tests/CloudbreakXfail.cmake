@@ -113,7 +113,7 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "Both .* and .* require the .* address hardware, and cannot be on the same table"
+  "Counter .* and .* must have identical addressing in .* as they share an address bus"
   testdata/p4_14_samples/counter.p4
 )
 

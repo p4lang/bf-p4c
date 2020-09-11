@@ -1700,6 +1700,7 @@ bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::Ba
     }
 
     AttachedActionCoord aac;
+    aac.am = at_mem;
     auto tbl = findContext<IR::MAU::Table>();
     auto &attached_info = self.all_attached_info[tbl];
     attached_info[at_mem->unique_id()] = aac;
@@ -1710,6 +1711,10 @@ bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) 
     auto tbl = findContext<IR::MAU::Table>();
     if (act->miss_only())
         return false;
+    const IR::MAU::AttachedMemory *stats_enabled = nullptr;
+    const IR::MAU::AttachedMemory *stats_disabled = nullptr;
+    const IR::MAU::AttachedMemory *meter_enabled = nullptr;
+    const IR::MAU::AttachedMemory *meter_disabled = nullptr;
 
     auto &attached_info = self.all_attached_info[tbl];
     for (auto &kv : attached_info) {
@@ -1718,6 +1723,11 @@ bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) 
 
         if (act->per_flow_enables.count(uid) == 0) {
             aac.all_per_flow_enabled = false;
+            if (aac.am->usesStatsBus()) stats_disabled = aac.am;
+            if (aac.am->usesMeterBus()) meter_disabled = aac.am;
+        } else {
+            if (aac.am->usesStatsBus()) stats_enabled = aac.am;
+            if (aac.am->usesMeterBus()) meter_enabled = aac.am;
         }
         if (uid.has_meter_type()) {
             if (act->meter_types.count(uid) == 0)
@@ -1730,6 +1740,29 @@ bool SetupAttachedAddressing::ScanActions::preorder(const IR::MAU::Action *act) 
             }
         }
     }
+    if (stats_enabled && stats_disabled) {
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "%1% is enabled and %2% is disabled in %3%, though they share addressing "
+                "(including enable)", stats_enabled, stats_disabled, act); }
+    if (meter_enabled && meter_disabled) {
+        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "%1% is enabled and %2% is disabled in %3%, though they share addressing "
+                "(including enable)", meter_enabled, meter_disabled, act); }
+    const IR::MAU::StatefulCall *stats_call = nullptr, *meter_call = nullptr;
+    for (auto *sc : act->stateful_calls) {
+        const IR::MAU::StatefulCall **prev;
+        if (sc->attached_callee->usesStatsBus())
+            prev = &stats_call;
+        else if (sc->attached_callee->usesMeterBus())
+            prev = &meter_call;
+        else
+            continue;
+        if (*prev && (sc->index ? (*prev)->index ? !sc->index->equiv(*(*prev)->index)
+                                           : true : (*prev)->index != nullptr)) {
+            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "%1% and %2% must have identical addressing in %3% as they share "
+                    "an address bus", sc->attached_callee, (*prev)->attached_callee, act); }
+        *prev = sc; }
     return false;
 }
 

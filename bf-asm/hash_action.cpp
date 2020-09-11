@@ -21,7 +21,7 @@ Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
 
 void HashActionTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
         if (kv.key == "search_bus" || kv.key == "result_bus") {
             // already dealt with in Table::setup_layout via common_init_setup
         } else if (!common_setup(kv, data, P4Table::MatchEntry)) {

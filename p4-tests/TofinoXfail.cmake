@@ -410,7 +410,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Both .* require the .* address hardware, and cannot be on the same table"
+  "Counter .* and .* must have identical addressing in .* as they share an address bus"
   testdata/p4_14_samples/counter.p4
 )
 
@@ -1430,12 +1430,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-counter4.p4
   testdata/p4_16_samples/psa-meter5.p4
   testdata/p4_16_samples/psa-meter4.p4
-)
-
-# program error
-p4c_add_xfail_reason("tofino"
-  "Both Counter .* and .* require the stats address hardware"
-  testdata/p4_16_samples/psa-counter2.p4
 )
 
 p4c_add_xfail_reason("tofino"

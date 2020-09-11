@@ -12,6 +12,7 @@
 #include <sstream>
 #include <functional>
 #include <iostream>
+#include <set>
 
 #include "json.h"
 #include "mask_counter.h"
@@ -263,10 +264,10 @@ template<typename T> inline std::string to_string(T val) {
 class MapIterChecked {
 /* Iterate through a map (VECTOR(pair_t)), giving errors for non-string and
  * duplicate keys (and skipping them) */
-    const VECTOR(pair_t) &map;
-    bool        allow;
-    std::map<const char *, int, std::function<bool(const char *, const char *)>>
-        keys_seen;
+    const VECTOR(pair_t)        &map;
+    bool                        allow;  // allow non-string keys
+    std::set<std::string>       duplicates_allowed;
+    std::map<std::string, int>  keys_seen;
     class iter {
         MapIterChecked  *self;
         pair_t          *p;
@@ -274,7 +275,8 @@ class MapIterChecked {
             while (p != self->map.end()) {
                 if (self->allow && p->key.type != tSTR) break;
                 if (!CHECKTYPE(p->key, tSTR)) { p++; continue; }
-                if (get(self->keys_seen, p->key.s)) {
+                if (self->duplicates_allowed.count(p->key.s)) break;
+                if (self->keys_seen.count(p->key.s)) {
                     error(p->key.lineno, "Duplicate element %s", p->key.s);
                     warning(self->keys_seen[p->key.s], "previous element %s",
                             p->key.s);
@@ -289,9 +291,12 @@ class MapIterChecked {
         bool operator==(iter &a) const { return p == a.p; }
         iter &operator++() { p++; check(); return *this; } };
 
- public:
-    explicit MapIterChecked(const VECTOR(pair_t) &map_, bool o = false) : map(map_), allow(o),
-        keys_seen([](const char *a, const char *b) { return strcmp(a, b) < 0; }) {}
+public:
+    explicit MapIterChecked(const VECTOR(pair_t) &map_, bool o=false,
+                            const std::set<std::string> &dup = {})
+    : map(map_), allow(o), duplicates_allowed(dup) {}
+    MapIterChecked(const VECTOR(pair_t) &map_, const std::set<std::string> &dup)
+    : map(map_), allow(false), duplicates_allowed(dup) {}
     iter begin() { return iter(this, map.begin()); }
     iter end() { return iter(this, map.end()); }
 };

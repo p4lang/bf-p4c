@@ -432,6 +432,8 @@ abstract AttachedMemory : Attached {
     UniqueAttachedId unique_id() const { return UniqueAttachedId(name, direct, get_id_type()); }
     virtual cstring externType() const = 0;
     cstring toString() const override { return externType() + " " + name.toString(); }
+    virtual bool usesMeterBus() const { return false; }
+    virtual bool usesStatsBus() const { return false; }
 }
 
 /** Any attached table that has a keeps stateful information about flows.
@@ -467,9 +469,12 @@ class Counter : Synth2Port {
     const Type *getType() const override { return Type_Counter::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; }
     cstring externType() const override { return direct ? "DirectCounter" : "Counter"; }
+    bool usesStatsBus() const override { return true; }
 }
 
-abstract MeterBus2Port : Synth2Port {}  // synth2port addressed via meter bus
+abstract MeterBus2Port : Synth2Port { // synth2port addressed via meter bus
+    bool usesMeterBus() const override { return true; }
+}
 
 class Meter : MeterBus2Port {
     int red_drop_value = -1;
@@ -591,6 +596,7 @@ class Selector : AttachedMemory {
     bool sps_scramble = true;  // Indicates if non-linear hash (SPS scramble) should be used.
     NullOK HashDist hash_mod = nullptr;
     cstring externType() const override { return "ActionSelector"; }
+    bool usesMeterBus() const override { return true; }
 #nodbprint
 }
 

@@ -523,6 +523,7 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     action a2() { tcount.count(1); }
     action a3() {tcount.count(2); }
     action a4() {scount.count(2); }
+    action a5() { tcount.count(3); scount.count(3); }
    table t1 {
         key = { headers.h1.f1 : exact; }
         actions = { @defaultonly nop; a1; a2; }
@@ -535,7 +536,7 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
 
     table t3 {
         key = { headers.h1.f4 : exact; }
-        actions = { a1; a2;a4;}
+        actions = { a1; a2; }
     }
 
     table t4 {
@@ -550,7 +551,7 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
  
    table t6 {
         key = { headers.h1.f1 : exact; }
-        actions = { a3; a4;}
+        actions = { a1; a5;}
     }
 
     table t7 {
@@ -570,12 +571,12 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
            }
         } else if (t8.apply().hit){
            switch (t3.apply().action_run) {
-               a4 : {t4.apply();}
+               a2 : {t4.apply();}
                default : {}
            }
        } else {
            switch (t6.apply().action_run) {
-              a3: {t7.apply();}
+              a1: {t7.apply();}
               default : {}
            }
        }

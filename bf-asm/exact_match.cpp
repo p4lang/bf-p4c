@@ -11,7 +11,7 @@ DEFINE_TABLE_TYPE(ExactMatchTable)
 
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, { "meter", "stats", "stateful" })) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         // Dynamic key masks are only on exact match tables
         } else if (kv.key == "dynamic_key_masks") {

@@ -534,6 +534,7 @@ class SetupAttachedAddressing : public PassManager {
         bool all_same_meter_type = true;
         bool meter_type_set = false;
         IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
+        const IR::MAU::AttachedMemory *am = nullptr;
     };
 
     using AttachedInfo = std::map<UniqueAttachedId, AttachedActionCoord>;
