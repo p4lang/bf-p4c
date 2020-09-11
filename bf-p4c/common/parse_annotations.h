@@ -74,6 +74,7 @@ class ParseAnnotations : public P4::ParseAnnotations {
         BFN_PARSE(PragmaIdletimePrecision, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaIdletimeTwoWayNotification, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaIgnoreTableDependency, PARSE, StringLiteral, extPragma);
+        BFN_PARSE(PragmaImmediate, PARSE, Expression, extPragma);
         BFN_PARSE_EMPTY(PragmaIntrinsicMetadata, PARSE_EMPTY, intPragma);
         BFN_PARSE(PragmaLrtEnable, PARSE, Expression, extPragma);
         BFN_PARSE(PragmaLrtScale, PARSE, Expression, intPragma);

@@ -297,6 +297,24 @@ const char *PragmaFlexible::help = "@flexible\n"
     "// in egress pipeline.\n"
     "egress_md.ingress_port = bridged_hdr.ingress_port;\n";
 
+const char *PragmaImmediate::name = "immediate";
+const char *PragmaImmediate::description =
+    "Specifies that some parameters from the match table’s associated "
+    "action data table should try to be packed in match overhead instead of in "
+    "the action data table.";
+const char *PragmaImmediate::help = "@pragma immediate 1\n"
+    "+attached to P4 match tables\n"
+    "\n"
+    "Specifies that some parameters from the match table’s associated action "
+    "data table should try to be packed in match overhead instead of in the "
+    "action data table.  A 1 tells the compiler to try to use this optimization. "
+    "A 0 tells the compiler to turn off the optimization.  All other values are "
+    "ignored.  This optimization, where available, can sometimes reduce the "
+    "memory requirements.  The default value is 1.  Note that action parameters "
+    "cannot be packed in match overhead for indirectly referenced action data "
+    "tables.";
+
+
 const char *PragmaForceImmediate::name = "force_immediate";
 const char *PragmaForceImmediate::description =
     "Requires that action parameters are packed in the match overhead of the table.";

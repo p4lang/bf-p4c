@@ -520,24 +520,25 @@ void DoTableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout,
  */
 void DoTableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
-    auto immediate_annotation_value = tbl->is_force_immediate();
-    // If @immediate(0) do not allow immediates. If @immediate(1) force immediate
-    bool immediate_allowed = immediate_annotation_value ? (immediate_annotation_value != 0) : true;
-    bool immediate_forced = immediate_annotation_value ? (immediate_annotation_value == 1) : false;
-    // Action Profiles cannot have any immediate data
-    if (tbl->layout.action_addr.address_bits != 0)
-        immediate_allowed = false;
-    // chained salus need the immediate path for the address, so can't use it for data
-    for (auto att : tbl->attached)
-        if (auto salu = att->attached->to<IR::MAU::StatefulAlu>())
-            if (salu->chain_vpn)
-                immediate_allowed = false;
+    IR::MAU::Table::ImmediateControl_t imm_ctrl = tbl->get_immediate_ctrl();
 
-    if (immediate_forced && !immediate_allowed) {
-      fatal_error("%1%: Cannot use force_immediate on table %2% when its action data "
-                  "table is indirectly addressed nor when the table needs to use the "
-                  "immediate path to write items like hash, meter color, or random "
-                  "number results.", tbl, tbl->externalName());
+    if (imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE) {
+        bool immediate_allowed = true;
+        // Action Profiles cannot have any immediate data
+        if (tbl->layout.action_addr.address_bits != 0)
+            immediate_allowed = false;
+        // chained salus need the immediate path for the address, so can't use it for data
+        for (auto att : tbl->attached)
+            if (auto salu = att->attached->to<IR::MAU::StatefulAlu>())
+                if (salu->chain_vpn)
+                    immediate_allowed = false;
+
+        if (!immediate_allowed) {
+          fatal_error("%1%: Cannot use force_immediate on table %2% when its action data "
+                      "table is indirectly addressed nor when the table needs to use the "
+                      "immediate path to write items like hash, meter color, or random "
+                      "number results.", tbl, tbl->externalName());
+        }
     }
     auto af = lc.get_action_formats(tbl, ActionData::NORMAL);
     if (af.size() > 0)
@@ -550,7 +551,9 @@ void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
                                            ActionData::FormatType_t format_type) {
     ActionData::Format af(phv, tbl, att_info);
     af.set_uses(&cache_action_formats[std::make_pair(tbl->name, format_type)]);
-    af.allocate_format(tbl->is_force_immediate() == 1, format_type);
+
+    IR::MAU::Table::ImmediateControl_t imm_ctrl = tbl->get_immediate_ctrl();
+    af.allocate_format(imm_ctrl, format_type);
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate

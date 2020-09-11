@@ -247,8 +247,14 @@ class Table : BFN::Unit {
     bool has_exit_recursive() const;  // is there an exit here or any control dependent table?
     int get_random_seed() const;
     int get_pragma_max_actions() const;
-    /// Returns 0 or 1 (the value of the pragma) if the pragma exists, boost::none otherwise
-    boost::optional<int> is_force_immediate() const;
+#emit
+    // Two pragmas can be used to control the usage of the immediate usage. "immediate" pragma
+    // can be set as 0 to force the usage of action data table. "force_immediate" pragma can be
+    // set to 1 to pack action data in match overhead. The combination of both result in 3 possible
+    // configuration as listed by this enum.
+    enum ImmediateControl_t { COMPILER, FORCE_IMMEDIATE, FORCE_NON_IMMEDIATE };
+#end
+    ImmediateControl_t get_immediate_ctrl() const;
     bool has_match_data() const;
     bool for_dleft() const;
     bool is_always_run_action() const { return always_run == IR::MAU::AlwaysRun::ACTION; }

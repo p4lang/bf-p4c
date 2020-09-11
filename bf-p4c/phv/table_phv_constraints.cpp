@@ -85,7 +85,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
 bool CollectForceImmediateFields::preorder(const IR::MAU::Action* action) {
     const auto* tbl = findContext<IR::MAU::Table>();
     if (!tbl) return true;
-    if (!tbl->is_force_immediate()) return true;
+    if (tbl->get_immediate_ctrl() != IR::MAU::Table::FORCE_IMMEDIATE) return true;
     LOG3("\t  Action " << action->name << " belongs to force_immediate table " << tbl->name);
     auto writtenFields = actions.actionWrites(action);
     ordered_set<const PHV::Field*> fields;

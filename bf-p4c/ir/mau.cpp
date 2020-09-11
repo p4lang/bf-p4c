@@ -785,16 +785,26 @@ int IR::MAU::Table::get_pragma_max_actions() const {
     return -1;
 }
 
-boost::optional<int> IR::MAU::Table::is_force_immediate() const {
-    int pragma_val;
-    if (getAnnotation("force_immediate", pragma_val)) {
-            if (pragma_val == 0 || pragma_val == 1) {
-                return pragma_val;
-            } else {
+IR::MAU::Table::ImmediateControl_t IR::MAU::Table::get_immediate_ctrl() const {
+    int force_pragma_val = 0;
+    int imm_pragma_val = 1;
+    if (getAnnotation("force_immediate", force_pragma_val)) {
+            if (force_pragma_val != 0 && force_pragma_val != 1) {
               error(ErrorType::ERR_INVALID, "%1%Invalid force_immediate pragma usage on "
                     "table %2%.  Only 0 and 1 are allowed.", srcInfo, externalName());
-              return boost::none; } }
-    return boost::none;
+              return IR::MAU::Table::COMPILER; } }
+    if (getAnnotation("immediate", imm_pragma_val)) {
+            if (imm_pragma_val != 0 && imm_pragma_val != 1) {
+              error(ErrorType::ERR_INVALID, "%1%Invalid immediate pragma usage on "
+                    "table %2%.  Only 0 and 1 are allowed.", srcInfo, externalName());
+              return IR::MAU::Table::COMPILER; } }
+
+    if (force_pragma_val)
+        return IR::MAU::Table::FORCE_IMMEDIATE;
+    else if (imm_pragma_val == 0)
+        return IR::MAU::Table::FORCE_NON_IMMEDIATE;
+    else
+        return IR::MAU::Table::COMPILER;
 }
 
 bool IR::MAU::Table::has_match_data() const {

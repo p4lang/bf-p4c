@@ -2960,7 +2960,8 @@ bool Format::determine_next_immediate_bytes(bool immediate_forced) {
  * directly line up for the entry.  For action profiles, the driver does not currently have
  * the ability to set up these different sizes of action data entry sizes.
  */
-bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
+bool Format::determine_bytes_per_loc(bool &initialized,
+                                     IR::MAU::Table::ImmediateControl_t imm_ctrl) {
     action_bus_inputs.resize(AD_LOCATIONS);
     action_bus_input_bitvecs.resize(AD_LOCATIONS);
     for (int i = 0; i < AD_LOCATIONS; i++) {
@@ -3015,6 +3016,10 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
             break; }
     }
 
+    if (imm_ctrl == IR::MAU::Table::FORCE_NON_IMMEDIATE)
+        go_imm = false;
+
+    bool imm_forced = imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE;
     bool imm_path_used = locked_in_all_actions_sects.size() > 0;
 
     go_imm &= !(imm_path_used);
@@ -3026,7 +3031,7 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
         go_imm2 = false;
 
     if (!go_imm) {
-        if (immediate_forced) {
+        if (imm_forced) {
           fatal_error("%s: Unable to force_immediate on table %s.  Action parameters cannot "
                       "be stored in match overhead when the action data table is indirectly "
                       "addressed, the immediate is needed for hash distribution or random "
@@ -3038,8 +3043,8 @@ bool Format::determine_bytes_per_loc(bool &initialized, bool immediate_forced) {
     if (!go_imm2)
         return false;
 
-    bool alloc_imm = determine_next_immediate_bytes(immediate_forced);
-    if (immediate_forced && !alloc_imm) {
+    bool alloc_imm = determine_next_immediate_bytes(imm_forced);
+    if (imm_forced && !alloc_imm) {
         fatal_error("%s: Unable to force_immediate on table %s.  Cannot fit all action "
                     "data in match overhead.  %d bytes in the action data table. "
                     "%d bytes in match overhead.", tbl->srcInfo, tbl->name,
@@ -3586,18 +3591,19 @@ void Format::build_potential_format(bool immediate_forced) {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format(bool immediate_forced, FormatType_t format_type) {
-    LOG1("Determining Formats for table " << tbl->name);
+void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
+                             FormatType_t format_type) {
+    LOG1("Determining Formats for table " << tbl->name << " with immediate ctrl " << imm_ctrl);
     bool possible = analyze_actions(format_type);
     if (!possible)
         return;
     bool initialized = false;
     while (true) {
-        bool can_allocate = determine_bytes_per_loc(initialized, immediate_forced);
+        bool can_allocate = determine_bytes_per_loc(initialized, imm_ctrl);
         if (!can_allocate)
             break;
         assign_RamSections_to_bytes();
-        build_potential_format(immediate_forced);
+        build_potential_format(imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE);
     }
 }
 

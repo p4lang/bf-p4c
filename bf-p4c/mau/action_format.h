@@ -1029,7 +1029,7 @@ class Format {
     void determine_single_action_input(SingleActionAllocation &single_action_alloc,
         int max_bytes_required);
     bool determine_next_immediate_bytes(bool immediate_forced);
-    bool determine_bytes_per_loc(bool &initialized, bool immediate_forced);
+    bool determine_bytes_per_loc(bool &initialized, IR::MAU::Table::ImmediateControl_t imm_ctrl);
 
     void assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
          BusInputs &total_inputs);
@@ -1050,7 +1050,7 @@ class Format {
 
  public:
     void set_uses(safe_vector<Use> *u) { uses = u; }
-    void allocate_format(bool immediate_forced, FormatType_t format_type);
+    void allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl, FormatType_t format_type);
     Format(PhvInfo &p, const IR::MAU::Table *t, SplitAttachedInfo &sai)
         : phv(p), tbl(t), att_info(sai) {}
 };
