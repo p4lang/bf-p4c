@@ -1551,6 +1551,11 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work,
          hex(pl->logical_id) << ")" <<
          (pl->need_more_match ? " (need more match)" : pl->need_more ? " (need more)" : ""));
 
+    if (pl->table) {
+        int dep_chain = self.deps.stage_info[pl->table].dep_stages_control_anti;
+        if (pl->stage + dep_chain >= Device::numStages())
+            LOG1(" Dependence chain longer than available stages");
+    }
     int stage_pragma = pl->table->get_provided_stage(&pl->stage);
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " dsespite @stage(" << stage_pragma << ")");
@@ -2192,6 +2197,8 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
 
         TablePlacement::choice_t choice = TablePlacement::DEFAULT;
         for (auto t : trial) {
+            if (best)
+                LOG3("For trial t : " << t->name << " with best: " << best->name);
             if (!best || self.is_better(t, best, choice)) {
                 self.log_choice(t, best, choice);
                 best = t;
@@ -2303,7 +2310,7 @@ void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t ch
     if (!best) {
         LOG3("    Updating best to first table seen: " << t->name);
     } else if (!t) {
-        LOG5("    Keeping best " << best->name << " for reason: " << choice);
+        LOG3("    Keeping best " << best->name << " for reason: " << choice);
     } else {
         LOG3("    Updating best to " << t->name << " from " << best->name
              << " for reason: " << choice);
@@ -2750,8 +2757,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
 
         if (stage_table != 0) {
             BUG_CHECK(!rv->empty(), "failed to attach first stage table");
-            BUG_CHECK(stage_table == pl->stage_split, "Splitting table %s cannot be "
-                      "resolved for stage table %d", table_part->name, stage_table); }
+            BUG_CHECK(stage_table == pl->stage_split, "Splitting table %s on stage %d cannot be "
+                      "resolved for stage table %d", table_part->name, pl->stage, stage_table); }
         select_layout_option(table_part, pl->use.preferred());
         add_attached_tables(table_part, pl->use.preferred(), &pl->resources);
         if (gw_layout_used)

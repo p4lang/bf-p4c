@@ -1201,7 +1201,7 @@ control Glenoma(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
         default_action = Lauada();
         size = 4096;
     }
-    @disable_atomic_modify(1) @ways(3) @name(".Geistown") table Geistown {
+    @disable_atomic_modify(1) @ways(3) @stage(1) @name(".Geistown") table Geistown {
         actions = {
             Thurmond();
             Jerico();
@@ -1629,7 +1629,7 @@ control Castle(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
     }
     @name(".Luning") action Luning() {
     }
-    @disable_atomic_modify(1) @name(".Flippen") table Flippen {
+    @disable_atomic_modify(1) @pack(4) @name(".Flippen") table Flippen {
         actions = {
             Tularosa();
             Lauada();
@@ -1940,7 +1940,7 @@ control Judson(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
         default_action = Lauada();
         size = 10240;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @name(".Baranof") table Baranof {
+    @idletime_precision(1) @disable_atomic_modify(1) @stage(2) @name(".Baranof") table Baranof {
         actions = {
             Forepaugh();
             Bucklin();
@@ -2945,14 +2945,14 @@ control Pillager(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     @name(".Somis") action Somis() {
         Yorkshire.Lynch.Candle = Heaton.get<tuple<bit<128>, bit<128>, bit<20>, bit<8>>>({ Longwood.Nevis.Dowell, Longwood.Nevis.Glendevey, Longwood.Nevis.Killen, Longwood.Nevis.Riner });
     }
-    @disable_atomic_modify(1) @placement_priority(- 1) @stage(2) @name(".Aptos") table Aptos {
+    @disable_atomic_modify(1) @name(".Aptos") table Aptos {
         actions = {
             Tullytown();
         }
         default_action = Tullytown();
         size = 1;
     }
-    @disable_atomic_modify(1) @placement_priority(- 1) @stage(2) @name(".Lacombe") table Lacombe {
+    @disable_atomic_modify(1) @name(".Lacombe") table Lacombe {
         actions = {
             Somis();
         }
@@ -4733,7 +4733,7 @@ control Macungie(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
     @name(".Burgdorf") action Burgdorf() {
         Yorkshire.NantyGlo.Guadalupe = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Idylside") table Idylside {
+    @disable_atomic_modify(1) @name(".Idylside") table Idylside {
         actions = {
             DewyRose();
             Kinston();
@@ -4759,7 +4759,7 @@ control Macungie(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         size = 1024;
         requires_versioning = false;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Haworth") table Haworth {
+    @disable_atomic_modify(1) @name(".Haworth") table Haworth {
         actions = {
             Almeria();
             Burgdorf();
@@ -4772,7 +4772,7 @@ control Macungie(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
         requires_versioning = false;
         default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".BigArm") table BigArm {
+    @disable_atomic_modify(1) @name(".BigArm") table BigArm {
         actions = {
             Almeria();
             Burgdorf();
@@ -4790,8 +4790,8 @@ control Macungie(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_int
             Idylside.apply();
             Haworth.apply();
         } else if (Yorkshire.NantyGlo.Luzerne == 3w0x2) {
-            Stovall.apply();
-            BigArm.apply();
+             Stovall.apply();
+             BigArm.apply();
         }
     }
 }
@@ -4815,7 +4815,7 @@ control Talkeetna(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
     @name(".Skiatook") action Skiatook(bit<16> Minetto) {
         Yorkshire.Readsboro.Tallassee = Minetto;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".DuPont") table DuPont {
+    @disable_atomic_modify(1) @name(".DuPont") table DuPont {
         actions = {
             Gorum();
             @defaultonly NoAction();
@@ -4826,7 +4826,7 @@ control Talkeetna(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         size = 1024;
         default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Shauck") table Shauck {
+    @disable_atomic_modify(1) @name(".Shauck") table Shauck {
         actions = {
             Quivero();
             Lauada();
@@ -4838,7 +4838,7 @@ control Talkeetna(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         default_action = Lauada();
         size = 512;
     }
-    @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(1) @ways(2) @name(".Telegraph") table Telegraph {
+    @disable_atomic_modify(1) @disable_atomic_modify(1) @ways(2) @name(".Telegraph") table Telegraph {
         actions = {
             Holyoke();
             @defaultonly NoAction();
@@ -4850,7 +4850,7 @@ control Talkeetna(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         size = 8192;
         default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Veradale") table Veradale {
+    @disable_atomic_modify(1) @name(".Veradale") table Veradale {
         actions = {
             Skiatook();
             @defaultonly NoAction();
@@ -4885,7 +4885,7 @@ control Talkeetna(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
     @name(".Reading") action Reading(bit<32> Coalwood) {
         Yorkshire.Greenwood.Amenia = max<bit<32>>(Yorkshire.Greenwood.Amenia, Coalwood);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Morgana") table Morgana {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(5) @name(".Morgana") table Morgana {
         key = {
             Yorkshire.Readsboro.McGonigle: exact @name("Readsboro.McGonigle") ;
             Yorkshire.Astor.Dowell       : exact @name("Astor.Dowell") ;
@@ -4922,7 +4922,7 @@ control Aquilla(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
         Yorkshire.Astor.Beasley = Yorkshire.Readsboro.Beasley & Beasley;
         Yorkshire.Astor.Sherack = Yorkshire.Readsboro.Sherack & Sherack;
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Tocito") table Tocito {
+    @disable_atomic_modify(1) @name(".Tocito") table Tocito {
         key = {
             Yorkshire.Readsboro.McGonigle: exact @name("Readsboro.McGonigle") ;
         }
@@ -4941,7 +4941,7 @@ control Mulhall(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intr
     @name(".Reading") action Reading(bit<32> Coalwood) {
         Yorkshire.Greenwood.Amenia = max<bit<32>>(Yorkshire.Greenwood.Amenia, Coalwood);
     }
-    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @name(".Okarche") table Okarche {
+    @ways(1) @pack(1) @disable_atomic_modify(1) @disable_atomic_modify(1) @stage(6) @name(".Okarche") table Okarche {
         key = {
             Yorkshire.Readsboro.McGonigle: exact @name("Readsboro.McGonigle") ;
             Yorkshire.Astor.Dowell       : exact @name("Astor.Dowell") ;
@@ -4978,7 +4978,7 @@ control Covington(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_in
         Yorkshire.Astor.Beasley = Yorkshire.Readsboro.Beasley & Beasley;
         Yorkshire.Astor.Sherack = Yorkshire.Readsboro.Sherack & Sherack;
     }
-    @disable_atomic_modify(1) @name(".Akhiok") table Akhiok {
+    @disable_atomic_modify(1) @stage(5) @name(".Akhiok") table Akhiok {
         key = {
             Yorkshire.Readsboro.McGonigle: exact @name("Readsboro.McGonigle") ;
         }
@@ -5090,7 +5090,7 @@ control BigBow(inout Ekron Longwood, inout Hapeville Yorkshire, in ingress_intri
         Yorkshire.Astor.Beasley = Yorkshire.Readsboro.Beasley & Beasley;
         Yorkshire.Astor.Sherack = Yorkshire.Readsboro.Sherack & Sherack;
     }
-    @disable_atomic_modify(1) @name(".Hughson") table Hughson {
+    @disable_atomic_modify(1) @stage(7) @name(".Hughson") table Hughson {
         key = {
             Yorkshire.Readsboro.McGonigle: exact @name("Readsboro.McGonigle") ;
         }
@@ -5234,7 +5234,7 @@ control RushCity(inout Ekron Longwood, inout Hapeville Yorkshire, in egress_intr
         Kosmos = Browning.get<tuple<bit<9>, bit<5>>>({ Yerington.egress_port, Yerington.egress_qid[4:0] });
         Naguabo.count((bit<12>)Kosmos);
     }
-    @disable_atomic_modify(1) @name(".Arion") table Arion {
+    @disable_atomic_modify(1) @stage(0) @name(".Arion") table Arion {
         actions = {
             Clarinda();
         }
