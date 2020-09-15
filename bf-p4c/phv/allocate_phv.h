@@ -482,6 +482,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const PhvUse& uses_i;
     const BruteForceStrategyConfig& config_i;
     PHV::Slicing::PackConflictChecker has_pack_conflict_i;
+    PHV::Slicing::IsReferencedChecker is_referenced_i;
     int pipe_id_i;  /// used for logging purposes
 
  public:

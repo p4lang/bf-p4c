@@ -73,18 +73,12 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
-  extensions/p4_tests/p4_16/compile_only/lrn1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   # P4C-2743
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
-)
-
-p4c_add_xfail_reason("tofino2"
-  "Could not place table .udf_vlist_mac_ip_tbl: Can't split this table across stages and it's too big for one stage"
-  extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -100,6 +94,9 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Could not place table .* The table .* could not fit"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
+  # P4C-2572
+  extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
+  extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -345,7 +342,7 @@ p4c_add_xfail_reason("tofino2"
 
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino2"
-  "you must introduce padding fields around the above slice"
+  "you can introduce padding fields"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
@@ -387,12 +384,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/dkm_invalid.p4
 )
 
-# P4C-2572
-p4c_add_xfail_reason("tofino2"
-  "parser error allocated to multiple containers?"
-  extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
-)
-
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino2"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
@@ -407,10 +398,14 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "invalid SuperCluster was formed|Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS"
+  "error: Use of uninitialized parser value|Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS"
   # P4C-2953
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
-  # P4C-2800 
+)
+
+p4c_add_xfail_reason("tofino2"
+  "invalid SuperCluster was formed|Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS"
+  # P4C-2800
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
   # P4C-3091
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_4.p4

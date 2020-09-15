@@ -29,6 +29,9 @@ using PHVContainerSizeLayout = ordered_map<const PHV::Field*, std::vector<int>>;
 // PackConflictChecker return true if the fields @f1 and @f2 have a pack conflict.
 using PackConflictChecker = std::function<bool(const Field* f1, const Field* f2)>;
 
+// IsReferencedChecker return true if the field is referenced.
+using IsReferencedChecker = std::function<bool(const Field* f1)>;
+
 // The interface that the iterator must satisfy.
 class IteratorInterface {
  public:

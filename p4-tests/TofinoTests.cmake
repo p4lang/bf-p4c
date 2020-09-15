@@ -116,7 +116,8 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${TOFINO_TNA_TEST_SUITE
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2143.p4" "-Xp4c=--disable-power-check")
 
 # p4_16/customer/ruijie/p4c-2992.p4
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/ruijie/p4c-2992.p4" "-Xp4c=--disable-power-check")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/ruijie/p4c-2992.p4" "-Xp4c=--disable-power-check -to 1800")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/customer/ruijie/p4c-2992.p4" PROPERTIES TIMEOUT 1800)
 
 # p4_16/customer/arista/p4c-2191.p4
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/p4c-2191.p4" "-to 1200")

@@ -422,6 +422,10 @@ struct Waubun {
     bit<1> Onycha;
 }
 
+// For learning quanta budget.
+@pa_container_size("ingress", "Balmorhea.Hapeville.Basic", 8)
+@pa_container_size("ingress", "Balmorhea.Hapeville.Exton", 8)
+@pa_container_size("ingress", "Balmorhea.Hapeville.Floyd", 8)
 struct Delavan {
     bit<1>  Bennet;
     bit<1>  Exton;

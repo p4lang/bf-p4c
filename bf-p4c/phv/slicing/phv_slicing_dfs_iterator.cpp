@@ -143,6 +143,7 @@ boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
 //     because if we are trying not to split the field in the middle, and we
 //     still meet some packing conflicts, then we should backtrack to avoid
 //     the packing.
+// 2.0 try split between referenced and non-referenced field.
 // 2.1 (TODO) container sizes that are more abundant. It allows allocation
 //     algorithm to balance between containers. More importantly, at the end
 //     of allocation, we can prune a lot of invalid slicing. We need to add this
@@ -153,16 +154,21 @@ boost::optional<AfterSplitConstraint> AfterSplitConstraint::intersect(
 // 3.  larger container to encourage more packings.
 struct NextSplitChoiceMetrics {
     bool will_create_new_spilt = false;
+    bool will_split_unreferenced = false;
     SplitChoice size;
 
-    NextSplitChoiceMetrics(bool will_create_new_spilt, SplitChoice size)
-        : will_create_new_spilt(will_create_new_spilt), size(size) {}
+    NextSplitChoiceMetrics(bool will_create_new_spilt, bool split_unreferenced, SplitChoice size)
+        : will_create_new_spilt(will_create_new_spilt),
+          will_split_unreferenced(split_unreferenced),
+          size(size) {}
 
     // pick slice list with exact container, more constraints and
     // has smaller size as next target to form a smaller search tree.
     bool operator<(const NextSplitChoiceMetrics& other) {
         if (will_create_new_spilt != other.will_create_new_spilt) {
             return will_create_new_spilt > other.will_create_new_spilt;
+        } else if (will_split_unreferenced != other.will_split_unreferenced) {
+            return will_split_unreferenced < other.will_split_unreferenced;
         } else {
             return size < other.size;
         }
@@ -170,7 +176,7 @@ struct NextSplitChoiceMetrics {
 };
 
 std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target) const {
-    // marks 1 is that bit is in the middle of a fieldslice.
+    // marks 1 if that bit is in the middle of a fieldslice.
     bitvec middle_of_fieldslices;
     int offset = 0;
     for (const auto& fs : *target.second) {
@@ -180,6 +186,21 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
             }
         }
         offset += fs.size();
+        if (offset > 32) break;
+    }
+
+    // marks 1 if that bit is at a boundary of reference and unreferenced field,
+    // that split [head...][rest...] into referenced list and unreferenced list.
+    bitvec unreferenced_boundary;
+    offset = 0;
+    const bool is_head_referenced = is_used_i(target.second->front().field());
+    for (const auto& fs : *target.second) {
+        if (is_used_i(fs.field()) != is_head_referenced) {
+            unreferenced_boundary.setbit(offset);
+            break;
+        }
+        offset += fs.size();
+        if (offset > 32) break;
     }
 
     int sl_sz = SuperCluster::slice_list_total_bits(*target.second);
@@ -212,6 +233,7 @@ std::vector<SplitChoice> DfsItrContext::make_choices(const SliceListLoc& target)
         }
         choices.push_back({
             bool(middle_of_fieldslices[int(c)]),
+            bool(unreferenced_boundary[int(c)]),
             c,
         });
     }

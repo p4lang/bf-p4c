@@ -50,6 +50,7 @@ class DfsItrContext : public IteratorInterface {
     const SuperCluster* sc_i;
     const PHVContainerSizeLayout pa_i;
     const PackConflictChecker has_pack_conflict_i;
+    const IsReferencedChecker is_used_i;
 
     // if a pa_container_size asks a field to be allocated to containers larger than it's
     // size, it's recorded here and will be used during pruning. Note that for one field,
@@ -94,10 +95,13 @@ class DfsItrContext : public IteratorInterface {
 
  public:
     DfsItrContext(const SuperCluster* sc, const PHVContainerSizeLayout& pa,
-                  const PackConflictChecker& pack_conflict, int max_search_steps = (1 << 25))
+                  const PackConflictChecker& pack_conflict,
+                  const IsReferencedChecker is_used,
+                  int max_search_steps = (1 << 25))
         : sc_i(sc),
           pa_i(pa),
           has_pack_conflict_i(pack_conflict),
+          is_used_i(is_used),
           n_step_limit_i(max_search_steps) {}
 
     /// iterate will pass valid slicing results to cb. Stop when cb returns false.

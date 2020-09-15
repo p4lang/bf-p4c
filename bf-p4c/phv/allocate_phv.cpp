@@ -2808,6 +2808,7 @@ BruteForceAllocationStrategy::BruteForceAllocationStrategy(
         if (core_alloc_i.mutex()(f1->id, f2->id)) return false;
         return core_alloc_i.actionConstraints().hasPackConflict(f1, f2);
     };
+    is_referenced_i = [&](const PHV::Field* f) { return uses_i.is_referenced(f); };
 }
 
 std::list<PHV::SuperCluster*>
@@ -3075,7 +3076,7 @@ BruteForceAllocationStrategy::preslice_clusters(
 
             auto itr_ctx = PHV::Slicing::ItrContext(
                 sc, core_alloc_i.pragmas().pa_container_sizes().field_to_layout(),
-                has_pack_conflict_i);
+                has_pack_conflict_i, is_referenced_i);
             itr_ctx.iterate([&](std::list<PHV::SuperCluster*> sliced_clusters) {
                 n_tried++;
                 if (n_tried > config_i.max_slicing) {
@@ -3879,7 +3880,7 @@ BruteForceAllocationStrategy::allocLoop(
         auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
         auto itr_ctx = PHV::Slicing::ItrContext(
             cluster_group, pa_container_sizes.field_to_layout(),
-            has_pack_conflict_i);
+            has_pack_conflict_i, is_referenced_i);
         itr_ctx.iterate([&](std::list<PHV::SuperCluster*> slicing) {
             ++n_tried;
             if (n_tried > MAX_SLICING_TRY) {

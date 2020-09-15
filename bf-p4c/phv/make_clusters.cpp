@@ -1,10 +1,13 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include <boost/range/adaptors.hpp>
+#include <sstream>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/utils/utils.h"
 #include "lib/algorithm.h"
 #include "lib/log.h"
+#include "lib/ordered_set.h"
 #include "lib/stringref.h"
 
 Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node* root) {
@@ -13,7 +16,6 @@ Visitor::profile_t Clustering::ClearClusteringStructs::init_apply(const IR::Node
     self.rotational_clusters_i.clear();
     self.super_clusters_i.clear();
     self.fields_to_slices_i.clear();
-    self.slices_used_in_slice_lists_i.clear();
     self.complex_validity_bits_i.clear();
     return rv;
 }
@@ -58,8 +60,7 @@ std::vector<PHV::FieldSlice> Clustering::slices(const PHV::Field* field, le_bitr
 
     std::vector<PHV::FieldSlice> rv;
     for (auto& slice : fields_to_slices_i.at(field))
-        if (slice.range().overlaps(range))
-            rv.push_back(slice);
+        if (slice.range().overlaps(range)) rv.push_back(slice);
     return rv;
 }
 
@@ -70,31 +71,35 @@ bool Clustering::MakeSlices::updateSlices(const PHV::Field* field, le_bitrange r
     auto& slices = self.fields_to_slices_i.at(field);
     // Find the slice that contains the low bit of this new range, and split it
     // if necessary.  Repeat for the high bit.
-    for (auto idx : { range.lo, range.hi + 1 }) {
+    for (auto idx : {range.lo, range.hi + 1}) {
         for (auto slice_it = slices.begin(); slice_it != slices.end(); ++slice_it) {
             // If a slice already exists at the an idx of this range, no additional
             // slicing is necessary.
             if (slice_it->range().lo == idx) {
-                break; }
+                break;
+            }
 
             // Otherwise, if the lo idx is in another slice, split that slice.
             if (slice_it->range().contains(idx)) {
                 changed = true;
                 auto range_lo = slice_it->range().resizedToBits(idx - slice_it->range().lo);
-                auto range_hi =
-                    slice_it->range().resizedToBits(slice_it->range().size() - range_lo.size())
-                                     .shiftedByBits(idx - slice_it->range().lo);
-                LOG5("Clustering::MakeSlices: breaking " << *slice_it << " into " << range_lo <<
-                     " / " << range_hi);
+                auto range_hi = slice_it->range()
+                                    .resizedToBits(slice_it->range().size() - range_lo.size())
+                                    .shiftedByBits(idx - slice_it->range().lo);
+                LOG5("Clustering::MakeSlices: breaking " << *slice_it << " into " << range_lo
+                                                         << " / " << range_hi);
                 slice_it = slices.erase(slice_it);
                 slice_it = slices.emplace(slice_it, PHV::FieldSlice(field, range_lo));
                 slice_it++;
                 slice_it = slices.emplace(slice_it, PHV::FieldSlice(field, range_hi));
-                break; } } }
+                break;
+            }
+        }
+    }
     return changed;
 }
 
-Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
+Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     equivalences_i.clear();
     // Wrap each field in a slice.
@@ -103,8 +108,8 @@ Visitor::profile_t Clustering::MakeSlices::init_apply(const IR::Node *root) {
             auto no_pack_slices = pa_sizes_i.get_no_pack_slices(&f);
             for (auto& slice : no_pack_slices) {
                 self.fields_to_slices_i[&f].push_back(slice);
-                LOG5("Clustering::MakeSlices: breaking " << f.name << " into " <<
-                     slice.range() << " due to pa_container_size");
+                LOG5("Clustering::MakeSlices: breaking " << f.name << " into " << slice.range()
+                                                         << " due to pa_container_size");
             }
         } else {
             self.fields_to_slices_i[&f].push_back(PHV::FieldSlice(&f, StartLen(0, f.size)));
@@ -125,9 +130,9 @@ bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
         // sets in `equivalences_i` and propagates fine-grained slicing through those fields until
         // we reach a fixed point. Therefore, implementing equivalent slicing for gateway comparison
         // slices is equivalent to adding those equivalent slices to the `equivalences_i` object.
-        auto &slice1 = field_info.first;
-        auto &info = field_info.second;
-        for (auto &slice2 : info.xor_with) {
+        auto& slice1 = field_info.first;
+        auto& info = field_info.second;
+        for (auto& slice2 : info.xor_with) {
             ordered_set<PHV::FieldSlice> equivalence;
             equivalence.insert(slice1);
             equivalence.insert(slice2);
@@ -138,18 +143,17 @@ bool Clustering::MakeSlices::preorder(const IR::MAU::Table* tbl) {
     return true;
 }
 
-bool Clustering::MakeSlices::preorder(const IR::Expression *e) {
+bool Clustering::MakeSlices::preorder(const IR::Expression* e) {
     le_bitrange range;
     PHV::Field* field = phv_i.field(e, &range);
 
-    if (!field)
-        return true;
+    if (!field) return true;
 
     updateSlices(field, range);
     return true;
 }
 
-void Clustering::MakeSlices::postorder(const IR::MAU::Instruction *inst) {
+void Clustering::MakeSlices::postorder(const IR::MAU::Instruction* inst) {
     LOG5("Clustering::MakeSlices: visiting instruction " << inst);
     // Find relative combined slice positions.
     ordered_set<PHV::FieldSlice> equivalence;
@@ -157,7 +161,8 @@ void Clustering::MakeSlices::postorder(const IR::MAU::Instruction *inst) {
         le_bitrange range;
         PHV::Field* f = phv_i.field(op, &range);
         if (!f) continue;
-        equivalence.insert(PHV::FieldSlice(f, range)); }
+        equivalence.insert(PHV::FieldSlice(f, range));
+    }
     equivalences_i.emplace_back(equivalence);
 }
 
@@ -176,7 +181,11 @@ void Clustering::MakeSlices::end_apply() {
                         auto new_slice =
                             tiny_slice.range().shiftedByBits(s1.range().lo - s2.range().lo);
                         LOG5("    ...and splitting " << s1.field() << " at " << new_slice);
-                        changed |= updateSlices(s1.field(), new_slice); } } } }
+                        changed |= updateSlices(s1.field(), new_slice);
+                    }
+                }
+            }
+        }
     } while (changed);
 
     if (LOGGING(5)) {
@@ -185,17 +194,21 @@ void Clustering::MakeSlices::end_apply() {
             std::stringstream ss;
             for (auto& slice : kv.second)
                 ss << "[" << slice.range().lo << ".." << slice.range().hi << "] ";
-            LOG5("    " << kv.first << ": " << ss.str()); } }
+            LOG5("    " << kv.first << ": " << ss.str());
+        }
+    }
 }
 
-Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *root) {
+Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     union_find_i.clear();
     // Initialize union_find_i with pointers to all field slices.
     for (auto& by_field : self.fields_to_slices_i) {
         for (auto& slice : by_field.second) {
             LOG5("Creating AlignedCluster singleton containing field slice " << slice);
-            union_find_i.insert(slice); } }
+            union_find_i.insert(slice);
+        }
+    }
     return rv;
 }
 
@@ -206,10 +219,12 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
     LOG5("Clustering::MakeAlignedClusters: visiting instruction " << inst);
     if (findContext<IR::MAU::SaluAction>()) {
         LOG5("    ...skipping SALU instruction " << inst);
-        return false; }
+        return false;
+    }
 
     if (inst->operands.size() == 0) {
-        return false; }
+        return false;
+    }
 
     // `set` doesn't induce alignment constraints, because the `deposit_field`
     // ALU instruction can rotate its source.  This is not true for casting
@@ -226,11 +241,13 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
         // another set instruction exists to assign 0 to the rest of the
         // destination.  In this case, the deposit_field instruction will
         // require the source and destination to be aligned.
-        bool needs_alignment = src && dst && src->size == dst_range.size() &&
-                                             dst->size != dst_range.size();
+        bool needs_alignment =
+            src && dst && src->size == dst_range.size() && dst->size != dst_range.size();
         if (!needs_alignment) {
             LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
-            return false; } }
+            return false;
+        }
+    }
 
     // Union all operands.  Because the union operation is reflexive and
     // transitive, start with the first operand (`dst`) and union it with all
@@ -243,9 +260,9 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
         if (!f) continue;
         if (!dst_slices.size()) {
             dst_slices = self.slices(f, range);
-            BUG_CHECK(dst_slices.size(),
-                      "No slices for field %1% in range %2%",
-                      cstring::to_cstring(f), cstring::to_cstring(range)); }
+            BUG_CHECK(dst_slices.size(), "No slices for field %1% in range %2%",
+                      cstring::to_cstring(f), cstring::to_cstring(range));
+        }
         auto these_slices = self.slices(f, range);
 
         // Some instructions naturally take operands of different sizes, eg.
@@ -260,12 +277,14 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
             LOG5("Adding aligned operands: " << *dst_slices_it << ", " << *these_slices_it);
             union_find_i.makeUnion(*dst_slices_it, *these_slices_it);
             ++dst_slices_it;
-            ++these_slices_it; } }
+            ++these_slices_it;
+        }
+    }
 
     return false;
 }
 
-bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
+bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table* tbl) {
     CollectGatewayFields collect_fields(phv_i);
     tbl->apply(collect_fields);
     auto& info_set = collect_fields.info;
@@ -287,7 +306,10 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
             while (a_it != slices_a.end() && b_it != slices_b.end()) {
                 union_find_i.makeUnion(*a_it, *b_it);
                 ++a_it;
-                ++b_it; } } }
+                ++b_it;
+            }
+        }
+    }
     return true;
 }
 
@@ -296,15 +318,15 @@ void Clustering::MakeAlignedClusters::end_apply() {
     for (auto* cluster_set : union_find_i) {
         // Create AlignedClusters, distinguishing between PHV/TPHV requirements.
         // XXX(cole): Need to account for all kinds of PHV for JBay.
-        bool tphv_candidate =
-            std::all_of(cluster_set->begin(), cluster_set->end(),
-                        [&](const PHV::FieldSlice& slice) {
-                            return slice.is_tphv_candidate(uses_i); });
+        bool tphv_candidate = std::all_of(
+            cluster_set->begin(), cluster_set->end(),
+            [&](const PHV::FieldSlice& slice) { return slice.is_tphv_candidate(uses_i); });
         PHV::Kind kind = tphv_candidate ? PHV::Kind::tagalong : PHV::Kind::normal;
-        self.aligned_clusters_i.emplace_back(new PHV::AlignedCluster(kind, *cluster_set)); }
+        self.aligned_clusters_i.emplace_back(new PHV::AlignedCluster(kind, *cluster_set));
+    }
 }
 
-Visitor::profile_t Clustering::MakeRotationalClusters::init_apply(const IR::Node *root) {
+Visitor::profile_t Clustering::MakeRotationalClusters::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);
     union_find_i.clear();
     slices_to_clusters_i.clear();
@@ -313,18 +335,19 @@ Visitor::profile_t Clustering::MakeRotationalClusters::init_apply(const IR::Node
     for (auto* cluster : self.aligned_clusters_i) {
         union_find_i.insert(cluster);
         LOG5("MakeRotationalClusters: Adding singleton aligned cluster " << cluster);
-        for (auto& slice : *cluster)
-            slices_to_clusters_i[slice] = cluster; }
+        for (auto& slice : *cluster) slices_to_clusters_i[slice] = cluster;
+    }
     return rv;
 }
 
-bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *inst) {
-    if (inst->name != "set")
-        return false;
+bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction* inst) {
+    if (inst->name != "set") return false;
 
     LOG5("MakeRotationalClusters: Visiting " << inst);
-    BUG_CHECK(inst->operands.size() == 2, "Primitive instruction %1% expected to have 2 operands, "
-              "but it has %2%", cstring::to_cstring(inst), inst->operands.size());
+    BUG_CHECK(inst->operands.size() == 2,
+              "Primitive instruction %1% expected to have 2 operands, "
+              "but it has %2%",
+              cstring::to_cstring(inst), inst->operands.size());
 
     // The destination must be a PHV-backed field.
     le_bitrange dst_range;
@@ -334,8 +357,7 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *in
     // The source may be a non-PHV backed value, however.
     le_bitrange src_range;
     PHV::Field* src_f = phv_i.field(inst->operands[1], &src_range);
-    if (!src_f)
-        return false;
+    if (!src_f) return false;
     LOG5("Adding set operands from instruction " << inst);
 
     auto dst_slices = self.slices(dst_f, dst_range);
@@ -347,8 +369,7 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *in
         auto src = *src_slices_it;
         BUG_CHECK(dst.size() == src.size(),
                   "set operands of different sizes: %1%, %2%\ninstruction: %3%",
-                  cstring::to_cstring(dst), cstring::to_cstring(src),
-                  cstring::to_cstring(inst));
+                  cstring::to_cstring(dst), cstring::to_cstring(src), cstring::to_cstring(inst));
         BUG_CHECK(slices_to_clusters_i.find(dst) != slices_to_clusters_i.end(),
                   "set dst operand is not present in any aligned cluster: %1%",
                   cstring::to_cstring(dst));
@@ -356,10 +377,11 @@ bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *in
                   "set src operand is not present in any aligned cluster: %1%",
                   cstring::to_cstring(src));
         LOG5("Adding rotationally-equivalent operands: " << *dst_slices_it << ", "
-             << *src_slices_it);
+                                                         << *src_slices_it);
         union_find_i.makeUnion(slices_to_clusters_i.at(dst), slices_to_clusters_i.at(src));
         ++dst_slices_it;
-        ++src_slices_it; }
+        ++src_slices_it;
+    }
 
     return false;
 }
@@ -369,495 +391,57 @@ void Clustering::MakeRotationalClusters::end_apply() {
         self.rotational_clusters_i.emplace_back(new PHV::RotationalCluster(*cluster_set));
 }
 
-Visitor::profile_t Clustering::MakeSuperClusters::init_apply(const IR::Node* root) {
-    auto rv = Inspector::init_apply(root);
-    headers_i.clear();
-    slice_lists_i.clear();
-    bridged_extracted_together_i.clear();
-    return rv;
-}
-
-void Clustering::MakeSuperClusters::visitHeaderRef(const IR::HeaderRef* hr) {
-    LOG5("Visiting HeaderRef " << hr);
-    const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
-
-    // Only analyze headers, not metadata structs.
-    if (struct_info.metadata || struct_info.size == 0) {
-        LOG5("Ignoring metadata or zero struct info: " << hr);
-        return;
-    }
-
-    if (headers_i.find(struct_info.first_field_id) != headers_i.end())
-        return;
-    headers_i.insert(struct_info.first_field_id);
-
-    // Build slice lists.  All slices of the same field go in the same slice
-    // list.  Additionally, non-byte aligned fields are grouped together in the
-    // smallest byte-aligned chunk.  Use reverse order, because types list
-    // fields in network order, not little Endian order.
-    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
-    int accumulator_bits = 0;
-
-    // This tracks whether the slice list so far is a TPHV candidate, with
-    // boost::none indicating that the slice list hasn't been started yet.
-    // TODO(yumin): optional<bool> is not good.
-    boost::optional<bool> prev_is_tphv = boost::none;
-    const PHV::Field* lastDigest = nullptr;
-    bool lastNoPack = false;
-    bool lastPadding = false;
-    bool lastWideArith = false;
-    bool lastDeparserZero = false;
-    bool break_at_next_byte_boundary = false;
-    bool lastUnreferenced = false;
-
-    auto StartNewSliceList = [&](void) {
-        slice_lists_i.insert(accumulator);
-        accumulator_bits = 0;
-        prev_is_tphv = boost::none;
-        accumulator = new PHV::SuperCluster::SliceList();
-        lastNoPack = false;
-        lastDigest = nullptr;
-        lastWideArith = false;
-        lastDeparserZero = false;
-        lastPadding = false;
-        break_at_next_byte_boundary = false;
-        lastUnreferenced = false;
-    };
-
-    std::vector<PHV::Field*> fields_in_header;
-    for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
-        PHV::Field* field = phv_i.field(fid);
-        BUG_CHECK(field != nullptr, "No PHV info for field in header reference %1%",
-                  cstring::to_cstring(hr));
-        BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
-                  "Found field in header but not PHV: %1%",
-                  cstring::to_cstring(field));
-        fields_in_header.push_back(field);
-    }
-
-    // bitsAfter represents the number of bits after this field, that could be a part of the same
-    // slice list. In case of no-pack fields, bitsAfter will be zero.
-    int bitsAfter = 0;
-    std::map<PHV::Field*, int> bitsAfterField;
-    for (int i = fields_in_header.size() - 1; i >= 0; i--) {
-        PHV::Field* field = fields_in_header[i];
-        if (field->is_solitary())
-            bitsAfter = 0;
-        else
-            bitsAfter += field->size;
-        bitsAfterField[field] = bitsAfter;
-        LOG5("\tBits after " << field->name << " : " << bitsAfter);
-    }
-
-    LOG5("Starting new slice list:");
-    for (unsigned i = 0; i < fields_in_header.size(); i++) {
-        PHV::Field* field = fields_in_header[i];
-        // XXX(cole): HACK to deal with intrinsic metadata padding.  Some
-        // intrinsic metadata is not deparsed and also marked as no-pack.  To
-        // avoid prepending its padding to the next slice list, we don't
-        // include unreferenced fields as the first fields in slice lists.  The
-        // longer-term solution is to replace slice lists with
-        // finer-granularity constraints.
-
-        // XXX(hanw):
-        // When allocating for a header that has
-        // header {
-        //    bit<4> _field_0;   // unreferenced;
-        //    bit<4> _padding;
-        //    bit<8> _field_1;   // referenced; }
-        // The check above would skip the first field, because it is
-        // unreferenced. We should also skip the second padding.
-        if (accumulator_bits % int(PHV::Size::b8) == 0 &&
-                lastUnreferenced && field->padding) {
-            LOG5("    ...skipping padding after unreferenced field: " << field);
-            continue;
-        }
-
-        // If the slice list contains a solitary field, then all the other slices in the list (if
-        // any) must be padding or unreferenced (unreferenced fields effectively act as a
-        // padding field).
-        if (lastNoPack && !field->padding && self.uses_i.is_referenced(field)) {
-            bool isNoSplit = std::any_of(accumulator->begin(), accumulator->end(),
-                    [](const PHV::FieldSlice& slice) { return slice.field()->no_split(); });
-            auto roundupSize = 8 * ROUNDUP(accumulator_bits, 8);
-            auto noSplitSize = (isNoSplit)
-                ?  ((accumulator_bits > 16 && accumulator_bits <= 24) ? 32 : roundupSize)
-                : roundupSize;
-            bool deparsedCondition = std::any_of(accumulator->begin(), accumulator->end(),
-                    [](const PHV::FieldSlice& slice) {
-                        return slice.field()->deparsed() || slice.field()->exact_containers();
-                    });
-            if (deparsedCondition && accumulator_bits != roundupSize) {
-                bool singleSlice = (accumulator->size() == 1);
-                std::stringstream ss;
-                if (singleSlice)
-                    ss << "The following slice must be packed by itself in a PHV:" << std::endl;
-                else
-                    ss << "The following slices must be packed together in a PHV, "
-                        "but they cannot be packed with any other slice:" << std::endl;
-                for (auto& slice : *accumulator) ss << "  " << slice << std::endl;
-                ss << "However, " << (singleSlice ? "this slice is " : "these slices are ") <<
-                    "also required to occupy the entire PHV as " <<
-                    (singleSlice ? "it is " : "they are ") << "deparsed." << std::endl;
-                ss << "To resolve this issue, you must introduce padding fields around the "
-                    "above " << (singleSlice ? "slice " : "slices ") << "(" << noSplitSize <<
-                    "b boundary) by annotating the padding field declarations with @padding.";
-                fatal_error("%1%", ss.str());
-            }
-            StartNewSliceList();
-            LOG5("Starting new slice list (to isolate a solitary field): ");
-        } else if (lastWideArith && !field->padding) {
-            StartNewSliceList();
-            LOG5("Starting new slice list (to isolate a field used in wide arithmetic): ");
-        } else if (lastDigest && !field->is_digest() && !field->padding &&
-                !self.uses_i.is_referenced(field)) {
-            StartNewSliceList();
-            LOG5("Starting new slice list (to separate a digest and non-digest field): ");
-        }
-
-        // If the slice list containers a deparser_zero field and the current field is not a
-        // deparser zero optimization candidate, then start a new slice list.
-        if (lastDeparserZero && !field->is_deparser_zero_candidate()) {
-            StartNewSliceList();
-            LOG5("Starting new slice list (to isolate deparser zero field): "); }
-
-        // Privatizable fields are the PHV copies of fields duplicated in TPHVs. So, slice creation
-        // has to start a new slice whenever it encounters a privatizable field. By construction,
-        // privatizable fields only being at a byte-aligned offset within a header, so this is a
-        // safe place to slice clusters.
-        bool is_tphv = field->is_tphv_candidate(self.uses_i) || field->privatizable();
-
-        if (accumulator_bits && (field->is_solitary()) && !lastPadding) {
-            // Break off the existing slice list if this field has a solitary and
-            // the previous fields are not padding fields.
-            // Break at bottom as well
-            StartNewSliceList();
-            LOG5("Starting new slice list (for solitary field):");
-        } else if (accumulator_bits && (field->used_in_wide_arith())) {
-            // Break off the existing slice list if this field is used in wide arithmetic
-            // Break at bottom as well
-            StartNewSliceList();
-            LOG5("Starting new slice list (for field used in wide arithmetic):");
-        } else if (accumulator_bits && !lastDeparserZero && field->is_deparser_zero_candidate()) {
-            // Break off the existing slice list if this field is a deparser zero optimization
-            // candidate.
-            StartNewSliceList();
-            LOG5("Starting new slice list (for deparser zero field):");
-        } else if (accumulator_bits && field->is_digest()) {
-            // Break off the existing slice list if this field is a digest
-            if (field->exact_containers() && field->is_marshaled()) {
-                LOG5("Do not start a new slice list because 8-bytes resubmit limit");
-            } else if (lastDigest == nullptr || accumulator_bits % int(PHV::Size::b8) == 0) {
-                // XXX(yumin): `&& !field->exact_containers()` is introduced for an edge case
-                // of P4C-1870 that if the resubmit field list is 8 bytes long, then they must
-                // take the whole container to avoid breaking the 8 bytes resubmit engine
-                // constraint.
-                LOG5("Starting new slice list (for digest field):");
-                StartNewSliceList();
-            }
-            lastDigest = field;
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0 &&
-                lastDigest != nullptr && !field->is_digest() && !field->padding) {
-            // break off the existing slice list if a metadata field is used in digest,
-            // AND the field is aliased as a source to a bridged metadata header AND
-            // the next field in the bridged metadata header is not used in the digest.
-            // This happens in switch-16 with mirroring digest.
-            // DO NOT break off if the field is a header field, otherwise, it may break
-            // the packing requirement of header field, see basic_ipv4.p4 when emitting
-            // ipv4.ihl as a digest field, it must be packed with ipv4.version, even if
-            // the ipv4.version if not emitted.
-            StartNewSliceList();
-            LOG5("Starting new slice list (to isolate non digest field from digest field):");
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && break_at_next_byte_boundary) {
-            StartNewSliceList();
-            LOG5("Starting new slice list (at phase 0 field boundary):");
-
-/* XXX(cole): This heuristic proactively breaks a slice list at a PHV/TPHV
- * boundary to encourage TPHV-eligible fields to be packed in TPHV containers.
- * However, that precludes packing TPHV fields with adjacent PHV fields in PHV
- * containers, which is sometimes necessary when MAU operations require small
- * header fields to be placed in larger containers.
- *
- * Remove it for now, because it causes problems with fabric + INT.
-
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0 && prev_is_tphv &&
-                   *prev_is_tphv != is_tphv) {
-            // Break off, if previous one is phv/tphv but this one is not the same.
-            StartNewSliceList();
-            LOG5("Starting new slice list (at " << (is_tphv ? "PHV-->TPHV" : "TPHV-->PHV") <<
-                 " boundary):");
-
- */
-
-/* XXX(cole): This heuristic proactively breaks big headers into 32b chunks,
- * which cuts down on the combinatorial space of slicing headers.
-
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0
-                   && accumulator_bits + field->size > int(PHV::Size::b32)) {
-            // Break off, if this field is a large field.
-            StartNewSliceList();
-            LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
-                    " is large):");
-*/
-
-        } else if (accumulator_bits % int(PHV::Size::b8) == 0
-                   && !self.uses_i.is_referenced(field) && !field->isGhostField()) {
-            LOG5("    ...breaking slice list before unreferenced field: " << field);
-            // Break off, on unreferenced/referenced boundary.
-            // Break at bottom as well.
-            StartNewSliceList();
-            LOG5("Starting new slice list (after " << accumulator_bits << "b because the next field"
-                    " is unreferenced):"); }
-
-        // XXX(Deep): From BRIG-899
-        // The hardware writes ghost metadata to a single 32-bit phv container in a very
-        // constrained form. The fields are written to certain bits in a fixed way:
-        //   pipe to [1:0]
-        //   qid to [12:2]
-        //   qlength to [30:13]
-        //   pingpong to [31:31]
-        // So, phv allocation must match the header. If a particular field is unused (pipe is rarely
-        // used), the hardware will still write those bits, so it may not be possible to reuse it
-        // for something else (need to add an explicit write in the mau pipe). The fields may not
-        // also be relocated within the container.
-        if (accumulator_bits == 0 && !self.uses_i.is_referenced(field) && !field->isGhostField() &&
-                field->size % 8 == 0) {
-            LOG5("    ...skipping unreferenced field at the beginning of a slice list: " << field);
-            lastUnreferenced = true;
-            continue; }
-
-
-        auto no_pack_slices = pa_sizes_i.get_no_pack_slices(field);
-        int field_slice_list_size = 0;
-        if (no_pack_slices.size() == 0) {
-            for (auto& slice : self.fields_to_slices_i.at(field)) {
-                LOG5("    ...adding " << slice);
-                accumulator->push_back(slice);
-                field_slice_list_size += slice.size();
-                self.slices_used_in_slice_lists_i.insert(slice);
-            }
-        } else {
-            StartNewSliceList();
-            LOG5("Starting new slice list (encountered a no-pack slice due to pa_container_size):");
-            std::vector<le_bitrange> boundaries;
-            for (auto& slice : no_pack_slices) boundaries.push_back(slice.range());
-            int indexIntoBoundaries = 0;
-            for (auto& slice : self.fields_to_slices_i.at(field)) {
-                LOG5("Considering slice " << slice);
-                // Index into the next container.
-                if (!slice.range().overlaps(boundaries[indexIntoBoundaries])) {
-                    indexIntoBoundaries++;
-                    LOG5("Starting new slice list (encountered a no-pack slice due to "
-                         "pa_container_size):");
-                    StartNewSliceList();
-                }
-                LOG5("    ...adding " << slice);
-                accumulator->push_back(slice);
-                self.slices_used_in_slice_lists_i.insert(slice);
-                field_slice_list_size += slice.size();
-                lastNoPack = true;
-            }
-            BUG_CHECK(field_slice_list_size == field->size,
-                    "Fine grained slicing of field %1% (size %2%) produced slices adding up to "
-                    "%3%b", cstring::to_cstring(field), field->size, field_slice_list_size);
-            continue;
-        }
-        accumulator_bits += field->size;
-        lastNoPack = field->is_solitary() || (lastNoPack && !self.uses_i.is_referenced(field)) ||
-            (lastNoPack && field->padding);
-        lastWideArith = field->used_in_wide_arith();
-        lastPadding = field->padding;
-        lastDeparserZero = field->is_deparser_zero_candidate();
-        lastUnreferenced = !self.uses_i.is_referenced(field);
-        lastDigest = (field->is_digest() || (lastDigest && !self.uses_i.is_referenced(field)) ||
-                (lastDigest && field->padding)) ? field : nullptr;
-
-        // We use AND because all slices in a slice list must be TPHV
-        // candidates for the slice list to be a TPHV candidate.  Note that a
-        // mix of PHV/TPHV candidates may be in the same slice list if the
-        // boundary is not byte-aligned.
-        prev_is_tphv = prev_is_tphv.get_value_or(true) && is_tphv;
-
-        BUG_CHECK(field_slice_list_size == field->size,
-                  "Fine grained slicing of field %1% (size %2%) produced slices adding up to %3%b",
-                  cstring::to_cstring(field), field->size, field_slice_list_size);
-
-        // Break off the slice list holding this field if it has a solitary
-        // constraint.
-        if (accumulator_bits % int(PHV::Size::b8) == 0 && !self.uses_i.is_referenced(field)) {
-            StartNewSliceList();
-            LOG5("Starting new slice list:");
-        }
-    }
-
-    if (accumulator->size())
-        slice_lists_i.insert(accumulator);
-}
-
-// Preorder on egress parser states and pack adjacent fields together if they
-// are are_bridged_extracted_together.
-// The reason we do this is:
-// 1. phv.are_bridged_extracted_together() allows two fields to be packed into
-//    one container, even if they are extracted.
-// 2. however, are_bridged_extracted_together does not take the relative position
-//    of two fields into account. So a field may be allocated to the wrong bits
-//    that makes parser extraction impossible.
-// So we pack them into a slice list to force this constraint.
-// See P4C-2754 for more details.
-bool Clustering::MakeSuperClusters::preorder(const IR::BFN::ParserState* state) {
-    if (state->gress == INGRESS) {
-        return false;
-    }
-
-    // sort fields by extract source.
-    std::map<nw_bitrange, const PHV::Field*> sorted;
-    for (const auto* prim : state->statements) {
-        if (const auto* extract = prim->to<IR::BFN::Extract>()) {
-            auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
-            if (!bufferSource) continue;
-
-            auto lval = extract->dest->to<IR::BFN::FieldLVal>();
-            if (!lval) continue;
-
-            const auto* field = phv_i.field(lval->field);
-            if (!field) {
-                continue;
-            }
-            sorted.insert({bufferSource->range, field});
-        }
-    }
-
-    boost::optional<std::pair<nw_bitrange, const PHV::Field*>> last = boost::none;
-    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
-    auto start_new_slicelist = [&] () {
-        if (accumulator->size() > 1) {
-            const int sz = PHV::SuperCluster::slice_list_total_bits(*accumulator);
-            const bool has_ec = PHV::SuperCluster::slice_list_has_exact_containers(*accumulator);
-            if (sz % 8 != 0 && has_ec) {
-                // XXX(yumin): alternatively, we can add some dummy_padding fields.
-                // but conservatively, we do not do it here.
-                LOG3("CANNOT build bridged extracted together "
-                     "slice list because of exact container: " << *accumulator);
-            } else {
-                LOG1("Build bridged extracted together slice list: " << *accumulator);
-                for (const auto& fs : *accumulator) {
-                    self.slices_used_in_slice_lists_i.insert(fs);
-                }
-                bridged_extracted_together_i.insert(accumulator);
-            }
-        }
-        last = boost::none;
-        accumulator = new PHV::SuperCluster::SliceList();
-    };
-
-    for (const auto& kv : boost::adaptors::reverse(sorted)) {
-        const nw_bitrange range = kv.first;
-        const auto* field = kv.second;
-        if (last && phv_i.are_bridged_extracted_together((*last).second, field)
-                   && (*last).first.lo == range.hi + 1) {
-            LOG3("bridged extracted together: " << (*last).second << " , " << field);
-        } else {
-            start_new_slicelist();
-        }
-        BUG_CHECK(self.fields_to_slices_i.count(field),
-                  "Field not in fields_to_slices_i: %1%", cstring::to_cstring(field));
-        for (const auto& fs : self.fields_to_slices_i.at(field)) {
-            accumulator->push_back(fs);
-        }
-        last = std::make_pair(range, field);
-    }
-    return true;
-}
-
-bool Clustering::MakeSuperClusters::preorder(const IR::ConcreteHeaderRef* hr) {
-    visitHeaderRef(hr);
-    return false;
-}
-
-bool Clustering::MakeSuperClusters::preorder(const IR::HeaderStackItemRef* hr) {
-    visitHeaderRef(hr);
-    return false;
-}
-
-// Create slice list from digest field list, this will allow compiler inserted
-// padding field to be allocated to the same container as the field that is
-// being padded.
-void Clustering::MakeSuperClusters::visitDigestFieldList(
-        const IR::BFN::DigestFieldList *fl, int skip) {
-    PHV::SuperCluster::SliceList *accumulator = new PHV::SuperCluster::SliceList();
-    int accumulator_bits = 0;
-    bool lastSkipped = 0;
-
-    if (fl->sources.size() == 0)
-        return;
-    LOG5("  creating slice list from field list: " << fl);
-
-    auto StartNewSliceList = [&](void) {
-        accumulator_bits = 0;
-        accumulator = new PHV::SuperCluster::SliceList();
-        lastSkipped = false;
-    };
-
-    for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
-        const PHV::Field* field = phv_i.field((*f)->field);
-
-        if (lastSkipped && field->padding) {
-            LOG5("    ...skipping padding after duplicated field: " << field);
-            continue;
-        }
-        if (accumulator_bits % int(PHV::Size::b8) == 0) {
-            slice_lists_i.insert(accumulator);
-            StartNewSliceList();
-            LOG5("Starting new slice list (for digest)");
-        }
-        for (auto &slice : self.fields_to_slices_i.at(field)) {
-            if (!self.slices_used_in_slice_lists_i.count(slice)) {
-                LOG5("    ...adding " << slice);
-                self.slices_used_in_slice_lists_i.insert(slice);
-                accumulator->push_back(slice);
-                accumulator_bits += slice.size();
-            } else {
-                LOG5("    ...skipping duplicated field: " << field);
-                StartNewSliceList();
-                lastSkipped = true;
-            }
-        }
-    }
-
-    if (accumulator->size()) {
-        slice_lists_i.insert(accumulator);
+// add valid bridged_extracted_together_i field slices to a slice list.
+void Clustering::CollectPlaceTogetherConstraints::pack_bridged_extracted_together() {
+    for (auto* sl : bridged_extracted_together_i) {
+        LOG3("Adding a bridged extracted slice lists " << sl);
+        place_together_i[Reason::BridgedTogether].push_back(sl);
     }
 }
 
-bool Clustering::MakeSuperClusters::preorder(const IR::BFN::Digest* digest) {
-    if (digest->name != "learning" && digest->name != "mirror"
-            && digest->name != "resubmit" && digest->name != "pktgen")
-        return false;
+void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
+    // XXX(cole): This is a temporary hack to try to encourage slices of
+    // metadata fields with alignment constraints to be placed together.
+    for (auto& kv : self.fields_to_slices_i) {
+        if (!self.uses_i.is_referenced(kv.first)) continue;
+        bool is_metadata = kv.first->metadata || kv.first->pov;
+        int minByteSize = ROUNDUP(kv.first->size, 8);
+        bool is_exact_containers = kv.first->hasMaxContainerBytesConstraint() &&
+                                   (kv.first->getMaxContainerBytes() == minByteSize);
+        // The kv.second.size() comparison is added to avoid creating slice lists containing one
+        // slice.
+        bool has_constraints =
+            kv.first->alignment || (kv.first->no_split() && kv.second.size() > 1) ||
+            (kv.first->is_solitary() && kv.second.size() > 1) || kv.first->is_checksummed() ||
+            kv.first->is_marshaled()
+            // We must create slice lists for all metadata fields that are
+            // involved in wide arithmetic to ensure that the slices of those
+            // fields can bbe placed adjacently.
+            || kv.first->used_in_wide_arith() || is_exact_containers ||
+            kv.first->written_in_force_immediate_table() || actions_i.hasSpecialityReads(kv.first);
 
-    if (digest->name == "learning" || digest->name == "pktgen") {
-        for (auto fieldList : digest->fieldLists)
-            visitDigestFieldList(fieldList, 0);
-    }
-
-    if (digest->name == "resubmit") {
-        for (auto fieldList : digest->fieldLists) {
-            visitDigestFieldList(fieldList, 1);
+        // XXX(cole): Bridged metadata is treated as a header, except in the
+        // egress pipeline, where it's treated as metadata.  We need to take
+        // care here not to add those fields to slice lists here, because they
+        // will already have been added when traversing headers.
+        if (is_metadata && has_constraints && !kv.first->bridged) {
+            LOG5("Creating slice list for field " << kv.first);
+            auto* list = new std::list<PHV::FieldSlice>();
+            for (auto& slice : kv.second) list->push_back(slice);
+            place_together_i[Reason::ConstrainedMeta].push_back(list);
         }
     }
-
-    // skip the first element in digest sources which is the session id
-    if (digest->name == "mirror") {
-        for (auto fieldList : digest->fieldLists) {
-            visitDigestFieldList(fieldList, 1);
-        }
-    }
-
-    return false;
 }
 
-void Clustering::MakeSuperClusters::pack_pov_bits() {
+// add pov lists to slice_lists_i.
+void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
+    ordered_set<PHV::FieldSlice> used;
+    for (const auto& sl : slice_lists_i) {
+        for (const auto& fs : *sl) {
+            used.insert(fs);
+        }
+    }
     ordered_set<PHV::Field*> pov_bits;
-
     for (auto& f : phv_i) {
         // Don't bother adding unreferenced fields.
         if (!self.uses_i.is_referenced(&f)) continue;
@@ -869,6 +453,9 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
         // $stkvalid.
         if (f.size > 1) continue;
 
+        // pov bits may be packed already, e.g. if used in digest field list.
+        if (used.count(PHV::FieldSlice(&f))) continue;
+
         // Skip valid bits involved in complex instructions, because they have
         // complicated packing constraints.
         if (self.complex_validity_bits_i.contains(&f)) {
@@ -878,16 +465,6 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
 
         pov_bits.insert(&f);
     }
-
-    // XXX(Deep): Might need to reintroduce this later, if we need to pack POV bits better.
-    // pack_complex_pov_bits();
-
-    auto* ingress_list = new PHV::SuperCluster::SliceList();
-    auto* egress_list = new PHV::SuperCluster::SliceList();
-    int ingress_list_bits = 0;
-    int egress_list_bits = 0;
-
-    ordered_set<PHV::Field*> allocated_pov_bits;
 
     ordered_map<PHV::Field*, ordered_set<PHV::Field*>> extractedTogetherBits;
     const auto& unionFind = phv_i.getSameSetConstantExtraction();
@@ -907,12 +484,15 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
         for (auto kv : extractedTogetherBits) {
             LOG3("\t" << kv.first->name);
             std::stringstream ss;
-            for (auto* f : kv.second)
-                ss << f->name << " ";
+            for (auto* f : kv.second) ss << f->name << " ";
             LOG3("\t  " << ss.str());
         }
     }
 
+    auto* ingress_list = new PHV::SuperCluster::SliceList();
+    auto* egress_list = new PHV::SuperCluster::SliceList();
+    int ingress_list_bits = 0;
+    int egress_list_bits = 0;
     ordered_set<PHV::Field*> allocated_extracted_together_bits;
     for (auto* f : pov_bits) {
         if (allocated_extracted_together_bits.count(f)) continue;
@@ -944,10 +524,13 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
             for (auto& slice2 : toBeAddedFields) {
                 if (slice1 == slice2) continue;
                 if (conflicts_i.hasPackConflict(slice1.field(), slice2.field()))
-                    any_pack_conflicts = true; } }
+                    any_pack_conflicts = true;
+            }
+        }
         if (any_pack_conflicts) {
             LOG5("    Ignoring POV bit " << f->name << " because of a pack conflict");
-            continue; }
+            continue;
+        }
 
         for (auto& slice : toBeAddedFields) {
             current_list->push_back(slice);
@@ -955,104 +538,426 @@ void Clustering::MakeSuperClusters::pack_pov_bits() {
             if (current_list_bits >= 32) {
                 LOG5("Creating new POV slice list: " << current_list);
                 slice_lists_i.insert(current_list);
-                for (auto sl = current_list->begin(); sl != current_list->end(); sl++)
-                    allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
                 current_list = new PHV::SuperCluster::SliceList();
                 current_list_bits = 0;
             }
         }
     }
 
-    if (ingress_list->size() != 0) {
-        LOG4("Creating new POV slice list: " << ingress_list);
-        slice_lists_i.insert(ingress_list);
-        for (auto sl = ingress_list->begin(); sl != ingress_list->end(); sl++)
-            allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
-    }
-    if (egress_list->size() != 0) {
-        LOG4("Creating new POV slice list: " << egress_list);
-        slice_lists_i.insert(egress_list);
-        for (auto sl = egress_list->begin(); sl != egress_list->end(); sl++)
-            allocated_pov_bits.insert(phv_i.field((*sl).field()->id));
+    for (auto* sl : {ingress_list, egress_list}) {
+        if (sl->size() != 0) {
+            LOG4("Creating new POV slice list: " << sl);
+            slice_lists_i.insert(sl);
+        }
     }
 }
 
-void Clustering::MakeSuperClusters::end_apply() {
-    // XXX(cole): This is a temporary hack to try to encourage slices of
-    // metadata fields with alignment constraints to be placed together.
-    for (auto& kv : self.fields_to_slices_i) {
-        if (!self.uses_i.is_referenced(kv.first)) continue;
-        bool is_metadata = kv.first->metadata || kv.first->pov;
-        int minByteSize = ROUNDUP(kv.first->size, 8);
-        bool is_exact_containers = kv.first->hasMaxContainerBytesConstraint() &&
-            (kv.first->getMaxContainerBytes() == minByteSize);
-        // The kv.second.size() comparison is added to avoid creating slice lists containing one
-        // slice.
-        bool has_constraints = kv.first->alignment
-                               || (kv.first->no_split() && kv.second.size() > 1)
-                               || (kv.first->is_solitary() && kv.second.size() > 1)
-                               || kv.first->is_checksummed() || kv.first->is_marshaled()
-                               // We must create slice lists for all metadata fields that are
-                               // involved in wide arithmetic to ensure that the slices of those
-                               // fields can bbe placed adjacently.
-                               || kv.first->used_in_wide_arith() || is_exact_containers
-                               || kv.first->written_in_force_immediate_table()
-                               || actions_i.hasSpecialityReads(kv.first);
+// Preorder on egress parser states and pack adjacent fields together if they
+// are are_bridged_extracted_together.
+// The reason we do this is:
+// 1. phv.are_bridged_extracted_together() allows two fields to be packed into
+//    one container, even if they are extracted.
+// 2. however, are_bridged_extracted_together does not take the relative position
+//    of two fields into account. So a field may be allocated to the wrong bits
+//    that makes parser extraction impossible.
+// So we pack them into a slice list to force this constraint.
+// See P4C-2754 for more details.
+bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::ParserState* state) {
+    if (state->gress == INGRESS) {
+        return false;
+    }
 
-        // XXX(hanw): if any slice of a field is already assigned to a slice
-        // list, do not create additional slice list from the field.  This is
-        // to avoid creating separate slice list for padding and padded in
-        // digest field lists.
-        bool used = false;
-        for (auto& slice : kv.second) {
-            if (self.slices_used_in_slice_lists_i.count(slice)) {
-                used = true;
-                break; } }
-        if (used) {
-            LOG5("Skip creating slice list for field " << kv.first);
-            continue;
+    // sort fields by extract source.
+    std::map<nw_bitrange, const PHV::Field*> sorted;
+    for (const auto* prim : state->statements) {
+        if (const auto* extract = prim->to<IR::BFN::Extract>()) {
+            auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
+            if (!bufferSource) continue;
+
+            auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+            if (!lval) continue;
+
+            const auto* field = phv_i.field(lval->field);
+            if (!field) {
+                continue;
+            }
+            sorted.insert({bufferSource->range, field});
         }
+    }
 
-        // XXX(cole): Bridged metadata is treated as a header, except in the
-        // egress pipeline, where it's treated as metadata.  We need to take
-        // care here not to add those fields to slice lists here, because they
-        // will already have been added when traversing headers.
-
-        if (is_metadata && has_constraints && !kv.first->bridged) {
-            LOG5("Creating slice list for field " << kv.first);
-            auto* list = new PHV::SuperCluster::SliceList();
-            for (auto& slice : kv.second)
-                list->push_back(slice);
-            slice_lists_i.insert(list); } }
-
-    pack_pov_bits();
-
-    // add valid bridged_extracted_together_i to slice_lists_i
-    // must happen after all other slice list makings are done.
-    {
-        ordered_set<PHV::FieldSlice> showed;
-        for (const auto* sl : slice_lists_i) {
-            for (const auto& fs : *sl) {
-                showed.insert(fs);
+    boost::optional<std::pair<nw_bitrange, const PHV::Field*>> last = boost::none;
+    PHV::SuperCluster::SliceList* accumulator = new PHV::SuperCluster::SliceList();
+    auto start_new_slicelist = [&]() {
+        if (accumulator->size() > 1) {
+            const int sz = PHV::SuperCluster::slice_list_total_bits(*accumulator);
+            const bool has_ec = PHV::SuperCluster::slice_list_has_exact_containers(*accumulator);
+            if (sz % 8 != 0 && has_ec) {
+                // XXX(yumin): alternatively, we can add some dummy_padding fields.
+                // but conservatively, we do not do it here.
+                LOG3(
+                    "CANNOT build bridged extracted together "
+                    "slice list because of exact container: "
+                    << *accumulator);
+            } else {
+                bridged_extracted_together_i.insert(accumulator);
             }
         }
+        last = boost::none;
+        accumulator = new PHV::SuperCluster::SliceList();
+    };
 
-        for (auto* sl : bridged_extracted_together_i) {
-            bool ok = true;
-            for (const auto& fs : *sl) {
-                if (showed.count(fs)) {
-                    ok = false;
-                    break;
+    for (const auto& kv : boost::adaptors::reverse(sorted)) {
+        const nw_bitrange range = kv.first;
+        const auto* field = kv.second;
+        if (last && phv_i.are_bridged_extracted_together((*last).second, field) &&
+            (*last).first.lo == range.hi + 1) {
+            LOG3("bridged extracted together: " << (*last).second << " , " << field);
+        } else {
+            start_new_slicelist();
+        }
+        BUG_CHECK(self.fields_to_slices_i.count(field), "Field not in fields_to_slices_i: %1%",
+                  cstring::to_cstring(field));
+        for (const auto& fs : self.fields_to_slices_i.at(field)) {
+            accumulator->push_back(fs);
+        }
+        last = std::make_pair(range, field);
+    }
+    return true;
+}
+
+void Clustering::CollectPlaceTogetherConstraints::visit_header_ref(const IR::HeaderRef* hr) {
+    LOG5("Visiting HeaderRef " << hr);
+    const PhvInfo::StructInfo& struct_info = phv_i.struct_info(hr);
+
+    // Only analyze headers, not metadata structs.
+    if (struct_info.metadata || struct_info.size == 0) {
+        LOG5("Ignoring metadata or zero struct info: " << hr);
+        return;
+    }
+
+    if (headers_i.find(struct_info.first_field_id) != headers_i.end()) return;
+    headers_i.insert(struct_info.first_field_id);
+
+    auto* fields_in_header = new std::list<PHV::FieldSlice>();
+    for (int fid : boost::adaptors::reverse(struct_info.field_ids())) {
+        PHV::Field* field = phv_i.field(fid);
+        BUG_CHECK(field != nullptr, "No PHV info for field in header reference %1%",
+                  cstring::to_cstring(hr));
+        BUG_CHECK(self.fields_to_slices_i.find(field) != self.fields_to_slices_i.end(),
+                  "Found field in header but not PHV: %1%", cstring::to_cstring(field));
+        for (auto& slice : self.fields_to_slices_i.at(field)) {
+            fields_in_header->push_back(slice);
+        }
+    }
+    place_together_i[Reason::Header].push_back(fields_in_header);
+    return;
+}
+
+bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::ConcreteHeaderRef* hr) {
+    visit_header_ref(hr);
+    return false;
+}
+
+bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::HeaderStackItemRef* hr) {
+    visit_header_ref(hr);
+    return false;
+}
+
+// Create slice list from digest field list, this will allow compiler inserted
+// padding field to be allocated to the same container as the field that is
+// being padded.
+void Clustering::CollectPlaceTogetherConstraints::visit_digest_fieldlist(
+    const IR::BFN::DigestFieldList* fl, int skip, Reason reason) {
+    if (fl->sources.size() == 0) return;
+    LOG5("  creating slice list from field list: " << fl);
+
+    auto* fieldslice_list = new std::list<PHV::FieldSlice>();
+    for (auto f = fl->sources.rbegin(); f != fl->sources.rend() - skip; f++) {
+        const PHV::Field* field = phv_i.field((*f)->field);
+        for (const auto& slice : self.fields_to_slices_i.at(field)) {
+            fieldslice_list->push_back(slice);
+        }
+    }
+    place_together_i[reason].push_back(fieldslice_list);
+    return;
+}
+
+bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::Digest* digest) {
+    if (digest->name == "learning") {
+        for (auto fieldList : digest->fieldLists) {
+            visit_digest_fieldlist(fieldList, 0, Reason::Learning);
+        }
+    } else if (digest->name == "pktgen") {
+        for (auto fieldList : digest->fieldLists) {
+            visit_digest_fieldlist(fieldList, 0, Reason::Pktgen);
+        }
+    } else if (digest->name == "resubmit") {
+        for (auto fieldList : digest->fieldLists) {
+            visit_digest_fieldlist(fieldList, 1, Reason::Resubmit);
+        }
+    } else if (digest->name == "mirror") {
+        // skip the first element in digest sources which is the session id
+        for (auto fieldList : digest->fieldLists) {
+            visit_digest_fieldlist(fieldList, 1, Reason::Mirror);
+        }
+    }
+    return false;
+}
+
+// SliceListAccumulator is a helper cluster that manages the current
+// state of accumulated slice list.
+struct SliceListAccumulator {
+    std::set<PHV::FieldSlice>* slices_used;
+    PHV::SuperCluster::SliceList* accumulator = new PHV::SuperCluster::SliceList();
+    int accumulator_bits = 0;
+    cstring log_prefix;
+
+    explicit SliceListAccumulator(std::set<PHV::FieldSlice>* slices_used, cstring log_prefix)
+        : slices_used(slices_used), log_prefix(log_prefix) {}
+
+    // append a new fieldslice to the end.
+    void append(const PHV::FieldSlice& fs) {
+        accumulator_bits += fs.size();
+        accumulator->push_back(fs);
+    }
+
+    // start_new returns the accumulated slice list and start over a new one.
+    PHV::SuperCluster::SliceList* start_new() {
+        PHV::SuperCluster::SliceList* rst = nullptr;
+        if (accumulator->size() > 0) {
+            rst = accumulator;
+            LOG1("accumulator(" << log_prefix << ") make slicelist: " << accumulator);
+            if (slices_used != nullptr) {
+                for (const auto& fs : *accumulator) {
+                    slices_used->insert(fs);
                 }
-                showed.insert(fs);
             }
-            if (ok) {
-                LOG3("Adding a bridged extracted slice lists " << sl);
-                slice_lists_i.insert(sl);
+        }
+        accumulator_bits = 0;
+        accumulator = new PHV::SuperCluster::SliceList();
+        return rst;
+    }
+};
+
+// BreakSliceListCtx describes a context during list breaking.
+struct BreakSliceListCtx {
+    using Itr = PHV::SuperCluster::SliceList::const_iterator;
+    int offset;
+    Itr curr;
+    boost::optional<Itr> prev;
+    boost::optional<Itr> next;
+};
+
+// break_slicelist_by break slicelists by @p condition.
+std::vector<PHV::SuperCluster::SliceList*> break_slicelist_by(
+    const std::vector<PHV::SuperCluster::SliceList*>& candidates, cstring log_prefix,
+    std::function<bool(const BreakSliceListCtx& ctx)> cond) {
+    std::vector<PHV::SuperCluster::SliceList*> rst;
+    for (const auto* sl : candidates) {
+        SliceListAccumulator accumulator(nullptr, log_prefix);
+        int offset = sl->begin()->field()->exact_containers()
+                         ? 0
+                         : (sl->begin()->alignment() ? (*sl->begin()->alignment()).align : 0);
+        for (auto itr = sl->begin(); itr != sl->end(); itr++) {
+            accumulator.append(*itr);
+            offset += itr->size();
+            auto ctx = BreakSliceListCtx();
+            ctx.offset = offset;
+            ctx.curr = itr;
+            ctx.prev = (itr == sl->begin() ? boost::none : boost::make_optional(std::prev(itr)));
+            ctx.next =
+                (std::next(itr) == sl->end() ? boost::none : boost::make_optional(std::next(itr)));
+            if (cond(ctx)) {
+                auto* last = accumulator.start_new();
+                if (last != nullptr) {
+                    rst.push_back(last);
+                }
+            }
+        }
+        auto* last = accumulator.start_new();
+        if (last != nullptr) {
+            rst.push_back(last);
+        }
+    }
+    return rst;
+}
+
+// pre-break: [][solitary]
+// post-break: [solitary][padding*][other]
+bool break_cond_solitary(const BreakSliceListCtx& ctx) {
+    if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
+        auto next = ctx.next.get();
+        if (next->field()->is_solitary()) {
+            return true;
+        }
+        // post-break without padding
+        if (ctx.curr->field()->is_solitary() && !next->field()->padding) {
+            return true;
+        }
+    }
+    // post-break with padding
+    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
+        // if current field is the padding of the prev solitary field, break.
+        if (ctx.prev.get()->field()->is_solitary() && ctx.curr->size() % 8 != 0 &&
+            ctx.offset % 8 == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// break [fs1<3>^0][fs2<2>^0][fs3<1>^0] into 3 different slices because their
+// aligment constraints are conflicting.
+bool break_cond_alignment_conflict(const BreakSliceListCtx& ctx) {
+    if (ctx.next) {
+        auto next = ctx.next.get();
+        const auto& next_alignment = next->alignment();
+        if (next_alignment && int((*next_alignment).align) != ctx.offset % 8) {
+            LOG5("break between " << *ctx.curr << " and " << *next << "because aligment "
+                                  << ctx.offset % 8 << "!=" << int((*next_alignment).align));
+            return true;
+        }
+    }
+    return false;
+}
+
+// break if there current field and the next field have different
+// deparsed_zero constraints.
+bool break_cond_deparsed_zero(const BreakSliceListCtx& ctx) {
+    if (ctx.next) {
+        auto curr = ctx.curr;
+        auto next = *ctx.next;
+        return curr->field()->is_deparser_zero_candidate() !=
+               next->field()->is_deparser_zero_candidate();
+    }
+    return false;
+}
+
+// break [digest][padding*][normal][digest][padding*] into
+// [digest][padding*], [normal], [digest][padding*].
+// digest fields are special, they should be split out from the original slice list,
+// along with the padding fields after them.
+bool break_cond_digest_field(const BreakSliceListCtx& ctx,
+                             const ordered_set<PHV::FieldSlice> digest_fields) {
+    // if next or current field is digest field and it's byte-aligned, break.
+    if (ctx.next && ctx.next.get()->field() != ctx.curr->field()) {
+        auto next = ctx.next.get();
+        if (ctx.offset % 8 == 0) {
+            if (digest_fields.count(*next) || digest_fields.count(*ctx.curr)) {
+                LOG5("break at " << *ctx.curr << " because it byte boundary of a digest field");
+                return true;
             }
         }
     }
 
+    // if prev field is digest field, and curr is padding or
+    // the current field can be a padding to make the list byte-sized.
+    if (ctx.prev && ctx.prev.get()->field() != ctx.curr->field()) {
+        auto prev = ctx.prev.get();
+        if (digest_fields.count(*prev) && ctx.curr->size() % 8 != 0 && ctx.offset % 8 == 0) {
+            LOG5("break at " << *ctx.curr << " because reaches digest field padding end");
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constraints() {
+    LOG1("solve place-together constraints");
+    std::set<PHV::FieldSlice> slices_used;
+    SliceListAccumulator accumulator(&slices_used, "priority-solving");
+
+    /// all fields slices that has been assigned to a slice list.
+    std::vector<PHV::SuperCluster::SliceList*> candidates;
+    for (auto& kv : place_together_i) {
+        auto& reason = kv.first;
+        auto& slicelists = kv.second;
+        LOG3("building slice list, priority: " << int(reason));
+        for (auto* sl : slicelists) {
+            LOG3("solve place-together for " << int(reason) << ": " << sl);
+            // break list at duplicated fields.
+            auto itr = sl->begin();
+            while (itr != sl->end()) {
+                auto& slice = *itr;
+                if (slices_used.count(slice)) {
+                    auto last = accumulator.start_new();
+                    if (last != nullptr) candidates.push_back(last);
+                    auto next = std::next(itr);
+                    while (next != sl->end() && next->field()->padding) {
+                        next = std::next(next);
+                    }
+                    itr = next;  // itr stops at first non-padding slice.
+                } else {
+                    accumulator.append(slice);
+                    itr++;
+                }
+            }
+            auto last = accumulator.start_new();
+            if (last != nullptr) candidates.push_back(last);
+        }
+    }
+
+    // split by digest and non-digest field.
+    LOG1("break slice list of digest fields");
+    ordered_set<PHV::FieldSlice> digest_fields;
+    for (const auto& reason :
+         {Reason::Resubmit, Reason::Mirror, Reason::Learning, Reason::Pktgen}) {
+        if (!place_together_i.count(reason)) {
+            continue;
+        }
+        auto& lists = place_together_i.at(reason);
+        for (const auto& sl : lists) {
+            for (const auto& fs : *sl) {
+                digest_fields.insert(fs);
+            }
+        }
+    }
+    candidates = break_slicelist_by(candidates, "digest-fields",
+                                    [&digest_fields](const BreakSliceListCtx& ctx) -> bool {
+                                        return break_cond_digest_field(ctx, digest_fields);
+                                    });
+
+    /// break at constraints.
+    // split by deparsed zero.
+    LOG1("break slice list of different deparsed zero constraints");
+    candidates = break_slicelist_by(candidates, "deparsed-zero", break_cond_deparsed_zero);
+
+    // break at conflicting aligments.
+    LOG1("break slice list of conflicting aligments");
+    candidates = break_slicelist_by(candidates, "aligment", break_cond_alignment_conflict);
+
+    // break by solitary.
+    LOG1("break slice list of mixed solitary/non-solitary fields");
+    candidates = break_slicelist_by(candidates, "solitary", break_cond_solitary);
+
+    // save results.
+    for (const auto& sl : candidates) {
+        slice_lists_i.insert(sl);
+    }
+}
+
+void Clustering::CollectPlaceTogetherConstraints::end_apply() {
+    // constraint solving
+    pack_constrained_metadata();
+    pack_bridged_extracted_together();
+    solve_place_together_constraints();
+
+    // add some additional pack together constraint.
+    pack_pov_bits();
+}
+
+Visitor::profile_t Clustering::MakeSuperClusters::init_apply(const IR::Node* root) {
+    auto rv = Inspector::init_apply(root);
+    return rv;
+}
+
+void Clustering::MakeSuperClusters::end_apply() {
+    auto slice_lists = place_togethers_i.get_slice_lists();
+    LOG1("MakeSuperClusters slicelist input: ");
+    for (const auto* sl : slice_lists) {
+        LOG1(sl);
+    }
     UnionFind<const PHV::RotationalCluster*> cluster_union_find;
     ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
 
@@ -1061,16 +966,17 @@ void Clustering::MakeSuperClusters::end_apply() {
         cluster_union_find.insert(rotational_cluster);
 
         // Map fields to clusters for quick lookup later.
-        for (auto* aligned_cluster : rotational_cluster->clusters())
-            for (auto& slice : *aligned_cluster)
-                slices_to_clusters[slice] = rotational_cluster; }
+        for (auto* aligned_cluster : rotational_cluster->clusters()) {
+            for (auto& slice : *aligned_cluster) {
+                slices_to_clusters[slice] = rotational_cluster;
+            }
+        }
+    }
 
     // Find sets of rotational clusters that have fields that need to be placed in
     // the same container.
-    for (auto* slice_list : slice_lists_i) {
-        if (slice_list->size() <= 1)
-            continue;
-
+    for (auto* slice_list : slice_lists) {
+        if (slice_list->size() <= 1) continue;
         // Union the clusters of all fields in the list.  Because union is
         // reflexive and commutative, union all clusters with the first cluster.
         BUG_CHECK(slices_to_clusters.find(slice_list->front()) != slices_to_clusters.end(),
@@ -1081,7 +987,9 @@ void Clustering::MakeSuperClusters::end_apply() {
             BUG_CHECK(slices_to_clusters.find(slice) != slices_to_clusters.end(),
                       "Created slice list with field slice not in any cluster: %1%",
                       cstring::to_cstring(slice));
-            cluster_union_find.makeUnion(first_cluster, slices_to_clusters.at(slice)); } }
+            cluster_union_find.makeUnion(first_cluster, slices_to_clusters.at(slice));
+        }
+    }
 
     // Build SuperClusters.
     for (auto* cluster_set : cluster_union_find) {
@@ -1090,32 +998,31 @@ void Clustering::MakeSuperClusters::end_apply() {
         ordered_set<PHV::SuperCluster::SliceList*> these_lists;
         ordered_set<PHV::FieldSlice> slices_in_these_lists;
         for (auto* rotational_cluster : *cluster_set)
-            for (auto* aligned_cluster : rotational_cluster->clusters() )
+            for (auto* aligned_cluster : rotational_cluster->clusters())
                 for (const PHV::FieldSlice& slice : *aligned_cluster)
-                    for (auto* slist : slice_lists_i)
+                    for (auto* slist : slice_lists)
                         if (std::find(slist->begin(), slist->end(), slice) != slist->end())
                             these_lists.insert(slist);
 
         // Put each exact_containers slice in a rotational cluster but not in a
         // field list into a singelton field list.
         for (auto* slice_list : these_lists)
-            for (auto& slice_in_list : *slice_list)
-                slices_in_these_lists.insert(slice_in_list);
+            for (auto& slice_in_list : *slice_list) slices_in_these_lists.insert(slice_in_list);
         for (auto* rotational_cluster : *cluster_set)
             for (auto* aligned_cluster : rotational_cluster->clusters())
                 for (auto& slice : *aligned_cluster)
-                    if (slice.field()->exact_containers()
-                        && slices_in_these_lists.find(slice) == slices_in_these_lists.end()) {
+                    if (slice.field()->exact_containers() &&
+                        slices_in_these_lists.find(slice) == slices_in_these_lists.end()) {
                         auto* new_list = new PHV::SuperCluster::SliceList();
                         new_list->push_back(slice);
                         these_lists.insert(new_list);
-                        slices_in_these_lists.insert(slice); }
+                        slices_in_these_lists.insert(slice);
+                    }
 
         // side-effect: cluster_set and these_lists might changes.
         addPaddingForMarshaledFields(*cluster_set, these_lists);
         self.super_clusters_i.emplace_back(new PHV::SuperCluster(*cluster_set, these_lists));
     }
-
 
     if (LOGGING(1)) {
         LOG1("--- CLUSTERING RESULTS --------------------------------------------------------");
@@ -1126,18 +1033,17 @@ void Clustering::MakeSuperClusters::end_apply() {
         LOG1("PHV CANDIDATES:");
         LOG1("");
         for (auto& g : self.super_clusters_i)
-            if (!g->okIn(PHV::Kind::tagalong))
-                LOG1(g);
+            if (!g->okIn(PHV::Kind::tagalong)) LOG1(g);
 
         LOG1("TPHV CANDIDATES:");
         for (auto& g : self.super_clusters_i)
-            if (g->okIn(PHV::Kind::tagalong))
-                LOG1(g); }
+            if (g->okIn(PHV::Kind::tagalong)) LOG1(g);
+    }
 }
 
 void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
-        ordered_set<const PHV::RotationalCluster*>& cluster_set,
-        ordered_set<PHV::SuperCluster::SliceList*>& these_lists) {
+    ordered_set<const PHV::RotationalCluster*>& cluster_set,
+    ordered_set<PHV::SuperCluster::SliceList*>& these_lists) {
     // Add paddings for marshaled fields slice list, to the size of the largest
     // slice list, up to the largest container size.
     int max_slice_list_size = 8;
@@ -1150,64 +1056,144 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
 
     for (auto* slice_list : these_lists) {
         if (std::any_of(slice_list->begin(), slice_list->end(),
-                        [] (const PHV::FieldSlice& fs) {
-                            return fs.field()->is_marshaled(); })) {
+                        [](const PHV::FieldSlice& fs) { return fs.field()->is_marshaled(); })) {
             int sum_bits = 0;
             for (const auto& fs : *slice_list) {
-                sum_bits += fs.size(); }
+                sum_bits += fs.size();
+            }
             BUG_CHECK(max_slice_list_size >= sum_bits, "wrong max slice list size.");
 
-            bool has_bridged = std::any_of(slice_list->begin(), slice_list->end(),
-                                           [] (const PHV::FieldSlice& fs) {
-                                               return fs.field()->bridged; });
+            bool has_bridged =
+                std::any_of(slice_list->begin(), slice_list->end(),
+                            [](const PHV::FieldSlice& fs) { return fs.field()->bridged; });
             // If a slice has bridged field, then it's padding is handled by bridged metadata
             // packing now. Adding extract padding here will make parse_bridged state wrong
             // because we do not adjust bridged metadata state.
             // TODO(yumin): in a long term, we need a way to deal with those marshaled fields,
             // bridged/mirrored/resubmited uniformly.
             if (has_bridged) {
-                continue; }
+                continue;
+            }
             // If this field does not need padding, skip it.
             if (max_slice_list_size == sum_bits) {
-                continue; }
+                continue;
+            }
 
             auto padding_size = ROUNDUP(sum_bits, 8) * 8 - sum_bits;
-            if (padding_size == 0)
-                continue;
-            auto* padding = phv_i.create_dummy_padding(padding_size,
-                                                       slice_list->front().gress());
+            if (padding_size == 0) continue;
+            auto* padding = phv_i.create_dummy_padding(padding_size, slice_list->front().gress());
             padding->set_exact_containers(true);
             auto padding_fs = PHV::FieldSlice(padding);
             slice_list->push_back(padding_fs);
-            auto* aligned_cluster_padding =
-                new PHV::AlignedCluster(PHV::Kind::normal,
-                                        std::vector<PHV::FieldSlice>{padding_fs});
+            auto* aligned_cluster_padding = new PHV::AlignedCluster(
+                PHV::Kind::normal, std::vector<PHV::FieldSlice>{padding_fs});
             auto* rot_cluster_padding = new PHV::RotationalCluster({aligned_cluster_padding});
             self.aligned_clusters_i.push_back(aligned_cluster_padding);
             self.rotational_clusters_i.push_back(rot_cluster_padding);
             cluster_set.insert(rot_cluster_padding);
-            LOG4("Added " << padding_fs << " for " <<  slice_list);
+            LOG4("Added " << padding_fs << " for " << slice_list);
         }
     }
 }
 
-Visitor::profile_t Clustering::ValidateDeparserZeroClusters::init_apply(const IR::Node* root) {
+void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
+    const std::list<PHV::SuperCluster*> clusters) {
     // Flag an error if the supercluster has a mix of deparsed zero fields and non deparsed zero
     // fields.
-    for (auto* sc : self.cluster_groups()) {
+    for (auto* sc : clusters) {
         bool has_deparser_zero_fields = sc->any_of_fieldslices(
-                [&] (const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate();
-                });
+            [&](const PHV::FieldSlice& fs) { return fs.field()->is_deparser_zero_candidate(); });
         bool has_non_deparser_zero_fields = sc->any_of_fieldslices(
-                [&] (const PHV::FieldSlice& fs) { return !fs.field()->is_deparser_zero_candidate();
-                });
+            [&](const PHV::FieldSlice& fs) { return !fs.field()->is_deparser_zero_candidate(); });
         if (has_deparser_zero_fields == has_non_deparser_zero_fields) {
             LOG1(sc);
-            ::error("contains a mixture of deparser zero and non deparser zero fields");
+            BUG("contains a mixture of deparser zero and non deparser zero fields");
         }
     }
+}
+
+void Clustering::ValidateClusters::validate_exact_container_lists(
+        const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
+    for (auto* sc : clusters) {
+        for (const auto* sl : sc->slice_lists()) {
+            bool has_padding = false;
+            // bool is_singleton = sl->size() == 1;
+            bool is_used = false;
+            bool has_exact_containers = false;
+            bool has_non_exact_containers = false;
+            for (const auto& fs : *sl) {
+                if (uses.is_referenced(fs.field())) {
+                    is_used = true;
+                }
+                has_padding |= fs.field()->is_padding();
+                has_exact_containers |= fs.field()->exact_containers();
+                has_non_exact_containers |= !fs.field()->exact_containers();
+            }
+            // XXX(yumin): it may be fine to mix exact or non_exact containers fields,
+            // e.g. checksum destination on egress can be an example of this.
+            // However, We need to investigate further on how it will impact phv allocation.
+            if (has_non_exact_containers && has_exact_containers) {
+                LOG1("mixed with exact_containers and non_exact_containers slices: " << sl);
+            }
+            // XXX(yumin): it's okay for padding fields to be not byte-sized.
+            if (has_exact_containers && is_used && !has_padding) {
+                int sz = PHV::SuperCluster::slice_list_total_bits(*sl);
+                if (sz % 8 != 0) {
+                    std::stringstream ss;
+                    ss << "invalid SuperCluster was formed: " << sc;
+                    ss << "because this slice list is not byte-sized: " << sl << " has " << sz
+                       << " bits.\n";
+                    ss << "This is either a compiler internal bug or you can introduce padding "
+                          "fields around them by @padding or @flexible";
+                    fatal_error("%1%", ss.str());
+                }
+            }
+        }
+    }
+}
+
+void Clustering::ValidateClusters::validate_alignments(
+    const std::list<PHV::SuperCluster*> clusters, const PhvUse& uses) {
+    for (auto* sc : clusters) {
+        for (const auto* sl : sc->slice_lists()) {
+            if (sl->size() == 0) {
+                continue;
+            }
+            bool is_used = false;
+            int offset = sl->begin()->field()->exact_containers()
+                             ? 0
+                             : (sl->begin()->alignment() ? (*sl->begin()->alignment()).align : 0);
+            for (const auto& fs : *sl) {
+                if (uses.is_referenced(fs.field())) {
+                    is_used = true;
+                }
+                const auto& alignment = fs.alignment();
+                if (is_used && alignment && int((*alignment).align) != offset % 8) {
+                    std::stringstream ss;
+                    ss << "invalid SuperCluster was formed: " << sc;
+                    ss << "because there are invalid alignment constraints in " << sl << "\n";
+                    ss << fs << " must be allocated to " << int((*alignment).align)
+                       << "-th bit in a byte";
+                    ss << ", but the slicelist requires it to start at " << offset % 8
+                       << "-th bit in a byte";
+                    ss << "This is either a compiler internal bug or you can introduce padding "
+                          "fields around them by @padding or @flexible";
+                    fatal_error("%1%", ss.str());
+                }
+                offset += fs.size();
+            }
+        }
+    }
+}
+
+Visitor::profile_t Clustering::ValidateClusters::init_apply(const IR::Node* root) {
+    validate_deparsed_zero_clusters(self.cluster_groups());
+    validate_exact_container_lists(self.cluster_groups(), self.uses_i);
+    validate_alignments(self.cluster_groups(), self.uses_i);
     return Inspector::init_apply(root);
 }
+
+//////////////////////////////////////////////////////////
 
 //***********************************************************************************
 //

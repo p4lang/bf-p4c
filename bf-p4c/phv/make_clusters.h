@@ -59,9 +59,6 @@ class Clustering : public PassManager {
     /// Maps fields to their slices.  Slice lists are ordered from LSB to MSB.
     ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>> fields_to_slices_i;
 
-    /// all fields slices that has been assigned to a slice list.
-    std::set<PHV::FieldSlice> slices_used_in_slice_lists_i;
-
     /// Collects validity bits involved in complex instructions, i.e.
     /// instructions that do anything other than assign a constant to the
     /// validity bit. Fields that are involved in the same assignment statement
@@ -217,57 +214,123 @@ class Clustering : public PassManager {
         : self(self), phv_i(self.phv_i) { }
     };
 
-    class MakeSuperClusters : public Inspector {
+    /// CollectPlaceTogetherConstraints
+    /// Place Together constraint is expressed as SliceList in backend.
+    /// There are multiple sources of this constraint, Headers, Digest Field Lists.
+    /// This pass collect all of them and produce a set of SliceLists that
+    /// each fieldslice resides in only one of the list.
+    class CollectPlaceTogetherConstraints : public Inspector {
         Clustering& self;
         PhvInfo& phv_i;
         const PackConflicts& conflicts_i;
-        const PragmaContainerSize& pa_sizes_i;
         const ActionPhvConstraints& actions_i;
 
-        /// Track headers already visited, by tracking the IDs of the first
-        /// fields.
-        ordered_set<int> headers_i;
+        // Reason of why fieldslices must be placed together.
+        // NOTE: the lower the number, the higher the priority(more constraints).
+        // This priority is used by the solver algorithm.
+        enum class Reason : int {
+            Header          = 1,  // parsed + deparsed
+            Resubmit        = 2,  // 8-bytes limit + deparsed
+            Mirror          = 3,  // deparsed
+            Learning        = 4,  // no_pack in same byte, handled in phv_fields: aligment = 0
+            Pktgen          = 5,  // unknown
+            BridgedTogether = 6,  // egress metadata that are bridged together
+            ConstrainedMeta = 7,  // metadata with constraints like solitary needs to in a list.
+        };
+
+        /// lists that must be placed together, may contains duplicated fieldslices.
+        /// The solver algorithm will read from this variable as input.
+        std::map<Reason, std::vector<PHV::SuperCluster::SliceList*>> place_together_i;
 
         /// Collection of slice lists, each of which contains slices that must
         /// be placed, in order, in the same container.
         ordered_set<PHV::SuperCluster::SliceList*> slice_lists_i;
 
+        /// Track headers already visited, by tracking the IDs of the first
+        /// fields.
+        ordered_set<int> headers_i;
+
         /// Collection of candidate slice lists that introduced by bridged_extracted_together_i.
         /// They will be added to slice_lists_i is there is no conflict.
         ordered_set<PHV::SuperCluster::SliceList*> bridged_extracted_together_i;
 
-        /// Helper function for visiting HeaderRefs.
-        void visitHeaderRef(const IR::HeaderRef* hr);
+        /// clear above states
+        Visitor::profile_t init_apply(const IR::Node * root) override {
+            auto rv = Inspector::init_apply(root);
+            place_together_i.clear();
+            slice_lists_i.clear();
+            headers_i.clear();
+            bridged_extracted_together_i.clear();
+            return rv;
+        };
 
-        /// Helper function for visiting DigestFieldLists.
-        void visitDigestFieldList(const IR::BFN::DigestFieldList* fl, int skip);
-
-        /// Clear state to enable backtracking
-        Visitor::profile_t init_apply(const IR::Node *) override;
-
-        /// Create lists of slices that need to be allocated in the same container.
-        bool preorder(const IR::ConcreteHeaderRef*) override;
-
-        /// Create lists of slices that need to be allocated in the same container.
-        bool preorder(const IR::HeaderStackItemRef*) override;
-
-        /// Create lists of slices that need to be allocated in the same container.
-        bool preorder(const IR::BFN::Digest*) override;
-
-        /// Create lists of slices that need to be allocated in the same container,
-        /// because adjacent fields are egress bridged extracted together.
-        bool preorder(const IR::BFN::ParserState* state) override;
-
-        /// Create cluster groups by taking the union of clusters of slices
-        /// that appear in the same list.
+        /// compute slice_list_i result.
         void end_apply() override;
+
+        /// generate slicelists into slice_lists_i from place_together_constraints.
+        /// Problem to solve:
+        ///   Fields can be used in header, digest list, or others, bridge_pack guarantees
+        ///   that there exists a set of slicelists, that each fieldlist showed up only
+        ///   once in a slicelist, and all alignment constraints are sat.
+        /// The algorithm is simple, it creates slice list by following the priority
+        /// of the reason, and skips duplicated fieldslices (i.e. slices that are already
+        /// a slice list). For example, being header is the most prioritized reason,
+        /// because those fields are parsed and deparsed. See comments of Reason for more.
+        void solve_place_together_constraints();
+
+        /// pack metadata fieldslices with constraints together.
+        /// e.g.
+        /// It will pack f1<12>[0:4] solitary, f1<12>[5:11] solitary into
+        /// [f1<12>[0:4] solitary, f1<12>[5:11] solitary].
+        void pack_constrained_metadata();
+
+        /// add valid bridged_extracted_together_i to slice_lists_i
+        /// must happen after all other slice list makings are done.
+        void pack_bridged_extracted_together();
 
         /// Pack pov bits into slice lists.
         void pack_pov_bits();
 
-        /// Pack complex pov bits.
-        /// XXX(Deep): Add this back in, if needed. No need for this right now.
-        /// void pack_complex_pov_bits();
+        /// Helper function for visiting HeaderRefs, write place_together.
+        void visit_header_ref(const IR::HeaderRef* hr);
+
+        /// Helper function for visiting DigestFieldLists, write place_together.
+        void visit_digest_fieldlist(const IR::BFN::DigestFieldList* fl, int skip, Reason reason);
+
+        /// call visitHeaderRef
+        bool preorder(const IR::ConcreteHeaderRef*) override;
+
+        /// call visitHeaderRef
+        bool preorder(const IR::HeaderStackItemRef*) override;
+
+        /// call visitDigestFieldList
+        bool preorder(const IR::BFN::Digest*) override;
+
+        /// collect fields adjacent fields are egress bridged extracted together
+        /// and save them in bridged_extracted_together_i.
+        bool preorder(const IR::BFN::ParserState* state) override;
+
+     public:
+        explicit CollectPlaceTogetherConstraints(Clustering& self,
+                                                 const ActionPhvConstraints& actions)
+            : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), actions_i(actions) {}
+
+        ordered_set<PHV::SuperCluster::SliceList*> get_slice_lists() const {
+            return slice_lists_i;
+        }
+    };
+
+    class MakeSuperClusters : public Inspector {
+        Clustering& self;
+        PhvInfo& phv_i;
+        const CollectPlaceTogetherConstraints& place_togethers_i;
+
+        /// Clear state to enable backtracking
+        Visitor::profile_t init_apply(const IR::Node *) override;
+
+        /// Create cluster groups by taking the union of clusters of slices
+        /// that appear in the same list.
+        void end_apply() override;
 
         /// Add padding into slice list for fields that will be marshaled, because they
         /// have exact_container requirement but might be non-byte-aligned.
@@ -280,39 +343,48 @@ class Clustering : public PassManager {
      public:
         explicit MakeSuperClusters(
                 Clustering &self,
-                const PragmaContainerSize& pa,
-                const ActionPhvConstraints& a)
-        : self(self), phv_i(self.phv_i), conflicts_i(self.conflicts_i), pa_sizes_i(pa),
-          actions_i(a) { }
+                const CollectPlaceTogetherConstraints& place_togethers)
+            : self(self), phv_i(self.phv_i), place_togethers_i(place_togethers) { }
     };
 
-    /** For the deparser zero optimization, we need to make sure that every deparser zero
-      * optimizable field is never in a supercluster that also contains non deparser zero fields.
-      * This class performs that validation after superclusters are generated.
-      */
-    class ValidateDeparserZeroClusters : public Inspector {
+    class ValidateClusters : public Inspector {
      private:
         Clustering& self;
 
         profile_t init_apply(const IR::Node* root) override;
 
+        /** For the deparser zero optimization, we need to make sure that every deparser zero
+         * optimizable field is never in a supercluster that also contains non deparser zero fields.
+         * This class performs that validation after superclusters are generated.
+         */
+        static void validate_deparsed_zero_clusters(const std::list<PHV::SuperCluster*> clusters);
+
+        // size % 8 = 0 if exact_containers
+        static void validate_exact_container_lists(const std::list<PHV::SuperCluster*> clusters,
+                                                   const PhvUse& uses);
+
+        // alignments of fieldslices in list must be all sat.
+        static void validate_alignments(const std::list<PHV::SuperCluster*> clusters,
+                                        const PhvUse& uses);
+
      public:
-        explicit ValidateDeparserZeroClusters(Clustering& c) : self(c) { }
+        explicit ValidateClusters(Clustering& c) : self(c) { }
     };
 
  public:
-    Clustering(PhvInfo &p, PhvUse &u, const PackConflicts& c, const PragmaContainerSize& pa,
-            const ActionPhvConstraints& a)
+    Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa,
+               const ActionPhvConstraints& a)
         : phv_i(p), uses_i(u), conflicts_i(c), pragma_i(pa), slice_i(*this, pa) {
+        auto* place_togethers = new CollectPlaceTogetherConstraints(*this, a);
         addPasses({
-            new ClearClusteringStructs(*this),          // clears pre-existing maps
-            new FindComplexValidityBits(*this),         // populates complex_validity_bits_i
+            new ClearClusteringStructs(*this),   // clears pre-existing maps
+            new FindComplexValidityBits(*this),  // populates complex_validity_bits_i
             &slice_i,
-            new MakeAlignedClusters(*this),             // populates aligned_clusters_i
-            new MakeRotationalClusters(*this),          // populates rotational_clusters_i
-            new MakeSuperClusters(*this, pa, a),        // populates super_clusters_i
-            new ValidateDeparserZeroClusters(*this)     // validate clustering is correct for
-                                                        // deparser zero optimization
+            new MakeAlignedClusters(*this),     // populates aligned_clusters_i
+            new MakeRotationalClusters(*this),  // populates rotational_clusters_i
+            place_togethers,
+            new MakeSuperClusters(*this, *place_togethers),     // populates super_clusters_i
+            new ValidateClusters(*this)  // validate clustering is correct.
         });
     }
 

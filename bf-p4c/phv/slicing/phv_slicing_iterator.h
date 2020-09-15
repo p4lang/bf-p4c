@@ -20,7 +20,8 @@ class ItrContext {
 
  public:
     ItrContext(const SuperCluster* sc, const PHVContainerSizeLayout& pa,
-               const PackConflictChecker& pack_conflict);
+               const PackConflictChecker pack_conflict,
+               const IsReferencedChecker is_referenced);
 
     // iterate will pass valid slicing results to cb. Stop when cb returns false.
     void iterate(const IterateCb& cb) { pImpl->iterate(cb); }

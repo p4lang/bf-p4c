@@ -6,8 +6,9 @@ namespace PHV {
 namespace Slicing {
 
 ItrContext::ItrContext(const SuperCluster* sc, const PHVContainerSizeLayout& pa,
-                       const PackConflictChecker& pack_conflict)
-    : pImpl(new DfsItrContext(sc, pa, pack_conflict)) {}
+                       const PackConflictChecker pack_conflict,
+                       const IsReferencedChecker is_referenced)
+    : pImpl(new DfsItrContext(sc, pa, pack_conflict, is_referenced)) {}
 
 }  // namespace Slicing
 }  // namespace PHV

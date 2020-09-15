@@ -740,19 +740,27 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     });
     for (auto fieldList : digest->fieldLists) {
         size_t digestSizeInBits = selectorSize;
+        std::stringstream ss;
         for (auto flval : fieldList->sources) {
             const PHV::Field* f = phv.field(flval->field);
             BUG_CHECK(f, "Digest field not present in PhvInfo");
-            f->foreach_alloc(PHV::AllocContext::DEPARSER, nullptr,
-                    [&](const PHV::AllocSlice& alloc) {
-                digestSizeInBits += alloc.container().size();
-            });
+            f->foreach_alloc(
+                PHV::AllocContext::DEPARSER, nullptr, [&](const PHV::AllocSlice& alloc) {
+                    ss << "learning field " << alloc.field() << " to " << alloc.container() << "\n";
+                    LOG5("learning field " << alloc.field() << " to " << alloc.container());
+                    digestSizeInBits += alloc.container().size();
+                });
         }
         BUG_CHECK(digestSizeInBits % 8 == 0, "Digest size in bits cannot be non byte aligned.");
         size_t digestSizeInBytes = digestSizeInBits / 8;
-        if (digestSizeInBytes > Device::maxDigestSizeInBytes())
-            ::error("Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
-                    "bytes.", digestSizeInBytes, Device::maxDigestSizeInBytes());
+        if (digestSizeInBytes > Device::maxDigestSizeInBytes()) {
+            ::error(
+                "Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
+                "bytes.\nCompiler will improve allocation of learning fields in future releases.\n"
+                "Temporary fix: try to apply @pa_container_size pragma to small fields allocated "
+                "to large container in: %3%",
+                digestSizeInBytes, Device::maxDigestSizeInBytes(), ss.str());
+        }
     }
     return true;
 }

@@ -81,11 +81,6 @@ p4c_add_xfail_reason("tofino3"
 )
 
 p4c_add_xfail_reason("tofino3"
-  "PHV allocation was not successful"
-  extensions/p4_tests/p4_16/compile_only/lrn1.p4
-)
-
-p4c_add_xfail_reason("tofino3"
   "error: Assignment source cannot be evaluated in the parser"
   testdata/p4_14_samples/axon.p4
 )
@@ -310,7 +305,7 @@ p4c_add_xfail_reason("tofino3"
 
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino3"
-  "you must introduce padding fields around the above slice"
+  "you can introduce padding fields"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 

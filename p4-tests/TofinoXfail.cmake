@@ -473,10 +473,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices.p4
 
-  # broke by flexible packing PR
-  extensions/p4_tests/p4_16/compile_only/lrn1.p4
-
-
   # P4C-1778
   # fit if
   ../glass/testsuite/p4_tests/arista/COMPILER-1168/comp_1168.p4
@@ -758,11 +754,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Direct Extern .* of type .* is used in action .*"
   testdata/p4_16_samples/psa-meter6.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
-  testdata/p4_16_samples/psa-example-digest-bmv2.p4
 )
 
 # This test attempts to match on a field of `error` type.
@@ -1636,7 +1627,7 @@ p4c_add_xfail_reason("tofino"
 
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino"
-  "you must introduce padding fields around the above slice"
+  "you can introduce padding fields"
   extensions/p4_tests/p4_16/compile_only/p4c-2025.p4
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
@@ -1803,12 +1794,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-qinq.p4
 )
 
-# P4C-2818
-p4c_add_xfail_reason("tofino"
-  "The compiler failed in slicing the following group of fields related by parser alignment and MAU constraints"
-  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-firewall.p4
-)
-
 # P4C-2614
 p4c_add_xfail_reason("tofino"
   "error: syntax error, unexpected '.'"
@@ -1868,7 +1853,6 @@ p4c_add_xfail_reason("tofino"
   "invalid SuperCluster was formed"
   # digest fields related failures.
   testdata/p4_14_samples/source_routing.p4
-  ba101_20-simple_l2
 
   # Expected to fail, which means that constraint conflicts are being correctly detected.
   extensions/p4_tests/p4_14/compile_only/01-FlexCounter.p4
@@ -1893,9 +1877,4 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Entry not found in table:pipe.ParserI.vs Object not found"
   p4_16_programs_tna_pvs
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: Power worst case estimated budget exceeded"
-  ../glass/testsuite/p4_tests/phv/COMPILER-908/compiler-908.p4
 )
