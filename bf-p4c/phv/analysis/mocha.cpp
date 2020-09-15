@@ -23,6 +23,8 @@ void CollectMochaCandidates::populateMembers(
         const IR::MAU::Action* act,
         const ActionAnalysis::FieldActionsMap& fieldActionsMap) {
     const IR::MAU::Table* tbl = findContext<IR::MAU::Table>();
+    BUG_CHECK(tbl != nullptr,
+        "No associated table found for collecting mocha candidates - %1%", act->name);
     LOG5("\tAnalyzing action " << act->name << " in table " << tbl->name);
     for (auto& fieldAction : Values(fieldActionsMap)) {
         const PHV::Field* write = phv.field(fieldAction.write.expr);

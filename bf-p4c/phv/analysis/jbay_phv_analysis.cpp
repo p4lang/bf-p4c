@@ -55,6 +55,7 @@ bool JbayPhvAnalysis::preorder(const IR::MAU::Table* tbl) {
 bool JbayPhvAnalysis::preorder(const IR::MAU::TableKey* read) {
     auto tbl = findContext<IR::MAU::Table>();
     const PHV::Field* f = phv.field(read->expr);
+    BUG_CHECK(tbl != nullptr, "No associated table found for PHV analysis - %1%", read->expr);
     if (!f)
         ::warning("\t\tField read not found: %1% in table: %2%", read->expr, tbl->name);
     fieldUsesMap[f] |= IPXBAR;

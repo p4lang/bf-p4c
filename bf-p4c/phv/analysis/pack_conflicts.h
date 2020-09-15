@@ -23,7 +23,7 @@ class PackConflicts : public PassManager {
     const ActionMutuallyExclusive   &amutex;
 
     /// Count for total number of no pack constraints induced by table placement
-    size_t                  totalNumSet;
+    size_t                  totalNumSet = 0;
 
     /// Stores a set of all actions invoked from the key table
     ordered_map<const IR::MAU::Table*, ordered_set<const IR::MAU::Action*>> tableActions;

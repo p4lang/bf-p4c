@@ -37,6 +37,8 @@ bool DetermineCandidateHeaders::preorder(const IR::MAU::Instruction* inst) {
         uint64_t constVal = constant->asUint64();
         if (constVal == 0) return true;
     }
+    BUG_CHECK(action != nullptr,
+        "No associated action found for determining candidate header - %1%", inst->name);
     headersValidatedInMAU[destField->header()].insert(action);
     LOG3("\t  Header validated in action " << action->name << ": " << destField->header());
     return true;
@@ -115,6 +117,8 @@ bool DetermineCandidateFields::preorder(const IR::MAU::Instruction* inst) {
     }
     auto& validationActions = headers.getActionsForCandidateHeader(destField->header());
     LOG3("\t  Found " << validationActions.size() << " actions");
+    BUG_CHECK(action != nullptr,
+        "No associated action found for determining candidate fields - %1%", inst->name);
     if (!validationActions.count(action)) {
         dropFromCandidateSet(destField);
         LOG3("\tDrop " << destField->name << " because the header is not validated in action " <<

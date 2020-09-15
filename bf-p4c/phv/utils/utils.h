@@ -689,7 +689,7 @@ class AlignedCluster : public ClusterStats {
     /// The kind of PHV container representing the minimum requirements for all
     /// slices in this container.
     PHV::Kind kind_i;
-    gress_t gress_i;
+    gress_t gress_i = INGRESS;
 
     /// Field slices in this cluster.
     ordered_set<PHV::FieldSlice> slices_i;
@@ -845,8 +845,8 @@ class RotationalCluster : public ClusterStats {
     ordered_map<const PHV::FieldSlice, AlignedCluster*> slices_to_clusters_i;
 
     // Statstics gathered from clusters.
-    PHV::Kind kind_i;
-    gress_t gress_i;
+    PHV::Kind kind_i = PHV::Kind::tagalong;
+    gress_t gress_i = INGRESS;
     int exact_containers_i = 0;
     int max_width_i = 0;
     int num_constraints_i = 0;

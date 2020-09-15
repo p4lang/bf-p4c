@@ -32,7 +32,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bitvec      extracted_from_const_i[3];
 
     /// Used to associate $stkvalid and $valid fields for header stacks.
-    BFN::HeaderStackInfo* stacks;
+    BFN::HeaderStackInfo* stacks = nullptr;
 
     /// Handy enum for indexing use_i below.
     enum { PARDE = 0, MAU = 1 };
@@ -80,9 +80,9 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
 
  protected:
     const PhvInfo &phv;
-    gress_t       thread;
-    bool          in_mau;
-    bool          in_dep;
+    gress_t       thread = INGRESS;
+    bool          in_mau = false;
+    bool          in_dep = false;
 
  private:
     profile_t init_apply(const IR::Node *) override;

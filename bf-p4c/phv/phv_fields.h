@@ -147,10 +147,10 @@ class Field : public LiftLess<Field> {
     cstring         name;
 
     /// Unique field ID.
-    int             id;
+    int             id = 0;
 
     /// Whether the Field is ingress or egress.
-    gress_t         gress;
+    gress_t         gress = INGRESS;
 
     /// returns @true if the Field is a ghost field.
     /// XXX(Deep): Right now, ghost fields are marked as ingress fields, so we use string comparison
@@ -164,7 +164,7 @@ class Field : public LiftLess<Field> {
     }
 
     /// Total size of Field in bits.
-    int             size;
+    int             size = 0;
 
     /// The alignment requirement of this field. If boost::none, there is no
     /// particular alignment requirement.
@@ -174,10 +174,10 @@ class Field : public LiftLess<Field> {
     nw_bitrange validContainerRange_i = ZeroToMax();
 
     /// Offset of lsb from lsb (last) bit of containing header.
-    int             offset;
+    int             offset = 0;
 
     /// True if this Field is metadata.
-    bool            metadata;
+    bool            metadata = false;
 
     /// True if this Field is intrinsic.
     bool            intrinsic_i = false;
@@ -223,7 +223,7 @@ class Field : public LiftLess<Field> {
     } mirror_field_list = {nullptr, -1};
 
     /// True if this Field is a validity bit.
-    bool            pov;
+    bool            pov = false;
 
     /// If this field is an alias destination, then maintain a pointer to the
     /// alias source. Alias destinations are the canonical representation for
