@@ -148,6 +148,9 @@ class ConvertMethodCalls : public MauTransform {
             }
         } else if (auto ef = mi->to<P4::ExternFunction>()) {
             name = ef->method->name;
+        } else if (mi->is<P4::ApplyMethod>()) {
+            error(ErrorType::ERR_UNSUPPORTED, "%s in complex context not yet supported -- must "
+                  "be in an 'if' by itself, not combined with other operations with &&/||", mc);
         } else {
             BUG("method call %s not yet implemented", mc); }
         IR::MAU::TypedPrimitive *prim;
