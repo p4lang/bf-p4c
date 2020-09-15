@@ -426,7 +426,7 @@ class LearningTableEntry : DigestTableEntry {
 #emit
     /// The packing format for this type of learn quanta; this describes to the
     /// driver how the fields included in the learn quantum are laid out.
-    const DigestPacking* controlPlaneFormat;
+    const DigestPacking* controlPlaneFormat = nullptr;
 #end
 }
 
