@@ -58,6 +58,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# Add copyright headers to all BFN/Intel source files before building and
+# packaging, so that we can easily avoid touching files from P4.org.
+#
+# Do this by adding headers to everything except p4c/ and p4-tests/.
+"${topdir}/scripts/packaging/copyright-stamp" "${topdir}"
+
 $topdir/bootstrap_bfn_compilers.sh --build-dir $builddir \
                                    -DCMAKE_BUILD_TYPE=RELEASE \
                                    -DCMAKE_INSTALL_PREFIX=$install_prefix \

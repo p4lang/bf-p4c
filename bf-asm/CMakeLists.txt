@@ -249,7 +249,7 @@ if (ENABLE_CLOUDBREAK)
 endif()
 
 # Other configuration files that need to be generated
-configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/config.h")
+configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.in" "${BFASM_BINARY_DIR}/config.h")
 
 set_source_files_properties (${BFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
