@@ -773,45 +773,37 @@ struct InsertTablesForChecksums : public Transform {
 };
 
 struct CollectFieldToState : public Inspector {
-    std::map<const IR::Expression*, const IR::BFN::ParserState*> field_to_state;
+    std::map<cstring, ordered_set<const IR::BFN::ParserState*>> field_to_state;
 
     bool preorder(const IR::BFN::Extract* extract) override {
         auto state = findContext<IR::BFN::ParserState>();
         CHECK_NULL(state);
 
-        field_to_state[extract->dest->field] = state;
+        field_to_state[extract->dest->field->toString()].insert(state);
         return false;
     }
 };
 
 struct CollectNestedChecksumInfo : public Inspector {
     const IR::BFN::ParserGraph& graph;
-    const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state;
+    const std::map<cstring, ordered_set<const IR::BFN::ParserState*>>& field_to_state;
     ChecksumUpdateInfoMap checksumsMap;
     std::map<cstring, std::set<const IR::BFN::EmitChecksum*>> dest_to_nested_csum;
     std::set<const IR::BFN::EmitChecksum*> visited;
 
     explicit CollectNestedChecksumInfo(const IR::BFN::ParserGraph& graph,
-            const std::map<const IR::Expression*, const IR::BFN::ParserState*>& field_to_state,
+            const std::map<cstring, ordered_set<const IR::BFN::ParserState*>>& field_to_state,
              ChecksumUpdateInfoMap checksumsMap) :
         graph(graph), field_to_state(field_to_state), checksumsMap(checksumsMap) { }
 
-    const IR::BFN::ParserState* find_state(const IR::Expression* a) {
-        for (auto& kv : field_to_state) {
-            if (kv.first->equiv(*a))
-                return kv.second;
-        }
-
-        return nullptr;
-    }
-
     bool can_be_on_same_parse_path(const IR::Expression* a, const IR::Expression* b) {
-        auto sa = find_state(a);
-        auto sb = find_state(b);
-
-        if (sa && sb) {
-            if (graph.is_descendant(sa, sb) || graph.is_descendant(sb, sa))
-                return true;
+        if (field_to_state.count(a->toString()) && field_to_state.count(b->toString())) {
+            for (auto sa : field_to_state.at(a->toString())) {
+                for (auto sb : field_to_state.at(b->toString())) {
+                    if (graph.is_descendant(sa, sb) || graph.is_descendant(sb, sa))
+                        return true;
+                }
+            }
         }
 
         return false;
