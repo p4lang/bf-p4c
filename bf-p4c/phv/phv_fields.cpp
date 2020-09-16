@@ -2314,7 +2314,7 @@ ostream &operator<<(ostream &out, const set<const ::PHV::Field *>& field_list) {
 
 // for calling from the debugger
 void dump(const PhvInfo *phv) { std::cout << *phv; }
-void dump(const PHV::Field *f) { std::cout << *f; }
+void dump(const PHV::Field *f) { std::cout << *f << std::endl; }
 
 const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const char *) {
     LOG1("");
