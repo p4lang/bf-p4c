@@ -962,8 +962,8 @@ class SuperCluster : public ClusterStats {
     ordered_map<const PHV::FieldSlice, ordered_set<const SliceList*>> slices_to_slice_lists_i;
 
     // Statstics gathered from clusters.
-    PHV::Kind kind_i;
-    gress_t gress_i;
+    PHV::Kind kind_i = PHV::Kind::tagalong;
+    gress_t gress_i = INGRESS;
     int exact_containers_i = 0;
     int max_width_i = 0;
     int num_constraints_i = 0;
