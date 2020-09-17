@@ -131,7 +131,11 @@ class Parser {
             MatchKey    load;
 
             int row = -1;
+            /// Data for narrow to wide extraction analysis, flag and
+            /// vector of affected PHV locations
             bool has_narrow_to_wide_extract = false;
+            std::vector<const Phv::Ref*> narrow_to_wide_32b;
+            std::vector<const Phv::Ref*> narrow_to_wide_16b;
 
             enum flags_t { OFFSET = 1, ROTATE = 2 };
 

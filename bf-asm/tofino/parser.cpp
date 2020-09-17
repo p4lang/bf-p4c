@@ -3,6 +3,8 @@
 #include <initializer_list>
 #include <set>
 #include <map>
+#include <vector>
+#include <sstream>
 
 #include "misc.h"
 
@@ -224,6 +226,12 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
         if ((where->reg.size == 32 && slot.idx >= phv_16b_0) ||
             (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
             match->has_narrow_to_wide_extract = true;
+
+            if (where->reg.size == 32) {
+                match->narrow_to_wide_32b.push_back(&where);
+            } else {
+                match->narrow_to_wide_16b.push_back(&where);
+            }
         }
 
         // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
@@ -303,6 +311,12 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
         if ((where->reg.size == 32 && slot.idx >= phv_16b_0) ||
             (where->reg.size == 16 && slot.idx >= phv_8b_0)) {
             match->has_narrow_to_wide_extract = true;
+
+            if (where->reg.size == 32) {
+                match->narrow_to_wide_32b.push_back(&where);
+            } else {
+                match->narrow_to_wide_16b.push_back(&where);
+            }
         }
 
         // special swizzling for 4x8->32, 2x16->32, even-and-odd pair needs to be swapped
@@ -450,7 +464,7 @@ int count_number_of_extractions(Parser* parser,
     return used;
 }
 
-/// Helping cache to remember the maximal depth of the node
+/// Helping cache to remember the maximal number of extractions
 class ExtractionCountCache {
  public:
     void insert(const Parser::State* state, AnalysisType type, int val) {
@@ -471,6 +485,118 @@ class ExtractionCountCache {
  private:
     std::map<const Parser::State*,
             std::map<AnalysisType, int>> m_cache;
+};
+
+/// Pad collector object which provides mapping from a narrow-to-wide match
+/// to added padding
+class PaddingInfoCollector {
+ public:
+    struct PadInfo {
+        /// The number of added extractors to work correctly
+        int m_count8;
+        int m_count16;
+
+        PadInfo() {
+            m_count8  = 0;
+            m_count16 = 0;
+        }
+
+        void add(const AnalysisType type, const int val) {
+            if (type == AnalysisType::BIT8) {
+                m_count8 += val;
+            } else {
+                m_count16 += val;
+            }
+        }
+    };
+
+    /// Information for one parser state where the padding
+    // is being added
+    struct PadState {
+        /// Added padding information into parser states (successors or predecessors)
+        std::map<Parser::State::Match*, PadInfo*> m_padding;
+
+        void addPadInfo(Parser::State::Match* match, AnalysisType pad, int count) {
+            if (count == 0) return;
+
+            if (!m_padding.count(match)) {
+                m_padding[match] = new PadInfo;
+            }
+
+            m_padding[match]->add(pad, count);
+        }
+
+        bool hasPadInfo() {
+            return m_padding.size() != 0;
+        }
+    };
+
+    PadState* getPadState(Parser::State::Match* match) {
+        if (!m_nrw_matches.count(match)) {
+            m_nrw_matches[match] = new PadState;
+        }
+
+        return m_nrw_matches[match];
+    }
+
+    void printPadInfo() {
+        for (auto s : m_nrw_matches) {
+            auto nrw_match = s.first;
+            auto info_collector = s.second;
+            // Skip the info if we don't have any stored padding
+            if (!info_collector->hasPadInfo()) {
+                continue;
+            }
+
+            std::stringstream message;
+            message << "State " << nrw_match->state->name;
+            if (nrw_match->match == true) {
+                message << ", match " << nrw_match->match;
+            }
+
+            message << " is using the narrow-to-wide extraction: " << std::endl;
+
+            if (nrw_match->narrow_to_wide_32b.size() != 0) {
+                message << "\t* 32 bit extractors are replaced by 2 x 16 bit extractors: ";
+                for (auto ref : nrw_match->narrow_to_wide_32b) {
+                    message << ref->name() << " ";
+                }
+                message << std::endl;
+            }
+
+            if (nrw_match->narrow_to_wide_16b.size() != 0) {
+                message << "\t* 16 bit extractors are replaced by 2 x 8 bit extractors: ";
+                for (auto ref : nrw_match->narrow_to_wide_16b) {
+                    message << ref->name() << " ";
+                }
+                message << std::endl;
+            }
+
+            message <<
+            "The following extractions need to be added to parser states to work correctly:" <<
+            std::endl;
+
+            for (auto pad : info_collector->m_padding) {
+                auto match = pad.first;
+                auto pad_info = pad.second;
+
+                message << "\t* State " << match->state->name;
+                if (match->match == true) {
+                    message << ", match " << match->match;
+                }
+
+                message << " needs " << pad_info->m_count8 << " x 8 bit and " <<
+                pad_info->m_count16 << " x 16 bit extractions to be added" << std::endl;
+            }
+
+            LOG1("WARNING: " << message.str());
+        }
+    }
+
+ private:
+    /// This provides mapping between the narrow-to-wide (NRW) match and collected
+    /// padding information
+    std::map<Parser::State::Match*, PadState*> m_nrw_matches;
 };
 
 int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &regs,
@@ -502,7 +628,9 @@ int analyze_worst_extractor_path(Parser* parser, Target::Tofino::parser_regs &re
     return extraction_result;
 }
 
-void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
+/// Add the fake extractions to have 2n 16b extractions. The function returns
+/// the number of added extractions.
+int pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs,
                                Parser::State::Match* match) {
     int row = parser->match_to_row.at(match);
     auto map = reinterpret_cast<tofino_phv_output_map *>(
@@ -577,10 +705,16 @@ void pad_to_16b_extracts_to_2n(Parser* parser, Target::Tofino::parser_regs &regs
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
         }
+
+        return 2 - (used % 2);
     }
+
+    return 0;
 }
 
-void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
+/// Add the fake extractions to have 4n 8b extractions. The function returns
+/// the number of added extractions.
+int pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
                               Parser::State::Match* match) {
     int row = parser->match_to_row.at(match);
     auto map = reinterpret_cast<tofino_phv_output_map *>(
@@ -634,14 +768,19 @@ void pad_to_8b_extracts_to_4n(Parser* parser, Target::Tofino::parser_regs &regs,
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[*map[used_idx].dst - 256] = 0;
         }
+
+        return 4 - (used % 4);
     }
+
+    return 0;
 }
 
 /// Add the padding to child nodes matches, added padding is controlled via the
 /// template \p use_8bit parameter
 template<bool use_8bit>
 void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int node_count,
-                            Parser::State::Match* match, std::set<Parser::State*> &visited) {
+                            Parser::State::Match* match, std::set<Parser::State*> &visited,
+                            PaddingInfoCollector::PadState* pstate) {
     if (node_count == 0 || !match) {
         LOG4("Node count or nullptr match was reached");
         return;
@@ -664,17 +803,20 @@ void pad_nodes_extracts(Parser* parser, Target::Tofino::parser_regs &regs, int n
     int new_node_count = node_count;
     auto phv_type = use_8bit ? AnalysisType::BIT16 : AnalysisType::BIT8;
     if (count_number_of_extractions(parser, regs, match, phv_type)) {
-        if (use_8bit)
-            pad_to_16b_extracts_to_2n(parser, regs, match);
-        else
-            pad_to_8b_extracts_to_4n(parser, regs, match);
+        if (use_8bit)  {
+            int pad = pad_to_16b_extracts_to_2n(parser, regs, match);
+            pstate->addPadInfo(match, AnalysisType::BIT16, pad);
+        } else {
+            int pad = pad_to_8b_extracts_to_4n(parser, regs, match);
+            pstate->addPadInfo(match, AnalysisType::BIT8, pad);
+        }
 
         new_node_count--;
     }
 
     for (auto state : match->next) {
         for (auto next_match : state->match) {
-            pad_nodes_extracts<use_8bit>(parser, regs, new_node_count, next_match, visited);
+            pad_nodes_extracts<use_8bit>(parser, regs, new_node_count, next_match, visited, pstate);
         }
     }
 
@@ -695,6 +837,7 @@ int ceil_and_wrap_to_fifo_size(int val, int div) {
 void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_regs &regs) {
     // 1] Apply narrow-to-wide constraints to all predecessors
     std::set<Parser::State::Match*> narrow_to_wide_matches;
+    PaddingInfoCollector pad_collector;
 
     for (auto& kv : parser->match_to_row) {
         if (kv.first->has_narrow_to_wide_extract)
@@ -704,20 +847,26 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
     std::set<Parser::State::Match*> all_preds;
 
     for (auto m : narrow_to_wide_matches) {
-        auto preds = m->get_all_preds();
-        all_preds.insert(preds.begin(), preds.end());
-        all_preds.insert(m);
-    }
+        auto states = m->get_all_preds();
+        states.insert(m);
+        auto pstate = pad_collector.getPadState(m);
 
-    for (auto p : all_preds) {
-        pad_to_16b_extracts_to_2n(parser, regs, p);
-        pad_to_8b_extracts_to_4n(parser, regs, p);
+        for (auto p : states) {
+            if (all_preds.count(p)) continue;
+
+            all_preds.insert(p);
+            int pad = pad_to_16b_extracts_to_2n(parser, regs, p);
+            pstate->addPadInfo(p, AnalysisType::BIT16, pad);
+            pad = pad_to_8b_extracts_to_4n(parser, regs, p);
+            pstate->addPadInfo(p, AnalysisType::BIT8, pad);
+        }
     }
 
     // 2] Apply the narrow-to-wide constraints to a given number
     // of child nodes.
     ExtractionCountCache cache;
     for (auto m : narrow_to_wide_matches) {
+        auto pstate = pad_collector.getPadState(m);
         // Each method removes all inserted nodes to the set
         std::set<Parser::State*> visited_states;
         int extracts_16b = analyze_worst_extractor_path(parser, regs, m, AnalysisType::BIT16,
@@ -732,8 +881,12 @@ void handle_narrow_to_wide_constraint(Parser* parser, Target::Tofino::parser_reg
         int pass_16b_nodes = ceil_and_wrap_to_fifo_size(extracts_16b, 2);
         int pass_8b_nodes = ceil_and_wrap_to_fifo_size(extracts_8b, 4);
 
-        pad_nodes_16b_extracts(parser, regs, pass_16b_nodes, m, visited_states);
-        pad_nodes_8b_extracts(parser, regs, pass_8b_nodes, m, visited_states);
+        pad_nodes_16b_extracts(parser, regs, pass_16b_nodes, m, visited_states, pstate);
+        pad_nodes_8b_extracts(parser, regs, pass_8b_nodes, m, visited_states, pstate);
+    }
+
+    if (LOGGING(1)) {
+        pad_collector.printPadInfo();
     }
 }
 
