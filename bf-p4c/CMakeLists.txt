@@ -785,7 +785,6 @@ set (BF_P4C_SOURCES
   )
 
 set (P4C_BAREFOOT_SRCS
-  p4c-barefoot.cpp
   frontend.cpp
   ${BF_P4C_BACKEND_CONV_SRCS}
   ${BF_P4C_GRAPHS_SRCS}
@@ -846,7 +845,22 @@ target_include_directories(bfp4c
 )
 
 add_executable(p4c-barefoot p4c-barefoot.cpp)
-target_link_libraries(p4c-barefoot bfp4c)
+# --whole-archive prevents the linker from removing unused symbols
+#
+# This prevents an issue with non-unified builds and P4 primitives being
+# undefined. The file "bf-p4c/arch/fromv1.0/primitives.cpp" defines a number
+# of primitives (e.g., bypass_egress). This is done by subclassing
+# PrimitiveConverter and creating a singleton instance, which registers
+# itself with the PrimitiveConverter base class. These singleton instances are
+# omitted during linking of the non-unified builds, and so the primitives are
+# not registered.
+#
+# FIXME: Understand why the symbols are present in unified builds but not
+# non-unified builds and remove the --whole-archive flag if possible.
+target_link_libraries(p4c-barefoot
+	-Wl,--whole-archive
+	bfp4c
+	-Wl,--no-whole-archive)
 
 
 if (NOT ENABLE_JBAY)
