@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Show usage and exit, unless we were given exactly one argument that points to
 # an existing directory.
 if [[ $# != 1 || ! -d "$1" ]] ; then
@@ -40,6 +42,14 @@ function exitHandler() {
 
 ### Configuration #############################################################
 
+# Location of the LICENSE file, relative to the given directory. This file is
+# used as the basis for generating the copyright header.
+licenceFile='LICENSE'
+
+# Location of the script for producing the LICENSE file, relative to the given
+# directory.
+generateLicence='scripts/generate-license.sh'
+
 # Any file whose path relative to the given directory matches any regex in this
 # list will be ignored.
 ignoreFilePatterns=(
@@ -51,6 +61,7 @@ ignoreFilePatterns=(
   '.*\.csv$'   # comma-separated values
   '.*\.json$'  # JSON doesn't support comments
   '.*\.md$'    # Markdown
+  '^LICENSE.in$'
   '^\.git/'
   '^bf-asm/test/'
   '^build/'
@@ -98,22 +109,6 @@ setType sh \
   '^bf-p4c/driver/bfn_version\.in$'  `# Python` \
   '^bf-p4c/driver/p4c\..*\.cfg$'  `# Python` \
 
-# Output the bare copyright notice to a temporary file.
-year="$(date +%Y)"
-mktemp bareNoticeFile
-cat >"${bareNoticeFile}" <<EOF
-Copyright 2013-${year} Intel Corporation.
-
-This software and the related documents are Intel copyrighted materials, and
-your use of them is governed by the express license under which they were
-provided to you ("License"). Unless the License provides otherwise, you may not
-use, modify, copy, publish, distribute, disclose or transmit this software or
-the related documents without Intel's prior written permission.
-
-This software and the related documents are provided as is, with no express or
-implied warranties, other than those that are expressly stated in the License.
-EOF
-
 ### Main body #################################################################
 
 cd "$1"
@@ -121,16 +116,24 @@ cd "$1"
 # Register clean-up hook.
 trap 'exitHandler' EXIT
 
+# Generate the LICENSE file and verify that it was created. This file will be
+# used as the basis for the copyright notice.
+"${generateLicence}"
+if [[ ! -f "${licenceFile}" ]] ; then
+  echo "Licence file missing: ${licenceFile}" >&2
+  exit 1
+fi
+
 # Create a C-style version of the copyright notice in a temporary file.
 mktemp cNoticeFile
-cat "${bareNoticeFile}" \
+cat "${licenceFile}" \
   | fmt -w 96 \
   | sed -e '1i/**' -e 's/^/ * /' -e '$a\ */' -e 's/ *$//' \
   > "${cNoticeFile}"
 
 # Create a Bash-style version of the copyright notice in a temporary file.
 mktemp shNoticeFile
-cat "${bareNoticeFile}" \
+cat "${licenceFile}" \
   | fmt -w 78 \
   | sed -e 's/^/# /' -e 's/ *$//' \
   > "${shNoticeFile}"
