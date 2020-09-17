@@ -3666,10 +3666,12 @@ cstring MauAsmOutput::find_attached_name(const IR::MAU::Table *tbl,
     auto &memuse = tbl->resources->memuse.at(unique_id);
 
     auto unattached_pos = memuse.unattached_tables.find(at_unique_id);
-    if (unattached_pos == memuse.unattached_tables.end())
-         return at_unique_id.build_name();
-    else
-         return unattached_pos->second.build_name();
+    if (unattached_pos == memuse.unattached_tables.end()) {
+        return at_unique_id.build_name();
+    } else {
+        // FIXME -- need to deal with mulitple salus from a dleft table, potentially
+        return unattached_pos->second.front().build_name();
+    }
 }
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
@@ -4142,15 +4144,16 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
             out << indent << "match: [" << emit_vector(memuse.dleft_match) << "]" << std::endl;
         --indent; }
 
-    if (salu->chain_vpn) {
+    auto *back_at = getParent<IR::MAU::BackendAttached>();
+    if (salu->chain_vpn || back_at->chain_vpn) {
         out << indent << "offset_vpn: true" << std::endl;
-        auto *back_at = getParent<IR::MAU::BackendAttached>();
         // if the address comes from hash_dist, we'll have allocated it with
         // IXBar::Use::METER_ADR_AND_IMMEDIATE, so need to use meter_adr_shift
         // to shift up the correct number of subword bits
         // see IXBar::XBarHashDist::initialize_hash_dist_unit
         if (back_at->hash_dist)
-            out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl; }
+            out << indent << "address_shift: " << ceil_log2(salu->width) << std::endl;
+    }
     if (salu->learn_action) {
         // FIXME -- fixed 8-bit shift for LearnAction -- will we ever want anything else?
         out << indent << "phv_hash_shift: 8" << std::endl; }

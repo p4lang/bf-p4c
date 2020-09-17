@@ -2,6 +2,7 @@
 #define BF_P4C_MAU_MEMORIES_H_
 
 #include <algorithm>
+#include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/mau/instruction_memory.h"
@@ -43,8 +44,6 @@ struct Memories {
     static constexpr int MATCH_CENTRAL_ROW = 4;
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
-
-    typedef ordered_map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
 
     /**
      * For an SRAM based tables, specifically there are 3 buses, and a 4th output potentially
@@ -253,7 +252,7 @@ struct Memories {
          *  The map will only be valid under the associated match portion, i.e the EXACT/TERNARY
          *  portion of the key
          */
-        std::map<UniqueId, UniqueId>             unattached_tables;
+        std::map<UniqueId, ordered_set<UniqueId>> unattached_tables;
         safe_vector<UniqueId>                    dleft_learn;
         safe_vector<UniqueId>                    dleft_match;
 
@@ -291,6 +290,7 @@ struct Memories {
         const ActionData::Format::Use *action_format;
         std::map<UniqueId, Memories::Use>* memuse;
         const LayoutOption *layout_option;
+        ActionData::FormatType_t format_type;
         int provided_entries;
         attached_entries_t attached_entries;
         // Entries per match table allocation_unit (logical table) of the table.  This is
@@ -309,9 +309,10 @@ struct Memories {
         table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,
                     std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
+                    ActionData::FormatType_t ft,
                     const int e, const int st, attached_entries_t attached_entries)
             : table(t), match_ixbar(mi), table_format(tf), instr_mem(im), action_format(af),
-              memuse(mu), layout_option(lo), provided_entries(e),
+              memuse(mu), layout_option(lo), format_type(ft), provided_entries(e),
               attached_entries(attached_entries), attached_gw_bytes(0), stage_table(st),
               table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
@@ -733,8 +734,8 @@ struct Memories {
     void clear();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo,
-                   const ActionData::Format::Use *af, int entries, int stage_table,
-                   attached_entries_t attached_entries);
+                   const ActionData::Format::Use *af, ActionData::FormatType_t ft,
+                   int entries, int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
     friend std::ostream &operator<<(std::ostream &, const Memories &);
     friend std::ostream &operator<<(std::ostream &, const safe_vector<Memories::table_alloc *> &);

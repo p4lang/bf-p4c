@@ -1,6 +1,7 @@
 #ifndef BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 #define BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 
+#include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "lib/safe_vector.h"
 
@@ -18,7 +19,6 @@ struct StageUseEstimate {
     static constexpr int MAX_POOL_RAMLINES = MAX_MOD << MAX_MOD_SHIFT;
     static constexpr int MOD_INPUT_BITS = 10;
 
-    typedef ordered_map<const IR::MAU::AttachedMemory *, int> attached_entries_t;
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;

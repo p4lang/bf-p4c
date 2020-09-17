@@ -81,24 +81,31 @@ class ValidateAttachedOfSingleTable : public MauInspector {
 
 class PhvInfo;
 
+/// Search for references to an AttachedMemory in instruction -- returns a bitmap of which
+/// operands refer to the AttachedMemory
 class HasAttachedMemory : public MauInspector {
     const IR::MAU::AttachedMemory *am_match;
-    bool _found = false;
+    unsigned _found = 0U;
 
     profile_t init_apply(const IR::Node *node) {
         auto rv = MauInspector::init_apply(node);
-        _found = false;
+        _found = 0;
         return rv;
     }
 
     bool preorder(const IR::MAU::AttachedMemory *am) {
+        unsigned mask = 1U;
+        const Visitor::Context *ctxt = nullptr;
+        if (findContext<IR::Primitive>(ctxt)) {
+            BUG_CHECK(ctxt->child_index >= 0 && ctxt->child_index < 32, "mask overflow");
+            mask <<= ctxt->child_index; }
         if (am_match == am)
-            _found = true;
+            _found |= mask;
         return false;
     }
  public:
     explicit HasAttachedMemory(const IR::MAU::AttachedMemory *am) : am_match(am) {}
-    bool found() const { return _found; }
+    unsigned found() const { return _found; }
 };
 
 /**
@@ -109,6 +116,8 @@ class SplitAttachedInfo : public PassManager {
     // Can't use IR::Node * as keys in a map, as they change in transforms.  Names
     // are unique and stable, so use them instead.
     ordered_map<cstring, ordered_set<const IR::MAU::Table *>> attached_to_table_map;
+    // FIXME -- can have multiple tables attached to a match table (meter + stats),
+    // so this needs to map to a set of AttachedMemory...
     ordered_map<cstring, const IR::MAU::AttachedMemory *> table_to_attached_map;
     // ordered_map<cstring, bitvec> types_per_attached;  -- unused
 
@@ -214,10 +223,11 @@ class SplitAttachedInfo : public PassManager {
 
  public:
     const IR::Expression *split_enable(const IR::MAU::AttachedMemory *);
+    const IR::Expression *split_index(const IR::MAU::AttachedMemory *);
     const IR::MAU::Action *create_pre_split_action(const IR::MAU::Action *act,
         const IR::MAU::Table *tbl, PhvInfo *phv);
     const IR::MAU::Action *create_post_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl);
+        const IR::MAU::Table *tbl, bool reduction_or = false);
 };
 
 #endif  /* BF_P4C_MAU_ATTACHED_INFO_H_ */

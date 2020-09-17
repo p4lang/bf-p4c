@@ -55,6 +55,9 @@ set (JBAY_JNA_TEST_SUITES
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${JBAY_JNA_TEST_SUITES}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
+#override just created test above adding an extra argument -- remove when P4C-3070 done
+p4c_add_test_with_args("tofino2" ${P4C_RUNTEST} FALSE ignore_test_1 extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4 "-tofino2 -arch t2na -Xp4c=--disable_split_attached" "")
+
 p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4")
 # P4C-2604
 #p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4")

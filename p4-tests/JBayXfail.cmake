@@ -91,9 +91,14 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/acl1.p4
 )
 
+#bf-rt has problems with dleft hash?
 p4c_add_xfail_reason("tofino2"
-  "Could not place table .* The table .* could not fit"
+  "'DLEFT_HASH'"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "Could not place table .*: The table .* could not fit within a single input crossbar"
   # P4C-2572
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
@@ -206,9 +211,9 @@ p4c_add_xfail_reason("tofino2"
 
 endif() # PTF_REQUIREMENTS_MET
 
+# don't support splitting counters, as they are not tracked in attached_info.cpp
 p4c_add_xfail_reason("tofino2"
-  "Could not place table .*: The table .* could not fit"
-  extensions/p4_tests/p4_14/stf/stateful3.p4
+  "error: .*could not fit .* along with .* Counter"
   testdata/p4_14_samples/counter5.p4
 )
 
@@ -346,9 +351,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
 )
 
-# stateful table too big to fit in one half of jbay stage -- needs two home rows (top and bottom)
+# action synthesis can't figure out it can use an OR to set a single bit.
 p4c_add_xfail_reason("tofino2"
-  "error:.* Could not place table .* could not fit in stage .* with .* entries"
+  "the program requires an action impossible to synthesize for Tofino2 ALU"
   extensions/p4_tests/p4_14/stf/stateful4.p4
 )
 
@@ -454,7 +459,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "Could not place table .* The table .* could not fit"
+  "Could not place table .* table .* could not fit"
   extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
 )
 
@@ -470,3 +475,11 @@ p4c_add_xfail_reason("tofino2"
   p4c_2527
   p4c-3001
 )
+
+# P4C-3070
+# This is a MustPass test, so we add an -Xp4c=--disable_split_attached in JBayTests.cmake
+# to make it pass.  If that is removed, this failure will occur.
+#p4c_add_xfail_reason("tofino2"
+#  "Compiler Bug.*: Inconsistent tables added on merging program paths"
+#  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
+#)

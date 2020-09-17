@@ -2043,14 +2043,18 @@ void TnaProgramStructure::collectBridgedFieldsInControls() {
     std::set<cstring> reachableFromIngress;
     calledControls.reachable("ingress", reachableFromIngress);
     for (auto s : reachableFromIngress) {
-        auto v1ctrl = controls.get(s);
-        // convert to p4-16 because the WriteContext used in
-        // CollectBridgedFields is implemented with p4-16 IR nodes.
-        auto p4ctrl = ProgramStructure::convertControl(v1ctrl, s);
-        p4ctrl = p4ctrl->apply(ConvertMetadata(this));
-        p4ctrl->apply(CollectBridgedFields(INGRESS,
-                    mayWrite[INGRESS], mayRead[INGRESS],
-                    bridgedFieldInfo));
+        if (auto v1ctrl = controls.get(s)) {
+            // convert to p4-16 because the WriteContext used in
+            // CollectBridgedFields is implemented with p4-16 IR nodes.
+            auto p4ctrl = ProgramStructure::convertControl(v1ctrl, s);
+            p4ctrl = p4ctrl->apply(ConvertMetadata(this));
+            p4ctrl->apply(CollectBridgedFields(INGRESS,
+                        mayWrite[INGRESS], mayRead[INGRESS],
+                        bridgedFieldInfo));
+        } else {
+            error("No ingress control in program");
+            return;
+        }
     }
 
     std::set<cstring> reachableFromEgress;
@@ -2266,13 +2270,14 @@ void TnaProgramStructure::collectDigestFields() {
     std::set<cstring> reachableFromIngress;
     calledControls.reachable("ingress", reachableFromIngress);
     for (auto s : reachableFromIngress) {
-        auto ctrl = controls.get(s);
-        // needed by CollectDigestFields to initalize conversionContext
-        controlType(ctrl->name);
-        auto actionsInTables = findActionInTables(ctrl);
-        for (auto name : actionsInTables) {
-            auto act = actions.get(name);
-            act->apply(CollectDigestFields(this, INGRESS, digestFieldLists));
+        if (auto ctrl = controls.get(s)) {
+            // needed by CollectDigestFields to initalize conversionContext
+            controlType(ctrl->name);
+            auto actionsInTables = findActionInTables(ctrl);
+            for (auto name : actionsInTables) {
+                auto act = actions.get(name);
+                act->apply(CollectDigestFields(this, INGRESS, digestFieldLists));
+            }
         }
     }
 

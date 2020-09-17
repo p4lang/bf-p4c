@@ -115,7 +115,7 @@ bool DarkLiveRange::preorder(const IR::MAU::Action* act) {
     }
 
     auto *tbl = findContext<IR::MAU::Table>();
-    if (tbl && tbl->match_table->getAnnotations()->getSingle("no_field_initialization")) {
+    if (tbl && tbl->getAnnotation("no_field_initialization")) {
           doNotInitActions.insert(act);
           LOG3("Pragma @no_field_initialization found for action: "<< act->externalName() <<
                 " in table " << tbl->externalName());

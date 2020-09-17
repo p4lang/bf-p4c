@@ -140,7 +140,6 @@ bool DoTableLayout::backtrack(trigger &trig) {
  */
 void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
                                   cstring &partition_index, const PhvInfo& phv) {
-    auto annot = tbl->match_table->getAnnotations();
     bool index_found = false;
     bool partitions_found = false;
     int partition_count = -1;
@@ -151,27 +150,20 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
             partition_index = partition_index_field->name;
             index_found = true; } }
 
-    if (auto *s = annot->getSingle("atcam_number_partitions")) {
-        auto *pragma_val = s->expr.at(0)->to<IR::Constant>();
-        ERROR_CHECK(pragma_val != nullptr, ErrorType::ERR_EXPECTED,
-                    "a valid atcam_number_partitions for table %1%.", tbl);
-        if (pragma_val) {
-            partition_count = pragma_val->asInt();
-            ERROR_CHECK(partition_count > 0, ErrorType::ERR_EXPECTED,
-                        "the number of partitions specified for table %1% to be greater "
-                        "than 0.", tbl);
-        }
+    if (tbl->getAnnotation("atcam_number_partitions", partition_count)) {
+        ERROR_CHECK(partition_count > 0, ErrorType::ERR_EXPECTED,
+                    "the number of partitions specified for table %1% to be greater "
+                    "than 0.", tbl);
         partitions_found = true;
     }
 
     if (partitions_found) {
         // Check if atcam_partition_index pragma is applied
-        auto pi = annot->getSingle("atcam_partition_index")->expr.at(0)->to<IR::Expression>();
+        auto pi = tbl->getExprAnnotation("atcam_partition_index");
         ERROR_CHECK(pi, ErrorType::WARN_MISSING,
                    "%1%: atcam parition index is not present for table %2%. "
                    "Ensure that an atcam_partition_index is added for a match key.",
                    tbl, tbl->externalName());
-
 
         // Check if atcam_partition_index name is consistent with the match key
         ERROR_CHECK(index_found, ErrorType::WARN_MISSING,
@@ -698,14 +690,13 @@ void LayoutChoices::setup_layout_options(const IR::MAU::Table *tbl,
 
     bool hash_action_only = false;
     add_hash_action_option(tbl, layout_proto, format_type, hash_action_only);
-    if (hash_action_only || format_type == ActionData::POST_SPLIT_ATTACHED)
-        return;
-    int index = 0;
-    for (auto &use : get_action_formats(tbl, format_type)) {
-            setup_exact_match(tbl, layout_proto, format_type,
-                              use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
-                              use.immediate_bits(), index);
-        index++; }
+    if (!hash_action_only && format_type != ActionData::POST_SPLIT_ATTACHED) {
+        int index = 0;
+        for (auto &use : get_action_formats(tbl, format_type)) {
+                setup_exact_match(tbl, layout_proto, format_type,
+                                  use.bytes_per_loc[ActionData::ACTION_DATA_TABLE],
+                                  use.immediate_bits(), index);
+            index++; } }
 }
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
@@ -1198,18 +1189,19 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
 
     int rams = 0;
     UniqueId lookup = tbl->unique_id(cntr);
-    if (self_.totalCounterRams.find(lookup) != self_.totalCounterRams.end()) {
+    if (self_.totalCounterRams.count(lookup)) {
         rams = self_.totalCounterRams.at(lookup);
     } else {  // when counter is shared by multiple tables
         for (auto &use : tbl->resources->memuse) {
             auto &mem = use.second;
             if (mem.type == Memories::Use::EXACT || mem.type == Memories::Use::ATCAM ||
                 mem.type == Memories::Use::TERNARY) {
-                if (mem.unattached_tables.find(lookup) != mem.unattached_tables.end()) {
-                    lookup = mem.unattached_tables.at(lookup);
-                    if (self_.totalCounterRams.find(lookup) != self_.totalCounterRams.end())
-                        rams = self_.totalCounterRams.at(lookup);
-                } } }
+                auto it = mem.unattached_tables.find(lookup);
+                if (it != mem.unattached_tables.end()) {
+                    for (auto other : it->second) {
+                        if (self_.totalCounterRams.count(other))
+                            rams += self_.totalCounterRams.at(other);
+                } } } }
     }
     if (rams == 0) {
         ::error(ErrorType::ERR_NOT_FOUND,

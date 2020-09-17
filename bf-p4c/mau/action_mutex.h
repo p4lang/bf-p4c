@@ -14,9 +14,9 @@ class ActionMutuallyExclusive : public MauInspector {
     SymBitMatrix                              not_mutex;
     bool preorder(const IR::MAU::Table *t) override {
         for (const auto* act : Values(t->actions)) {
-            assert(!action_ids.count(act));
+            if (!action_ids.count(act))
+                action_ids.emplace(act, action_ids.size());
             name_actions[t->externalName() + "." + act->name] = act;
-            action_ids.emplace(act, action_ids.size());
         }
         return true; }
     void postorder(const IR::MAU::Table *tbl) override;

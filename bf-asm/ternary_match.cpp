@@ -210,14 +210,14 @@ void TernaryMatchTable::pass1() {
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     }
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
-    if (match.empty() && input_xbar->tcam_width()) {
+    if (layout_size() == 0) layout.clear();
+    if (match.empty() && input_xbar->tcam_width() && layout.size() != 0) {
         match.resize(input_xbar->tcam_width());
         for (unsigned i = 0; i < match.size(); i++) {
             match[i].word_group = input_xbar->tcam_word_group(i);
             match[i].byte_group = input_xbar->tcam_byte_group(i/2);
             match[i].byte_config = i&1; }
         match.back().byte_config = 3; }
-    if (layout_size() == 0) layout.clear();
     if (match.size() == 0) {
         if (layout.size() != 0)
             error(layout[0].lineno, "No match or input_xbar in non-empty ternary table %s", name());
@@ -725,8 +725,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) const {
     // Determine the zero padding necessary by creating a bitvector (for each
     // word). While creating entries for pack format set bits used. The unused
     // bits must be padded with zero field entries.
-    std::vector<bitvec> tcam_bits;
-    tcam_bits.resize(match.size());
+    std::vector<bitvec> tcam_bits(match.size());
     // Set pvp bits for each tcam word
     for (unsigned i = 0; i < match.size(); i++) {
         gen_match_fields_pvp(match_field_list, i, uses_versioning,

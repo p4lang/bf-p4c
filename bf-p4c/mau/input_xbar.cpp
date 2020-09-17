@@ -3943,7 +3943,9 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
         } else if (auto salu = ba->attached->to<IR::MAU::StatefulAlu>()) {
             dest = IXBar::HD_METER_ADR;
             // Chained addresses don't need to shift as the input itself is an address
-            if (salu->chain_vpn) {
+            if (salu->chain_vpn || attached_entries.at(salu).need_more) {
+                // Chained address can't be shifted in the hash_dist, as they need to go
+                // through the vpn_offset&check unit and will be shifted there
                 shift = 0;
                 chained_addr = true;
             } else {
@@ -4134,7 +4136,8 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
  *  locations that have no current hash matrix use
  */
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                       const LayoutOption *lo, const ActionData::Format::Use *af) {
+                       const LayoutOption *lo, const ActionData::Format::Use *af,
+                       const attached_entries_t &attached_entries) {
     if (!tbl) return true;
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
@@ -4251,7 +4254,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         alloc.clear_ixbar();
         return false; }
 
-    XBarHashDist xbar_hash_dist(*this, phv, tbl, af, lo, &alloc);
+    XBarHashDist xbar_hash_dist(*this, phv, tbl, af, lo, &alloc, attached_entries);
     xbar_hash_dist.hash_action();
     xbar_hash_dist.immediate_inputs();
     tbl->attached.apply(xbar_hash_dist);

@@ -495,6 +495,10 @@ UniqueId IR::MAU::Table::unique_id(const IR::MAU::AttachedMemory *at, bool is_gw
     return rv;
 }
 
+UniqueId IR::MAU::Table::get_uid(const IR::MAU::AttachedMemory *at, bool is_gw) const {
+    return is_placed() ? unique_id(at, is_gw) : pp_unique_id(at, is_gw);
+}
+
 const IR::MAU::BackendAttached *IR::MAU::Table::get_attached(UniqueId id) const {
     for (auto *at : attached)
         if (unique_id(at->attached) == id)
@@ -600,33 +604,42 @@ bool IR::MAU::Table::is_a_gateway_table_only() const {
     return false;
 }
 
+const IR::Annotations *IR::MAU::Table::getAnnotations() const {
+    return match_table ? match_table->getAnnotations() : IR::Annotations::empty;
+}
+
+const IR::Annotation *IR::MAU::Table::getAnnotation(cstring name) const {
+    return match_table ? match_table->getAnnotation(name) : nullptr;
+}
+
+const IR::Expression *IR::MAU::Table::getExprAnnotation(cstring name) const {
+    if (auto annot = getAnnotation(name)) {
+        if (annot->expr.size() == 1)
+            return annot->expr.at(0);
+        error(ErrorType::ERR_UNEXPECTED, "%1%: %2% pragma provided to table %3% has multiple "
+              "parameters, while only one is expected", annot, name, externalName()); }
+    return nullptr;
+}
+
 bool IR::MAU::Table::getAnnotation(cstring name, int &val) const {
-    if (!match_table) return false;
-    if (auto annot = match_table->annotations->getSingle(name)) {
-        if (annot->expr.size() != 1) {
-            error(ErrorType::ERR_UNEXPECTED, "%1%: %2% pragma provided to table %3% has multiple "
-                  "parameters, while only one is expected", annot, name, externalName());
-        } else if (auto constant = annot->expr.at(0)->to<IR::Constant>()) {
+    if (auto *expr = getExprAnnotation(name)) {
+        if (auto constant = expr->to<IR::Constant>()) {
             val = constant->asInt();
             return true;
         } else {
-            error(ErrorType::ERR_INVALID, "Invalid %1%: %2% pragma provided to table %3% is not "
-                  "a constant", annot, name, externalName()); } }
+            error(ErrorType::ERR_INVALID, "Invalid annotation%1%: %2% pragma provided to "
+                  "table %3% is not a constant", expr->srcInfo, name, externalName()); } }
     return false;
 }
 
 bool IR::MAU::Table::getAnnotation(cstring name, ID &val) const {
-    if (!match_table) return false;
-    if (auto annot = match_table->annotations->getSingle(name)) {
-        if (annot->expr.size() != 1) {
-            error(ErrorType::ERR_UNEXPECTED, "%1%: %2% pragma provided to table %3% has multiple "
-                  "parameters, while only one is expected", annot, name, externalName());
-        } else if (auto v = annot->expr.at(0)->to<IR::StringLiteral>()) {
+    if (auto *expr = getExprAnnotation(name)) {
+        if (auto v = expr->to<IR::StringLiteral>()) {
             val = *v;
             return true;
         } else {
-            error(ErrorType::ERR_INVALID, "Invalid %1%: %2% pragma provided to table %3% is not a "
-                  "string literal", annot, name, externalName()); } }
+            error(ErrorType::ERR_INVALID, "Invalid annotation%1%: %2% pragma provided to "
+                  "table %3% is not a string literal", expr->srcInfo, name, externalName()); } }
     return false;
 }
 

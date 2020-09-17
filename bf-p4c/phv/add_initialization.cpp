@@ -206,7 +206,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     for (auto node : alloc_sl.getInitPrimitive()->getARApriorUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
-        prior_tables.insert(tbl->pp_unique_id());
+        prior_tables.insert(tbl->get_uid());
         for (auto minStg : phv.minStage(tbl))
             prior_max_stage = std::max(prior_max_stage, minStg);
     }
@@ -216,7 +216,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
     for (auto node : alloc_sl.getInitPrimitive()->getARApostUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
-        post_tables.insert(tbl->pp_unique_id());
+        post_tables.insert(tbl->get_uid());
         for (auto minStg : phv.minStage(tbl))
             post_min_stage = std::min(post_min_stage, minStg);
     }

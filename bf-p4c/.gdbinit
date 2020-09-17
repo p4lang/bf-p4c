@@ -523,10 +523,9 @@ class IXBarUsePrinter(object):
                 rv += "\n   meter_alu_hash: group=" + str(mah['group'])
             hdh = self.val['hash_dist_hash']
             if hdh['allocated']:
-                rv += "\n   hash_dist_hash: unit=" + str(hdh['unit'])
+                rv += "\n   hash_dist_hash: "
                 rv += " group=" + str(hdh['group'])
-                rv += " slice=" + str(hdh['slice'])
-                rv += " bit_mask=" + str(hdh['bit_mask'])
+                rv += " gm_bits=" + str(hdh['galois_matrix_bits'])
                 rv += " algorithm=" + str(hdh['algorithm'])
             rv += "\n"
         except Exception as e:
@@ -628,6 +627,8 @@ def find_pp(val):
         return SlicePrinter(val)
     if val.type.tag == 'UniqueId':
         return UniqueIdPrinter(val)
+    if val.type.tag == 'attached_entries_t':  # is an ordered_map
+        return ordered_map_Printer(val)
     return None
 
 try:

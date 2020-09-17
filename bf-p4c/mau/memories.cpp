@@ -267,25 +267,26 @@ void Memories::clear_allocation() {
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
         TableResourceAlloc *resources, const LayoutOption *lo, const ActionData::Format::Use *af,
-        int entries, int stage_table, attached_entries_t attached_entries) {
+        ActionData::FormatType_t ft, int entries, int stage_table,
+        attached_entries_t attached_entries) {
     table_alloc *ta;
     if (!t->conditional_gateway_only()) {
         const IXBar::Use *match_ixbar = &resources->match_ixbar;
         if (lo->layout.gateway && lo->layout.hash_action)
             match_ixbar = &resources->gateway_ixbar;
         ta = new table_alloc(t, match_ixbar, &resources->table_format, &resources->instr_mem, af,
-                             &resources->memuse, lo, entries, stage_table,
+                             &resources->memuse, lo, ft, entries, stage_table,
                              std::move(attached_entries));
     } else {
         ta = new table_alloc(t, &resources->gateway_ixbar, nullptr, nullptr, nullptr,
-                             &resources->memuse, lo, entries, stage_table,
+                             &resources->memuse, lo, ft, entries, stage_table,
                              std::move(attached_entries));
     }
     LOG2("Adding table " << ta->table->name << " with " << entries << " entries");
     tables.push_back(ta);
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, nullptr, nullptr,
-                                      nullptr, &resources->memuse, lo, -1, stage_table, {});
+                                      nullptr, &resources->memuse, lo, ft, -1, stage_table, {});
         LOG2("Adding gateway table " << ta_gw->table->name << " to table "
              << ta_gw->table->name);
         ta_gw->link_table(ta);
@@ -407,7 +408,8 @@ class SetupAttachedTables : public MauInspector {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
         bool tind_check = ta->layout_option->layout.ternary &&
-                          !ta->layout_option->layout.no_match_miss_path();
+                          !ta->layout_option->layout.no_match_miss_path() &&
+                          ta->format_type != ActionData::POST_SPLIT_ATTACHED;
         if (tind_check) {
             if (ta->table_format->has_overhead()) {
                 for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::TIND_PP)) {
@@ -468,15 +470,12 @@ class SetupAttachedTables : public MauInspector {
                               std::back_inserter(intersect));
         BUG_CHECK(intersect.empty(), "%s: Error when accounting for uniqueness in logical units "
                   "to address in memory allocation", ta->table->name);
-        if (unattached_object_ids.size() > 0) {
-            BUG_CHECK(attached_object_id.size() == 1, "%s: Multiple resource indicated for the "
-                      "same object in %s", ta->table->srcInfo, at->name);
-        }
 
         for (auto unattached_id : unattached_object_ids) {
             // auto tbl_id = ta->build_unique_id(nullptr, false, unattached_id.logical_table);
             auto tbl_id = unattached_id.base_match_id();
-            (*ta->memuse)[tbl_id].unattached_tables.emplace(unattached_id, attached_object_id[0]);
+            for (auto ao_id : attached_object_id)
+                (*ta->memuse)[tbl_id].unattached_tables[unattached_id].insert(ao_id);
         }
         return !attached;
     }
@@ -665,7 +664,8 @@ bool Memories::analyze_tables(mem_info &mi) {
             (*ta->memuse)[unique_id].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
-            if (any_of(Values(ta->attached_entries), [](int entries){ return entries > 0; })) {
+            if (any_of(Values(ta->attached_entries),
+                       [](attached_entries_element_t ent){ return ent.entries > 0; })) {
                 // at least one attached table so need a no match table
                 no_match_hit_tables.push_back(ta);
                 ta->link_table(ta);  // link to itself to produce payload
@@ -2015,7 +2015,9 @@ void Memories::swbox_bus_stateful_alus() {
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(salu)) {
                 int per_row = RegisterPerWord(salu);
-                int entries = salu->direct ? ta->calc_entries_per_uid[lt_entry] : salu->size;
+                int entries = salu->direct ? ta->calc_entries_per_uid[lt_entry]
+                                           : ta->attached_entries.at(salu).entries;
+                if (entries == 0) continue;
                 int depth = mems_needed(entries, SRAM_DEPTH, per_row, true);
                 if (ta->table->for_dleft())
                     depth = ta->layout_option->dleft_hash_sizes[lt_entry] + 1;
@@ -2042,7 +2044,9 @@ void Memories::swbox_bus_meters_counters() {
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(stats)) {
                 int per_row = CounterPerWord(stats);
-                int entries = stats->direct ? ta->calc_entries_per_uid[lt_entry] : stats->size;
+                int entries = stats->direct ? ta->calc_entries_per_uid[lt_entry]
+                                            : ta->attached_entries.at(stats).entries;
+                if (entries == 0) continue;
                 int depth = mems_needed(entries, SRAM_DEPTH, per_row, true);
                 auto *stats_group = new SRAM_group(ta, depth, 0, SRAM_group::STATS);
                 stats_group->attached = stats;
@@ -2061,7 +2065,9 @@ void Memories::swbox_bus_meters_counters() {
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(meter)) {
-                int entries = meter->direct ? ta->calc_entries_per_uid[lt_entry] : meter->size;
+                int entries = meter->direct ? ta->calc_entries_per_uid[lt_entry]
+                                            : ta->attached_entries.at(meter).entries;
+                if (entries == 0) continue;
                 int depth = mems_needed(entries, SRAM_DEPTH, 1, true);
 
                 auto *meter_group = new SRAM_group(ta, depth, 0, SRAM_group::METER);
@@ -3005,6 +3011,12 @@ void Memories::fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side) {
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
                 mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
                 alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
+                if (candidate->placed == candidate->depth) {
+                    // This is the last RAM in a syn2port table, so it is the spare and should
+                    // not have a VPN.  It turns out to not matter as we don't output the vpns
+                    // for syn2port in the compiler, and let the assembler allocate them.
+                    alloc.row.back().vpn.pop_back();
+                }
             }
         }
     }
@@ -3634,11 +3646,20 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
     temp_alloc.table_format = *ta->table_format;
     temp_alloc.instr_mem = *ta->instr_mem;
     temp_alloc.action_format = *ta->action_format;
-    bitvec payload_bv = FindPayloadCandidates::determine_payload(ta->table, &temp_alloc,
-                                                                 &ta->layout_option->layout);
-    uint64_t lo_bv = payload_bv.getrange(0, 32);
-    uint64_t hi_bv = payload_bv.getrange(32, 32);
-    return (hi_bv << 32) | lo_bv;
+    bitvec payload_bv;
+    if (ta->payload_match_addr_only) {
+        // FIXME -- determine_payload assumes the payload is coming from the
+        // match table, which is not the case when we're just using a payload to
+        // supply an invalid match address to avoid running a direct table (P4C-2938)
+        // this needs cleaning up
+    } else if (ta->format_type == ActionData::POST_SPLIT_ATTACHED) {
+        // FIXME -- running a split attached table -- the address comes from hash_dist
+        // if part of the action needs immed data (from match or tind), that would have to
+        // come from payload -- not yet implemented
+    } else {
+        payload_bv = FindPayloadCandidates::determine_payload(ta->table, &temp_alloc,
+                                                              &ta->layout_option->layout); }
+    return payload_bv.getrange(0, 64);
 }
 
 /** Allocates all gateways with a payload, which is a conditional linked to a no match table.
@@ -3671,13 +3692,7 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
 
 
             table_alloc *payload_ta = ta->table_link ? ta->table_link : ta;
-            uint64_t payload_value = 0;
-            if (!ta->payload_match_addr_only) {
-                // FIXME -- determine_payload assumes the payload is coming from the
-                // match table, which is not the case when we're just using a payload to
-                // supply an invalid match address to avoid running a direct table (P4C-2938)
-                // this needs cleaning up
-                payload_value = determine_payload(payload_ta); }
+            uint64_t payload_value = determine_payload(payload_ta);
             bool result_bus_found = find_result_bus_gw(alloc, payload_value, u_id.build_name(),
                                                        // Change this in a little bit
                                                        payload_ta);
@@ -3816,6 +3831,7 @@ bool Memories::allocate_all_gw() {
                      * when we could/should do that -- in the match table layout perhaps? */
                     payload_gws.push_back(ta_gw);
                     ta_gw->payload_match_addr_only = true;
+                    ta_gw->table_link->payload_match_addr_only = true;
                     pushed_back = true;
                     break; } } }
         if (pushed_back) continue;

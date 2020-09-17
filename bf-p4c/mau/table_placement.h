@@ -22,7 +22,6 @@ class FindPayloadCandidates;
 
 class TablePlacement : public PassManager {
  public:
-    typedef ordered_map<const IR::MAU::AttachedMemory *, int>      attached_entries_t;
     const BFN_Options &options;
     DependencyGraph   &deps;
     const TablesMutuallyExclusive &mutex;
@@ -57,6 +56,7 @@ class TablePlacement : public PassManager {
 
     static int placement_round;
     static bool can_duplicate(const IR::MAU::AttachedMemory *);
+    static bool can_split(const IR::MAU::AttachedMemory *);
 
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     std::map<cstring, struct TableInfo *> tblByName;
@@ -132,7 +132,9 @@ class TablePlacement : public PassManager {
 
     template <class... Args> void error(Args... args) {
         auto &ctxt = BaseCompileContext::get();
-        summary.addPlacementError(ctxt.errorReporter().format_message(args...)); }
+        auto msg = ctxt.errorReporter().format_message(args...);
+        LOG5("    defer error: " << msg);
+        summary.addPlacementError(msg); }
     int errorCount() const { return ::errorCount() + summary.placementErrorCount(); }
 };
 

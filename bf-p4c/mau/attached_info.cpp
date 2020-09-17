@@ -138,10 +138,19 @@ bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::ActionData *ad) {
 bool SplitAttachedInfo::BuildSplitMaps::preorder(const IR::MAU::Table *tbl) {
     const IR::MAU::AttachedMemory *at = nullptr;
     for (auto back_at : tbl->attached) {
-        if (back_at->attached->direct || TablePlacement::can_duplicate(back_at->attached))
+        if (back_at->attached->direct)
             continue;
+        // FIXME -- need to deal with multiple tables attached to one match table.  Currently
+        // we only allow the first non-duplicatable table to be split, or the first found if
+        // there are no non-duplicatable
+        if (at) {
+            if (TablePlacement::can_duplicate(back_at->attached))
+                continue;
+            if (TablePlacement::can_duplicate(at))
+                at = nullptr; }
         BUG_CHECK(at == nullptr, "A single table %1% has multiple meters/stateful ALUs", tbl->name);
-        at = back_at->attached;
+        at = back_at->attached; }
+    if (at) {
         self.attached_to_table_map[at->name].insert(tbl);
         self.table_to_attached_map[tbl->name] = at; }
     return true;
@@ -156,9 +165,23 @@ bool SplitAttachedInfo::ValidateAttachedOfAllTables::preorder(const IR::MAU::Tab
     if (self.table_to_attached_map.count(tbl->name) == 0)
         return true;
 
+    auto *at = self.table_to_attached_map.at(tbl->name);
+    ValidateAttachedOfSingleTable::addr_type_t addr_type;
+    if (at->is<IR::MAU::MeterBus2Port>()) {
+        addr_type = ValidateAttachedOfSingleTable::METER;
+    } else if (at->is<IR::MAU::Counter>()) {
+        addr_type = ValidateAttachedOfSingleTable::STATS;
+    } else if (at->is<IR::MAU::ActionData>()) {
+        addr_type = ValidateAttachedOfSingleTable::ACTIONDATA;
+    } else if (at->is<IR::MAU::Selector>()) {
+        addr_type = ValidateAttachedOfSingleTable::METER;
+    } else {
+        BUG("Unhandled attached table type %s", at);
+    }
+
     auto &addr_info = self.address_info_per_table[tbl->name];
-    addr_info.address_bits = ia[ValidateAttachedOfSingleTable::METER].address_bits;
-    addr_info.hash_bits = ia[ValidateAttachedOfSingleTable::METER].hash_bits;
+    addr_info.address_bits = ia[addr_type].address_bits;
+    addr_info.hash_bits = ia[addr_type].hash_bits;
     return true;
 }
 
@@ -175,15 +198,14 @@ bool SplitAttachedInfo::EnableAndTypesOnActions::preorder(const IR::MAU::Action 
     auto &addr_info = self.address_info_per_table[tbl->name];
 
     auto pfe_p = act->per_flow_enables.find(uai);
+    auto type_p = act->meter_types.find(uai);
     if (pfe_p == act->per_flow_enables.end()) {
         if (!act->hit_only())
             addr_info.always_run_on_miss = false;
         if (!act->miss_only())
             addr_info.always_run_on_hit = false;
-    } else {
-        auto type_p = act->meter_types.find(uai);
-        BUG_CHECK(type_p != act->meter_types.end(), "Action %1% requires a meter type, as the %2% "
-            "is running in this action", act->name, at->name);
+    }
+    if (type_p != act->meter_types.end()) {
         int meter_type = static_cast<int>(type_p->second);
         if (!act->hit_only())
             addr_info.types_on_miss.setbit(meter_type);
@@ -315,6 +337,10 @@ const IR::Expression *SplitAttachedInfo::split_enable(const IR::MAU::AttachedMem
     return index_tempvars[at->name].enable;
 }
 
+const IR::Expression *SplitAttachedInfo::split_index(const IR::MAU::AttachedMemory *at) {
+    return index_tempvars[at->name].index;
+}
+
 /**
  * When a match table is in a separate stage than it's stateful ALU, the IR::MAU::Table object
  * must be split into 2 separate IR::MAU::Table objects after table placement.  The first table
@@ -385,9 +411,15 @@ const IR::MAU::Action *SplitAttachedInfo::create_pre_split_action(const IR::MAU:
     return rv;
 }
 
+/** Modify an action to run after the match, driving just the attached table(s) and values
+ * dependent on it.  If `reduction_or` is true, it also needs to combine with previous actions
+ * for this attached table in earlier stages (so 'set' needs to turn into 'or' -- in stages
+ * where the attached table is not running, the table output will be 0.
+ */
 const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl) {
+        const IR::MAU::Table *tbl, bool reduction_or) {
     // FIXME -- should only do this once per table/action -- memoize?
+    if (act->stateful_calls.empty()) return nullptr;
     IR::MAU::Action *rv = act->clone();
     auto *at = attached_from_table(tbl);
     if (at == nullptr)
@@ -396,15 +428,35 @@ const IR::MAU::Action *SplitAttachedInfo::create_post_split_action(const IR::MAU
     rv->default_allowed = true;
     rv->init_default = true;
     rv->hit_path_imp_only = true;
+    rv->disallowed_reason = "hit_path_only";
 
     HasAttachedMemory has_attached(at);
     for (auto it = rv->action.begin(); it != rv->action.end();) {
         auto instr = *it;
         instr->apply(has_attached);
-        if (!has_attached.found())
-            it = rv->action.erase(it);
-        else
+        if (auto ops = has_attached.found()) {
+            if (reduction_or) {
+                if (instr->name == "set") {
+                    BUG_CHECK(instr->operands.size() == 2, "wrong number of operands to set");
+                    *it = new IR::MAU::Instruction(instr->srcInfo, "or",
+                    instr->operands.at(0),
+                    instr->operands.at(0),
+                    instr->operands.at(1));
+                } else if (instr->name == "or" || instr->name == "xor" ||
+                           instr->name == "add" || instr->name == "sub" ||
+                           instr->name == "sadds" || instr->name == "saddu" ||
+                           instr->name == "ssubs" || instr->name == "ssubu" ||
+                           (instr->name == "orca" && ops == 4) ||
+                           (instr->name == "orcb" && ops == 2) ||
+                           (instr->name == "andca" && ops == 2) ||
+                           (instr->name == "andcb" && ops == 4)) {
+                    // these are all ok
+                } else {
+                    error("Can't split %s across stages (so can't split %s)", act, tbl); } }
             it++;
+        } else {
+            it = rv->action.erase(it);
+        }
     }
 
     for (auto it = rv->stateful_calls.begin(); it != rv->stateful_calls.end();) {

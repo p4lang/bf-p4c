@@ -585,9 +585,14 @@ class Table {
     virtual MeterTable* get_meter() const { return 0; }
     virtual void set_stateful(StatefulTable *s) { BUG(); }
     virtual StatefulTable *get_stateful() const { return 0; }
-    virtual void set_address_used() { BUG(); }
-    virtual void set_color_used() { BUG(); }
-    virtual void set_output_used() { BUG(); }
+    virtual void set_address_used() {
+        // FIXME -- could use better error message(s) -- lineno is not accurate/useful
+        error(lineno, "Tofino does not support extracting the address used on "
+              "a non-stateful table %s", name()); }
+    virtual void set_color_used() {
+        error(lineno, "Cannot extract color on a non-meter table %s", name()); }
+    virtual void set_output_used() {
+        error(lineno, "Cannot extract output on a non-stateful table %s", name()); }
     virtual const Call &get_action() const { return action; }
     virtual bool is_attached(const Table *) const { BUG(); return false; }
     virtual Format::Field *find_address_field(const AttachedTable *) const { BUG(); return 0; }

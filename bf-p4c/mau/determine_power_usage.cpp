@@ -432,19 +432,18 @@ void DeterminePowerUsage::add_unattached_memory_accesses() {
       // that is pinned to the attached table name.
       for (auto &unattached : mem.unattached_tables) {
         // auto &attached_table_unique_id = unattached.first;
-        auto &match_attached_to_unique_id = unattached.second;
-        // LOG4("Unattached attached_table_unique_id = " << attached_table_unique_id);
-        // LOG4("     match_attached_to_unique_id = " << match_attached_to_unique_id);
-        if (attached_memory_usage_.find(match_attached_to_unique_id) !=
-            attached_memory_usage_.end()) {
-          auto attached_mem_access =
-            attached_memory_usage_.at(match_attached_to_unique_id);
-          tbl_memory_access += attached_mem_access;
+        for (auto &match_attached_to_unique_id : unattached.second) {
+          // LOG4("Unattached attached_table_unique_id = " << attached_table_unique_id);
+          // LOG4("     match_attached_to_unique_id = " << match_attached_to_unique_id);
+          if (attached_memory_usage_.count(match_attached_to_unique_id)) {
+            auto &attached_mem_access =
+              attached_memory_usage_.at(match_attached_to_unique_id);
+            tbl_memory_access += attached_mem_access;
 
-          // LOG4("Found attached memory access\n" << attached_mem_access);
-        } else {
-          LOG1("WARNING: Unable to find shared resource memory usage for " << t->name << ".");
-  } } } }
+            // LOG4("Found attached memory access\n" << attached_mem_access);
+          } else {
+            LOG1("WARNING: Unable to find shared resource memory usage for " << t->name << ".");
+  } } } } }
 }
 
 void DeterminePowerUsage::update_stage_dependencies_for_min_latency() {

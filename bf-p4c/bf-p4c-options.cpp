@@ -151,6 +151,9 @@ BFN_Options::BFN_Options() {
     registerOption("--disable_backfill", nullptr,
         [this](const char *) { disable_table_placement_backfill = true; return true; },
         "Do not backfill tables in table placement");
+    registerOption("--disable_split_attached", nullptr,
+        [this](const char *) { disable_split_attached = true; return true; },
+        "Do not split meters or registers across stages");
     registerOption("--bf-rt-schema", "file",
         [this](const char *arg) { bfRtSchema = arg; return true; },
         "Generate and write BF-RT JSON schema to the specified file");

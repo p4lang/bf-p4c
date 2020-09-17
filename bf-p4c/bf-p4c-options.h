@@ -32,6 +32,7 @@ class BFN_Options : public CompilerOptions {
     bool disable_direct_exit = false;
     bool disable_long_branch = false;
     bool disable_dark_allocation = false;
+    bool disable_split_attached = false;
     bool disable_table_placement_backfill = false;
     bool table_placement_in_order = false;
     bool disable_gfm_parity = true;

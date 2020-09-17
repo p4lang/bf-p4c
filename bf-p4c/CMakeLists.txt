@@ -337,6 +337,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/adjust_byte_count.h
   mau/add_always_run.h
   mau/asm_output.h
+  mau/attached_entries.h
   mau/attached_info.h
   mau/attached_output.h
   mau/build_power_graph.h

@@ -2,7 +2,7 @@
 #include "bf-p4c/common/empty_tableseq.h"
 
 int AddAlwaysRun::compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
-    return compare(t1, t2 ? boost::optional<UniqueId>(t2->pp_unique_id()) : boost::none);
+    return compare(t1, t2 ? boost::optional<UniqueId>(t2->get_uid()) : boost::none);
 }
 
 int AddAlwaysRun::compare(const IR::MAU::Table* t1, boost::optional<UniqueId> t2) const {
@@ -14,7 +14,7 @@ int AddAlwaysRun::compare(const IR::MAU::Table* t1, boost::optional<UniqueId> t2
 
     auto globalOrdering = globalOrderings.at(t1->gress);
 
-    auto t1Id = t1->pp_unique_id();
+    auto t1Id = t1->get_uid();
     auto t2Id = *t2;
     BUG_CHECK(globalOrdering.count(t1Id), "Global ordering not available for table %1%", t1);
     BUG_CHECK(globalOrdering.count(t2Id),
@@ -41,7 +41,7 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
         auto& flowGraph = self.flowGraphs[gress];
         std::map<UniqueId, const IR::MAU::Table*> tablesByUniqueId;
         for (auto* table : flowGraph.get_tables()) {
-            tablesByUniqueId[table->pp_unique_id()] = table;
+            tablesByUniqueId[table->get_uid()] = table;
         }
 
         // Add the always-run tables to the index and to the flow graph.
@@ -84,7 +84,7 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
         // Do a topological sort of the flow graph to populate self.globalOrderings.
         int pos = 0;
         for (auto* table : flowGraph.topological_sort()) {
-            if (table) self.globalOrderings[gress][table->pp_unique_id()] = pos++;
+            if (table) self.globalOrderings[gress][table->get_uid()] = pos++;
         }
     }
 
@@ -137,8 +137,8 @@ void AddAlwaysRun::PrepareToAdd::end_apply(const IR::Node* root) {
         auto* table = entry.first;
         auto* subsequentTable = entry.second;
 
-        self.subsequentTables[table->pp_unique_id()] =
-            subsequentTable ? boost::optional<UniqueId>(subsequentTable->pp_unique_id())
+        self.subsequentTables[table->get_uid()] =
+            subsequentTable ? boost::optional<UniqueId>(subsequentTable->get_uid())
                             : boost::none;
     }
 }
@@ -163,7 +163,7 @@ const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
         // Build a map of tables to add, indexed by unique ID.
         std::map<UniqueId, const IR::MAU::Table*> tableIdx;
         for (auto* table : Keys(self.allTablesToAdd.at(gress))) {
-            tableIdx[table->pp_unique_id()] = table;
+            tableIdx[table->get_uid()] = table;
         }
 
         // Populate tablesToAdd.
@@ -198,7 +198,7 @@ const IR::Node* AddAlwaysRun::AddTables::preorder(IR::MAU::TableSeq* tableSeq) {
         // subsequentTable is the current table's minimum subsequent table.
         // If we're at the last table, then it's the one that we saved above.
         subsequentTable =
-            i < tableSeq->tables.size() - 1 ? self.subsequentTables.at(curTable->pp_unique_id())
+            i < tableSeq->tables.size() - 1 ? self.subsequentTables.at(curTable->get_uid())
                                             : savedSubsequentTable;
 
         // Add to the result any tables that need to come before the current table.

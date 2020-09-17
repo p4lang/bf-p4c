@@ -648,7 +648,7 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
     }
     if (!attached_entries.count(salu))
         return;
-    auto entries = attached_entries.at(salu);
+    auto entries = attached_entries.at(salu).entries;
     if (entries == 0)
         return;
 
@@ -695,7 +695,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int width = 1;
         int attached_entries = lo->entries;
         if (!at->direct) {
-            if (!att_entries.count(at) || (attached_entries = att_entries.at(at)) == 0)
+            if (!att_entries.count(at) || (attached_entries = att_entries.at(at).entries) == 0)
                 continue; }
         bool need_srams = true;
         bool need_maprams = false;
@@ -901,17 +901,18 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     // Because the table is const, the layout options must be copied into the Object
     layout_options.clear();
     format_type = ActionData::NORMAL;
+    int initial_entries = entries;
     if (!tbl->created_during_tp) {
         for (auto *ba : tbl->attached) {
             if (ba->attached->direct)
                 continue;
-            else if (TablePlacement::can_duplicate(ba->attached))
-                continue;
             else if (entries == 0)
                 format_type = ActionData::POST_SPLIT_ATTACHED;
-            else if (attached_entries.at(ba->attached) == 0)
+            else if (attached_entries.at(ba->attached).entries == 0)
                 format_type = ActionData::PRE_SPLIT_ATTACHED;
-            else if (prev_placed || attached_entries.at(ba->attached) < ba->attached->size)
+            else if (TablePlacement::can_duplicate(ba->attached))
+                continue;
+            else if (prev_placed && attached_entries.at(ba->attached).entries < ba->attached->size)
                 P4C_UNIMPLEMENTED("Split attached table with some match and some attached "
                                   "in the same stage, but not all in one stage");
             else
@@ -955,6 +956,13 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
     BUG_CHECK(tbl->conditional_gateway_only() || !layout_options.empty(), "No layout for %s", tbl);
     determine_initial_layout_option(tbl, entries, attached_entries, table_placement);
     // FIXME: This is a quick hack to handle tables with only a default action
+
+    // FIXME if the initial_entries was 0, we can't set it non-zero as that will cause
+    // table placement to loop, never being able to finish the table.  So we reset it
+    // it unconditionally.  This will likely cause an error about being unable to split
+    // a table (generally due to not having a SPLIT_ATTACHED format, but thats better than
+    // a non-informational crash,
+    if (initial_entries == 0) entries = 0;
 
     LOG2("StageUseEstimate(" << tbl->name << ", " << entries << ", " << format_type << ") " <<
          layout_options.size() << " layouts");
@@ -1012,13 +1020,16 @@ int StageUseEstimate::stages_required() const {
    different layout options can be while still using up to the number of srams */
 bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
                                         int &entries, attached_entries_t &attached_entries) {
-    if (std::all_of(layout_options.begin(), layout_options.end(),
-                    [](LayoutOption &lo) { return lo.layout.hash_action; }))
-        return false;
-
-    // Remove the hash action layout option(s)
-    layout_options.erase(std::remove_if(layout_options.begin(), layout_options.end(),
-            [](LayoutOption &lo) { return lo.layout.hash_action; }), layout_options.end());
+    if (entries > 1) {
+        // Can't split hash_action tables that do any actual lookup (but can duplicate
+        // no-match-hit tables, which are hash_action with 1 entry)
+        if (std::all_of(layout_options.begin(), layout_options.end(),
+                        [](LayoutOption &lo) { return lo.layout.hash_action; }))
+            return false;
+        // Remove the hash action layout option(s)
+        layout_options.erase(std::remove_if(layout_options.begin(), layout_options.end(),
+                [](LayoutOption &lo) { return lo.layout.hash_action; }), layout_options.end());
+    }
 
     for (auto &lo : layout_options) {
         lo.clear_mems();
@@ -1062,7 +1073,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
     for (auto back_at : tbl->attached) {
          auto at = back_at->attached;
          if (at->direct || !att_entries.count(at)) continue;
-         int attached_entries = att_entries.at(at);
+         int attached_entries = att_entries.at(at).entries;
          if (attached_entries == 0) continue;
          int per_word = 0;
          int width = 1;

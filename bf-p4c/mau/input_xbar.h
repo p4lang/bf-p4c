@@ -6,6 +6,7 @@
 #include <random>
 #include <unordered_set>
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/mau/attached_entries.h"
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -591,6 +592,7 @@ struct IXBar {
         const ActionData::Format::Use *af;
         const LayoutOption *lo;
         TableResourceAlloc *resources;
+        const attached_entries_t &attached_entries;
 
         void build_action_data_req(const IR::MAU::HashDist *hd);
         void build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node,
@@ -608,8 +610,9 @@ struct IXBar {
         void hash_action();
         bool allocate_hash_dist();
         XBarHashDist(IXBar &s, const PhvInfo &p, const IR::MAU::Table *t,
-                const ActionData::Format::Use *a, const LayoutOption *l, TableResourceAlloc *r)
-            : self(s), phv(p), tbl(t), af(a), lo(l), resources(r) {}
+                const ActionData::Format::Use *a, const LayoutOption *l, TableResourceAlloc *r,
+                const attached_entries_t &ae)
+            : self(s), phv(p), tbl(t), af(a), lo(l), resources(r), attached_entries(ae) {}
     };
 
 /* A problem occurred with the way the IXbar was allocated that requires backtracking
@@ -803,7 +806,8 @@ struct IXBar {
     bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &phv,
                     Use &alloc, bool on_search_bus);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                    const LayoutOption *lo, const ActionData::Format::Use *af);
+                    const LayoutOption *lo, const ActionData::Format::Use *af,
+                    const attached_entries_t &ae);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const HashDistUse &hash_dist_alloc);
     void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);

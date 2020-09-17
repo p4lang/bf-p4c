@@ -31,7 +31,7 @@ env:
     - TOFINO_TESTS_2="^tofino/(.*programs|.*internal_p4_14)"
     - TOFINO_EXCLUDE_2="TestRealData|_basic_ipv4|_stful|_meters|_hash_driven|_dkm|_exm_smoke_test|_exm_direct_|_exm_direct_1_|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|perf_test_alpm|entry_read_from_hw"
     - JBAY_TESTS="^tofino2|cpplint|gtest|test_p4c_driver"
-    - JBAY_EXCLUDE="smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*"
+    - JBAY_EXCLUDE="ignore_test_|smoketest|p4_16_programs_tna_exact_match|p4_16_programs_tna_meter_lpf_wred|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|/dkm/|entry_read_from_hw|/p4_14/stf/decaf_9.*"
 
 cache:
   # timeout waiting for docker images

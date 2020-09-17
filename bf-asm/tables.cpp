@@ -541,7 +541,7 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                 else
                     long_branch.emplace(lb.key.i, lb.value); } }
     } else if (kv.key == "vpns") {
-        if (CHECKTYPE(kv.value, tVEC))
+        if (CHECKTYPESIZE(kv.value, tVEC))
             setup_vpns(layout, &kv.value.vec);
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
