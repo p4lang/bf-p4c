@@ -1075,9 +1075,10 @@ add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
   )
 # force the generation of the bf-p4c package
 add_custom_target(bf-p4c ALL DEPENDS ${P4C_BINARY_DIR}/bf-p4c)
-if (ENABLE_BAREFOOT_INTERNAL)
-  install (PROGRAMS ${P4C_BINARY_DIR}/bf-p4c DESTINATION bin)
-endif()
+#TODO: Put this change after rel_9_3 release - P4C-2733
+#if (ENABLE_BAREFOOT_INTERNAL)
+install (PROGRAMS ${P4C_BINARY_DIR}/bf-p4c DESTINATION bin)
+#endif()
 install (FILES ${P4C_BINARY_DIR}/p4c_src/main.py
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
