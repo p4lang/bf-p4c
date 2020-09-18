@@ -793,7 +793,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
 const IR::Expression *DoInstructionSelection::postorder(IR::Neg *e) {
     if (!af) return e;
     return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type),
-                                    new IR::Constant(0), e->expr);
+                                    new IR::Constant(e->srcInfo, e->type, 0), e->expr);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Shl *e) {

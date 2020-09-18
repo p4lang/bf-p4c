@@ -181,36 +181,39 @@ bool checkIncorrectCsumFields(const IR::HeaderOrMetadata* last,
     }
 }
 
-using ChecksumHeaderToFieldInfo = ordered_map<const IR::HeaderRef*, std::map<cstring, int>>;
+using ChecksumHeaderToFieldInfo =
+    ordered_map<cstring, std::pair<const IR::HeaderRef*, std::map<cstring, int>>>;
 
-FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerTofields,
+FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerToFields,
                              const IR::Member* destField) {
     auto listInfo = new FieldListInfo(new IR::Vector<IR::BFN::ChecksumEntry>());
-    for (auto& fm : headerTofields) {
+    for (auto& htf : headerToFields) {
         int bitCount = 0;
         int offset16 = 0;
         const IR::Member* prev;
         bool fieldsTillByte = false;
-        auto header = fm.first->baseRef();
+        const auto* headerRef = htf.second.first;
+        const auto& fieldMap = htf.second.second;
+        auto header = headerRef->baseRef();
         auto headerPovBit = new IR::Member(IR::Type::Bits::get(1),
-                                                        fm.first, "$valid");
+                                                        headerRef, "$valid");
         for (auto field : header->type->fields) {
             if (bitCount % 8 == 0) {
                 // Next field does not need to be included in csum list
                 fieldsTillByte = false;
             }
-            if (fm.second.count(field->name)) {
-                auto member = new IR::Member(field->type, fm.first, field->name);
+            if (fieldMap.count(field->name)) {
+                auto member = new IR::Member(field->type, headerRef, field->name);
                 prev = member;
                 if (header->is<IR::Metadata>()) {
                     // Constraints are relaxed on metadata
                     auto destPov = new IR::Member(IR::Type::Bits::get(1),
                                    destField->expr->to<IR::ConcreteHeaderRef>(), "$valid");
-                    listInfo->add_field(member, destPov, fm.second.at(field->name));
+                    listInfo->add_field(member, destPov, fieldMap.at(field->name));
                     continue;
                 }
                 if (fieldsTillByte) {
-                    if (offset16 != fm.second.at(field->name) % 16) {
+                    if (offset16 != fieldMap.at(field->name) % 16) {
                         ::fatal_error("All fields within the same byte-size chunk of the header"
                         " must have the same 2 byte-alignment in the checksum list. Checksum"
                         " engine is unable to read %1% for %2% checksum update", member,
@@ -219,15 +222,15 @@ FieldListInfo* reorderFields(const ChecksumHeaderToFieldInfo& headerTofields,
                 }
                 fieldsTillByte = true;
                 // Setting the alignment for next field
-                offset16 = (fm.second.at(field->name) + field->type->width_bits()) % 16;
-                if (bitCount % 8 != fm.second.at(field->name) % 8) {
+                offset16 = (fieldMap.at(field->name) + field->type->width_bits()) % 16;
+                if (bitCount % 8 != fieldMap.at(field->name) % 8) {
                     ::fatal_error("Each field's bit alignment in the packet should be"
                     " equal to that in the checksum list. Checksum"
                     " engine is unable to read %1% for %2% checksum update", member,
                      destField);
                 }
                 prev = member;
-                listInfo->add_field(member, headerPovBit, fm.second.at(field->name));
+                listInfo->add_field(member, headerPovBit, fieldMap.at(field->name));
             } else if (fieldsTillByte) {
                 ::fatal_error("All fields within same byte of header must participate in the "
                 "checksum list. Checksum engine is unable to read %1% for %2% checksum update",
@@ -254,7 +257,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
     const IR::HeaderOrMetadata* currentFieldHeaderRef = nullptr;
     const IR::HeaderOrMetadata* lastFieldHeaderRef = nullptr;
     std::map<const IR::Member*, int> duplicateMap;
-    ChecksumHeaderToFieldInfo fieldMap;
+    ChecksumHeaderToFieldInfo headerToFields;
     int offset = 0;
     std::stringstream msg;
     // Along with collecting checksum update fields, following checks are performed:
@@ -272,17 +275,23 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             } else if (auto* member = source->to<IR::Member>()) {
                 if (auto curHeader = member->expr->to<IR::ConcreteHeaderRef>()) {
                     currentFieldHeaderRef = curHeader->baseRef();
-                    if (fieldMap.count(curHeader) && fieldMap[curHeader].count(member->member)) {
+                    cstring headerName = curHeader->toString();
+                    if (headerToFields.count(headerName) &&
+                            headerToFields[headerName].second.count(member->member)) {
                         duplicateMap[member] = offset;
                     } else {
-                        fieldMap[curHeader][member->member] = offset;
+                        headerToFields[headerName].first = curHeader;
+                        headerToFields[headerName].second[member->member] = offset;
                     }
                 } else if (auto curStack = member->expr->to<IR::HeaderStackItemRef>()) {
                     currentFieldHeaderRef = curStack->baseRef();
-                    if (fieldMap.count(curStack) && fieldMap[curStack].count(member->member)) {
+                    cstring headerName = curStack->toString();
+                    if (headerToFields.count(headerName) &&
+                            headerToFields[headerName].second.count(member->member)) {
                         duplicateMap[member] = offset;
                     } else {
-                        fieldMap[curStack][member->member] = offset;
+                        headerToFields[headerName].first = curStack;
+                        headerToFields[headerName].second[member->member] = offset;
                     }
                 } else {
                     ::error("Unhandled checksum expression %1%", member);
@@ -304,7 +313,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             :: error("Invalid entry in checksum calculation %1%", source);
         }
     }
-    auto listInfo = reorderFields(fieldMap, destField);
+    auto listInfo = reorderFields(headerToFields, destField);
     std::map<const IR::Member*, const IR::TempVar*> duplicatedFields;
     for (auto&dupField : duplicateMap) {
         auto fieldSize = dupField.first->type->width_bits();

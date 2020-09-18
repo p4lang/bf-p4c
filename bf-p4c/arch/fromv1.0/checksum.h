@@ -24,8 +24,10 @@ class TranslateParserChecksums : public PassManager {
  public:
     std::map<const IR::Expression*, IR::Member*> residualChecksums;
     std::set<const IR::Expression*> needBridging;
-    std::map<const IR::Expression*, ordered_set<const IR::Member*>> residualChecksumPayloadFields;
-    std::map<const IR::Expression*, std::map<gress_t, const IR::ParserState*>> destToGressToState;
+    std::map<const IR::Expression*,
+        ordered_set<const IR::Expression*>> residualChecksumPayloadFields;
+    std::map<const IR::Expression*,
+        std::map<gress_t, const IR::ParserState*>> destToGressToState;
     std::map<gress_t,
           std::map<cstring, IR::Statement*>> checksumDepositToHeader;
     DeclToStates ingressVerifyDeclToStates;
@@ -210,8 +212,8 @@ class InsertParserChecksums : public Inspector {
 
     unsigned residualChecksumCnt = 0;
 
-    typedef std::map<const IR::ParserState*, std::vector<const IR::Member*> > StateToExtracts;
-    typedef std::map<const IR::Member*, const IR::ParserState*> ExtractToState;
+    typedef std::map<const IR::ParserState*, std::vector<const IR::Expression*> > StateToExtracts;
+    typedef std::map<const IR::Expression*, const IR::ParserState*> ExtractToState;
 
     StateToExtracts stateToExtracts;
     ExtractToState extractToState;
@@ -231,9 +233,8 @@ class InsertParserChecksums : public Inspector {
 
             if (method && method->member == "extract") {
                 for (auto m : *(call->arguments)) {
-                    auto* mem = m->expression->to<IR::Member>();
-                    stateToExtracts[state].push_back(mem);
-                    extractToState[mem] = state;
+                    stateToExtracts[state].push_back(m->expression);
+                    extractToState[m->expression] = state;
                 }
             }
         }
@@ -297,7 +298,7 @@ class InsertParserChecksums : public Inspector {
 
         for (auto f : fieldlist->to<IR::ListExpression>()->components) {
             for (auto extract : extracts) {
-                if (belongsTo(f->to<IR::Member>(), extract)) {
+                if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
                     auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                         new IR::MethodCallExpression(mc->srcInfo,
                             new IR::Member(new IR::PathExpression(decl->name), "add"),
@@ -311,7 +312,7 @@ class InsertParserChecksums : public Inspector {
         }
 
         for (auto extract : extracts) {
-            if (belongsTo(destfield->to<IR::Member>(), extract)) {
+            if (belongsTo(destfield->to<IR::Member>(), extract->to<IR::Member>())) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
                 auto addCall = new IR::MethodCallStatement(mc->srcInfo,
@@ -326,9 +327,9 @@ class InsertParserChecksums : public Inspector {
         }
     }
 
-    ordered_set<const IR::Member*>
+    ordered_set<const IR::Expression*>
     collectResidualChecksumPayloadFields(const IR::ParserState* state) {
-        ordered_set<const IR::Member*> rv;
+        ordered_set<const IR::Expression*> rv;
 
         auto descendants = graph->get_all_descendants(state);
 
@@ -418,7 +419,7 @@ class InsertParserChecksums : public Inspector {
                 for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                     if (f->is<IR::Constant>()) {
                         constant = f;
-                    } else if (belongsTo(f->to<IR::Member>(), extract)) {
+                    } else if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
                         if (constant) {
                             exprList.emplace_back(constant);
                             constant = nullptr;
@@ -441,7 +442,7 @@ class InsertParserChecksums : public Inspector {
                     parserStatements->push_back(subtractCall);
                }
 
-                if (belongsTo(destfield->to<IR::Member>(), extract)) {
+                if (belongsTo(destfield->to<IR::Member>(), extract->to<IR::Member>())) {
                     auto subtractCall = new IR::MethodCallStatement(mc->srcInfo,
                         new IR::MethodCallExpression(mc->srcInfo,
                             new IR::Member(new IR::PathExpression(decl->name), "subtract"),
@@ -458,7 +459,8 @@ class InsertParserChecksums : public Inspector {
                             new IR::Vector<IR::Type>({ residualChecksum->type }),
                             new IR::Vector<IR::Argument>({ new IR::Argument(residualChecksum) })));
 
-                    translate->checksumDepositToHeader[location][extract->member] = deposit;
+                    translate->checksumDepositToHeader[location]
+                        [extract->to<IR::Member>()->member] = deposit;
                     if (auto boolLiteral = condition->to<IR::BoolLiteral>()) {
                         if (!boolLiteral->value) {
                             // Do not add the if-statement if the condition is always true.
