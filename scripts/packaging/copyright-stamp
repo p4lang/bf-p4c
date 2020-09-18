@@ -74,12 +74,6 @@ ignoreFilePatterns=(
   # The only file we ship from Glass seems to be primitives.json, which can't
   # have comments anyway.
   '^glass/'
-
-  # Ignore this script. Bad things happen if we modify it while it's running.
-  # Also don't modify docker_build.sh, since that is also running during
-  # packaging.
-  '^docker/docker_build.sh$'
-  '^scripts/packaging/copyright-stamp$'
 )
 
 # Any file whose path relative to the given directories matches any regex in
@@ -87,7 +81,8 @@ ignoreFilePatterns=(
 # will always add an Intel copyright notice to these files. Use
 # `ignoreFilePatterns` to disable this behaviour for specific files.
 noCopyrightCheckPatterns=(
-  '^scripts/package_p4c_for_tofino.sh$'
+  '^scripts/package_p4c_for_tofino\.sh$'
+  '^scripts/packaging/copyright-stamp$'
 )
 
 # When a file's path relative to the given directory matches a regex declared
@@ -100,8 +95,8 @@ setType c \
   '\.(c|cpp|h|h\.in|hpp|l|p4|ypp)$' \
 
 setType sh \
-  '(^|/)CMakeLists.txt$' \
-  '(^|/)MANIFEST.in$'  `# Python manifest file` \
+  '(^|/)CMakeLists\.txt$' \
+  '(^|/)MANIFEST\.in$'  `# Python manifest file` \
   '(^|/)\.clang-format$' \
   '(^|/)\.dockerignore$' \
   '(^|/)\.gdbinit$' \
@@ -238,28 +233,37 @@ for path in "${!filesToTypes[@]}" ; do
   typ="${filesToTypes["${path}"]}"
   noticeFileVar="${typ}NoticeFile"
 
-  cp "${path}" "${scratchFile}"
+  # Rewrite each file as follows:
+  #   1. Rename the original file to a temporary location,
+  #   2. Write the result into the original location, and
+  #   3. Copy attributes from the original file to the new file.
+  #
+  # This ensures that the new file occupies a new inode, so that if the file is
+  # a currently running script, this rewriting won't alter the script's
+  # behaviour.
+  {
+    mv "${path}" "${scratchFile}"
 
-  if [[ "${typ}" == "sh" ]] ; then
-    # For scripts, if the file starts with a shebang, insert a blank line after
-    # the shebang, and insert the header after the blank line.
-    if IFS= LC_ALL=C \
-      read -rn2 -d '' shebang < "${scratchFile}" \
+    if [[ "${typ}" == "sh" ]] \
+      && IFS= LC_ALL=C read -rn2 -d '' shebang < "${scratchFile}" \
       && [[ "${shebang}" == '#!' ]]
     then
+      # We have a script that starts with a shebang. Put a blank line after
+      # the shebang, followed by the copyright header, then the rest of the
+      # original file.
       cat >"${path}" \
         <(head -n 1 "${scratchFile}") \
         <(echo) \
         "${!noticeFileVar}" \
         <(tail -n +2 "${scratchFile}")
-
-      continue
+    else
+      # Add copyright header to the beginning of the file.
+      cat >"${path}" \
+        "${!noticeFileVar}" \
+        <(echo) \
+        "${scratchFile}"
     fi
-  fi
 
-  # Add copyright header to the beginning of the file.
-  cat >"${path}" \
-    "${!noticeFileVar}" \
-    <(echo) \
-    "${scratchFile}"
+    cp -a --attributes-only "${scratchFile}" "${path}"
+  }
 done
