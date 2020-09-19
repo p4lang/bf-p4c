@@ -20,10 +20,10 @@ class BuildDominatorTree : public Inspector {
     using PredMap = boost::iterator_property_map<std::vector<Vertex>::iterator, IndexMap>;
 
  private:
-    /// References to FlowGraph references for every gress.
-    std::vector<FlowGraph*>&              flowGraph;
-    /// Immediate dominator map for each gress.
-    std::vector<ImmediateDominatorMap*>  iDominator;
+    /// Maps each gress to its table flow graph.
+    ordered_map<gress_t, FlowGraph>&              flowGraph;
+    /// Maps each gress to its Immediate dominator map.
+    ordered_map<gress_t, ImmediateDominatorMap*>  iDominator;
 
     profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::BFN::Pipe* pipe) override;
@@ -49,9 +49,9 @@ class BuildDominatorTree : public Inspector {
     void printDominatorTree(const ImmediateDominatorMap& idom) const;
 
  public:
-    /** @returns the flow graph associated with the program
+    /** @returns the flow graph associated with each gress in the program
       */
-    const std::vector<FlowGraph*>& getFlowGraph() const {
+    const ordered_map<gress_t, FlowGraph>& getFlowGraph() const {
         return flowGraph;
     }
 
@@ -87,7 +87,7 @@ class BuildDominatorTree : public Inspector {
     const std::vector<const IR::MAU::Table*>
         getAllDominators(const IR::MAU::Table* t, gress_t gress) const;
 
-    explicit BuildDominatorTree(std::vector<FlowGraph*>& fg) : flowGraph(fg) { }
+    explicit BuildDominatorTree(ordered_map<gress_t, FlowGraph>& fg) : flowGraph(fg) { }
 
     /// GTest methods.
 

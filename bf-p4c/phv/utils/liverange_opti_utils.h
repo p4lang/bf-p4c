@@ -17,7 +17,7 @@ static ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>>
 canFUnitsReachGUnits(
         const ordered_set<const IR::BFN::Unit*>& f_units,
         const ordered_set<const IR::BFN::Unit*>& g_units,
-        const std::vector<FlowGraph*>& flowGraph) {
+        const ordered_map<gress_t, FlowGraph>& flowGraph) {
     ordered_set<std::pair<const IR::BFN::Unit*, const IR::BFN::Unit*>> rv;
     auto gress = boost::make_optional(false, gress_t());
     for (const auto* u1 : f_units) {
@@ -30,8 +30,8 @@ canFUnitsReachGUnits(
             continue;
         }
         const auto* t1 = table1 ? u1->to<IR::MAU::Table>() : nullptr;
-        const FlowGraph* fg = flowGraph[*gress];
-        BUG_CHECK(fg, "Flow graph not found");
+        BUG_CHECK(flowGraph.count(*gress), "Flow graph not found for %1%", *gress);
+        const FlowGraph& fg = flowGraph.at(*gress);
         for (const auto* u2 : g_units) {
             // Units of different gresses cannot reach each other.
             if (gress)
@@ -64,7 +64,7 @@ canFUnitsReachGUnits(
             if (!u2->is<IR::MAU::Table>())
                 BUG("Non-parser, non-deparser, non-table defuse unit found.");
             const auto* t2 = u2->to<IR::MAU::Table>();
-            if (fg->can_reach(t1, t2)) {
+            if (fg.can_reach(t1, t2)) {
                 LOG4("\t\t\t" << t1->name << " can reach " << t2->name);
                 rv.insert(std::make_pair(u1, u2));
             } else {

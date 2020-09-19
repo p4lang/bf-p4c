@@ -172,6 +172,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/compile_only/p4c-2492.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2336.p4
   extensions/p4_tests/p4_16/compile_only/p4c-2446.p4
+  extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
   extensions/p4_tests/p4_16/compile_only/all_ctrl_edges.p4
   extensions/p4_tests/p4_16/compile_only/placement_priority.p4
   extensions/p4_tests/p4_16/compile_only/test_config_31_serenum.p4

@@ -28,7 +28,7 @@ class FindInitializationNode : public Inspector {
     const MetadataLiveRange&                metaLiveMap;
     const ActionPhvConstraints&             actionConstraints;
     const TablesMutuallyExclusive&          tableMutex;
-    const std::vector<FlowGraph*>&          flowGraph;
+    const ordered_map<gress_t, FlowGraph>&  flowGraph;
     const DetermineCandidateHeaders&        noInitPacketFields;
     const MauBacktracker&                   tableAlloc;
 
@@ -169,7 +169,7 @@ class FindInitializationNode : public Inspector {
             const MetadataLiveRange& l,
             const ActionPhvConstraints& a,
             const TablesMutuallyExclusive& m,
-            const std::vector<FlowGraph*>& fg,
+            const ordered_map<gress_t, FlowGraph>& fg,
             const DetermineCandidateHeaders& c,
             const MauBacktracker& bt)
         : domTree(d), phv(p), defuse(u), dg(g), noInit(i), tablesToActions(t),

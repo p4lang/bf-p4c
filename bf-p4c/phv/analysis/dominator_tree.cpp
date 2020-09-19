@@ -6,40 +6,41 @@
 using namespace boost;
 
 bool BuildDominatorTree::preorder(const IR::BFN::Pipe *pipe) {
-    const int numThreads = (sizeof(pipe->thread) / sizeof(IR::BFN::Pipe::thread_t));
-    for (size_t i = 0; i < numThreads /* pipe->thread.size() */; ++i) {
-        flowGraph.push_back(new FlowGraph());
-        pipe->thread[i].mau->apply(FindFlowGraph(*(flowGraph[i])));
-    }
+    FindFlowGraphs find_flow_graphs(flowGraph);
+    pipe->apply(find_flow_graphs);
 
     // Generate dominator tree for each gress.
-    for (auto* fg : flowGraph) {
+    for (const auto& entry : flowGraph) {
+        const auto& gress = entry.first;
+        const auto& fg = entry.second;
+
         ordered_map<int, const IR::MAU::Table*> indexMap;
         // If the flow graph is empty (e.g. no egress tables), no need to build the dominator map.
         // However, we still create an ImmediateDominatorMap for the particular gress.
-        if (fg->emptyFlowGraph) {
-            iDominator.push_back(new ImmediateDominatorMap());
+        if (fg.emptyFlowGraph) {
+            iDominator.emplace(gress, new ImmediateDominatorMap());
             continue;
         }
-        if (!fg->gress)
-            BUG("Gress not assigned for flow graph");
-        gress_t graphGress = *(fg->gress);
-        generateIndexToTableMap(*fg, indexMap);
-        iDominator.push_back(new ImmediateDominatorMap);
-        generateDominatorTree(*fg, indexMap, *(iDominator.at(graphGress)));
+        BUG_CHECK(fg.gress, "Gress not assigned for flow graph");
+        BUG_CHECK(*fg.gress == gress, "FindFlowGraphs resulted in an inconsistent data structure");
+        generateIndexToTableMap(fg, indexMap);
+        iDominator.emplace(gress, new ImmediateDominatorMap());
+        generateDominatorTree(fg, indexMap, *(iDominator.at(gress)));
     }
     if (!LOGGING(1)) return false;
-    for (size_t i = 0; i < iDominator.size(); ++i) {
-        LOG1("\tPrinting dominator tree for " << i);
-        printDominatorTree(*(iDominator.at(i)));
+    for (gress_t gress : Range(INGRESS, GHOST)) {
+        if (iDominator.count(gress) == 0) continue;
+        LOG1("\tPrinting dominator tree for " << gress);
+        printDominatorTree(*(iDominator.at(gress)));
     }
     return false;
 }
 
 Visitor::profile_t BuildDominatorTree::init_apply(const IR::Node* root) {
     flowGraph.clear();
-    for (auto* idom : iDominator)
-        idom->clear();
+    for (auto idom : iDominator)
+        idom.second->clear();
+    iDominator.clear();
     return Inspector::init_apply(root);
 }
 
@@ -128,7 +129,7 @@ void BuildDominatorTree::printDominatorTree(const ImmediateDominatorMap& idom) c
 boost::optional<const IR::MAU::Table*>
 BuildDominatorTree::getImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
     cstring tableName = (t == NULL) ? "deparser" : t->name;
-    BUG_CHECK(gress < iDominator.size(), "Invalid gress %1% for table %2%", gress, tableName);
+    BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
     if (!iDom->count(t)) return boost::none;
     return iDom->at(t);
@@ -137,7 +138,7 @@ BuildDominatorTree::getImmediateDominator(const IR::MAU::Table* t, gress_t gress
 boost::optional<const IR::MAU::Table*>
 BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
     cstring tableName = (t == NULL) ? "deparser" : t->name;
-    BUG_CHECK(gress < iDominator.size(), "Invalid gress %1% for table %2%", gress, tableName);
+    BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     auto dom = getImmediateDominator(t, gress);
     if (!dom) return boost::none;
     // If the table is not a gateway, then return the immediate dominator itself.
@@ -284,7 +285,7 @@ BuildDominatorTree::getNonGatewayGroupDominator(ordered_set<const IR::MAU::Table
 }
 
 cstring BuildDominatorTree::hasImmediateDominator(gress_t g, cstring t) const {
-    BUG_CHECK(g < iDominator.size(), "Invalid gress %1% for unit %2%", g, t);
+    BUG_CHECK(iDominator.count(g) > 0, "Invalid gress %1% for unit %2%", g, t);
     const ImmediateDominatorMap* iDom = iDominator.at(g);
     for (auto kv : *iDom) {
         // If it is a sink node, then check corresponding to the nullptr entry in the dominator map.

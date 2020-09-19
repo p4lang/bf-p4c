@@ -289,11 +289,7 @@ apply {
     )"));
     ASSERT_TRUE(test);
 
-    FlowGraph* fg_ingress = new FlowGraph();
-    FlowGraph* fg_egress = new FlowGraph();
-    std::vector<FlowGraph*> fg;
-    fg.push_back(fg_ingress);
-    fg.push_back(fg_egress);
+    ordered_map<gress_t, FlowGraph> fg;
     auto* dom_tree = new BuildDominatorTree(fg);
     test->pipe->apply(*dom_tree);
 

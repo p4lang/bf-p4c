@@ -49,8 +49,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
     PackConflicts pack_conflicts;
     /// Action induced packing constraints.
     ActionPhvConstraints action_constraints;
-    /// Table flow graph for the program.
-    std::vector<FlowGraph*> flowGraph;
+    /// Table flow graph for each gress in the program.
+    ordered_map<gress_t, FlowGraph> flowGraph;
     /// Dominator tree for the program.
     BuildDominatorTree domTree;
     /// Map of tables to actions and vice versa.
