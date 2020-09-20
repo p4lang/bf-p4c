@@ -17,6 +17,8 @@ std::pair<int, int> getSliceLoHi(const IR::Expression* e);
  *  Also strength-reduce slices on bitwise operations
  */
 const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi);
+inline const IR::Expression *MakeSlice(const IR::Expression *e, le_bitrange slice) {
+    return MakeSlice(e, slice.lo, slice.hi); }
 
 /**
   * MakeSliceDestination -- slice an expression used as the destination in an instruction.  Creates

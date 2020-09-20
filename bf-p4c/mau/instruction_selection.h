@@ -274,12 +274,14 @@ class BackendCopyPropagation : public MauTransform, TofinoWriteContext {
         const IR::Expression *read;
      public:
         FieldImpact(le_bitrange db, const IR::Expression *r) : dest_bits(db), read(r) { }
+        const IR::Expression *getSlice(bool isSalu, le_bitrange bits);
     };
     ordered_map<const PHV::Field *, safe_vector<FieldImpact>> copy_propagation_replacements;
     bool elem_copy_propagated = false;
+    IR::Vector<IR::Primitive> *split_set = nullptr;
 
     const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override;
+    const IR::Node *preorder(IR::MAU::Instruction *i) override;
     const IR::MAU::StatefulCall *preorder(IR::MAU::StatefulCall *sc) override {
         prune(); return sc;
     }

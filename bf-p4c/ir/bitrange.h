@@ -461,6 +461,9 @@ struct ClosedRange {
       , hi(std::numeric_limits<int>::max() - 1) { }
     explicit ClosedRange(std::pair<int, int> range)
       : lo(range.first), hi(range.second) { }
+    ClosedRange(const HalfOpenRange<Unit, Order> &r)  // NOLINT(runtime/explicit)
+      : lo(r.lo), hi(r.hi - 1) { BUG_CHECK(!r.empty(), "can't convert empty range to Closed"); }
+
 
     /// @see HalfOpenRange::size().
     ssize_t size() const { return ssize_t(hi) - ssize_t(lo) + 1; }

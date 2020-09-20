@@ -1946,14 +1946,17 @@ const IR::MAU::Action *BackendCopyPropagation::preorder(IR::MAU::Action *a) {
     return a;
 }
 
-const IR::MAU::Instruction *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
+const IR::Node *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
     instr->copy_propagated.clear();
     // In order to maintain the sequential property, the reads have to be visited before the writes
+    split_set = nullptr;
     for (ssize_t i = instr->operands.size() - 1; i >= 0; i--) {
         elem_copy_propagated = false;
         visit(instr->operands[i], "operands", i);
         instr->copy_propagated[i] = elem_copy_propagated; }
     prune();
+    if (split_set) {
+        return split_set; }
     return instr;
 }
 /** Mark instr->operands[1] as the most recent replacement for instr->operands[0] when @inst
@@ -2008,6 +2011,21 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR:
     }
 }
 
+const IR::Expression *BackendCopyPropagation::FieldImpact::getSlice(bool isSalu, le_bitrange bits) {
+    const IR::Expression *rv;
+    BUG_CHECK(dest_bits.contains(bits), "%s is not a superset of %s", dest_bits, bits);
+    if (isSalu && read->is<IR::MAU::HashDist>()) {
+        // FIXME -- SALU uses hash directly, not via hash dist; need refactoring
+        // of IXBarExpression/HashGenExpression to make this more sane
+        auto *hd = read->to<IR::MAU::HashDist>();
+        rv = MakeSlice(hd->expr, bits.shiftedByBits(-dest_bits.lo));
+        rv = new IR::MAU::IXBarExpression(rv);
+    } else {
+        rv = MakeSlice(read, bits.shiftedByBits(-dest_bits.lo));
+    }
+    return rv;
+}
+
 /** @returns the copy propagation candidate for @e if @e can be replaced (setting
   * @elem_copy_propagated to true), or @e if @e cannot be replaced (setting @elem_copy_propagated
   * to false).
@@ -2026,6 +2044,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         return e;
     }
     bool isSalu = findContext<IR::MAU::SaluAction>() != nullptr;
+    bitvec mask_bits(bits.lo, bits.size());
 
     prune();
     // If a read is possibly replaced with a copy propagated value, replace this value
@@ -2035,23 +2054,35 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
             continue; }
         if (replacement.dest_bits.contains(bits)) {
             elem_copy_propagated = true;
-            auto rv = MakeSlice(replacement.read, bits.lo, bits.hi);
-            if (isSalu && replacement.read->is<IR::MAU::HashDist>()) {
-                // FIXME -- SALU uses hash directly, not via hash dist; need refactoring
-                // of IXBarExpression/HashGenExpression to make this more sane
-                auto *hd = replacement.read->to<IR::MAU::HashDist>();
-                rv = MakeSlice(hd->expr, bits.lo, bits.hi);
-                rv = new IR::MAU::IXBarExpression(rv); }
+            auto rv = replacement.getSlice(isSalu, bits);
             LOG4("BackendCopyProp: " << e << " -> " << rv);
             return rv;
-        } else if (!replacement.dest_bits.intersectWith(bits).empty()) {
+        } else if (replacement.dest_bits.intersectWith(bits).empty()) {
+            continue;
+        } else if (instr->name == "set") {
+            if (!split_set) split_set = new IR::Vector<IR::Primitive>;
+            le_bitrange range = replacement.dest_bits.intersectWith(bits);
+            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+                MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
+                replacement.getSlice(isSalu, range)));
+            mask_bits.clrrange(range.lo, range.size());
+            LOG4("BackendCopyProp: created slice: " << split_set->back());
+        } else {
            ::error("%s: Currently the field %s[%d:%d] in action %s is read in a way "
                    "too complex for the compiler to currently handle.  Please consider "
                    "simplifying this action around this parameter", instr->srcInfo,
                    field->name, bits.hi, bits.lo, act->name);
         }
     }
-
+    if (split_set) {
+        while (!mask_bits.empty()) {
+            int lo = mask_bits.ffs();
+            le_bitrange range(lo, mask_bits.ffz(lo)-1);
+            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+                MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
+                MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
+            mask_bits.clrrange(range.lo, range.size());
+            LOG4("BackendCopyProp: created slice: " << split_set->back()); } }
     return e;
 }
 
