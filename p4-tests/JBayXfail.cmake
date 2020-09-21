@@ -301,6 +301,7 @@ p4c_add_xfail_reason("tofino2"
   "PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
+  p4c-3001
 )
 
 # P4C-2141
@@ -473,7 +474,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "error: PHV allocation creates an invalid container action within a Tofino ALU"
   p4c_2527
-  p4c-3001
 )
 
 # P4C-3070
