@@ -1079,21 +1079,25 @@ add_dependencies(p4c_driver linkp4cbarefoot)
 add_dependencies(linkp4cbarefoot remove_psa_for_tofino)
 
 # Set default target and architecture to tofino-tna
-add_custom_command(OUTPUT ${P4C_BINARY_DIR}/bf-p4c
+add_custom_target(set_p4c_default_target ALL
   # should cythonify bf-p4c
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_BINARY_DIR}/p4c ${P4C_BINARY_DIR}/bf-p4c
   COMMAND sed -i'' -e 's/bmv2/tofino/g' ${P4C_BINARY_DIR}/p4c_src/main.py
   COMMAND sed -i'' -e 's/v1model/default/g' ${P4C_BINARY_DIR}/p4c_src/main.py
   COMMENT "Set default target and architecture to tofino-default"
   WORKING_DIRECTORY ${P4C_BINARY_DIR}
   DEPENDS p4c_driver ${P4C_BINARY_DIR}/p4c_src/main.py
+)
+
+# On internal builds, symlink bf-p4c to p4c.
+if (ENABLE_BAREFOOT_INTERNAL)
+  add_custom_command(OUTPUT ${P4C_BINARY_DIR}/p4c
+    COMMAND ${CMAKE_COMMAND} -E create_symlink bf-p4c ${P4C_BINARY_DIR}/p4c
+    DEPENDS p4c_driver
   )
-# force the generation of the bf-p4c package
-add_custom_target(bf-p4c ALL DEPENDS ${P4C_BINARY_DIR}/bf-p4c)
-#TODO: Put this change after rel_9_3 release - P4C-2733
-#if (ENABLE_BAREFOOT_INTERNAL)
-install (PROGRAMS ${P4C_BINARY_DIR}/bf-p4c DESTINATION bin)
-#endif()
+  add_custom_target(bf-p4c_symlink ALL DEPENDS ${P4C_BINARY_DIR}/p4c)
+  install (PROGRAMS ${P4C_BINARY_DIR}/p4c DESTINATION bin)
+endif()
+
 install (FILES ${P4C_BINARY_DIR}/p4c_src/main.py
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 

@@ -128,6 +128,7 @@ pushd ${builddir}
 cmake ${mydir} -DCMAKE_BUILD_TYPE=${buildtype}\
       ${cmakeGen:+"-G${cmakeGen}"} \
       ${ENABLED_COMPONENTS} \
+      -DP4C_DRIVER_NAME='bf-p4c' \
       -DENABLE_GMP=OFF \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=1\
       -DP4C_CPP_FLAGS="$P4C_CPP_FLAGS" $otherArgs
