@@ -31,6 +31,10 @@ const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
         const IR::Expression *val = nullptr;
         if (auto ev = prop->value->to<IR::ExpressionValue>())
             val = conv.convert(ev->expression);
+        if (!val) {
+            error("%s: %s property is not an expression", prop->name, prop->value->srcInfo);
+            continue;
+        }
         cstring valstr;
         if (auto sl = val->to<IR::StringLiteral>()) valstr = sl->value;
         if (auto pe = val->to<IR::PathExpression>()) valstr = pe->path->name;
@@ -64,9 +68,10 @@ const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
             annotations->addAnnotation("meter_profile", val);
         } else {
             error("Unknown property %s on meter", prop);
-            continue; }
-        if (!val)
-            error("%s: %s property is not an expression", prop->name, prop->value->srcInfo); }
+            continue;
+        }
+    }
+
     if (direct && instance_count)
         error("meter %s specifies both 'direct' and 'instance_count'", ext);
 
