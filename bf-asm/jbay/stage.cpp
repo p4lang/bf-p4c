@@ -60,7 +60,7 @@ static void addvec(json::vector &vec, uint32_t val, uint32_t extra = 0) {
 
 template<class T>
 static void addvec(json::vector &vec, checked_array_base<T> &array, uint32_t extra = 0) {
-    for (auto &el :array)
+    for (auto &el : array)
         addvec(vec, el, extra);
 }
 
@@ -138,8 +138,8 @@ static void disable_jbay_power_gating(REGS &regs) {
 
     auto &xbar_power_ctl = regs.dp.match_input_xbar_din_power_ctl;
     auto &actionmux_power_ctl = regs.dp.actionmux_din_power_ctl;
-    for(int side=0; side < 2; side++) {
-      for(int reg=0; reg < 16; reg++) {
+    for (int side=0; side < 2; side++) {
+      for (int reg=0; reg < 16; reg++) {
         xbar_power_ctl[side][reg] |= 0x3FF;
         actionmux_power_ctl[side][reg] |= 0x3FF;
       }
@@ -181,14 +181,15 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
                 deferred_eop_bus_delay.eop_output_delay_fifo = 1;
             else
                 deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
-        } else if (this[1].stage_dep[gress] == MATCH_DEP)
+        } else if (this[1].stage_dep[gress] == MATCH_DEP) {
             deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
-        else
+        } else {
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        }
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
-        if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP)
+        if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP) {
             merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
-        else {
+        } else {
             /* last stage in JBay must be always set as match-dependent on deparser */
             if (stageno == AsmStage::numstages()-1) {
                 merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
@@ -247,8 +248,11 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     if (stageno != AsmStage::numstages()-1) {
         merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
         merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP; }
-    merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec;
-    merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch;
+
+    merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec[INGRESS] |
+        mpr_bus_dep_glob_exec[EGRESS] | mpr_bus_dep_glob_exec[GHOST];
+    merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch[INGRESS] |
+        mpr_bus_dep_long_branch[EGRESS] | mpr_bus_dep_long_branch[GHOST];
 
     merge.mpr_long_brch_thread = long_branch_thread[EGRESS];
     if (auto conflict = (long_branch_thread[INGRESS] | long_branch_thread[GHOST])

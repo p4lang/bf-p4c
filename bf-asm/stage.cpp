@@ -112,6 +112,17 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                     error(kv.value.lineno,
                             "mpr_stage_id value cannot be greater than current stage.");
                 stage[stageno].mpr_stage_id[gress] = kv.value.i;
+
+                /* Intermediate stage must carry the mpr glob_exec and long_branch bitmap. */
+                if (kv.value.i != stageno) {
+                    for (int inter_stage = kv.value.i + 1; inter_stage < stageno; inter_stage++) {
+                        stage[inter_stage].mpr_bus_dep_glob_exec[gress] |=
+                            stage[kv.value.i].mpr_bus_dep_glob_exec[gress];
+
+                        stage[inter_stage].mpr_bus_dep_long_branch[gress] |=
+                            stage[kv.value.i].mpr_bus_dep_long_branch[gress];
+                    }
+                }
             }
             continue;
         } else if (kv.key == "mpr_always_run") {
@@ -123,13 +134,13 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
         } else if (kv.key == "mpr_bus_dep_glob_exec") {
             stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
             if CHECKTYPE(kv.value, tINT) {
-                stage[stageno].mpr_bus_dep_glob_exec |= kv.value.i;
+                stage[stageno].mpr_bus_dep_glob_exec[gress] = kv.value.i;
             }
             continue;
         } else if (kv.key == "mpr_bus_dep_long_brch") {
             stage[stageno].verify_have_mpr(kv.key.s, kv.key.lineno);
             if CHECKTYPE(kv.value, tINT) {
-                stage[stageno].mpr_bus_dep_long_branch |= kv.value.i;
+                stage[stageno].mpr_bus_dep_long_branch[gress] = kv.value.i;
             }
             continue;
         } else if (kv.key == "mpr_next_table_lut") {

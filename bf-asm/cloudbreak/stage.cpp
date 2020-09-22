@@ -86,14 +86,15 @@ template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
                 deferred_eop_bus_delay.eop_output_delay_fifo = 1;
             else
                 deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
-        } else if (this[1].stage_dep[gress] == MATCH_DEP)
+        } else if (this[1].stage_dep[gress] == MATCH_DEP) {
             deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
-        else
+        } else {
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        }
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
-        if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP)
+        if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP) {
             merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
-        else {
+        } else {
             /* last stage in Cloudbreak must be always set as match-dependent on deparser */
             if (stageno == AsmStage::numstages()-1) {
                 merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
@@ -147,8 +148,11 @@ template<> void Stage::write_regs(Target::Cloudbreak::mau_regs &regs) {
     if (stageno != AsmStage::numstages()-1) {
         merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
         merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP; }
-    merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec;
-    merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch;
+
+    merge.mpr_bus_dep.mpr_bus_dep_glob_exec = mpr_bus_dep_glob_exec[INGRESS] |
+        mpr_bus_dep_glob_exec[EGRESS] | mpr_bus_dep_glob_exec[GHOST];
+    merge.mpr_bus_dep.mpr_bus_dep_long_brch = mpr_bus_dep_long_branch[INGRESS] |
+        mpr_bus_dep_long_branch[EGRESS] | mpr_bus_dep_long_branch[GHOST];
 
     merge.mpr_long_brch_thread = long_branch_thread[EGRESS];
     if (auto conflict = (long_branch_thread[INGRESS] | long_branch_thread[GHOST])
