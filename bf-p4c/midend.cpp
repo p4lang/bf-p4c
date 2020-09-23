@@ -51,6 +51,7 @@
 #include "bf-p4c/midend/normalize_params.h"
 #include "bf-p4c/midend/register_read_write.h"
 #include "bf-p4c/midend/rewrite_egress_intrinsic_metadata_header.h"
+#include "bf-p4c/midend/rewrite_flexible_header.h"
 #include "bf-p4c/midend/simplifyIfStatement.h"
 #include "bf-p4c/midend/simplify_nested_if.h"
 #include "bf-p4c/midend/simplify_args.h"
@@ -383,6 +384,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new BFN::CopyHeaders(&refMap, &typeMap, typeChecking),
         // must run after copy structure
         new P4::SimplifyIfStatement(&refMap, &typeMap),
+        new RewriteFlexibleStruct(&refMap, &typeMap),
         new SimplifyEmitArgs(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap, typeChecking),
         new P4::SimplifySelectList(&refMap, &typeMap, typeChecking),

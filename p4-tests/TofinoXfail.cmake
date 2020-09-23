@@ -1314,11 +1314,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-4-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Unsupported type header_union prot_host_addr_t"
-  testdata/p4_16_samples/issue1879-bmv2.p4
-)
-
 # P4C-2133
 p4c_add_xfail_reason("tofino"
   "Varbit extract requires too many parser branches to implement"
@@ -1765,9 +1760,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register-complex-bmv2.p4
 )
 
-# error in flattening nested header
 p4c_add_xfail_reason("tofino"
-  "Field __bfp4c_fields is not a member of structure header __bfp4c_bridged_metadata_header"
+  "Varbit field size expression evaluates to .* packet.extract"
   testdata/p4_16_samples/issue1879-bmv2.p4
 )
 
