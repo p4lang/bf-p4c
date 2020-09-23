@@ -590,7 +590,21 @@ bitvec PhvInfo::bits_allocated(
                 [&](const PHV::AllocSlice& slice) {
                     return metadata_mutex_i(slice.field()->id, alloc.field()->id);
             });
-            if (!mutually_exclusive && !meta_overlay)
+            bool dark_overlay = std::any_of(
+                write_slices_in_container.begin(), write_slices_in_container.end(),
+                [&](const PHV::AllocSlice& slice) {
+                    return dark_mutex_i(slice.field()->id, alloc.field()->id);
+            });
+            bool noMutex = !mutually_exclusive && !meta_overlay;
+
+            // In case of a dark container do not consider dark overlay feasibility
+            if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))
+                noMutex = noMutex && !dark_overlay;
+
+            LOG6("\t\t mutex control:" << mutually_exclusive << " meta:" << meta_overlay <<
+                 " dark:" << dark_overlay);
+
+            if (noMutex)
                 ret_bitvec.setrange(bits.lo, bits.size());
         });
     }
@@ -732,9 +746,9 @@ bool PHV::Field::checkContext(
                 LOG3("\t\tTable: " << tbl->name << ", P4 Name: " <<
                         TableSummary::getTableName(tbl));
                 if (use) {
-                    LOG3("\t\t  " << slice.getEarliestLiveness().first << " < " << stage <<
+                    LOG6("\t\t  " << slice.getEarliestLiveness().first << " < " << stage <<
                          " = " << (slice.getEarliestLiveness().first < stage));
-                    LOG3("\t\t  " << (slice.getEarliestLiveness().first == stage) << " && (" <<
+                    LOG6("\t\t  " << (slice.getEarliestLiveness().first == stage) << " && (" <<
                          *use << " <= " << slice.getLatestLiveness().second << ") = " <<
                          (*use <= slice.getEarliestLiveness().second));
                     bool greaterThanMinStage = (slice.getEarliestLiveness().first < stage) ||
@@ -743,13 +757,13 @@ bool PHV::Field::checkContext(
                     bool lessThanMaxStage = (stage < slice.getLatestLiveness().first) ||
                         (stage == slice.getLatestLiveness().first &&
                          *use <= slice.getLatestLiveness().second);
-                    LOG3("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
+                    LOG6("\t\t  A. greaterThanMinStage: " << greaterThanMinStage <<
                             ", lessThanMaxStage: " << lessThanMaxStage);
                     inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
                 } else {
                     bool greaterThanMinStage = slice.getEarliestLiveness().first <= stage;
                     bool lessThanMaxStage = stage <= slice.getLatestLiveness().first;
-                    LOG3("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
+                    LOG6("\t\t  B. greaterThanMinStage: " << greaterThanMinStage <<
                             ", lessThanMaxStage: " << lessThanMaxStage);
                     inLiveRange |= (greaterThanMinStage && lessThanMaxStage);
                 }
@@ -961,7 +975,7 @@ void PHV::Field::foreach_alloc(
     }
     // candidate_slices contains all the slices that are in @range.
     for (auto& slice : candidate_slices) {
-        LOG7("\tforeach_alloc slice: " << slice << " stages: " << slice.getEarliestLiveness() <<
+        LOG6("\tforeach_alloc slice: " << slice << " stages: " << slice.getEarliestLiveness() <<
              " - " << slice.getLatestLiveness());
         fn(slice);
     }

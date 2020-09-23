@@ -733,6 +733,7 @@ void ComputeDependencies::end_apply() {
             ss << t << " ";
         LOG3(ss.str());
     }
+    LOG7(PhvInfo::reportMinStages());
 }
 
 AddSliceInitialization::AddSliceInitialization(

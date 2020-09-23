@@ -1859,15 +1859,29 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         const PHV::Field* write_field = phv.field(field_action.write.expr);
         if (write_field == nullptr)
             BUG("Verify Overwritten: Action does not have a write?");
-        fieldsWritten.insert(write_field); }
+        fieldsWritten.insert(write_field);
+        LOG6("\t Overwrite: Adding written field " << write_field->name << " for expr " <<
+             field_action.write.expr);
+    }
 
     PHV::FieldUse use(PHV::FieldUse::WRITE);
+    // Collect bitvec of non (mutually/meta/dark) exclusive fieldslices on @container
+    // for fields in @fieldWritten
     bitvec container_occupancy = phv.bits_allocated(container, fieldsWritten, table_context, &use);
+    if (container_occupancy.empty()) {
+        LOG4("Verify_overwritten: container_occupancy is empty");
+        return true;
+    }
+
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.direct_write_bits;
     }
 
+    LOG6("\t Overwrite masks - container:" << container_occupancy << " total_write: " <<
+         total_write_bits);
+    LOG6("\t Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
+         " ci: " << ci.alignment.direct_write_bits << " invalid: " << invalidate_write_bits);
 
     total_write_bits |= adi.alignment.direct_write_bits;
     total_write_bits |= ci.alignment.direct_write_bits;

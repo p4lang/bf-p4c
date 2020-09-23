@@ -296,14 +296,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
 )
 
-# P4C-2604
-p4c_add_xfail_reason("tofino2"
-  "PHV allocation creates an invalid container action within a Tofino ALU"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
-  extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
-  p4c-3001
-)
-
 # P4C-2141
 p4c_add_xfail_reason("tofino2"
   "PHV allocation creates an invalid container action within a Tofino ALU"
@@ -488,4 +480,9 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
+)
+
+p4c_add_xfail_reason ("tofino2"
+  "error: tofino2 supports up to 20 stages, using 22"
+  p4c-3001
 )
