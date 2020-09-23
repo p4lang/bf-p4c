@@ -676,6 +676,8 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
 
 void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
     for (auto &row : layout) {
+        // FIXME -- if row.cols is empty, we don't really need a bus here (won't use it
+        // for anything).
         if (row.bus < 0) {
             if (bus_use[row.row][0] == this)
                 row.bus = 0;

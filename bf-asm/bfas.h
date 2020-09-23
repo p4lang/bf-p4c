@@ -75,11 +75,17 @@ inline void warning(int lineno, const char *fmt, ...) {
 #endif
 }
 
-inline void bug(const char* fname, int lineno) {
+void bug(const char *, int, const char * = 0, ...) __attribute__((format(printf, 3, 4)));
+inline void bug(const char* fname, int lineno, const char *fmt, ...) {
 #ifdef NDEBUG
     fprintf(stderr, "Assembler BUG");
 #else
     fprintf(stderr, "%s:%d: Assembler BUG: ", fname, lineno);
+    if (fmt) {
+        va_list     args;
+        va_start(args, fmt);
+        vfprintf(stderr, fmt, args);
+        va_end(args); }
 #endif
     fprintf(stderr, "\n");
     fflush(stderr);
@@ -88,8 +94,8 @@ inline void bug(const char* fname, int lineno) {
 extern std::unique_ptr<std::ostream> open_output(const char *,
         ...) __attribute__((format(printf, 1, 2)));
 
-#define BUG() do { bug(__FILE__, __LINE__); } while (0)
-#define BUG_CHECK(e) do { if (!(e)) BUG(); } while (0)
+#define BUG(...) do { bug(__FILE__, __LINE__, ##__VA_ARGS__); } while (0)
+#define BUG_CHECK(e, ...) do { if (!(e)) BUG(__VA_ARGS__); } while (0)
 
 class VersionIter {
     unsigned    left, bit;

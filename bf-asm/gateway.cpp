@@ -315,6 +315,8 @@ void GatewayTable::pass1() {
     Table::pass1();
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+    /* in a gateway, the layout has one or two rows -- layout[0] specifies the gateway, and
+     * layout[1] specifies the payload. There will be no columns in either row */
     if (layout.empty() || layout[0].row < 0)
         error(lineno, "No row specified in gateway");
     else if (layout[0].bus < 0 && (!match.empty() || !xor_match.empty()))
@@ -468,13 +470,16 @@ void GatewayTable::pass2() {
             gw_unit = layout[0].bus;
         } else {
             for (int i = 0; i < 2; ++i) {
-                if (!stage->gw_unit_use[layout[0].row][i]) {
+                if (!stage->gw_unit_use[layout[0].row][i] &&
+                    !stage->sram_search_bus_use[layout[0].row][i]) {
                     gw_unit = i;
                     break; } } }
         if (gw_unit < 0)
             error(layout[0].lineno, "No gateway units available on row %d", layout[0].row);
         else
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
+    if (layout[0].bus < 0 && gw_unit >= 0)
+        layout[0].bus = gw_unit;
     if (payload_unit < 0 && (have_payload >= 0 || match_address >= 0)) {
         if (layout.size() > 1) {
             if (layout[1].result_bus < 0) {
@@ -543,8 +548,39 @@ void GatewayTable::pass2() {
         if (!miss.run_table)
             miss.next_map_lut = find_next_lut_entry(tbl, miss.next); }
 }
+
 void GatewayTable::pass3() {
     LOG1("### Gateway table " << name() << " pass3");
+    if (layout[0].bus >= 0) {
+        auto *tbl = stage->sram_search_bus_use[layout[0].row][layout[0].bus];
+        // Sharing with an exact match -- make sure it is ok
+        if (tbl && input_xbar) {
+            auto *sram_tbl = tbl->to<SRamMatchTable>();
+            BUG_CHECK(sram_tbl, "%s is not an SRamMatch table even though it is using a "
+                      "search bus?", tbl->name());
+            SRamMatchTable::WayRam *way = nullptr;
+            for (auto &row : sram_tbl->layout) {
+                if (row.row == layout[0].row && row.bus == layout[0].bus) {
+                    if (row.cols.empty()) {
+                        // FIXME -- not really used, so we don't need to check the
+                        // match/hash group.  Should this be an asm error?
+                        return; }
+                    way = &sram_tbl->way_map.at(std::make_pair(row.row, row.cols[0]));
+                    break; } }
+            BUG_CHECK(way, "%s claims to use search bus %d.%d, but we can't find it in the layout",
+                      sram_tbl->name(), layout[0].row, layout[0].bus);
+            if (input_xbar->hash_group() >= 0 && sram_tbl->ways[way->way].group >= 0 &&
+                input_xbar->hash_group() != sram_tbl->ways[way->way].group) {
+                error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
+                      "different hash group", name(), layout[0].row, layout[0].bus, tbl->name());
+            }
+            if (input_xbar->match_group() >= 0 && sram_tbl->word_ixbar_group[way->word] >= 0 &&
+                input_xbar->match_group() != sram_tbl->word_ixbar_group[way->word]) {
+                error(layout[0].lineno, "%s sharing search bus %d.%d with %s, but wants a "
+                      "different match group", name(), layout[0].row, layout[0].bus, tbl->name());
+            }
+        }
+    }
 }
 
 static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {

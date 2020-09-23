@@ -188,6 +188,8 @@ void MatchTable::pass1() {
 }
 
 void MatchTable::pass3() {
+    if (gateway) {
+        gateway->pass3(); }
 }
 
 void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) const {

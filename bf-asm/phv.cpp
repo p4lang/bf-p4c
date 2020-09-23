@@ -303,6 +303,7 @@ int Phv::get_position_offset(gress_t gress, std::string name) {
 // each stage. Support for liveness indication for each container must be added
 // (in assembly syntax/compiler) to set per stage phv containers correctly.
 void Phv::output(json::map &ctxt_json) {
+    bool warn_once = false;
     json::vector &phv_alloc = ctxt_json["phv_allocation"];
     for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
         json::map phv_alloc_stage;
@@ -374,6 +375,14 @@ void Phv::output(json::map &ctxt_json) {
                     auto container_json = field_context_json[slot.first->name];
                     BUG_CHECK(container_json);
                     bool field_added = false;
+                    if (!container_json->as_vector()) {
+                        // FIXME -- should be flexible about parsing context_json -- continue
+                        // to accept a map instead of a vector here.
+                        if (!warn_once) {
+                            // FIXME -- would be nice to have the bfa lineno here.
+                            warning(-1, "Invalid/obsolete phv context_json:, ignoring");
+                            warn_once = true; }
+                        continue; }
                     for (auto &field_json : *container_json->as_vector()) {
                         auto live_start = -1, live_end = Target::NUM_MAU_STAGES();
                         auto container_field_json = field_json->as_map();
