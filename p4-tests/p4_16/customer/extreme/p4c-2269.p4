@@ -1,5 +1,4 @@
 # 1 "/home/parallels/Downloads/p4c-2269/npb.p4"
-# 1 "<built-in>"
 # 1 "<command-line>"
 # 1 "/home/parallels/Downloads/p4c-2269/npb.p4"
 /*******************************************************************************
@@ -27,7 +26,6 @@
 
 #include <tna.p4>       /* TOFINO1_ONLY */
 
-@pa_auto_init_metadata
 
 
 # 1 "/home/parallels/Downloads/p4c-2269/features.p4" 1
@@ -14798,6 +14796,7 @@ control npb_egr_sff_top_part2 (
 
 @pa_no_overlay("ingress", "hdr.bridged_md.__pad_3")
 
+@pa_auto_init_metadata
 control SwitchIngress(
         inout switch_header_t hdr,
         inout switch_ingress_metadata_t ig_md,

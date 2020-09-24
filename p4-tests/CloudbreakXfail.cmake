@@ -383,6 +383,7 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1559.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1560.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1561.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1562-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-a.p4
@@ -399,7 +400,12 @@ p4c_add_xfail_reason("tofino3"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2262-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1562-1.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-3030-2.p4
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
   extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4

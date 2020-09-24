@@ -14,7 +14,14 @@ set (P16_V1_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CM
 p4c_find_tests("${P16_V1_FOR_JBAY}" p16_v1tests INCLUDE "${P16_V1_INCLUDE_PATTERNS}" EXCLUDE "${P16_V1_EXCLUDE_PATTERNS}")
 
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na).p4" "main|common_tna_test")
-set (P16_JNA_EXCLUDE_PATTERNS "tofino\\.h" "p4c-1323-b\\.p4" "TOFINO1_ONLY" "<built-in>" "p4c-2555-2\\.p4")
+set (P16_JNA_EXCLUDE_PATTERNS
+  "tofino\\.h" "TOFINO1_ONLY" "<built-in>"
+  "p4c-1323-b\\.p4"
+  "p4c-2555-2\\.p4"
+  "p4c-2794\\.p4"
+  "p4c-3001\\.p4"
+  "p4c-3030-2\\.p4"
+)
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" P16_JNA_TESTS INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P16_JNA_TESTS}" p16_jna_tests EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
@@ -69,6 +76,15 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-132
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2555-2.p4" "-to 1800")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4" PROPERTIES TIMEOUT 1800)
 
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-2794.p4" "-to 1800")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4" PROPERTIES TIMEOUT 1800)
+
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3001.p4" "-to 2400")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3001.p4" PROPERTIES TIMEOUT 2400)
+
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-3030-2.p4" "-to 1800")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3030-2.p4" PROPERTIES TIMEOUT 1800)
+
 set (testExtraArgs "${testExtraArgs} -tofino2")
 
 p4c_add_ptf_test_with_ptfdir (
@@ -100,10 +116,6 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3033" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
 
-p4c_add_ptf_test_with_ptfdir (
-    "tofino2" "p4c-3001" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3001/npb.p4"
-    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3001")
-set_tests_properties("tofino2/p4c-3001" PROPERTIES TIMEOUT 2400)
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)

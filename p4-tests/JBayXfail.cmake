@@ -335,6 +335,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "PHV allocation is invalid for container"
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
   p4c_1585_b
 )
 
@@ -434,6 +435,11 @@ p4c_add_xfail_reason ("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
 )
 
+p4c_add_xfail_reason ("tofino2"
+  "error: tofino2 supports up to 20 stages, using 21"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
+)
+
 # DRV-3528
 p4c_add_xfail_reason ("tofino2"
   "TTransportException: TSocket read 0 bytes"
@@ -480,9 +486,4 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
-)
-
-p4c_add_xfail_reason ("tofino2"
-  "error: tofino2 supports up to 20 stages, using 22"
-  p4c-3001
 )
