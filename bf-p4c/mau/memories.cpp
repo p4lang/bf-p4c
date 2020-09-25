@@ -3449,7 +3449,12 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row
               "Miscoordination of what hash groups are on the search bus vs. what hash "
               "groups are in the table format");
 
-    auto ixbar_groups = exact_ta->table_format->ixbar_group_per_width.at(search_bus.hash_group);
+    // FIXME -- even if mulitple hash functions are needed for many ways, the search data
+    // will always come from the first one, so that all ways will have the same match format
+    // in the RAM (required by the driver).  If the driver ever changes, this will also change,
+    // and we'll need a way to tell the assembler which search format to use for each way.
+    // Currently an exact match table can only have one format in the .bfa
+    const auto &ixbar_groups = exact_ta->table_format->ixbar_group_per_width.begin()->second;
     int ixbar_group = ixbar_groups[search_bus.width_section];
 
     if (ixbar_group != ta->match_ixbar->gateway_group())
