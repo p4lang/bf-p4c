@@ -104,6 +104,11 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     int width = e->left->type->width_bits();
     if (((e1 & k1) == k2).match(e) || ((e1 & k1) != k2).match(e)) {
         BUG_CHECK(!e1->is<IR::Constant>(), "constant folding failed");
+        // always true or always false
+        if ((abs(k1->value) & abs(k2->value)) != abs(k2->value)) {
+            auto rv = new IR::BoolLiteral(e->srcInfo, e->is<IR::Equ>() ? false : true);
+            warning("Masked comparison is always %s", rv);
+            return rv; }
         // masked comparison
         auto shift = ffs(abs(k1->value));
         if (shift > 0) {
