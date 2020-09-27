@@ -249,7 +249,7 @@ node ('compiler-travis') {
                             returnStdout: true
                         ).trim()
                         sh "echo 'p4v_cid : ' $p4v_cid"
-                        sh "docker exec ${p4v_cid} python3 -u main.py -t compiler"
+                        sh "docker exec ${p4v_cid} python3 -u main.py -t compiler -r serial -f tests.csv"
                         sh "docker container stop ${bf_p4c_cid}"
                         sh "docker container stop ${p4v_cid}"
                     } catch (err) {
