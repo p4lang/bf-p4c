@@ -73,10 +73,6 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "PHV allocation was not successful"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
   # P4C-2743
   extensions/p4_tests/p4_16/customer/extreme/npb-dark-phv-goal.p4
 )
@@ -294,12 +290,23 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "This program violates action constraints imposed by Tofino2"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1460.p4
+
+  # P4C-3155
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
 )
 
-# P4C-2141
 p4c_add_xfail_reason("tofino2"
   "PHV allocation creates an invalid container action within a Tofino ALU"
+
+  # P4C-2141
   extensions/p4_tests/p4_14/stf/parser_error.p4
+
+  # P4C-3060
+  p4c_2527
+
+  # P4C-3158
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1326.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -332,8 +339,13 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
 )
 
+# P4C-3157
 p4c_add_xfail_reason("tofino2"
   "PHV allocation is invalid for container"
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4
+  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2358-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-2649.p4
   p4c_1585_b
@@ -466,12 +478,6 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Expected packet was not received on device 0, port 2"
   p4c_1587
-)
-
-# P4C-3060
-p4c_add_xfail_reason("tofino2"
-  "error: PHV allocation creates an invalid container action within a Tofino ALU"
-  p4c_2527
 )
 
 # P4C-3070
