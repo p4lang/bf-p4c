@@ -27,6 +27,7 @@ class P4RuntimeStdConverter {
 
         using ConverterFn =
             std::function<void(p4configv1::P4Info*, const p4configv1::ExternInstance&)>;
+        using UpdatorFn = std::function<void(p4configv1::ExternInstance&)>;
         using C = P4RuntimeStdConverter;
         using std::placeholders::_1;
         using std::placeholders::_2;
@@ -43,11 +44,22 @@ class P4RuntimeStdConverter {
           {::barefoot::P4Ids::DIRECT_REGISTER, std::bind(&C::convertDirectRegister, this, _1, _2)},
         };
 
+        std::unordered_map<P4Id, UpdatorFn> updators = {
+          {::barefoot::P4Ids::PORT_METADATA, std::bind(&C::updatePortMetadata, this, _1)},
+        };
+
         static const std::unordered_set<P4Id> suppressWarnings = {
           ::barefoot::P4Ids::REGISTER_PARAM,
           ::barefoot::P4Ids::PORT_METADATA,
           ::barefoot::P4Ids::SNAPSHOT,
           ::barefoot::P4Ids::SNAPSHOT_LIVENESS,
+        };
+
+        // P4C-3127 : Some TNA specific externs may be required to be generated
+        // within the 'externs' block in p4info output. Add them to the list
+        // below
+        static const std::unordered_set<P4Id> allowedExterns = {
+          ::barefoot::P4Ids::PORT_METADATA,
         };
 
         // When converting action profile instances, we need to know if the
@@ -57,6 +69,7 @@ class P4RuntimeStdConverter {
         // profile id to corresponding selector (if any).
         buildActionSelectorMap(*p4info);
 
+        // Convert TNA Externs to P4 Externs
         for (const auto& externType : p4info->externs()) {
             auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
             auto converterIt = converters.find(externTypeId);
@@ -71,9 +84,27 @@ class P4RuntimeStdConverter {
                 converterIt->second(p4info, externInstance);
         }
 
-        // remove all the Tofino-specific externs now that we have converted
-        // them to standard P4Info objects (when it was possible)
+        // Update allowed TNA externs
+        for (auto& externType : *p4info->mutable_externs()) {
+            auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externType.extern_type_id());
+            auto updatorIt = updators.find(externTypeId);
+            if (updatorIt == updators.end()) continue;
+            for (auto& externInstance : *externType.mutable_instances())
+                updatorIt->second(externInstance);
+        }
+
+        // remove all (except allowed) Tofino-specific externs now that we have
+        // converted / updated them to standard P4Info objects (when it was possible)
+        typedef google::protobuf::RepeatedPtrField<p4configv1::Extern> protoExterns;
+        auto externs = new protoExterns(p4info->externs());
         p4info->clear_externs();
+        for (auto externIt = externs->begin(); externIt != externs->end(); externIt++) {
+            auto externTypeId = static_cast<::barefoot::P4Ids::Prefix>(externIt->extern_type_id());
+            if (allowedExterns.count(externTypeId)) {
+                auto* externType = p4info->add_externs();
+                externType->CopyFrom(*externIt);
+            }
+        }
 
         // update implementation_id and direct_resource_ids fields in Table
         // messages because the ids have changed
@@ -283,6 +314,14 @@ class P4RuntimeStdConverter {
         auto* regStd = p4info->add_registers();
         setPreamble(externInstance, p4configv1::P4Ids::REGISTER, regStd);
         regStd->mutable_type_spec()->CopyFrom(reg.type_spec());
+    }
+
+    void updatePortMetadata(p4configv1::ExternInstance& externInstance) {
+        auto *preamble = externInstance.mutable_preamble();
+        stripPipePrefix(preamble->mutable_name());
+        auto *info = externInstance.mutable_info();
+        auto *value = info->mutable_value();
+        *value = "ig_intr_md.ingress_port";
     }
 
     void updateTables(p4configv1::P4Info* p4info) {
