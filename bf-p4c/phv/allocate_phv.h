@@ -470,6 +470,9 @@ struct BruteForceStrategyConfig {
     int max_sl_alignment;
     // whether this score is tofino only.
     bool tofino_only;
+    // enable validation on pre-sliced super clusters to avoid creating unallocatable
+    // clusters at preslicing.
+    bool pre_slicing_validation;
 };
 
 class BruteForceAllocationStrategy : public AllocationStrategy {
@@ -483,6 +486,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     const BruteForceStrategyConfig& config_i;
     PHV::Slicing::PackConflictChecker has_pack_conflict_i;
     PHV::Slicing::IsReferencedChecker is_referenced_i;
+    boost::optional<const PHV::SuperCluster::SliceList*> unallocatable_list_i;
     int pipe_id_i;  /// used for logging purposes
 
  public:
@@ -496,6 +500,10 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     tryAllocation(const PHV::Allocation &alloc,
                   const std::list<PHV::SuperCluster*>& cluster_groups_input,
                   const std::list<PHV::ContainerGroup *>& container_groups) override;
+
+    boost::optional<const PHV::SuperCluster::SliceList*> get_unallocatable_list() const {
+        return unallocatable_list_i;
+    }
 
  protected:
     AllocResult
@@ -522,6 +530,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
     /// slice clusters into clusters with container-sized chunks.
     std::list<PHV::SuperCluster*> preslice_clusters(
             const std::list<PHV::SuperCluster*>& cluster_groups,
+            const std::list<PHV::ContainerGroup *>& container_groups,
             std::list<PHV::SuperCluster*>& unsliceable);
 
     /// remove singleton metadata slice list. This was introduced because some metadata fields are
@@ -591,10 +600,18 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
             std::list<PHV::SuperCluster*>& cluster_groups,
             const std::list<PHV::ContainerGroup *>& container_groups);
 
+    // return unallocatable slice list by allocating superclusters to an empty PHV.
     boost::optional<const PHV::SuperCluster::SliceList*> diagnose_slicing(
         const std::list<PHV::SuperCluster*>& slicing,
-        const std::list<PHV::ContainerGroup*>& container_groups,
-        const AllocContext& score_ctx) const;
+        const std::list<PHV::ContainerGroup*>& container_groups) const;
+
+    // return unallocatable slice list.
+    // It will try to slice @p sliced further and allocate to an empty PHV.
+    // The reason why this function will try to split further is because that
+    // there can be valid presliced cluster that is too large for a single container group.
+    boost::optional<const PHV::SuperCluster::SliceList*> preslice_validation(
+        const std::list<PHV::SuperCluster*>& sliced,
+        const std::list<PHV::ContainerGroup*>& container_groups) const;
 };
 
 /** Given constraints gathered from compilation thus far, allocate fields to

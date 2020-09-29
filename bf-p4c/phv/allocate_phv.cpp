@@ -16,6 +16,7 @@
 #include "bf-p4c/phv/utils/report.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "lib/error.h"
 #include "lib/log.h"
 
 // AllocScore metrics.
@@ -2150,7 +2151,12 @@ CoreAllocation::find_first_unallocated_slicelist(
         }
     }
     if (never_allocated.size() > 0) {
-        return *never_allocated.begin();
+        // must return the first unallocatable sl in the action-sorted order.
+        for (const auto& sl : slice_lists) {
+            if (never_allocated.count(sl)) {
+                return sl;
+            }
+        }
     }
     return boost::none;
 }
@@ -2389,6 +2395,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         /*.max_slicing:*/            128,
         /*.max_sl_alignment_try:*/   1,
         /*.tofino_only:*/            false,
+        /*.pre_slicing_validation:*/ false,
     };
     BruteForceStrategyConfig tofino_only_backup_config {
         /*.name:*/                   "tofino_only_backup",
@@ -2397,19 +2404,20 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         /*.max_slicing:*/            256,
         /*.max_sl_alignment_try:*/   5,
         /*.tofino_only:*/            true,
+        /*.pre_slicing_validation:*/ false,
     };
-
     std::vector<BruteForceStrategyConfig> configs = {
         default_config, tofino_only_backup_config,
     };
 
     AllocResult result(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
+    std::vector<const PHV::SuperCluster::SliceList*> unallocatable_lists;
     for (const auto& config : configs) {
         if (config.tofino_only && Device::currentDevice() != Device::TOFINO) {
             continue;
         }
-        AllocationStrategy* strategy = new BruteForceAllocationStrategy(
+        BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
             empty_alloc, config.name, core_alloc_i, parser_critical_path_i,
             critical_path_clusters_i, clot_i, strided_headers_i, uses_i, config, pipeId);
         result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
@@ -2420,6 +2428,48 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
             break;
         } else {
             LOG1("phv allocation with " << config.name << " config failed.");
+            if (strategy->get_unallocatable_list()) {
+                unallocatable_lists.push_back(*(strategy->get_unallocatable_list()));
+                LOG1("possibly unallocatable slice list: " << unallocatable_lists.back());
+            }
+        }
+    }
+    if (result.status == AllocResultCode::FAIL && unallocatable_lists.size() > 0) {
+        // It's possible that the algorithm created unallocatable clusters during preslicings.
+        // We can't detect them upfront because currently action phv constraints is not able to
+        // print out packing limitations like TWO_SOURCES_AND_CONSTANT.
+        // Until we can print a complete list of packing constraints from action phv constraints,
+        // we run a allocation algorithm again with pre_slicing validation - try to allocate
+        // all sliced clusters to a empty PHV while pre_slicing. It will ensure that all sliced
+        // clusters are allocatable.
+        // It's not enabled by default because it will make allocation X2 slower.
+        bool all_same = unallocatable_lists.size() == 1 ||
+                        std::all_of(unallocatable_lists.begin() + 1, unallocatable_lists.end(),
+                                    [&](const PHV::SuperCluster::SliceList* sl) {
+                                        return *sl == *(unallocatable_lists.front());
+                                    });
+        if (all_same) {
+            LOG1("pre-slicing validation is enabled for " << unallocatable_lists.front());
+            // create a config that validate pre_slicing results.
+            BruteForceStrategyConfig config{
+                /*.name:*/                   "default_validate_pre_slicing",
+                /*.is_better:*/              default_alloc_score_is_better,
+                /*.max_failure_retry:*/      0,
+                /*.max_slicing:*/            256,
+                /*.max_sl_alignment_try:*/   5,
+                /*.tofino_only:*/            false,
+                /*.pre_slicing_validation:*/ true,
+            };
+            BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
+                empty_alloc, config.name, core_alloc_i, parser_critical_path_i,
+                critical_path_clusters_i, clot_i, strided_headers_i, uses_i, config, pipeId);
+            auto new_result = strategy->tryAllocation(alloc, cluster_groups, container_groups);
+            if (new_result.status == AllocResultCode::SUCCESS) {
+                result = new_result;
+            } else {
+                ::warning("found a unallocatable slice list: %1%",
+                          cstring::to_cstring(unallocatable_lists.front()));
+            }
         }
     }
     alloc.commit(result.transaction);
@@ -3018,9 +3068,57 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
     return allocated_sc;
 }
 
+boost::optional<const PHV::SuperCluster::SliceList*>
+BruteForceAllocationStrategy::preslice_validation(
+    const std::list<PHV::SuperCluster*>& clusters,
+    const std::list<PHV::ContainerGroup*>& container_groups) const {
+    for (PHV::SuperCluster* cluster : clusters) {
+        int n_tried = 0;
+        auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
+        bool succ = false;
+        auto itr_ctx = PHV::Slicing::ItrContext(cluster, pa_container_sizes.field_to_layout(),
+                                                has_pack_conflict_i, is_referenced_i);
+        boost::optional<const PHV::SuperCluster::SliceList*> last_invald;
+        itr_ctx.iterate([&](std::list<PHV::SuperCluster*> sliced) {
+            ++n_tried;
+            if (n_tried > config_i.max_slicing) {
+                return false;
+            }
+            if (pa_container_sizes.unsatisfiable_fields(sliced).size() > 0) {
+                // LOG4("Container size unsatisfiable slicing, continue ...");
+                return true;
+            }
+            for (auto* sc : sliced) {
+                // we don't validate stridedAlloc cluster.
+                if (!sc->needsStridedAlloc()) {
+                    if (auto unallocatable = diagnose_slicing(sliced, container_groups)) {
+                        itr_ctx.invalidate(*unallocatable);
+                        last_invald = *unallocatable;
+                        return true;
+                    }
+                }
+            }
+            // all allocated
+            succ = true;
+            return false;
+        });
+        if (!succ) {
+            if (last_invald) {
+                return last_invald;
+            } else {
+                LOG1("preslice_validation cannot allocate "
+                     << cluster << "but no unallocatable slice list was found");
+                return boost::none;
+            }
+        }
+    }
+    return boost::none;
+}
+
 std::list<PHV::SuperCluster*>
 BruteForceAllocationStrategy::preslice_clusters(
         const std::list<PHV::SuperCluster*>& cluster_groups,
+        const std::list<PHV::ContainerGroup *>& container_groups,
         std::list<PHV::SuperCluster*>& unsliceable) {
     auto& pa_container_sizes = core_alloc_i.pragmas().pa_container_sizes();
     auto& meter_color_dests = core_alloc_i.actionConstraints().meter_color_dests();
@@ -3068,8 +3166,9 @@ BruteForceAllocationStrategy::preslice_clusters(
         LOG5("PRESLICING " << sc);
         try {
             // Try until we find one (1) satisfies pa_container_size pragmas
-            // TODO(2) is allocate-able, because we do not take action constraints into account
-            // in slicing iterator.
+            // (2) allocatable, because we do not take action constraints into account
+            // in slicing iterator, we need to do a virtual allocation test to see whether
+            // the presliced clusters can be allocated. enabled by config.pre_slicing_validation
             bool found = false;
             int n_tried = 0;
             std::list<PHV::SuperCluster*> sliced;
@@ -3090,6 +3189,14 @@ BruteForceAllocationStrategy::preslice_clusters(
                     for (const auto* f : unsatisfiable_fields) LOG5("\t" << f);
                 }
                 if (unsatisfiable_fields.size() == 0) {
+                    if (config_i.pre_slicing_validation) {
+                        // validation did not pass
+                        if (auto unallocatable =
+                                preslice_validation(sliced_clusters, container_groups)) {
+                            itr_ctx.invalidate(*unallocatable);
+                            return true;
+                        }
+                    }
                     found = true;
                     sliced = sliced_clusters;
                     return false;
@@ -3225,7 +3332,7 @@ AllocResult
 BruteForceAllocationStrategy::tryAllocationFailuresFirst(
     const PHV::Allocation &alloc,
     const std::list<PHV::SuperCluster*>& cluster_groups_input,
-    const std::list<PHV::ContainerGroup *>& container_groups,
+    const std::list<PHV::ContainerGroup*>& container_groups,
     const ordered_set<const PHV::Field*>& failures) {
     // remove singleton un_referenced fields
     std::list<PHV::SuperCluster*> cluster_groups =
@@ -3239,7 +3346,7 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
 
     // slice and then sort clusters.
     std::list<PHV::SuperCluster*> unsliceable;
-    cluster_groups = preslice_clusters(cluster_groups, unsliceable);
+    cluster_groups = preslice_clusters(cluster_groups, container_groups, unsliceable);
 
     // fail early if some clusters have unsatisfiable constraints.
     if (unsliceable.size()) {
@@ -3610,7 +3717,8 @@ bool is_valid_stride_slicing(std::list<PHV::SuperCluster*>& slicing) {
 
 boost::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrategy::diagnose_slicing(
     const std::list<PHV::SuperCluster*>& slicing,
-    const std::list<PHV::ContainerGroup*>& container_groups, const AllocContext& score_ctx) const {
+    const std::list<PHV::ContainerGroup*>& container_groups) const {
+    AllocContext score_ctx("dummy", [](const AllocScore, const AllocScore){ return false; });
     LOG3("diagnose_slicing starts");
     auto tx = empty_alloc_i.makeTransaction();
     for (auto* sc : slicing) {
@@ -3865,6 +3973,7 @@ BruteForceAllocationStrategy::allocLoop(
         auto best_score = AllocScore::make_lowest();
         boost::optional<PHV::Transaction> best_alloc = boost::none;
         boost::optional<std::list<PHV::SuperCluster*>> best_slicing = boost::none;
+        std::vector<const PHV::SuperCluster::SliceList*> diagnosed_unallocatables;
 
         int MAX_SLICING_TRY = config_i.max_slicing;
 
@@ -3932,10 +4041,11 @@ BruteForceAllocationStrategy::allocLoop(
                 if (cluster_group->slice_lists().size() > 0) {
                     LOG5("Check impossible slicelist");
                     if (auto impossible_slicelist =
-                            diagnose_slicing(slicing, container_groups, score_ctx)) {
+                            diagnose_slicing(slicing, container_groups)) {
                         LOG5("found slicelist that is impossible to allocate: "
                              << *impossible_slicelist);
                         itr_ctx.invalidate(*impossible_slicelist);
+                        diagnosed_unallocatables.push_back(*impossible_slicelist);
                     }
                 }
                 return true;
@@ -4004,6 +4114,21 @@ BruteForceAllocationStrategy::allocLoop(
             alloc_history << "FAILED to allocate " << cluster_group << "\n";
             alloc_history << "when the things are like: " << "\n";
             alloc_history << rst.getTransactionSummary() << "\n";
+            if (diagnosed_unallocatables.size() > 0) {
+                bool all_same = diagnosed_unallocatables.size() == 1 ||
+                                std::all_of(diagnosed_unallocatables.begin() + 1,
+                                            diagnosed_unallocatables.end(),
+                                            [&](const PHV::SuperCluster::SliceList* sl) {
+                                                return *sl == *(diagnosed_unallocatables.front());
+                                            });
+                if (all_same) {
+                    LOG1("found possible unallocatable slice list: "
+                         << diagnosed_unallocatables.front());
+                    if (!unallocatable_list_i) {
+                        unallocatable_list_i = diagnosed_unallocatables.front();
+                    }
+                }
+            }
         }
     }
 
