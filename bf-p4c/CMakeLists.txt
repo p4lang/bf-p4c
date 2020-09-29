@@ -493,6 +493,7 @@ set (BF_P4C_BACKEND_PHV_SRCS
   phv/analysis/live_range_shrinking.cpp
   phv/analysis/pack_conflicts.cpp
   phv/analysis/parser_critical_path.cpp
+  phv/pragma/phv_pragmas.cpp
   phv/pragma/pa_alias.cpp
   phv/pragma/pa_atomic.cpp
   phv/pragma/pa_container_size.cpp

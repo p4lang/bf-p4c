@@ -19,13 +19,6 @@ Visitor::profile_t PragmaDeparserZero::init_apply(const IR::Node* root) {
 }
 
 bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
-    auto check_pragma_string = [] (const IR::StringLiteral* ir, cstring pragma_name) {
-        if (!ir) {
-            // We only have stringLiteral in IR, no IntLiteral.
-            ::warning("@pragma %1%'s arguments must be string literals, skipped", pragma_name);
-            return false; }
-        return true; };
-
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         cstring pragma_name = annotation->name.name;
@@ -35,24 +28,41 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
             continue;
 
         auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() != 2) {
-            ::warning("@pragma %1% must have 2 arguments, %2% are found, skipped", pragma_name,
-                    exprs.size());
-            continue; }
 
-        // No need to check correct gress because CollectGlobalPragmas pass checks this for this
-        // pragma.
-        auto gress = exprs[0]->to<IR::StringLiteral>();
-        auto field_ir = exprs[1]->to<IR::StringLiteral>();
-        if (!check_pragma_string(gress, pragma_name) || !check_pragma_string(field_ir, pragma_name))
-            continue;
-
-        if (pragma_name == PHV::pragma::DISABLE_DEPARSE_ZERO)
-            if (!PHV::Pragmas::gressValid(pragma_name, gress->value))
+        const IR::StringLiteral *pipe_arg = nullptr;
+        if (exprs.at(0)) {
+            // If pipe is not present, the first argument is nullptr
+            pipe_arg = exprs.at(0)->to<IR::StringLiteral>();
+            if (!pipe_arg) {
+                ::warning(ErrorType::WARN_INVALID,
+                    "%1%: Found a non-string literal argument `pipe'. Ignoring pragma.",
+                    exprs.at(0));
                 continue;
+            }
+        }
+        auto gress_arg = exprs.at(1)->to<IR::StringLiteral>();
+        if (!gress_arg) {
+            ::warning(ErrorType::WARN_INVALID,
+                "%1%: Found a non-string literal argument `gress'. Ignoring pragma.",
+                exprs.at(1));
+            continue;
+        }
+        auto field_ir = exprs.at(2)->to<IR::StringLiteral>();
+        if (!field_ir) {
+            ::warning(ErrorType::WARN_INVALID,
+                "%1%: Found a non-string literal argument `field'. Ignoring pragma.",
+                exprs.at(2));
+            continue;
+        }
 
-        cstring header_name = gress->value + "::" + field_ir->value;
+        // Check whether the pragma should be applied for this pipe
+        if (pipe_arg && pipe->name && pipe->name != pipe_arg->value) {
+            LOG4("Skipping pragma" << pragma_name << " at the pipe "
+                << pipe->name << " (`" << pipe_arg->value << "' passed as pipe name).");
+            continue;
+        }
+
+        cstring header_name = gress_arg->value + "::" + field_ir->value;
         LOG1("    Marking pragma " << pragma_name << " for header " << header_name);
         if (!headerFields.count(header_name))
             continue;

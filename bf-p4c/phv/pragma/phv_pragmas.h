@@ -23,15 +23,18 @@ constexpr const char* DISABLE_DEPARSE_ZERO = "pa_disable_deparse_0_optimization"
 
 class Pragmas : public PassManager {
  public:
-    /// @returns true if for the associated @pragmaName, the @gress is either ingress or egress.
-    static bool gressValid(cstring pragmaName, cstring gress) {
-        if (gress != "ingress" && gress != "egress") {
-            ::warning("@pragma %1%'s first argument must either be ingress/egress, "
-                      "instead of %2%, skipped", pragmaName, gress);
-            return false;
-        }
-        return true;
-    }
+    static bool gressValid(cstring gress);
+    static bool determinePipeGressArgs(const IR::Vector<IR::Expression>& exprs,
+        unsigned& expr_index, unsigned& required_args,
+        const IR::StringLiteral*& pipe_arg, const IR::StringLiteral*& gress_arg);
+    static bool checkStringLiteralArgs(const IR::Vector<IR::Expression>& exprs);
+    static bool checkNumberArgs(const IR::Annotation* annotation,
+        unsigned required_args, const unsigned min_required_args, bool exact_number_of_args,
+        cstring pragma_name, cstring pragma_args_wo_pipe);
+    static bool checkPipeApplication(const IR::Annotation *annotation,
+        const IR::BFN::Pipe* pipe, const IR::StringLiteral *pipe_arg);
+    static void reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
+        const IR::Expression* expr, cstring field_name = "");
 
  private:
     PragmaContainerSize         pa_container_sizes_i;

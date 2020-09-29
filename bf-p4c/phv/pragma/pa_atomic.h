@@ -20,7 +20,8 @@ class PragmaAtomic : public Inspector {
         return rv;
     }
 
-    bool add_constraint(cstring field_name);
+    bool add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
+        cstring field_name);
 
     bool preorder(const IR::BFN::Pipe* pipe) override;
 

@@ -124,17 +124,17 @@ class ParseAnnotations : public P4::ParseAnnotations {
         // pa_ pragmas
         BFN_PARSE_EMPTY(PragmaAlias, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaAutoInitMetadata, PARSE_EMPTY, extPragma);
-        BFN_PARSE(PragmaAtomic, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaAtomic, PARSE_STRING_LITERAL_LIST, extPragma);
         BFN_PARSE_EMPTY(PragmaContainerSize, PARSE_EXPRESSION_LIST, extPragma);
-        BFN_PARSE(PragmaContainerType, PARSE_TRIPLE, StringLiteral, extPragma);
-        BFN_PARSE(PragmaMutuallyExclusive, PARSE_TRIPLE, StringLiteral, extPragma);
-        BFN_PARSE(PragmaNoInit, PARSE_PAIR, StringLiteral, extPragma);
-        BFN_PARSE(PragmaNoOverlay, PARSE_PAIR, StringLiteral, extPragma);
-        BFN_PARSE(PragmaSolitary, PARSE_PAIR, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaContainerType, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaMutuallyExclusive, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaNoInit, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaNoOverlay, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaSolitary, PARSE_STRING_LITERAL_LIST, extPragma);
         // FIXME: is DisableDeparseZero internal?
-        BFN_PARSE(PragmaDisableDeparseZero, PARSE_PAIR, StringLiteral, intPragma);
-        BFN_PARSE(PragmaNotDeparsed, PARSE, StringLiteral, extPragma);
-        BFN_PARSE(PragmaNotParsed, PARSE, StringLiteral, extPragma);
+        BFN_PARSE_EMPTY(PragmaDisableDeparseZero, PARSE_STRING_LITERAL_LIST, intPragma);
+        BFN_PARSE_EMPTY(PragmaNotDeparsed, PARSE_STRING_LITERAL_LIST, extPragma);
+        BFN_PARSE_EMPTY(PragmaNotParsed, PARSE_STRING_LITERAL_LIST, extPragma);
 
         // internal annotation to be removed
         BFN_PARSE(PragmaActionSelectorHashFieldCalcName, PARSE, StringLiteral, intPragma);

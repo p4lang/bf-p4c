@@ -1,8 +1,11 @@
 #include "bf-p4c/phv/pragma/pa_container_type.h"
+
 #include <string>
 #include <numeric>
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+
 #include "lib/log.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 /// BFN::Pragma interface
 const char *PragmaContainerType::name = "pa_container_type";
@@ -10,13 +13,14 @@ const char *PragmaContainerType::description =
     "Forces the allocation of a field in the specified container type.";
 const char *PragmaContainerType::help = "??";  // FIXME
 
-bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
+bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe,
+        const IR::Expression* expr, cstring field_name, cstring kind) {
     // check field name
     PHV::Field* field = phv_i.field(field_name);
     if (!field) {
-        ::warning("@pragma pa_container_type's argument "
-                  "%1% does not match any phv fields, skipped", field_name);
-        return false; }
+        PHV::Pragmas::reportNoMatchingPHV(pipe, expr, field_name);
+        return false;
+    }
     if (kind == "mocha") {
         field->set_mocha_candidate(true);
         field->set_dark_candidate(false);
@@ -40,41 +44,44 @@ bool PragmaContainerType::add_constraint(cstring field_name, cstring kind) {
 }
 
 bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
-    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
-        if (!ir) {
-            // We only have stringLiteral in IR, no IntLiteral.
-            ::warning("%1%", "@pragma pa_container_type's arguments "
-                      "must be string literals, skipped");
-            return false; }
-        return true; };
-
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaContainerType::name)
             continue;
 
         auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() != 3) {
-            ::warning("@pragma pa_atomic must "
-                      "have 3 arguments, %1% are found, skipped", exprs.size());
-            continue; }
 
-        auto gress = exprs[0]->to<IR::StringLiteral>();
-        auto field_ir = exprs[1]->to<IR::StringLiteral>();
-        auto container_type = exprs[2]->to<IR::StringLiteral>();
-
-        if (!check_pragma_string(gress) || !check_pragma_string(field_ir) ||
-            !check_pragma_string(container_type))
+        if (!PHV::Pragmas::checkStringLiteralArgs(exprs)) {
             continue;
+        }
 
-        // check gress correct
-        if (!PHV::Pragmas::gressValid("pa_container_type", gress->value))
+        const unsigned min_required_arguments = 3;  // gress, field, type
+        unsigned required_arguments = min_required_arguments;
+        unsigned expr_index = 0;
+        const IR::StringLiteral *pipe_arg = nullptr;
+        const IR::StringLiteral *gress_arg = nullptr;
+
+        if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
+                required_arguments, pipe_arg, gress_arg)) {
             continue;
+        }
 
-        auto field_name = gress->value + "::" + field_ir->value;
+        if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
+                min_required_arguments, true, PragmaContainerType::name,
+                "`gress', `field', `type'")) {
+            continue;
+        }
+
+        if (!PHV::Pragmas::checkPipeApplication(annotation, pipe, pipe_arg)) {
+            continue;
+        }
+
+        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        auto container_type = exprs[expr_index++]->to<IR::StringLiteral>();
+
+        auto field_name = gress_arg->value + "::" + field_ir->value;
         LOG1("Adding container type " << container_type->value << " for " << field_name);
-        add_constraint(field_name, container_type->value);
+        add_constraint(pipe, field_ir, field_name, container_type->value);
     }
     return true;
 }

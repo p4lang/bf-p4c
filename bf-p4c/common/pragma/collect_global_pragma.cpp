@@ -47,18 +47,33 @@ bool CollectGlobalPragma::preorder(const IR::StructField* s) {
         // structFieldName.
         if (!ann->expr.size())
             continue;
-        const IR::StringLiteral* gress = ann->expr.at(0)->to<IR::StringLiteral>();
-        if (!gress || (gress->value != "ingress" && gress->value != "egress")) {
-            ::warning("Ignoring @pragma %1% on %2% as it does not apply to ingress or egress",
-                      ann->name.name, structFieldNameWithoutDot);
+
+        auto& exprs = ann->expr;
+
+        const unsigned min_required_arguments = 1;  // gress
+        unsigned required_arguments = min_required_arguments;
+        unsigned expr_index = 0;
+        const IR::StringLiteral *pipe_arg = nullptr;
+        const IR::StringLiteral *gress_arg = nullptr;
+
+        if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
+                required_arguments, pipe_arg, gress_arg)) {
             continue;
         }
+
+        if (!PHV::Pragmas::checkNumberArgs(ann, required_arguments,
+                min_required_arguments, true, ann->name.name,
+                "`gress'")) {
+            continue;
+        }
+
         // Create a new annotation that includes the pragma not_parsed or not_deparsed and also adds
         // the name of the header with which the pragma is associated. The format is equivalent to:
         // @pragma not_parsed <gress> <hdr_name>. PHV allocation can then consume this added
         // annotation when implementing the deparsed zero optimization.
         auto* name = new IR::StringLiteral(IR::ID(structFieldNameWithoutDot));
-        IR::Annotation* newAnnotation = new IR::Annotation(IR::ID(ann->name.name), {gress, name});
+        IR::Annotation* newAnnotation = new IR::Annotation(IR::ID(ann->name.name),
+            {pipe_arg, gress_arg, name});
         LOG1("      Adding global annotation: " << newAnnotation);
         global_pragmas_.push_back(newAnnotation);
     }

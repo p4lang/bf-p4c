@@ -112,6 +112,15 @@ class BFNContext final : public P4CContext {
         return empty;
     }
 
+    /// Checks whether the given @name names a pipe in the program.
+    bool isPipeName(const cstring &name) {
+        for (auto pipe : _pipes) {
+            if (pipe.second == name)
+                return true;
+        }
+        return false;
+    }
+
  private:
     bool isRecognizedDiagnostic(cstring diagnostic) final;
 

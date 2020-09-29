@@ -961,11 +961,15 @@ const char *PragmaDisableDeparseZero::help = "To be documented";
 const char *PragmaNotDeparsed::name = "not_deparsed";
 const char *PragmaNotDeparsed::description =
     "Specifies that the header instance should not be deparsed.";
-const char *PragmaNotDeparsed::help = "@pragma not_deparsed[a][b] [ingress/egress]\n"
+const char *PragmaNotDeparsed::help = "@pragma not_deparsed[a][b] [pipe] [ingress/egress]\n"
     "+attached to P4 header instances\n"
     "\n"
     "Prevents the attached header instance from being deparsed in the "
-    "specified gress (ingress or egress). Note that this pragma will not "
+    "specified gress (ingress or egress). "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to "
+    "all pipelines. "
+    "Note that this pragma will not "
     "prevent POV bits from being allocated and manipulated for the "
     "instance. It will not prevent the header and its fields from being "
     "accessed in the deparser either. It just prevents POV bits from being "
@@ -977,11 +981,16 @@ const char *PragmaNotDeparsed::help = "@pragma not_deparsed[a][b] [ingress/egres
 const char *PragmaNotParsed::name = "not_parsed";
 const char *PragmaNotParsed::description =
     "Specifies that the header is not parsed.";
-const char *PragmaNotParsed::help = "@pragma not_parsed [ingress/egress]\n"
+const char *PragmaNotParsed::help = "@pragma not_parsed [pipe] [ingress/egress]\n"
     "+attached to P4 header instances\n"
     "\n"
     "Indicates the attached header instance, though appearing in the parse "
-    "graph, will never actually be parsed.  This pragma is used by the PHV "
+    "graph, will never actually be parsed in the specified gress (ingress or "
+    "egress). "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to "
+    "all pipelines. "
+    "This pragma is used by the PHV "
     "allocator to reduce the lifetime of the packet fields to be from first "
     "use to the deparser.  Normally, packet fields are considered live from "
     "the parser to the deparser.  The intended use case for this pragma is "
@@ -989,7 +998,10 @@ const char *PragmaNotParsed::help = "@pragma not_parsed [ingress/egress]\n"
     "the packet header must still be extracted in the parse graph in order "
     "to infer the correct deparse order of the header.  This can be "
     "achieved using an invalid select condition to branch to a parse state "
-    "where the extraction occurs.";
+    "where the extraction occurs. "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to"
+    "all pipelines.";
 
 // internal annotations to be removed
 const char *PragmaActionSelectorHashFieldCalcName::name = "action_selector_hash_field_calc_name";

@@ -1,19 +1,25 @@
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
+
 #include <string>
 #include <numeric>
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+
 #include "lib/log.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c/arch/bridge_metadata.h"
 
 /// BFN::Pragma interface
 const char *PragmaNoOverlay::name = "pa_no_overlay";
 const char *PragmaNoOverlay::description =
     "Specifies that the field can not be overlayed with any other field.";
-const char *PragmaNoOverlay::help = "@pragma pa_no_overlay gress inst_1.field_1\n"
+const char *PragmaNoOverlay::help = "@pragma pa_no_overlay [pipe] gress inst_1.field_1\n"
     "+ attached to P4 header instances\n"
     "\n"
     "Specifies that the indicated field cannot be overlayed with any other "
-    "field. The gress value can be either ingress or egress.";
+    "field. The gress value can be either ingress or egress. "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to "
+    "all pipelines.";
 
 bool PragmaNoOverlay::add_constraint(cstring field_name) {
     // check field name
@@ -46,37 +52,41 @@ bool PragmaNoOverlay::preorder(const IR::MAU::Instruction* inst) {
 }
 
 bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
-    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
-        if (!ir) {
-            // We only have stringLiteral in IR, no IntLiteral.
-            ::warning("%1%", "@pragma pa_no_overlay's arguments "
-                      "must be string literals, skipped");
-            return false; }
-        return true; };
-
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaNoOverlay::name)
             continue;
 
         auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() != 2) {
-            ::warning("@pragma pa_no_overlay must "
-                      "have 2 arguments, %1% are found, skipped", exprs.size());
-            continue; }
 
-        auto gress = exprs[0]->to<IR::StringLiteral>();
-        auto field_ir = exprs[1]->to<IR::StringLiteral>();
-
-        if (!check_pragma_string(gress) || !check_pragma_string(field_ir))
+        if (!PHV::Pragmas::checkStringLiteralArgs(exprs)) {
             continue;
+        }
 
-        // check gress correct
-        if (!PHV::Pragmas::gressValid("pa_no_overlay", gress->value))
+        const unsigned min_required_arguments = 2;  // gress, field
+        unsigned required_arguments = min_required_arguments;
+        unsigned expr_index = 0;
+        const IR::StringLiteral *pipe_arg = nullptr;
+        const IR::StringLiteral *gress_arg = nullptr;
+
+        if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
+                required_arguments, pipe_arg, gress_arg)) {
             continue;
+        }
 
-        auto field_name = gress->value + "::" + field_ir->value;
+        if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
+                min_required_arguments, true, PragmaNoOverlay::name,
+                "`gress', `field'")) {
+            continue;
+        }
+
+        if (!PHV::Pragmas::checkPipeApplication(annotation, pipe, pipe_arg)) {
+            continue;
+        }
+
+        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+
+        auto field_name = gress_arg->value + "::" + field_ir->value;
         add_constraint(field_name);
     }
 

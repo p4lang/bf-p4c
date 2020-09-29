@@ -24,7 +24,8 @@ class PragmaContainerType : public Inspector {
     }
 
     /// Adds the constraint that @field_name should be allocated to container type @kind.
-    bool add_constraint(cstring field_name, cstring kind);
+    bool add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
+        cstring field_name, cstring kind);
 
     bool preorder(const IR::BFN::Pipe* pipe) override;
 

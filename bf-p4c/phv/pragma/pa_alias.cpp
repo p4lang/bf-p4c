@@ -7,13 +7,14 @@
 #include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "bf-p4c-options.h"
 
 /// BFN::Pragma interface
 const char *PragmaAlias::name = "pa_alias";
 const char *PragmaAlias::description =
     "Specifies that two fields are aliased";
 const char *PragmaAlias::help =
-    "@pragma pa_alias gress inst1.field_name_1 inst_2.field_name_2 "
+    "@pragma pa_alias [pipe] gress inst1.field_name_1 inst_2.field_name_2 "
     "<inst_3.field_name_3 ...>\n"
     "+ attached to P4 header instances\n"
     "\n"
@@ -25,7 +26,11 @@ const char *PragmaAlias::help =
     "Note that the list of aliasing fields can only have a maximum of one "
     "packet field/intrinsic metadata field instance. "
     "Use this pragma with care, as it merges the constraints of all fields."
-    "The gress value can be either ingress or egress. The fields must all "
+    "The gress value can be either ingress or egress. "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to "
+    "all pipelines. "
+    "The fields must all "
     "be of the same width. Note that incorrect aliasing may result in "
     "incorrect behavior--the compiler will allocate all the fields specified "
     "in the pragma to the same containers, without additional correctness "
@@ -158,12 +163,6 @@ bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
 }
 
 void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
-    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
-        if (!ir) {
-            ::warning("%1%", "@pragma pa_alias's arguments must be strings, skipped");
-            return false; }
-        return true; };
-
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaAlias::name)
@@ -171,56 +170,57 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         LOG3("Annotation: " << annotation);
 
         auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() < 3) {
-            ::warning("Skipping @pragma pa_alias with %1% arguments "
-                      "(Require 3 or more arguments: gress, field1, field2, ..., fieldn)",
-                      exprs.size());
-            continue; }
 
-        auto gress = exprs[0]->to<IR::StringLiteral>();
+        if (!PHV::Pragmas::checkStringLiteralArgs(exprs)) {
+            continue;
+        }
+
+        const unsigned min_required_arguments = 3;  // gress, field1, field2, ...
+        unsigned required_arguments = min_required_arguments;
+        unsigned expr_index = 0;
+        const IR::StringLiteral *pipe_arg = nullptr;
+        const IR::StringLiteral *gress_arg = nullptr;
+
+        if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
+                required_arguments, pipe_arg, gress_arg)) {
+            continue;
+        }
+
+        if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
+                min_required_arguments, false, PragmaAlias::name,
+                "`gress', `field1', `field2'")) {
+            continue;
+        }
+
+        if (!PHV::Pragmas::checkPipeApplication(annotation, pipe, pipe_arg)) {
+            continue;
+        }
+
+        // Extract the rest of the arguments
         std::vector<const IR::StringLiteral*> field_irs;
-        for (unsigned i = 1; i < exprs.size(); i++) {
-            const IR::StringLiteral* name = exprs[i]->to<IR::StringLiteral>();
+        for (; expr_index < exprs.size(); ++expr_index) {
+            const IR::StringLiteral* name = exprs[expr_index]->to<IR::StringLiteral>();
             field_irs.push_back(name);
         }
+
         bool processPragma = true;
-
-        if (!check_pragma_string(gress)) {
-            ::fatal_error("Only string allowed as gress value specified in pragma %2%",
-                    cstring::to_cstring(gress), cstring::to_cstring(annotation));
-            processPragma = false;
-        }
-
-        if (!std::all_of(field_irs.begin(), field_irs.end(), check_pragma_string)) {
-            ::fatal_error("Non-string field name found in pragma %1%",
-                    cstring::to_cstring(annotation));
-            processPragma = false;
-        }
-
-        // check gress correct
-        if (!PHV::Pragmas::gressValid("pa_alias", gress->value)) {
-            ::fatal_error("Invalid gress %1% specified for pragma %2%",
-                    cstring::to_cstring(gress->value),
-                    cstring::to_cstring(annotation));
-            processPragma = false;
-        }
-
-        if (!processPragma) continue;
 
         std::vector<const PHV::Field*> fields;
         for (const auto* field_ir : field_irs) {
-            cstring field_name = gress->value + "::" + field_ir->value;
+            cstring field_name = gress_arg->value + "::" + field_ir->value;
             const auto* field = phv_i.field(field_name);
             if (!field) {
-                ::warning("Ignoring pragma %1% because argument %2% does not match any "
-                          "PHV fields.", cstring::to_cstring(annotation), field_name);
+                PHV::Pragmas::reportNoMatchingPHV(pipe, field_ir, field_name);
                 processPragma = false;
+                break;
             }
             fields.push_back(field);
         }
 
-        if (!processPragma) continue;
+        if (!processPragma)
+            continue;
+
+        processPragma = true;
 
         const PHV::Field* aliasDest = fields[0];
         for (unsigned i = 1; i < fields.size(); i++) {
@@ -233,9 +233,13 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
             }
             aliasDest = mayAlias->first;
         }
-        if (!processPragma) continue;
+
+        if (!processPragma)
+            continue;
+
         for (const auto* field : fields) {
-            if (field == aliasDest) continue;
+            if (field == aliasDest)
+                continue;
             aliasMap[field->name] = { aliasDest->name, boost::none, PragmaAlias::PRAGMA };
             fieldsWithAliasing[field->id] = true;
             fieldsWithAliasing[aliasDest->id] = true;

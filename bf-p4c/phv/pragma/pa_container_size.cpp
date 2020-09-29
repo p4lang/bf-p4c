@@ -1,15 +1,18 @@
 #include "bf-p4c/phv/pragma/pa_container_size.h"
+
 #include <string>
 #include <numeric>
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+
 #include "lib/log.h"
+#include "bf-p4c/common/utils.h"
+#include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 /// BFN::Pragma interface
 const char *PragmaContainerSize::name = "pa_container_size";
 const char *PragmaContainerSize::description =
     "Forces the allocation of a field in the specified container size.";
 const char *PragmaContainerSize::help =
-    "@pragma pa_container_size gress instance_name.field_name 32\n"
+    "@pragma pa_container_size [pipe] gress instance_name.field_name 32\n"
     "+ attached to P4 header instances\n"
     "\n"
     "Specifies that the indicated packet or metadata field should be "
@@ -36,7 +39,10 @@ const char *PragmaContainerSize::help =
     "phv32[31:0] = hdr1.x_60[31:0]\n"
     "\n"
     "Allowed container sizes are 8, 16, and 32.  The gress value can be "
-    "either ingress or egress.";
+    "either ingress or egress. "
+    "If the optional pipe value is provided, the pragma is applied only "
+    "to the corresponding pipeline. If not provided, it is applied to "
+    "all pipelines.";
 
 boost::optional<PHV::Size>
 PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
@@ -49,43 +55,50 @@ PragmaContainerSize::convert_to_phv_size(const IR::Constant* ir) {
 }
 
 bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
-    auto check_pragma_string = [] (const IR::StringLiteral* ir) {
-        if (!ir) {
-            // We only have stringLiteral in IR, no IntLiteral.
-            ::warning("%1%", "@pragma pa_container_size's arguments "
-                      "must be string literals, skipped");
-            return false; }
-        return true; };
-
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaContainerSize::name)
             continue;
 
         auto& exprs = annotation->expr;
-        // check pragma argument
-        if (exprs.size() < 3) {
-            ::warning("@pragma pa_container_size must "
-                      "have at least 3 arguments, only %1% found, skipped", exprs.size());
-            continue; }
 
-        auto gress = exprs[0]->to<IR::StringLiteral>();
-        auto field_ir = exprs[1]->to<IR::StringLiteral>();
+        const unsigned min_required_arguments = 3;  // gress, field, size1, ...
+        unsigned required_arguments = min_required_arguments;
+        unsigned expr_index = 0;
+        const IR::StringLiteral *pipe_arg = nullptr;
+        const IR::StringLiteral *gress_arg = nullptr;
 
-        if (!check_pragma_string(gress) || !check_pragma_string(field_ir))
+        if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
+                required_arguments, pipe_arg, gress_arg)) {
             continue;
+        }
 
-        // check gress correct
-        if (!PHV::Pragmas::gressValid("pa_container_size", gress->value))
+        if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
+                min_required_arguments, false, PragmaContainerSize::name,
+                "`gress', `field', `size1'")) {
             continue;
+        }
+
+        if (!PHV::Pragmas::checkPipeApplication(annotation, pipe, pipe_arg)) {
+            continue;
+        }
+
+        auto field_ir = exprs[expr_index]->to<IR::StringLiteral>();
+        if (!field_ir) {
+            ::warning(ErrorType::WARN_INVALID,
+                "%1%: Found a non-string literal argument `field'. Ignoring pragma.",
+                exprs[expr_index]);
+            continue;
+        }
+        expr_index++;
 
         // check field name
-        auto field_name = gress->value + "::" + field_ir->value;
+        auto field_name = gress_arg->value + "::" + field_ir->value;
         auto field = phv_i.field(field_name);
         if (!field) {
-            ::warning("@pragma pa_container_size "
-                      "%1% does not match any field, skipped", field_name);
-            continue; }
+            PHV::Pragmas::reportNoMatchingPHV(pipe, field_ir, field_name);
+            continue;
+        }
 
         // If there is a pa_container_size pragma on the field, then also apply it to its privatized
         // (TPHV) version.
@@ -101,10 +114,12 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             pa_container_sizes_i[privatized_field] = {};
 
         bool failed = false;
-        for (size_t i = 2; i < exprs.size(); ++i) {
-            auto container_size_ir = exprs[i]->to<IR::Constant>();
+        for (; expr_index < exprs.size(); ++expr_index) {
+            auto container_size_ir = exprs[expr_index]->to<IR::Constant>();
             if (!container_size_ir) {
-                ::warning("%1% is not legal integer, skipped", exprs[i]);
+                ::warning(ErrorType::WARN_INVALID,
+                    "%1%: Found a non-integer literal argument `size'. Ignoring pragma.",
+                    exprs[expr_index]);
                 failed = true;
                 break; }
 
@@ -115,7 +130,9 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             } else {
                 pa_container_sizes_i[field].push_back(*container_size);
                 if (privatized_field)
-                    pa_container_sizes_i[privatized_field].push_back(*container_size); } }
+                    pa_container_sizes_i[privatized_field].push_back(*container_size);
+            }
+        }
 
         if (failed) {
             pa_container_sizes_i.erase(field);
