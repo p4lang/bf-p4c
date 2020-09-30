@@ -88,23 +88,6 @@ class Table : BFN::Unit, IAnnotated  {
         int hash_bits = 0;   // this is a temporary field to do some of the splitting statefuls
         bool per_flow_enable = false;
         int meter_type_bits = 0;
-        IndirectAddress() { memset(this, 0, sizeof(*this)); }
-        operator== { return memcmp(this, &a, sizeof(IndirectAddress)) == 0; }
-        toJSON {
-            json << json.indent << "\"shifter_enabled\" : " << shifter_enabled << ",\n"
-                 << json.indent << "\"address_bits\" : " << address_bits << ",\n"
-                 << json.indent << "\"per_flow_enble\" : " << per_flow_enable << ",\n"
-                 << json.indent << "\"meter_type_bits\" : " << meter_type_bits;
-        }
-        fromJSON {
-            if (!json.json) return nullptr;
-            IndirectAddress *rv = new IndirectAddress();
-            json.load("shifter_enabled", rv->shifter_enabled);
-            json.load("address_bits", rv->address_bits);
-            json.load("per_flow_enable", rv->per_flow_enable);
-            json.load("meter_type_bits", rv->meter_type_bits);
-            return rv;
-        }
 #emit
         IndirectAddress &operator+=(const IndirectAddress &a);
 #end
@@ -136,9 +119,9 @@ class Table : BFN::Unit, IAnnotated  {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_table = 0;
         int             overhead_bits = 0;
-        inline IndirectAddress meter_addr;
-        inline IndirectAddress stats_addr;
-        inline IndirectAddress action_addr;
+        inline IndirectAddress meter_addr = {};
+        inline IndirectAddress stats_addr = {};
+        inline IndirectAddress action_addr = {};
         int             immediate_bits = 0;
         int             partition_bits = 0;
         int             partition_count = 0;
@@ -148,30 +131,6 @@ class Table : BFN::Unit, IAnnotated  {
         int             sel_len_bits = 0;
         int             proxy_hash_width = 0;
         HashFunction    proxy_hash_algorithm = {};
-        Layout() { memset(this, 0, sizeof(*this)); }
-        operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
-        toJSON {
-            json << json.indent << "\"entries\" : " << entries << ",\n"
-                 << json.indent << "\"gateway\" : " << gateway << ",\n"
-                 << json.indent << "\"ternary\" : " << ternary << ",\n"
-                 << json.indent << "\"ixbar_bytes\" : " << ixbar_bytes << ",\n"
-                 << json.indent << "\"match_width_bits\" : " << match_width_bits << ",\n"
-                 << json.indent << "\"action_data_bytes_in_table\" : "
-                                << action_data_bytes_in_table << ",\n"
-                 << json.indent << "\"immediate_bits\" : " << immediate_bits << ",\n"
-                 << json.indent << "\"overhead_bits\" : " << overhead_bits; }
-        fromJSON {
-            if (!json.json) return nullptr;
-            Layout *rv = new Layout();
-            json.load("entries", rv->entries);
-            json.load("gateway", rv->gateway);
-            json.load("ternary", rv->ternary);
-            json.load("ixbar_bytes", rv->ixbar_bytes);
-            json.load("match_width_bits", rv->match_width_bits);
-            json.load("action_data_bytes_in_table", rv->action_data_bytes_in_table);
-            json.load("immediate_bits", rv->immediate_bits);
-            json.load("overhead_bits", rv->overhead_bits);
-            return rv; }
 
         bool direct_ad_required() const {
             if (action_addr.address_bits > 0)
@@ -215,19 +174,6 @@ class Table : BFN::Unit, IAnnotated  {
         int             match_groups = 0;
         int             entries = 0;
         int             width = 0;
-        Way() { memset(this, 0, sizeof(*this)); }
-        operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
-        toJSON {
-            json << json.indent << "\"match_groups\" : " << match_groups << ",\n"
-                 << json.indent << "\"entries\" : " << entries << ",\n"
-                 << json.indent << "\"width\" : " << width; }
-        fromJSON {
-            if (!json.json) return nullptr;
-            Way* way = new Way();
-            json.load("match_groups", way->match_groups);
-            json.load("entries", way->entries);
-            json.load("width", way->width);
-            return way; }
     }
     safe_vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
@@ -554,24 +500,7 @@ class StatefulAlu : MeterBus2Port {
         int             exp_shift = 0;
         int             scale = 0;
         int[16]         table = { 0 };
-        MathUnit() { memset(this, 0, sizeof(*this)); }
-        operator== { return memcmp(this, &a, sizeof(*this)) == 0; }
         dbprint { out << valid; }
-        toJSON {
-            json << json.indent << "\"valid\" : " << valid << ",\n"
-                 << json.indent << "\"exp_invert\" : " << exp_invert << ",\n"
-                 << json.indent << "\"exp_shift\" : " << exp_shift << ",\n"
-                 << json.indent << "\"scale\" : " << scale << ",\n"
-                 << json.indent << "\"table\" : " << table; }
-        fromJSON {
-            if (!json.json) return nullptr;
-            MathUnit* mu = new MathUnit();
-            json.load("valid", mu->valid);
-            json.load("exp_invert", mu->exp_invert);
-            json.load("exp_shift", mu->exp_shift);
-            json.load("scale", mu->scale);
-            json.load("table", mu->table);
-            return mu; }
     }
     MathUnit            math = MathUnit();
 
