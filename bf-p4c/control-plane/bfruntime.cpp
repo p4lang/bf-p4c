@@ -2250,7 +2250,7 @@ BfRtSchemaGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                 BF_RT_DATA_ENTRY_HIT_STATE, "$ENTRY_HIT_STATE",
                 makeTypeEnum({"ENTRY_IDLE", "ENTRY_ACTIVE"}),
                 false /* repeated */);
-            addSingleton(dataJson, fEntryHitState, false /* mandatory */, true /* read-only */);
+            addSingleton(dataJson, fEntryHitState, false /* mandatory */, false /* read-only */);
             if (!pollModeOnly)
               addSingleton(dataJson, fEntryTTL, false /* mandatory */, false /* read-only */);
         }
