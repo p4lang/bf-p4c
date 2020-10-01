@@ -52,11 +52,11 @@ BFN_Options::BFN_Options() {
         [this](const char *) { force_match_dependency = true; return true; },
         "Forces all MAU stages to have a match dependency to the previous stage.",
         OptionFlags::Hide);
-#if BAREFOOT_INTERNAL
     registerOption("--no-power-check", nullptr,
         [this](const char *) { no_power_check = true; return true; },
         "Turns off the MAU power budget check",
         OptionFlags::Hide);
+#if BAREFOOT_INTERNAL
     registerOption("--skip-compilation", "pipe1[,pipe2]",
         [this](const char* arg) {
         auto copy = strdup(arg);
