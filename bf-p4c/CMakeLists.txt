@@ -1135,7 +1135,66 @@ add_dependencies(bfn_p4runtime barefootdir controlplane)
 
 if (ENABLE_TESTING)
   # # Tofino-specific GTests.
+
+  # bf_gtest_support library
+  #
+  # The bf_gtest_helpers.h encapsulates stringified tofino p4 header files.
+  set (P4HEADERS_H        "${P4C_BINARY_DIR}/p4headers.h")
+  set (P4HEADERS_CPP      "${P4C_BINARY_DIR}/p4headers.cpp")
+  set (BFN_P4INCLUDE_DIR  "${BFN_P4C_SOURCE_DIR}/bf-p4c/p4include")
+  set (I_P4INCLUDE        -I "${BFN_P4INCLUDE_DIR}" -I "${P4C_SOURCE_DIR}/p4include")
+  add_custom_command (OUTPUT "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit" >  "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#ifndef P4HEADERS_H_"                >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#define P4HEADERS_H_"                >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#include <string>"                   >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "namespace Test {"                    >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "struct P4Headers {"                  >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino1_p4;"         >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino2_p4;"         >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino3_p4;"         >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "};"                                  >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers& p4headers();"       >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace Test"                >> "${P4HEADERS_H}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#endif"                              >> "${P4HEADERS_H}"
+      VERBATIM)
+  add_custom_target(p4headers_h DEPENDS "${P4HEADERS_H}")
+  add_custom_command (OUTPUT "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit"                   >  "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "#include \"${P4HEADERS_H}\""                           >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "namespace Test {"                                      >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "namespace {"                                           >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers p4h = {"                               >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    std::string{R\"("                                  >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino1arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino2arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                            >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_C_COMPILER} -E -x c "${BFN_P4INCLUDE_DIR}/tofino3arch.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}};"                                            >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace"                                       >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "const P4Headers& p4headers() {return p4h;}"            >> "${P4HEADERS_CPP}"
+      COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace Test"                                  >> "${P4HEADERS_CPP}"
+      DEPENDS "${BFN_P4INCLUDE_DIR}/tofino1arch.p4" "${BFN_P4INCLUDE_DIR}/tofino2arch.p4" "${BFN_P4INCLUDE_DIR}/tofino3arch.p4"
+      COMMENT "Stringify tofino1arch.p4, tofino2arch.p4, tofino3arch.p4 -> ${P4HEADERS_CPP}"
+      VERBATIM)
+  add_custom_target(p4headers_cpp DEPENDS "${P4HEADERS_CPP}")
+  add_library (bf_gtest_support "${P4HEADERS_CPP}"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bf_gtest_helpers.cpp"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp")
+                                # test_bf_gtest_helpers should be in its own testlib - & requies 'whole_archive' hack!
+                                # Leave it in GTEST_BF_P4C_SOURCES for now.
+  target_include_directories (bf_gtest_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest}" PRIVATE "${P4C_BINARY_DIR}")
+  add_dependencies (bf_gtest_support p4headers_h p4headers_cpp genIR)  # Indirectly we #include "ir/gen-tree-macro.h"
+
+
+
   set (GTEST_BF_P4C_SOURCES
+    # Currently all gtests need to be built directly into the gtestp4c binary.
+    # TODO To use libraries, the whole_archive hack is needed. See the example.tar.gz
+    #      projet in Jira P4C-2940 and target_link_test_libs.cmake for implementation.
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/test_bf_gtest_helpers.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_format_helper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_mutex.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
@@ -1169,7 +1228,6 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_dependency_graph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/table_mutex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tphv_slice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
@@ -1187,7 +1245,7 @@ if (ENABLE_TESTING)
     )
 
   set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
-  set (GTEST_LDADD ${GTEST_LDADD} "tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
+  set (GTEST_LDADD ${GTEST_LDADD} "bf_gtest_support;tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
 
   add_test(NAME test_p4c_driver
     COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c
