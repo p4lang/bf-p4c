@@ -8,8 +8,8 @@
 #include <cstdarg>
 #include <fstream>
 
-#include "common/run_id.h"
-#include "p4c/lib/exceptions.h"
+#include "bf-p4c/common/run_id.h"
+#include "lib/exceptions.h"
 
 namespace Logging {
 

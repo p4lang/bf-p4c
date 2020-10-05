@@ -2,6 +2,19 @@
 #include "bf-p4c/logging/manifest.h"
 #include "bf-p4c/logging/phv_logging.h"
 
+void CollectPhvLoggingInfo::collectConstraints() {
+    fieldConstraints = ConstrainedFieldMapBuilder::buildMap(phv, *superclusters);
+
+    for (auto &f : phv) {
+        for (auto &f2 : phv) {
+            if (f == f2) continue;
+
+            noPackConstraints[f.name][f2.name] = phv.isFieldNoPack(&f, &f2);
+            noPackConstraints[f2.name][f.name] = phv.isFieldNoPack(&f, &f2);
+        }
+    }
+}
+
 Visitor::profile_t CollectPhvLoggingInfo::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     sliceWriteToActions.clear();
@@ -9,6 +22,12 @@ Visitor::profile_t CollectPhvLoggingInfo::init_apply(const IR::Node* root) {
     sliceXbarToTables.clear();
     actionsToTables.clear();
     tableNames.clear();
+
+    // Initialized during very first run before all allocations
+    if (fieldConstraints.empty()) {
+        collectConstraints();
+    }
+
     return rv;
 }
 
@@ -161,6 +180,19 @@ ordered_map<const PHV::Field*, const PHV::Field*> PhvLogging::getFieldAliases() 
     }
     return aliasMap;
 }
+
+Phv_Schema_Logger::FieldInfo* PhvLogging::getFieldInfo(const PHV::Field *f) const {
+    return new FieldInfo(f->size, getFieldType(f), std::string(stripThreadPrefix(f->name)),
+            getGress(f), "");
+}
+
+Phv_Schema_Logger::SourceLocation* PhvLogging::getSourceLoc(const PHV::Field *f) const {
+    if (f->srcInfo == boost::none)
+        return new SourceLocation("DummyFile", -1);
+    return new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
+                                f->srcInfo->toPosition().sourceLine);
+}
+
 Phv_Schema_Logger::FieldSlice*
 PhvLogging::logFieldSlice(const PHV::Field* f, bool use_alias = false) {
     std::string fieldName = std::string(stripThreadPrefix(f->name));
@@ -267,80 +299,95 @@ int PhvLogging::getDatabaseIndex(std::vector<T> &db, T item) {
     return static_cast<int>(i);
 }
 
-void PhvLogging::extractFieldConstraints(Constraint *c, const PHV::Field *f,
-                                    const ordered_set<const PHV::Field*> &fields) {
-    auto getSourceLoc = [this] (const PHV::Field *f) {
-        if (f->srcInfo == boost::none)
-            return new SourceLocation("DummyFile", -1);
-        return new SourceLocation(std::string(f->srcInfo->toPosition().fileName),
-                                    f->srcInfo->toPosition().sourceLine);
-    };
-
-    auto getFieldInfo = [this] (const PHV::Field *f) {
-        return new FieldInfo(f->size, getFieldType(f), std::string(stripThreadPrefix(f->name)),
-            getGress(f), "");
-    };
-
-    // Field properties
+void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
+    auto f = phv.field(fieldName);
     auto fieldInfo = getFieldInfo(f);
     auto srcLoc = getSourceLoc(f);
 
-    // Solitary Constraints
-    if (f->is_solitary()) {
-        if (f->deparsed_bottom_bits()) {
-            auto sc = new BoolConstraint(
-                false, int(ConstraintReason::SolitaryLastByte), "Solitary", srcLoc);
-            c->append(sc);
-        } else {
-            if (f->getSolitaryConstraint().isALU()) {
-                auto sc = new BoolConstraint(
-                    false, int(ConstraintReason::SolitaryAlu), "Solitary", srcLoc);
-                c->append(sc);
-            } else if (f->getSolitaryConstraint().isDigest()) {
-                if (f->getDigestConstraint().isMirror()) {
-                    auto sc = new BoolConstraint(
-                        false, int(ConstraintReason::SolitaryMirror), "Solitary", srcLoc);
-                    c->append(sc);
-                } else if (f->getDigestConstraint().isLearning()) {
-                    auto sc = new BoolConstraint(
-                        false, int(ConstraintReason::SolitaryExceptSameDigest), "Solitary", srcLoc);
-                    c->append(sc);
-                }
-            }
-        }
+    // Skip fields added during allocations
+    if (info.fieldConstraints.find(fieldName) == info.fieldConstraints.end()) return;
+    auto cfield = info.fieldConstraints.at(fieldName);
+
+    // Log constraints to Constraint loggers
+    logSolitaryConstraints(cfield, srcLoc);
+    logNoPackConstraint(cfield, fieldInfo, srcLoc);
+
+    // Append Constraint loggers to Field logger
+    if (cfield.hasLoggedConstraints()) {
+        logger->append_constraints(cfield.getLogger());
     }
 
+    for (auto &slice : cfield.getSlices()) {
+        if (!slice.hasLoggedConstraints()) continue;
+        logger->append_constraints(slice.getLogger());
+    }
+}
+
+void PhvLogging::logSolitaryConstraints(ConstrainedField &field, const SourceLocation *srcLoc) {
+    auto &c = field.getSolitary();
+    if (!c.hasConstraint()) return;
+
+    if (c.isALU()) {
+        auto sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryAlu), "Solitary", srcLoc);
+        field.getLogger()->append(sc);
+    }
+    if (c.isDigest()) {
+        auto digest = field.getDigest();
+        if (digest.isLearning()) {
+            auto sc = new BoolConstraint(
+                false, int(ConstraintReason::SolitaryMirror), "Solitary", srcLoc);
+            field.getLogger()->append(sc);
+        } else if (digest.isLearning()) {
+            auto sc = new BoolConstraint(
+                false, int(ConstraintReason::SolitaryExceptSameDigest), "Solitary", srcLoc);
+            field.getLogger()->append(sc);
+        }
+    }
+    if (field.hasBottomBits()) {
+        // Logged as Solitary Last Byte for better verbosity at user level
+        auto sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryLastByte), "Solitary", srcLoc);
+        field.getLogger()->append(sc);
+    }
+}
+
+void PhvLogging::logNoPackConstraint(ConstrainedField &field,
+                                                 const FieldInfo *fieldInfo,
+                                                 const SourceLocation *srcLoc) {
     auto &fieldGroupItems = logger.get_field_group_items();
     auto &fieldGroups = logger.get_field_groups();
 
-    // List constraints
+    // No Pack constraint is logged as DifferentContainer for better verbosity
+    // at user level
     auto diffContainerConstraint = new ListConstraint(
         {}, int(ConstraintReason::DifferentContainer), "DifferentContainer", srcLoc);
 
-    for (const auto* f2 : fields) {
-        if (f == f2) continue;
-        // Different container
-        if (phv.isFieldNoPack(f, f2)) {
-            auto otherFieldInfo = getFieldInfo(f2);
-            auto otherSrcLoc = getSourceLoc(f2);
+    for (auto kv : info.fieldConstraints) {
+        auto &f = kv.second;
+        if (field.getName() == f.getName()) continue;
+        if (!info.noPackConstraints.at(field.getName()).at(f.getName())) continue;
+        auto phvf = phv.field(f.getName());
 
-            auto groupItem = new FieldGroupItem(fieldInfo, srcLoc);
-            auto otherGroupItem = new FieldGroupItem(otherFieldInfo, otherSrcLoc);
+        auto otherFieldInfo = getFieldInfo(phvf);
+        auto otherSrcLoc = getSourceLoc(phvf);
 
-            int index1 = getDatabaseIndex(fieldGroupItems, groupItem);
-            int index2 = getDatabaseIndex(fieldGroupItems, otherGroupItem);
+        auto groupItem = new FieldGroupItem(fieldInfo, srcLoc);
+        auto otherGroupItem = new FieldGroupItem(otherFieldInfo, otherSrcLoc);
 
-            std::vector<int> group = {index1, index2};
-            // Groups always have to be sorted to prevent duplicates
-            std::sort(group.begin(), group.end());
+        int index1 = getDatabaseIndex(fieldGroupItems, groupItem);
+        int index2 = getDatabaseIndex(fieldGroupItems, otherGroupItem);
 
-            int gi = getDatabaseIndex(fieldGroups, group);
-            diffContainerConstraint->append(gi);
-        }
+        std::vector<int> group = {index1, index2};
+        // Groups always have to be sorted to prevent duplicates
+        std::sort(group.begin(), group.end());
+
+        int gi = getDatabaseIndex(fieldGroups, group);
+        diffContainerConstraint->append(gi);
     }
 
     if (diffContainerConstraint->get_lists().size() > 0)
-        c->append(diffContainerConstraint);
+        field.getLogger()->append(diffContainerConstraint);
 }
 
 void PhvLogging::logFields() {
@@ -382,14 +429,7 @@ void PhvLogging::logFields() {
                 field->append_phv_slices(logContainerSlice(sl, use_alias));
             }
 
-            // Log constraints applied to a field as whole
-            auto c = new Constraint();
-            extractFieldConstraints(c, f, kv.second);
-
-            if (c->get_base_constraint().size() > 0)
-                    field->append_constraints(c);
-
-            // TODO: extract per slice constraints
+            logFieldConstraints(use_alias ? f->aliasSource->name : f->name, field);
 
             logger.append_fields(field);
         }

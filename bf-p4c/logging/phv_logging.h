@@ -15,6 +15,7 @@
 #include "bf-p4c/phv/phv_spec.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/logging/logging.h"
+#include "bf-p4c/logging/constrained_fields.h"
 #include "bf-p4c/version.h"
 #include "ir/ir.h"
 #include "phv_schema.h"
@@ -46,6 +47,18 @@ struct CollectPhvLoggingInfo : public MauInspector {
 
     /// Mapping from a FieldSlice to all the tables in which it is used in the input crossbar.
     ordered_map<const PHV::FieldSlice, ordered_set<cstring>> sliceXbarToTables;
+
+    /// Map of fields with their slices, containing snapshot of non-group constraints
+    /// applied to them before first allocation
+    ConstrainedFieldMap fieldConstraints;
+
+    /// Superclusters used to extract certain group constraints (MAU groups, equivalent alignment)
+    const std::list<PHV::SuperCluster*> *superclusters;
+
+    /// Extracted no pack (different container) constraints
+    ordered_map<cstring, ordered_map<cstring, bool>> noPackConstraints;
+
+    void collectConstraints();
 
     /// Clear all local state.
     profile_t init_apply(const IR::Node* root) override;
@@ -187,6 +200,17 @@ class PhvLogging : public MauInspector {
      */
     ordered_map<const PHV::Field*, const PHV::Field*> getFieldAliases();
 
+    /**
+     *  Transform @f to loggable field info
+     */
+    FieldInfo* getFieldInfo(const PHV::Field *f) const;
+
+    /**
+     *  If @f has srcInfo, return SourceLocation with fileName and sourceLine
+     *  Otherwise return DummyFile:-1
+     */
+    SourceLocation* getSourceLoc(const PHV::Field *f) const;
+
     /** If @f is a field then return a logger FieldSlice object to log the field
      * info. Substitue the field name with the one in its 'aliasSource' field if
      * 'use_alias' is set to true
@@ -218,16 +242,21 @@ class PhvLogging : public MauInspector {
     // Add database of constraint reasons
     void logConstraintReasons();
 
+    // Add field constraint information to the logger object
+    void logFieldConstraints(const cstring &fieldName, Field *logger);
+
+    void logSolitaryConstraints(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logNoPackConstraint(ConstrainedField &field,
+                                                 const FieldInfo *fieldInfo,
+                                                 const SourceLocation *srcLoc);
+
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.
     // This template is supposed to be used with FieldGroupItem
     // and FieldGroups
     template<typename T>
     int getDatabaseIndex(std::vector<T> &db, T item);
-
-    /// Extract constraints applied to a field
-    void extractFieldConstraints(Constraint *c, const PHV::Field *f,
-                            const ordered_set<const PHV::Field*> &fields);
 
  public:
     explicit PhvLogging(const char *filename,

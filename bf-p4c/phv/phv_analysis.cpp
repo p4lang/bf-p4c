@@ -124,5 +124,6 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             phvLoggingInfo
         });
 
+    phvLoggingInfo->superclusters = &clustering.cluster_groups();
     setName("PHV Analysis");
 }
