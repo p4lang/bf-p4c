@@ -135,12 +135,14 @@ endif ()
 add_subdirectory(bf-asm)
 add_subdirectory(p4c)
 
-# Gtest needs additional includes, add them here
-target_include_directories(gtestp4c
-  PRIVATE ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include
-  PRIVATE ${P4C_BINARY_DIR}/extensions/bf-p4c/logging
-  PRIVATE bf-p4c/logging
-)
+# Gtest needs additional includes, add them here.
+if (ENABLE_GTESTS)
+  target_include_directories(gtestp4c
+    PRIVATE "${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include"
+    PRIVATE "${P4C_BINARY_DIR}/extensions/bf-p4c/logging"
+    PRIVATE "bf-p4c/logging"
+  )
+endif()
 
 add_custom_target(ctags-all
   COMMAND cd ${BFN_P4C_SOURCE_DIR}/bf-p4c &&
