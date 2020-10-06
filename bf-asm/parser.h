@@ -263,7 +263,7 @@ class Parser {
     bitvec                              state_use;
     State::Ref                          start_state[4];
     int                                 priority[4] = { 0 };
-    int                                 pri_thresh[4] = { 3, 3, 3, 3 };
+    int                                 pri_thresh[4] = { 0, 0, 0, 0 };
     int                                 tcam_row_use = 0;
     Phv::Ref                            parser_error;
     // the ghost "parser" extracts a single 32-bit value
