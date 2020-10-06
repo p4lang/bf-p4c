@@ -195,13 +195,14 @@ PHV::RotationalCluster* SuperClusterBuilder::analyze_rotational_cluster(std::ist
 
     // The whole cluster is on one line
     std::getline(scs, rot_clust);
-    // Skip empty lines
-    if (rot_clust.empty()) return new PHV::RotationalCluster(clusters);
 
     // Remove initial whitespaces
     unsigned int i = 0;
     while (rot_clust.length() > i && ::isspace(rot_clust[i])) i++;
     rot_clust = rot_clust.substr(i, rot_clust.length()-1);
+
+    // Skip empty lines
+    if (rot_clust.empty()) return new PHV::RotationalCluster(clusters);
 
     // Check and remove the outer '[]'
     if (rot_clust.length() < 2 || rot_clust[0] != '[' || rot_clust[rot_clust.length()-1] != ']') {

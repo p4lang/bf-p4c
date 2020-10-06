@@ -56,7 +56,8 @@ TEST_F(BuildSuperCluster, basic) {
         [[egress::Twain.Westbury.LaPalma<1> ^2 deparsed exact_containers [0:0]]]
         [[egress::Twain.Westbury.Ronda<3> ^3 deparsed exact_containers [0:2]]]
         [[egress::Twain.Westbury.Laurelton<2> ^6 deparsed exact_containers [0:1]]]
-)");
+	
+ )");
 
     // Build the supercluster
     boost::optional<PHV::SuperCluster*> sc = scb.build_super_cluster(input_super_cluster);
@@ -72,6 +73,8 @@ TEST_F(BuildSuperCluster, basic) {
 
     std::string input_str = input_super_cluster.str();
     input_str.erase(0, input_str.find("\n") + 1);
+    // Also erase the last empty line
+    input_str.erase(input_str.size()-3, 3);
     std::string output_str = output_super_cluster.str();
     output_str.erase(0, output_str.find("\n") + 1);
     // Compare input and output
