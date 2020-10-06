@@ -120,6 +120,12 @@ p4c_add_ptf_test_with_ptfdir (
     "tofino2" "p4c-3033" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033/npb.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 2400 " "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3033")
 
+p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c-3171" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3171/npb.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt -to 1200"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c-3171")
+set_tests_properties("tofino2/p4c-3171" PROPERTIES TIMEOUT 1200)
+
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/bf-onos/pipelines/fabric/src/main/resources/fabric-tofino.p4)
 set (ONOS_FABRIC_PTF ${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/onf_fabric/tests/onf)

@@ -493,3 +493,10 @@ p4c_add_xfail_reason("tofino2"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
 )
+
+# P4C-3171
+# This should be a must-pass once fixed.
+p4c_add_xfail_reason("tofino2"
+  "Expected packet was not received"
+  p4c-3171
+)
