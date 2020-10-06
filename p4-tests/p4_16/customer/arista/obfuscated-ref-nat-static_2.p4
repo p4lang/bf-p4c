@@ -5,19 +5,118 @@
 #include <core.p4>
 #include <tna.p4>       /* TOFINO1_ONLY */
 
+
 @pa_auto_init_metadata
 
-@pa_container_size("ingress" , "Talco.Sequim.$valid" , 16) @pa_container_size("ingress" , "Talco.Aniak.$valid" , 16) @pa_container_size("egress" , "Talco.Westville.AquaPark" , 16) @pa_atomic("ingress" , "Terral.Mentone.Moorcroft") @pa_atomic("ingress" , "Terral.Corvallis.Hammond") @pa_atomic("ingress" , "Terral.Mentone.Chatmoss") @pa_atomic("ingress" , "Terral.Hapeville.Pajaros") @pa_atomic("ingress" , "Terral.Mentone.Altus") @pa_mutually_exclusive("egress" , "Terral.Corvallis.Dassel" , "Talco.Wesson.Dassel") @pa_mutually_exclusive("egress" , "Talco.Masontown.Cisco" , "Talco.Wesson.Dassel") @pa_mutually_exclusive("ingress" , "Terral.Mentone.Altus" , "Terral.Mickleton.Boerne") @pa_no_init("ingress" , "Terral.Mentone.Altus") @pa_atomic("ingress" , "Terral.Mentone.Altus") @pa_atomic("ingress" , "Terral.Mickleton.Boerne") @pa_atomic("ingress" , "Terral.Baytown.LaLuz") @pa_no_overlay("ingress" , "Terral.Mentone.Randall") @pa_container_size("ingress" , "Terral.Mentone.Sheldahl" , 16) @pa_no_overlay("ingress" , "Terral.Sanford.Lewiston") @pa_no_overlay("ingress" , "Terral.Sanford.Lamona") @pa_no_overlay("ingress" , "Terral.BealCity.Sublett") @pa_no_overlay("ingress" , "Terral.Mentone.Etter") @pa_no_overlay("ingress" , "Terral.Mentone.Rocklin") @pa_no_overlay("ingress" , "Terral.Corvallis.Wamego") @pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu") @pa_alias("ingress" , "Terral.Hohenwald.Allgood" , "ig_intr_md_for_dprsr.mirror_type") @pa_alias("egress" , "Terral.Hohenwald.Allgood" , "eg_intr_md_for_dprsr.mirror_type") @pa_atomic("ingress" , "Terral.Mentone.WindGap") header Florin {
+
+@pa_container_size("ingress" , "Talco.Sequim.$valid" , 16)
+@pa_container_size("ingress" , "Talco.Aniak.$valid" , 16)
+@pa_container_size("egress" , "Talco.Westville.AquaPark" , 16)
+@pa_atomic("ingress" , "Terral.Mentone.Moorcroft")
+@pa_atomic("ingress" , "Terral.Corvallis.Hammond")
+@pa_atomic("ingress" , "Terral.Mentone.Chatmoss")
+@pa_atomic("ingress" , "Terral.Hapeville.Pajaros")
+@pa_atomic("ingress" , "Terral.Mentone.Altus")
+@pa_mutually_exclusive("egress" , "Terral.Corvallis.Dassel" , "Talco.Wesson.Dassel")
+@pa_mutually_exclusive("egress" , "Talco.Masontown.Cisco" , "Talco.Wesson.Dassel")
+@pa_mutually_exclusive("ingress" , "Terral.Mentone.Altus" , "Terral.Mickleton.Boerne")
+@pa_no_init("ingress" , "Terral.Mentone.Altus")
+@pa_atomic("ingress" , "Terral.Mentone.Altus")
+@pa_atomic("ingress" , "Terral.Mickleton.Boerne")
+@pa_atomic("ingress" , "Terral.Baytown.LaLuz")
+@pa_no_overlay("ingress" , "Terral.Mentone.Randall")
+@pa_container_size("ingress" , "Terral.Mentone.Sheldahl" , 16)
+@pa_no_overlay("ingress" , "Terral.Sanford.Lewiston")
+@pa_no_overlay("ingress" , "Terral.Sanford.Lamona")
+@pa_no_overlay("ingress" , "Terral.BealCity.Sublett")
+@pa_no_overlay("ingress" , "Terral.Mentone.Etter")
+@pa_no_overlay("ingress" , "Terral.Mentone.Rocklin")
+@pa_no_overlay("ingress" , "Terral.Corvallis.Wamego")
+@pa_no_overlay("ingress" , "ig_intr_md_for_tm.copy_to_cpu")
+@pa_alias("ingress" , "Terral.Hohenwald.Allgood" , "ig_intr_md_for_dprsr.mirror_type")
+@pa_alias("egress" , "Terral.Hohenwald.Allgood" , "eg_intr_md_for_dprsr.mirror_type")
+@pa_atomic("ingress" , "Terral.Mentone.WindGap") header Florin {
     bit<8> Requa;
 }
 
 header Sudbury {
     bit<8> Allgood;
-    @flexible 
+    @flexible
     bit<9> Chaska;
 }
 
-@pa_atomic("ingress" , "Terral.Mentone.WindGap") @pa_alias("egress" , "Terral.Gastonia.Florien" , "eg_intr_md.egress_port") @pa_atomic("ingress" , "Terral.Mentone.Moorcroft") @pa_atomic("ingress" , "Terral.Corvallis.Hammond") @pa_no_init("ingress" , "Terral.Corvallis.Gause") @pa_atomic("ingress" , "Terral.Mickleton.Brinkman") @pa_no_init("ingress" , "Terral.Mentone.WindGap") @pa_alias("ingress" , "Terral.Goodwin.Ericsburg" , "Terral.Goodwin.Staunton") @pa_alias("egress" , "Terral.Livonia.Ericsburg" , "Terral.Livonia.Staunton") @pa_mutually_exclusive("egress" , "Terral.Corvallis.Ayden" , "Terral.Corvallis.Standish") @pa_alias("ingress" , "Terral.McBrides.Buncombe" , "Terral.McBrides.Crestone") @pa_no_init("ingress" , "Terral.Mentone.AquaPark") @pa_no_init("ingress" , "Terral.Mentone.Horton") @pa_no_init("ingress" , "Terral.Mentone.Cecilton") @pa_no_init("ingress" , "Terral.Mentone.Glassboro") @pa_no_init("ingress" , "Terral.Mentone.Avondale") @pa_atomic("ingress" , "Terral.Bridger.Fredonia") @pa_atomic("ingress" , "Terral.Bridger.Stilwell") @pa_atomic("ingress" , "Terral.Bridger.LaUnion") @pa_atomic("ingress" , "Terral.Bridger.Cuprum") @pa_atomic("ingress" , "Terral.Bridger.Belview") @pa_atomic("ingress" , "Terral.Belmont.Kalkaska") @pa_atomic("ingress" , "Terral.Belmont.Arvada") @pa_mutually_exclusive("ingress" , "Terral.Elvaston.Findlay" , "Terral.Elkville.Findlay") @pa_mutually_exclusive("ingress" , "Terral.Elvaston.Quogue" , "Terral.Elkville.Quogue") @pa_no_init("ingress" , "Terral.Mentone.Onycha") @pa_no_init("egress" , "Terral.Corvallis.Raiford") @pa_no_init("egress" , "Terral.Corvallis.Ayden") @pa_no_init("ingress" , "ig_intr_md_for_tm.level1_exclusion_id") @pa_no_init("ingress" , "ig_intr_md_for_tm.rid") @pa_no_init("ingress" , "Terral.Corvallis.Cecilton") @pa_no_init("ingress" , "Terral.Corvallis.Horton") @pa_no_init("ingress" , "Terral.Corvallis.Hammond") @pa_no_init("ingress" , "Terral.Corvallis.Chaska") @pa_no_init("ingress" , "Terral.Corvallis.Barrow") @pa_no_init("ingress" , "Terral.Corvallis.McCammon") @pa_no_init("ingress" , "Terral.Ocracoke.Findlay") @pa_no_init("ingress" , "Terral.Ocracoke.Noyes") @pa_no_init("ingress" , "Terral.Ocracoke.Hampton") @pa_no_init("ingress" , "Terral.Ocracoke.Garcia") @pa_no_init("ingress" , "Terral.Ocracoke.Bessie") @pa_no_init("ingress" , "Terral.Ocracoke.Whitten") @pa_no_init("ingress" , "Terral.Ocracoke.Quogue") @pa_no_init("ingress" , "Terral.Ocracoke.Madawaska") @pa_no_init("ingress" , "Terral.Ocracoke.Chloride") @pa_no_init("ingress" , "Terral.Dozier.Findlay") @pa_no_init("ingress" , "Terral.Dozier.Quogue") @pa_no_init("ingress" , "Terral.Dozier.Edwards") @pa_no_init("ingress" , "Terral.Dozier.Murphy") @pa_no_init("ingress" , "Terral.Bridger.LaUnion") @pa_no_init("ingress" , "Terral.Bridger.Cuprum") @pa_no_init("ingress" , "Terral.Bridger.Belview") @pa_no_init("ingress" , "Terral.Bridger.Fredonia") @pa_no_init("ingress" , "Terral.Bridger.Stilwell") @pa_no_init("ingress" , "Terral.Belmont.Kalkaska") @pa_no_init("ingress" , "Terral.Belmont.Arvada") @pa_no_init("ingress" , "Terral.Sanford.Cutten") @pa_no_init("ingress" , "Terral.Toluca.Cutten") @pa_no_init("ingress" , "Terral.Mentone.Cecilton") @pa_no_init("ingress" , "Terral.Mentone.Horton") @pa_no_init("ingress" , "Terral.Mentone.Philbrook") @pa_no_init("ingress" , "Terral.Mentone.Avondale") @pa_no_init("ingress" , "Terral.Mentone.Glassboro") @pa_no_init("ingress" , "Terral.Mentone.Altus") @pa_no_init("ingress" , "Terral.Goodwin.Staunton") @pa_no_init("ingress" , "Terral.Goodwin.Ericsburg") @pa_no_init("ingress" , "Terral.NantyGlo.Daleville") @pa_no_init("ingress" , "Terral.NantyGlo.Ackley") @pa_no_init("ingress" , "Terral.NantyGlo.Candle") @pa_no_init("ingress" , "Terral.NantyGlo.Noyes") @pa_no_init("ingress" , "Terral.NantyGlo.Bushland") struct Selawik {
+
+@pa_atomic("ingress" , "Terral.Mentone.WindGap")
+@pa_alias("egress" , "Terral.Gastonia.Florien" , "eg_intr_md.egress_port")
+@pa_atomic("ingress" , "Terral.Mentone.Moorcroft")
+@pa_atomic("ingress" , "Terral.Corvallis.Hammond")
+@pa_no_init("ingress" , "Terral.Corvallis.Gause")
+@pa_atomic("ingress" , "Terral.Mickleton.Brinkman")
+@pa_no_init("ingress" , "Terral.Mentone.WindGap")
+@pa_alias("ingress" , "Terral.Goodwin.Ericsburg" , "Terral.Goodwin.Staunton")
+@pa_alias("egress" , "Terral.Livonia.Ericsburg" , "Terral.Livonia.Staunton")
+@pa_mutually_exclusive("egress" , "Terral.Corvallis.Ayden" , "Terral.Corvallis.Standish")
+@pa_alias("ingress" , "Terral.McBrides.Buncombe" , "Terral.McBrides.Crestone")
+@pa_no_init("ingress" , "Terral.Mentone.AquaPark")
+@pa_no_init("ingress" , "Terral.Mentone.Horton")
+@pa_no_init("ingress" , "Terral.Mentone.Cecilton")
+@pa_no_init("ingress" , "Terral.Mentone.Glassboro")
+@pa_no_init("ingress" , "Terral.Mentone.Avondale")
+@pa_atomic("ingress" , "Terral.Bridger.Fredonia")
+@pa_atomic("ingress" , "Terral.Bridger.Stilwell")
+@pa_atomic("ingress" , "Terral.Bridger.LaUnion")
+@pa_atomic("ingress" , "Terral.Bridger.Cuprum")
+@pa_atomic("ingress" , "Terral.Bridger.Belview")
+@pa_atomic("ingress" , "Terral.Belmont.Kalkaska")
+@pa_atomic("ingress" , "Terral.Belmont.Arvada")
+@pa_mutually_exclusive("ingress" , "Terral.Elvaston.Findlay" , "Terral.Elkville.Findlay")
+@pa_mutually_exclusive("ingress" , "Terral.Elvaston.Quogue" , "Terral.Elkville.Quogue")
+@pa_no_init("ingress" , "Terral.Mentone.Onycha")
+@pa_no_init("egress" , "Terral.Corvallis.Raiford")
+@pa_no_init("egress" , "Terral.Corvallis.Ayden")
+@pa_no_init("ingress" , "ig_intr_md_for_tm.level1_exclusion_id")
+@pa_no_init("ingress" , "ig_intr_md_for_tm.rid")
+@pa_no_init("ingress" , "Terral.Corvallis.Cecilton")
+@pa_no_init("ingress" , "Terral.Corvallis.Horton")
+@pa_no_init("ingress" , "Terral.Corvallis.Hammond")
+@pa_no_init("ingress" , "Terral.Corvallis.Chaska")
+@pa_no_init("ingress" , "Terral.Corvallis.Barrow")
+@pa_no_init("ingress" , "Terral.Corvallis.McCammon")
+@pa_no_init("ingress" , "Terral.Ocracoke.Findlay")
+@pa_no_init("ingress" , "Terral.Ocracoke.Noyes")
+@pa_no_init("ingress" , "Terral.Ocracoke.Hampton")
+@pa_no_init("ingress" , "Terral.Ocracoke.Garcia")
+@pa_no_init("ingress" , "Terral.Ocracoke.Bessie")
+@pa_no_init("ingress" , "Terral.Ocracoke.Whitten")
+@pa_no_init("ingress" , "Terral.Ocracoke.Quogue")
+@pa_no_init("ingress" , "Terral.Ocracoke.Madawaska")
+@pa_no_init("ingress" , "Terral.Ocracoke.Chloride")
+@pa_no_init("ingress" , "Terral.Dozier.Findlay")
+@pa_no_init("ingress" , "Terral.Dozier.Quogue")
+@pa_no_init("ingress" , "Terral.Dozier.Edwards")
+@pa_no_init("ingress" , "Terral.Dozier.Murphy")
+@pa_no_init("ingress" , "Terral.Bridger.LaUnion")
+@pa_no_init("ingress" , "Terral.Bridger.Cuprum")
+@pa_no_init("ingress" , "Terral.Bridger.Belview")
+@pa_no_init("ingress" , "Terral.Bridger.Fredonia")
+@pa_no_init("ingress" , "Terral.Bridger.Stilwell")
+@pa_no_init("ingress" , "Terral.Belmont.Kalkaska")
+@pa_no_init("ingress" , "Terral.Belmont.Arvada")
+@pa_no_init("ingress" , "Terral.Sanford.Cutten")
+@pa_no_init("ingress" , "Terral.Toluca.Cutten")
+@pa_no_init("ingress" , "Terral.Mentone.Cecilton")
+@pa_no_init("ingress" , "Terral.Mentone.Horton")
+@pa_no_init("ingress" , "Terral.Mentone.Philbrook")
+@pa_no_init("ingress" , "Terral.Mentone.Avondale")
+@pa_no_init("ingress" , "Terral.Mentone.Glassboro")
+@pa_no_init("ingress" , "Terral.Mentone.Altus")
+@pa_no_init("ingress" , "Terral.Goodwin.Staunton")
+@pa_no_init("ingress" , "Terral.Goodwin.Ericsburg")
+@pa_no_init("ingress" , "Terral.NantyGlo.Daleville")
+@pa_no_init("ingress" , "Terral.NantyGlo.Ackley")
+@pa_no_init("ingress" , "Terral.NantyGlo.Candle")
+@pa_no_init("ingress" , "Terral.NantyGlo.Noyes")
+@pa_no_init("ingress" , "Terral.NantyGlo.Bushland") struct Selawik {
     bit<1>   Waipahu;
     bit<2>   Shabbona;
     PortId_t Ronan;
@@ -63,48 +162,90 @@ header Aguilita {
     bit<8> Allgood;
 }
 
-@pa_alias("ingress" , "Terral.Shingler.Willard" , "ig_intr_md_for_tm.ingress_cos") @pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Terral.Shingler.Willard") @pa_alias("ingress" , "Terral.Corvallis.Dassel" , "Talco.Masontown.Cisco") @pa_alias("egress" , "Terral.Corvallis.Dassel" , "Talco.Masontown.Cisco") @pa_alias("ingress" , "Terral.Corvallis.Lapoint" , "Talco.Masontown.Higginson") @pa_alias("egress" , "Terral.Corvallis.Lapoint" , "Talco.Masontown.Higginson") @pa_alias("ingress" , "Terral.Corvallis.Cecilton" , "Talco.Masontown.Oriskany") @pa_alias("egress" , "Terral.Corvallis.Cecilton" , "Talco.Masontown.Oriskany") @pa_alias("ingress" , "Terral.Corvallis.Horton" , "Talco.Masontown.Bowden") @pa_alias("egress" , "Terral.Corvallis.Horton" , "Talco.Masontown.Bowden") @pa_alias("ingress" , "Terral.Corvallis.Manilla" , "Talco.Masontown.Cabot") @pa_alias("egress" , "Terral.Corvallis.Manilla" , "Talco.Masontown.Cabot") @pa_alias("ingress" , "Terral.Corvallis.Hematite" , "Talco.Masontown.Keyes") @pa_alias("egress" , "Terral.Corvallis.Hematite" , "Talco.Masontown.Keyes") @pa_alias("ingress" , "Terral.Corvallis.Rockham" , "Talco.Masontown.Basic") @pa_alias("egress" , "Terral.Corvallis.Rockham" , "Talco.Masontown.Basic") @pa_alias("ingress" , "Terral.Corvallis.Chaska" , "Talco.Masontown.Freeman") @pa_alias("egress" , "Terral.Corvallis.Chaska" , "Talco.Masontown.Freeman") @pa_alias("ingress" , "Terral.Corvallis.Gause" , "Talco.Masontown.Exton") @pa_alias("egress" , "Terral.Corvallis.Gause" , "Talco.Masontown.Exton") @pa_alias("ingress" , "Terral.Corvallis.Barrow" , "Talco.Masontown.Floyd") @pa_alias("egress" , "Terral.Corvallis.Barrow" , "Talco.Masontown.Floyd") @pa_alias("ingress" , "Terral.Corvallis.Blairsden" , "Talco.Masontown.Fayette") @pa_alias("egress" , "Terral.Corvallis.Blairsden" , "Talco.Masontown.Fayette") @pa_alias("ingress" , "Terral.Corvallis.Pachuta" , "Talco.Masontown.Osterdock") @pa_alias("egress" , "Terral.Corvallis.Pachuta" , "Talco.Masontown.Osterdock") @pa_alias("ingress" , "Terral.Dozier.Bessie" , "Talco.Masontown.PineCity") @pa_alias("egress" , "Terral.Dozier.Bessie" , "Talco.Masontown.PineCity") @pa_alias("ingress" , "Terral.Belmont.Arvada" , "Talco.Masontown.Alameda") @pa_alias("egress" , "Terral.Belmont.Arvada" , "Talco.Masontown.Alameda") @pa_alias("egress" , "Terral.Shingler.Willard" , "Talco.Masontown.Rexville") @pa_alias("ingress" , "Terral.Mentone.Grabill" , "Talco.Masontown.Quinwood") @pa_alias("egress" , "Terral.Mentone.Grabill" , "Talco.Masontown.Quinwood") @pa_alias("ingress" , "Terral.Mentone.DonaAna" , "Talco.Masontown.Marfa") @pa_alias("egress" , "Terral.Mentone.DonaAna" , "Talco.Masontown.Marfa") @pa_alias("egress" , "Terral.Baytown.Monahans" , "Talco.Masontown.Palatine") @pa_alias("ingress" , "Terral.NantyGlo.Topanga" , "Talco.Masontown.Adona") @pa_alias("egress" , "Terral.NantyGlo.Topanga" , "Talco.Masontown.Adona") @pa_alias("ingress" , "Terral.NantyGlo.Daleville" , "Talco.Masontown.IttaBena") @pa_alias("egress" , "Terral.NantyGlo.Daleville" , "Talco.Masontown.IttaBena") @pa_alias("ingress" , "Terral.NantyGlo.Noyes" , "Talco.Masontown.Mabelle") @pa_alias("egress" , "Terral.NantyGlo.Noyes" , "Talco.Masontown.Mabelle") header Harbor {
+
+@pa_alias("ingress" , "Terral.Shingler.Willard" , "ig_intr_md_for_tm.ingress_cos")
+@pa_alias("ingress" , "ig_intr_md_for_tm.ingress_cos" , "Terral.Shingler.Willard")
+@pa_alias("ingress" , "Terral.Corvallis.Dassel" , "Talco.Masontown.Cisco")
+@pa_alias("egress" , "Terral.Corvallis.Dassel" , "Talco.Masontown.Cisco")
+@pa_alias("ingress" , "Terral.Corvallis.Lapoint" , "Talco.Masontown.Higginson")
+@pa_alias("egress" , "Terral.Corvallis.Lapoint" , "Talco.Masontown.Higginson")
+@pa_alias("ingress" , "Terral.Corvallis.Cecilton" , "Talco.Masontown.Oriskany")
+@pa_alias("egress" , "Terral.Corvallis.Cecilton" , "Talco.Masontown.Oriskany")
+@pa_alias("ingress" , "Terral.Corvallis.Horton" , "Talco.Masontown.Bowden")
+@pa_alias("egress" , "Terral.Corvallis.Horton" , "Talco.Masontown.Bowden")
+@pa_alias("ingress" , "Terral.Corvallis.Manilla" , "Talco.Masontown.Cabot")
+@pa_alias("egress" , "Terral.Corvallis.Manilla" , "Talco.Masontown.Cabot")
+@pa_alias("ingress" , "Terral.Corvallis.Hematite" , "Talco.Masontown.Keyes")
+@pa_alias("egress" , "Terral.Corvallis.Hematite" , "Talco.Masontown.Keyes")
+@pa_alias("ingress" , "Terral.Corvallis.Rockham" , "Talco.Masontown.Basic")
+@pa_alias("egress" , "Terral.Corvallis.Rockham" , "Talco.Masontown.Basic")
+@pa_alias("ingress" , "Terral.Corvallis.Chaska" , "Talco.Masontown.Freeman")
+@pa_alias("egress" , "Terral.Corvallis.Chaska" , "Talco.Masontown.Freeman")
+@pa_alias("ingress" , "Terral.Corvallis.Gause" , "Talco.Masontown.Exton")
+@pa_alias("egress" , "Terral.Corvallis.Gause" , "Talco.Masontown.Exton")
+@pa_alias("ingress" , "Terral.Corvallis.Barrow" , "Talco.Masontown.Floyd")
+@pa_alias("egress" , "Terral.Corvallis.Barrow" , "Talco.Masontown.Floyd")
+@pa_alias("ingress" , "Terral.Corvallis.Blairsden" , "Talco.Masontown.Fayette")
+@pa_alias("egress" , "Terral.Corvallis.Blairsden" , "Talco.Masontown.Fayette")
+@pa_alias("ingress" , "Terral.Corvallis.Pachuta" , "Talco.Masontown.Osterdock")
+@pa_alias("egress" , "Terral.Corvallis.Pachuta" , "Talco.Masontown.Osterdock")
+@pa_alias("ingress" , "Terral.Dozier.Bessie" , "Talco.Masontown.PineCity")
+@pa_alias("egress" , "Terral.Dozier.Bessie" , "Talco.Masontown.PineCity")
+@pa_alias("ingress" , "Terral.Belmont.Arvada" , "Talco.Masontown.Alameda")
+@pa_alias("egress" , "Terral.Belmont.Arvada" , "Talco.Masontown.Alameda")
+@pa_alias("egress" , "Terral.Shingler.Willard" , "Talco.Masontown.Rexville")
+@pa_alias("ingress" , "Terral.Mentone.Grabill" , "Talco.Masontown.Quinwood")
+@pa_alias("egress" , "Terral.Mentone.Grabill" , "Talco.Masontown.Quinwood")
+@pa_alias("ingress" , "Terral.Mentone.DonaAna" , "Talco.Masontown.Marfa")
+@pa_alias("egress" , "Terral.Mentone.DonaAna" , "Talco.Masontown.Marfa")
+@pa_alias("egress" , "Terral.Baytown.Monahans" , "Talco.Masontown.Palatine")
+@pa_alias("ingress" , "Terral.NantyGlo.Topanga" , "Talco.Masontown.Adona")
+@pa_alias("egress" , "Terral.NantyGlo.Topanga" , "Talco.Masontown.Adona")
+@pa_alias("ingress" , "Terral.NantyGlo.Daleville" , "Talco.Masontown.IttaBena")
+@pa_alias("egress" , "Terral.NantyGlo.Daleville" , "Talco.Masontown.IttaBena")
+@pa_alias("ingress" , "Terral.NantyGlo.Noyes" , "Talco.Masontown.Mabelle")
+@pa_alias("egress" , "Terral.NantyGlo.Noyes" , "Talco.Masontown.Mabelle") header Harbor {
     bit<8>  Allgood;
     bit<3>  IttaBena;
     bit<1>  Adona;
     bit<4>  Connell;
-    @flexible 
+    @flexible
     bit<8>  Cisco;
-    @flexible 
+    @flexible
     bit<3>  Higginson;
-    @flexible 
+    @flexible
     bit<24> Oriskany;
-    @flexible 
+    @flexible
     bit<24> Bowden;
-    @flexible 
+    @flexible
     bit<12> Cabot;
-    @flexible 
+    @flexible
     bit<6>  Keyes;
-    @flexible 
+    @flexible
     bit<3>  Basic;
-    @flexible 
+    @flexible
     bit<9>  Freeman;
-    @flexible 
+    @flexible
     bit<2>  Exton;
-    @flexible 
+    @flexible
     bit<1>  Floyd;
-    @flexible 
+    @flexible
     bit<1>  Fayette;
-    @flexible 
+    @flexible
     bit<32> Osterdock;
-    @flexible 
+    @flexible
     bit<1>  PineCity;
-    @flexible 
+    @flexible
     bit<16> Alameda;
-    @flexible 
+    @flexible
     bit<3>  Rexville;
-    @flexible 
+    @flexible
     bit<12> Quinwood;
-    @flexible 
+    @flexible
     bit<12> Marfa;
-    @flexible 
+    @flexible
     bit<1>  Palatine;
-    @flexible 
+    @flexible
     bit<6>  Mabelle;
 }
 
@@ -716,7 +857,23 @@ struct Nuyaka {
     bit<1>    Martelle;
 }
 
-@pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Cecilton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Horton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Avondale") @pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Glassboro") @pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Cecilton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Horton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Avondale") @pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Glassboro") @pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Cecilton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Horton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Avondale") @pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Glassboro") @pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Cecilton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Horton") @pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Avondale") @pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Glassboro") struct Gambrills {
+
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Cecilton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Horton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Avondale")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Cecilton" , "Talco.Millhaven.Glassboro")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Cecilton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Horton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Avondale")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Horton" , "Talco.Millhaven.Glassboro")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Cecilton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Horton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Avondale")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Avondale" , "Talco.Millhaven.Glassboro")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Cecilton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Horton")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Avondale")
+@pa_mutually_exclusive("egress" , "Talco.Yerington.Glassboro" , "Talco.Millhaven.Glassboro") struct Gambrills {
     Harbor       Masontown;
     Hoagland     Wesson;
     Idalia       Yerington;
@@ -4881,7 +5038,21 @@ control Minetto(inout Gambrills Talco, inout Nuyaka Terral, in ingress_intrinsic
     }
 }
 
-@pa_no_init("ingress" , "Terral.Ocracoke.Quogue") @pa_no_init("ingress" , "Terral.Ocracoke.Findlay") @pa_no_init("ingress" , "Terral.Ocracoke.Madawaska") @pa_no_init("ingress" , "Terral.Ocracoke.Hampton") @pa_no_init("ingress" , "Terral.Ocracoke.Whitten") @pa_no_init("ingress" , "Terral.Ocracoke.Noyes") @pa_no_init("ingress" , "Terral.Ocracoke.Chloride") @pa_no_init("ingress" , "Terral.Ocracoke.Garcia") @pa_no_init("ingress" , "Terral.Ocracoke.Bessie") @pa_atomic("ingress" , "Terral.Ocracoke.Quogue") @pa_atomic("ingress" , "Terral.Ocracoke.Findlay") @pa_atomic("ingress" , "Terral.Ocracoke.Madawaska") @pa_atomic("ingress" , "Terral.Ocracoke.Hampton") @pa_atomic("ingress" , "Terral.Ocracoke.Garcia") control Talkeetna(inout Gambrills Talco, inout Nuyaka Terral, in ingress_intrinsic_metadata_t Greenland, in ingress_intrinsic_metadata_from_parser_t HighRock, inout ingress_intrinsic_metadata_for_deparser_t WebbCity, inout ingress_intrinsic_metadata_for_tm_t Shingler) {
+
+@pa_no_init("ingress" , "Terral.Ocracoke.Quogue")
+@pa_no_init("ingress" , "Terral.Ocracoke.Findlay")
+@pa_no_init("ingress" , "Terral.Ocracoke.Madawaska")
+@pa_no_init("ingress" , "Terral.Ocracoke.Hampton")
+@pa_no_init("ingress" , "Terral.Ocracoke.Whitten")
+@pa_no_init("ingress" , "Terral.Ocracoke.Noyes")
+@pa_no_init("ingress" , "Terral.Ocracoke.Chloride")
+@pa_no_init("ingress" , "Terral.Ocracoke.Garcia")
+@pa_no_init("ingress" , "Terral.Ocracoke.Bessie")
+@pa_atomic("ingress" , "Terral.Ocracoke.Quogue")
+@pa_atomic("ingress" , "Terral.Ocracoke.Findlay")
+@pa_atomic("ingress" , "Terral.Ocracoke.Madawaska")
+@pa_atomic("ingress" , "Terral.Ocracoke.Hampton")
+@pa_atomic("ingress" , "Terral.Ocracoke.Garcia") control Talkeetna(inout Gambrills Talco, inout Nuyaka Terral, in ingress_intrinsic_metadata_t Greenland, in ingress_intrinsic_metadata_from_parser_t HighRock, inout ingress_intrinsic_metadata_for_deparser_t WebbCity, inout ingress_intrinsic_metadata_for_tm_t Shingler) {
     @name(".Gorum") action Gorum(bit<32> Solomon) {
         Terral.Wildorado.Quinault = max<bit<32>>(Terral.Wildorado.Quinault, Solomon);
     }
@@ -5453,6 +5624,7 @@ control Waretown(inout Gambrills Talco, inout Nuyaka Terral, in ingress_intrinsi
         Stout.apply();
     }
 }
+
 
 @pa_no_init("ingress" , "Terral.Corvallis.Lapoint") control Blunt(inout Gambrills Talco, inout Nuyaka Terral, in ingress_intrinsic_metadata_t Greenland, in ingress_intrinsic_metadata_from_parser_t HighRock, inout ingress_intrinsic_metadata_for_deparser_t WebbCity, inout ingress_intrinsic_metadata_for_tm_t Shingler) {
     @name(".Arapahoe") action Arapahoe() {
