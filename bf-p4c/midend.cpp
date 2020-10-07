@@ -56,6 +56,7 @@
 #include "bf-p4c/midend/simplify_nested_if.h"
 #include "bf-p4c/midend/simplify_args.h"
 #include "bf-p4c/midend/type_checker.h"
+#include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
 namespace BFN {
@@ -425,6 +426,7 @@ MidEnd::MidEnd(BFN_Options& options) {
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),
         new RegisterReadWrite(&refMap, &typeMap),
+        new BFN::SetDefaultSize(true /* warn */),
         new MidEndLast,
     });
 }

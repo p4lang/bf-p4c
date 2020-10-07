@@ -66,6 +66,7 @@ bit<1> b;
                             noop; }
             key = { hdr.data.h1 : exact; }
                 default_action = noop;
+                size = 512;
             }
 
             table t2 {
@@ -73,6 +74,7 @@ bit<1> b;
                             noop; }
                 key = { hdr.data.h2: exact; }
                 default_action = noop;
+                size = 512;
             }
 
             table t3 {
@@ -80,6 +82,7 @@ bit<1> b;
                             noop; }
                 key = { hdr.data.h3: exact; }
                 default_action = noop;
+                size = 512;
             }
 
 
@@ -355,42 +358,49 @@ TEST_F(MultipleApplyTest, SWI_2941_example1) {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table B {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table C {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table D {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table E {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table F {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
         
         table G {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         apply {
@@ -428,42 +438,49 @@ TEST_F(MultipleApplyTest, SWI_2941_example2) {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table B {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table C {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table D {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table E {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table F {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
         
         table G {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         apply {
@@ -502,42 +519,49 @@ TEST_F(MultipleApplyTest, SWI_2941_example3) {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table B {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table C {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table D {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table E {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table F {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
         
         table G {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         apply {
@@ -579,42 +603,49 @@ TEST_F(MultipleApplyTest, SWI_2941_example4) {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table B {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table C {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table D {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table E {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table F {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
         
         table G {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         apply {
@@ -660,18 +691,21 @@ TEST_F(MultipleApplyTest, SWI_2941_example5) {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table B {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         table C {
             actions = { noop; a1; }
             key = { hdr.data.h1 : exact; }
             default_action = noop;
+            size = 512;
         }
 
         apply {

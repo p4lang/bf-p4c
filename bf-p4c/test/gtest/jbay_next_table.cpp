@@ -240,6 +240,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(3)
@@ -251,6 +252,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(0)
@@ -262,6 +264,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(5)
@@ -273,6 +276,7 @@ TEST_F(NextTablePropTest, OnGressOverlapLB) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
     apply {
@@ -306,6 +310,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(3)
@@ -317,6 +322,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(3)
@@ -328,6 +334,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(6)
@@ -339,6 +346,7 @@ TEST_F(NextTablePropTest, TightOnGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
     apply {
@@ -372,6 +380,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(3)
@@ -383,6 +392,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
     apply {
@@ -403,6 +413,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     @stage(6)
@@ -414,6 +425,7 @@ TEST_F(NextTablePropTest, TightOffGressOverlap) {
         actions = {
             noop;
         }
+        size = 512;
     }
     apply {
         if (t3.apply().hit) {
@@ -443,6 +455,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
      @stage(3)
@@ -454,6 +467,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
          actions = {
              noop;
          }
+        size = 512;
      }
 
     apply {
@@ -474,6 +488,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     @stage(7)
@@ -485,6 +500,7 @@ TEST_F(NextTablePropTest, TightOffGressMerge) {
         actions = {
             noop;
         }
+        size = 512;
     }
     apply {
         if (t3.apply().hit) {
@@ -514,6 +530,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -525,6 +542,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -536,6 +554,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -547,6 +566,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -558,6 +578,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -569,6 +590,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -580,6 +602,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -591,6 +614,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -602,6 +626,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -613,6 +638,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -624,6 +650,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -635,6 +662,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -646,6 +674,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -657,6 +686,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -668,6 +698,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -679,6 +710,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -690,6 +722,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -701,6 +734,7 @@ TEST_F(NextTablePropTest, OnGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -758,6 +792,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -769,6 +804,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -780,6 +816,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -791,6 +828,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -802,6 +840,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -813,6 +852,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -824,6 +864,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -835,6 +876,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -846,6 +888,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -857,6 +900,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -868,6 +912,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -879,6 +924,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -890,6 +936,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -901,6 +948,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(4)
@@ -912,6 +960,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(10)
@@ -923,6 +972,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(7)
@@ -934,6 +984,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -945,6 +996,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -1001,6 +1053,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1012,6 +1065,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1023,6 +1077,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1034,6 +1089,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1045,6 +1101,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1056,6 +1113,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1067,6 +1125,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1078,6 +1137,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1089,6 +1149,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1100,6 +1161,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1111,6 +1173,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1122,6 +1185,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1133,6 +1197,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(6)
@@ -1144,6 +1209,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(4)
@@ -1155,6 +1221,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(10)
@@ -1166,6 +1233,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(5)
@@ -1177,6 +1245,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1188,6 +1257,7 @@ TEST_F(NextTablePropTest, OnGressPartialOverlapDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -1244,6 +1314,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1255,6 +1326,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1266,6 +1338,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1277,6 +1350,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1288,6 +1362,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1299,6 +1374,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1310,6 +1386,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1321,6 +1398,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1332,6 +1410,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1343,6 +1422,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1354,6 +1434,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1365,6 +1446,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1376,6 +1458,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1387,6 +1470,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(4)
@@ -1398,6 +1482,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(10)
@@ -1409,6 +1494,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -1451,6 +1537,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(10)
@@ -1462,6 +1549,7 @@ TEST_F(NextTablePropTest, OffGressFullOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     apply {
@@ -1494,6 +1582,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1505,6 +1594,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1516,6 +1606,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1527,6 +1618,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1538,6 +1630,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1549,6 +1642,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1560,6 +1654,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1571,6 +1666,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1582,6 +1678,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1593,6 +1690,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1604,6 +1702,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1615,6 +1714,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1626,6 +1726,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1637,6 +1738,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(4)
@@ -1648,6 +1750,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(10)
@@ -1659,6 +1762,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -1701,6 +1805,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1712,6 +1817,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     apply {
@@ -1745,6 +1851,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1756,6 +1863,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1767,6 +1875,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1778,6 +1887,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1789,6 +1899,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1800,6 +1911,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1811,6 +1923,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1822,6 +1935,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1833,6 +1947,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1844,6 +1959,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1855,6 +1971,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1866,6 +1983,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1877,6 +1995,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -1888,6 +2007,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(4)
@@ -1899,6 +2019,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(7)
@@ -1910,6 +2031,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -1921,6 +2043,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(3)
@@ -1932,6 +2055,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -1977,6 +2101,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(6)
@@ -1988,6 +2113,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     apply {
@@ -2020,6 +2146,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2031,6 +2158,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2042,6 +2170,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2053,6 +2182,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2064,6 +2194,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2075,6 +2206,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2086,6 +2218,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2097,6 +2230,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2108,6 +2242,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2119,6 +2254,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2130,6 +2266,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2141,6 +2278,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2152,6 +2290,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2163,6 +2302,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(7)
@@ -2174,6 +2314,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(13)
@@ -2185,6 +2326,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(0)
@@ -2196,6 +2338,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(3)
@@ -2207,6 +2350,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
 
@@ -2252,6 +2396,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     @stage(8)
@@ -2263,6 +2408,7 @@ TEST_F(NextTablePropTest, OffGressPartialOverlapMultiUseDumbTables2) {
         actions = {
                    noop;
       }
+      size = 512;
     }
 
     apply {

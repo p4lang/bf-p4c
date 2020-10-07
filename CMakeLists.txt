@@ -141,6 +141,7 @@ if (ENABLE_GTESTS)
     PRIVATE "${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include"
     PRIVATE "${P4C_BINARY_DIR}/extensions/bf-p4c/logging"
     PRIVATE "bf-p4c/logging"
+    PRIVATE "${P4C_BINARY_DIR}/control-plane/"
   )
 endif()
 

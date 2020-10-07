@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
 
+#include "ir/ir.h"
+
 namespace IR {
 class P4Program;
 }  // namespace IR
@@ -8,6 +10,14 @@ class P4Program;
 class BFN_Options;
 
 namespace BFN {
+
+class SetDefaultSize : public Modifier {
+    bool warn = false;
+    bool preorder(IR::P4Table *table) override;
+
+ public:
+     explicit SetDefaultSize(bool warn) : warn(warn) {}
+};
 
 class P4RuntimeArchHandlerTofino;
 

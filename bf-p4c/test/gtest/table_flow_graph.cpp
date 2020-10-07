@@ -180,6 +180,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t8 {
@@ -189,6 +190,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t9 {
@@ -198,6 +200,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t10 {
@@ -207,6 +210,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t3 {
@@ -257,6 +261,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
             noop;
             setf12;
         }
+        size = 512;
     }
 
     table t12 {
@@ -266,6 +271,7 @@ TEST_F(TableFlowGraphTest, BasicControlFlow) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
 apply {
@@ -850,6 +856,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t8 {
@@ -859,6 +866,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t9 {
@@ -868,6 +876,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t10 {
@@ -877,6 +886,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t3 {
@@ -927,6 +937,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
             noop;
             setf12;
         }
+        size = 512;
     }
 
     table t12 {
@@ -936,6 +947,7 @@ TEST_F(TableFlowGraphTest, MultipleApplies) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
 apply {

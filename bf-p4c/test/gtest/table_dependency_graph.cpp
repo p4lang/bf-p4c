@@ -134,6 +134,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         actions = {
             a1; noop;
         }
+        size = 512;
     }
 
     table t2 {
@@ -143,6 +144,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     table t3 {
@@ -152,6 +154,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     table t4 {
@@ -161,6 +164,7 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     apply {
@@ -303,6 +307,7 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             setf1;
             altsetf1;
         }
+        size = 512;
     }
 
     table t12 {
@@ -316,6 +321,7 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
             setf1;
             altsetf1;
         }
+        size = 512;
     }
 
     apply {
@@ -490,6 +496,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t8 {
@@ -499,6 +506,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t9 {
@@ -508,6 +516,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t10 {
@@ -517,6 +526,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
         actions = {
             setb1;
         }
+        size = 512;
     }
 
     table t3 {
@@ -567,6 +577,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
             noop;
             setf12;
         }
+        size = 512;
     }
 
     table t12 {
@@ -576,6 +587,7 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
         actions = {
             noop;
         }
+        size = 512;
     }
 
     apply {
@@ -677,71 +689,85 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     table A {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table B {
         key = { headers.h2.f1 : exact; }
         actions = { setb1; }
+        size = 512;
     }
 
     table C {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table X {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table Y {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table X2 {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table Y2 {
         key = { headers.h2.f1: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     table Z1 {
         key = { headers.h2.b1: exact; }
         actions = { setb1; }
+        size = 512;
     }
 
     table Z2 {
         key = { headers.h2.b1: exact; }
         actions = { setb1; }
+        size = 512;
     }
 
     table Z3 {
         key = { headers.h2.b1: exact; }
         actions = { setb1; }
+        size = 512;
     }
 
     table alpha {
         key = { headers.h2.f2: exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table beta {
         key = { headers.h2.f2: exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table gamma {
         key = { headers.h2.f2: exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h2.f12: exact; }
         actions = { noop; }
+        size = 512;
     }
 
     apply {
@@ -852,23 +878,27 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f4; }
         key = { headers.h1.f2 : exact;
                 headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f3; }
         key = { headers.h1.f1 : exact;
                 headers.h1.f6 : exact; }
+        size = 512;
     }
 
     apply {
@@ -938,17 +968,20 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f4; }
         key = { headers.h1.f2 : exact;
                 headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_d {
@@ -956,6 +989,7 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
         key = { headers.h1.f1 : exact;
                 headers.h1.f5 : exact;
                 headers.h1.f6 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1026,24 +1060,28 @@ TEST_F(TableDependencyGraphTest, DomFrontier2) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f4; }
         key = { headers.h1.f2 : exact;
                 headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f3; }
         key = { headers.h1.f1 : exact;
                 headers.h1.f5 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f6; }
         key = { headers.h1.f3 : exact;
                 headers.h1.f5 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1110,21 +1148,25 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f5; }
         key = { headers.h1.f4 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f4; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1204,21 +1246,25 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { noop; }
         key = { headers.h1.f2 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f1; set_f5; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { noop; }
         key = { headers.h1.f5 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1294,21 +1340,25 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
     table node_a {
         actions = { set_f1; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f4; }
         key = { headers.h1.f4 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f2; }
         key = { headers.h1.f5 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1382,26 +1432,31 @@ TEST_F(TableDependencyGraphTest, GraphA) {
     table node_a {
         actions = { set_f1; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f1; set_f2; set_f3; set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f2; set_f3; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     table node_e {
         actions = { set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1490,17 +1545,20 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
                     @defaultonly set_f1; }
         key = { headers.h1.f3 : exact; }
         const default_action = set_f1(0x0);
+        size = 512;
     }
 
 
     table node_b {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1554,22 +1612,26 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
         actions = { set_f2;
                     set_f1_and_exit; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
 
     table node_b {
         actions = { set_f1_and_exit; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1618,41 +1680,49 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
             table node_a {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
+                size = 512;
             }
 
             table node_b {
               actions = { set_f1; }
                 key = { headers.h1.f2 : exact; }
+                size = 512;
             }
 
             table node_c {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
+                size = 512;
             }
 
             table node_d {
               actions = { set_f1; }
                 key = { headers.h1.f3 : exact; }
+                size = 512;
             }
 
             table node_e {
               actions = { set_f1; }
                 key = { headers.h1.f1 : exact; headers.h1.f2 : exact; }
+                size = 512;
             }
 
             table node_f {
               actions = { set_f1; }
                 key = { headers.h1.f3 : exact; }
+                size = 512;
             }
 
             table node_g {
               actions = { set_f2; }
                 key = { headers.h1.f3 : exact; }
+                size = 512;
             }
 
             table node_h {
               actions = { set_f2; }
                 key = { headers.h1.f2 : exact; }
+                size = 512;
             }
 
             apply {
@@ -1757,56 +1827,67 @@ TEST_F(TableDependencyGraphTest, ControlPathwayValidation) {
     table node_a {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_b {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_c {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_d {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_e {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_f {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_g {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_h {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_i {
         actions = { set_f1; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_j {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     table node_k {
         actions = { set_f2; }
         key = { headers.h1.f3 : exact; }
+        size = 512;
     }
 
     apply {
@@ -1945,6 +2026,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
                 table node_a {
                     actions = { noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 action do_exit() { exit; }
@@ -1952,6 +2034,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
                 table node_b {
                     actions = { do_exit; }
                     key = { headers.h1.f2 : exact; }
+                    size = 512;
                 }
 
                 action set_f3(bit<8> v) { headers.h1.f3 = v; }
@@ -1959,11 +2042,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
                 table node_c {
                     actions = { set_f3; }
                     key = { headers.h1.f4 : exact; }
+                    size = 512;
                 }
 
                 table node_d {
                     actions = { noop; }
                     key = { headers.h1.f3 : exact; }
+                    size = 512;
                 }
 
                 apply {
@@ -2024,11 +2109,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
                 table node_a {
                     actions = { noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 table node_b {
                     actions = { noop; }
                     key = { headers.h1.f2 : exact; }
+                    size = 512;
                 }
 
                 action do_exit() { exit; }
@@ -2037,11 +2124,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
                 table node_c {
                     actions = { do_exit; set_f3; }
                     key = { headers.h1.f4 : exact; }
+                    size = 512;
                 }
 
                 table node_d {
                     actions = { noop; }
                     key = { headers.h1.f3 : exact; }
+                    size = 512;
                 }
 
                 apply {
@@ -2104,11 +2193,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
                 table node_a {
                     actions = { noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 table node_b {
                     actions = { noop; }
                     key = { headers.h1.f2 : exact; }
+                    size = 512;
                 }
 
                 action set_f3(bit<8> v) { headers.h1.f3 = v; }
@@ -2116,6 +2207,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
                 table node_c {
                     actions = { set_f3; }
                     key = { headers.h1.f4 : exact; }
+                    size = 512;
                 }
 
                 action do_exit() { exit; }
@@ -2123,11 +2215,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
                 table node_d {
                     actions = { do_exit; }
                     key = { headers.h1.f5 : exact; }
+                    size = 512;
                 }
 
                 table node_e {
                     actions = { noop; }
                     key = {headers.h1.f3 : exact; }
+                    size = 512;
                 }
 
                 apply {
@@ -2194,12 +2288,14 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
                 table node_a {
                     actions = { noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 action do_exit() { exit; }
                 table node_b {
                     actions = { do_exit; }
                     key = { headers.h1.f2 : exact; }
+                    size = 512;
                 }
 
                 action set_f3(bit<8> v) { headers.h1.f3 = v; }
@@ -2207,11 +2303,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
                 table node_c {
                     actions = { do_exit; set_f3; }
                     key = { headers.h1.f4 : exact; }
+                    size = 512;
                 }
 
                 table node_d {
                     actions = { noop; }
                     key = { headers.h1.f3 : exact; }
+                    size = 512;
                 }
 
                 apply {
@@ -2281,6 +2379,7 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
                 table node_a {
                     actions = { noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 action c() {}
@@ -2289,33 +2388,39 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
                 table node_b {
                     actions = { c; d; e; }
                     key = { headers.h1.f2 : exact; }
+                    size = 512;
                 }
 
                 action do_exit() { exit; }
                 table node_c {
                     actions = { do_exit; }
                     key = { headers.h1.f3 : exact; }
+                    size = 512;
                 }
 
                 table node_d {
                     actions = { noop; }
                     key = { headers.h1.f4 : exact; }
+                    size = 512;
                 }
 
                 table node_e {
                     actions = { do_exit; }
                     key = { headers.h1.f5 : exact; }
+                    size = 512;
                 }
 
                 action set_f6(bit<8> v) { headers.h1.f6 = v; }
                 table node_f {
                     actions = { set_f6; }
                     key = { headers.h2.f7 : exact; }
+                    size = 512;
                 }
 
                 table node_g {
                     actions = { noop; }
                     key = { headers.h1.f6 : exact; }
+                    size = 512;
                 }
 
                 apply {
@@ -2376,6 +2481,7 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
                 table node_a {
                     actions = { a; b; c; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
                 action noop() {} 
@@ -2388,36 +2494,43 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
                 table multi {
                     key = { headers.h1.f3 : exact; }
                     actions = { setf4; noop; }
+                    size = 512;
                 }
 
                 table node_b {
                     key = { headers.h1.f2 : exact; }
                     actions = { setf3; noop; }
+                    size = 512;
                 }
 
                 table node_c {
                     key = { headers.h1.f4 : exact; }
                     actions = { setf5; noop; }
+                    size = 512;
                 }
 
                 table node_d {
                     key = { headers.h1.f4 : exact; }
                     actions = { setf6; noop; }
+                    size = 512;
                 }
 
                 table node_e {
                     key = { headers.h1.f2 : exact; }
                     actions = { setf3; noop; }
+                    size = 512;
                 }
 
                 table node_f {
                     key = { headers.h1.f5 : exact; }
                     actions = { noop; setf5; }
+                    size = 512;
                 }
 
                 table node_g {
                     key = { headers.h1.f6 : exact; }
                     actions = { noop; setf6; }
+                    size = 512;
                 }
 
                 apply {
@@ -2497,22 +2610,26 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges1) {
                 table node_a {
                     actions = { a; b; c; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
 
                 table node_b {
                     key = { headers.h1.f2 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_c {
                     key = { headers.h1.f3 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_d {
                     key = { headers.h1.f4 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 apply {
@@ -2577,32 +2694,38 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges2) {
                 table node_a {
                     actions = { a; b; c; noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
 
                 table node_b {
                     key = { headers.h1.f2 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_c {
                     key = { headers.h1.f3 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_d {
                     key = { headers.h1.f4 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_e {
                     key = { headers.h1.f5 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_f {
                     key = { headers.h1.f6 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 apply {
@@ -2699,37 +2822,44 @@ TEST_F(TableDependencyGraphTest, PredicationBasedEdges3) {
                 table node_a {
                     actions = { a; b; c; noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
 
                 table node_b {
                     key = { headers.h1.f2 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_c {
                     key = { headers.h1.f3 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_d {
                     key = { headers.h1.f4 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_e {
                     key = { headers.h1.f5 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_f {
                     key = { headers.h1.f6 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_g {
                     key = { headers.h1.f6 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 apply {
@@ -2829,32 +2959,38 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
                 table node_a {
                     actions = { a; b; c; noop; }
                     key = { headers.h1.f1 : exact; }
+                    size = 512;
                 }
 
 
                 table node_b {
                     key = { headers.h1.f2 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_c {
                     key = { headers.h1.f3 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_d {
                     key = { headers.h1.f4 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_e {
                     key = { headers.h1.f5 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 table node_f {
                     key = { headers.h1.f6 : exact; }
                     actions = { noop; }
+                    size = 512;
                 }
 
                 apply {

@@ -46,31 +46,37 @@ createActionMutexTestCase(const std::string& mau, const std::string *tables_p = 
         actions = { set_f1; noop; }
         key = { headers.h1.f1 : exact; }
         const default_action = noop;
+        size = 1024;
     }
 
     table node_b {
         actions = { set_f1; set_f2; set_f3; set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 1024;
     }
 
     table node_c {
         actions = { set_f2; }
         key = { headers.h1.f1 : exact; }
+        size = 1024;
     }
 
     table node_d {
         actions = { set_f2; set_f3; }
         key = { headers.h1.f1 : exact; }
+        size = 1024;
     }
 
     table node_e {
         actions = { set_f4; }
         key = { headers.h1.f1 : exact; }
+        size = 1024;
     }
 
     table node_f {
         actions = { set_f5; }
         key = { headers.h1.f1 : exact; }
+        size = 1024;
     }
 
 )");
@@ -382,36 +388,43 @@ TEST_F(ActionMutexTest, Tofino2NextTableTest) {
     table node_a {
         key = { headers.h1.f1 : exact; }
         actions = { set_f1; set_f4; }
+        size = 1024;
     }
 
     table node_b {
         key = { headers.h1.f1 : exact; }
         actions = { set_f1; set_f2; set_f3; set_f4; }
+        size = 1024;
     }
 
     table node_c {
         key = { headers.h1.f1 : exact; }
         actions = { set_f1; set_f2; set_f3; set_f4; }
+        size = 1024;
     }
 
     table node_d {
         key = { headers.h1.f1 : exact; }
         actions = { set_f5; }
+        size = 1024;
     }
 
     table node_e {
         key = { headers.h1.f1 : exact; }
         actions = { set_f5; }
+        size = 1024;
     }
 
     table node_f {
         key = { headers.h1.f1 : exact; }
         actions = { set_f5; }
+        size = 1024;
     }
 
     table node_g {
         key = { headers.h1.f1 : exact; }
         actions = { set_f5; }
+        size = 1024;
     }
     )");
     auto test = createActionMutexTestCase(

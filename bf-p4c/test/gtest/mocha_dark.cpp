@@ -116,11 +116,13 @@ action do3() {
 table t1 {
     key = { headers.h1.f1 : exact; }
     actions = { do1; do2; }
+    size = 512;
 }
 
 table t2 {
     key = { meta.f1 : exact;}
     actions = { do3; }
+    size = 512;
 }
 
 apply {

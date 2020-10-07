@@ -179,6 +179,7 @@ table t7 {
     actions = {
         setb1;
     }
+    size = 512;
 }
 
 table t8 {
@@ -188,6 +189,7 @@ table t8 {
     actions = {
         setb1;
     }
+    size = 512;
 }
 
 table t9 {
@@ -197,6 +199,7 @@ table t9 {
     actions = {
         setb1;
     }
+    size = 512;
 }
 
 table t10 {
@@ -206,6 +209,7 @@ table t10 {
     actions = {
         setb1;
     }
+    size = 512;
 }
 
 table t3 {
@@ -256,6 +260,7 @@ table t11 {
         noop;
         setf12;
     }
+    size = 512;
 }
 
 table t12 {
@@ -265,6 +270,7 @@ table t12 {
     actions = {
         noop;
     }
+    size = 512;
 }
 
 

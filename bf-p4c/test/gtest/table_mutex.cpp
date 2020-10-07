@@ -89,16 +89,19 @@ TEST_F(TableMutexTest, BasicMutex) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     apply {
@@ -130,16 +133,19 @@ TEST_F(TableMutexTest, TwoActionsSameNextTable) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; setf2; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; }
+        size = 512;
     }
 
 
@@ -181,21 +187,25 @@ TEST_F(TableMutexTest, SharedNextTable) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; setf2; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { nop; }
+        size = 512;
     }
 
 
@@ -242,26 +252,31 @@ TEST_F(TableMutexTest, DifferingNextTableChains) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; setf2; setf3; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { nop; }
+        size = 512;
     }
 
     table t5 {
         key = { headers.h1.f5 : exact; }
         actions = { nop; }
+        size = 512;
     }
 
 
@@ -317,21 +332,25 @@ TEST_F(TableMutexTest, OneChainFromTwoActions) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; setf2; setf3; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { nop; }
+        size = 512;
     }
 
     apply {
@@ -378,16 +397,19 @@ TEST_F(TableMutexTest, MultiLevelNextTableChain) {
     table t1 {
         key = { headers.h1.f2 : exact; }
         actions = { nop; setf1; setf2; setf3; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { setf1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { setf2; setf3; }
+        size = 512;
     }
 
 
@@ -430,41 +452,49 @@ TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
     table t0 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; a2; a3; }
+        size = 512;
     }
 
     table t1_0 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; a2; a3; }
+        size = 512;
     }
 
     table t1_1 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; a2; a3; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; }
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a2; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a3; }
+        size = 512;
     }
 
     table t5 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; }
+        size = 512;
     }
 
     table t6 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a2; }
+        size = 512;
     }
 
     apply {
@@ -527,41 +557,49 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
    table t1 {
         key = { headers.h1.f1 : exact; }
         actions = { @defaultonly nop; a1; a2; }
+        size = 512;
         const default_action = nop;
     }
     table t2 {
         key = { headers.h1.f3 : exact; }
         actions = { a1; a2; a3;}
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f4 : exact; }
         actions = { a1; a2; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f2 : exact; }
         actions = { a1; a4;}
+        size = 512;
     }
 
     table t5 {
         key = { headers.h1.f5 : exact; }
         actions = { a1;}
+        size = 512;
     }
  
    table t6 {
         key = { headers.h1.f1 : exact; }
         actions = { a1; a5;}
+        size = 512;
     }
 
     table t7 {
         key = { headers.h1.f5 : exact; }
         actions = { a4;}
+        size = 512;
     }
 
     table t8 {
         key = { headers.h1.f1 : exact; }
         actions = { a1;}
+        size = 512;
     }
     apply {
         if (t5.apply().hit) {
@@ -615,43 +653,52 @@ TEST_F(TableMutexTest, ExitTableMutex1) {
      table t1 {
         key = { headers.h1.f5 : exact; }
         actions = { @defaultonly nop; a1; a3;}
+        size = 512;
         const default_action = nop;
     }
 
     table t2 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1; a3;}
+        size = 512;
     }
 
     table t3 {
         key = { headers.h1.f2 : exact;}
         actions = {a2;}
+        size = 512;
         const default_action = a2; 
     }
     table t4 {
         key = { headers.h1.f3 : exact;}
         actions = {nop; a1; a3;}
+        size = 512;
     }
     table t5 {
         key = { headers.h1.f4 : exact;}
         actions = {nop; a1; a3;}
+        size = 512;
     }
     table t6 {
         key = { headers.h1.f3 : exact;}
         actions = {nop; a1;}
+        size = 512;
     }
     table t7 {
         key = { headers.h1.f3 : exact;}
         actions = {a2;}
+        size = 512;
         const default_action = a2;
     }
     table t8 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a1;}
+        size = 512;
     }
     table t9 {
         key = { headers.h1.f1 : exact; }
         actions = { nop; a4;}
+        size = 512;
     }
 
     apply {

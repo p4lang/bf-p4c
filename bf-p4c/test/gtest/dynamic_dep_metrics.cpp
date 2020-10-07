@@ -132,18 +132,21 @@ TEST_F(DynamicDepTest, DownwardProp1) {
     table t1 {
         key = { headers.h1.f1 : exact; }
         actions = { a1; }
+        size = 512;
     }
 
     @name(".t2")
     table t2 {
         key = { headers.h1.f1 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     @name(".t3")
     table t3 {
         key = { headers.h1.f1 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     action a4() {
@@ -154,18 +157,21 @@ TEST_F(DynamicDepTest, DownwardProp1) {
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { a4; }
+        size = 512;
     }
 
     @name(".t5")
     table t5 {
         key = { headers.h1.f4 : exact; }
         actions = { a4; }
+        size = 512;
     }
 
     @name(".t6")
     table t6 {
         key = { headers.h1.f4 : exact; }
         actions = { a4; }
+        size = 512;
     }
 
     apply {
@@ -188,6 +194,7 @@ TEST_F(DynamicDepTest, DownwardProp1) {
     table e1 {
         key = { headers.h1.f1 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     apply {
@@ -273,30 +280,35 @@ TEST_F(DynamicDepTest, CanPlaceCDS) {
     table t1 {
         key = { headers.h1.f1 : exact; }
         actions = { a1; }
+        size = 512;
     }
 
     @name(".t2")
     table t2 {
         key = { headers.h1.f2 : exact; }
         actions = { a2; }
+        size = 512;
     }
 
     @name(".t3")
     table t3 {
         key = { headers.h1.f3 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     @name(".t3_sub1")
     table t3_sub1 {
         key = { headers.h1.f1 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     @name(".t3_sub2")
     table t3_sub2 {
         key = { headers.h1.f5 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
 
@@ -304,12 +316,14 @@ TEST_F(DynamicDepTest, CanPlaceCDS) {
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     @name(".t4_sub1")
     table t4_sub1 {
         key = { headers.h1.f2 : exact; }
         actions = { noop; }
+        size = 512;
     }
 
     apply {

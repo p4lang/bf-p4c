@@ -409,14 +409,14 @@ bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_4"
          "test.TestSelector
           test.TestAllHit
           test.TestAddHdr
-          test.TestExmStateRestoreLarge
           test.TestTcamSnapshot
           test.TestTcamMove
           test.TestExm6way3Entries
-          test.TestTcamStateRestore
-          test.TestUdpDstPort
           test.TestRangeTernaryValid
           test.TestTcamDuplicateEntries")
+# test.TestExmStateRestoreLarge
+# test.TestTcamStateRestore
+# test.TestUdpDstPort
 p4c_add_ptf_test_with_ptfdir ("tofino" "smoketest_programs_basic_ipv4_5" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4"
     "${testExtraArgs} -pd -to 2000 -arch v1model" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_14/basic_ipv4")
 bfn_set_ptf_test_spec("tofino" "smoketest_programs_basic_ipv4_5"

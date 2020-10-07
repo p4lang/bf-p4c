@@ -111,6 +111,35 @@ template<> struct CounterlikeTraits<::BFN::MeterExtern> {
 namespace Helpers = P4::ControlPlaneAPI::Helpers;
 
 namespace BFN {
+
+// P4C-3177
+// If no 'size' parameter is set on the table, p4info picks a default value of
+// 1024.
+// p4c/frontends/p4/fromv1.0/v1model.h: const unsigned defaultTableSize = 1024;
+// This pass is run again in the MidEnd to modify IR and set this value. BF-RT
+// does not modify program IR used by Midend.
+bool SetDefaultSize::preorder(IR::P4Table *table) {
+    LOG2("SetDefaultSize on table : " << table->name);
+    auto sizeProperty = table->getSizeProperty();
+    if (sizeProperty == nullptr) {
+        int defaultSize = 512;
+        if (auto k = table->getConstantProperty("min_size"))
+            defaultSize = k->asInt();
+        auto properties = new IR::TableProperties(table->properties->properties);
+        auto sizeProp = new IR::Property(IR::ID("size"),
+                new IR::ExpressionValue(new IR::Constant(defaultSize)), true);
+        properties->properties.push_back(sizeProp);
+        if (warn) {
+            auto hidden = table->getAnnotation("hidden");
+            if (!hidden)
+                ::warning("No size defined for table '%s', setting default size to %d",
+                        table->name, defaultSize);
+        }
+        table->properties = properties;
+    }
+    return false;
+}
+
 /// Extends P4RuntimeSymbolType for the Tofino extern types.
 class SymbolType final : public P4RuntimeSymbolType {
  public:
@@ -2061,6 +2090,7 @@ void generateP4Runtime(const IR::P4Program* program,
     P4::TypeMap         typeMap;
     refMap.setIsV1(true);
     program = program->apply(P4::EliminateTypedef(&refMap, &typeMap));
+    program = program->apply(BFN::SetDefaultSize(false /* warn */));
 
     if (arch != "psa") {
         // Following ActionSelector API has been retired, we convert them

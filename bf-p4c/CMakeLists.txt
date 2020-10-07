@@ -1251,7 +1251,8 @@ if (ENABLE_TESTING)
     )
 
   set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_BF_P4C_SOURCES} PARENT_SCOPE)
-  set (GTEST_LDADD ${GTEST_LDADD} "bf_gtest_support;tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY}" PARENT_SCOPE)
+  set (GTEST_LDADD ${GTEST_LDADD}
+      "bf_gtest_support;tofinobackend;${OPENSSL_LIBRARIES};${LIBDYNHASH_LIBRARY};bfn_p4runtime" PARENT_SCOPE)
 
   add_test(NAME test_p4c_driver
     COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/test_p4c_driver.py -j 4 --print-on-failure --compiler ${P4C_BINARY_DIR}/bf-p4c

@@ -150,26 +150,31 @@ TEST_F(MetadataLiveRangeTest, BasicControlFlow) {
     table t1 {
         key = { headers.h1.f1 : exact; }
         actions = { do1; }
+        size = 512;
     }
 
     table t2 {
         key = { headers.h1.f3 : exact; }
         actions = { do2; }
+        size = 512;
     }
 
     table t3 {
         key = { meta.f2 : exact; }
         actions = { do3; }
+        size = 512;
     }
 
     table t4 {
         key = { headers.h1.f4 : exact; }
         actions = { do4; }
+        size = 512;
     }
 
     table t5 {
         key = { meta.f1 : exact; }
         actions = { do5; }
+        size = 512;
     }
 
     apply {
