@@ -20,3 +20,5 @@ This README serves for sample programs for P4I. It lists various edge cases usef
     * mirror - **No example yet**
  * DifferentContainer
     * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
+ * MAU Group
+    * tofino2_1585_b2 (example of group with slices: ingress::hdr.vlan_tag.$stkvalid)

@@ -10,12 +10,14 @@
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/constraints/constraints.h"
 #include "bf-p4c/phv/phv_spec.h"
 #include "bf-p4c/phv/utils/utils.h"
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/logging/constrained_fields.h"
+#include "bf-p4c/logging/mau_group_extractor.h"
 #include "bf-p4c/version.h"
 #include "ir/ir.h"
 #include "phv_schema.h"
@@ -57,6 +59,9 @@ struct CollectPhvLoggingInfo : public MauInspector {
 
     /// Extracted no pack (different container) constraints
     ordered_map<cstring, ordered_map<cstring, bool>> noPackConstraints;
+
+    /// Extracted MAU group constraints
+    MauGroupExtractor *mauGroupConstraints;
 
     void collectConstraints();
 
@@ -129,7 +134,8 @@ class PhvLogging : public MauInspector {
         SolitaryPragma,
         SolitaryExceptSameDigest,
         SolitaryAfterStage,
-        DifferentContainer
+        DifferentContainer,
+        MAUGroup
     };
 
  private:
@@ -250,6 +256,8 @@ class PhvLogging : public MauInspector {
     void logNoPackConstraint(ConstrainedField &field,
                                                  const FieldInfo *fieldInfo,
                                                  const SourceLocation *srcLoc);
+
+    void logMauGroupConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.

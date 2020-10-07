@@ -4,6 +4,7 @@
 
 void CollectPhvLoggingInfo::collectConstraints() {
     fieldConstraints = ConstrainedFieldMapBuilder::buildMap(phv, *superclusters);
+    mauGroupConstraints = new MauGroupExtractor(*superclusters, fieldConstraints);
 
     for (auto &f : phv) {
         for (auto &f2 : phv) {
@@ -311,6 +312,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     // Log constraints to Constraint loggers
     logSolitaryConstraints(cfield, srcLoc);
     logNoPackConstraint(cfield, fieldInfo, srcLoc);
+    logMauGroupConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -386,8 +388,65 @@ void PhvLogging::logNoPackConstraint(ConstrainedField &field,
         diffContainerConstraint->append(gi);
     }
 
-    if (diffContainerConstraint->get_lists().size() > 0)
+    if (diffContainerConstraint->get_lists().size() > 0) {
         field.getLogger()->append(diffContainerConstraint);
+    }
+}
+
+void PhvLogging::logMauGroupConstraint(ConstrainedField &field, const SourceLocation *srcLoc) {
+    if (!info.mauGroupConstraints->isFieldInAnyGroup(field.getName())) return;
+
+    auto getSlice = [] (const PHV::FieldSlice *slice) {
+        return new Slice(slice->range().lo, slice->range().hi);
+    };
+
+    auto groups = info.mauGroupConstraints->getGroups(field.getName());
+
+    for (auto mg : groups) {
+        auto mauGroup = *mg;
+        auto mauC = new ListConstraint({}, int(ConstraintReason::MAUGroup), "MAUGroup", srcLoc);
+
+        std::vector<std::pair<ConstrainedSlice*, bool>> relatedSlices;
+
+        // Create group of indices to field_group_items
+        std::vector<int> group;
+        for (auto &item : mauGroup) {
+            auto f = phv.field(item.getParent().getName());
+            PHV::FieldSlice slice(f, item.getRange());
+
+            auto info = getFieldInfo(f);
+            auto srcLoc = getSourceLoc(f);
+
+            // If nullptr, then the slice goes over whole field
+            Slice *sl = slice.is_whole_field() ? nullptr : getSlice(&slice);
+            auto fieldGroupItem = new FieldGroupItem(info, srcLoc, sl);
+
+            int index = getDatabaseIndex(logger.get_field_group_items(), fieldGroupItem);
+            group.push_back(index);
+
+            // Update relatedSlices
+            if (item.getParent().getName() == field.getName()) {
+                relatedSlices.push_back({&item, slice.is_whole_field()});
+            }
+        }
+
+        std::sort(group.begin(), group.end());
+
+        int index = getDatabaseIndex(logger.get_field_groups(), group);
+        mauC->append(index);
+
+        // Append constraint to appropriate loggers
+        for (auto &pair : relatedSlices) {
+            if (pair.second) {
+                // If the slice is whole field, then append constraint to field itself
+                field.getLogger()->append(mauC);
+                BUG_CHECK(relatedSlices.size() == 1,
+                    "Related slices contain whole-field slice plus something extra.");
+            } else {
+                pair.first->getLogger()->append(mauC);
+            }
+        }
+    }
 }
 
 void PhvLogging::logFields() {
@@ -475,6 +534,10 @@ void PhvLogging::logConstraintReasons() {
             ConstraintReason::DifferentContainer,
             "Different Container: This field cannot be packed into same container with listed"
             " fields or their slices."
+        }, {
+            ConstraintReason::MAUGroup,
+            "MAU Group: This field (or its particular slices) must be in the same MAU group"
+            " as other fields or slices."
         }
     };
 

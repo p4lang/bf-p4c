@@ -662,6 +662,7 @@ set (BF_P4C_BACKEND_LOGGING_HDRS
   logging/filelog.h
   logging/logging.h
   logging/manifest.h
+  logging/mau_group_extractor.h
   logging/pass_manager.h
   logging/phv_logging.h
   logging/resources.h
@@ -671,6 +672,7 @@ set (BF_P4C_BACKEND_LOGGING_SRCS
   logging/constrained_fields.cpp
   logging/filelog.cpp
   logging/manifest.cpp
+  logging/mau_group_extractor.cpp
   logging/pass_manager.cpp
   logging/phv_logging.cpp
   logging/resources.cpp
@@ -1243,6 +1245,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/container_action.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/build_super_cluster.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/mau_group_extractor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/input_xbar.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )

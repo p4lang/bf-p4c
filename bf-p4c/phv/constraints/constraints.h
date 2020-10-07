@@ -9,7 +9,9 @@
 /// XXX(Deep): Integrate all constraints into this class format.
 
 namespace PHV {
+
 class Field;
+
 };
 
 namespace Constraints {
