@@ -696,7 +696,12 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int attached_entries = lo->entries;
         if (!at->direct) {
             if (!att_entries.count(at) || (attached_entries = att_entries.at(at).entries) == 0)
-                continue; }
+                continue;
+        } else {
+            // Direct attached table already filled entirely. No need to compute space required.
+            if (attached_entries == 0)
+                continue;
+        }
         bool need_srams = true;
         bool need_maprams = false;
         if (auto *ctr = at->to<IR::MAU::Counter>()) {

@@ -1133,6 +1133,11 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             // defer the placement of this attached table
             if (!rv->is_match_placed(att_to)) {
                 tables_with_shared.insert(att_to);
+
+                // Can't split indirect attached table when more than one stateful action exist
+                if (count_sful_actions(rv->table) > 1)
+                    continue;
+
                 rv->attached_entries.at(ba->attached).entries = 0;
                 rv->attached_entries.at(ba->attached).need_more = true;
                 if (stateful_selector) {
