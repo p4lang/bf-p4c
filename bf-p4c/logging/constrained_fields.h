@@ -68,7 +68,7 @@ class ConstrainedField : public LoggableEntity {
     Constraints::AlignmentConstraint alignment;
     Constraints::DigestConstraint digest;
 
-    bool deparsedBottomBits;
+    bool deparsedBottomBits = false;
 
  public:
     ConstrainedField() {}
