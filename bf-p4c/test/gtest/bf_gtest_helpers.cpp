@@ -8,11 +8,50 @@
 #include "boost/algorithm/string/replace.hpp"
 #include "boost/algorithm/string/trim_all.hpp"
 
-#include "frontends/p4/toP4/toP4.h"
+#include "ir/ir.h"
+#include "p4headers.h"
 #include "lib/exceptions.h"
 #include "lib/sourceCodeBuilder.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "frontends/parsers/parserDriver.h"
-#include "p4headers.h"
+#include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/typeMap.h"
+#include "frontends/p4/toP4/toP4.h"
+#include "frontends/p4/frontend.h"    // Used by run_p4c_frontend_passes
+
+// Frontend Passes
+#include "frontends/p4/actionsInlining.h"
+#include "frontends/p4/createBuiltins.h"
+#include "frontends/p4/defaultArguments.h"
+#include "frontends/p4/deprecated.h"
+#include "frontends/p4/directCalls.h"
+#include "frontends/p4/dontcareArgs.h"
+#include "frontends/p4/evaluator/evaluator.h"
+#include "frontends/common/constantFolding.h"
+#include "frontends/p4/functionsInlining.h"
+#include "frontends/p4/hierarchicalNames.h"
+#include "frontends/p4/inlining.h"
+#include "frontends/p4/localizeActions.h"
+#include "frontends/p4/moveConstructors.h"
+#include "frontends/p4/moveDeclarations.h"
+#include "frontends/p4/parserControlFlow.h"
+#include "frontends/p4/removeReturns.h"
+#include "frontends/p4/resetHeaders.h"
+#include "frontends/p4/setHeaders.h"
+#include "frontends/p4/sideEffects.h"
+#include "frontends/p4/simplify.h"
+#include "frontends/p4/simplifyDefUse.h"
+#include "frontends/p4/simplifyParsers.h"
+#include "frontends/p4/specialize.h"
+#include "frontends/p4/specializeGenericFunctions.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/p4/structInitializers.h"
+#include "frontends/p4/switchAddDefault.h"
+#include "frontends/p4/tableKeyNames.h"
+#include "frontends/p4/typeChecking/bindVariables.h"
+#include "frontends/p4/uniqueNames.h"
+#include "frontends/p4/unusedDeclarations.h"
+#include "frontends/p4/uselessCasts.h"
 
 namespace Test {
 
@@ -23,7 +62,11 @@ std::string trimWhiteSpace(std::string str) {
 }
 
 std::string trimAnnotations(const std::string& str) {
-    const char* annotation = R"(@\w+(\([^\)]*?\))?)";
+    // Are nested parentheses legal? If they are count them.
+    auto nestedParen = R"(@\w+\([^\)]*\()";
+    if (std::regex_search(str, std::regex(nestedParen)))
+        throw std::invalid_argument("Annotation with nested parentheses are not supported");
+    auto annotation = R"(@\w+(\([^\)]*\))?)";
     return std::regex_replace(str, std::regex(annotation), "");
 }
 
@@ -123,7 +166,8 @@ Result match(const CheckList& exprs,
 }
 
 size_t find_next_end(const std::string& blk, size_t pos, const std::string& ends) {
-    BUG_CHECK(ends.length() >= 2, "Bad ends string");
+    if (ends.length() != 2 || ends[0] == ends[1])
+        throw std::invalid_argument("Bad ends string");
     int count = 1;
     pos = blk.find_first_of(ends, pos);
     while (pos != std::string::npos) {
@@ -139,7 +183,8 @@ size_t find_next_end(const std::string& blk, size_t pos, const std::string& ends
 
 std::pair<size_t, size_t> find_next_block(const std::string& blk, size_t pos,
                                           const std::string& ends) {
-    BUG_CHECK(ends.length() >= 2, "Bad ends string");
+    if (ends.length() != 2 || ends[0] == ends[1])
+        throw std::invalid_argument("Bad ends string");
     pos = blk.find_first_of(ends[0], pos);
     if (pos == std::string::npos)
         return std::make_pair(pos, pos);
@@ -163,32 +208,92 @@ std::string get_ends(char opening) {
 
 }  // namespace Match
 
-TestCode::TestCode(Match::P4Include header, std::string code,
-                   const std::initializer_list<std::string>& replacement,
-                   const std::string& blockMarker) :
-                   autoGTestContext(new P4CContextWithOptions<CompilerOptions>(
-                        P4CContextWithOptions<CompilerOptions>::get())) {
+
+namespace {
+char marker_last_char(const std::string& blockMarker) {
+    // Find the actual last character of marker e.g. the '{' of the any_to_open_brace.
+    size_t len = blockMarker.length();
+    while (len > 1 && blockMarker[len - 1] == '`') {
+        --len;  // Remove closing `.
+        // Check the contents of the back quoted regex.
+        if (blockMarker[len - 1] == '`') {
+            --len;  // Remove opening `.
+        } else {
+            // Remove sub-pattern markers etc.
+            int count = 0;
+            while (len > 1 &&
+                   blockMarker[len - 2] != '\\' &&   // not escaped.
+                   (blockMarker[len - 1] == '(' || blockMarker[len - 1] == ')')) {
+                count += (blockMarker[len - 1] == ')')? 1 : -1;
+                if (count < 0)
+                    throw std::invalid_argument("Invalid blockMarker parentheses");
+                --len;  // Remove sub-pattern.
+            }
+            if (!count && blockMarker[len - 1] != '`') {
+                --len;  // Remove opening `. It was an empty regex.
+            } else if (len > 1 &&
+                       blockMarker[len - 2] != '\\' &&   // not escaped.
+                       blockMarker.find_first_of("^$.|?*+{}[]\\", len-1) == len-1) {
+                // Ends with a special regex char.
+                throw std::invalid_argument("marker_last_char must be a literal");
+            } else {
+                break;  // Found!
+            }
+        }
+    }
+    if (len)
+        return blockMarker[len - 1];
+    return 0;
+}
+}  // namespace
+
+TestCode::TestCode(Hdr header, std::string code,
+                   const std::initializer_list<std::string>& insertion,
+                   const std::string& blockMarker,
+                   const std::initializer_list<std::string>& options) :
+                   context(new BFNContext()) {
+    // Set up default options.
+    auto& o = BFNContext::get().options();
+    o.langVersion = CompilerOptions::FrontendVersion::P4_16;
+    o.target = "tofino";
+    o.arch = "tna";
+    if (options.size()) {
+        // Overwrite with user options.
+        std::vector<char*> argv;
+        for (const auto& arg : options)
+            argv.push_back(const_cast<char*>(arg.data()));
+        argv.push_back(nullptr);
+        o.process(argv.size() - 1, argv.data());
+    }
+
+    // Add the header first.
     std::stringstream source;
     switch (header) {
-        case Match::P4Include::None:
+        case Hdr::None:
             break;
-        case Match::P4Include::Tofino1arch:
-            source << p4headers().tofino1_p4;
+        case Hdr::Tofino1arch:
+            source << p4headers().tofino1arch_p4;
             break;
-        case Match::P4Include::Tofino2arch:
-            source << p4headers().tofino2_p4;
+        case Hdr::Tofino2arch:
+            source << p4headers().tofino2arch_p4;
             break;
-        case Match::P4Include::Tofino3arch:
-            source << p4headers().tofino3_p4;
+        case Hdr::Tofino3arch:
+            source << p4headers().tofino3arch_p4;
+            break;
+        case Hdr::V1model_2018:
+            source << p4headers().v1model_2018_p4;
+            break;
+        case Hdr::V1model_2020:
+            source << p4headers().v1model_2020_p4;
             break;
     }
 
     // Replace embedded tokens.
     int i = 0;
-    for (auto rep : replacement) {
+    for (auto insert : insertion) {
         std::ostringstream oss;
         oss << '%' << i++ << '%';
-        boost::replace_all(code, oss.str(), rep);
+        boost::replace_all(code, oss.str(), insert);
     }
     source << code;
 
@@ -198,7 +303,7 @@ TestCode::TestCode(Match::P4Include header, std::string code,
 
     if (!blockMarker.empty()) {
         marker = std::regex(Match::convet_to_regex(blockMarker));
-        ends = Match::get_ends(marker_end_char(blockMarker));
+        ends = Match::get_ends(marker_last_char(blockMarker));
         if (ends.empty())
             throw std::invalid_argument("blockMarker's last char is not a Match::get_ends()");
     }
@@ -238,46 +343,136 @@ std::string TestCode::tofino_shell() {return R"(
              egress_deparser()) pipeline;
     Switch(pipeline) main;)";}
 
-char TestCode::marker_end_char(const std::string& blockMarker) {
-    // Find the actual last character of marker viz the '{' in any_to_open_brace.
-    size_t len = blockMarker.length();
-    while (len > 1 && blockMarker[len - 1] == '`') {
-        --len;  // Remove closing `.
-        // Check the contents of the back quoted regex.
-        if (blockMarker[len - 1] == '`') {
-            --len;  // Remove opening `.
-        } else {
-            // Remove sub-pattern markers etc.
-            int count = 0;
-            while (len > 1 &&
-                   blockMarker[len - 2] != '\\' &&   // not escaped.
-                   (blockMarker[len - 1] == '(' || blockMarker[len - 1] == ')')) {
-                count += (blockMarker[len - 1] == ')')? 1 : -1;
-                if (count < 0)
-                    throw std::invalid_argument("Invalid blockMarker parentheses");
-                --len;  // Remove sub-pattern.
-            }
-            if (!count && blockMarker[len - 1] != '`') {
-                --len;  // Remove opening `. It was an empty regex.
-            } else if (len > 1 &&
-                       blockMarker[len - 2] != '\\' &&   // not escaped.
-                       blockMarker.find_first_of("^$.|?*+{}[]\\", len-1) == len-1) {
-                // Ends with a special regex char.
-                throw std::invalid_argument("marker_end_char must be a literal");
-            } else {
-                break;  // Found!
-            }
-        }
-    }
-    if (len)
-        return blockMarker[len - 1];
-    return 0;
+namespace {
+Visitor* minimum_frontend_passes(bool skipSideEffectOrdering) {
+    // TODO Can the number of passes be reduced further  - to reduce the processing time?
+    auto refMap = new P4::ReferenceMap();
+    auto typeMap = new P4::TypeMap();
+    auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+    return new PassManager({
+        // Synthesize some built-in constructs
+        new P4::CreateBuiltins(),
+        new P4::ResolveReferences(refMap, true),  // check shadowing
+        // First pass of constant folding, before types are known --
+        // may be needed to compute types.
+        new P4::ConstantFolding(refMap, nullptr),
+        // Desugars direct parser and control applications
+        // into instantiations followed by application
+        new P4::InstantiateDirectCalls(refMap),
+        new P4::ResolveReferences(refMap),  // check shadowing
+        // Type checking and type inference.  Also inserts
+        // explicit casts where implicit casts exist.
+        new P4::TypeInference(refMap, typeMap, false),  // insert casts
+        new P4::BindTypeVariables(refMap, typeMap),
+        new P4::DefaultArguments(refMap, typeMap),  // add default argument values to parameters
+        new P4::ResolveReferences(refMap),
+        new P4::TypeInference(refMap, typeMap, false),  // more casts may be needed
+        new P4::RemoveParserControlFlow(refMap, typeMap),
+        new P4::StructInitializers(refMap, typeMap),
+        new P4::SpecializeGenericFunctions(refMap, typeMap),
+        new P4::TableKeyNames(refMap, typeMap),
+        new PassRepeated({
+            new P4::ConstantFolding(refMap, typeMap),
+            new P4::StrengthReduction(refMap, typeMap),
+            new P4::UselessCasts(refMap, typeMap)
+        }),
+        new P4::SimplifyControlFlow(refMap, typeMap),
+        new P4::SwitchAddDefault,
+        new P4::RemoveAllUnusedDeclarations(refMap, true),
+        new P4::SimplifyParsers(refMap),
+        new P4::ResetHeaders(refMap, typeMap),
+        new P4::UniqueNames(refMap),  // Give each local declaration a unique internal name
+        new P4::MoveDeclarations(),  // Move all local declarations to the beginning
+        new P4::MoveInitializers(refMap),
+        new P4::SideEffectOrdering(refMap, typeMap, skipSideEffectOrdering),
+        new P4::SimplifyControlFlow(refMap, typeMap),
+        new P4::MoveDeclarations(),  // Move all local declarations to the beginning
+        new P4::SimplifyDefUse(refMap, typeMap),
+        new P4::UniqueParameters(refMap, typeMap),
+        new P4::SimplifyControlFlow(refMap, typeMap),
+        new P4::SpecializeAll(refMap, typeMap),
+        new P4::RemoveParserControlFlow(refMap, typeMap),
+        new P4::RemoveReturns(refMap),
+        new P4::RemoveDontcareArgs(refMap, typeMap),
+        new P4::MoveConstructors(refMap),
+        new P4::RemoveAllUnusedDeclarations(refMap),
+        new P4::ClearTypeMap(typeMap),
+        evaluator,
+        new P4::Inline(refMap, typeMap, evaluator),
+        new P4::InlineActions(refMap, typeMap),
+        new P4::InlineFunctions(refMap, typeMap),
+        new P4::SetHeaders(refMap, typeMap),
+        // Check for constants only after inlining
+        new P4::SimplifyControlFlow(refMap, typeMap),
+        new P4::RemoveParserControlFlow(refMap, typeMap),
+        new P4::UniqueNames(refMap),
+        new P4::LocalizeAllActions(refMap),
+        new P4::UniqueNames(refMap),  // needed again after inlining
+        new P4::UniqueParameters(refMap, typeMap),
+        new P4::SimplifyControlFlow(refMap, typeMap),
+        new P4::HierarchicalNames(),
+    });
 }
+
+Visitor* minimum_backend_passes(const CompilerOptions& options) {
+    (void) options;
+    return new PassManager({
+#if 0
+    // TODO This is taken from bf-p4c/test/gtest/phv_core_alloc.cpp
+        new CollectHeaderStackInfo,
+        new CollectPhvInfo(phv),
+        new InstructionSelection(options, phv),
+        &uses,
+        &pragmas,
+        new MutexOverlay(phv, pragmas),
+        &field_to_parser_states,
+        &parser_critical_path,
+        new FindDependencyGraph(phv, deps, &options, "", "Before PHV allocation"),
+        new MemoizeMinStage(phv, deps),
+        &defuse,
+        &table_mutex,
+        &action_mutex,
+        &pack_conflicts,
+        &action_constraints,
+        new TablePhvConstraints(phv, action_constraints, pack_conflicts),
+        new PardePhvConstraints(phv, pragmas.pa_container_sizes()),
+        &critical_path_clusters,
+        &dom_tree,
+        &table_actions_map,
+        &meta_live_range,
+        (Device::phvSpec().hasContainerKind(PHV::Kind::dark) &&
+         !options.disable_dark_allocation)
+            ? &dark_live_range : nullptr,
+        &live_range_shrinking,
+        &clustering,
+        &table_ids,
+        &strided_headers,
+        &parser_info
+#endif
+    });
+}
+
+}  // namespace
 
 bool TestCode::apply_pass(Visitor* pass, const Visitor_Context* context) {
     auto before = ::errorCount();
     program = program->apply(*pass, context);
     return ::errorCount() == before;
+}
+
+bool TestCode::apply_pass(Pass pass) {
+    switch (pass) {
+        case Pass::FullFrontend: {
+            auto before = ::errorCount();
+            program = P4::FrontEnd().run(BFNContext::get().options(), program, true);
+            return ::errorCount() == before;
+        }
+        case Pass::MinimumFrontend:
+            return apply_pass(minimum_frontend_passes(true), nullptr);
+        case Pass::MinimumBackend:
+            return apply_pass(minimum_backend_passes(BFNContext::get().options()), nullptr);
+    }
+    return false;
 }
 
 Match::Result TestCode::match(const Match::CheckList& exprs) const {

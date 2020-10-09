@@ -26,8 +26,9 @@ TEST(testBfGtestHelper, MatchTrimAnnotations) {
     EXPECT_EQ(trimAnnotations(" a @func(p1,\np2\n) b ").compare(" a  b "), 0);
     EXPECT_EQ(trimAnnotations(" a @func(p1,\n@name\n) b ").compare(" a  b "), 0);
 
-    // ********* We do not handle nested parentheses! **********
-    EXPECT_EQ(trimAnnotations(" a @func( fx() ) b ").compare(" a  ) b "), 0);
+    // ********* We do not handle nested parentheses **********
+    EXPECT_THROW(trimAnnotations(" a @nest(() b "), std::invalid_argument);
+    EXPECT_THROW(trimAnnotations(" a @func( fx() ) b "), std::invalid_argument);
 }
 
 TEST(testBfGtestHelper, MatchConvetToRegex) {
@@ -55,6 +56,13 @@ TEST(testBfGtestHelper, MatchMatchBasic) {
     EXPECT_EQ(match_basic("ress", "expression", 3, 4), failed);
     EXPECT_EQ(match_basic("ress", "expression", 3, 1), failed);  // Bad pos.
     EXPECT_EQ(match_basic("ress", "expression", 13), failed);  // Bad pos.
+}
+
+TEST(testBfGtestHelper, MatchResult) {
+    EXPECT_TRUE(Result(true, 1, 2) == Result(true, 1, 2));
+    EXPECT_TRUE(Result(true, 1, 2) != Result(false, 1, 2));
+    EXPECT_TRUE(Result(true, 1, 2) != Result(true, 2, 2));
+    EXPECT_TRUE(Result(true, 1, 2) != Result(true, 1, 1));
 }
 
 TEST(testBfGtestHelper, MatchMatch) {
@@ -126,6 +134,47 @@ TEST(testBfGtestHelper, MatchMatch) {
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count << "'\n";
 }
 
+TEST(testBfGtestHelper, MatchFindNextEnd) {
+    EXPECT_THROW(find_next_end("", 0, ""), std::invalid_argument);      // Bad ends string
+    EXPECT_THROW(find_next_end("", 0, "1"), std::invalid_argument);     // Bad ends string
+    EXPECT_THROW(find_next_end("", 0, "123"), std::invalid_argument);   // Bad ends string
+    EXPECT_THROW(find_next_end("", 0, "11"), std::invalid_argument);    // Bad ends string
+    EXPECT_EQ(find_next_end("", 0, "12"), std::string::npos);
+
+    EXPECT_EQ(find_next_end("   ", 0, "{}"), std::string::npos);
+    EXPECT_EQ(find_next_end("0{2", 0, "{}"), std::string::npos);
+    EXPECT_EQ(find_next_end("0{2{45}7}9", 0, "{}"), std::string::npos);
+    EXPECT_EQ(find_next_end("{12}4}6", 0, "{}"), 5U);
+    EXPECT_EQ(find_next_end("{12}4}6", 2, "{}"), 3U);
+    EXPECT_EQ(find_next_end("AAZZZAZ", 0, "AZ"), 4U);
+}
+
+TEST(testBfGtestHelper, MatchFindNextBlock) {
+    EXPECT_THROW(find_next_block("", 0, ""), std::invalid_argument);      // Bad ends string
+    EXPECT_EQ(find_next_block("   ", 0, "{}"), std::make_pair(std::string::npos,
+                                                              std::string::npos));
+    EXPECT_EQ(find_next_block("0{2", 0, "{}"), std::make_pair(1UL, std::string::npos));
+    EXPECT_EQ(find_next_block("0{2{45}7}9", 0, "{}"), std::make_pair(1UL, 8UL));
+    EXPECT_EQ(find_next_block("{12}4}6", 0, "{}"), std::make_pair(0UL, 3UL));
+    EXPECT_EQ(find_next_block("{12}4}6", 2, "{}"), std::make_pair(std::string::npos,
+                                                                  std::string::npos));
+    EXPECT_EQ(find_next_block("AAZZZAZ", 0, "AZ"), std::make_pair(0UL, 3UL));
+}
+
+TEST(testBfGtestHelper, MatchGetEnds) {
+    EXPECT_EQ(get_ends('*'), "");
+    EXPECT_EQ(get_ends('{'), "{}");
+    EXPECT_EQ(get_ends('}'), "");
+    EXPECT_EQ(get_ends('('), "()");
+    EXPECT_EQ(get_ends(')'), "");
+    EXPECT_EQ(get_ends('['), "[]");
+    EXPECT_EQ(get_ends(']'), "");
+    EXPECT_EQ(get_ends('<'), "<>");
+    EXPECT_EQ(get_ends('>'), "");
+    auto str = "{12}4}6";
+    EXPECT_EQ(find_next_block(str, 0, get_ends(str[0])), std::make_pair(0UL, 3UL));
+}
+
 namespace {
 std::string Code = R"(
     control TestIngress<H, M>(inout H hdr, inout M meta);
@@ -140,49 +189,73 @@ std::string EmptyAppy = R"(apply{})";
 std::string Marker = "control testingress" + TestCode::any_to_brace();
 }  // namespace
 
-TEST(testBfGtestHelper, TestCode) {
-    TestCode(P4Include::None, "");
-    TestCode(P4Include::Tofino1arch, "");
-    TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy});
-    TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
+TEST(testBfGtestHelper, TestCodeTestCodeGood) {
+    TestCode(TestCode::Hdr::None, "");
+    TestCode(TestCode::Hdr::Tofino1arch, "");
+    TestCode(TestCode::Hdr::Tofino2arch, "");
+    TestCode(TestCode::Hdr::Tofino3arch, "");
+    auto blk2018 = TestCode(TestCode::Hdr::V1model_2018, "");
+    auto blk2020 = TestCode(TestCode::Hdr::V1model_2020, "");
+    EXPECT_NE(blk2018.get_block().compare(blk2020.get_block()), 0);
 
+    // The 'Code' string requires two insertions.
+    TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy});
+    TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
+    TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker, {});
+}
+
+TEST(testBfGtestHelperDeathTest, TestCodeTestCodeOptions) {
+    // What is the best way to test the option arguments are being read?
+    ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+    EXPECT_EXIT(TestCode(TestCode::Hdr::Tofino1arch, Code,
+                         {EmptyDefs, EmptyAppy}, Marker, {"test app", "--version"}),
+        ::testing::ExitedWithCode(0), "test app[^V]*Version");
+}
+
+TEST(testBfGtestHelper, TestCodeTestCodeBad) {
     testing::internal::CaptureStderr();
-    EXPECT_THROW(TestCode(P4Include::Tofino1arch, Code, {EmptyDefs}), std::invalid_argument);
+    EXPECT_THROW(TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs}),
+                std::invalid_argument);
     auto stderr = testing::internal::GetCapturedStderr();
     EXPECT_NE(stderr.find("syntax error"), std::string::npos);
 
     testing::internal::CaptureStderr();
-    EXPECT_THROW(TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, ""}), std::invalid_argument);
+    EXPECT_THROW(TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, ""}),
+                std::invalid_argument);
     stderr = testing::internal::GetCapturedStderr();
     EXPECT_NE(stderr.find("syntax error"), std::string::npos);
 
     testing::internal::CaptureStderr();
-    EXPECT_THROW(TestCode(P4Include::Tofino1arch, Code, {"", EmptyAppy}), std::invalid_argument);
+    EXPECT_THROW(TestCode(TestCode::Hdr::Tofino1arch, Code, {"", EmptyAppy}),
+                std::invalid_argument);
     stderr = testing::internal::GetCapturedStderr();
     EXPECT_NE(stderr.find("syntax error"), std::string::npos);
 
     testing::internal::CaptureStderr();
-    EXPECT_THROW(TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, "bad"),
+    EXPECT_THROW(TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, "bad"),
                  std::invalid_argument);
     stderr = testing::internal::GetCapturedStderr();
     EXPECT_EQ(stderr.length(), 0U);
 
-    TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy, "There is no %3%"});
-    // Multiple replacements tested below.
+    TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy, "There is no %3%"});
+    // Multiple insertions tested below.
 }
 
-TEST(testBfGtestHelper, ControlBlockTestGetBlock) {
-    auto blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, "\napply\n\n{\n\n}\n"}, Marker);
+TEST(testBfGtestHelper, TestCodeGetBlock) {
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
+                        {EmptyDefs, "\napply\n\n{\n\n}\n"}, Marker);
     // The default setting is  blk.flags(TrimWhiteSpace);
     EXPECT_EQ(blk.get_block().compare("apply { }"), 0);
     EXPECT_EQ(blk.get_block(6).compare("{ }"), 0);
 
-    blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, "\n\napply\n\n{\n\n}\n\n"}, Marker);
+    blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
+                   {EmptyDefs, "\n\napply\n\n{\n\n}\n\n"}, Marker);
     blk.flags(Raw);
     // This 'Raw' test is dependant upon the parser, hence is brittle.
     // EXPECT_EQ(blk.get_block().compare("   apply {\n    }"), 0);
 
-    blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, "action a(){} apply{a();}"}, Marker);
+    blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
+                   {EmptyDefs, "action a(){} apply{a();}"}, Marker);
     blk.flags(TrimWhiteSpace | TrimAnnotations);
     EXPECT_EQ(blk.get_block().compare("action a() { } apply { a(); }"), 0);
 
@@ -191,19 +264,19 @@ TEST(testBfGtestHelper, ControlBlockTestGetBlock) {
     boost::replace_all(pkg, R"(%0%)", R"(%1%)");
     boost::replace_all(pkg, R"(%tmp%)", R"(%0%)");
     // N.B. control block starts at %2%, also the order of defines is not important.
-    blk = TestCode(P4Include::Tofino1arch, pkg, {R"(a();)", EmptyDefs, ""}, Marker);
+    blk = TestCode(TestCode::Hdr::Tofino1arch, pkg, {R"(a();)", EmptyDefs, ""}, Marker);
     blk.flags(TrimWhiteSpace | TrimAnnotations);
     EXPECT_EQ(blk.get_block().compare("action a() { } apply { a(); a(); }"), 0) << blk;
 }
 
-TEST(testBfGtestHelper, ControlBlockTestApplyPassConst) {
-    auto blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy});
+TEST(testBfGtestHelper, TestCodeApplyPassConst) {
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy});
     Util::SourceCodeBuilder builder;
     EXPECT_TRUE(blk.apply_pass(new P4::ToP4(builder, false)));
 }
 
-#if 0
-TEST(testBfGtestHelper, ControlBlockTestApplyPassMutating) {
+#if 1
+TEST(testBfGtestHelper, TestCodeApplyPassMutating) {
     // A similar test is run in the gtest 'ElimCast.EquLeft'.
     // It is here as an example & for debugging purposes.
     auto defs = R"(
@@ -225,10 +298,11 @@ TEST(testBfGtestHelper, ControlBlockTestApplyPassMutating) {
             "}",
         "}"
     };
-    auto blk = TestCode(P4Include::Tofino1arch, TestCode::tofino_shell(),
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, TestCode::tofino_shell(),
                         {defs, TestCode::empty_state(), input, TestCode::empty_appy()},
                         TestCode::tofino_shell_control_marker());
     blk.flags(TrimWhiteSpace | TrimAnnotations);
+    EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend));
     EXPECT_TRUE(blk.apply_pass(new BFN::RewriteConcatToSlices()));
     auto res = blk.match(expected);
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
@@ -236,15 +310,15 @@ TEST(testBfGtestHelper, ControlBlockTestApplyPassMutating) {
 }
 #endif
 
-TEST(testBfGtestHelper, ControlBlockTestMatch) {
-    auto blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
+TEST(testBfGtestHelper, TestCodeMatch) {
+    auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
     auto res = blk.match(CheckList{"apply", "{", "}"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
                              << "\n    '" << blk.get_block() << "'\n";;
     // EXPECT_EQ(res.pos, 9U);   // Dependant upon parser.
     EXPECT_EQ(res.count, 3U);
 
-    blk = TestCode(P4Include::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
+    blk = TestCode(TestCode::Hdr::Tofino1arch, Code, {EmptyDefs, EmptyAppy}, Marker);
     blk.flags(Raw);
     res = blk.match(CheckList{"`\\s*`apply`\\s*`{`\\s*`}`\\s*`"});
     EXPECT_TRUE(res.success) << " pos=" << res.pos << " count=" << res.count
