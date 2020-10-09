@@ -358,9 +358,7 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             Crc *rv = new Crc(what.lineno);
             if (what[0] != "crc")
                 rv->reverse = true;
-            // tINT types are masked to 32bits, tBIGINT are left as they are.
-            auto crcSize = [](value_type type){return type == tINT? 32 : 0;};
-            rv->poly = get_bitvec(what[1], crcSize(what[1].type));
+            rv->poly = get_bitvec(what[1]);
             // Shift and set LSB to 1 to generate polynomial from Koopman number
             // provided in assembly
             rv->poly <<= 1;
@@ -368,10 +366,10 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             int i = 2;
 
             if (what.vec.size > 2) {
-                rv->init = get_bitvec(what[2], crcSize(what[2].type));
+                rv->init = get_bitvec(what[2]);
                 ++i;
                 if (what.vec.size > 3) {
-                    rv->final_xor = get_bitvec(what[3], crcSize(what[3].type));
+                    rv->final_xor = get_bitvec(what[3]);
                     ++i;
                 }
                 if (what.vec.size > 4) {
