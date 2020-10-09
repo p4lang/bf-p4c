@@ -47,14 +47,13 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
                 lrt.emplace_back(kv.value);
             } else {
                 for (auto &el : kv.value.map) {
-                    if (!CHECKTYPE2(el.key, tINT, tBIGINT) || !CHECKTYPE(el.value, tINT))
-                        break;
-                    if (el.key.type == tBIGINT) {
-                        if (el.key.bigi.size != 1)
-                            error(el.key.lineno, "Threshold too large\n");
-                        lrt.emplace_back(el.key.lineno, el.key.bigi.data[0], el.value.i);
-                    } else {
-                        lrt.emplace_back(el.key.lineno, el.key.i, el.value.i); } } }
+                    if (CHECKTYPE2(el.key, tINT, tBIGINT) && CHECKTYPE(el.value, tINT)) {
+                        lrt.emplace_back(el.key.lineno,
+                                         get_int64(el.key, 64, "Threshold too large"),
+                                         el.value.i);
+                    }
+                }
+            }
         } else if (kv.key == "bytecount_adjust") {
             if (CHECKTYPE(kv.value, tINT)) {
                 bytecount_adjust = kv.value.i;
@@ -74,10 +73,8 @@ CounterTable::lrt_params::lrt_params(const value_t &m)
     if (CHECKTYPE(m, tMAP)) {
         for (auto &kv : MapIterChecked(m.map, true)) {
             if (kv.key == "threshold") {
-                if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
-                    threshold = kv.value.bigi.data[0];
-                else if (CHECKTYPE(kv.value, tINT))
-                    threshold = kv.value.i;
+                if (CHECKTYPE2(kv.value, tINT, tBIGINT))
+                    threshold = get_int64(kv.value, 64, "Threshold too large");
             } else if (kv.key == "interval") {
                 if (CHECKTYPE(kv.value, tINT))
                     interval = kv.value.i;

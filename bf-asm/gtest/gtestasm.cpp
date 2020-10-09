@@ -4,6 +4,7 @@
 
 // Add the component's unit-tests here.
 #include "depositfield.cpp"
+#include "asm-types.cpp"
 
 GTEST_API_ int main(int argc, char **argv) {
   printf("running gtestasm\n");

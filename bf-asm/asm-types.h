@@ -110,6 +110,13 @@ static inline void free_pair(pair_t *p) {
     free_value(&p->value); }
 bool get_bool(const value_t &v);
 
+// If max_bits is zero, no testing or masking is carried out.
+// If error_message is set, values larger than max_bits will error, otherwise the value is masked.
+bitvec get_bitvec(const value_t &v, unsigned max_bits = 0,
+                    const char* error_message = nullptr);
+uint64_t get_int64(const value_t &v, unsigned max_bits = 0,
+                    const char* error_message = nullptr);
+
 #ifdef __cplusplus
 bool operator==(const struct value_t &, const struct value_t &);
 inline bool operator==(const struct value_t &a, const char *b) {

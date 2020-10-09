@@ -167,34 +167,20 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     const value_t *v = &v_;
     if (options.target == TOFINO) can_mask = false;
     if (can_mask && v->type == tCMD && *v == "&" && v->vec.size == 3) {
-        if (v->vec[2].type == tINT) {
-            mask = v->vec[2].i;
+        if (v->vec[2].type == tINT || v->vec[2].type == tBIGINT) {
+            mask = get_int64(v->vec[2], 64, "mask too large");
             v = &v->vec[1];
-        } else if (v->vec[2].type == tBIGINT) {
-            if (v->vec[2].bigi.size != 1)
-                error(v->lineno, "mask too large");
-            mask = v->vec[2].bigi.data[0];
-            v = &v->vec[1];
-        } else if (v->vec[1].type == tINT) {
-            mask = v->vec[1].i;
-            v = &v->vec[2];
-        } else if (v->vec[1].type == tBIGINT) {
-            if (v->vec[1].bigi.size != 1)
-                error(v->lineno, "mask too large");
-            mask = v->vec[1].bigi.data[0];
+        } else if (v->vec[1].type == tINT || v->vec[1].type == tBIGINT) {
+            mask = get_int64(v->vec[1], 64, "mask too large");
             v = &v->vec[2];
         } else {
             error(v->lineno, "mask must be a constant"); } }
     if (v->type == tCMD && *v == "-") {
         neg = true;
         v = &v->vec[1]; }
-    if (v->type == tINT) {
-        op = new Const(v->lineno, v->i);
-        return; }
-    if (v->type == tBIGINT) {
-        if (v->bigi.size > 1)
-            error(v->lineno, "Integer too large");
-        op = new Const(v->lineno, v->bigi.data[0]);
+    if (v->type == tINT || v->type == tBIGINT) {
+        auto i = get_int64(*v, 64, "Integer too large");
+        op = new Const(v->lineno, i);
         return; }
     if (v->type == tSTR) {
         if (auto f = tbl->format->field(v->s)) {
@@ -672,16 +658,10 @@ Instruction *TMatchOP::Decode::decode(Table *tbl, const Table::Actions::Action *
                 op[idx][1] == "learn") {
                 rv->learn = rv->learn_not = true;
                 continue; } }
-        if (op[idx].type == tINT) {
+        if (op[idx].type == tINT || op[idx].type == tBIGINT) {
             if (rv->mask)
                 error(op[idx].lineno, "Can't have more than one mask operand to an SALU tmatch");
-            rv->mask = op[idx].i;
-        } else if (op[idx].type == tBIGINT) {
-            if (rv->mask)
-                error(op[idx].lineno, "Can't have more than one mask operand to an SALU tmatch");
-            if (op[idx].bigi.size > 1)
-                error(op[idx].lineno, "Integer too large");
-            rv->mask = op[idx].bigi.data[0];
+            rv->mask = get_int64(op[idx], 64, "Integer too large");
         } else if (op[idx].type == tSTR) {
             if (auto f = tbl->format->field(op[idx].s)) {
                 if (rv->srca) {

@@ -116,6 +116,8 @@ void ExactMatchTable::determine_ghost_bits() {
     // Determine ghost bits by determine what is not in the match
     for (auto& p4_param : p4_params_list) {
         for (int bit = p4_param.start_bit; bit < p4_param.start_bit + p4_param.bit_width; bit++) {
+            if (!p4_param.mask.empty() && !p4_param.mask[bit])
+                continue;  // Skip non-masked bits.
             bool found = false;
             for (auto ms : match) {
                 std::string field_name = ms->name();

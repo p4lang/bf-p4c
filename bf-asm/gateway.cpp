@@ -30,12 +30,8 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                         error(lineno, "range match set too large");
                     range[i] = (*v)[last-i-1].i; }
             v = &(*v)[last]; }
-        if (v->type == tINT) {
-            val.word0 = ~(val.word1 = (uint64_t)v->i);
-        } else if (v->type == tBIGINT) {
-            if (v->bigi.size > 1)
-                error(lineno, "Gateway key too large");
-            val.word0 = ~(val.word1 = (uint64_t)v->bigi.data[0]);
+        if (v->type == tINT || v->type == tBIGINT) {
+            val.word0 = ~(val.word1 = get_int64(*v, 64, "Gateway key too large"));
         } else if (v->type == tMATCH) {
             val = v->m; } }
     if (data == "run_table") {
@@ -137,13 +133,8 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                     else if (v.key == "false")
                         cond_false = Match(0, v.value, range_match); } }
         } else if (kv.key == "payload") {
-            if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
-                payload = kv.value.bigi.data[0];
-            else if (sizeof(uintptr_t) == sizeof(uint32_t) && kv.value.type == tBIGINT &&
-                     kv.value.bigi.size == 2)
-                payload = kv.value.bigi.data[0] + ((uint64_t)kv.value.bigi.data[1] << 32);
-            else if (CHECKTYPE(kv.value, tINT))
-                payload = kv.value.i;
+            if (CHECKTYPE2(kv.value, tINT, tBIGINT))
+                payload = get_int64(kv.value);
             /* FIXME -- should also be able to specify payload as <action name>(<args>) */
             have_payload = kv.key.lineno;
         } else if (kv.key == "payload_map") {

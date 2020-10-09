@@ -405,20 +405,18 @@ class Table {
         std::string name;
         std::string alias;
         std::string key_name;
-        unsigned start_bit;
-        unsigned position;
-        unsigned bit_width;
-        unsigned bit_width_full;
+        unsigned start_bit = 0;
+        unsigned position = 0;
+        unsigned bit_width = 0;
+        unsigned bit_width_full = 0;
+        bitvec mask;
         std::string default_value;  // value stored as hex string to accommodate large nos
-        bool defaulted;
-        bool is_valid;
+        bool defaulted = false;
+        bool is_valid = false;
         std::string type;
         std::unique_ptr<json::map> context_json;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0,
-            std::string t = "", std::string v = "", bool d = false,
-            bool i = false, unsigned s = 0) :
-            name(n), start_bit(s), position(p), bit_width(bw), bit_width_full(bwf),
-            default_value(v), defaulted(d), is_valid(i), type(t) {}
+        explicit p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0) :
+                          name(n), position(p), bit_width(bw) {}
     };
     friend std::ostream &operator<<(std::ostream &, const p4_param &);
     typedef std::vector<p4_param>  p4_params;
@@ -1491,7 +1489,7 @@ public:
 static uint gateway_handle = 0x70000000;
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
-    uint64_t                    payload;
+    uint64_t                    payload = -1;
     int                         have_payload = -1;
     std::vector<int>            payload_map;
     int                         match_address = -1;

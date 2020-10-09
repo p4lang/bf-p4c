@@ -46,18 +46,21 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
         // FIXME -- this should be in the stateful action setup as it is per action?
         if (!CHECKTYPE(kv.value, tMAP)) return true;
         for (auto &el : kv.value.map) {
-            if (el.key == "match")
+            if (el.key == "match") {
                 parse_vector(sbus_match, el.value);
-            else if (el.key == "learn")
+            } else if (el.key == "learn") {
                 parse_vector(sbus_learn, el.value);
-            else if (el.key == "operation" || el.key == "combine") {
-                if (el.value == "and") sbus_comb = SBUS_AND;
-                else if (el.value == "or") sbus_comb = SBUS_OR;
-                else error(el.value.lineno, "Invalid sbus %s %s, must be 'and' or 'or'",
-                           value_desc(el.key), value_desc(el.value));
-            } else
+            } else if (el.key == "operation" || el.key == "combine") {
+                if (el.value == "and")
+                    sbus_comb = SBUS_AND;
+                else if (el.value == "or")
+                    sbus_comb = SBUS_OR;
+                else
+                    error(el.value.lineno, "Invalid sbus %s %s, must be 'and' or 'or'",
+                          value_desc(el.key), value_desc(el.value));
+            } else {
                 warning(el.key.lineno, "ignoring unknown item %s in sbus of table %s",
-                        value_desc(el.key), name()); }
+                        value_desc(el.key), name()); } }
     } else if (kv.key == "fifo" || kv.key == "stack") {
         if (stateful_counter_mode) {
             error(kv.key.lineno, "Conflicting log counter functions in %s", name());
@@ -86,12 +89,10 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             error(kv.value.lineno, "Syntax error, expecting push or pop");
         if (kv.value.type == tSTR)
             watermark_level = 1;
-        else if (CHECKTYPE(kv.value[1], tINT)) {
+        else if (CHECKTYPE(kv.value[1], tINT))
             watermark_level = kv.value[1].i / 128;
-        }
-        if (kv.value[1].i % 128 != 0) {
+        if (kv.value[1].i % 128 != 0)
             error(kv.value[1].lineno, "watermark level must be a mulitple of 128");
-        }
     } else if (kv.key == "underflow") {
         if (CHECKTYPE(kv.value, tSTR))
             underflow_action = kv.value;
@@ -111,47 +112,49 @@ bool StatefulTable::setup_jbay(const pair_t &kv) {
             else if (phv_hash_shift < 0 || phv_hash_shift > 15)
                 error(kv.value.lineno, "phv_hash_shift %" PRId64 " out of range", kv.value.i); }
     } else if (kv.key == "phv_hash_mask") {
-        if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
-            if (kv.value.type == tINT)
-                phv_hash_mask.setraw(kv.value.i);
-            else
-                phv_hash_mask.setraw(kv.value.bigi.data, kv.value.bigi.size); }
+        if (CHECKTYPE2(kv.value, tINT, tBIGINT))
+            phv_hash_mask = get_bitvec(kv.value);
     } else if (kv.key == "stage_alu_id") {
         if (CHECKTYPE(kv.value, tINT)) {
             if (kv.value.i < 0 || kv.value.i >= 128)
                 error(kv.value.lineno, "invalid stage_alu_id %" PRIi64, kv.value.i);
             stage_alu_id = kv.value.i; }
-    } else
-        return false;
+    } else {
+        return false; }
     return true;
 }
 
 static int parse_jbay_counter_mode(const value_t &v) {
     int rv = 0;
-    if (v == "counter") rv = FUNCTION_LOG;
-    else if (v == "fifo") rv = FUNCTION_FIFO;
-    else if (v == "stack") rv = FUNCTION_STACK;
-    else if (v == "clear") rv = FUNCTION_FAST_CLEAR;
-    else return -1;
+    if (v == "counter")
+        rv = FUNCTION_LOG;
+    else if (v == "fifo")
+        rv = FUNCTION_FIFO;
+    else if (v == "stack")
+        rv = FUNCTION_STACK;
+    else if (v == "clear")
+        rv = FUNCTION_FAST_CLEAR;
+    else
+        return -1;
     if (v.type == tSTR) return rv | PUSH_ALL;
     if (v.type != tCMD) return -1;
     int flag = 0;
     for (int i = 1; i < v.vec.size; ++i) {
-        if (v[i] == "hit") flag |= PUSH_HIT;
-        else if (v[i] == "miss") flag |= PUSH_MISS;
-        else if (v[i] == "gateway") flag |= PUSH_GATEWAY;
-        else if (v[i] == "gw0") flag |= PUSH_GW_ENTRY;
-        else if (v[i] == "gw1") flag |= (PUSH_GW_ENTRY << 1);
-        else if (v[i] == "gw2") flag |= (PUSH_GW_ENTRY << 2);
-        else if (v[i] == "gw3") flag |= (PUSH_GW_ENTRY << 3);
-        else if (v[i] == "push" && (rv & FUNCTION_MASK) != FUNCTION_LOG) {
+        if (v[i] == "hit") {flag |= PUSH_HIT;
+        } else if (v[i] == "miss") {flag |= PUSH_MISS;
+        } else if (v[i] == "gateway") {flag |= PUSH_GATEWAY;
+        } else if (v[i] == "gw0") {flag |= PUSH_GW_ENTRY;
+        } else if (v[i] == "gw1") {flag |= (PUSH_GW_ENTRY << 1);
+        } else if (v[i] == "gw2") {flag |= (PUSH_GW_ENTRY << 2);
+        } else if (v[i] == "gw3") {flag |= (PUSH_GW_ENTRY << 3);
+        } else if (v[i] == "push" && (rv & FUNCTION_MASK) != FUNCTION_LOG) {
             rv |= flag ? flag : PUSH_ALL;
             flag = 0;
         } else if (v[i] == "pop" && (rv & FUNCTION_MASK) != FUNCTION_LOG) {
             rv |= (flag ? flag : PUSH_ALL) << PUSHPOP_BITS;
             flag = 0;
-        } else
-            return -1; }
+        } else {
+            return -1; } }
     return rv | flag;
 }
 int StatefulTable::parse_counter_mode(Target::JBay target, const value_t &v) {
@@ -246,13 +249,13 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
             merge.mau_stateful_log_watermark_threshold[meter_group()] = watermark_level; }
         if (underflow_action.set()) {
             auto act = actions->action(underflow_action.name);
-            BUG_CHECK(act);    
+            BUG_CHECK(act);
             // 4-bit stateful addr MSB encoding for instruction, as given by table 6-67 (6.4.4.11)
             ctl3.slog_underflow_instruction = act->code * 2 + 1;
         }
         if (overflow_action.set()) {
             auto act = actions->action(overflow_action.name);
-            BUG_CHECK(act);    
+            BUG_CHECK(act);
             ctl3.slog_overflow_instruction = act->code * 2 + 1;
         }
     } else {
@@ -320,7 +323,7 @@ void StatefulTable::gen_tbl_cfg(Target::JBay, json::map &tbl, json::map &stage_t
             tbl["stateful_direction"] = "inout";
         else
             tbl["stateful_direction"] = "in";
-    } else if (has_pop)
-        tbl["stateful_direction"] = "out";
+    } else if (has_pop) {
+        tbl["stateful_direction"] = "out"; }
     tbl["stateful_counter_index"] = meter_group();
 }

@@ -1,4 +1,6 @@
 #include <config.h>
+#include <sstream>
+#include <string>
 
 #include "action_bus.h"
 #include "algorithm.h"
@@ -561,6 +563,8 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             p.bit_width = w.value.i;
                         else if (w.key == "full_size" && CHECKTYPE(w.value, tINT))
                             p.bit_width_full = w.value.i;
+                        else if (w.key == "mask")
+                            p.mask = get_bitvec(w.value);
                         else if (w.key == "alias" && CHECKTYPE(w.value, tSTR))
                             p.alias = w.value.s;
                         else if (w.key == "key_name" && CHECKTYPE(w.value, tSTR))
@@ -2144,6 +2148,7 @@ std::ostream &operator<<(std::ostream &out, const Table::p4_param &p) {
         << "[ w =" << p.bit_width
         << ", w_full =" << p.bit_width_full
         << ", start_bit =" << p.start_bit
+        << ", mask = 0x" << p.mask
         << ", position =" << p.position
         << ", default_value =" << p.default_value
         << ", defaulted =" << p.defaulted
@@ -2782,6 +2787,11 @@ void Table::common_tbl_cfg(json::map &tbl) const {
             param["start_bit"] = p.start_bit;
             param["bit_width"] = p.bit_width;
             param["bit_width_full"] = p.bit_width_full;
+            if (!p.mask.empty()) {
+                std::stringstream ss;
+                ss << "0x" << p.mask;
+                param["mask"] = ss.str();
+            }
             param["position"] = p.position;
             param["match_type"] = p.type;
             param["is_valid"] = p.is_valid;

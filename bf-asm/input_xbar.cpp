@@ -16,13 +16,8 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
         error(lineno, "Hash column out of range");
         return; }
     if (lo == hi) {
-        if (what.type == tINT) {
-            hash_table[lo].data.setraw(what.i);
-            return;
-        } else if (what.type == tBIGINT) {
-            hash_table[lo].data.setraw(what.bigi.data, what.bigi.size);
-            if (hash_table[lo].data.max().index() >= 64)
-                error(what.lineno, "Hash column value out of range");
+        if (what.type == tINT || what.type == tBIGINT) {
+            hash_table[lo].data = get_bitvec(what, 64, "Hash column value out of range");
             return;
         } else if ((what.type == tSTR) && (what == "parity")) {
             options.disable_gfm_parity = false;
@@ -33,7 +28,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
         for (int i = lo; i <= hi; ++i) {
             hash_table[i].data.setraw(what.i); }
         return; }
-    HashExpr *fn = HashExpr::create(gress, stage, what);
+    HashExpr *fn = HashExpr::create(gress, stage, what);  // TODO Set the crcSize.
     if (!fn) return;
     fn->build_algorithm();
     int width = fn->width();

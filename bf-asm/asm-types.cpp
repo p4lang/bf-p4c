@@ -94,6 +94,54 @@ bool get_bool(const value_t &v) {
     return false;
 }
 
+bitvec get_bitvec(const value_t &v, unsigned max_bits, const char* error_message) {
+    bitvec bv;
+    if (CHECKTYPE2(v, tINT, tBIGINT)) {
+        if (v.type == tINT) {
+            bv.setraw(v.i);
+        } else {
+            if (!v.bigi.size) return bv;
+            bv.setraw(v.bigi.data, v.bigi.size);
+        }
+    }
+    if (!max_bits)
+        return bv;
+    int bits = bv.max().index() + 1;
+    if (error_message && bits > max_bits)
+        error(v.lineno, "%s", error_message);
+    bv.clrrange(max_bits, bits);
+    return bv;
+}
+
+uint64_t get_int64(const value_t &v, unsigned max_bits, const char* error_message) {
+    BUG_CHECK(max_bits <= 64);
+    bool too_large = false;
+    uint64_t value = 0;
+    if (CHECKTYPE2(v, tINT, tBIGINT)) {
+        if (v.type == tINT) {
+            value = (uint64_t)v.i;
+        } else {
+            if (!v.bigi.size) return 0;
+            if (sizeof(uintptr_t) == sizeof(uint32_t)) {
+                value = ((uint64_t)v.bigi.data[1] << 32) + v.bigi.data[0];
+                too_large = v.bigi.size > 2;
+            } else {
+                BUG_CHECK(sizeof(uintptr_t) == sizeof(uint64_t));
+                value = v.bigi.data[0];
+                too_large = v.bigi.size > 1;
+            }
+        }
+    }
+    if (!max_bits)
+        return value;
+    uint64_t masked = value;
+    if (max_bits < 64)
+        masked &= (1ULL << max_bits) - 1;
+    if (error_message && (too_large || masked != value))
+        error(v.lineno, "%s", error_message);
+    return masked;
+}
+
 static int chkmask(const match_t &m, int maskbits) {
     uint64_t mask = bitMask(maskbits);
     int shift = 0;

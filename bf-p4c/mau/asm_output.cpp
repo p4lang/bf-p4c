@@ -2,8 +2,13 @@
 #include <regex>
 #include <string>
 #include <vector>
+#include <iterator>
+#include <memory>
+
 #include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
+#include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/slice.h"
 #include "bf-p4c/lib/error_type.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/asm_output.h"
@@ -26,6 +31,274 @@ int DefaultNext::id_counter = 0;
 
 // TODO(zma) not sure how the tEOP buses are shared, punt it for another day
 static int teop = 0;
+
+namespace {
+// Create the key name that will be output to the assembler & context.json files.
+cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name = nullptr) {
+    cstring annName = "";
+    if (auto ann = table_key->getAnnotation(IR::Annotation::nameAnnotation)) {
+        annName = ann->getName();
+        // P4_14-->P4_16 translation names valid matches with a
+        // "$valid$" suffix (note the trailing "$").  However, Brig
+        // and pdgen use "$valid".
+        if (annName.endsWith("$valid$"))
+            annName = annName.substr(0, annName.size() - 1);
+        // XXX(cole): This is a hack to remove slices from key annName annotations,
+        // eg. "foo.bar[3:0]" becomes "foo.bar".
+        // XXX(hanw): The hack is here because frontend uses @name annotation to keep
+        // the original name of the table key and annotation does not keep the
+        // IR structure of a slice. The original name of the table key must be
+        // kept in case an optimization renames the table key name (not sure if
+        // there is optimization that does this).
+        std::string s(annName.c_str());
+        std::smatch sm;
+        std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+        std::regex_search(s, sm, sliceRegex);
+        if (sm.size() == 3) {
+            auto newAnnName = s.substr(0, sm.position(0));
+            if (!table_name.isNullOrEmpty())
+                // XXX(cole): It would be nice to report srcInfo here.
+                ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
+                          "%1%: Table key name not supported.  "
+                          "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
+            annName = newAnnName;
+        }
+        LOG3(ann << ": setting external annName of key " << table_key
+                 << " to " << annName);
+    }
+    return annName;
+}
+
+// Helper function for printing as hex.
+// TODO this needs moving to p4c/lib/hex.h
+class hex_big_int {
+    const big_int& v;       // N.B. We expect the caller to manage life-times!
+
+ public:
+    explicit hex_big_int(const big_int& val) : v(val) {}
+    friend std::ostream &operator<<(std::ostream &os, const hex_big_int& value) {
+        auto save = os.flags();
+        os << "0x" << std::hex << value.v;
+        os.flags(save);
+        return os;
+    }
+};
+
+// Handles whether the BFA output for this match component will be split across multiple lines.
+// This results in code that is more complex, but maintains compactness and readability of
+// the BFA for the common case when we don't have user annotations.
+class Item_Format {
+    const IR::MAU::TableKey* table_key;
+    const indent_t& indent;
+
+ public:
+    std::function<std::ostream&(std::ostream&)> open;
+    std::function<std::ostream&(std::ostream&)> separator;
+    std::function<std::ostream&(std::ostream&)> annotate_and_close;
+    Item_Format(const IR::MAU::TableKey* table_key, const indent_t& indent)
+                : table_key(table_key), indent(indent) {
+        if (has_user_annotation(table_key)) {
+            open = [=](std::ostream &out) -> std::ostream & {
+                out << std::endl << indent;
+                return out;
+            };
+            separator = [=](std::ostream &out) -> std::ostream & {
+                out << std::endl << indent;
+                return out;
+            };
+            annotate_and_close = [=](std::ostream &out) -> std::ostream & {
+                out << std::endl;
+                emit_user_annotation_context_json(out, indent, table_key);
+                return out;
+            };
+        } else {
+            open = [](std::ostream &out) -> std::ostream & {
+                out << " { ";
+                return out;
+            };
+            separator = [](std::ostream &out) -> std::ostream & {
+                out << ", ";
+                return out;
+            };
+            annotate_and_close = [=](std::ostream &out) -> std::ostream & {
+                emit_user_annotation_context_json(out, indent, table_key);
+                out << " }" << std::endl;
+                return out;
+            };
+        }
+    }
+};
+
+// Helper class for extracting & outputting a slice.
+// N.B. getSliceLoHi() is unsuitable as we don't want the expression width as default.
+struct SliceRange {
+    int start_bit;
+    int width;
+    SliceRange(const IR::Expression* expr, int default_size) : start_bit(0), width(default_size) {
+        if (const auto s = expr->to<IR::Slice>()) {
+            const auto hi = s->e1->to<IR::Constant>();
+            const auto lo = s->e2->to<IR::Constant>();
+            // TODO We should be bug_checking at root and relying on the invariance!
+            BUG_CHECK(lo && hi, "Invalid match key slice %1%[%2%:%3%]", s->e0, s->e1, s->e2);
+            int v_lo = lo->asInt();
+            int v_hi = hi->asInt();
+            BUG_CHECK(v_lo <= v_hi, "Invalid match key slice range %1% %2%", v_lo, v_hi);
+            start_bit = v_lo;
+            width = 1 + v_hi - v_lo;
+        }
+    }
+};
+
+class ExtractKeyDetails {
+    // We need to recombine keys that have been broken into multiple slices.
+    // (This happens when we have non-contiguous masks)
+    // This is done by the KeyDetails class.
+    // ExtractKeyDetails handles the iteration over the KeyDetails class.
+    // The original tbl->match_key iterator is encapsulated
+    // and a new ExtractKeyDetails::Iterator is exposed.
+
+    using OriginalIterator = IR::Vector<IR::MAU::TableKey>::const_iterator;
+
+    struct KeyConfig {
+        const PhvInfo &phv;
+        const cstring tbl_name;
+    };
+
+    const OriginalIterator table_begin;
+    const OriginalIterator table_end;
+    const KeyConfig config;
+
+ public:
+    class Iterator;
+
+    class KeyDetails {
+        const KeyConfig& config;
+        OriginalIterator key;
+        OriginalIterator key_end;
+        bool recombine_mask = false;
+
+        friend class Iterator;  // Only the iterator will construct KeyDetails.
+        KeyDetails(OriginalIterator begin, OriginalIterator end,
+                   const KeyConfig& config) : config{config} {
+            // N.B. *end (and *begin) may be nullptr;
+            for (key = begin; key != end; ++key) {
+                if ((*key)->for_match() && (*key)->p4_param_order >= 0)
+                    break;
+                // We are ignoring param generated by compiler, e.g., alpm partition index.
+                // These have a negative p4_param_order. Is this an error?
+                if ((*key)->p4_param_order < 0)
+                    ::warning(BFN::ErrorType::ERR_UNEXPECTED, "%1%: Unexpected key", *key);
+            }
+
+            key_end = (key == end)? end : key + 1;
+            if (key != end)
+                recombine_mask = (*key)->from_mask;
+
+            while (key_end != end &&
+                   (*key_end)->p4_param_order == (*key)->p4_param_order) {
+                if (!config.tbl_name.isNullOrEmpty())
+                    ERROR_CHECK((*key)->from_mask && (*key_end)->from_mask, ErrorType::ERR_INVALID,
+                                "Unexpected recombination of non mask keys "
+                                "in match field for table %1%.", config.tbl_name);
+                ++key_end;
+            }
+        }
+
+        inline const PHV::Field* phv_field(const OriginalIterator& key) const {
+            return config.phv.field((*key)->expr);
+        }
+        inline cstring original_name(const OriginalIterator& key) const {
+            // Replace any alias nodes with their original sources, in order to
+            // ensure the original names are emitted.
+            return phv_field(key)->externalName();
+        }
+
+     public:
+        cstring name() const { return original_name(key); }
+        cstring key_name(bool use_name) const {
+            auto annName = keyAnnotationName(*key, config.tbl_name);
+            auto plainName = name();
+            if (annName.isNullOrEmpty() ||
+                cstring::to_cstring(canon_name(annName)) ==
+                    cstring::to_cstring(canon_name(plainName))) {
+                return use_name? plainName : nullptr;
+            }
+            return annName;
+        }
+        cstring match_type() const {
+            // 'atcam_partition_index' match type is synonym to 'exact' match
+            // from the context.json's perspective.
+            // It carries one more bit of information about which field is used as the
+            // atcam_partition_index and this information is conveyed to low-level driver
+            // via the 'partition_field_name' attribute under the algorithm tcam node.
+            if ((*key)->match_type.name == "atcam_partition_index")
+                return "exact";
+            return (*key)->match_type.name;
+        }
+        int start_bit() const {
+            if (recombine_mask)
+                return 0;  // A masked value is full width.
+            SliceRange slice_range{(*key)->expr, -1};  // We don't care about width.
+            return slice_range.start_bit;
+        }
+        int width() const {
+            if (recombine_mask)
+                return full_size();  // A masked value is full width.
+            SliceRange slice_range{(*key)->expr, full_size()};
+            return slice_range.width;
+        }
+        big_int mask() const {
+            if (!recombine_mask)
+                return 0;
+            big_int mask = 0;
+            for (auto i = key; i != key_end; ++i) {
+                SliceRange slice_range{(*i)->expr, -1};
+                ERROR_CHECK(slice_range.width != -1, ErrorType::ERR_INVALID,
+                            "Unexpected recombination of non slice key %1% for table %2%.",
+                            original_name(i), config.tbl_name);
+                mask += bigBitMask(slice_range.width) << slice_range.start_bit;
+            }
+            return mask;
+        }
+        int full_size() const { return phv_field(key)->size; }
+        big_int field_mask() const { return Util::mask(full_size()); }
+        big_int expression_mask() const { return Util::mask((*key)->expr->type->width_bits()); }
+        const IR::MAU::TableKey* table_keys() const { return *key; }  // We return the first.
+    };
+
+    class Iterator : public std::iterator<std::input_iterator_tag, IR::MAU::TableKey> {
+        const ExtractKeyDetails* ekd;
+        std::unique_ptr<const KeyDetails> details;
+
+        friend class ExtractKeyDetails;   // Only allow construction via begin() & end().
+        Iterator(const OriginalIterator& begin, const ExtractKeyDetails* ekd) :
+                ekd(ekd), details{new KeyDetails{begin, ekd->table_end, ekd->config}} {}
+
+     public:
+        Iterator& operator++() {
+            details.reset(new KeyDetails{details->key_end, ekd->table_end, ekd->config});
+            return *this;
+        }
+        bool operator==(const Iterator& other) const {
+                        return details->table_keys() == other.details->table_keys();
+        }
+        bool operator!=(const Iterator& other) const { return !operator==(other); }
+
+        const KeyDetails& operator*() { return *details; }
+        const KeyDetails* operator->() { return details.get(); }
+    };
+
+    friend class Iterator;
+    Iterator begin() { auto ekd = this; return Iterator{table_begin, ekd}; }
+    Iterator end() { auto ekd = this; return Iterator{table_end, ekd}; }
+
+    ExtractKeyDetails(const IR::MAU::Table *tbl, const PhvInfo &phv, bool warn) :
+                table_begin{tbl->match_key.begin()},
+                table_end{tbl->match_key.end()},
+                config{phv, (warn? tbl->externalName() : nullptr)} {}
+};
+
+}  // namespace
 
 class MauAsmOutput::EmitAttached : public Inspector {
     friend class MauAsmOutput;
@@ -2753,128 +3026,22 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         return;
 
     out << indent++ <<  "p4_param_order: " << std::endl;
-    int p4_param_index = 0;
-    for (auto ixbar_read : tbl->match_key) {
-        if (!ixbar_read->for_match())
-            continue;
-        // do not dump param that is generated by compiler, e.g., alpm partition index
-        if (ixbar_read->p4_param_order < 0)
-            continue;
-        auto *expr = ixbar_read->expr;
-        std::map<int, int> slices;
-        if (auto slice = expr->to<IR::Slice>()) {
-            expr = slice->e0;
-            auto hi = slice->e1->to<IR::Constant>();
-            auto lo = slice->e2->to<IR::Constant>();
-
-            BUG_CHECK(lo != nullptr && hi != nullptr,
-                    "Invalid match key slice %1%[%2%:%3%]", expr, slice->e1, slice->e2);
-
-            auto v_lo = lo->asInt();
-            auto v_hi = hi->asInt();
-
-            BUG_CHECK(v_lo <= v_hi, "Invalid match key slice range %1% %2%", v_lo, v_hi);
-
-            slices.emplace(v_lo, v_hi - v_lo + 1);
-        }
-
-        auto phv_field = phv.field(expr);
-        // Replace any alias nodes with their original sources, in order to
-        // ensure the original names are emitted.
-        auto full_size = phv_field->size;
-
-        // Check for @name annotation.
-        cstring name = phv_field->externalName();
-
-        cstring annName = "";
-        if (auto ann = ixbar_read->getAnnotation(IR::Annotation::nameAnnotation)) {
-            annName = ann->getName();
-            // P4_14-->P4_16 translation names valid matches with a
-            // "$valid$" suffix (note the trailing "$").  However, Brig
-            // and pdgen use "$valid".
-            if (annName.endsWith("$valid$"))
-                annName = annName.substr(0, annName.size() - 1);
-
-            // XXX(cole): This is a hack to remove slices from key annName annotations,
-            // eg. "foo.bar[3:0]" becomes "foo.bar".
-            // XXX(hanw): The hack is here because frontend uses @name annotation to keep
-            // the original name of the table key and annotation does not keep the
-            // IR structure of a slice. The original name of the table key must be
-            // kept in case an optimization renames the table key name (not sure if
-            // there is optimization that does this).
-            std::string s(annName.c_str());
-            std::smatch sm;
-            std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
-            std::regex_search(s, sm, sliceRegex);
-            if (sm.size() == 3) {
-                auto newAnnName = s.substr(0, sm.position(0));
-                // XXX(cole): It would be nice to report srcInfo here.
-                ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
-                          "%1%: Table key name not supported.  "
-                          "Replacing \"%2%\" with \"%3%\".", tbl, annName, newAnnName);
-                annName = newAnnName;
-            }
-
-            LOG3(ann << ": setting external annName of key " << ixbar_read
-                 << " to " << annName);
-        }
-
-        // If fields dont have slices we add the entire field starting at bit 0
-        if (slices.empty())
-            slices[0] = full_size;
-
-        // Whether the BFA output for this match component will be split across multiple lines.
-        // This results in code that is more complex, but maintains compactness and readability of
-        // the BFA for the common case when we don't have user annotations.
-        bool multiline = has_user_annotation(ixbar_read);
-        auto item_sep = [&](std::ostream &out) -> std::ostream & {
-            if (multiline) out << std::endl << indent;
-            else
-                out << ", ";
-            return out;
-        };
-
-        for (auto sl : slices) {
-            out << indent++ << canon_name(name) << ":";
-            if (multiline) out << std::endl << indent;
-            else
-              out << " { ";
-
-            // 'atcam_partition_index' match type is synonym to 'exact' match
-            // from the context.json's perspective.  It carries one more bit of
-            // information about which field is used as the
-            // atcam_partition_index and this information is conveyed to
-            // low-level driver via the 'partition_field_name' attribute under
-            // the algorithm tcam node. As a result, we print
-            // 'atcam_partition_index' as 'exact' here.
-            auto match_type = ixbar_read->match_type.name;
-            if (match_type == "atcam_partition_index") match_type = "exact";
-            out << "type: " << match_type << item_sep;
-
-            out << "size: " << sl.second << item_sep;
-
-            // Slices are used in keys (only) in p4-16, while masks are used
-            // (only) in p4-14. For BF-RT, we consider a slice with an
-            // annotation  as a separate field and set the size and full_size to
-            // be the same value. The key name carries the annotated name.
-            bool setKeyName = false;
-            if (!annName.isNullOrEmpty()) {
-                setKeyName = (cstring::to_cstring(canon_name(name))
-                        != cstring::to_cstring(canon_name(annName)));
-            }
-            auto start_bit = sl.first;
-            out << "full_size: " << full_size;
-            if (setKeyName)
-                out << item_sep << "key_name: \"" << canon_name(annName) << "\"";
-            if (start_bit > 0)
-                out << item_sep << "start_bit: " << start_bit;
-            if (multiline) out << std::endl;
-            emit_user_annotation_context_json(out, indent, ixbar_read);
-            if (!multiline) out << " }" << std::endl;
-            indent--;
-        }
-
-        p4_param_index++;
+    for (const auto& key_info : ExtractKeyDetails(tbl, phv, true)) {
+        Item_Format format(key_info.table_keys(), indent);
+        out << indent++ << canon_name(key_info.name()) << ":" << format.open;
+        out << "type: " << key_info.match_type();
+        out << format.separator << "size: " << key_info.width();
+        out << format.separator << "full_size: " << key_info.full_size();
+        auto key_name = key_info.key_name(false);
+        if (!key_name.isNullOrEmpty())
+            out << format.separator << "key_name: " << '"' << canon_name(key_name) << '"';
+        auto start_bit = key_info.start_bit();
+        if ( start_bit > 0)
+            out << format.separator << "start_bit: " << start_bit;
+        if (auto mask = key_info.mask())
+            out << format.separator << "mask: " << hex_big_int(mask);
+        out << format.annotate_and_close;
+        indent--;
     }
     if (tbl->dynamic_key_masks)
         out << --indent << "dynamic_key_masks: true" << std::endl;
@@ -2899,104 +3066,80 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
         auto method_call = entry->action->to<IR::MethodCallExpression>();
         BUG_CHECK(method_call, "Action is not specified for a static entry");
 
-        auto method = method_call->method->to<IR::PathExpression>();
-        auto path = method->path;
-        size_t key_index = 0, param_index = 0;
         out << indent++ << "- priority: " << priority++ << std::endl;
         out << indent << "match_key_fields_values:" << std::endl;
+
+        auto extract = ExtractKeyDetails(tbl, phv, false);
+        auto key_info = extract.begin();
         for (auto key : entry->getKeys()->components) {
-            ERROR_CHECK(key_index < tbl->match_key.size(), ErrorType::ERR_INVALID,
+            ERROR_CHECK(key_info != extract.end(), ErrorType::ERR_INVALID,
                         "invalid %1% key. Static entry has more keys than those specified "
                         "in match field for table %2%.", key, tbl->externalName());
-            auto match_key = tbl->match_key[key_index];
-            if (match_key->match_type == "selector" || match_key->match_type == "dleft_hash") {
-                key_index++;
-                continue; }
-            auto match_key_size = phv.field(match_key->expr)->size;
-            // Set a mask with all 1's for size of match key
-            bitvec match_key_mask(0, match_key_size);
-            auto match_key_name = phv.field(match_key->expr)->externalName();
-            // Use annotation names if present
-            if (auto ann = match_key->getAnnotation(IR::Annotation::nameAnnotation)) {
-                auto annName = ann->getName();
-                // Remove slicing info if present
-                std::string s(annName.c_str());
-                std::smatch sm;
-                std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
-                std::regex_search(s, sm, sliceRegex);
-                if (sm.size() == 3) {
-                    annName = s.substr(0, sm.position(0));
-                }
-                match_key_name = annName;
-            }
-            // Remove trailing `$` from $valid$'s. These are removed from match_key_fields
-            // to be consistent with PD Gen which expects only $valid suffix.
-            if (match_key_name.endsWith("$valid$"))
-                match_key_name = match_key_name.substr(0, match_key_name.size() - 1);
-            out << indent++ << "- field_name: " << canon_name(match_key_name) << std::endl;
-            if (auto b = key->to<IR::BoolLiteral>()) {
-                out << indent << "value: \"0x" << (b->value ? 1 : 0) << "\"" <<  std::endl;
-                if (match_key->match_type == "ternary")
-                    out << indent << "mask: \"0x1\"" << std::endl;
-            } else if (key->to<IR::Constant>()) {
-                out << indent << "value: \"0x" << std::hex << key << std::dec << "\"" << std::endl;
-                if (match_key->match_type == "ternary") {
-                    out << indent << "mask: \"0x"
-                        << std::hex << match_key_mask << std::dec << "\"" << std::endl;
-                }
-            } else if (auto ts = key->to<IR::Mask>()) {
-                // This error should be caught in front end as an invalid key
-                // expression
-                ERROR_CHECK(match_key->match_type == "ternary", ErrorType::ERR_INVALID,
+
+            auto key_name = key_info->key_name(true);
+            out << indent++ << "- field_name: " << canon_name(key_name) << std::endl;
+
+            // Helper functions for formatting field entries.
+            auto out_value = [&out, &indent]
+                             (const big_int& val, cstring match_type, const big_int& mask) {
+                out << indent << "value: " << '"' << hex_big_int(val) << '"' << std::endl;
+                if (match_type == "ternary")
+                    out << indent << "mask: " << '"' << hex_big_int(mask) << '"' << std::endl;
+            };
+            auto out_range = [&out, &indent](const big_int& start, const big_int& end) {
+                out << indent << "range_start: " << '"' << hex_big_int(start) << '"' << std::endl;
+                out << indent << "range_end: " << '"' << hex_big_int(end) << '"' << std::endl;
+            };
+
+            if (const auto b = key->to<IR::BoolLiteral>()) {
+                out_value(b->value?1:0, key_info->match_type(), 1);
+            } else if (const auto val = key->to<IR::Constant>()) {
+                auto mask = key_info->field_mask();
+                out_value(val->value, key_info->match_type(), mask);
+            } else if (const auto ts = key->to<IR::Mask>()) {
+                // This error should be caught in front end as an invalid key expression.
+                ERROR_CHECK(key_info->match_type() == "ternary", ErrorType::ERR_INVALID,
                             "%1%: mask value specified in static entry for field %2% a "
                             "non ternary match type in table %3%.",
-                            key, canon_name(match_key_name), tbl->externalName());
+                            key, key_name, tbl->externalName());
                 // Ternary match with value and mask specified
                 // e.g. In p4 - "15 &&& 0xff" where 15 is value and 0xff is mask
-                if (auto val = ts->left->to<IR::Constant>()) {
-                    out << indent << "value: \"0x" << std::hex
-                        << val << std::dec << "\"" << std::endl;
-                }
-                if (auto mask = ts->right->to<IR::Constant>()) {
-                    out << indent << "mask: \"0x" << std::hex
-                        << mask->value << std::dec << "\"" << std::endl;
-                }
-            } else if (key->to<IR::DefaultExpression>()) {
-                if (match_key->match_type == "range") {
-                    out << indent << "range_start: \"0x0\"" << std::endl;
-                    auto range_bit_width = match_key->expr->type->width_bits();
-                    auto range_end = ((IR::Constant(1) << range_bit_width) - 1).clone();
-                    out << indent << "range_end: \"0x"
-                        << std::hex << range_end << std::dec << "\"" << std::endl;
-
-                } else {
-                    out << indent << "value: \"0x0\"" << std::endl;
-                    if (match_key->match_type == "ternary") {
-                        out << indent << "mask: \"0x0\"" << std::endl;
-                    }
-                }
-            } else if (auto r = key->to<IR::Range>()) {
-                // This error should be caught in front end as an invalid key
-                // expression
-                ERROR_CHECK(match_key->match_type == "range", ErrorType::ERR_INVALID,
+                const auto hasValue = ts->left->to<IR::Constant>();
+                const auto hasMask = ts->right->to<IR::Constant>();
+                // TODO Should we ERROR_CHECK(hasValue && hasMask)?
+                auto value = hasValue? hasValue->value : 0;
+                auto mask = hasMask? hasMask->value : key_info->field_mask();
+                out_value(value, key_info->match_type(), mask);
+            } else if (const auto r = key->to<IR::Range>()) {
+                // This error should be caught in front end as an invalid key expression.
+                ERROR_CHECK(key_info->match_type() == "range", ErrorType::ERR_INVALID,
                             "range value specified in static entry for field %2% a "
-                            "non range match type in table %1%.",
-                            tbl, canon_name(match_key_name));
-                // Extract start and end values from range node
-                if (auto range_start = r->left->to<IR::Constant>())
-                    out << indent << "range_start: \"0x"
-                        << std::hex << range_start->value << std::dec << "\"" << std::endl;
-                if (auto range_end = r->right->to<IR::Constant>())
-                    out << indent << "range_end: \"0x"
-                        << std::hex << range_end->value << std::dec << "\"" << std::endl;
+                            "non range match type in table %1%.", tbl, key_name);
+                const auto hasStart = r->left->to<IR::Constant>();
+                const auto hasEnd = r->right->to<IR::Constant>();
+                // TODO Should we ERROR_CHECK(hasStart && hasEnd)?
+                auto start = hasStart? hasStart->value : 0;
+                auto end = hasEnd? hasEnd->value : key_info->expression_mask();
+                out_range(start, end);
+            } else if (key->to<IR::DefaultExpression>()) {
+                if (key_info->match_type() == "range") {
+                    out_range(0, key_info->expression_mask());
+                } else {
+                    out_value(0, key_info->match_type(), 0);
+                }
             } else {
                 P4C_UNIMPLEMENTED("Static entries are only supported for "
                     "match keys with bit-string type");
             }
-            key_index++;
+            ++key_info;
             indent--;
         }
+        ERROR_CHECK(key_info == extract.end(), ErrorType::ERR_INVALID,
+                    "missing key. Static entry has less keys than those specified "
+                    "in match field for table %1%.", tbl->externalName());
 
+        auto method = method_call->method->to<IR::PathExpression>();
+        auto path = method->path;
         for (auto action : Values(tbl->actions)) {
             if (action->name.name == path->name) {
                 out << indent << "action_handle: 0x" << hex(action->handle) << std::endl;
@@ -3015,6 +3158,7 @@ void MauAsmOutput::emit_static_entries(std::ostream &out, indent_t indent,
                 "Total arguments on method call differ from those on method"
                 " parameters in table %s", tbl->name);
             out << std::endl;
+            size_t param_index = 0;
             for (auto param : *method_call->arguments) {
                 auto p = param_list.at(param_index++);
                 auto param_name = p->name;
@@ -3732,10 +3876,9 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             out << indent++ << "default_action_parameters:" << std::endl;
             int index = 0;
             for (auto param : act->default_params) {
-                auto pval = param->expression;
-                if (pval->is<IR::Constant>())
-                    out << indent << act->args[index++]->name << ": \"0x"
-                        << std::hex << pval << std::dec << "\"" << std::endl;
+                if (const auto pval = param->expression->to<IR::Constant>())
+                    out << indent << act->args[index++]->name << ": "
+                        << '"' << hex_big_int(pval->value) << '"' << std::endl;
             }
             indent--;
             break;

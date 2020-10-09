@@ -356,11 +356,11 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
         } else if ((what[0] == "crc" || what[0] == "crc_rev" || what[0] == "crc_reverse") &&
                    CHECKTYPE2(what[1], tBIGINT, tINT)) {
             Crc *rv = new Crc(what.lineno);
-            if (what[0] != "crc") rv->reverse = true;
-            if (what[1].type == tBIGINT)
-                rv->poly.setraw(what[1].bigi.data, what[1].bigi.size);
-            else
-                rv->poly.setraw(what[1].i & 0xFFFFFFFF);
+            if (what[0] != "crc")
+                rv->reverse = true;
+            // tINT types are masked to 32bits, tBIGINT are left as they are.
+            auto crcSize = [](value_type type){return type == tINT? 32 : 0;};
+            rv->poly = get_bitvec(what[1], crcSize(what[1].type));
             // Shift and set LSB to 1 to generate polynomial from Koopman number
             // provided in assembly
             rv->poly <<= 1;
@@ -368,24 +368,12 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             int i = 2;
 
             if (what.vec.size > 2) {
-                if (what[2].type == tBIGINT) {
-                    rv->init.setraw(what[2].bigi.data, what[2].bigi.size);
-                    i++;
-                } else if (what[2].type == tINT) {
-                    rv->init.setraw(what[2].i & 0xFFFFFFFF);
-                    i++;
-                }
-
+                rv->init = get_bitvec(what[2], crcSize(what[2].type));
+                ++i;
                 if (what.vec.size > 3) {
-                    if (what[3].type == tBIGINT) {
-                        rv->final_xor.setraw(what[3].bigi.data, what[3].bigi.size);
-                        i++;
-                    } else if (what[3].type == tINT) {
-                        rv->final_xor.setraw(what[3].i & 0xFFFFFFFF);
-                        i++;
-                    }
+                    rv->final_xor = get_bitvec(what[3], crcSize(what[3].type));
+                    ++i;
                 }
-
                 if (what.vec.size > 4) {
                     if (what[4].type == tINT) {
                         rv->total_input_bits = what[4].i;

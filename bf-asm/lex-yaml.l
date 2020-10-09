@@ -28,7 +28,7 @@ static int parse_match(YYSTYPE *, const char *s, int bits_per_digit);
 %}
 
 ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
-STR \".*\"
+STR \"(\\.|[^\n"\\])*\"
 %option nounput noyywrap
 
 %%

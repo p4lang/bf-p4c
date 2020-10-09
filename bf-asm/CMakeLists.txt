@@ -312,7 +312,8 @@ if (ENABLE_GTESTS)
     ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
   )
   target_link_libraries (gtestasm PRIVATE bfas_lib gtest)
-  target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3)
+  target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3
+                          -Wno-unused-parameter -Wno-sign-compare)
 
   # Add to CTests - but this is in the BFASM project viz build/bf-asm, not build/p4c
   add_test (NAME gtestasm COMMAND gtestasm WORKING_DIRECTORY ${P4C_BINARY_DIR})

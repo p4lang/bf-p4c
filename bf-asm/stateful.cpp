@@ -108,13 +108,8 @@ void StatefulTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT))
                 busy_value = kv.value.i;
         } else if (kv.key == "clear_value" && Target::SUPPORT_SALU_FAST_CLEAR()) {
-            if (CHECKTYPE2(kv.value, tINT, tBIGINT)) {
-                if (kv.value.type == tINT)
-                    clear_value.setraw(kv.value.i);
-                else
-                    clear_value.setraw(kv.value.bigi.data, kv.value.bigi.size);
-                if (clear_value.max().index() >= 128)
-                    error(kv.value.lineno, "Value too large for 128 bits"); }
+            if (CHECKTYPE2(kv.value, tINT, tBIGINT))
+                clear_value = get_bitvec(kv.value, 128, "Value too large for 128 bits");
         } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name());
