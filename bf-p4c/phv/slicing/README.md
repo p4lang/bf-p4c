@@ -411,6 +411,20 @@ struct AfterSplitConstraint {
 
 With the enhanced `AfterSplitConstraint` class, the above pruning strategies still apply.
 
+### Pruning strategy: metadata list joining two exact containers slicelists with different sizes
+When a medatada list joins two exact containers lists of different sizes into one supercluster,
+we should prune early because the supercluster cannot be well-formed already.
+For example,
+```text
+sl_1: [f1<16>, f2<8>, f3<8>[0:1], f3<8>[2:7]], total 32, exact.
+sl_2: [f2'<8>, f4<8>[0:3], f4<8>[4:7]], total 16, exact.
+sl_3: [md1<2>, pad<2>, md2<4>]
+rotational clusters:
+{f3[0:1], md1}, {f4<8>[0:3], md2}
+```
+sl3 will join sl1 and sl2 into one super cluster, and we can infer that
+this cluster is invalid because there are a 32-bit exact list and a 16-bit exact list.
+
 ## Enhancement 4: Pack conflicts between fields
 Two fields exhibit a pack conflict when they cannot end up in the same list. This constraint is
 orthogonal to the above constraints. The algorithm checks all splitted slice lists to ensure that no

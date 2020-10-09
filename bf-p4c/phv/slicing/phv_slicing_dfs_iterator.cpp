@@ -13,7 +13,9 @@
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
+#include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
+#include "lib/range.h"
 
 namespace {
 
@@ -342,8 +344,22 @@ std::pair<SplitSchema, SplitDecision> DfsItrContext::make_split_meta(
             if (offset + fs.size() <= first_n_bits) {
                 decisions[fs] = container_size_constraint;
             } else {
-                auto partial_fs = FieldSlice(fs, StartLen(fs.range().lo, first_n_bits - offset));
+                const int length = first_n_bits - offset;
+                auto partial_fs = FieldSlice(fs, StartLen(fs.range().lo, length));
                 decisions[partial_fs] = container_size_constraint;
+
+                // Needs to update slices that has already been split.
+                for (const auto& other : sc->cluster(fs).slices()) {
+                    if (split_decisions_i.count(other)) {
+                        const auto head = FieldSlice(other, StartLen(other.range().lo, length));
+                        const auto tail = FieldSlice(
+                            other, StartLen(other.range().lo + length, other.size() - length));
+                        decisions[head] = split_decisions_i.at(other);
+                        decisions[tail] = split_decisions_i.at(other);
+                        LOG6("fs update " << other << " into " << head << " and " << tail
+                                          << " because " << fs << " is split into " << partial_fs);
+                    }
+                }
             }
             offset += fs.size();
         }
@@ -700,7 +716,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
                 has_conflicting_decisions = true;
                 return;
             } else {
-                decided_sz[other] = split_decisions_i.at(fs);
+                decided_sz[other] = *intersection;
             }
         }
     });
@@ -857,6 +873,104 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
     return false;
 }
 
+// split_by_bytes split @p by each byte.
+std::vector<SuperCluster::SliceList*> split_sl_at_byte_boundary(const SuperCluster::SliceList* sl) {
+    int offset = 0;
+    auto curr = new SuperCluster::SliceList();
+    std::vector<SuperCluster::SliceList*> rst;
+    for (auto itr = sl->begin(); itr != sl->end(); itr++) {
+        const auto& fs = *itr;
+        if (offset + fs.size() >= 8) {
+            const int head_length = 8 - offset;
+            auto head = FieldSlice(fs, StartLen(fs.range().lo, head_length));
+            curr->push_back(head);
+            auto remainder = new SuperCluster::SliceList();
+            remainder->assign(std::next(itr), sl->end());
+            if (fs.size() - head_length > 0) {
+                auto tail =
+                    FieldSlice(fs, StartLen(fs.range().lo + head_length, fs.size() - head_length));
+                remainder->push_front(tail);
+            }
+            if (remainder->size() > 0) {
+                rst = split_sl_at_byte_boundary(remainder);
+            }
+            rst.push_back(curr);
+            return rst;
+        } else {
+            offset += fs.size();
+            curr->push_back(fs);
+        }
+    }
+    if (curr->size() > 0) {
+        rst.push_back(curr);
+    }
+    return rst;
+}
+
+// RangeLookupableConstraints supports range lookup on field slices.
+struct RangeLookupableConstraints {
+    ordered_map<const Field*, std::map<le_bitrange, AfterSplitConstraint>> constraints;
+
+    explicit RangeLookupableConstraints(
+        const ordered_map<FieldSlice, AfterSplitConstraint>& original) {
+        for (const auto& c : original) {
+            constraints[c.first.field()][c.first.range()] = c.second;
+        }
+    }
+
+    boost::optional<AfterSplitConstraint> lookup(const FieldSlice& fs) const {
+        if (!constraints.count(fs.field())) {
+            return boost::none;
+        }
+        for (const auto& c : constraints.at(fs.field())) {
+            if (c.first.contains(fs.range())) {
+                return c.second;
+            }
+        }
+        return boost::none;
+    }
+};
+
+bool DfsItrContext::dfs_prune_unsat_exact_list_size_mismatch(
+    const ordered_map<FieldSlice, AfterSplitConstraint>& decided_sz, const SuperCluster* sc) const {
+    const auto constraints = RangeLookupableConstraints(decided_sz);
+    for (auto* sl : sc->slice_lists()) {
+        // Note that exact_list_size mismatch can only be created by metadata lists that
+        // merge two exact lists with different sizes into one supercluster. Also,
+        // exact_containers list has been checked by collect_after_split_constraint already.
+        if (sl->front().field()->exact_containers()) {
+            continue;
+        }
+        std::vector<SuperCluster::SliceList*> targets;
+        if (!need_further_split(sl)) {
+            targets.push_back(sl);
+        } else {
+            targets = split_sl_at_byte_boundary(sl);
+        }
+        for (auto* target : targets) {
+            AfterSplitConstraint exact_size_req{
+                .t = AfterSplitConstraint::ConstraintType::NONE,
+                .size = 0,
+            };
+            for (const auto& fs : *target) {
+                auto fs_constraint = constraints.lookup(fs);
+                if (fs_constraint) {
+                    auto intersect = exact_size_req.intersect(*fs_constraint);
+                    if (!intersect) {
+                        LOG5("DFS pruned(unsat_exact_size_mismatch): at "
+                             << fs << ", it must be " << *fs_constraint << " but there are "
+                             << exact_size_req << " before this fieldslice");
+                        return true;
+                    } else {
+                        exact_size_req = *intersect;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool DfsItrContext::dfs_prune() const {
     for (const auto* sc : to_be_split_i) {
         // unwell_formed
@@ -877,6 +991,11 @@ bool DfsItrContext::dfs_prune() const {
 
         // constraints for a slice list cannot be *all* satisfied.
         if (dfs_prune_unsat_slicelist_constraints(*after_split_constraints, sc)) {
+            return true;
+        }
+
+        // prune when metadata list joins two size-mismatched exact lists.
+        if (dfs_prune_unsat_exact_list_size_mismatch(*after_split_constraints, sc)) {
             return true;
         }
     }

@@ -341,7 +341,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-3157
 p4c_add_xfail_reason("tofino2"
-  "PHV allocation is invalid for container"
+  "PHV allocation is invalid for container|Exiting with SIGSEGV"
   extensions/p4_tests/p4_16/customer/extreme/p4c-1565-2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1572-b2.p4
   extensions/p4_tests/p4_16/customer/extreme/p4c-1585-b2.p4

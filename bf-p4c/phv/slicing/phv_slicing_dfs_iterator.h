@@ -148,6 +148,19 @@ class DfsItrContext : public IteratorInterface {
         const ordered_map<FieldSlice, AfterSplitConstraint>& constraints,
         const SuperCluster* sc) const;
 
+    /// return true if exists a medatada list that will join two
+    /// exact_containers lists of different sizes. For example:;
+    /// sl_1: [f1<16>, f2<8>, f3<8>[0:1], f3<8>[2:7]], total 32, exact.
+    /// sl_2: [f2'<8>, f4<8>[0:3], f4<8>[4:7]], total 16, exact.
+    /// sl_3: [md1<2>, pad<2>, md2<4>]
+    /// rotational clusters:
+    /// {f3[0:1], md1}, {f4<8>[0:3], md2}
+    /// sl_3 will join sl_1 and sl_2 into one super cluster, and we can infer that
+    /// this cluster is invalid because exact slice list sizes are not the same.
+    bool dfs_prune_unsat_exact_list_size_mismatch(
+        const ordered_map<FieldSlice, AfterSplitConstraint>& decided_sz,
+        const SuperCluster* sc) const;
+
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
     /// of @p sc based on split_decisions_i and pa_container_size_upcastings_i.
     boost::optional<ordered_map<FieldSlice, AfterSplitConstraint>> collect_aftersplit_constraints(
