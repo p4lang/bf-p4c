@@ -275,6 +275,10 @@ boost::optional<SliceListLoc> DfsItrContext::dfs_pick_next() const {
     NextSplitTargetMetrics best;
 
     for (auto* sc : to_be_split_i) {
+        // Unfortunately using after_split_constraints here implies that
+        // fixes and improvement of after_split constraints will
+        // change the order of searching, which may have a butterfly effect
+        // on slicing and allocation in some cases.
         auto after_split_constraints = collect_aftersplit_constraints(sc);
         if (!after_split_constraints) {
             return boost::none;
@@ -643,7 +647,7 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
     ordered_map<FieldSlice, AfterSplitConstraint> decided_sz;
     bool has_conflicting_decisions = false;
 
-    // record AfterSplitConstraint from pa_container_size upcastring pragma.
+    // record AfterSplitConstraint from pa_container_size upcasting pragma.
     sc->forall_fieldslices([&](const FieldSlice& fs) {
         if (pa_container_size_upcastings_i.count(fs.field())) {
             le_bitrange range;
@@ -698,21 +702,35 @@ DfsItrContext::collect_aftersplit_constraints(const SuperCluster* sc) const {
         if (has_conflicting_decisions) {
             return;
         }
-        if (!split_decisions_i.count(fs) ||
-            split_decisions_i.at(fs).t == AfterSplitConstraint::ConstraintType::NONE) {
+        AfterSplitConstraint constraint{.t = AfterSplitConstraint::ConstraintType::NONE, .size = 0};
+        // propagate decision collected above, that was not made by DFS, to other fs in cluster.
+        if (decided_sz.count(fs)) {
+            constraint = decided_sz.at(fs);
+        }
+        if (split_decisions_i.count(fs)) {
+            auto intersection = constraint.intersect(split_decisions_i.at(fs));
+            if (!intersection) {
+                LOG5("DFS pruned(conflicted decisions on same field): " << fs
+                     << " must be both " << constraint << " and " << split_decisions_i.at(fs));
+                has_conflicting_decisions = true;
+                return;
+            }
+            constraint = *intersection;
+        }
+        if (constraint.t == AfterSplitConstraint::ConstraintType::NONE) {
             return;
         }
         for (const auto& other : sc->cluster(fs).slices()) {
             if (!decided_sz.count(other)) {
-                decided_sz[other] = split_decisions_i.at(fs);
+                decided_sz[other] = constraint;
                 continue;
             }
 
-            auto intersection = decided_sz.at(other).intersect(split_decisions_i.at(fs));
+            auto intersection = decided_sz.at(other).intersect(constraint);
             if (!intersection) {
                 LOG5("DFS pruned(conflicted decisions): " << other << " must "
                                                           << decided_sz.at(other) << ", but " << fs
-                                                          << " must " << split_decisions_i.at(fs));
+                                                          << " must " << constraint);
                 has_conflicting_decisions = true;
                 return;
             } else {

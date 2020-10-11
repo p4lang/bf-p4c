@@ -9,6 +9,8 @@
 @pa_auto_init_metadata
 
 
+@pa_container_size("egress", "Dateland.Burwell.Mackville", 32) // table fitting
+
 @pa_container_size("ingress", "Dateland.Ramos.Norwood", 16, 8)
 
 @pa_container_size("ingress", "Doddridge.Daleville.Roosville", 32)

@@ -9,6 +9,7 @@
 @pa_auto_init_metadata
 
 
+@pa_container_size("egress", "Dateland.Burwell.Mackville", 32) // fitting
 @pa_mutually_exclusive("egress" , "Doddridge.Norma.AquaPark" , "Dateland.Freeny.AquaPark")
 @pa_mutually_exclusive("egress" , "Dateland.Tiburon.Union" , "Dateland.Freeny.AquaPark")
 @pa_mutually_exclusive("egress" , "Dateland.Freeny.AquaPark" , "Doddridge.Norma.AquaPark")
