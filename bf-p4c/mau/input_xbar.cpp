@@ -3567,6 +3567,11 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         bits_of_my_hash_seen += overlap.size();
     }
     hdh.algorithm = alloc_req.func->algorithm;
+    if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+        hdh.hash_gen_expr = alloc_req.func->hash_gen_expr;
+    } else {
+        // Non-"identity" hashes can't be built from (just) the hash_gen_expr
+        hdh.hash_gen_expr = nullptr; }
     hdh.group = hash_group;
     hdh.allocated = true;
     rv.p4_hash_range = alloc_req.func->hash_bits;
@@ -3578,9 +3583,14 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     // This is the requirement for assembly generation. The HashDistUse
     // requirements are just the OR of all of its HashDistIRUse hash_tables
     rv.use.hash_table_inputs[hash_group] = rv.use.compute_hash_tables();
-    rv.use.hash_seed[hash_group]
-        |= determine_final_xor(&(alloc_req.func->algorithm), phv, hdh.galois_start_bit_to_p4_hash,
-                               rv.use.field_list_order, rv.use.total_input_bits());
+    if (hdh.hash_gen_expr) {
+        for (auto &slice : hdh.galois_start_bit_to_p4_hash) {
+            bitvec seed = IXBarExprSeed(hdh.hash_gen_expr, slice.second);
+            rv.use.hash_seed[hash_group] |= seed << slice.first; }
+    } else {
+        rv.use.hash_seed[hash_group]
+            |= determine_final_xor(&alloc_req.func->algorithm, phv, hdh.galois_start_bit_to_p4_hash,
+                                   rv.use.field_list_order, rv.use.total_input_bits()); }
     rv.use.type = IXBar::Use::HASH_DIST;
     rv.use.used_by = tbl->match_table->externalName();
     rv.use.hash_dist_type = alloc_req.dest;
@@ -3796,6 +3806,11 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
     for (auto &ir_alloc : hd_alloc.ir_allocations) {
         // For updating functions, need to have the same bytes and the same hash_table_inputs
         HashDistIRUse curr;
+        // FIXME -- why are we not just copying the whole ir_alloc (just curr = ir_alloc)?
+        // what needs to be different?  Currently not copying:
+        //     use.algorithm, use.galois_matrix_bitsm use, galois_start_bit_to_p4_hash,
+        //     dyn_hash_name
+        // so they remain uninitialized on curr?
         curr.use.field_list_order.insert(curr.use.field_list_order.end(),
              ir_alloc.use.field_list_order.begin(), ir_alloc.use.field_list_order.end());
         curr.use.use.insert(curr.use.use.end(), ir_alloc.use.use.begin(), ir_alloc.use.use.end());
@@ -3807,6 +3822,7 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
         }
         curr.use.hash_dist_hash.allocated = true;
         curr.use.hash_dist_hash.group = ir_alloc.use.hash_dist_hash.group;
+        curr.use.hash_dist_hash.hash_gen_expr = ir_alloc.use.hash_dist_hash.hash_gen_expr;
         curr.use.type = Use::HASH_DIST;
         curr.use.hash_dist_type = curr.dest;
         chained_hd_alloc.ir_allocations.emplace_back(curr);
@@ -4046,16 +4062,16 @@ void IXBar::XBarHashDist::hash_action() {
         return;
 
     IR::Vector<IR::Expression> components;
-    IR::ListExpression *field_list = new IR::ListExpression(components);
     int bits_required = 0;
     for (auto read : tbl->match_key) {
         if (read->for_match()) {
             le_bitrange bits;
             phv.field(read->expr, &bits);
             bits_required += bits.size();
-            field_list->push_back(read->expr);
+            components.push_back(read->expr);
         }
     }
+    IR::ListExpression *field_list = new IR::ListExpression(components);
 
     auto hge = new IR::MAU::HashGenExpression(tbl->srcInfo, IR::Type::Bits::get(bits_required),
                        field_list, IR::MAU::HashFunction::identity());

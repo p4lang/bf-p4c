@@ -32,7 +32,7 @@ void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
         i.inThread[INGRESS] = false;
 }
 
-void CollectHeaderStackInfo::postorder(IR::Primitive* prim) {
+void CollectHeaderStackInfo::postorder(IR::MAU::Primitive* prim) {
     if (prim->name == "push_front" || prim->name == "pop_front") {
         LOG3("CollectHeaderStackInfo: visiting " << prim);
         BUG_CHECK(prim->operands.size() == 2, "wrong number of operands to %s", prim);
@@ -121,8 +121,8 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
     // then cleared when an initialization is found.
     ordered_map<cstring, bitvec> pushed_inits;
 
-    ordered_map<cstring, const IR::Primitive*> push_prims;
-    IR::Vector<IR::Primitive> to_keep;
+    ordered_map<cstring, const IR::MAU::Primitive*> push_prims;
+    IR::Vector<IR::MAU::Primitive> to_keep;
 
     for (auto* prim : act->action) {
         to_keep.push_back(prim);

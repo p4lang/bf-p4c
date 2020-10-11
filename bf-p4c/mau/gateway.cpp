@@ -967,7 +967,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool BuildGatewayMatch::preorder(const IR::Primitive *) {
+bool BuildGatewayMatch::preorder(const IR::MAU::Primitive *) {
     return false;
 }
 

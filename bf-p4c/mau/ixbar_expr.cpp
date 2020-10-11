@@ -250,11 +250,13 @@ void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::BFN::SignExtend
 
 void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::MAU::HashGenExpression *hge) {
     inside_expr = false;
+    BUG_CHECK(!self._func, "Multiple HashGenExpressions in a single BuildP4HashFunction");
     self._func = new P4HashFunction();
     self._func->inputs = fields;
     self._func->hash_bits = { 0, hge->type->width_bits() - 1 };
     self._func->algorithm = hge->algorithm;
     self._func->symmetrically_hashed_inputs = sym_fields;
+    self._func->hash_gen_expr = hge->expr;
     if (hge->dynamic)
         self._func->dyn_hash_name = hge->id.name;
 }

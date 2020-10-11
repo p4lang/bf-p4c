@@ -618,7 +618,7 @@ static double fn_max[2][3] = { { 1.36930639376291528364, 1.875, 3.515625 },
                                { 1.41421356237309504880, 1.0, 1.0 } };
 
 
-bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
+bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
     cstring method;
     if (auto p = prim->name.find('.'))
         method = p + 1;
@@ -1526,10 +1526,10 @@ const IR::Expression *FixupStatefulAlu::UpdateEncodings::preorder(IR::Member *ex
     if (!enum_type || !self.encodings.count(enum_type)) return exp;
     if (!exp->expr->is<IR::TypeNameExpression>()) return exp;
     auto encoding = self.encodings.at(enum_type).encoding;
-    const IR::Primitive *prim;
+    const IR::MAU::Primitive *prim;
     if (getParent<IR::AssignmentStatement>() || getParent<IR::BFN::SavedRVal>()) {
         // ok
-    } else if ((prim = getParent<IR::Primitive>()) && prim->name == "modify_field") {
+    } else if ((prim = getParent<IR::MAU::Primitive>()) && prim->name == "modify_field") {
         // ok
     } else {
         error(ErrorType::ERR_UNSUPPORTED, "%1%: enum reference", exp);

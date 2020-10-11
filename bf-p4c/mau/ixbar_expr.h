@@ -2,10 +2,13 @@
 #define BF_P4C_MAU_IXBAR_EXPR_H_
 
 #include "ir/ir.h"
+#include "boost/range/adaptor/reversed.hpp"
+#include "lib/bitvec.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/** Functor to test if an expression can be computed in the ixbar & hash matrixes */
 class CanBeIXBarExpr : public Inspector {
     static constexpr int MAX_HASH_BITS = 52;
 
@@ -37,17 +40,16 @@ class CanBeIXBarExpr : public Inspector {
         return type->to<IR::Type_Extern>(); }
 
     profile_t init_apply(const IR::Node *n) {
-        rv = true;
+        auto *expr = n->to<IR::Expression>();
+        BUG_CHECK(expr, "CanBeIXBarExpr called on non-expression");
+        rv = expr->type->width_bits() <= get_max_hash_bits();
         return Inspector::init_apply(n); }
     bool preorder(const IR::Node *) { return false; }  // ignore non-expressions
     bool preorder(const IR::PathExpression *pe) {
-        if (pe->type->width_bits() > get_max_hash_bits() || !checkPath(pe)) rv = false;
+        if (!checkPath(pe)) rv = false;
         return false; }
-    bool preorder(const IR::Constant *c) {
-        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
-        return false; }
+    bool preorder(const IR::Constant *) { return false; }
     bool preorder(const IR::Member *m) {
-        if (m->type->width_bits() > get_max_hash_bits()) rv = false;
         auto *base = m->expr;
         while ((m = base->to<IR::Member>())) base = m->expr;
         if (auto *pe = base->to<IR::PathExpression>()) {
@@ -57,42 +59,18 @@ class CanBeIXBarExpr : public Inspector {
         } else {
             rv = false; }
         return false; }
-    bool preorder(const IR::TempVar *tv) {
-        if (tv->type->width_bits() > get_max_hash_bits()) rv = false;
-        return false; }
-    bool preorder(const IR::Slice *sl) {
-        if (sl->type->width_bits() > get_max_hash_bits()) {
-            rv = false;
-        } else if (sl->e0->is<IR::Member>() || sl->e0->is<IR::TempVar>()) {
-            // can do a small slice of a field even when whole field would be too big
-            return false; }
-        return rv; }
-    bool preorder(const IR::Concat *c) {
-        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
-        return rv; }
-    bool preorder(const IR::Cast *c) {
-        if (c->type->width_bits() > get_max_hash_bits()) rv = false;
-        return rv; }
-    bool preorder(const IR::BFN::SignExtend *e) {
-        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
-        return rv; }
-    bool preorder(const IR::BFN::ReinterpretCast *e) {
-        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
-        return rv; }
-    bool preorder(const IR::BXor *e) {
-        if (e->type->width_bits() > get_max_hash_bits()) rv = false;
-        return rv; }
+    bool preorder(const IR::TempVar *) { return false; }
+    bool preorder(const IR::Slice *) { return rv; }
+    bool preorder(const IR::Concat *) { return rv; }
+    bool preorder(const IR::Cast *) { return rv; }
+    bool preorder(const IR::BFN::SignExtend *) { return rv; }
+    bool preorder(const IR::BFN::ReinterpretCast *) { return rv; }
+    bool preorder(const IR::BXor *) { return rv; }
     bool preorder(const IR::BAnd *e) {
-        if (e->type->width_bits() > get_max_hash_bits()) {
-            rv = false;
-        } else if (!e->left->is<IR::Constant>() && e->right->is<IR::Constant>()) {
-            rv = false; }
+        if (!e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) rv = false;
         return rv; }
     bool preorder(const IR::BOr *e) {
-        if (e->type->width_bits() > get_max_hash_bits()) {
-            rv = false;
-        } else if (!e->left->is<IR::Constant>() && e->right->is<IR::Constant>()) {
-            rv = false; }
+        if (!e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) rv = false;
         return rv; }
     bool preorder(const IR::MethodCallExpression *mce) {
         if (auto *method = mce->method->to<IR::Member>()) {
@@ -112,12 +90,86 @@ class CanBeIXBarExpr : public Inspector {
 };
 
 
+/* FIXME -- this should be a constructor of bitvec in the open source code */
+inline bitvec to_bitvec(big_int v) {
+    bitvec rv(static_cast<uintptr_t>(v));
+    v >>= sizeof(uintptr_t) * CHAR_BIT;
+    if (v > 0)
+        rv |= to_bitvec(v) << (sizeof(uintptr_t) * CHAR_BIT);
+    return rv;
+}
+
+/** Functor to compute the constant (seed) part of an IXBar expression */
+class IXBarExprSeed : public Inspector {
+    le_bitrange slice;
+    int         shift = 0;
+    bitvec      rv;
+
+    bool preorder(const IR::Annotation *) { return false; }
+    bool preorder(const IR::Type *) { return false; }
+    bool preorder(const IR::Constant *k) {
+        if (getParent<IR::BAnd>()) return false;
+        rv ^= to_bitvec((k->value >> slice.lo) & ((big_int(1) << slice.size()) - 1)) << shift;
+        return false; }
+    bool preorder(const IR::Concat *e) {
+        auto tmp = slice;
+        int rwidth = e->right->type->width_bits();
+        if (slice.lo < rwidth) {
+            slice = slice.intersectWith(0, rwidth-1);
+            visit(e->right, "right"); }
+        if (tmp.hi >= rwidth) {
+            slice = tmp;
+            slice.lo = rwidth;
+            shift += rwidth;
+            slice = slice.shiftedByBits(-rwidth);
+            visit(e->left, "left");
+            shift -= rwidth; }
+        slice = tmp;
+        return false; }
+    bool preorder(const IR::ListExpression *fl) {
+        auto tmp = slice;
+        auto old_shift = shift;
+        for (auto *e : boost::adaptors::reverse(fl->components)) {
+            int width = e->type->width_bits();
+            if (slice.lo < width) {
+                auto t2 = slice;
+                slice = slice.intersectWith(0, width-1);
+                visit(e);
+                slice = t2; }
+            if (slice.hi < width) break;
+            slice = slice.shiftedByBits(-width);
+            shift += width; }
+        slice = tmp;
+        shift = old_shift;
+        return false; }
+    bool preorder(const IR::Slice *sl) {
+        auto tmp = slice;
+        slice = slice.shiftedByBits(-sl->getL());
+        int width = sl->getH() - sl->getL() + 1;
+        if (slice.size() > width)
+            slice.hi = slice.lo + width - 1;
+        visit(sl->e0, "e0");
+        slice = tmp;
+        return false; }
+    bool preorder(const IR::MethodCallExpression *mce) {
+        BUG("MethodCallExpression not supported in IXBarExprSeed: %s", mce);
+        return false; }
+
+ public:
+    IXBarExprSeed(const IR::Expression *e, le_bitrange sl) : slice(sl) { e->apply(*this); }
+    operator bitvec() const { return rv >> slice.lo; }
+};
+
 struct P4HashFunction {
     safe_vector<const IR::Expression *> inputs;
     le_bitrange hash_bits;
     IR::MAU::HashFunction algorithm;
     cstring dyn_hash_name;
     LTBitMatrix symmetrically_hashed_inputs;
+    const IR::Expression *hash_gen_expr = nullptr;
+    // FIXME -- we record the expression the hash is derived from so it can be copied to
+    // the IXBar::Use::HashDistHash and then output it in the .bfa file.  Perhaps we should
+    // compute the (raw) GFM bits here instead?
 
     bool is_dynamic() const {
        bool rv = !dyn_hash_name.isNull();

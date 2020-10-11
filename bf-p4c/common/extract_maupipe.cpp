@@ -194,10 +194,10 @@ class ConvertMethodCalls : public MauTransform {
         return prim;
     }
 
-    const IR::Primitive *postorder(IR::Primitive *prim) {
+    const IR::MAU::Primitive *postorder(IR::MAU::Primitive *prim) {
         if (prim->name == "method_call_init") {
             BUG_CHECK(prim->operands.size() == 1, "method call initialization failed");
-            if (auto *p = prim->operands.at(0)->to<IR::Primitive>())
+            if (auto *p = prim->operands.at(0)->to<IR::MAU::Primitive>())
                 return p;
             else if (prim->operands.at(0)->is<IR::Member>())
                 // comes from a bare "isValid" call -- is a noop
@@ -322,6 +322,13 @@ class SetupActionProperties : public MauModifier {
 class ActionBodySetup : public Inspector {
     IR::MAU::Action         *af;
 
+    bool InHashAnnot() const {
+        const Visitor::Context *ctxt = nullptr;
+        while (auto *blk = findContext<IR::BlockStatement>(ctxt)) {
+            if (blk->getAnnotation("in_hash")) return true;
+            if (blk->getAnnotation("in_vliw")) return false; }
+        return false; }
+
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
@@ -329,12 +336,13 @@ class ActionBodySetup : public Inspector {
             cstring pname = "modify_field";
             if (assign->left->type->is<IR::Type_Header>())
                 pname = "copy_header";
-            auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+            auto prim = new IR::MAU::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+            prim->in_hash = InHashAnnot();
             af->action.push_back(prim); }
         return false; }
     bool preorder(const IR::MethodCallStatement *mc) override {
         if (!af->exitAction) {
-            auto mc_init = new IR::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
+            auto mc_init = new IR::MAU::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
             af->action.push_back(mc_init); }
         return false;
     }
@@ -1193,7 +1201,7 @@ void AttachTables::InitializeStatefulAlus
             inst_ctor[salu] = new CreateSaluInstruction(salu); }
         ext->apply(*inst_ctor[salu]); }
 
-    auto prim = findContext<IR::Primitive>();
+    auto prim = findContext<IR::MAU::Primitive>();
     LOG6("  - " << (prim ? prim->name : "<no primitive>"));
     if (prim && prim->name.endsWith(".address")) {
         salu->chain_vpn = true;

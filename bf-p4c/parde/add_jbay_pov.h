@@ -41,38 +41,38 @@ class AddJBayMetadataPOV : public Transform {
           new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true,
                                                  digest->selector->field->toString() + ".$valid"));
         return digest; }
-    static IR::Primitive* create_pov_write(const IR::Expression *povBit, bool validate) {
-        return new IR::Primitive("modify_field", povBit,
+    static IR::MAU::Primitive* create_pov_write(const IR::Expression *povBit, bool validate) {
+        return new IR::MAU::Primitive("modify_field", povBit,
             new IR::Constant(IR::Type::Bits::get(1), (unsigned)validate));
     }
-    IR::Node* insert_deparser_param_pov_write(const IR::Primitive* p, bool validate) {
+    IR::Node* insert_deparser_param_pov_write(const IR::MAU::Primitive* p, bool validate) {
         auto *dest = p->operands.at(0);
         for (auto* param : dp->params) {
             if (equiv(dest, param->source->field)) {
                 auto pov_write = create_pov_write(param->povBit->field, validate);
                 if (validate)
-                    return new IR::Vector<IR::Primitive>({ p, pov_write });
+                    return new IR::Vector<IR::MAU::Primitive>({ p, pov_write });
                 else
                     return pov_write;
             }
         }
         return nullptr;
     }
-    IR::Node* insert_deparser_digest_pov_write(const IR::Primitive* p, bool validate) {
+    IR::Node* insert_deparser_digest_pov_write(const IR::MAU::Primitive* p, bool validate) {
         auto *dest = p->operands.at(0);
         for (auto& item : dp->digests) {
             auto* digest = item.second;
             if (equiv(dest, digest->selector->field)) {
                 auto pov_write = create_pov_write(digest->povBit->field, validate);
                 if (validate)
-                    return new IR::Vector<IR::Primitive>({ p, pov_write });
+                    return new IR::Vector<IR::MAU::Primitive>({ p, pov_write });
                 else
                     return pov_write;
             }
         }
         return nullptr;
     }
-    IR::Node *postorder(IR::Primitive *p) override {
+    IR::Node *postorder(IR::MAU::Primitive *p) override {
         if (p->name == "modify_field") {
             if (auto rv = insert_deparser_param_pov_write(p, true))
                 return rv;

@@ -35,6 +35,32 @@ class Slice {
     Slice(const PHV::Field *f, int bit) : field(f), lo(bit), hi(bit) {}
     Slice(const PHV::Field *f, int l, int h) : field(f), lo(l), hi(h) {}
     Slice(const PHV::Field *f, le_bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
+    explicit Slice(const PHV::AbstractField *f)
+    : field(f->field()), lo(f->range().lo), hi(f->range().hi) {}
+    Slice(const PHV::AbstractField *f, int l, int h)
+    : field(f->field()), lo(f->range().lo + l), hi(f->range().lo + h) {
+        if (hi > f->range().hi) hi = f->range().hi;
+        if (!field || lo > hi) invalidate(); }
+    Slice(const PHV::AbstractField *f, le_bitrange r) : Slice(f, r.lo, r.hi) {}
+    Slice(const PHV::AbstractField *f, int bit) : Slice(f, bit, bit) {}
+    Slice(const PhvInfo &phv, const IR::Expression *e) {
+        le_bitrange     bits;
+        if (!(field = phv.field(e, &bits))) {
+            invalidate();
+        } else {
+            lo = bits.lo;
+            hi = bits.hi; } }
+    Slice(const PhvInfo &phv, const IR::Expression *e, int l, int h) {
+        le_bitrange     bits;
+        if (!(field = phv.field(e, &bits))) {
+            invalidate();
+        } else {
+            lo = bits.lo + l;
+            hi = bits.lo + h;
+            if (hi > bits.hi) hi = bits.hi;
+            if (lo > hi) invalidate(); } }
+    Slice(const PhvInfo &phv, const IR::Expression *e, le_bitrange r) : Slice(phv, e, r.lo, r.hi) {}
+    Slice(const PhvInfo &phv, const IR::Expression *e, int bit) : Slice(phv, e, bit, bit) {}
     Slice(const PhvInfo &phv, cstring n)
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)

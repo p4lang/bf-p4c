@@ -646,6 +646,14 @@ struct FormatHash {
         BUG_CHECK(match_data == nullptr || match_data_map == nullptr, "FormatHash not "
                   "configured correctly");
     }
+
+    // functors for formatting expressions as hash expression in bfa.  FIXME -- Should be
+    // folded in to operator<< or as non-static methods?  Problem is we need dynamic
+    // dispatch on IR types, which can only be done with visitors (or messy dynamic_cast
+    // chains)  So we just define them as nested classes here.
+    class SliceWidth;   // find maximum slice width that can output as one line
+    class ZeroHash;     // true iff slice contributes nothing to hash table (all 0s)
+    class Output;       // output a .bfa expression for a slice of a hash expression
 };
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
@@ -1222,6 +1230,241 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     }
 }
 
+/* Find the maximum width of a slice starting from bit that can be output as a single
+ * expression in a hash table in a .bfa file
+ */
+class FormatHash::SliceWidth : public Inspector {
+    const PhvInfo &phv;
+    safe_vector<Slice> &match_data;
+    int bit;
+    int width;
+    bool preorder(const IR::Annotation *) { return false; }
+    bool preorder(const IR::Type *) { return false; }
+    bool preorder(const IR::BXor *) { return true; }
+    bool preorder(const IR::BAnd *) { return true; }
+    bool preorder(const IR::BOr *) { return true; }
+    bool preorder(const IR::Constant *c) {
+        if (getParent<IR::BOr>()) {
+            // can't do OR in the .bfa -- need to slice based on bit ranges
+            big_int v = c->value >> bit;
+            if (v != 0) {
+                int b(v & 1);
+                int w = 1;
+                while (((v >> w) & 1) == b) ++w;
+                if (width > w)
+                    width = w; } }
+        return false; }
+    bool preorder(const IR::Concat *e) {
+        if (bit < e->right->type->width_bits()) {
+            if (width > e->right->type->width_bits() - bit)
+                width = e->right->type->width_bits() - bit;
+            visit(e->right, "right");
+        } else {
+            int tmp = bit;
+            bit -= e->right->type->width_bits();
+            BUG_CHECK(bit < e->left->type->width_bits(), "bit out of range in SliceWidth");
+            if (width > e->left->type->width_bits() - bit)
+                width = e->left->type->width_bits() - bit;
+            visit(e->left, "left");
+            bit = tmp; }
+        return false; }
+    bool preorder(const IR::ListExpression *fl) {
+        int tmp = bit;
+        for (auto *e : boost::adaptors::reverse(fl->components)) {
+            if (bit < e->type->width_bits()) {
+                if (width > e->type->width_bits() - bit)
+                    width = e->type->width_bits() - bit;
+                visit(e);
+                break; }
+            bit -= e->type->width_bits(); }
+        bit = tmp;
+        return false; }
+    bool preorder(const IR::BFN::SignExtend *e) {
+        int w = e->type->width_bits() - bit;
+        if (width > w)
+            width = w;
+        w = width;
+        visit(e->expr, "e");
+        if (width < w && width >= e->expr->type->width_bits())
+            width = w;
+        return false; }
+    bool preorder(const IR::Expression *e) {
+        int w = e->type->width_bits() - bit;
+        if (width > w)
+            width = w;
+        Slice sl(phv, e, bit, bit + width - 1);
+        BUG_CHECK(sl, "Invalid expression %s in FormatHash::SliceWidth", e);
+        for (auto &md : match_data) {
+            if (auto tmp = sl & md) {
+                if (tmp.get_lo() > sl.get_lo()) {
+                    w = tmp.get_lo() - sl.get_lo();
+                    if (width > w)
+                        width = w;
+                    continue; }
+                if (width > tmp.width())
+                    width = tmp.width();
+                break; } }
+        return false; }
+
+ public:
+    SliceWidth(const PhvInfo &p, const IR::Expression *e, int b, safe_vector<Slice> &md)
+    : phv(p), match_data(md), bit(b), width(e->type->width_bits() - b) { e->apply(*this); }
+    operator int() const { return width; }
+};
+
+/* True if a slice of a hash expression is all 0s in the GF matrix.  Slice cannot be
+ * be wider than what is returned by SliceWidth for its start bit */
+class FormatHash::ZeroHash : public Inspector {
+    const PhvInfo &phv;
+    le_bitrange slice;
+    safe_vector<Slice> &match_data;
+    bool    rv = false;
+    bool preorder(const IR::Annotation *) { return false; }
+    bool preorder(const IR::Type *) { return false; }
+    bool preorder(const IR::BXor *e) {
+        if (!rv) {
+            visit(e->left, "left");
+            bool tmp = rv;
+            rv = false;
+            visit(e->right, "right");
+            rv &= tmp; }
+        return false; }
+    bool preorder(const IR::BAnd *) { return true; }
+    bool preorder(const IR::BOr *) { return true; }
+    bool preorder(const IR::BFN::SignExtend *) { return true; }
+    bool preorder(const IR::Constant *k) {
+        if (getParent<IR::BAnd>() || getParent<IR::BOr>()) {
+            big_int v = k->value, mask = 1;
+            v >>= slice.lo;
+            mask <<= slice.size();
+            mask -= 1;
+            v &= mask;
+            if (getParent<IR::BAnd>()) {
+                if (v == 0) rv = true;
+            } else if (v == mask) {
+                rv = true;
+            } else {
+                BUG_CHECK(v == 0, "Incorrect slicing of BOr in hash expression"); }
+        } else {
+            rv = true; }
+        return false; }
+    bool preorder(const IR::Concat *e) {
+        int rwidth = e->right->type->width_bits();
+        if (slice.lo < rwidth) {
+            BUG_CHECK(slice.hi < rwidth, "Slice too wide in FormatHash::ZeroHash");
+            visit(e->right, "right");
+        } else {
+            auto tmp = slice;
+            slice = slice.shiftedByBits(-rwidth);
+            visit(e->left, "left");
+            slice = tmp; }
+        return false; }
+    bool preorder(const IR::ListExpression *fl) {
+        auto tmp = slice;
+        for (auto *e : boost::adaptors::reverse(fl->components)) {
+            int width = e->type->width_bits();
+            if (slice.lo < width) {
+                BUG_CHECK(slice.hi < width, "Slice too wide in FormatHash::ZeroHash");
+                visit(e);
+                break; }
+            slice = slice.shiftedByBits(-width); }
+        slice = tmp;
+        return false; }
+    bool preorder(const IR::Expression *e) {
+        Slice sl(phv, e, slice);
+        BUG_CHECK(sl, "Invalid expression %s in FormatHash::ZeroHash", e);
+        for (auto &md : match_data) {
+            if (auto tmp = sl & md) {
+                return false; } }
+        rv = true;
+        return false; }
+
+ public:
+    ZeroHash(const PhvInfo &p, const IR::Expression *e, le_bitrange s, safe_vector<Slice> &md)
+    : phv(p), slice(s), match_data(md) { e->apply(*this); }
+    explicit operator bool() const { return rv; }
+};
+
+/* output a slice of a hash expression as a .bfa hash expression */
+class FormatHash::Output : public Inspector {
+    const PhvInfo &phv;
+    std::ostream &out;
+    le_bitrange slice;
+    safe_vector<Slice> &match_data;
+    bool preorder(const IR::Annotation *) { return false; }
+    bool preorder(const IR::Type *) { return false; }
+    bool preorder(const IR::BXor *e) {
+        bool need_left = !ZeroHash(phv, e->left, slice, match_data);
+        bool need_right = !ZeroHash(phv, e->right, slice, match_data);
+        if (need_left) visit(e->left, "left");
+        if (need_left && need_right) out << " ^ ";
+        if (need_right) visit(e->right, "right");
+        return false; }
+    bool preorder(const IR::BAnd *e) {
+        visit(e->left, "left"); out << "&"; visit(e->right, "right"); return false; }
+    bool preorder(const IR::BOr *e) {
+        auto k = e->left->to<IR::Constant>();
+        auto &op = k ? e->right : e->left;
+        if (!k) k = e->right->to<IR::Constant>();
+        big_int v = k->value >> slice.lo;
+        if ((v & 1) == 0) {
+            visit(op);
+        } else {
+            out << "0"; }
+        return false; }
+    bool preorder(const IR::Constant *k) {
+        big_int v = k->value, mask = 1;
+        v >>= slice.lo;
+        mask <<= slice.size();
+        mask -= 1;
+        v &= mask;
+        out << "0x" << std::hex << v << std::dec;
+        return false; }
+    bool preorder(const IR::Concat *e) {
+        if (slice.lo < e->right->type->width_bits()) {
+            visit(e->right, "right");
+        } else {
+            auto tmp = slice;
+            slice = slice.shiftedByBits(-e->right->type->width_bits());
+            visit(e->left, "left");
+            slice = tmp; }
+        return false; }
+    bool preorder(const IR::ListExpression *fl) {
+        auto tmp = slice;
+        for (auto *e : boost::adaptors::reverse(fl->components)) {
+            if (slice.lo < e->type->width_bits()) {
+                visit(e);
+                break; }
+            slice = slice.shiftedByBits(-e->type->width_bits()); }
+        slice = tmp;
+        return false; }
+    bool preorder(const IR::BFN::SignExtend *e) {
+        if (slice.hi < e->expr->type->width_bits()) {
+            // a slice or mask on a sign extension such that we don't need any of the
+            // sign extended bits.  Could have been eliinated earlier, but ignore it here
+            return true; }
+        auto tmp = slice;
+        slice.hi = e->expr->type->width_bits() - 1;
+        out << "sign_extend(";
+        visit(e->expr, "expr");
+        slice = tmp;
+        out << ")";
+        return false; }
+    bool preorder(const IR::Expression *e) {
+        Slice sl(phv, e, slice);
+        BUG_CHECK(sl, "Invalid expression %s in FormatHash::Output", e);
+        for (auto &md : match_data) {
+            if (auto tmp = sl & md) {
+                out << tmp;
+                break; } }
+        return false; }
+
+ public:
+    Output(const PhvInfo &p, std::ostream &o, const IR::Expression *e, le_bitrange s,
+           safe_vector<Slice> &md)
+    : phv(p), out(o), slice(s), match_data(md) { e->apply(*this); }
+};
+
 /** Given a bitrange to allocate into the ixbar hash matrix, as well as a list of fields to
  *  be the identity, this coordinates the field slice to a portion of the bit range.  This
  *  really only applies for identity matches.
@@ -1229,6 +1472,31 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const IXBar::Use::HashDistHash &hdh,
         const safe_vector<const IR::Expression *> &field_list_order) const {
+    if (hdh.hash_gen_expr) {
+        int hash_gen_expr_width = hdh.hash_gen_expr->type->width_bits();
+        BUG_CHECK(hash_gen_expr_width > 0, "zero width hash expression: %s ?", hdh.hash_gen_expr);
+        for (auto bit_pos : hdh.galois_start_bit_to_p4_hash) {
+            int out_bit = bit_pos.first, in_bit = bit_pos.second.lo;
+            while (in_bit <= bit_pos.second.hi && in_bit < hash_gen_expr_width) {
+                int width = FormatHash::SliceWidth(phv, hdh.hash_gen_expr, in_bit, match_data);
+                le_bitrange slice(in_bit, in_bit + width - 1);
+                slice = slice.intersectWith(bit_pos.second);
+                out << indent << out_bit;
+                if (width > 1 ) out << ".." << (out_bit + slice.size() - 1);
+                out << ": ";
+                if (!FormatHash::ZeroHash(phv, hdh.hash_gen_expr, slice, match_data)) {
+                    FormatHash::Output(phv, out, hdh.hash_gen_expr, slice, match_data);
+                } else {
+                    out << "0"; }
+                out << std::endl;
+                in_bit += slice.size();
+                out_bit += slice.size(); }
+            BUG_CHECK(in_bit == bit_pos.second.hi + 1 || in_bit >= hash_gen_expr_width,
+                      "mismatched hash width"); }
+        return; }
+
+    BUG("still need this code?");
+#if 0
     int bits_seen = 0;
     for (auto it = field_list_order.rbegin(); it != field_list_order.rend(); it++) {
         auto fs = PHV::AbstractField::create(phv, *it);
@@ -1266,6 +1534,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_ident(std::ostream &out, indent_t indent
         }
         bits_seen += fs->size();
     }
+#endif
 }
 
 void MauAsmOutput::emit_ixbar_meter_alu_hash(std::ostream &out, indent_t indent,

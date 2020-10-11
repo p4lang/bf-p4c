@@ -453,6 +453,13 @@ const char *PragmaIgnoreTableDependency::help = "@pragma ignore_table_dependency
     "control plane.  Note that this pragma will be silently ignored if it "
     "is used on tables that belong to different gress values. ";
 
+const char *PragmaInHash::name = "in_hash";
+const char *PragmaInHash::description =
+    "Action code that should be computed in a hash function and use hash dist to "
+    "avoid container group constraints";
+const char *PragmaInHash::help = "@in_hash { ..code.. }\n"
+    "code should use hash tables and hash_dist";
+
 const char *PragmaIntrinsicMetadata::name = "__intrinsic_metadata";
 const char *PragmaIntrinsicMetadata::description =
     "Declare metadata that needs to be processed for architecture specific semantics.";

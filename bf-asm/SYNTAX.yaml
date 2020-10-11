@@ -214,9 +214,15 @@ stage <constant> <thread>:
                         # bit-reversed (little endian instead of the defaul big endian) crc
                     <expression> ^ <expression>
                         # xor of other expressions.
+                    <expression> & <int>
+                    <int> & <expression>
+                        # mask expression, including just some bits in the result
                     stripe(<expression>, ...)
                         # stripe other expressions across the width required,
                         # repeating as necessary
+                    sextend(<expression>)
+                    sign_extend(<expression>)
+                        # sign extend expression (replicating the sign bit to the needed width
                 <int>: parity
                     # Keyword parity indicates this bit is reserved for parity
                     # calculation

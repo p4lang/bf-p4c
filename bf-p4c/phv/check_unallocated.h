@@ -88,7 +88,7 @@ class CheckForUnallocatedTemps : public PassManager {
  */
 struct CheckForNonprimitiveOperations : public Inspector {
     bool preorder(const IR::Member *) override { return false; }
-    bool preorder(const IR::Primitive *) override { return false; }
+    bool preorder(const IR::MAU::Primitive *) override { return false; }
 
     bool preorder(const IR::Operation_Unary *op) override {
         dump(op);

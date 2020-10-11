@@ -136,7 +136,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::BoolLiteral *) override;
     bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Slice *) override;
-    bool preorder(const IR::Primitive *) override;
+    bool preorder(const IR::MAU::Primitive *) override;
     bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
     bool preorder(const IR::Equ *r) override { return preorder(r, "equ", true); }
     bool preorder(const IR::Neq *r) override { return preorder(r, "neq", true); }

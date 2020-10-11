@@ -3099,7 +3099,7 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-bool MergeAlwaysRunActions::Scan::preorder(const IR::Primitive *prim) {
+bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Primitive *prim) {
     auto *tbl = findContext<IR::MAU::Table>();
     if (tbl != nullptr && tbl->is_always_run_action()) {
         for (uint32_t idx = 0; idx < prim->operands.size(); ++idx) {

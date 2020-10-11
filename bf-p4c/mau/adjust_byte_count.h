@@ -19,7 +19,7 @@ class AdjustByteCountSetup : public PassManager {
         AdjustByteCountSetup &self;
      public :
         explicit Scan(AdjustByteCountSetup &self) : self(self) {}
-        bool preorder(const IR::Primitive *prim) override;
+        bool preorder(const IR::MAU::Primitive *prim) override;
     };
 
     class Update : public MauTransform {

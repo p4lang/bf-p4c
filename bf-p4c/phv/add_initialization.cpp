@@ -158,7 +158,7 @@ Visitor::profile_t ComputeDarkInitialization::init_apply(const IR::Node* root) {
 void ComputeDarkInitialization::computeInitInstruction(
         const PHV::AllocSlice& slice,
         const IR::MAU::Action* action) {
-    const IR::Primitive* prim;
+    const IR::MAU::Primitive* prim;
     if (slice.getInitPrimitive()->destAssignedToZero()) {
         LOG4("\tAdd initialization from zero in action " << action->name << " for: " << slice);
         prim = fieldToExpr.generateInitInstruction(slice);
@@ -321,11 +321,11 @@ void ComputeDarkInitialization::end_apply() {
 
 // Retrieve primitives for @tbl/@act hash key
 // -----
-const ordered_set<const IR::Primitive*>
+const ordered_set<const IR::MAU::Primitive*>
 ComputeDarkInitialization::getInitializationInstructions(
         const IR::MAU::Table* tbl,
         const IR::MAU::Action* act) const {
-    static ordered_set<const IR::Primitive*> rv;
+    static ordered_set<const IR::MAU::Primitive*> rv;
     cstring key = getKey(tbl, act);
     if (!actionToInsertedInsts.count(key)) return rv;
     return actionToInsertedInsts.at(key);

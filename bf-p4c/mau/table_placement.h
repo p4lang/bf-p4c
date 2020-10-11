@@ -248,7 +248,7 @@ class MergeAlwaysRunActions : public PassManager {
     class Scan : public MauInspector {
         MergeAlwaysRunActions &self;
         bool preorder(const IR::MAU::Table *) override;
-        bool preorder(const IR::Primitive *) override;
+        bool preorder(const IR::MAU::Primitive *) override;
         void end_apply() override;
 
      public:

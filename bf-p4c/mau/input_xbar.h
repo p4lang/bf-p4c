@@ -418,6 +418,7 @@ struct IXBar {
             bitvec galois_matrix_bits;
             IR::MAU::HashFunction algorithm;
             std::map<int, le_bitrange> galois_start_bit_to_p4_hash;
+            const IR::Expression *hash_gen_expr = nullptr;   // expression from HashGenExpr
 
             void clear() {
                 allocated = false;

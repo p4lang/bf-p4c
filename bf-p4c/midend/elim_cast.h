@@ -333,6 +333,11 @@ class RewriteConcatToSlices : public Transform {
         }
     }
 
+    const IR::BlockStatement *preorder(IR::BlockStatement *blk) override {
+        if (blk->getAnnotation("in_hash")) prune();
+        return blk;
+    }
+
     const IR::Node* preorder(IR::AssignmentStatement* stmt) override {
         if (auto c = stmt->right->to<IR::Concat>()) {
             temps.clear();

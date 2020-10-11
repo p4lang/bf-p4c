@@ -56,7 +56,7 @@ AdjustByteCountSetup::Update::preorder(IR::MAU::Meter *meter) {
     return meter;
 }
 
-bool AdjustByteCountSetup::Scan::preorder(const IR::Primitive *prim) {
+bool AdjustByteCountSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
     LOG1("Primitive : " << prim);
 
     const IR::MAU::AttachedMemory *obj = nullptr;

@@ -246,7 +246,7 @@ class HashExpr::Xor : HashExpr {
         return true; }
     void build_algorithm() override {
         for (auto *e : what) {
-             e->build_algorithm();
+            if (e) e->build_algorithm();
         }
     }
 
@@ -264,6 +264,32 @@ class HashExpr::Xor : HashExpr {
             e->dbprint(out);
         }
     }
+};
+
+class HashExpr::Mask : HashExpr {
+    HashExpr            *what;
+    bitvec              mask;
+    Mask(int lineno, HashExpr *w, bitvec m) : HashExpr(lineno), what(w), mask(m) {}
+    friend class HashExpr;
+    bool check_ixbar(InputXbar *ix, int grp) override {
+        return what->check_ixbar(ix, grp); }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) override {
+        if (mask[bit])
+            what->gen_data(data, bit, ix, hash_table); }
+    int width() override { return what->width(); }
+    int input_size() override { return what->input_size(); }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const Mask &>(a_);
+        return mask == a.mask && *what == *a.what; }
+    void build_algorithm() override { what->build_algorithm(); }
+
+    void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+            int hash_table) override { }
+    Phv::Ref* get_ghost_slice() override { return what->get_ghost_slice(); }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: Mask " << mask << std::endl;
+            what->dbprint(out); }
 };
 
 class HashExpr::Stripe : HashExpr {
@@ -344,6 +370,35 @@ class HashExpr::Slice : HashExpr {
     }
 };
 
+class HashExpr::SExtend : HashExpr {
+    HashExpr    *what;
+    SExtend(int lineno, HashExpr *w) : HashExpr(lineno), what(w) {}
+    friend class HashExpr;
+    bool check_ixbar(InputXbar *ix, int grp) override {
+        return what->check_ixbar(ix, grp); }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int hash_table) override {
+        int width = what->width();
+        if (width > 0 && bit >= width)
+            bit = width - 1;
+        what->gen_data(data, bit, ix, hash_table); }
+    int width() override { return 0; }
+    int input_size() override { return what->input_size(); }
+    bool operator==(const HashExpr &a_) const override {
+        if (typeid(*this) != typeid(a_)) return false;
+        auto &a = static_cast<const SExtend &>(a_);
+        return *what == *a.what;
+    }
+    void build_algorithm() override {
+         what->build_algorithm();
+    }
+    void gen_ixbar_inputs(std::vector<ixbar_input_t> &inputs, InputXbar *ix,
+            int hash_table) override { }
+    void dbprint(std::ostream & out) const override {
+        out << "HashExpr: SExtend" << std::endl;
+        if (what) out << what << std::endl;
+    }
+};
+
 // The ordering for crc expression is:
 // crc(poly, @optional init, @optional input_bits, map)
 HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
@@ -393,6 +448,29 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
             for (int i = 1; i < what.vec.size; i++)
                 rv->what.push_back(create(gress, stage, what[i]));
             return rv;
+        } else if (what[0] == "&") {
+            HashExpr *op = nullptr;
+            bitvec mask;
+            bool have_mask = false;
+            for (int i = 1; i < what.vec.size; i++) {
+                if (what[i].type == tINT || what[i].type == tBIGINT) {
+                    if (have_mask) {
+                        mask &= get_bitvec(what[i]);
+                    } else {
+                        mask = get_bitvec(what[i]);
+                        have_mask = true; }
+                } else if (op) {
+                    error(what.lineno, "Invalid mask operation");
+                    return nullptr;
+                } else {
+                    op = create(gress, stage, what[i]); } }
+            if (!op) {
+                error(what.lineno, "Invalid mask operation");
+                return nullptr;
+            } else if (have_mask) {
+                return new Mask(what.lineno, op, mask);
+            } else {
+                return op; }
         } else if (what[0] == "stripe") {
             Stripe *rv = new Stripe(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
@@ -416,6 +494,11 @@ HashExpr *HashExpr::create(gress_t gress, int stage, const value_t &what) {
                 if (what.vec.size > 3)
                     rv->_width = what[3].i; }
             return rv;
+        } else if (what[0] == "sextend" || what[0] == "sign_extend") {
+            if (what.vec.size != 2) {
+                error(what.lineno, "Invalid sign extension");
+                return nullptr; }
+            return new SExtend(what.lineno, create(gress, stage, what[1]));
         } else if (what.vec.size == 2) {
             return new PhvRef(gress, stage, what);
         } else {

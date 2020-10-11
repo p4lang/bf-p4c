@@ -27,7 +27,7 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
             opcode != "ssubu" && opcode != "ssubs",
             "Saturating arithmetic operations cannot be split");
 
-    auto split = new IR::Vector<IR::Primitive>();
+    auto split = new IR::Vector<IR::MAU::Primitive>();
     bool check_pairing = false;
     for (auto slice : slices) {
         auto *n = inst->clone();
@@ -112,7 +112,7 @@ const IR::MAU::ActionArg *ConstantsToActionData::preorder(IR::MAU::ActionArg *ar
     return arg;
 }
 
-const IR::Primitive *ConstantsToActionData::preorder(IR::Primitive *prim) {
+const IR::MAU::Primitive *ConstantsToActionData::preorder(IR::MAU::Primitive *prim) {
     prune();
     return prim;
 }
@@ -451,7 +451,7 @@ const IR::Constant *MergeInstructions::preorder(IR::Constant *cst) {
     return cst;
 }
 
-const IR::Primitive *MergeInstructions::preorder(IR::Primitive *prim) {
+const IR::MAU::Primitive *MergeInstructions::preorder(IR::MAU::Primitive *prim) {
     prune();
     return prim;
 }

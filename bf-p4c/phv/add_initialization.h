@@ -91,7 +91,7 @@ class ComputeDarkInitialization : public Inspector {
     const MapFieldToExpr&       fieldToExpr;
     const DependencyGraph&      dg;
 
-    ordered_map<cstring, ordered_set<const IR::Primitive*>> actionToInsertedInsts;
+    ordered_map<cstring, ordered_set<const IR::MAU::Primitive*>> actionToInsertedInsts;
 
     void computeInitInstruction(
         const PHV::AllocSlice& slice,
@@ -127,7 +127,7 @@ class ComputeDarkInitialization : public Inspector {
         )
         : phv(p), tableActionsMap(m), fieldToExpr(e), dg(g) { }
 
-    const ordered_set<const IR::Primitive*>
+    const ordered_set<const IR::MAU::Primitive*>
     getInitializationInstructions(const IR::MAU::Table* tbl, const IR::MAU::Action* act) const;
 };
 

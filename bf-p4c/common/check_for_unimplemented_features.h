@@ -23,17 +23,17 @@ class CheckOperations : public Inspector {
 
     /// @returns BOP in modify_field(x, BOP), if BOP is a binary operation
     /// expression.
-    boost::optional<const IR::Operation_Binary*> getSrcBinop(const IR::Primitive* p) const;
+    boost::optional<const IR::Operation_Binary*> getSrcBinop(const IR::MAU::Primitive* p) const;
 
     /// @returns true if @p is a P4_16 encoding of a P4_14 funnel shift
     /// operation, eg. modify_field(x, (y ++ z) >> n).
-    bool isFunnelShift(const IR::Primitive* p) const;
+    bool isFunnelShift(const IR::MAU::Primitive* p) const;
 
     /// @returns true if @p is a P4_16 encoding of a P4_14 bitmasked modify_field
     /// operation, eg. modify_field(x, val, 0xAA).
-    bool isModBitMask(const IR::Primitive* p) const;
+    bool isModBitMask(const IR::MAU::Primitive* p) const;
 
-    bool preorder(const IR::Primitive*) override;
+    bool preorder(const IR::MAU::Primitive*) override;
 };
 
 class CheckForUnimplementedFeatures : public PassManager {

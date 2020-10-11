@@ -607,6 +607,15 @@ class TableSeq {
 #apply
 }
 
+class Primitive : IR::Primitive {
+    bool in_hash = false;
+#emit
+    using IR::Primitive::Primitive;
+#end
+#nodbprint
+#apply
+}
+
 /// A primitive function, optionally annotated with its front end type.
 class TypedPrimitive : Primitive {
 #nodbprint

@@ -137,7 +137,7 @@ class BuildGatewayMatch : public Inspector {
     safe_vector<int>            range_match;
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
-    bool preorder(const IR::Primitive *) override;
+    bool preorder(const IR::MAU::Primitive *) override;
     bool preorder(const IR::LAnd *) override { return true; }
     bool preorder(const IR::LNot *) override { return true; }
     bool preorder(const IR::BAnd *) override { return true; }

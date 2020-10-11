@@ -11,8 +11,10 @@ class HashExpr {
     class Random;
     class Crc;
     class Xor;
+    class Mask;
     class Stripe;
     class Slice;
+    class SExtend;
  protected:
     explicit HashExpr(int l) : lineno(l) {}
 
