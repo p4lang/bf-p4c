@@ -69,6 +69,7 @@ class ConstrainedField : public LoggableEntity {
     Constraints::DigestConstraint digest;
 
     bool deparsedBottomBits = false;
+    bool noSplit = false;
 
  public:
     ConstrainedField() {}
@@ -92,6 +93,9 @@ class ConstrainedField : public LoggableEntity {
 
     void setBottomBits(bool b);
     bool hasBottomBits() const                                       { return deparsedBottomBits; }
+
+    void setNoSplit(bool b);
+    bool hasNoSplit() const                                               { return noSplit; }
 };
 
 typedef std::map<cstring, ConstrainedField> ConstrainedFieldMap;

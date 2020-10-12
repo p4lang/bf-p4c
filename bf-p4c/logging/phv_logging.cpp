@@ -313,6 +313,7 @@ void PhvLogging::logFieldConstraints(const cstring &fieldName, Field *logger) {
     logSolitaryConstraints(cfield, srcLoc);
     logNoPackConstraint(cfield, fieldInfo, srcLoc);
     logMauGroupConstraint(cfield, srcLoc);
+    logNoSplitConstraint(cfield, srcLoc);
 
     // Append Constraint loggers to Field logger
     if (cfield.hasLoggedConstraints()) {
@@ -449,6 +450,13 @@ void PhvLogging::logMauGroupConstraint(ConstrainedField &field, const SourceLoca
     }
 }
 
+void PhvLogging::logNoSplitConstraint(ConstrainedField &field, const SourceLocation *srcLoc) {
+    if (!field.hasNoSplit()) return;
+
+    auto nsc = new BoolConstraint(false, int(ConstraintReason::NoSplit), "NoSplit", srcLoc);
+    field.getLogger()->append(nsc);
+}
+
 void PhvLogging::logFields() {
     /// Map of all headers and their fields.
     ordered_map<cstring, ordered_set<const PHV::Field*>> fields = getFields();
@@ -538,6 +546,9 @@ void PhvLogging::logConstraintReasons() {
             ConstraintReason::MAUGroup,
             "MAU Group: This field (or its particular slices) must be in the same MAU group"
             " as other fields or slices."
+        }, {
+            ConstraintReason::NoSplit,
+            "No Split: This field cannot be split into multiple slices."
         }
     };
 

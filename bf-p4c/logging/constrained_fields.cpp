@@ -32,6 +32,10 @@ ConstrainedField::ConstrainedField(const cstring &name) : name(name) {
     logger = new Constraint(nullptr);
 }
 
+void ConstrainedField::addSlice(ConstrainedSlice &slice) {
+    slices.insert(slice);
+}
+
 void ConstrainedField::setSolitary(const Constraints::SolitaryConstraint &solitary) {
     ConstrainedField::solitary = solitary;
 }
@@ -48,8 +52,8 @@ void ConstrainedField::setBottomBits(bool b) {
     deparsedBottomBits = b;
 }
 
-void ConstrainedField::addSlice(ConstrainedSlice &slice) {
-    slices.insert(slice);
+void ConstrainedField::setNoSplit(bool b) {
+    noSplit = b;
 }
 
 /* ConstrainedFieldMap */
@@ -66,6 +70,7 @@ ConstrainedFieldMap ConstrainedFieldMapBuilder::buildMap(const PhvInfo &phv,
         result[f.name].setAlignment(f.getAlignmentConstraint());
         result[f.name].setDigest(f.getDigestConstraint());
         result[f.name].setBottomBits(f.deparsed_bottom_bits());
+        result[f.name].setNoSplit(f.no_split());
     }
 
     // Extract slices based on clustering

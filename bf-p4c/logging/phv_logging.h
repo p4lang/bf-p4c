@@ -135,7 +135,8 @@ class PhvLogging : public MauInspector {
         SolitaryExceptSameDigest,
         SolitaryAfterStage,
         DifferentContainer,
-        MAUGroup
+        MAUGroup,
+        NoSplit
     };
 
  private:
@@ -258,6 +259,8 @@ class PhvLogging : public MauInspector {
                                                  const SourceLocation *srcLoc);
 
     void logMauGroupConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
+
+    void logNoSplitConstraint(ConstrainedField &field, const SourceLocation *srcLoc);
 
     // Looks up item in db. If item is not there, it is added.
     // Index of the item is then returned.

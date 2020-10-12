@@ -22,3 +22,5 @@ This README serves for sample programs for P4I. It lists various edge cases usef
     * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
  * MAU Group
     * tofino2_1585_b2 (example of group with slices: ingress::hdr.vlan_tag.$stkvalid)
+ * No Split
+    * tofino2_switch_16_32q (ingress::smac_src_move)
