@@ -61,7 +61,7 @@ class TablePlacement : public PassManager {
     std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     std::map<cstring, struct TableInfo *> tblByName;
     std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
-    std::map<const IR::MAU::AttachedMemory *, std::set<const IR::MAU::Table *>> attached_to;
+    std::map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>> attached_to;
     class SetupInfo;
 
     TablePlacement(const BFN_Options &, DependencyGraph &,
@@ -214,8 +214,8 @@ class MergeAlwaysRunActions : public PassManager {
     std::map<AlwaysRunKey, ordered_set<const IR::MAU::Table *>> ar_tables_per_stage;
     std::map<AlwaysRunKey, const IR::MAU::Table *> merge_per_stage;
     std::map<AlwaysRunKey, std::set<int>> merged_ar_minStages;
-    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> written_fldSlice;
-    std::map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> read_fldSlice;
+    ordered_map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> written_fldSlice;
+    ordered_map<const IR::MAU::Table*, std::set<PHV::FieldSlice>> read_fldSlice;
 
     // Keep the original start and end of AllocSlice liveranges that have
     // shifted due to table merging
@@ -272,8 +272,8 @@ class MergeAlwaysRunActions : public PassManager {
     class UpdateAffectedTableMinStage : public MauInspector, public TofinoWriteContext {
         MergeAlwaysRunActions &self;
         // Map affected tables to pair of <old, new> minStages
-        std::map<const IR::MAU::Table*, std::pair<int, int>> tableMinStageShifts;
-        std::map<PHV::AllocSlice*, std::pair<int, int>> sliceLRshifts;
+        ordered_map<const IR::MAU::Table*, std::pair<int, int>> tableMinStageShifts;
+        ordered_map<PHV::AllocSlice*, std::pair<int, int>> sliceLRshifts;
         std::map<PHV::AllocSlice*, std::pair<bool, bool>> sliceLRmodifies;
 
         bool preorder(const IR::MAU::Table *) override;

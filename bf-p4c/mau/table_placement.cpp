@@ -2073,7 +2073,6 @@ bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl,
     if (gmc.size() > 0)
         return true;
 
-    std::set<const IR::MAU::Table *> placeable_cd_gws;
     int non_cd_gw_tbls = 0;
     bool placeable_table_found = false;
     for (auto cd_tbl : self.ntp.control_dom_set.at(tbl)) {

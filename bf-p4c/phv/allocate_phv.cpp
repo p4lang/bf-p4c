@@ -18,6 +18,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/error.h"
 #include "lib/log.h"
+#include "lib/ordered_map.h"
 
 // AllocScore metrics.
 namespace {
@@ -3048,7 +3049,7 @@ BruteForceAllocationStrategy::pounderRoundAllocLoop(
             // If the pounder slicing does not satisfy pa_container_size requirements, then ignore
             // and go to the next slicing. This is required to ensure that pa_container_size pragma
             // is always respected after preslicing.
-            std::set<const PHV::Field*> unsatisfiable_fields =
+            ordered_set<const PHV::Field*> unsatisfiable_fields =
                 pa_container_sizes.unsatisfiable_fields(*slice_rst);
             if (unsatisfiable_fields.size() > 0)
                 continue;
@@ -4004,7 +4005,7 @@ BruteForceAllocationStrategy::allocLoop(
             // If the current slicing does not satisfy pa_container_size requirements, then ignore
             // and go to the next slice. This is required to ensure that later slicings (after
             // pre-slicing) respect the pa_container_size pragma.
-            std::set<const PHV::Field*> unsatisfiable_fields =
+            ordered_set<const PHV::Field*> unsatisfiable_fields =
                 pa_container_sizes.unsatisfiable_fields(slicing);
 
             if (unsatisfiable_fields.size() > 0) {

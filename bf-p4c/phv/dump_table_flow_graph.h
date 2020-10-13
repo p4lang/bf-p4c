@@ -12,7 +12,7 @@ struct DumpTableFlowGraph : public Visitor {
         const PhvInfo& phv;
         explicit CollectPhvReadsAndWrites(const PhvInfo& p) : phv(p) { }
 
-        std::set<const PHV::Field*> reads, writes;
+        ordered_set<const PHV::Field*> reads, writes;
 
         bool preorder(const IR::MAU::Table* tbl) override {
             return !tbl->is_a_gateway_table_only();

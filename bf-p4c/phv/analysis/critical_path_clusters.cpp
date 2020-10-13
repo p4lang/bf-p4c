@@ -12,10 +12,10 @@ CalcCriticalPathClusters::apply_visitor(const IR::Node * node, const char *) {
     return node;
 }
 
-std::set<PHV::SuperCluster *>
+ordered_set<PHV::SuperCluster *>
 CalcCriticalPathClusters::calc_critical_clusters(
     const std::list<PHV::SuperCluster *>& clusters) const {
-    std::set<PHV::SuperCluster *> results;
+    ordered_set<PHV::SuperCluster *> results;
     for (auto* super_cluster : clusters) {
         bool has_critical_field = std::any_of(critical_fields_i.begin(), critical_fields_i.end(),
                 [&](const PHV::Field* f) { return super_cluster->contains(f); });
@@ -26,7 +26,7 @@ CalcCriticalPathClusters::calc_critical_clusters(
 
 void
 CalcCriticalPathClusters::print(std::ostream& out,
-                                const std::set<PHV::SuperCluster *>& clusters) const {
+                                const ordered_set<PHV::SuperCluster *>& clusters) const {
     out << "=========== Critical Clusters ===========" << std::endl;
     for (auto* super_cluster : clusters) {
         for (auto* rotational_cluster : super_cluster->clusters()) {

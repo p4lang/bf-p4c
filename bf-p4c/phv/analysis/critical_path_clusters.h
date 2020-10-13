@@ -6,7 +6,7 @@
 #include "bf-p4c/phv/make_clusters.h"
 #include "bf-p4c/phv/analysis/parser_critical_path.h"
 
-/** Provide a function to produces a std::set<const SuperCluster*> that
+/** Provide a function to produces an ordered_set<const SuperCluster*> that
  * those SuperClusters have at least one cluster that
  * has field(s) extracted on the parser critical path,
  * either ingress or egress. The result
@@ -27,12 +27,12 @@ class CalcCriticalPathClusters : public Inspector {
     explicit CalcCriticalPathClusters(const CalcParserCriticalPath& parser_critical_path)
         : parser_critical_path(parser_critical_path) {}
 
-    std::set<PHV::SuperCluster *>
+    ordered_set<PHV::SuperCluster *>
     calc_critical_clusters(const std::list<PHV::SuperCluster *>& clusters) const;
 
     profile_t init_apply(const IR::Node* root) override;
 
-    void print(std::ostream& out, const std::set<PHV::SuperCluster *>& clusters) const;
+    void print(std::ostream& out, const ordered_set<PHV::SuperCluster *>& clusters) const;
 };
 
 #endif /* BF_P4C_PHV_ANALYSIS_CRITICAL_PATH_CLUSTERS_H_ */

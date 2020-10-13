@@ -450,9 +450,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // verify that. We're much less restrictive for bridged metadata fields,
         // since they don't end up on the wire and they're not visible to the
         // programmer.
-        std::set<const PHV::Field*> deparsedHeaderFields;
+        ordered_set<const PHV::Field*> deparsedHeaderFields;
         std::set<const PHV::Field*> deparsedMetadataFields;
-        std::set<const PHV::Field*> nonDeparsedFields;
+        ordered_set<const PHV::Field*> nonDeparsedFields;
         std::set<const PHV::Field*> deparsedPaddingFields;
 
         for (auto& slice : slices) {

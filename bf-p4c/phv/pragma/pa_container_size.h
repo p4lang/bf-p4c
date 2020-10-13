@@ -94,7 +94,7 @@ class PragmaContainerSize : public Inspector {
      *  Require: Forall field showed in @p sliced, all FieldSlices of that field
      *  exists in @p sliced.
      */
-    std::set<const PHV::Field*>
+    ordered_set<const PHV::Field*>
     unsatisfiable_fields(const std::list<PHV::SuperCluster*>& sliced);
 
     /**

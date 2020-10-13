@@ -249,11 +249,10 @@ PragmaContainerSize::field_slice_req(const PHV::FieldSlice& fs) const {
         return boost::none; }
 }
 
-std::set<const PHV::Field*>
+ordered_set<const PHV::Field*>
 PragmaContainerSize::unsatisfiable_fields(
         const std::list<PHV::SuperCluster*>& sliced) {
-    std::set<const PHV::Field*> rst;
-    std::set<const PHV::Field*> is_in_slicelist;
+    ordered_set<const PHV::Field*> rst;
 
     // field is not sliced in the way specified.
     for (const auto* sup_cluster : sliced) {
@@ -334,7 +333,7 @@ PragmaContainerSize::unsatisfiable_fields(
             std::set<const PHV::Field*> toBeRemovedFields;
             // In case the combined slice satisfies the pragma requirements, we need to add a new
             // requirement to the `field_slice_req_i` map corresponding to the combined slice.
-            std::set<PHV::FieldSlice> toBeAddedReq;
+            ordered_set<PHV::FieldSlice> toBeAddedReq;
             // Error condition for checking the combined slice.
             bool errorCombinedSliceCheck = false;
             // When a slice list contains slices that are not part of a specified slicing, then the
