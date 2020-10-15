@@ -13,14 +13,23 @@ This README serves for sample programs for P4I. It lists various edge cases usef
 
 ## Constraints
 
- * Solitary
-    * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
-    * last_byte - tofino2_1585_b2 (example: ig_intr_md_for_dprsr.digest_type::ingress)
-    * learning_digest - **No example yet**
-    * mirror - **No example yet**
- * DifferentContainer
+ * Solitary (always applied to whole field)
+    * alu - tofino2_switch_16_32q (egress::eg_md.checks.mtu)
+    * intrinsic - arista_lb_v4v6 (ig_intr_md_for_tm.mcast_grp_b)
+    * checksum - TODO
+    * last_byte - tofino2_switch_16_32q (ingress::ig_intr_md_for_dprsr.digest_type)
+    * mirror - TODO
+    * container_size - tofino2_switch_16_32q (ingress::eg_md.mirror.src)
+    * pa_solitary - tofino2_switch_16_32q (ingress::ether_type_0)
+    * except_same_digest - TODO
+ * DifferentContainer (always applied to whole field)
     * alu - tofino2_1585_b2 (example: hdr.bridged_md.nsh_extr_si::ingress)
  * MAU Group
-    * tofino2_1585_b2 (example of group with slices: ingress::hdr.vlan_tag.$stkvalid)
+    * Whole field is in group:
+        - tofino2_switch_16_32q (ingress::ig_md.lkp.mac_type)
+    * Field has two slices, both in same group:
+        - tofino2_switch_16_32q (ingress::ig_md.lkp.mac_dst_addr)
+    * Field has two slices, each in different group:
+        - arista_lb_v4v6 (ingress::Millstone.Guion.Wilmore)
  * No Split
     * tofino2_switch_16_32q (ingress::smac_src_move)

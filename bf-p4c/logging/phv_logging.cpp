@@ -330,29 +330,44 @@ void PhvLogging::logSolitaryConstraints(ConstrainedField &field, const SourceLoc
     auto &c = field.getSolitary();
     if (!c.hasConstraint()) return;
 
+    BoolConstraint *sc = nullptr;
     if (c.isALU()) {
-        auto sc = new BoolConstraint(
+        sc = new BoolConstraint(
             false, int(ConstraintReason::SolitaryAlu), "Solitary", srcLoc);
-        field.getLogger()->append(sc);
+    }
+    if (c.isArch()) {
+        sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryIntrinsic), "Solitary", srcLoc);
+    }
+    if (c.isChecksum()) {
+        sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryChecksum), "Solitary", srcLoc);
     }
     if (c.isDigest()) {
         auto digest = field.getDigest();
-        if (digest.isLearning()) {
-            auto sc = new BoolConstraint(
+        if (digest.isMirror()) {
+            sc = new BoolConstraint(
                 false, int(ConstraintReason::SolitaryMirror), "Solitary", srcLoc);
-            field.getLogger()->append(sc);
-        } else if (digest.isLearning()) {
-            auto sc = new BoolConstraint(
+        } else {
+            sc = new BoolConstraint(
                 false, int(ConstraintReason::SolitaryExceptSameDigest), "Solitary", srcLoc);
-            field.getLogger()->append(sc);
         }
+    }
+    if (c.isPragmaSolitary()) {
+        sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryPragma), "Solitary", srcLoc);
+    }
+    if (c.isPragmaContainerSize()) {
+        sc = new BoolConstraint(
+            false, int(ConstraintReason::SolitaryContainerSize), "Solitary", srcLoc);
     }
     if (field.hasBottomBits()) {
         // Logged as Solitary Last Byte for better verbosity at user level
-        auto sc = new BoolConstraint(
+        sc = new BoolConstraint(
             false, int(ConstraintReason::SolitaryLastByte), "Solitary", srcLoc);
-        field.getLogger()->append(sc);
     }
+
+    if (sc) field.getLogger()->append(sc);
 }
 
 void PhvLogging::logNoPackConstraint(ConstrainedField &field,
@@ -534,10 +549,6 @@ void PhvLogging::logConstraintReasons() {
             ConstraintReason::SolitaryExceptSameDigest,
             "Solitary (Except same digest): This field cannot be packed with anything else that"
             " does not belong to the same digest field list."
-        }, {
-            ConstraintReason::SolitaryAfterStage,
-            "Solitary (After stage): This field cannot be packed with anything else"
-            " after a program point."
         }, {
             ConstraintReason::DifferentContainer,
             "Different Container: This field cannot be packed into same container with listed"

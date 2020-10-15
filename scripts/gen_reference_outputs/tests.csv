@@ -45,6 +45,7 @@ tofino_switch_16_x1,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x
 tofino_switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
 tofino_switch_16_32q,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x3.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX3_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna,skip_Glass
 tofino2_switch_16_32q,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y3.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY3_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na,skip_Glass
+arista_lb_v4v6,p4_tests/p4_16/customer/arista/obfuscated-ref-stateless-load-balance-v4v6.p4,,-Xp4c="--disable-power-check",tofino,p4-16,tna,skip_Glass
 # Failed PHV Allocation examples
 tofino_leaf,glass/testsuite/p4_tests/parde/COMPILER-612/leaf.p4,,"",tofino,p4-14,v1model,skip_Glass
 tofino_meta_init_problem,glass/testsuite/p4_tests/phv/COMPILER-828/meta_init_problem.p4,,"",tofino,p4-14,v1model,skip_Glass

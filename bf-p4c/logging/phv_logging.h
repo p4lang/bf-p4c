@@ -133,7 +133,6 @@ class PhvLogging : public MauInspector {
         SolitaryContainerSize,
         SolitaryPragma,
         SolitaryExceptSameDigest,
-        SolitaryAfterStage,
         DifferentContainer,
         MAUGroup,
         NoSplit
