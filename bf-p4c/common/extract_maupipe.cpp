@@ -1746,7 +1746,6 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
     BUG_CHECK(toplevel, "toplevel cannot be nullptr");
 
     auto main = toplevel->getMain();
-    auto arch = new ParseTna();
     main->apply(*arch);
 
     /// setup the context to know which pipes are available in the program: for logging and
