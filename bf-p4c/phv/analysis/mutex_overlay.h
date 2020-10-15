@@ -293,18 +293,27 @@ class ExcludeDeparserOverlays : public Inspector {
 };
 
 /** Checksum is calculated only when the checksum destination field is valid.
- * So we need to make sure that the fields included in checksum should  not overlap any other
- * live fields when checksum destination is live. We do this my giving all the checksum fields
- * same mutex constraint as that of checksum destination.
- * Note: This contraint is added only for tofino because tofino's checksum engine cannot
- * dynamically predicate entries based on header validity
+ *  We need to make sure that the fields included in checksum don't overlap any
+ *  other live fields when checksum destination is live. We do this by giving
+ *  all the checksum fields same mutex constraint as that of checksum
+ *  destination. Note: This contraint is added only for tofino because tofino's
+ *  checksum engine cannot dynamically predicate entries based on header
+ *  validity.
+ *  P4C-3064 - Avoid overlay of checksum fields with other fields that may be
+ *  present. The pass was updated to detect if checksum source field might come
+ *  from a new header being added in MAU. In that case, all of the checksum
+ *  source fields are set to be non mutually exclusive with every field being
+ *  extracted but not referenced in MAU.
  */
 class ExcludeCsumOverlays : public Inspector {
  private:
     PhvInfo& phv;
+    const FindAddedHeaderFields& addedFields;
+    const PhvUse& use;
     bool preorder(const IR::BFN::EmitChecksum* emitChecksum) override;
  public:
-    explicit ExcludeCsumOverlays(PhvInfo& p) : phv(p) { }
+    explicit ExcludeCsumOverlays(PhvInfo& p, const FindAddedHeaderFields& a, const PhvUse& u)
+        : phv(p), addedFields(a), use(u) { }
 };
 
 class MarkMutexPragmaFields : public Inspector {
@@ -331,7 +340,8 @@ class MutexOverlay : public PassManager {
  public:
     MutexOverlay(
             PhvInfo& phv,
-            const PHV::Pragmas& pragmas)
+            const PHV::Pragmas& pragmas,
+            const PhvUse& use)
     : addedFields(phv), fieldToParserStates(phv) {
         addPasses({
             new ExcludeDeparsedIntrinsicMetadata(phv, neverOverlay),
@@ -343,7 +353,8 @@ class MutexOverlay : public PassManager {
             &parserInfo,
             &fieldToParserStates,
             new ExcludeParserLoopReachableFields(phv, fieldToParserStates, parserInfo),
-            Device::currentDevice() == Device::TOFINO ? new ExcludeCsumOverlays(phv) : nullptr,
+            Device::currentDevice() == Device::TOFINO ?
+                new ExcludeCsumOverlays(phv, addedFields, use) : nullptr,
             new ExcludeMAUOverlays(phv, addedFields),
             new ExcludeDeparserOverlays(phv),
             new MarkMutexPragmaFields(phv, pragmas.pa_mutually_exclusive())

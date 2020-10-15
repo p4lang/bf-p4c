@@ -85,11 +85,13 @@ createPaNoOverlayPragmaTestCase() {
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
                                    PhvInfo& phv) {
     PHV::Pragmas* pragmas = new PHV::Pragmas(phv);
+    PhvUse* uses = new PhvUse(phv);
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         pragmas,
-        new MutexOverlay(phv, *pragmas),
+        uses,
+        new MutexOverlay(phv, *pragmas, *uses),
     };
     return pipe->apply(quick_backend);
 }

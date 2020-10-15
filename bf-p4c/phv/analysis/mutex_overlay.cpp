@@ -217,15 +217,27 @@ void ExcludeMAUOverlays::end_apply() {
 }
 
 bool ExcludeCsumOverlays::preorder(const IR::BFN::EmitChecksum* emitChecksum) {
+    bool addedInMau = false;
+    for (auto sourceField : emitChecksum->sources) {
+        auto csumPhvField = phv.field(sourceField->field->field);
+        if (addedFields.isAddedInMAU(csumPhvField)) {
+            addedInMau = true;
+            break;
+        }
+    }
+
     auto checksumDest = phv.field(emitChecksum->dest->field);
     auto allFields = phv.get_all_fields();
     for (auto& field : allFields) {
-        if (phv.isFieldMutex(checksumDest, &field.second)) continue;
-        for (auto sourceField : emitChecksum->sources) {
-            auto csumPhvField = phv.field(sourceField->field->field);
-            LOG3("\t  Mark as non mutually exclusive: " << csumPhvField->name <<
-                ", " << field.first << " due to " << checksumDest->name  << " checksum update");
-            phv.removeFieldMutex(csumPhvField, &field.second);
+        const PHV::Field *fieldRef = phv.field(field.first);
+        if (!phv.isFieldMutex(checksumDest, fieldRef) || (addedInMau &&
+            use.is_extracted(fieldRef, fieldRef->gress) && !use.is_used_mau(fieldRef))) {
+            for (auto sourceField : emitChecksum->sources) {
+                auto csumPhvField = phv.field(sourceField->field->field);
+                LOG3("\t  Mark as non mutually exclusive: " << csumPhvField->name <<
+                    ", " << field.first << " due to " << checksumDest->name  << " checksum update");
+                phv.removeFieldMutex(csumPhvField, fieldRef);
+            }
         }
     }
     return false;

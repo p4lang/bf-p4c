@@ -60,7 +60,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Identify fields for deparsed-zero optimization
             new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
             // Produce pairs of mutually exclusive header fields, e.g. (arpSrc, ipSrc)
-            new MutexOverlay(phv, pragmas),
+            new MutexOverlay(phv, pragmas, uses),
             // map fields to parser states
             &field_to_parser_states,
             // calculate ingress/egress parser's critical path
