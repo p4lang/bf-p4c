@@ -811,8 +811,7 @@ class BarefootBackend(BackendDriver):
 
                 if run_summary_logs and rc_ver == 0:
                     if pipe.get('context', False):  # context.json is required
-                        # ignore the return code -- we may have failed generating some logs.
-                        self.runSummaryLogging(pipe)
+                        rc += self.runSummaryLogging(pipe)
 
                 rc += rc_ver
 

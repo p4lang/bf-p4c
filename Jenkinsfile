@@ -257,6 +257,14 @@ node ('compiler-travis') {
                     }
                 }
             }
+        },
+        installed_p4c_tests: {
+            ansiColor('xterm') {
+                timestamps {
+                    sh "echo 'Running driver tests on installed p4c'"
+                    sh "docker run --privileged -w /bfn/bf-p4c-compilers/scripts barefootnetworks/bf-p4c-compilers:${image_tag} python3 -u test_p4c_driver.py -j 4 --print-on-failure --compiler '/usr/local/bin/p4c'"
+                }
+            }
         }
     )
 }
