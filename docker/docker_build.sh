@@ -222,6 +222,14 @@ WORKDIR /tmp
   rm -rf "${Z3}" "${Z3_ZIP}"
 }
 
+# Clear out CC and CXX.
+#   * These apparently cause pip to build its packages incorrectly: some
+#     packages (e.g., pysubnettree) use CC where they should use CXX.
+#
+#   * CC and CXX are set by Dockerbuild to enable distcc. We wish to build the
+#     compiler locally anyway.
+unset CC CXX
+
 # Dependencies for testing.
 apt-get install -y net-tools
 pip install --upgrade pip
@@ -252,9 +260,6 @@ export LDFLAGS="-Wl,-s"
 
 # Configure distcc to just use localhost for building the Docker image.
 echo localhost > /etc/distcc/hosts
-
-unset CC
-unset CXX
 
 # Build and install bf-p4c-compilers.
 WORKDIR "${BF_P4C_COMPILERS}"
