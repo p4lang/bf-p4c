@@ -44,7 +44,9 @@ bool WalkPowerGraph::preorder(const IR::MAU::Table* t) {
 void WalkPowerGraph::end_apply(const IR::Node *root) {
   bool updated_deps = true;
   auto& spec = Device::mauPowerSpec();
-  double rounding = spec.get_max_power() / 104729.0;
+  double max_power = (options_.max_power > 0.0) ? options_.max_power : spec.get_max_power();
+  LOG2("Max Power allowed : " << max_power);
+  double rounding = max_power / 104729.0;
   double total_power = 0.0;
 
   mau_features_->update_deps_for_device();
@@ -64,7 +66,8 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
         continue; } }
 
     total_power = estimate_power();
-    if (total_power > (spec.get_max_power() + rounding)) {
+    if (total_power > (max_power + rounding)) {
+      LOG5(" Updating deps to reduce power");
       updated_deps = mau_features_->try_convert_to_match_dep();
     } else {
       // power not exceeded, hooray!
@@ -78,10 +81,12 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
 
   // log results (power.json, mau.power.log)
   // latency, features, power
-  if (total_power > (spec.get_max_power() + rounding)) {
-    double excess = total_power - spec.get_max_power();
+  if (total_power > (max_power + rounding)) {
+    double excess = total_power - max_power;
     std::string s = float2str(excess);
-    std::string error_msg = "Power worst case estimated budget exceeded by " + s + "W.\n";
+    std::string mps = float2str(max_power);
+    std::string error_msg = "Power worst case estimated budget (" + mps + "W) ";
+    error_msg += "exceeded by " + s + "W.\n";
     error_msg += "Too many memories are accessed in the worst case table control flow.\n";
     error_msg += "Adding control flow conditions to separate large table execution ";
     error_msg += "and/or splitting large tables may help.\n";

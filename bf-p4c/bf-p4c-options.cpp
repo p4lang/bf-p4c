@@ -21,6 +21,16 @@
 #include "bf-p4c/logging/manifest.h"
 #include "frontends/parsers/parserDriver.h"
 
+static bool check_exclusive(bool option1, std::string option1Arg,
+                            bool option2, std::string option2Arg) {
+    if (option1 && option2) {
+        ::error("Options %1% and %2% cannot be used together. Please specify only one option",
+                option1Arg, option2Arg);
+        return false;
+    }
+    return true;
+}
+
 BFN_Options::BFN_Options() {
     target = "tofino";
     arch   = "v1model";
@@ -37,9 +47,32 @@ BFN_Options::BFN_Options() {
         [this](const char *) { display_power_budget = true; return true; },
         "Display MAU power summary after compilation");
     registerOption("--disable-power-check", nullptr,
-        [this](const char *) { disable_power_check = true; return true; },
+        [this](const char *) {
+            if (!check_exclusive(true, "--disable-power-check",
+                                (max_power > 0.0), "--set-max-power"))
+                return false;
+            if (!check_exclusive(true, "--disable-power-check",
+                                no_power_check, "--no-power-check"))
+                return false;
+            disable_power_check = true;
+            return true; },
         "Raises the threshold for the power budget check",
         OptionFlags::Hide);
+    registerOption("--set-max-power", "arg",
+        [this](const char* arg) {
+            if (!check_exclusive(true, "--set-max-power",
+                                disable_power_check, "--disable_power_check"))
+                return false;
+            if (!check_exclusive(true, "--set-max-power",
+                                no_power_check, "--no-power-check"))
+                return false;
+            max_power = std::atof(arg);
+            if (max_power <= 0.0) {
+                ::error("Invalid max power set %s", arg);
+                return false;
+            }
+            return true; },
+         "Set maximum power allowed");
     registerOption("--disable-mpr-config", nullptr,
         [this](const char *) { disable_mpr_config = true; return true; },
         "Disables MPR configuration, switching all tables to be always run.",
@@ -53,7 +86,15 @@ BFN_Options::BFN_Options() {
         "Forces all MAU stages to have a match dependency to the previous stage.",
         OptionFlags::Hide);
     registerOption("--no-power-check", nullptr,
-        [this](const char *) { no_power_check = true; return true; },
+        [this](const char *) {
+            if (!check_exclusive(true, "--no-power-check",
+                                disable_power_check, "--disable_power_check"))
+                return false;
+            if (!check_exclusive(true, "--no-power-check",
+                                (max_power > 0.0), "--set-max-power"))
+                return false;
+            no_power_check = true;
+            return true; },
         "Turns off the MAU power budget check",
         OptionFlags::Hide);
 #if BAREFOOT_INTERNAL

@@ -14,6 +14,7 @@ class BFN_Options : public CompilerOptions {
     bool use_clot = true;
     bool no_tagalong = false;
     float phv_scale_factor = 1;
+    float max_power = 0.0;
     bool create_graphs = false;
     bool privatization = false;
     bool decaf = false;
