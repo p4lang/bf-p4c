@@ -53,7 +53,7 @@ export P4C_DEPS="autoconf \
                  g++-6 \
                  libboost1.67-dev \
                  libfl-dev \
-                 libgc-dev \
+                 libatomic-ops-dev
                  libgmp-dev \
                  libssl-dev \
                  libtool \
@@ -66,7 +66,6 @@ export P4C_DEPS="autoconf \
 export P4C_RUNTIME_DEPS="cpp \
                          cmake \
                          ethtool \
-                         libgc1c2 \
                          libgmp10 \
                          libgmpxx4ldbl \
                          libnl-genl-3-dev \
@@ -185,6 +184,17 @@ release)
   apt-get install -y ${REL_PKGS}
   ;;
 esac
+
+# Download, configure, build GC with large config
+WORKDIR /tmp
+{
+  curl -o gc-7.4.2.tar.gz https://hboehm.info/gc/gc_source/gc-7.4.2.tar.gz
+  tar -xvf gc-7.4.2.tar.gz
+  cd gc-7.4.2
+  ./autogen.sh && ./configure --enable-large-config --enable-cplusplus --enable-shared
+  make -$MAKEFLAGS && make install -$MAKEFLAGS
+  ldconfig
+}
 
 # Download, configure, build, and install Boost if needed.
 WORKDIR /tmp

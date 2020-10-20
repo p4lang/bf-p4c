@@ -110,7 +110,7 @@ install_linux_packages() {
         # please keep this list in alphabetical order
         apt_packages="automake autopoint bison cmake curl doxygen ethtool flex g++ git \
                  libcli-dev libedit-dev libeditline-dev libevent-dev \
-                 libgc-dev libjudy-dev \
+                 libatomic-ops-dev libjudy-dev \
                  libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev \
                  libtool pkg-config \
                  python2.7 python python3 python-pip python3-pip \
@@ -147,6 +147,7 @@ install_linux_packages() {
         elif [[ $linux_distro == "Debian" && $linux_version =~ "9.5" ]]; then
             install_rapidjson "1.1.0"
         fi
+        install_libgc_linux
     fi
     if [[ $linux_distro == "Fedora" || $linux_distro == "CentOS Linux" ]]; then
         # please keep this list in alphabetical order
@@ -178,7 +179,7 @@ install_linux_packages() {
         fi
         install_bison "3.0.4"
         install_cmake "3.5.2"
-        install_libgc
+        install_libgc_fed_cent
         install_rapidjson "1.1.0"
         install_boost "1.67.0"
         $SUDO pip install scapy
@@ -208,7 +209,18 @@ function install_bison() {
     fi
 }
 
-function install_libgc() {
+function install_libgc_linux() {
+    # Download, configure and build GC with large-config
+    echo "Build and install libgc"
+    curl -o gc-7.4.2.tar.gz https://hboehm.info/gc/gc_source/gc-7.4.2.tar.gz
+    tar -xvf gc-7.4.2.tar.gz
+    cd gc-7.4.2
+    ./autogen.sh && ./configure --enable-large-config --enable-cplusplus --enable-shared
+    $SUDO make && $SUDO make install || die "Failed to install libgc"
+    $SUDO $LDCONFIG
+}
+
+function install_libgc_fed_cent() {
     echo "Checking for and installing the Boehm-Demers-Weiser GC library"
     if ! `pkg-config bdw-gc` || version_LT `pkg-config --modversion bdw-gc` "7.2.0"; then
         tmpdir=$(mktemp -d)
@@ -222,7 +234,7 @@ function install_libgc() {
         ln -s  $tmpdir/libatomic_ops $tmpdir/bdwgc/libatomic_ops
         autoreconf -vif
         automake --add-missing
-        ./configure --disable-debug --disable-dependency-traking --enable-cplusplus
+        ./configure --enable-large-config --disable-debug --disable-dependency-traking --enable-cplusplus
         make -j $nprocs
         $SUDO make install
         cd ..

@@ -408,14 +408,14 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
 )
 
+# P4C-2953
 p4c_add_xfail_reason("tofino2"
-  "error: Use of uninitialized parser value|Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS"
-  # P4C-2953
+  "error: Use of uninitialized parser value"
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
-  "invalid SuperCluster was formed|Too many heap sections: Increase MAXHINCR or MAX_HEAP_SECTS"
+  "error: This program violates action constraints imposed by Tofino2"
   # P4C-2800
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2_3.p4
   # P4C-3091

@@ -22,6 +22,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-2794\\.p4"
   "p4c-3001\\.p4"
   "p4c-3030-2\\.p4"
+  "obfuscated-ref-msee-eft_tofino2\\.p4"
 )
 set (P16_JNA_FOR_JBAY "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_JNA_FOR_JBAY}" P16_JNA_TESTS INCLUDE "${P16_JNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_JNA_EXCLUDE_PATTERNS}")
@@ -73,6 +74,11 @@ p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/custome
 # p4_16/customer/extreme/p4c-1323-b.p4 needs a longer timeout.
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1323-b.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-1323-b.p4" PROPERTIES TIMEOUT 1200)
+
+# p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4 needs a longer timeout.
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4" "-to 1200")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4" PROPERTIES TIMEOUT 1200)
+p4c_add_test_label("tofino2" "CUST_MUST_PASS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4")
 
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-1587-a.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4" PROPERTIES TIMEOUT 1200)

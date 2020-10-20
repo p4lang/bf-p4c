@@ -47,6 +47,9 @@ set (JBAY_MUST_PASS_TESTS
   # Customer profiles
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200518.p4
   extensions/p4_tests/p4_16/customer/extreme/npb-master-20200813.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-noname_tofino2.p4
+  extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-msee-eft_tofino2.p4
 # P4C-3171
 #  p4c-3171
   extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
