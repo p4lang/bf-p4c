@@ -59,6 +59,9 @@ bool DarkLiveRange::increasesDependenceCriticalPath(
     if (use_stage < init_stage) return false;
     int new_init_stage = use_stage + 1;
     LOG5("\t\tnew_init_stage: " << new_init_stage << ", maxStages: " << maxStages);
+    LOG5("\t\t\t MinStages: useTable(" << *(PhvInfo::minStage(use).begin()) <<
+         ")  initTable(" << *(PhvInfo::minStage(init).begin()) << ")");
+
     if (new_init_stage + init_dep_tail > maxStages)
         return true;
     return false;
@@ -579,22 +582,29 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             return boost::none;
         }
 
+        bool ARAspill = PhvInfo::darkSpillARA && movePreviousToDark && !initializeFromDark;
         const IR::MAU::Table* groupDominator = getGroupDominator(info.field.field(), f_nodes,
                 info.field.field()->gress);
-        if (groupDominator == nullptr) {
+        int firstDarkInitMaxStage = 0;
+
+        // ALEX:
+        if (!ARAspill && groupDominator == nullptr) {
             LOG2("\t\tCannot find group dominator to write " << lastField->field << " into a "
                  "dark container.");
             return boost::none;
         }
 
-        while (groupDominator != nullptr) {
+        // ALEX:
+        while (ARAspill || groupDominator != nullptr) {
             // Check that the group dominator can be used to add the move instruction without
             // lengthening the dependence chain.
-            bool groupDominatorAfterLastUsePrevField =
+            // ALEX:
+            bool goToNextDominator = false;
+            bool groupDominatorAfterLastUsePrevField = ARAspill ? true :
                 (dg.min_stage(groupDominator) > lastField->maxStage.first) ||
                 ((dg.min_stage(groupDominator) == lastField->maxStage.first) &&
                  lastField->maxStage.second == PHV::FieldUse(READ));
-            bool groupDominatorBeforeFirstUseCurrentField =
+            bool groupDominatorBeforeFirstUseCurrentField = ARAspill ? true :
                 isGroupDominatorEarlierThanFirstUseOfCurrentField(info, f_nodes, groupDominator);
 
             if (!groupDominatorAfterLastUsePrevField) {
@@ -605,72 +615,91 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 return boost::none;
             }
 
-
             // Check that the initialization point cannot reach the units using the last field.
-            const IR::BFN::Unit* groupDominatorUnit = groupDominator->to<IR::BFN::Unit>();
-            auto reach_condition = canFUnitsReachGUnits({ groupDominatorUnit }, lastField->units,
-                    domTree.getFlowGraph());
-            if (reach_condition.size() > 0) {
-                bool ignoreReach = ignoreReachCondition(info, *lastField, reach_condition);
-                if (!ignoreReach) {
-                    LOG2("\t\tCannot find initialization point because group dominator can reach "
-                         "one of the uses of the last field " << lastField->field);
-                    return boost::none;
+            if (!ARAspill) {
+                const IR::BFN::Unit* groupDominatorUnit = groupDominator->to<IR::BFN::Unit>();
+                auto reach_condition = canFUnitsReachGUnits({ groupDominatorUnit },
+                                                            lastField->units,
+                                                            domTree.getFlowGraph());
+                if (reach_condition.size() > 0) {
+                    bool ignoreReach = ignoreReachCondition(info, *lastField, reach_condition);
+                    if (!ignoreReach) {
+                        LOG2("\t\tCannot find initialization point because group dominator can  "
+                             "reach one of the uses of the last field " << lastField->field);
+                        return boost::none;
+                    }
                 }
-            }
-            // Check that units using the last field can reach the initialization point.
-            bool goToNextDominator = false;
-            for (auto* u : lastField->units) {
-                auto reach_condition = canFUnitsReachGUnits({ u }, { groupDominatorUnit },
-                        domTree.getFlowGraph());
-                if (reach_condition.size() == 0) {
-                    LOG2("\t\tUse unit " << DBPrint::Brief << u << " of previous field " <<
-                            lastField->field << " cannot reach initialization point " <<
-                            DBPrint::Brief << groupDominatorUnit);
+
+                // Check that units using the last field can reach the initialization point.
+                goToNextDominator = !groupDominatorBeforeFirstUseCurrentField;
+
+                if (!goToNextDominator) {
+                    for (auto* u : lastField->units) {
+                        auto reach_condition = canFUnitsReachGUnits({ u }, { groupDominatorUnit },
+                                                                    domTree.getFlowGraph());
+                        if (reach_condition.size() == 0) {
+                            LOG2("\t\tUse unit " << DBPrint::Brief << u << " of previous field " <<
+                                 lastField->field << " cannot reach initialization point " <<
+                                 DBPrint::Brief << groupDominatorUnit);
+                            goToNextDominator = true;
+                            break;
+                        }
+                    }
+                } else {
+                    LOG3("\t\tCannot initialize current field before its first use.");
+                }
+
+                // If we are initializing the current field, then make sure that the initialization
+                // point does not cause a lengthening of the critical path.
+                if (!goToNextDominator && initializeCurrentField) {
+                    for (auto* u : f_nodes) {
+                        const auto* t = u->to<IR::MAU::Table>();
+                        if (!t) continue;
+                        if (increasesDependenceCriticalPath(t, groupDominator)) {
+                            LOG2("\t\tCannot initialize at " << groupDominator->name << " because "
+                                 "it would increase the critical path through the dependency graph "
+                                 "(via use at " << DBPrint::Brief << u);
+                            goToNextDominator = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!goToNextDominator && doNotInitTables.count(groupDominator)) {
+                    LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
+                         " Therefore, we will not initialize at that table.");
                     goToNextDominator = true;
                 }
             }
 
-            // If we are initializing the current field, then make sure that the initialization
-            // point does not cause a lengthening of the critical path.
-            if (initializeCurrentField) {
-                for (auto* u : f_nodes) {
-                    const auto* t = u->to<IR::MAU::Table>();
-                    if (!t) continue;
-                    if (increasesDependenceCriticalPath(t, groupDominator)) {
-                        LOG2("\t\tCannot initialize at " << groupDominator->name << " because "
-                             "it would increase the critical path through the dependency graph "
-                             "(via use at " << DBPrint::Brief << u);
-                        goToNextDominator = true;
-                    }
-                }
-            }
-
-            if (doNotInitTables.count(groupDominator)) {
-                LOG2("\t\tTable " << groupDominator->name << " requires more than one stage."
-                     " Therefore, we will not initialize at that table.");
-                goToNextDominator = true;
-            }
-
             // Only find initialization point if this group dominator is the right candidate.
-            if (!goToNextDominator) {
-                LOG2("\t\tTrying to initialize at table " << groupDominator->name << " (Stage " <<
-                        dg.min_stage(groupDominator) << ")");
+            if (ARAspill || !goToNextDominator) {
+                if (ARAspill)
+                    LOG2("\t\tTrying to initialize using ARA");
+                else
+                    LOG2("\t\tTrying to initialize at table " << groupDominator->name << " (Stage "
+                         << dg.min_stage(groupDominator) << ")");
+
                 auto darkInitPoints = getInitPointsForTable(group, c, groupDominator, *lastField,
                         info, rv, movePreviousToDark, initializeCurrentField, initializeFromDark,
-                        alloc);
+                                                            alloc, ARAspill);
                 if (!groupDominatorBeforeFirstUseCurrentField) {
                     // TODO: Relax by accounting for valid uses directly from dark containers.
                     LOG3("\t\tCannot initialize current field before its first use.");
                 } else if (!darkInitPoints) {
-                    LOG3("\t\tDid not get any initialization points; need to move up in the flow "
-                            "graph.");
+                    if (ARAspill)
+                        return boost::none;
+                    else
+                        LOG3("\t\tDid not get any initialization points; need to move up in the"
+                             " flow graph.");
                 } else if (darkInitPoints) {
                     // Found initializations. Now set up the return vector accordingly.
                     LOG3("\t\t" << darkInitPoints->size() << " initializations found");
                     for (auto init : *darkInitPoints) {
                         LOG3("\t\t  Adding to return vector: " << init);
                         rv.push_back(init);
+                        firstDarkInitMaxStage =
+                            init.getDestinationSlice().getEarliestLiveness().first;
                     }
                     break;
                 }
@@ -689,15 +718,20 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
                 groupDominator = *newGroupDominator;
                 LOG2("\t\tSetting new group dominator to " << groupDominator);
             }
-        }
+
+            BUG_CHECK(!ARAspill, "Reached nextDominator while ARAspill ...?");
+        }  // while (groupDominator)
 
         if (idx == 1 && firstDarkInitEntry != nullptr) {
             LOG3("Need to push the first dark init primitive corresponding to " <<
                     *firstDarkInitEntry);
             if (movePreviousToDark) {
                 LOG3("  Live range must extend to the initialization point");
+                firstDarkInitMaxStage = ARAspill ?
+                    firstDarkInitMaxStage : dg.min_stage(groupDominator);
+
                 firstDarkInitEntry->setDestinationLatestLiveness(
-                        std::make_pair(dg.min_stage(groupDominator), PHV::FieldUse(READ)));
+                        std::make_pair(firstDarkInitMaxStage, PHV::FieldUse(READ)));
                 LOG3("  New dark primitive: " << *firstDarkInitEntry);
                 rv.insert(rv.begin(), *firstDarkInitEntry);
             }
@@ -726,55 +760,87 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         bool moveLastFieldToDark,
         bool initializeCurrentField,
         bool initializeFromDark,
-        const PHV::Transaction& alloc) const {
+        const PHV::Transaction& alloc,
+        bool useARA) const {
     PHV::DarkInitMap rv;
 
-    // If the last field is to be moved into a dark container, make sure that the uses of that slice
-    // (for that live range) is not mutually exclusive with the table t, where the move is supposed
-    // to happen.
     bool lastMutexSatisfied = true;
-    if (moveLastFieldToDark)
-        lastMutexSatisfied = mutexSatisfied(lastField, t);
-
-    // If the current field is to be initialized, make sure that the uses of that slice (for the
-    // corresponding live range) is not mutually exclusive with the table t, where the
-    // initialization is to be performed.
     bool currentMutexSatisfied = true;
-    if (initializeCurrentField)
-        currentMutexSatisfied = mutexSatisfied(currentField, t);
 
-    if (!lastMutexSatisfied || !currentMutexSatisfied) return boost::none;
+    if (!useARA) {
+        // If the last field is to be moved into a dark container, make sure that the uses of that
+        // slice (for that live range) is not mutually exclusive with the table t, where the move
+        // is supposed to happen.
+        if (moveLastFieldToDark)
+            lastMutexSatisfied = mutexSatisfied(lastField, t);
+
+        // If the current field is to be initialized, make sure that the uses of that slice (for the
+        // corresponding live range) is not mutually exclusive with the table t, where the
+        // initialization is to be performed.
+        if (initializeCurrentField)
+            currentMutexSatisfied = mutexSatisfied(currentField, t);
+
+        if (!lastMutexSatisfied || !currentMutexSatisfied) return boost::none;
+    }
 
     PHV::DarkInitEntry* prevSlice = nullptr;
     int cur_min_stage = currentField.get_min_stage(dg);
     BUG_CHECK(cur_min_stage >= 0, "Found invalid min_stage for slice %1%", currentField.field);
 
-    boost::optional<PHV::DarkInitEntry> lastFieldInit;
+    // ALEX: In the future we may want to use regular actions for spills to dark
+    //       So we will need to add logic to determine useARA
+
+    boost::optional<PHV::DarkInitEntry*> darkFieldInit = boost::none;
+    boost::optional<PHV::DarkInitEntry*> currentFieldInit = boost::none;
 
     // Check if moving lastField to dark container (if required) is possible.
     if (moveLastFieldToDark) {
-        lastFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
-                                                       currentField.maxStage);
-        if (!lastFieldInit) return boost::none;
-        LOG3("\t\t\tA. Creating dark init primitive for moving last field to dark : " <<
-             *lastFieldInit);
-        // Update prior and post table constraints for injection during AddDarkInitialization pass
-        lastFieldInit->addPriorUnits(lastField.units);
-        lastFieldInit->addPostUnits(currentField.units);
+        darkFieldInit = getInitForLastFieldToDark(c, group, t, lastField, alloc,
+                                                  currentField, useARA);
+        if (!darkFieldInit) return boost::none;
+        LOG3("\t\t\tA. Creating" << (useARA ? " ARA " : " non-ARA ") <<
+             " dark init primitive for moving last field to dark : " << **darkFieldInit);
 
-        // Tag spill to dark initialization as AlwaysRunAction
-        lastFieldInit->setAlwaysRunInit();
-        rv.push_back(*lastFieldInit);
+        if (useARA) {
+            // Update prior and post table constraints for injection
+            // during AddDarkInitialization pass
+            (*darkFieldInit)->addPriorUnits(lastField.units);
+            (*darkFieldInit)->addPostUnits(currentField.units);
 
-        auto srcSlice = lastFieldInit->getSourceSlice();
+            // Tag spill to dark initialization as AlwaysRunAction
+            (*darkFieldInit)->setAlwaysRunInit();
+        }
+
+        auto srcSlice = (*darkFieldInit)->getSourceSlice();
         if (srcSlice) {
             if (initMap.size() > 0) {
                 PHV::DarkInitEntry* lastSlice = &initMap[initMap.size() - 1];
-                PHV::StageAndAccess newLatestStage = std::make_pair(dg.min_stage(t),
+                // ALEX:
+                PHV::StageAndAccess newLatestStage =
+                    std::make_pair(
+                        (*darkFieldInit)->getDestinationSlice().getEarliestLiveness().first,
                         PHV::FieldUse(READ));
                 lastSlice->setDestinationLatestLiveness(newLatestStage);
-                LOG3("\t\t\t  Extending liveness of " << *lastSlice << " to " <<
-                     newLatestStage.first << newLatestStage.second);
+                LOG3("\t\t\t  Extending latest liveness of " << *lastSlice);
+
+                // Also update the lifetime of prior/post prims related to the source slice
+                for (auto *prim : lastSlice->getInitPrimitive().getARApostPrims()) {
+                    LOG4("\t\tUpdating latest liveness for: " << prim->getDestinationSlice());
+                    LOG4("\t\t\t to " << newLatestStage);
+                    prim->setDestinationLatestLiveness(newLatestStage);
+                }
+                for (auto *prim : lastSlice->getInitPrimitive().getARApostPrims()) {
+                    LOG4("After update: " << prim->getDestinationSlice());
+                }
+
+                for (auto *prim : lastSlice->getInitPrimitive().getARApriorPrims()) {
+                    LOG4("\t\tUpdating latest liveness for: " << prim->getDestinationSlice());
+                    LOG4("\t\t\t to " << newLatestStage);
+                    prim->setDestinationLatestLiveness(newLatestStage);
+                }
+                for (auto *prim : lastSlice->getInitPrimitive().getARApriorPrims()) {
+                    LOG4("After update: " << prim->getDestinationSlice());
+                }
             }
         }
     } else {
@@ -783,8 +849,9 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
             prevSlice = &initMap[initMap.size() - 1];
         } else {
             PHV::AllocSlice dest(lastField.field);
-            dest.setLiveness(lastField.minStage, std::make_pair(dg.min_stage(t),
-                        PHV::FieldUse(READ)));
+            // ALEX: Here we can use the dominator t since moveLastFieldToDark==false
+            dest.setLiveness(lastField.minStage,
+                             std::make_pair(dg.min_stage(t), PHV::FieldUse(READ)));
             PHV::DarkInitEntry noInitDark(dest);
             noInitDark.setNop();
             LOG3("\t\t\tB. Creating dark init primitive: " << noInitDark);
@@ -794,26 +861,49 @@ boost::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
 
     // Check if there is an allocation for field currentField. If there is, then it must be in a
     // dark container, which can then be moved back into this container (c).
-    boost::optional<PHV::DarkInitEntry> currentFieldInit;
     if (initializeCurrentField && initializeFromDark) {
         currentFieldInit = getInitForCurrentFieldFromDark(c, t, currentField, initMap, alloc);
     } else if (initializeCurrentField && !initializeFromDark) {
-        currentFieldInit = getInitForCurrentFieldWithZero(c, t, currentField, alloc);
-        if (lastFieldInit) {
-            auto drkInit = &rv[rv.size() - 1];
-            drkInit->addPostUnits({t});
-            LOG5("\t\t\t\tAdding table " << t->name << " to post-units of last DarkInitEntry: " <<
-                 "\n" << *drkInit);
+        currentFieldInit = getInitForCurrentFieldWithZero(c, t, currentField, alloc,
+                                                          darkFieldInit, useARA);
+
+        // Add a dependency between the previous slice's move-to-dark and the
+        // current slice's init-to-zero primitives
+        if (darkFieldInit && useARA) {
+            BUG_CHECK(currentFieldInit,
+                      "Last field moved to dark but no zero initialization for current field");
+
+            (*currentFieldInit)->setAlwaysRunInit();
+            // Update prior and post table constraints for injection
+            // during AddDarkInitialization pass
+            (*currentFieldInit)->addPriorUnits(lastField.units);
+            (*currentFieldInit)->addPostUnits(currentField.units);
+
+            LOG4("\tAdding Prior DarkInitEntry " << **darkFieldInit <<
+                 "\n\t to " << **currentFieldInit);
+            (*currentFieldInit)->addPriorPrims(*darkFieldInit);
         }
     }
 
     if (!currentFieldInit) return boost::none;
-    rv.push_back(*currentFieldInit);
+
+    if (darkFieldInit) {
+        if (useARA) {
+            LOG4("\tAdding Post DarkInitEntry " << **currentFieldInit << "\n\t to " <<
+                 **darkFieldInit);
+            (*darkFieldInit)->addPostPrims(*currentFieldInit);
+        }
+
+        rv.push_back(**darkFieldInit);
+    }
+
+    rv.push_back(**currentFieldInit);
 
     if (prevSlice != nullptr) {
-        PHV::StageAndAccess newLatestStage = std::make_pair(cur_min_stage, PHV::FieldUse(READ));
+        BUG_CHECK(t, "Dominator node is not set");
+        PHV::StageAndAccess newLatestStage = std::make_pair(dg.min_stage(t), PHV::FieldUse(READ));
         prevSlice->setDestinationLatestLiveness(newLatestStage);
-        LOG5("\t\tSetting latest liveness for previous slice : " << prevSlice);
+        LOG5("\t\tSetting latest liveness for previous slice : " << *prevSlice);
     }
 
     return rv;
@@ -869,17 +959,30 @@ boost::optional<PHV::Allocation::ActionSet> DarkLiveRange::getInitActions(
     return moveActions;
 }
 
-boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
+boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
         const PHV::Container& c,
         const PHV::ContainerGroup& group,
         const IR::MAU::Table* t,
-        const OrderedFieldInfo& field,
+        const OrderedFieldInfo& prvField,
         const PHV::Transaction& alloc,
-        const PHV::StageAndAccess nxtFieldMaxStage) const {
+        const OrderedFieldInfo& curField,
+        bool useARA) const {
     // Find out all the actions in table t, where we need to insert moves into the dark container.
     // DXm[a...b] = Xn[a...b]
-    auto moveActions = getInitActions(c, field, t, alloc);
-    if (!moveActions) return boost::none;
+    // ALEX: Only need to do this for non ARA move-to-dark inits
+    boost::optional<PHV::Allocation::ActionSet> moveActions;
+    if (!useARA) {
+        moveActions = getInitActions(c, prvField, t, alloc);
+        if (!moveActions) return boost::none;
+    } else {
+        if ((prvField.maxStage.first >= (curField.minStage.first)) ||
+            ((prvField.maxStage.first == (curField.minStage.first - 1)) &&
+             prvField.maxStage.second.isWrite())) {
+            LOG5("\t\t\t   Cannot do ARA spill due to slice liveranges: previousMax(" <<
+                 prvField.maxStage << ") currentMin(" << curField.minStage << ")");
+            return boost::none;
+        }
+    }
 
     auto darkCandidates = group.getAllContainersOfKind(PHV::Kind::dark);
     LOG5("\t\t\t\tOverlay container: " << c);
@@ -887,49 +990,47 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForLastFieldToDark(
         LOG5("\t\t\t\tCandidate dark container: " << dark);
 
     // Get best dark container to move the field into.
-    const PHV::Container darkCandidate = getBestDarkContainer(darkCandidates, field, alloc);
+    const PHV::Container darkCandidate = getBestDarkContainer(darkCandidates, prvField, alloc);
     if (darkCandidate == PHV::Container()) {
-        LOG4("\t\t\t  Could not find a dark container to move field " << field.field << " into");
+        LOG4("\t\t\t  Could not find a dark container to move field " << prvField.field << " into");
         return boost::none;
     }
     LOG5("\t\t\t  Best container for dark: " << darkCandidate);
 
-    PHV::AllocSlice srcSlice(field.field);
-    srcSlice.setLiveness(field.minStage, std::make_pair(dg.min_stage(t), PHV::FieldUse(READ)));
-    LOG5("\t\t\t\tCreated source slice " << srcSlice << " live between [" << field.minStage.first <<
-         field.minStage.second << ", " << dg.min_stage(t) << PHV::FieldUse(READ) << "]");
+    int minDarkStage = prvField.maxStage.second.isRead() ? prvField.maxStage.first :
+        prvField.maxStage.first + 1;
 
-    if (field.minStage.first > dg.min_stage(t)) {
-        LOG5("\t\t\tfield.minStage (" << field.minStage.first << ")  dg.min_stage (" <<
-             dg.min_stage(t) << "  table: " << t->name);
-        return boost::none;
-    }
+    PHV::AllocSlice srcSlice(prvField.field);
+    if (useARA)
+        srcSlice.setLiveness(prvField.minStage, std::make_pair(minDarkStage, PHV::FieldUse(READ)));
+    else
+        srcSlice.setLiveness(prvField.minStage, std::make_pair(dg.min_stage(t),
+                                                               PHV::FieldUse(READ)));
+    LOG5("\t\t\t\tCreated source slice " << srcSlice);
 
-    PHV::AllocSlice dstSlice(field.field.field(), darkCandidate, field.field.field_slice(),
-            field.field.container_slice());
+    PHV::AllocSlice dstSlice(prvField.field.field(), darkCandidate, prvField.field.field_slice(),
+            prvField.field.container_slice());
     // Set maximum liveness for this slice.
-    int darkStage = nxtFieldMaxStage.second == PHV::FieldUse(READ) ? nxtFieldMaxStage.first :
-        nxtFieldMaxStage.first + 1;
-    dstSlice.setLiveness(std::make_pair(dg.min_stage(t), PHV::FieldUse(WRITE)),
-            std::make_pair(darkStage, PHV::FieldUse(READ)));
-    LOG5("\t\t\t\tCreated destination slice " << dstSlice << " live between [" << dg.min_stage(t) <<
-         PHV::FieldUse(WRITE) << ", " << darkStage << PHV::FieldUse(READ) << "]");
+    int maxDarkStage = curField.maxStage.second == PHV::FieldUse(READ) ? curField.maxStage.first :
+        curField.maxStage.first + 1;
+    dstSlice.setLiveness(std::make_pair(srcSlice.getLatestLiveness().first, PHV::FieldUse(WRITE)),
+            std::make_pair(maxDarkStage, PHV::FieldUse(READ)));
+    LOG5("\t\t\t\tCreated destination slice " << dstSlice);
 
-    if (darkStage <= dg.min_stage(t)) {
-        LOG5("\t\t\tdarkStage (" << darkStage << ")  dg.min_stage (" <<
-             dg.min_stage(t) << "  table: " << t->name);
-        return boost::none;
-    }
-
-    PHV::DarkInitEntry rv(dstSlice, srcSlice, *moveActions);
-    return rv;
+    // ALEX: Use actions only for non-ARA primitives
+    if (useARA)
+        return new PHV::DarkInitEntry(dstSlice, srcSlice);
+    else
+        return new PHV::DarkInitEntry(dstSlice, srcSlice, *moveActions);
 }
 
-boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldWithZero(
+boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const OrderedFieldInfo& field,
-        const PHV::Transaction& alloc) const {
+        const PHV::Transaction& alloc,
+        boost::optional<PHV::DarkInitEntry*> drkInit,
+        bool useARA) const {
     // TODO:
     // Check if any pack conflicts are violated.
     // Initializing at table t requires that there is a dependence now from the previous uses of
@@ -939,15 +1040,24 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldWithZer
 
     // Find out all actions in table t, where we need to initialize @field to 0 in container @c.
     // c[a...b] = 0
-    auto initActions = getInitActions(c, field, t, alloc);
-    if (!initActions) return boost::none;
+    // ALEX: Use initAction for non-ARA primitives
+    boost::optional<PHV::Allocation::ActionSet>  initActions;
+    if (!useARA) {
+        initActions = getInitActions(c, field, t, alloc);
+        if (!drkInit && !initActions) return boost::none;
+    }
 
     PHV::AllocSlice dstSlice(field.field);
-    dstSlice.setLiveness(std::make_pair(dg.min_stage(t), PHV::FieldUse(WRITE)), field.maxStage);
-    LOG5("\t\t\t\tCreated destination slice " << dstSlice << " live between [" << dg.min_stage(t) <<
-            PHV::FieldUse(WRITE) << ", " << field.maxStage.first << field.maxStage.second << "]");
-    PHV::DarkInitEntry rv(dstSlice, *initActions);
-    return rv;
+    int earlyLRstg = ((useARA && drkInit) ?
+                      (*drkInit)->getDestinationSlice().getEarliestLiveness().first :
+                      dg.min_stage(t));
+    dstSlice.setLiveness(std::make_pair(earlyLRstg, PHV::FieldUse(WRITE)), field.maxStage);
+    LOG5("\t\t\t\tCreated destination slice " << dstSlice);
+    // ALEX: Use initAction for non-ARA primitives
+    if (useARA)
+        return new PHV::DarkInitEntry(dstSlice);
+    else
+        return new PHV::DarkInitEntry(dstSlice, *initActions);
 }
 
 boost::optional<PHV::DarkInitEntry>
@@ -980,7 +1090,7 @@ DarkLiveRange::generateInitForLastStageAlwaysInit(
 }
 
 
-boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldFromDark(
+boost::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldFromDark(
         const PHV::Container& c,
         const IR::MAU::Table* t,
         const OrderedFieldInfo& field,
@@ -992,7 +1102,7 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldFromDar
     // matches the field slice for the current field.
     PHV::AllocSlice dstSlice(field.field);
     dstSlice.setLiveness(std::make_pair(dg.min_stage(t), PHV::FieldUse(WRITE)), field.maxStage);
-    PHV::DarkInitEntry rv(dstSlice, *initActions);
+    auto *rv = new PHV::DarkInitEntry(dstSlice, *initActions);
     for (auto it = initMap.rbegin(); it != initMap.rend(); ++it) {
         PHV::AllocSlice dest = it->getDestinationSlice();
         bool found = (dest.field() == field.field.field() &&
@@ -1006,10 +1116,10 @@ boost::optional<PHV::DarkInitEntry> DarkLiveRange::getInitForCurrentFieldFromDar
             // Current initialization point becomes start of liveness of new slice and end of
             // liveness of source slice.
             it->setDestinationLatestLiveness(newReadStage);
-            rv.setDestinationEarliestLiveness(newWriteStage);
+            rv->setDestinationEarliestLiveness(newWriteStage);
             dest.setLatestLiveness(newReadStage);
-            rv.addSource(dest);
-            LOG3("\t\t\tAdding initialization from dark: " << rv);
+            rv->addSource(dest);
+            LOG3("\t\t\tAdding initialization from dark: " << *rv);
             return rv;
         }
     }

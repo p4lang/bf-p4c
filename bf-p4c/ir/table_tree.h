@@ -37,6 +37,7 @@ class TableTree {
         ordered_map<const IR::MAU::TableSeq *, safe_vector<cstring>> next;
         out << indent++;
         if (tbl->global_id()) out << hex(*tbl->global_id()) << ": ";
+        else if (tbl->stage() != -1) out << hex(tbl->stage() * 16) << ": ";
         out << tbl->name;
         const char *sep = "(";
         for (auto &row : tbl->gateway_rows) {

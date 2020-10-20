@@ -190,6 +190,7 @@ void TableSummary::postorder(const IR::BFN::Pipe* pipe) {
         // than deviceStages, then redo table placement without container conflicts.
         LOG1("Invoking table placement without container conflicts because previous round of "
              "table placement took " << maxStage << " stages.");
+        PhvInfo::darkSpillARA = false;
         state = NOCC_TRY2;
         throw NoContainerConflictTrigger::failure(true);
 

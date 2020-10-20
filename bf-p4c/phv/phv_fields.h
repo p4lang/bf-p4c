@@ -1019,6 +1019,7 @@ class PhvInfo {
  public:
     static ordered_map<cstring, std::set<int>> table_to_min_stage;
     static int deparser_stage;
+    static bool darkSpillARA;
 
     /// Pretty-print all fields
     struct DumpPhvFields : public Visitor {
@@ -1221,8 +1222,12 @@ class PhvInfo {
         bool has_constrs = (alwaysRunTables.count(grs) ?
                             (alwaysRunTables[grs].count(tbl) ? true : false) : false);
 
-        if (!has_constrs)
+        if (!has_constrs) {
             (alwaysRunTables[grs]) [tbl] = cnstrs;
+        } else {
+            (alwaysRunTables[grs]) [tbl].first.insert(cnstrs.first.begin(), cnstrs.first.end());
+            (alwaysRunTables[grs]) [tbl].second.insert(cnstrs.second.begin(), cnstrs.second.end());
+        }
 
         return !has_constrs;
     }

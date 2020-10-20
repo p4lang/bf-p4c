@@ -13,6 +13,7 @@ namespace PHV {
 using ActionSet = ordered_set<const IR::MAU::Action*>;
 
 class DarkInitPrimitive;
+class DarkInitEntry;
 class Field;
 
 class AllocSlice {
@@ -122,6 +123,8 @@ class DarkInitPrimitive {
      ActionSet actions;
      ordered_set<const IR::BFN::Unit*> priorUnits;   // Hold units of prior overlay slice
      ordered_set<const IR::BFN::Unit*> postUnits;   // Hold units of post overlay slice
+     std::vector<PHV::DarkInitEntry*> priorPrims;  // Hold prior ARA prims
+     std::vector<PHV::DarkInitEntry*> postPrims;  // Hold post ARA prims
 
  public:
      DarkInitPrimitive(void)
@@ -132,7 +135,11 @@ class DarkInitPrimitive {
          : assignZeroToDestination(true), nop(false), sourceSlice(boost::none),
          alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
-     explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
+     explicit DarkInitPrimitive(PHV::AllocSlice& src)
+         : assignZeroToDestination(false), nop(false), sourceSlice(src),
+         alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false) { }
+
+    explicit DarkInitPrimitive(PHV::AllocSlice& src, ActionSet initPoints)
          : assignZeroToDestination(false), nop(false), sourceSlice(src),
          alwaysInitInLastMAUStage(false), alwaysRunActionPrim(false), actions(initPoints) { }
 
@@ -144,15 +151,27 @@ class DarkInitPrimitive {
          alwaysRunActionPrim(other.alwaysRunActionPrim),
          actions(other.actions),
          priorUnits(other.priorUnits),
-         postUnits(other.postUnits) { }
+         postUnits(other.postUnits),
+         priorPrims(other.priorPrims),
+         postPrims(other.postPrims) { }
 
-     bool operator==(const DarkInitPrimitive& other) const {
-         return assignZeroToDestination == other.assignZeroToDestination &&
-                nop == other.nop &&
-                sourceSlice == other.sourceSlice &&
-                alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage &&
-                alwaysRunActionPrim == other.alwaysRunActionPrim &&
-                actions == other.actions;
+    bool operator==(const PHV::DarkInitPrimitive& other) const {
+        bool zero2dest = (assignZeroToDestination == other.assignZeroToDestination);
+        bool isNop = (nop == other.nop);
+        bool srcSlc = false;
+        if (!sourceSlice && !other.sourceSlice)
+            srcSlc = true;
+        if (sourceSlice && other.sourceSlice)
+            srcSlc = (sourceSlice == other.sourceSlice);
+        bool initLstStg  = (alwaysInitInLastMAUStage == other.alwaysInitInLastMAUStage);
+        bool araPrim = (alwaysRunActionPrim == other.alwaysRunActionPrim);
+        bool acts = (actions == other.actions);
+        bool rslt = zero2dest && isNop && srcSlc && initLstStg && araPrim && acts;
+
+        LOG7("\t op==" << rslt << " <-- " << zero2dest << " " << isNop << " " << srcSlc <<
+             " " << initLstStg << " " << araPrim << " " << acts);
+
+        return rslt;
      }
 
      bool isEmpty() const {
@@ -184,6 +203,20 @@ class DarkInitPrimitive {
          }
          postUnits.insert(units.begin(), units.end());
      }
+
+     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         if (!append) {
+             priorPrims.clear();
+         }
+         priorPrims.push_back(prims);
+     }
+     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         if (!append) {
+             postPrims.clear();
+         }
+         postPrims.push_back(prims);
+     }
+
      void setLastStageAlwaysInit() { alwaysInitInLastMAUStage = alwaysRunActionPrim = true; }
      void setAlwaysRunActionPrim() { alwaysRunActionPrim = true; }
      bool isNOP() const { return nop; }
@@ -194,6 +227,8 @@ class DarkInitPrimitive {
      const ActionSet& getInitPoints() const { return actions; }
      const ordered_set<const IR::BFN::Unit*>& getARApriorUnits() const { return priorUnits; }
      const ordered_set<const IR::BFN::Unit*>& getARApostUnits() const { return postUnits; }
+     const std::vector<PHV::DarkInitEntry*> getARApriorPrims() const { return priorPrims; }
+     const std::vector<PHV::DarkInitEntry*> getARApostPrims() const { return postPrims; }
 };
 
 class DarkInitEntry {
@@ -205,8 +240,12 @@ class DarkInitEntry {
      explicit DarkInitEntry(AllocSlice& dest) : destinationSlice(dest) { }
      explicit DarkInitEntry(AllocSlice& dest, ActionSet initPoints)
          : destinationSlice(dest), initInfo(initPoints) { }
+     explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src)
+         : destinationSlice(dest), initInfo(src) { }
      explicit DarkInitEntry(AllocSlice& dest, AllocSlice& src, ActionSet init)
          : destinationSlice(dest), initInfo(src, init) { }
+     explicit DarkInitEntry(AllocSlice dest, DarkInitPrimitive &src)
+         : destinationSlice(dest), initInfo(src) { }
 
      void addSource(AllocSlice sl) { initInfo.addSource(sl); }
      void setNop() { initInfo.setNop(); }
@@ -215,24 +254,56 @@ class DarkInitEntry {
      bool isNOP() const { return initInfo.isNOP(); }
      bool destAssignedToZero() const { return initInfo.destAssignedToZero(); }
      bool mustInitInLastMAUStage() const { return initInfo.mustInitInLastMAUStage(); }
-     boost::optional<AllocSlice> getSourceSlice() { return initInfo.getSourceSlice(); }
+     boost::optional<AllocSlice> getSourceSlice() const { return initInfo.getSourceSlice(); }
+
      void addPriorUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
          initInfo.addPriorUnits(units, append);
      }
      void addPostUnits(const ordered_set<const IR::BFN::Unit*>& units, bool append = true) {
          initInfo.addPostUnits(units, append);
      }
+
+     void addPriorPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         initInfo.addPriorPrims(prims, append);
+     }
+     void addPostPrims(PHV::DarkInitEntry* prims, bool append = true) {
+         initInfo.addPostPrims(prims, append);
+     }
+
      const ActionSet& getInitPoints() const { return initInfo.getInitPoints(); }
-     const AllocSlice getDestinationSlice() const { return destinationSlice; }
-     AllocSlice getDestinationSlice() { return destinationSlice; }
-     const DarkInitPrimitive& getInitPrimitive() const { return initInfo; }
-     DarkInitPrimitive& getInitPrimitive() { return initInfo; }
+    const AllocSlice& getDestinationSlice() const { return destinationSlice; }
+    AllocSlice getDestinationSlice() { return destinationSlice; }
+    const DarkInitPrimitive& getInitPrimitive() const { return initInfo; }
+    DarkInitPrimitive& getInitPrimitive() { return initInfo; }
      void setDestinationLatestLiveness(const PHV::StageAndAccess& max) {
          destinationSlice.setLatestLiveness(max);
      }
      void setDestinationEarliestLiveness(const PHV::StageAndAccess& min) {
          destinationSlice.setEarliestLiveness(min);
      }
+
+    bool operator<(const PHV::DarkInitEntry& other) const {
+        if (destinationSlice != other.getDestinationSlice())
+            return destinationSlice < other.getDestinationSlice();
+        if (getSourceSlice() && other.getSourceSlice() &&
+            *(getSourceSlice()) != *(other.getSourceSlice()))
+            return *(getSourceSlice()) < *(other.getSourceSlice());
+        if (getSourceSlice() && !other.getSourceSlice())
+            return true;
+        return false;
+    }
+
+    bool operator==(const PHV::DarkInitEntry& other) const {
+        LOG4("DarkInitEntry == : " << &destinationSlice << " <-> ");
+
+        return
+            (destinationSlice == other.getDestinationSlice()) &&
+            (initInfo == other.getInitPrimitive());
+    }
+
+    bool operator!=(const PHV::DarkInitEntry& other) const {
+        return !this->operator==(other);
+    }
 };
 
 std::ostream &operator<<(std::ostream &out, const AllocSlice&);

@@ -66,6 +66,7 @@ const PHV::AllocContext* PHV::AllocContext::DEPARSER =
 
 int PhvInfo::deparser_stage = -1;
 ordered_map<cstring, std::set<int>> PhvInfo::table_to_min_stage;
+bool PhvInfo::darkSpillARA = true;
 
 void PhvInfo::clear() {
     all_fields.clear();
@@ -565,6 +566,7 @@ bitvec PhvInfo::bits_allocated(
         const PHV::FieldUse* use) const {
     bitvec ret_bitvec;
     auto& fields = fields_in_container(c);
+
     if (fields.size() == 0) return ret_bitvec;
     // Gather all the slices of written fields allocated to container c
     std::vector<PHV::AllocSlice> write_slices_in_container;
@@ -579,6 +581,7 @@ bitvec PhvInfo::bits_allocated(
         field->foreach_alloc(ctxt, use, [&](const PHV::AllocSlice &alloc) {
             if (alloc.container() != c) return;
             le_bitrange bits = alloc.container_slice();
+
             // Discard the slices that are mutually exclusive with any of the written slices
             bool mutually_exclusive = std::any_of(
                 write_slices_in_container.begin(), write_slices_in_container.end(),
@@ -601,11 +604,12 @@ bitvec PhvInfo::bits_allocated(
             if (Device::phvSpec().hasContainerKind(PHV::Kind::dark) && !c.is(PHV::Kind::dark))
                 noMutex = noMutex && !dark_overlay;
 
-            LOG6("\t\t mutex control:" << mutually_exclusive << " meta:" << meta_overlay <<
+            LOG3("\t\t mutex control:" << mutually_exclusive << " meta:" << meta_overlay <<
                  " dark:" << dark_overlay);
 
-            if (noMutex)
+            if (noMutex) {
                 ret_bitvec.setrange(bits.lo, bits.size());
+            }
         });
     }
     return ret_bitvec;
@@ -812,7 +816,6 @@ const std::vector<PHV::AllocSlice> PHV::Field::get_combined_alloc_bytes(
                 LOG3("\t  Slice: " << slice);
                 field_cont_pairs.emplace_back(slice.field_slice(), slice.container_slice());
             }
-
 
             std::sort(field_cont_pairs.begin(), field_cont_pairs.end(),
                 [](const std::pair<le_bitrange, le_bitrange> &a,

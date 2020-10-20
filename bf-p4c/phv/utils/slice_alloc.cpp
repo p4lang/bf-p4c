@@ -144,7 +144,7 @@ bool PHV::AllocSlice::isUsedParser() const {
 
 namespace PHV {
 
-std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice &slice) {
+    std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice &slice) {
     out << slice.container() << " " << slice.container_slice() << " <-- "
         << PHV::FieldSlice(slice.field(), slice.field_slice());
     out << " live at [" << slice.getEarliestLiveness().first <<
@@ -163,7 +163,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice &slice) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice* slice) {
+    std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice* slice) {
     if (slice)
         out << *slice;
     else
@@ -177,14 +177,14 @@ std::ostream &operator<<(std::ostream &out,
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV::DarkInitEntry& entry) {
+    std::ostream &operator<<(std::ostream &out, const PHV::DarkInitEntry& entry) {
     out << "\t\t" << entry.getDestinationSlice();
     const PHV::DarkInitPrimitive& prim = entry.getInitPrimitive();
     out << prim;
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV::DarkInitPrimitive& prim) {
+    std::ostream &operator<<(std::ostream &out, const PHV::DarkInitPrimitive& prim) {
     if (prim.isNOP()) {
         out << " NOP";
         return out;

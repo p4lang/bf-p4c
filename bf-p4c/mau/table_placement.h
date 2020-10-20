@@ -170,6 +170,8 @@ class DecidePlacement : public MauInspector {
 
 class TransformTables : public MauTransform {
     TablePlacement &self;
+    ordered_set<const IR::MAU::Table *> always_run_actions;  // always run actions to be
+                // moved to the top-level TableSeq.  A set so we avoid duplicate references
 
  public:
     explicit TransformTables(TablePlacement &s) : self(s) {}
@@ -179,6 +181,7 @@ class TransformTables : public MauTransform {
     IR::Node *postorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Node *preorder(IR::MAU::BackendAttached *) override;
+    IR::Node *preorder(IR::BFN::Pipe *pipe) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;
     void merge_match_and_gateway(IR::MAU::Table *tbl, const TablePlacement::Placed *placed,
         IR::MAU::Table::Layout &gw_layout);

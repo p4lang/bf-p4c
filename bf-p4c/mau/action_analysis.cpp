@@ -1860,7 +1860,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         if (write_field == nullptr)
             BUG("Verify Overwritten: Action does not have a write?");
         fieldsWritten.insert(write_field);
-        LOG6("\t Overwrite: Adding written field " << write_field->name << " for expr " <<
+        LOG4("\t Overwrite: Adding written field " << write_field->name << " for expr " <<
              field_action.write.expr);
     }
 
@@ -1878,9 +1878,9 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
         total_write_bits |= tot_align_info.second.direct_write_bits;
     }
 
-    LOG6("\t Overwrite masks - container:" << container_occupancy << " total_write: " <<
+    LOG4("\t Overwrite masks - container:" << container_occupancy << " total_write: " <<
          total_write_bits);
-    LOG6("\t Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
+    LOG4("\t Overwrite masks - adi:" << adi.alignment.direct_write_bits <<
          " ci: " << ci.alignment.direct_write_bits << " invalid: " << invalidate_write_bits);
 
     total_write_bits |= adi.alignment.direct_write_bits;
@@ -2244,6 +2244,7 @@ bool ActionAnalysis::ContainerAction::verify_shift(cstring &error_message,
         return false;
     }
 
+    LOG4("VERIFY SHIFT");
     bool total_overwrite_possible = verify_overwritten(container, phv);
     total_overwrite_possible |= verify_only_read(phv);
     if (!total_overwrite_possible) {
@@ -2359,6 +2360,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     check_overwrite |= (is_from_set() && read_sources() == 2);
 
     if (check_overwrite) {
+        LOG4("CHECK OVERWRITE");
         bool total_overwrite_possible = verify_overwritten(container, phv);
         if (!total_overwrite_possible) {
             error_code |= ILLEGAL_OVERWRITE;

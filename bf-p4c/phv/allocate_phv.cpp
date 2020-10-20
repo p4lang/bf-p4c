@@ -1154,6 +1154,56 @@ CoreAllocation::tryAllocSliceList(
     return tryAllocSliceList(alloc, group, super_cluster, start_pos, score_ctx);
 }
 
+
+// ALEX : Check for overlapping liveranges between slices of non-overlapping bitranges
+bool CoreAllocation::hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
+                                           ordered_set<PHV::AllocSlice> alloc_slices) const {
+    bool lr_overlap = false;  // candidate liverange overlaps with allocated liverage?
+    for (auto& cnd_slice : candidate_slices) {
+        std::set<int> write_stages;
+        if (cnd_slice.getEarliestLiveness().second.isWrite())
+            write_stages.insert(cnd_slice.getEarliestLiveness().first);
+        if (cnd_slice.getLatestLiveness().second.isWrite())
+            write_stages.insert(cnd_slice.getLatestLiveness().first);
+        if (write_stages.size() == 0) continue;
+
+        for (auto& alc_slice : alloc_slices) {
+            if (alc_slice.field() == cnd_slice.field())
+                continue;
+
+            if (alc_slice.container() != cnd_slice.container())
+                continue;
+
+            // Check non bitrange-overlapping slices (missed by phv_action_constraints)
+            if (!alc_slice.container_slice().overlaps(cnd_slice.container_slice())) {
+                for (int stg : write_stages) {
+                    if ((stg >= alc_slice.getEarliestLiveness().first) &&
+                        (stg < alc_slice.getLatestLiveness().first)) {
+                        lr_overlap = true;
+                        LOG4("\t\t Found overlapping liverange between allocated " <<
+                             alc_slice << " and candidate " << cnd_slice);
+                    }
+
+                    if ((stg == alc_slice.getLatestLiveness().first) &&
+                        alc_slice.getLatestLiveness().second.isWrite()) {
+                        lr_overlap = true;
+                        LOG4("\t\t Found overlapping liverange between allocated " <<
+                             alc_slice << " and candidate " << cnd_slice);
+                    }
+                }
+            }
+        }
+        if (lr_overlap) break;
+    }
+    if (lr_overlap)
+        LOG4("\t\t Stop considering mocha container due to overlapping liveranges"
+             " of candidate slices with allocated slices in non-oevrlapping container "
+             "bitrange");
+
+    return lr_overlap;
+}
+
+
 // FIELDSLICE LIST <--> CONTAINER GROUP allocation.
 // This function generally is used under two cases:
 // 1. Allocating the slice list of a super_cluster.
@@ -1463,6 +1513,15 @@ CoreAllocation::tryAllocSliceList(
             for (auto& slice : candidate_slices) LOG6("\t\t  " << slice);
             LOG6("\t\tExisting slices in container: " << c);
             for (auto& slice : perContainerAlloc.slices(c)) LOG6("\t\t\t" << slice);
+        }
+
+        // ALEX : Add special handling for dark overlays of Mocha containers
+        //        - If the overlaying candidate slice liverange overlaps
+        //          with the liverange of other existing slices in the container
+        //          then do skip the dark overlay
+        if (new_overlay_container && c.is(PHV::Kind::mocha)) {
+            if (hasCrossingLiveranges(candidate_slices, perContainerAlloc.slices(c)))
+                continue;
         }
 
         // Check that each field slice satisfies slice<-->container
@@ -2211,7 +2270,6 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     return best_alloc;
 }
 
-
 /* static */
 std::list<PHV::ContainerGroup *> AllocatePHV::makeDeviceContainerGroups() {
     const PhvSpec& phvSpec = Device::phvSpec();
@@ -2397,6 +2455,17 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         /*.max_sl_alignment_try:*/   1,
         /*.tofino_only:*/            false,
         /*.pre_slicing_validation:*/ false,
+        /*.enable_ara_in_overlays:*/ true
+    };
+    BruteForceStrategyConfig no_ara_config {
+        /*.name:*/                   "disable_ara",
+        /*.is_better:*/              default_alloc_score_is_better,
+        /*.max_failure_retry:*/      0,
+        /*.max_slicing:*/            128,
+        /*.max_sl_alignment_try:*/   1,
+        /*.tofino_only:*/            false,
+        /*.pre_slicing_validation:*/ false,
+        /*.enable_ara_in_overlays:*/ false
     };
     BruteForceStrategyConfig tofino_only_backup_config {
         /*.name:*/                   "tofino_only_backup",
@@ -2406,18 +2475,26 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
         /*.max_sl_alignment_try:*/   5,
         /*.tofino_only:*/            true,
         /*.pre_slicing_validation:*/ false,
+        /*.enable_ara_in_overlays:*/ false
     };
     std::vector<BruteForceStrategyConfig> configs = {
-        default_config, tofino_only_backup_config,
+        default_config, no_ara_config, tofino_only_backup_config,
     };
 
     AllocResult result(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
     std::vector<const PHV::SuperCluster::SliceList*> unallocatable_lists;
     for (const auto& config : configs) {
+        if (!PhvInfo::darkSpillARA && (config.name == "default")) continue;
+        if (config.enable_ara_in_overlays && Device::currentDevice() == Device::TOFINO) {
+            continue;
+        }
         if (config.tofino_only && Device::currentDevice() != Device::TOFINO) {
             continue;
         }
+
+        PhvInfo::darkSpillARA = PhvInfo::darkSpillARA && config.enable_ara_in_overlays;
+
         BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
             empty_alloc, config.name, core_alloc_i, parser_critical_path_i,
             critical_path_clusters_i, clot_i, strided_headers_i, uses_i, config, pipeId);
@@ -2460,6 +2537,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
                 /*.max_sl_alignment_try:*/   5,
                 /*.tofino_only:*/            false,
                 /*.pre_slicing_validation:*/ true,
+                /*.enable_ara_in_overlays:*/ false
             };
             BruteForceAllocationStrategy* strategy = new BruteForceAllocationStrategy(
                 empty_alloc, config.name, core_alloc_i, parser_critical_path_i,

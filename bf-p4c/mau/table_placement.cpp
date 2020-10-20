@@ -36,7 +36,7 @@
  ** organized so as to allow backtracking within the greedy allocation, though we do not
  ** currently do any backtracking here.
  **
- ** All of the decisions for placement are done in the preorder(IR::MAU::Pipe *) method --
+ ** All of the decisions for placement are done in the preorder(IR::BFN::Pipe *) method --
  ** in this method we go over all the tables in the pipe (directly, not using the visitor
  ** infrastructure) making decisions about which tables should be allocated to which logical
  ** tables and what ixbar an memory resources to use for them.  All of these decisions are
@@ -2414,6 +2414,11 @@ void TablePlacement::log_choice(const Placed *t, const Placed *best, choice_t ch
     }
 }
 
+IR::Node *TransformTables::preorder(IR::BFN::Pipe *pipe) {
+    always_run_actions.clear();
+    return pipe;
+}
+
 IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     self.tblInfo.clear();
     self.tblByName.clear();
@@ -2423,6 +2428,7 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau) <<
          TableTree("ghost", pipe->ghost_thread));
+    BUG_CHECK(always_run_actions.empty(), "Inconsistent always_run list");
     return pipe;
 }
 
@@ -2810,10 +2816,13 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         gw_only = false;
     }
 
-    if (tbl->is_always_run_action())
+    if (tbl->is_always_run_action()) {
         tbl->stage_ = it->second->stage;
-    else
+        LOG4("\t Set stage for ARA " << tbl->name << " to " << tbl->stage());
+    } else {
         tbl->set_global_id(it->second->logical_id);
+        LOG4("\t Set stage for table " << tbl->name << " to " << tbl->stage());
+    }
 
     if (self.table_placed.count(tbl->name) == 1) {
         if (!gw_only) {
@@ -3037,6 +3046,9 @@ IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
 }
 
 IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
+    if (getParent<IR::BFN::Pipe>())
+        BUG_CHECK(always_run_actions.empty(), "inconsistent always_run list");
+
     // Inserting the starter pistol tables
     if (findContext<IR::MAU::Table>() == nullptr && seq->tables.size() > 0) {
         if (Device::currentDevice() == Device::TOFINO) {
@@ -3050,6 +3062,18 @@ IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
 }
 
 IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
+    /* move all always run actions to the top-level seq in the pipe threads */
+    if (getParent<IR::BFN::Pipe>()) {
+        seq->tables.append(always_run_actions);
+        always_run_actions.clear();
+    } else {
+        for (auto it = seq->tables.begin(); it != seq->tables.end();) {
+            if ((*it)->is_always_run_action()) {
+                always_run_actions.insert(*it);
+                it = seq->tables.erase(it);
+            } else {
+                ++it; } } }
+
     if (seq->tables.size() > 1) {
         std::stable_sort(seq->tables.begin(), seq->tables.end(),
             // Always Run Action will appear logically after all tables in its stage but before

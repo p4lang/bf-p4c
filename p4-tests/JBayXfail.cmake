@@ -181,10 +181,11 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "error: Ran out of chunks in field dictionary"
+  "error: Ran out of chunks in field dictionary|PHV allocation was not successful"
   extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
 
   # P4C-2555
+  # P4C-3227 resolve the PHV Allocation to go back to field dictionary chunks
   extensions/p4_tests/p4_16/customer/extreme/p4c-2555-2.p4
 )
 
@@ -403,7 +404,7 @@ p4c_add_xfail_reason("tofino2"
 
 # P4C-2799
 p4c_add_xfail_reason("tofino2"
-  "error: PHV allocation was not successful"
+  "error: PHV allocation creates an invalid container action within a Tofino ALU"
   # P4C-3043
   extensions/p4_tests/p4_16/customer/arista/obfuscated-ref-baremetal_tofino2_2.p4
 )
@@ -447,11 +448,6 @@ p4c_add_xfail_reason ("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-2828.p4
 )
 
-p4c_add_xfail_reason ("tofino2"
-  "error: tofino2 supports up to 20 stages, using 21"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-2794.p4
-)
-
 # DRV-3528
 p4c_add_xfail_reason ("tofino2"
   "TTransportException: TSocket read 0 bytes"
@@ -492,11 +488,4 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Call to getNonGatewayGroupDominator with tables of different gresses."
   extensions/p4_tests/p4_16/compile_only/p4c-3087.p4
-)
-
-# P4C-3171
-# This should be a must-pass once fixed.
-p4c_add_xfail_reason("tofino2"
-  "Expected packet was not received"
-  p4c-3171
 )

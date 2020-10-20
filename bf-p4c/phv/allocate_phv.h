@@ -390,6 +390,9 @@ class CoreAllocation {
         std::vector<PHV::AllocSlice>& new_candidate_slices,
         PHV::Transaction& alloc_attempt) const;
 
+    bool hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
+                               ordered_set<PHV::AllocSlice> alloc_slices) const;
+
 
     PhvInfo& phv() const                                  { return phv_i; }
     const PhvUse& uses() const                            { return uses_i; }
@@ -473,6 +476,8 @@ struct BruteForceStrategyConfig {
     // enable validation on pre-sliced super clusters to avoid creating unallocatable
     // clusters at preslicing.
     bool pre_slicing_validation;
+    // enable AlwaysRun Action use for dark spills and zero-initialization during dark overlays
+    bool enable_ara_in_overlays;
 };
 
 class BruteForceAllocationStrategy : public AllocationStrategy {
@@ -700,6 +705,9 @@ class AllocatePHV : public Inspector {
     bool diagnoseSuperCluster(const PHV::SuperCluster* sc) const;
 
  public:
+    // Select if dark overlays (spilling and zero-initialization) will
+    // be using AlwaysRunActions (ARA)
+
     AllocatePHV(const Clustering& clustering,
                 const PhvUse& uses,
                 const FieldDefUse& defuse,

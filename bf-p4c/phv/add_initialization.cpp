@@ -151,6 +151,7 @@ class AddMetadataInitialization : public Transform {
 
 Visitor::profile_t ComputeDarkInitialization::init_apply(const IR::Node* root) {
     actionToInsertedInsts.clear();
+    darkInitToARA.clear();
     phv.clearARAconstraints();
     return Inspector::init_apply(root);
 }
@@ -180,15 +181,19 @@ void ComputeDarkInitialization::computeInitInstruction(
 
 int ComputeDarkInitialization::calcMinStage(const PHV::AllocSlice &sl_prev,
                                             const PHV::AllocSlice &sl_current,
-                                            int prior_max_stage, int post_min_stage) {
-    int ara_stg = sl_prev.getLatestLiveness().first;
+                                            int prior_max_stage, int post_min_stage,
+                                            bool init_from_zero) {
+    int ara_stg = sl_current.getEarliestLiveness().first;
 
-    BUG_CHECK(ara_stg == sl_current.getEarliestLiveness().first,
-              "prev slice end stage (%1%) != cur slice start stage (%2%)",
-              ara_stg, sl_current.getEarliestLiveness().first);
-    BUG_CHECK(prior_max_stage <= ara_stg, "prior_max_stage (%1%) > dominator stage (%2%)",
+    if (!init_from_zero) {
+        BUG_CHECK(ara_stg == sl_prev.getLatestLiveness().first,
+                  "prev slice end stage (%1%) != current slice start stage (%2%)",
+                  sl_prev.getLatestLiveness().first, ara_stg);
+    }
+
+    BUG_CHECK(prior_max_stage <= ara_stg, "prior_max_stage (%1%) > init stage (%2%)",
               prior_max_stage, ara_stg);
-    BUG_CHECK(ara_stg <= post_min_stage, "post_min_stage (%1%) < dominator stage (%2%)",
+    BUG_CHECK(ara_stg <= post_min_stage, "post_min_stage (%1%) < init stage (%2%)",
               post_min_stage, ara_stg);
 
     return ara_stg;
@@ -196,86 +201,228 @@ int ComputeDarkInitialization::calcMinStage(const PHV::AllocSlice &sl_prev,
 
 int ComputeDarkInitialization::ARA_table_id = 0;
 
+bool ComputeDarkInitialization::use_same_containers(PHV::AllocSlice alloc_sl,
+                                                    IR::MAU::Table *&ara_tbl) {
+    // If dest/src containers match we will provide the ARA table;
+    // So the ARA table expected to be nullptr
+    // BUG_CHECK(ara_tbl == nullptr, "Provided ARA table %1%", ara_tbl->name);
+
+    bool share_both_containers = false;
+    auto dst_cntr = alloc_sl.container();
+    bool has_src = !(!alloc_sl.getInitPrimitive()->getSourceSlice());
+    auto src_cntr = (has_src ?
+                     alloc_sl.getInitPrimitive()->getSourceSlice()->container() : PHV::Container());
+    if (dst_cntr != PHV::Container()) LOG4("\tCurrent AllocSlice dest container: " << dst_cntr);
+    if (has_src)
+        LOG4("\tCurrent AllocSlice source container: " << src_cntr);
+
+    for (auto drkInit : darkInitToARA) {
+        LOG4("\t Container sharing checks with ARA " << drkInit.second->name);
+
+        // Handle dependences between spills/writebacks of different
+        // fields to/from the same containers
+        if (has_src && (src_cntr == drkInit.first.getDestinationSlice().container()) &&
+            alloc_sl.getInitPrimitive()->getSourceSlice()->container_slice().
+            overlaps(drkInit.first.getDestinationSlice().container_slice())) {
+            LOG4("\t\tOverlapping source " << alloc_sl.getInitPrimitive()->getSourceSlice() <<
+                 "\n\t\t to destination " << drkInit.first.getDestinationSlice().container_slice());
+        }
+
+        if (drkInit.first.getInitPrimitive().getSourceSlice() &&
+            (dst_cntr == drkInit.first.getInitPrimitive().getSourceSlice()->container()) &&
+            drkInit.first.getInitPrimitive().getSourceSlice()->container_slice().
+            overlaps(alloc_sl.container_slice())) {
+            LOG4("\t\tOverlapping destination " << alloc_sl.container_slice() << "\n\t\t to source "
+                 << drkInit.first.getInitPrimitive().getSourceSlice()->container_slice());
+        }
+
+        // Check destination container
+        if (dst_cntr != drkInit.first.getDestinationSlice().container())
+            continue;
+        LOG4("\t\tSame dest container");
+
+        // Check source container
+        if ((drkInit.first.getInitPrimitive().getSourceSlice() &&
+             src_cntr != drkInit.first.getInitPrimitive().getSourceSlice()->container()) ||
+            (!drkInit.first.getInitPrimitive().getSourceSlice() &&
+             (!has_src)))
+            continue;
+        LOG4("\t\tSame source container");
+
+        ara_tbl = drkInit.second;
+        share_both_containers = true;
+    }
+
+    return share_both_containers;
+}
+
 void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice alloc_sl) {
-    // 1. Create UniqueId sets for ARA table constraints
     std::set<UniqueId> prior_tables;
     std::set<UniqueId> post_tables;
+    bool use_existing_ara = false;
+    bool same_dst_src_cont = false;
+    IR::MAU::Table *ara_tbl = nullptr;
+    IR::MAU::Action *act = nullptr;
+    cstring act_name;
+    gress_t ara_gress = alloc_sl.field()->gress;
+    auto prev_sl = alloc_sl.getInitPrimitive()->getSourceSlice();
+    std::pair<std::set<UniqueId>, std::set<UniqueId>> constraints;
 
+    // 1A. Check if multiple primitives need to be added into the same ARA table
+    //     due to combining the spill and the zero-initializations
+    //     primitives
+    // ---
+    LOG4("\t ARA for slice: " <<  alloc_sl);
+
+    LOG4("\tPrior ARAs:" << alloc_sl.getInitPrimitive()->getARApriorPrims().size());
+    BUG_CHECK(alloc_sl.getInitPrimitive()->getARApriorPrims().size() < 2,
+              "More than one prior prims?");
+
+    for (auto *priorARA : alloc_sl.getInitPrimitive()->getARApriorPrims()) {
+        LOG4("\t\t " << *priorARA);
+
+        if (darkInitToARA.count(*priorARA)) {
+            LOG4("\t\tFound prior dependent dark prim entry: " <<
+                 darkInitToARA[*priorARA]->name);
+
+            ara_tbl = darkInitToARA[*priorARA];
+            use_existing_ara = true;
+        }
+    }
+
+    LOG4("\tPost ARAs:" << alloc_sl.getInitPrimitive()->getARApostPrims().size());
+    BUG_CHECK(alloc_sl.getInitPrimitive()->getARApostPrims().size() < 2,
+              "More than one post prims?");
+
+    for (auto *postARA : alloc_sl.getInitPrimitive()->getARApostPrims()) {
+        LOG4("\t\t " << *postARA);
+
+        if (darkInitToARA.count(*postARA)) {
+            LOG4("\t\tFound post dependent dark prim entry: " <<
+                 darkInitToARA[*postARA]->name);
+            BUG_CHECK(!use_existing_ara, "Having both prior and post prims?");
+
+            ara_tbl = darkInitToARA[*postARA];
+            use_existing_ara = true;
+        }
+    }
+
+    // 1B. Create UniqueId sets for ARA table constraints
+    // ---
     int prior_max_stage = -1;
-    LOG6("\tPrior Tables: ");
+    int post_min_stage = PhvInfo::deparser_stage;
+
+    LOG4("\tPrior Tables: ");
     for (auto node : alloc_sl.getInitPrimitive()->getARApriorUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         prior_tables.insert(tbl->get_uid());
+        LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
+
         for (auto minStg : phv.minStage(tbl))
             prior_max_stage = std::max(prior_max_stage, minStg);
     }
 
-    int post_min_stage = PhvInfo::deparser_stage;
-    LOG6("\tPost Tables: ");
+    LOG4("\tPost Tables: ");
     for (auto node : alloc_sl.getInitPrimitive()->getARApostUnits()) {
         const auto* tbl = node->to<IR::MAU::Table>();
         if (!tbl) continue;
         post_tables.insert(tbl->get_uid());
+        LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
+
         for (auto minStg : phv.minStage(tbl))
             post_min_stage = std::min(post_min_stage, minStg);
     }
 
-    auto constraints = std::make_pair(prior_tables, post_tables);
+    // 1C. Check if multiple primitives need to be added into the same ARA table
+    //     due to having the same source and destination containers
+    //     Also check if source/dest container is also used by previous or subsequent dark overlays
+    //     and update prior/post_tables
+    // ---
+    same_dst_src_cont = use_same_containers(alloc_sl, ara_tbl);
 
-    // 2. Create new ARA Table
-    std::stringstream ara_name;
-    ara_name << "ara_table_" << ARA_table_id++;
-    gress_t ara_gress = alloc_sl.field()->gress;
+    if (same_dst_src_cont) {
+        BUG_CHECK(ara_tbl, "AlwaysRun Table not set ...?");
+        int stg = *(PhvInfo::minStage(ara_tbl).begin());
 
-    auto ara_tbl = new IR::MAU::Table(ara_name, ara_gress);
-    ara_tbl->always_run = IR::MAU::AlwaysRun::ACTION;
-    ara_name << "_action";
-    auto act = new IR::MAU::Action(cstring(ara_name.str()));
+        if (stg == alloc_sl.getEarliestLiveness().first) {
+            use_existing_ara = true;
+        } else if (alloc_sl.getInitPrimitive()->getSourceSlice() &&
+                   (prior_max_stage <= stg) && (stg <= post_min_stage)) {
+            // Need to update the liveranges of the affected slices
+            LOG4("\t AllocSlice " << alloc_sl << " will  have its liverange updated ...");
 
-    BUG_CHECK(alloc_sl.getInitPrimitive()->getSourceSlice(),
-              "No source slice defined for allocated slice %1%", alloc_sl);
-    LOG4("\tAdd ARA initialization in action " << act->name << " for: " << alloc_sl);
-    auto prev_sl = alloc_sl.getInitPrimitive()->getSourceSlice();
-    if (prev_sl)
-        LOG4("\t  Initialize from: " << *prev_sl);
-    auto prim = fieldToExpr.generateInitInstruction(alloc_sl,
-        *(alloc_sl.getInitPrimitive()->getSourceSlice()));
-    LOG4("\t\tAdded initialization: " << prim);
-    act->action.push_back(prim);
-
-    ara_tbl->actions.emplace(cstring(ara_name.str()), act);
-
-    // Update phvInfo::table_to_min_stage (required during ActionAnalysis)
-    BUG_CHECK(post_min_stage >= prior_max_stage,
-              "Conflicting prior (%1%) and post (%2%) table minStages!",
-              prior_max_stage, post_min_stage);
-    int ara_stg = calcMinStage((prev_sl ? *prev_sl : alloc_sl), alloc_sl,
-                               prior_max_stage, post_min_stage);
-    LOG4("\t Prior max stage:" << prior_max_stage << "  Post min stage: " << post_min_stage <<
-         "  ARA stage: " << ara_stg);
-
-    phv.addMinStageEntry(ara_tbl, ara_stg);
-
-    // 3. Insert ARA table and constraints into alwaysRunTables
-    bool no_existing_cnstrs = phv.add_table_constraints(ara_gress, ara_tbl, constraints);
-    BUG_CHECK(no_existing_cnstrs, "Table %1% has existing constraints", ara_tbl->externalName());
-
-    // 4. Insert ARA table into post units of source alloc slice
-    if (prev_sl) {
-        auto *fld = const_cast<PHV::Field*>(prev_sl->field());
-        for (auto &slc : fld->get_alloc()) {
-            if (*prev_sl == slc) {
-                slc.getInitPrimitive()->addPostUnits({ara_tbl});
-                LOG4("\t  Adding " << ara_tbl->name << " to source slice " << slc);
-                for (auto *unit : slc.getInitPrimitive()->getARApostUnits()) {
-                    const auto* tbl = unit->to<IR::MAU::Table>();
-                    if (!tbl) continue;
-                    LOG4("\t\tPostUnit:" << tbl->name);
-                }
+            if (prev_sl) {
+                LOG4("\t Source AllocSlice " << *prev_sl <<
+                     " will  have its liverange updated ...");
             }
+
+            use_existing_ara = true;
+            BUG_CHECK(0, "Need to update liveranges");
+        } else {
+            LOG4("\tWARNING: Action Analysis may fail for slice " << alloc_sl);
         }
     }
+
+
+    // 2. Create or get ARA table
+    // ---
+    if (use_existing_ara) {
+        BUG_CHECK(ara_tbl->actions.size() == 1, "ARA table has more than 1 actions ...?");
+        BUG_CHECK(ara_tbl->actions.begin()->second != nullptr, "ARA has null Action ...?");
+
+        act = const_cast<IR::MAU::Action*>(ara_tbl->actions.begin()->second);
+        act_name = ara_tbl->actions.begin()->first;
+
+    } else {
+        std::stringstream ara_name;
+        ara_name << "ara_table_" << ARA_table_id++;
+        ara_tbl = new IR::MAU::Table(ara_name, ara_gress);
+        ara_tbl->always_run = IR::MAU::AlwaysRun::ACTION;
+        ara_name << "_action";
+        act_name = cstring(ara_name.str());
+        act = new IR::MAU::Action(act_name);
+    }
+
+    constraints = std::make_pair(prior_tables, post_tables);
+
+    LOG4("\tAdd ARA initialization in " <<  (use_existing_ara ? "existing" : "new") <<
+         " action " << act->name << " for: " << alloc_sl);
+
+    const IR::MAU::Instruction *prim;
+
+    if (prev_sl) {
+        LOG4("\t  Initialize from: " << *prev_sl);
+        prim = fieldToExpr.generateInitInstruction(alloc_sl, *(prev_sl));
+    } else {
+        LOG4("\t  Initialize from zero ");
+        prim = fieldToExpr.generateInitInstruction(alloc_sl);
+    }
+
+    LOG4("\t\tAdded initialization: " << prim);
+    act->action.push_back(prim);
+    ara_tbl->actions[act_name] = act;
+    bool no_existing_cnstrs = phv.add_table_constraints(ara_gress, ara_tbl, constraints);
+
+    // 3. Insert ARA table and constraints into alwaysRunTables
+    // ---
+    if (!use_existing_ara) {
+        int ara_stg = calcMinStage((prev_sl ? *prev_sl : alloc_sl), alloc_sl,
+                                   prior_max_stage, post_min_stage, !prev_sl);
+        LOG4("\t Prior max stage:" << prior_max_stage << "  Post min stage: " << post_min_stage <<
+             "  ARA stage: " << ara_stg);
+
+        // Update phvInfo::table_to_min_stage (required during ActionAnalysis)
+        phv.addMinStageEntry(ara_tbl, ara_stg);
+
+        BUG_CHECK(no_existing_cnstrs, "Table %1% has existing constraints",
+                  ara_tbl->externalName());
+    }
+
+    // 4. Create mapping from DarkInitEntry to ARA table
+    auto *drkinit = new PHV::DarkInitEntry(alloc_sl, *(alloc_sl.getInitPrimitive()));
+    darkInitToARA[*drkinit] = ara_tbl;
+    LOG4("\t Added darkEntry" << *drkinit << " to " << ara_tbl->name);
 }
 
 

@@ -310,23 +310,58 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
     }
 }
 
+const IR::MAU::Table* InjectDarkAntiDependencies::getTable(UniqueId uid) {
+    if (id_to_table.count(uid))
+        return id_to_table.at(uid);
+
+    // Check if we can find same-name UniqueId
+    std::vector<UniqueId> same_name_tbls;
+
+    for (auto entry : id_to_table) {
+        if (entry.first.name == uid.name)
+            same_name_tbls.push_back(entry.first);
+    }
+
+    BUG_CHECK(same_name_tbls.size() > 0, "Cannot find UniqueId %1% in id_to_table", uid);
+
+    if (same_name_tbls.size() > 1) {
+        LOG1("UniqueId " << uid << " shares name with " << same_name_tbls.size() << " tables!!!");
+        for (auto tbl_id : same_name_tbls)
+            LOG1("\t\t " << tbl_id);
+    }
+
+    return id_to_table.at(*(same_name_tbls.begin()));
+}
+
 bool InjectDarkAntiDependencies::preorder(const IR::MAU::Table *tbl) {
     placed |= tbl->is_placed();
     if (placed)
         return false;
     id_to_table[tbl->pp_unique_id()] = tbl;
+    LOG7("\t Table: " << tbl->name << "  pp_id:" << tbl->pp_unique_id());
     return true;
 }
 
 void InjectDarkAntiDependencies::end_apply() {
     if (placed) return;
 
+    LOG7("\t\t ARA Constraints have " << phv.getARAConstraints().size() << " gresses");
+    int gress_idx = 1;
+
     for (auto & per_gress_map : Values(phv.getARAConstraints())) {
+        LOG7("\t\t Gress " << gress_idx << " has " << per_gress_map.size() << " ara tables");
+        int ara_idx = 0;
+
         for (auto pair : per_gress_map) {
             auto orig_ar_id = pair.first->pp_unique_id();
-            auto curr_ar_table = id_to_table.at(orig_ar_id);
+            // auto curr_ar_table = id_to_table.at(orig_ar_id);
+            auto curr_ar_table = getTable(orig_ar_id);
+            LOG7("\t\t ARA table " << ara_idx << " has " << pair.second.first.size() <<
+                 " prior tables and " << pair.second.second.size() << " post tables");
+
             for (auto orig_id : pair.second.first) {
-                auto curr_table = id_to_table.at(orig_id);
+                auto curr_table = getTable(orig_id);
+
                 dg.add_edge(curr_table, curr_ar_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
                 LOG6("\t\tInjectDarkAntiDependence(1): " << curr_table->name << " --> " <<
@@ -334,13 +369,15 @@ void InjectDarkAntiDependencies::end_apply() {
             }
 
             for (auto orig_id : pair.second.second) {
-                auto curr_table = id_to_table.at(orig_id);
+                auto curr_table = getTable(orig_id);
                 dg.add_edge(curr_ar_table, curr_table,
                             DependencyGraph::ANTI_NEXT_TABLE_METADATA);
                 LOG6("\t\tInjectDarkAntiDependence(2): " << curr_ar_table->name << " --> " <<
                      curr_table->name);
             }
+            ara_idx++;
         }
+        gress_idx++;
     }
 }
 

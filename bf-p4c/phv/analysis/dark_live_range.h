@@ -264,7 +264,8 @@ class DarkLiveRange : public Inspector {
             bool moveLastFieldToDark,
             bool initializeCurrentField,
             bool initializeFromDark,
-            const PHV::Transaction& alloc) const;
+            const PHV::Transaction& alloc,
+            bool useARA) const;
 
     const PHV::Container getBestDarkContainer(
             const ordered_set<PHV::Container>& darkContainers,
@@ -290,26 +291,29 @@ class DarkLiveRange : public Inspector {
             const IR::MAU::Action* action,
             const PHV::Transaction& alloc) const;
 
-    boost::optional<PHV::DarkInitEntry> getInitForLastFieldToDark(
+    boost::optional<PHV::DarkInitEntry*> getInitForLastFieldToDark(
             const PHV::Container& c,
             const PHV::ContainerGroup& group,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
             const PHV::Transaction& alloc,
-            const PHV::StageAndAccess nxtFieldMaxStage) const;
+            const OrderedFieldInfo& nxtField,
+            bool useARA) const;
 
-    boost::optional<PHV::DarkInitEntry> getInitForCurrentFieldFromDark(
+    boost::optional<PHV::DarkInitEntry*> getInitForCurrentFieldFromDark(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
             PHV::DarkInitMap& initMap,
             const PHV::Transaction& alloc) const;
 
-    boost::optional<PHV::DarkInitEntry> getInitForCurrentFieldWithZero(
+    boost::optional<PHV::DarkInitEntry*> getInitForCurrentFieldWithZero(
             const PHV::Container& c,
             const IR::MAU::Table* t,
             const OrderedFieldInfo& field,
-            const PHV::Transaction& alloc) const;
+            const PHV::Transaction& alloc,
+            boost::optional<PHV::DarkInitEntry*>,
+            bool useARA) const;
 
     bool ignoreReachCondition(
             const OrderedFieldInfo& currentField,

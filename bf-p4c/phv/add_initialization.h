@@ -92,6 +92,7 @@ class ComputeDarkInitialization : public Inspector {
     const DependencyGraph&      dg;
 
     ordered_map<cstring, ordered_set<const IR::MAU::Primitive*>> actionToInsertedInsts;
+    ordered_map<const PHV::DarkInitEntry, IR::MAU::Table*> darkInitToARA;
 
     void computeInitInstruction(
         const PHV::AllocSlice& slice,
@@ -102,7 +103,11 @@ class ComputeDarkInitialization : public Inspector {
     // *ALEX* Ths will need to be updated with more detailed analysis when
     //        the initialization injection stops using the dominator analysis
     int calcMinStage(const PHV::AllocSlice &sl_prev, const PHV::AllocSlice &sl_current,
-                     int prior_max_stage, int post_min_stage);
+                     int prior_max_stage, int post_min_stage, bool init_from_zero);
+
+    // Check dest and src containers if they match with containers in
+    // darkInitToARA AllocSlice's
+    bool use_same_containers(PHV::AllocSlice alloc_sl, IR::MAU::Table *&ara_tbl);
 
     // Create new MOVE instruction and place it into new Action which
     // is added into new AlwaysRunAction Table. Use prior and post

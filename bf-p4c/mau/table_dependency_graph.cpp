@@ -753,6 +753,17 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 if (!upstream_t_pair.second)
                     new_dep = DependencyGraph::ANTI_ACTION_READ;
             }
+
+            // Handle the case of incorrect ARA-->ARA dependencies
+            // which are added due to depth-first traversal of the
+            // control flow visitor
+            if (upstream_t->is_always_run_action() && table->is_always_run_action() &&
+                (upstream_t->stage() > table->stage())) {
+                LOG7("\t addDeps: Will not add edge " << dep_types(dep) << " between tables " <<
+                     upstream_t->name << " and " << table->name);
+                continue;
+            }
+
             auto edge_pair = self.dg.add_edge(upstream_t, table, new_dep);
             const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
             if (upstream_t_pair.second) {
@@ -809,30 +820,44 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             bool non_first_write_red_or = false;
             if (self.access.count(field_name)) {
                 LOG6("\t\tadd_dependency(" << field_name << ")");
+                // AlwaysRun Actions (ARA)
+                //   1) either initialize to zero or
+                //   2) move between PHVs.
+                // In either case the write operand of
+                // the ARA is not dependent to prior accesses because
+                //   1) the zero-init is the first access of this field or
+                //   2) the read of the move is dependent to prior accesses.
                 if (isWrite()) {
-                    // Write-after-read dependence.
-                    addDeps(self.access[field->name].ixbar_read,
-                            DependencyGraph::ANTI_TABLE_READ, field);
-                    addDeps(self.access[field->name].action_read,
-                            DependencyGraph::ANTI_ACTION_READ, field);
-                    // Write-after-write dependence.
-                    if (is_red_or) {
-                        auto pos = self.red_or_use.find(field->name);
-                        // If reduction_or, and the previous write was a reduction_or
-                        if (pos != self.red_or_use.end()) {
-                            ERROR_CHECK(pos->second == red_or_key, "%s: "
-                            "The reduction_or groups collide on field %s, over group %s and "
-                            "group %s", table->srcInfo, field->name, red_or_key, pos->second);
-                            addDeps(self.access[field->name].reduction_or_write,
-                                    DependencyGraph::REDUCTION_OR_OUTPUT, field);
-                            non_first_write_red_or = true;
+                    if (table->is_always_run_action()) {
+                        LOG7("\t Skipping dependencies for write expression " << e << " of ARA " <<
+                            table->name);
+                    } else {
+                        // Write-after-read dependence.
+                        addDeps(self.access[field->name].ixbar_read,
+                                DependencyGraph::ANTI_TABLE_READ, field);
+                        addDeps(self.access[field->name].action_read,
+                                DependencyGraph::ANTI_ACTION_READ, field);
+                        // Write-after-write dependence.
+                        if (is_red_or) {
+                            auto pos = self.red_or_use.find(field->name);
+                            // If reduction_or, and the previous write was a reduction_or
+                            if (pos != self.red_or_use.end()) {
+                                ERROR_CHECK(pos->second == red_or_key, "%s: The reduction_or "
+                                            "groups collide on field %s, over group %s and "
+                                            "group %s", table->srcInfo, field->name, red_or_key,
+                                            pos->second);
+                                addDeps(self.access[field->name].reduction_or_write,
+                                        DependencyGraph::REDUCTION_OR_OUTPUT, field);
+                                non_first_write_red_or = true;
+                            } else {
+                                // If reduction_or and previous write was not reduction_or
+                                addDeps(self.access[field->name].write, DependencyGraph::OUTPUT,
+                                        field);
+                            }
                         } else {
-                            // If reduction_or and previous write was not reduction_or
+                            // If normal
                             addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
                         }
-                    } else {
-                        // If normal
-                        addDeps(self.access[field->name].write, DependencyGraph::OUTPUT, field);
                     }
                 } else {
                     // Read-after-write dependence.
@@ -1007,9 +1032,14 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
     }
 };
 
-bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * /* seq */) {
+bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * seq ) {
     const Context *ctxt = getContext();
+    LOG5("\t TableSeq (" << seq->size() << ")   front: " <<
+         (seq->front() ? seq->front()->name : "null") << " back: " <<
+         (seq->back() ? seq->back()->name : "null"));
+
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
+        LOG5("\t Hit Top of pipe - clearing access");
         access.clear();
     }
 
@@ -1065,6 +1095,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
 bool FindDataDependencyGraph::preorder(const IR::MAU::TableKey *read) {
     visitAgain();
     auto tbl = findContext<IR::MAU::Table>();
+    LOG5("\t TableKey for table " << (tbl ? tbl->name : "null"));
     read->apply(UpdateAccess(*this, tbl));
     return false;
 }
@@ -1072,6 +1103,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableKey *read) {
 bool FindDataDependencyGraph::preorder(const IR::MAU::Action *act) {
     visitAgain();
     auto tbl = findContext<IR::MAU::Table>();
+    LOG5("\t Action for table " << (tbl ? tbl->name : "null"));
     act->apply(UpdateAccess(*this, tbl));
     return false;
 }
@@ -1184,9 +1216,19 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
         ordered_set<DependencyGraph::Graph::vertex_descriptor> this_generation;
         // Select vertices of those current in-degree is 0 as members of this_generation.
         // as long as they have not been processed yet.
+        LOG5("\t New while iteration over num_vertices - processed size: " <<
+            processed.size() << "   graph vertices: " << num_vertices(dep_graph));
+
         for (auto& kv : n_depending_on) {
+            LOG5("\t processed: " << processed.count(kv.first) << " numDeps: " << kv.second);
+
             if (!processed.count(kv.first) && kv.second == 0)
-                this_generation.insert(kv.first); }
+                this_generation.insert(kv.first);
+            else if (!processed.count(kv.first) && kv.second)
+                LOG5("\t\t Non processed vertex: " << curr_dg.get_vertex(kv.first)->name <<
+                     " with " << kv.second << " incoming deps");
+        }
+
         // There are no remaining vertices, so it must be a loop.
         if (this_generation.size() == 0) {
             LOG2(dg);
@@ -1525,6 +1567,9 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
     }
 
     auto ALL_EDGE_TYPES = DependencyGraph::CONTROL | DependencyGraph:: ANTI;
+
+    LOG4("CALC_TOPOLOGICAL_STAGE 1");
+
     auto topo_rst = self.calc_topological_stage(ALL_EDGE_TYPES, &local_dg);
 
     typename DependencyGraph::Graph::edge_iterator edges, edges_end;
@@ -1614,6 +1659,8 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
  *       t_b that are not mutually exclusive with t_b.
  */
 void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
+    LOG4("CALC_TOPOLOGICAL_STAGE 2");
+
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage(DependencyGraph::ANTI);
 
@@ -1665,6 +1712,9 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
 
         auto edge_pair = dg.add_edge(pair.first.first, pair.first.second, dep);
         dg.data_annotations[edge_pair.first] = dg.data_annotations[pair.second];
+
+        LOG4("CALC_TOPOLOGICAL_STAGE 3");
+
         calc_topological_stage(DependencyGraph::ANTI | DependencyGraph::CONTROL);
     }
 }
@@ -1674,6 +1724,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         add_logical_deps_from_control_deps();
 
     // Topological sort
+
+    LOG4("CALC_TOPOLOGICAL_STAGE 4");
+
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage();
 
@@ -1715,6 +1768,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     }
 
     // Build dep_stages_control
+
+    LOG4("CALC_TOPOLOGICAL_STAGE 5");
+
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst_control = calc_topological_stage(DependencyGraph::CONTROL);
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
@@ -1781,6 +1837,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // earlier stage than Table B. To enforce this (since table placement only places one table at a
     // time), we guarantee that Table B has a lower logical ID than Table A (i.e. Table A doesn't
     // get placed until Table B has been placed).
+
+    LOG4("CALC_TOPOLOGICAL_STAGE 6");
+
     auto topo_rst_logical = calc_topological_stage(DependencyGraph::CONTROL |
                                                    DependencyGraph::ANTI);
     // Log the resulting sort
@@ -1916,6 +1975,9 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // Compute for the final time the dependence graph, which will leave happens_after and
     // happens_before with stage orders
     dg.vertex_rst = topo_rst_logical;
+
+    LOG4("CALC_TOPOLOGICAL_STAGE 7");
+
     calc_topological_stage();
     // Use this final computation to create the happens_physical maps
     for (auto kv : dg.happens_before_work_map)

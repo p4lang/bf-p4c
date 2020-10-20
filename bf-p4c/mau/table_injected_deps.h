@@ -134,6 +134,9 @@ class InjectDarkAntiDependencies : public AbstractDependencyInjector {
 
     bool preorder(const IR::MAU::Table *) override;
     void end_apply() override;
+    // Get table corresponding to uid from id_to_table map
+    // - handle case where @uid may not exists in id_to_table
+    const IR::MAU::Table* getTable(UniqueId uid);
 
  public:
     InjectDarkAntiDependencies(const PhvInfo &p, DependencyGraph &g,
