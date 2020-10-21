@@ -669,14 +669,10 @@ class BarefootBackend(BackendDriver):
             # raise
 
     def runCleaner(self):
-        if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER" and self._verbose:
+        if self._verbose:
             return 0
 
         filesToRemove = []
-
-        if os.environ['P4C_BUILD_TYPE'] != "DEVELOPER":
-            filesToRemove.append('.bfa')
-
         filesToRemove.append('.dynhash.json')
         filesToRemove.append('.prim.json')
 
