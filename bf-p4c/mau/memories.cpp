@@ -357,6 +357,7 @@ bool Memories::allocate_all() {
 
     LOG3("Analyzing tables " << tables << IndentCtl::indent);
     if (!analyze_tables(mi)) {
+        LOG3_UNINDENT;
         return false;
     }
     unsigned row = 0;
@@ -3110,6 +3111,7 @@ void Memories::update_must_place_in_half(const SRAM_group *candidate, switchbox_
         return;
     BUG_CHECK(must_place_in_half.find(candidate) == must_place_in_half.end(), "Trying to "
               "allocate a synth2port table to multiple home rows");
+    BUG_CHECK(candidate->is_synth_type(), "Trying to place non-synth2port group as synth2port");
     must_place_in_half.insert(candidate);
     for (auto ag : candidate->sel.action_groups)
         must_place_in_half.insert(ag);
@@ -3331,17 +3333,6 @@ void Memories::action_bus_users_log() {
  *  information, and have a separate overflow structure.  The details of how color maprams are
  *  currently allocated are summarized above the color_mapram_candidates section.
  *
- *  Two other things have separate overflow constraints, specifically selectors and color mapram.
- *  Selectors provide an address offset to an action table, and have a separate overflow switchbox
- *  in order to provide this address.  The overflow switchbox, similar to the data overflow,
- *  can only overflow one address at a time.  Also, this means that an action data table attached
- *  to a selector must be at or below the row the selector is in.  This is specified in uArch
- *  section 6.2.8.4.7 Selector RAM Addressing, and is handled by the sel_oflow structure.
- *
- *  The other overflow is color maprams.  Color maprams are attached to meters and save the color
- *  information, and have a separate overflow structure.  The details of how color maprams are
- *  currently allocated are summarized above the color_mapram_candidates section.
- *
  *  Also please note that there are two buses to consider, the buses to address the RAMs and
  *  the buses to move data to the correct place.  Unless specified directly, the constraints
  *  generally come directly from the data bus, as overflow for addresses is a little simpler.
@@ -3404,8 +3395,14 @@ bool Memories::allocate_all_swbox_users() {
             for (auto group : must_place_in_half) {
                 if (!(group->all_placed() && group->cm.all_placed())) {
                     LOG4("    Group not finished " << group);
-                    BUG("A group that was started in a match central half was not finished "
-                        "in that half");
+                    // FIXME -- we started placing some synth2port and/or selector table(s) in
+                    // the upper half and didn't manage to fully place them.  This suggests a
+                    // problem in Memories::can_be_placed_in_half where it either incorrectly
+                    // computes the number of availble memories in the half, or doesn't
+                    // consider interactions between multiple tables.  The example in
+                    // P4C-3205 has both a selector and a register in the stage.
+                    // As a stopgap, we just fail memory allocation instead of aborting
+                    return false;
                 }
             }
             curr_oflow = nullptr;
