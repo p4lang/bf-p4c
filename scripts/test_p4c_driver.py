@@ -407,8 +407,9 @@ def load_test_file(testfile):
     """Load a test file.
 
     It needs to define test_matrix as a map of test names to a tuple
-    of (compiler options, xfail message). If `xfail message` is not
-    None, the test is expected to fail with that message.
+    of (compiler options, xfail message, file_list). If `xfail message` is not
+    None, the test is expected to fail with that message. The `file_list` is the
+    list of files to check for the existence.
 
     """
     data = None
