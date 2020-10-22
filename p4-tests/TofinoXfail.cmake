@@ -913,11 +913,6 @@ p4c_add_xfail_reason("tofino"
   ../glass/testsuite/p4_tests/phv/COMPILER-761/simple_l3_mirror.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Cannot operate on values with different widths"
-  ba102_simple_l3_mirror
-  )
-
 # Valid XFAIL
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, the table .* cannot perform a range match on key .* as the key does not fit in under 5 PHV nibbles"
@@ -1873,4 +1868,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Entry not found in table:pipe.ParserI.vs Object not found"
   p4_16_programs_tna_pvs
+)
+
+# P4C-3207
+p4c_add_xfail_reason("tofino"
+  "Cannot unify bit<16> to ether_type_t"
+  ba102_simple_l3_acl
+)
+
+# P4C-3208
+p4c_add_xfail_reason("tofino"
+  "Unexpected type _"
+  ba102_simple_l3_meter
 )
