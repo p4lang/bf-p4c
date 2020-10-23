@@ -52,6 +52,23 @@ void CollectMochaCandidates::end_apply() {
     for (PHV::Field& f : phv) {
         std::stringstream ss;
         ss << "    Examining field: " << f << std::endl;
+        // Padding field should be marked as mocha candidate. For example, the
+        // following slice list consist of two fields: a header field that is a
+        // mocha candidate and a padding field.
+        //
+        //  [ ingress::Wanamassa.Yorkshire.Weinert<1> ^0 bridge deparsed
+        //                                      exact_containers mocha [0:0]
+        //    ingress::Wanamassa.Yorkshire.__pad_17<7> ^1 padding deparsed
+        //                                      exact_containers mocha [0:6] ]
+        //
+        // This slice list can be allocated to a mocha container if and only if
+        // all slices in the slice list are mocha candidate. Therefore, the
+        // padding field should be marked as mocha candidate.
+        if (f.is_padding()) {
+            f.set_mocha_candidate(true);
+            ss << "    ...mark padding as mocha candidate.";
+            continue;
+        }
         if (!uses.is_referenced(&f)) {
             ss << "    ...unreferenced field";
             LOG5(ss.str());
@@ -76,11 +93,18 @@ void CollectMochaCandidates::end_apply() {
         // we ignore those fields for mocha allocation.
         // XXX(Deep): Add analysis to determine if the exact_containers requirement can be satisfied
         // for nonbyte-aligned packet fields.
-        if (isPacketField(&f) && f.size % 8 != 0) {
-            ss << "    ...packet field size is not in multiple of bytes.";
-            LOG5(ss.str());
-            continue;
-        }
+        //
+        // XXX(hanw): commented out, does this constraint make any sense?
+        // Whether the program analysis 'think' a field is mocha candidate is
+        // orthogonal to whether a mocha field can be allocated to a mocha
+        // container. Filter out valid candidate during program analysis seems
+        // very conservative.
+        //
+        // if (isPacketField(&f) && f.size % 8 != 0) {
+        //     ss << "    ...packet field size is not in multiple of bytes.";
+        //     LOG5(ss.str());
+        //     continue;
+        // }
         if (f.pov) {
             ss << "    ...pov field.";
             LOG5(ss.str());

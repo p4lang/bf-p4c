@@ -1423,7 +1423,7 @@ p4c_add_xfail_reason("tofino"
 
 # no support for runtime-variable indexing
 p4c_add_xfail_reason("tofino"
-  "Compiler Bug.*: No PhvInfo::header for header"
+  "Compiler Bug.*: No PhvInfo::header for header|Compiler Bug.*Exiting with SIGSEGV"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
 )

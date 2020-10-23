@@ -93,10 +93,9 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/jbay/hwlearn4.p4
 )
 
+# P4C-3194
 p4c_add_xfail_reason("tofino2"
-  "Could not place table .*: The table .* could not fit within a single input crossbar"
-  # P4C-2572
-  extensions/p4_tests/p4_16/customer/keysight/p4c-2554.p4
+  "Could not place table .* PHV allocation doesn't want this table split, and it's too big for one stage"
   extensions/p4_tests/p4_16/customer/keysight/pktgen9_16.p4
 )
 
