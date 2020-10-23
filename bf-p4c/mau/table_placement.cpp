@@ -1368,14 +1368,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         rv->need_more_match = false;
         rv->entries = initial_entries;
         rv->attached_entries = initial_attached_entries;
-        // FIXME -- this initialization of rv->use appears to be redundant with the one in
-        // pick_layout_option, but it turns out its not.  By doing it twice, calculate_way_sizes
-        // ends up being called again, which means small exact tables will end up with 4
-        // ways instead of 3.  It might seem to be better to NOT do this, as then these tables
-        // will use less space, but for some reason doing that causes switch_16_d0 to need
-        // 21 stages instead of 20.
-        rv->use = StageUseEstimate(rv->table, rv->entries, rv->attached_entries, &lc,
-                                   rv->stage_split > 0, rv->gw != nullptr);
 
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
@@ -1485,11 +1477,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             break; } }
 
     rv->update_formats();
-    if (!rv->table->conditional_gateway_only()) {
-        BUG_CHECK(rv->use.preferred_action_format() != nullptr,
-                  "Action format could not be found for a particular layout option.");
-        BUG_CHECK(rv->use.preferred_meter_format() != nullptr,
-                  "Meter format could not be found for a particular layout option."); }
     for (auto *t : whole_stage)
         t->update_formats();
 
@@ -1500,6 +1487,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         error("Could not place %s: %s", rv->table, error_message);
         return nullptr;
     }
+
+    if (!rv->table->conditional_gateway_only()) {
+        BUG_CHECK(rv->use.preferred_action_format() != nullptr,
+                  "Action format could not be found for a particular layout option.");
+        BUG_CHECK(rv->use.preferred_meter_format() != nullptr,
+                  "Meter format could not be found for a particular layout option."); }
 
     rv->setup_logical_id();
 

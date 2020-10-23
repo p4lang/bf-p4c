@@ -469,9 +469,18 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     }
 
     if (calculated_depth <= 3) {
-        calculated_depth = calculated_depth == 1 ? 3 : 4;
+        if (lo->way.match_groups > 1 && calculated_depth <= 2)
+            calculated_depth = 2;
+        else
+            calculated_depth = 3;
     }
 
+    if (calculated_depth < 4) {
+        // FIXME -- current must-pass testcases have been tuned assuming a minimum of
+        // 4 hash ways -- using less (even though it makes tables smaller and should make
+        // things easier to fit) results in the testcases not fitting.
+        calculated_depth = 4;
+    }
 
     if (can_be_identity_hash(tbl, lo, calculated_depth))
         return;
@@ -479,8 +488,10 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     if (calculated_depth < 8) {
         switch (calculated_depth) {
             case 1:
-            case 2:
                 BUG("Illegal calculated depth for resources %1%", calculated_depth);
+            case 2:
+                lo->way_sizes = {1, 1};
+                break;
             case 3:
                 lo->way_sizes = {1, 1, 1};
                 break;

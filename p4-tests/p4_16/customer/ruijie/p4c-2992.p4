@@ -4804,6 +4804,7 @@ control downlink_ig_acl_key_sel(in switch_header_t hdr, inout switch_ingress_met
     action set_group_classid_4() {
         slice.group_classid = ig_md.policer.group_classid_4;
     }
+    @placement_priority(60)
     table acl {
         key = {
             slice.group: exact;
