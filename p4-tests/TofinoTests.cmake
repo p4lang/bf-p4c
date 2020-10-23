@@ -50,7 +50,8 @@ set (P16_TNA_ARISTA_FILES
 # digest_tna.p4 is used for another test (digest-std-p4runtime) with different args
 set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2191\\.p4" "p4c-2398\\.p4" "p4c-2032\\.p4" "p4c-2030\\.p4"
-    "p4c-2992\\.p4" "p4c-2410-leaf\\.p4" "p4c-2573-leaf\\.p4" "p4c-2753\\.p4")
+    "p4c-2992\\.p4" "p4c-2410-leaf\\.p4" "p4c-2573-leaf\\.p4" "p4c-2753\\.p4"
+    "p4c-3241\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
 set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
@@ -175,6 +176,11 @@ p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-2753.p4"
     "-Xp4c=\"--disable-power-check\"")
+
+# p4_16/compile_only/p4c-3241.p4 
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-3241.p4"
+    "-Xp4c=\"--set-max-power 56.98\"")
 
 set (TOFINO_PSA_TEST_SUITES
   ${p16_psa_tests}
