@@ -1864,12 +1864,6 @@ p4c_add_xfail_reason("tofino"
   p4c_2249
 )
 
-# P4C-3044
-p4c_add_xfail_reason("tofino"
-  "Entry not found in table:pipe.ParserI.vs Object not found"
-  p4_16_programs_tna_pvs
-)
-
 # P4C-3207
 p4c_add_xfail_reason("tofino"
   "Cannot unify bit<16> to ether_type_t"
@@ -1881,3 +1875,25 @@ p4c_add_xfail_reason("tofino"
   "Unexpected type _"
   ba102_simple_l3_meter
 )
+
+# p4_16/errors Always fail tests
+p4c_add_xfail_reason("tofino"
+  "error: Adjust byte count operand on primitive .* does not resolve to a constant value"
+  extensions/p4_tests/p4_16/errors/meters_adjust_byte_count_neg.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Wide operations not supported in stateful alu, will only operate on bottom 32 bits"
+  extensions/p4_tests/p4_16/errors/p4c-2338.p4
+)
+
+p4c_add_xfail_reason("tofino"
+    "error: Counter .* and Counter .* must have identical addressing in increment as they share an address bus"
+  extensions/p4_tests/p4_16/errors/counter1.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: Counter .* is enabled and Counter .* is disabled in .*, though they share addressing"
+  extensions/p4_tests/p4_16/errors/counter2.p4
+)
+

@@ -53,7 +53,12 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2992\\.p4" "p4c-2410-leaf\\.p4" "p4c-2573-leaf\\.p4" "p4c-2753\\.p4"
     "p4c-3241\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" "${P16_TNA_ARISTA_FILES}")
-set (P16_TNA_FOR_TOFINO "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
+set (P16_TNA_FOR_TOFINO 
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/*.p4" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/*.p4" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/*/*.p4" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/*.p4" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/*.p4")
 p4c_find_tests("${P16_TNA_FOR_TOFINO}" P4_16_TNA_TESTS INCLUDE "${P16_TNA_INCLUDE_PATTERNS}" EXCLUDE "${P16_TNA_EXCLUDE_PATTERNS}")
 bfn_find_tests("${P4_16_TNA_TESTS}" p16_tna_tests EXCLUDE "${P16_TNA_EXCLUDE_FILES}")
 
