@@ -629,7 +629,7 @@ class BruteForceAllocationStrategy : public AllocationStrategy {
  * that assigns field slices to containers, or `::error` explains why PHV
  * allocation was unsuccessful.
  */
-class AllocatePHV : public Inspector {
+class AllocatePHV : public Visitor {
  private:
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
@@ -639,6 +639,7 @@ class AllocatePHV : public Inspector {
     const MauBacktracker& alloc_i;
     const SymBitMatrix& mutex_i;
     PHV::Pragmas& pragmas_i;
+    const IR::BFN::Pipe *root;
 
     // Used to balance container usage for parser states on the critical path
     const CalcParserCriticalPath& parser_critical_path_i;
@@ -649,10 +650,9 @@ class AllocatePHV : public Inspector {
     const CollectStridedHeaders& strided_headers_i;
 
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
-     * marks the place in the back end where PHV allocation does its work,
-     * which is triggered by a call to `init_apply`.
+     * marks the place in the back end where PHV allocation does its work.
      */
-    profile_t init_apply(const IR::Node* root) override;
+    const IR::Node *apply_visitor(const IR::Node* root, const char *name = 0) override;
 
     /** Translate each AllocSlice in @alloc into a PHV::Field::alloc_slice and
      * attach it to the PHV::Field it slices.

@@ -2419,11 +2419,13 @@ static Logging::FileLog *createFileLog(int pipeId, const cstring &prefix, int lo
     return new Logging::FileLog(pipeId, filename, Logging::Mode::AUTO);
 }
 
-Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
+const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
+    root = root_->to<IR::BFN::Pipe>();
+    BUG_CHECK(root, "IR root is not a BFN::Pipe: %s", root_);
     log_device_stats();
 
-    int pipeId = root->to<IR::BFN::Pipe>()->id;
+    int pipeId = root->id;
 
     // Make sure that fields are not marked as mutex with itself.
     for (const auto& field : phv_i) {
@@ -2600,7 +2602,7 @@ Visitor::profile_t AllocatePHV::init_apply(const IR::Node* root) {
     }
     Logging::FileLog::close(logfile);
 
-    return Inspector::init_apply(root);
+    return root;
 }
 
 bool AllocatePHV::diagnoseFailures(const std::list<PHV::SuperCluster *>& unallocated) const {
