@@ -1109,9 +1109,11 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         if (t->layout.exact) {
             if (t->layout.ixbar_width_bits < ceil_log2(rv->entries)) {
                 rv->entries = 1 << t->layout.ixbar_width_bits;
-                ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
-                          "Shrinking %1%: with %2% match bits, can only have %3% entries",
-                          t, t->layout.ixbar_width_bits, rv->entries);
+                // Skip warnings on compiler generated tables
+                if (!t->is_compiler_generated)
+                    ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
+                              "Shrinking %1%: with %2% match bits, can only have %3% entries",
+                              t, t->layout.ixbar_width_bits, rv->entries);
             }
         }
     } else {
