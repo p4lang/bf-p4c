@@ -12,9 +12,9 @@
 std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
     if (p0 == nullptr) return out;
     indent_t indent(1);
-    out <<   indent << "phase0_match " << p0->tableName << ":" << std::endl;
+    out <<   indent << "phase0_match " << canon_name(p0->tableName) << ":" << std::endl;
     out << ++indent << "p4:" << std::endl;
-    out << ++indent << "name: " << p0->tableName << std::endl;
+    out << ++indent << "name: " << canon_name(p0->tableName) << std::endl;
     out <<   indent << "size: " << p0->size << std::endl;
     out <<   indent << "preferred_match_type: exact" << std::endl;
     out <<   indent << "match_type: exact" << std::endl;
