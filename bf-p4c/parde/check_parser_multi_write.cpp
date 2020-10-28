@@ -363,6 +363,69 @@ struct InferWriteMode : public ParserTransform {
     }
 };
 
+// Check if fields that share the same byte on the wire have conflicting
+// parser write semantics.
+struct CheckWriteModeConsistency : public ParserTransform {
+    const PhvInfo& phv;
+    const MapFieldToParserStates& field_to_states;
+
+    std::map<const IR::BFN::Extract*, IR::BFN::ParserWriteMode> extract_to_write_mode;
+
+    CheckWriteModeConsistency(const PhvInfo& p,
+                              const MapFieldToParserStates& fs) :
+        phv(p), field_to_states(fs) { }
+
+    void check(const ordered_set<const IR::BFN::Extract*>& extracts) {
+        const IR::BFN::Extract* prev = nullptr;
+
+        for (auto curr : extracts) {
+            if (prev) {
+                auto a = prev->source->to<IR::BFN::InputBufferRVal>();
+                auto b = curr->source->to<IR::BFN::InputBufferRVal>();
+
+                if (a && b) {
+                    if (prev->write_mode != curr->write_mode) {
+                        if (a->range.hi / 8 == b->range.lo / 8) {
+                            auto curr_dest = phv.field(curr->dest->field);
+                            auto prev_dest = phv.field(prev->dest->field);
+
+                            if (curr_dest->padding || prev_dest->padding) {
+                                if (curr_dest->padding)
+                                    extract_to_write_mode[prev] = curr->write_mode;
+                                else
+                                    extract_to_write_mode[curr] = prev->write_mode;
+                            } else {
+                                ::error("%1% and %2% share the same byte on the wire but"
+                                        " have conflicting parser write semantics.",
+                                         curr_dest->name, prev_dest->name);
+                            }
+                        }
+                    }
+                }
+            }
+
+            prev = curr;
+        }
+    }
+
+    profile_t init_apply(const IR::Node* root) override {
+        for (auto& kv : field_to_states.state_to_extracts) {
+            check(kv.second);
+        }
+
+        return ParserTransform::init_apply(root);
+    }
+
+    IR::Node* preorder(IR::BFN::Extract* extract) override {
+        auto orig = getOriginal<IR::BFN::Extract>();
+
+        if (extract_to_write_mode.count(orig))
+            extract->write_mode = extract_to_write_mode.at(orig);
+
+        return extract;
+    }
+};
+
 // If any egress intrinsic metadata, e.g. "eg_intr_md.egress_port" is mirrored,
 // the mirrored version will overwrite the original version in the EPB. Because Tofino
 // parser only supports bitwise-or semantic on rewrite, we need to transform the
@@ -521,6 +584,7 @@ CheckParserMultiWrite::CheckParserMultiWrite(const PhvInfo& phv) : phv(phv) {
     auto parser_info = new CollectParserInfo;
     auto field_to_states = new MapFieldToParserStates(phv);
     auto infer_write_mode = new InferWriteMode(phv, *parser_info, *field_to_states);
+    auto check_write_mode_consistency = new CheckWriteModeConsistency(phv, *field_to_states);
     auto fixup_mirrored_intrinsic = new FixupMirroredIntrinsicMetadata(phv);
 
     bool needs_fixup = Device::currentDevice() == Device::TOFINO &&
@@ -533,6 +597,8 @@ CheckParserMultiWrite::CheckParserMultiWrite(const PhvInfo& phv) : phv(phv) {
         parser_info,
         field_to_states,
         infer_write_mode,
+        field_to_states,
+        check_write_mode_consistency,
         LOGGING(4) ? new DumpParser("after_check_parser_multi_write") : nullptr,
     });
 }

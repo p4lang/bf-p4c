@@ -1694,6 +1694,9 @@ struct MapFieldToParserStates : public Inspector {
 
     std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> state_to_parser;
 
+    ordered_map<const IR::BFN::ParserState*,
+                ordered_set<const IR::BFN::Extract*>> state_to_extracts;
+
     explicit MapFieldToParserStates(const PhvInfo& phv) : phv_i(phv) { }
 
     profile_t init_apply(const IR::Node* root) override {
@@ -1717,6 +1720,7 @@ struct MapFieldToParserStates : public Inspector {
 
             field_to_extracts[f].insert(extract);
             extract_to_state[extract] = state;
+            state_to_extracts[state].insert(extract);
         }
 
         return true;
