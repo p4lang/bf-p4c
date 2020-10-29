@@ -272,44 +272,49 @@ bool nonsliceable(const IR::Operation_Binary* binOp) {
 }
 
 bool nested_nonsliceable(const IR::Expression* expr) {
-    auto binOp = expr->to<IR::Operation_Binary>();
-    if (!binOp)
-        return false;
-    if (nonsliceable(binOp))
-        return true;
-    return nested_nonsliceable(binOp->left) || nested_nonsliceable(binOp->right);
+    if (auto sliceOp = expr->to<IR::Slice>())
+        return nested_nonsliceable(sliceOp->e0);
+    if (auto binOp = expr->to<IR::Operation_Binary>()) {
+        if (nonsliceable(binOp))
+            return true;
+        return nested_nonsliceable(binOp->left) || nested_nonsliceable(binOp->right);
+    }
+    return false;
 }
 
 // returns nullptr if none found, else the first find.
 const IR::Concat* find_nested_concat(const IR::Expression* expr) {
-    auto binOp = expr->to<IR::Operation_Binary>();
-    if (!binOp)
-        return nullptr;
-    if (nonsliceable(binOp))
-        return nullptr;     // Already removed by dice_concat().
-    if (auto concatOp = expr->to<IR::Concat>())
-        return concatOp;
-    if (auto concatOp = find_nested_concat(binOp->left))
-        return concatOp;
-    if (auto concatOp = find_nested_concat(binOp->right))
-        return concatOp;
+    // concats have already been removed from nonsliceables by remove_concat_from_nonsliceable().
+    if (auto sliceOp = expr->to<IR::Slice>()) {  // IR::Mux clean.
+        // BUG_CHECK(!find_nested_concat(sliceOp->e1) && !find_nested_concat(sliceOp->e2), "!!");
+        return find_nested_concat(sliceOp->e0);
+    }
+    if (auto binOp = expr->to<IR::Operation_Binary>()) {
+        if (nonsliceable(binOp))
+            return nullptr;    // nonsliceable clean.
+        if (auto concatOp = expr->to<IR::Concat>())
+            return concatOp;
+        if (auto concatOp = find_nested_concat(binOp->left))
+            return concatOp;
+        if (auto concatOp = find_nested_concat(binOp->right))
+            return concatOp;
+    }
     return nullptr;
 }
 
-// Dice IR::Concat expressions out of sub-expressions that can't be sliced,
-// (unless they are zero extensions) as they can't be slice where they are.
-// returns nullptr if nothing changed, else the new node.
-const IR::Expression* dice_concat(const IR::Expression* expr, Statements& stmts,
-                                  bool in_nonsliceable = false) {
-    auto binOp = expr->to<IR::Operation_Binary>();
-    if (!binOp)
-        return nullptr;
+const IR::Expression* remove_concat_from_nonsliceable(const IR::Expression* expr,
+                                                      Statements& stmts,
+                                                      bool in_nonsliceable = false);
 
+// returns nullptr if nothing changed, else the new node.
+const IR::Expression* remove_concat_from_nonsliceable(const IR::Operation_Binary* binOp,
+                                                      Statements& stmts,
+                                                      bool in_nonsliceable) {
     if (in_nonsliceable) {
         if (auto concatOp = binOp->to<IR::Concat>()) {
             if (!zero_extended(concatOp)) {
                 // Break the complex expression down the best we can.
-                // TODO Should we dice slightly higher viz include sliceable parents?
+                // TODO Should we cut slightly higher viz include sliceable parents?
                 if (nested_nonsliceable(concatOp))
                     return assign_expr_to_temp(concatOp, stmts);
                 else
@@ -321,8 +326,8 @@ const IR::Expression* dice_concat(const IR::Expression* expr, Statements& stmts,
         in_nonsliceable = nonsliceable(binOp);
     }
 
-    auto newleft = dice_concat(binOp->left, stmts, in_nonsliceable);
-    auto newright = dice_concat(binOp->right, stmts, in_nonsliceable);
+    auto newleft = remove_concat_from_nonsliceable(binOp->left, stmts, in_nonsliceable);
+    auto newright = remove_concat_from_nonsliceable(binOp->right, stmts, in_nonsliceable);
     if (newleft || newright) {
         IR::Operation_Binary* clone = binOp->clone();
         if (newleft)
@@ -334,31 +339,67 @@ const IR::Expression* dice_concat(const IR::Expression* expr, Statements& stmts,
     return nullptr;
 }
 
-// Dice sub-expressions that can't be sliced from expressions that need to be sliced.
 // returns nullptr if nothing changed, else the new node.
-const IR::Expression* dice_nonSliceable(const IR::Expression* expr, Statements& stmts) {
-    auto binOp = expr->to<IR::Operation_Binary>();
-    if (!binOp)
-        return nullptr;
-
-    if (nonsliceable(binOp))
-        return assign_expr_to_temp(binOp, stmts);
-
-    auto newleft = dice_nonSliceable(binOp->left, stmts);
-    auto newright = dice_nonSliceable(binOp->right, stmts);
-    if (newleft || newright) {
-        IR::Operation_Binary* clone = binOp->clone();
-        if (newleft)
-            clone->left = newleft;
-        if (newright)
-            clone->right = newright;
+const IR::Expression* remove_concat_from_nonsliceable(const IR::Operation_Ternary* ternOp,
+                                                      Statements& stmts,
+                                                      bool in_nonsliceable) {
+    // IR::Mux needs e1 & e2 checking too.
+    auto newe0 = remove_concat_from_nonsliceable(ternOp->e0, stmts, in_nonsliceable);
+    auto newe1 = remove_concat_from_nonsliceable(ternOp->e1, stmts, in_nonsliceable);
+    auto newe2 = remove_concat_from_nonsliceable(ternOp->e2, stmts, in_nonsliceable);
+    if (newe0 || newe1 || newe2) {
+        IR::Operation_Ternary* clone = ternOp->clone();
+        if (newe0)
+            clone->e0 = newe0;
+        if (newe1)
+            clone->e1 = newe1;
+        if (newe2)
+            clone->e2 = newe2;
         return clone;
+    }
+    return nullptr;
+}
+
+// returns nullptr if nothing changed, else the new node.
+const IR::Expression* remove_concat_from_nonsliceable(const IR::Expression* expr,
+                                                      Statements& stmts,
+                                                      bool in_nonsliceable) {
+    if (auto ternOp = expr->to<IR::Operation_Ternary>())
+        return remove_concat_from_nonsliceable(ternOp, stmts, in_nonsliceable);
+    if (auto binOp = expr->to<IR::Operation_Binary>())
+        return remove_concat_from_nonsliceable(binOp, stmts, in_nonsliceable);
+    return nullptr;
+}
+
+// returns nullptr if nothing changed, else the new node.
+const IR::Expression* remove_nonsliceable_from_sliceable(const IR::Expression* expr,
+                                                         Statements& stmts) {
+    if (auto ternOp = expr->to<IR::Operation_Ternary>()) {
+        if (auto sliceOp = expr->to<IR::Slice>()) {
+            // BUG_CHECK(!nonsliceable(sliceOp->e1) && !nonsliceable(sliceOp->e2), "!!");
+            return remove_nonsliceable_from_sliceable(sliceOp->e0, stmts);
+        }
+        return assign_expr_to_temp(ternOp, stmts);
+    }
+
+    if (auto binOp = expr->to<IR::Operation_Binary>()) {
+        if (nonsliceable(binOp))
+            return assign_expr_to_temp(binOp, stmts);
+        auto newleft = remove_nonsliceable_from_sliceable(binOp->left, stmts);
+        auto newright = remove_nonsliceable_from_sliceable(binOp->right, stmts);
+        if (newleft || newright) {
+            IR::Operation_Binary* clone = binOp->clone();
+            if (newleft)
+                clone->left = newleft;
+            if (newright)
+                clone->right = newright;
+            return clone;
+        }
     }
     return nullptr;
 }
 
 // Slice the entire assignment.
-// It should not contain nonsliceable expressions.
 void slice_assignment(const IR::Expression* lvalue, const IR::Expression* rvalue,
                       Statements& stmts) {
     if (auto concatOp = find_nested_concat(rvalue)) {
@@ -375,26 +416,20 @@ void slice_assignment(const IR::Expression* lvalue, const IR::Expression* rvalue
 
 const IR::Node* RewriteConcatToSlices::preorder(IR::AssignmentStatement* stmt) {
     // The returned node will be re-visited.
-
-    // The current backend has ordered a "double dice and slice, with a twist".
-    //          dice:  lower sub-expression into a temporary variable.
-    //          slice: slice the entire expression into multiple expressions.
-    //          twist: we leave zero_extended IR::Concat sub-expressions untouched
-    //                 in nonsliceable sub-expressions.
-    // N.B. Previously visited node may not require further processing.
+    // N.B. A previously visited node may not require further processing.
     // TODO Use the visitor to traverse rather than doing it here.
 
-    // First dice IR::Concat expressions out of sub-expressions that can't be sliced,
+    // First remove sliceable expressions out of sub-expressions that can't be sliced,
     // (unless they are zero extensions) as they can't be slice where they are.
     Statements stmts;
-    if (auto newright = dice_concat(stmt->right, stmts)) {
+    if (auto newright = remove_concat_from_nonsliceable(stmt->right, stmts)) {
         stmt->right = newright;
         return create_block(stmts, stmt);
     }
     if (find_nested_concat(stmt->right)) {
-        // Next dice sub-expressions that can't be sliced from expressions that need to be sliced.
+        // Next remove sub-expressions that can't be sliced from expressions that need to be sliced.
         // N.B. a sliceable concat could be anywhere in the expression.
-        if (auto newright = dice_nonSliceable(stmt->right, stmts)) {
+        if (auto newright = remove_nonsliceable_from_sliceable(stmt->right, stmts)) {
             stmt->right = newright;
             return create_block(stmts, stmt);
         }
@@ -438,16 +473,16 @@ const IR::Node* RewriteConcatToSlices::preorder(IR::IfStatement* stmt) {
     // The returned node will be re-visited.
 
     // See comment re RewriteConcatToSlices::preorder(IR::AssignmentStatement* stmt)
-    // First dice IR::Concat expressions out of sub-expressions that can't be sliced,
+    // First remove sliceable expressions out of sub-expressions that can't be sliced,
     // (unless they are logical expressions) as they can't be slice where they are.
     Statements stmts;
-    if (auto newcond = dice_concat(stmt->condition, stmts)) {
+    if (auto newcond = remove_concat_from_nonsliceable(stmt->condition, stmts)) {
         stmt->condition = newcond;
         return create_block(stmts, stmt);
     }
-    // Next dice sub-expressions that can't be sliced.
+    // Next remove sub-expressions that can't be sliced.
     if (find_nested_concat(stmt->condition)) {
-       if (auto newcond = dice_nonSliceable(stmt->condition, stmts)) {
+       if (auto newcond = remove_nonsliceable_from_sliceable(stmt->condition, stmts)) {
             stmt->condition = newcond;
             return create_block(stmts, stmt);
         }

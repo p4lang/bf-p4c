@@ -535,4 +535,38 @@ TEST(ElimCast, AssignFunnelShift) {
     RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
 }
 
+TEST(ElimCast, AssignExplicitSlice) {
+    auto input = R"(
+        apply {
+            headers.h.field1 = (headers.h.field1 ++ headers.h.field2)[11:4];
+        })";
+    Match::CheckList expected = {
+        "apply { {",
+            "bit<4> $concat_to_slice`(\\d+)`;",
+            "bit<4> $concat_to_slice`(\\d+)`;",
+            "$concat_to_slice`\\1` = headers.h.field1[3:0];",
+            "$concat_to_slice`\\2` = headers.h.field2[7:4];",
+            "headers.h.field1[7:4] = $concat_to_slice`\\1`;",
+            "headers.h.field1[3:0] = $concat_to_slice`\\2`;",
+        "} }"
+    };
+    RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
+}
+
+TEST(ElimCast, AssignExplicitSlicePlus) {
+    auto input = R"(
+        apply {
+            headers.h.field1 = (headers.h.field1 ++ headers.h.field2 + 16w3)[11:4];
+        })";
+    Match::CheckList expected = {
+        "apply { {",
+            "bit<16> $concat_to_slice`(\\d+)`;",
+            "$concat_to_slice`\\1`[15:8] = headers.h.field1;",
+            "$concat_to_slice`\\1`[7:0] = headers.h.field2;",
+            "headers.h.field1 = ($concat_to_slice`\\1` + 16w3)[11:4];",
+        "} }"
+    };
+    RUN_CHECK(new BFN::RewriteConcatToSlices(), input, expected);
+}
+
 }  // namespace Test
