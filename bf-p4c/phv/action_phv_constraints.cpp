@@ -2017,7 +2017,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
 
         for (auto& packing_slice : kv_unallocated.second) {
             ordered_set<int> req_alignment;
-            for (auto& slice : slices) {
+            for (auto& slice : container_state) {
                 auto sources = constraint_tracker.source_alignment(slice, packing_slice);
                 req_alignment |= sources; }
 
