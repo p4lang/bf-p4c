@@ -900,6 +900,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful|./p4c TIMEOUT"
+  ../glass/testsuite/p4_tests/mau/COMPILER-630/case3431b.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-443/case2514.p4
   ../glass/testsuite/p4_tests/rdp/COMPILER-502/case2675.p4
   # funnel shift not supported
@@ -1017,7 +1018,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-604
 p4c_add_xfail_reason("tofino"
   "Compiler Bug.*Operand.*of instruction.*operating on container.*must be a PHV"
-  extensions/p4_tests/p4_14/compile_only/p4smith_regression/clue_0.p4
   extensions/p4_tests/p4_16/compile_only/deparse-zero-clustering.p4
   testdata/p4_16_samples/issue983-bmv2.p4
   ../glass/testsuite/p4_tests/arista/COMPILER-548/case3011.p4

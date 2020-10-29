@@ -54,8 +54,8 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSlices) {
     auto slices1 = fields["ingress::hdr.test"].getSlices();
     auto slices2 = fields["egress::hdr.test"].getSlices();
 
-    ASSERT_EQ(slices1.size(), 2);
-    ASSERT_EQ(slices2.size(), 1);
+    ASSERT_EQ(slices1.size(), 2U);
+    ASSERT_EQ(slices2.size(), 1U);
 
     auto &slice0 = *slices1.begin();
     auto &slice1 = *(++slices1.begin());
@@ -85,7 +85,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
     auto &cf = fields.at("ingress::hdr.test");
     EXPECT_TRUE(cf.getSolitary().hasConstraint());
     EXPECT_TRUE(cf.getAlignment().hasConstraint());
-    EXPECT_EQ(cf.getAlignment().getAlignment(), 4);
+    EXPECT_EQ(cf.getAlignment().getAlignment(), 4U);
 }
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {

@@ -309,6 +309,14 @@ TestCode::TestCode(Hdr header, std::string code,
     }
 }
 
+std::string TestCode::min_control_shell() {return R"(
+    %0%                                                 // Defines 'struct Headers'
+    control TestIngress<H>(inout H hdr);
+    package TestPackage<H>(TestIngress<H> ig);
+    control testingress(inout Headers headers) {%1%}    // The control block
+    TestPackage(testingress()) main;)";}
+
+
 std::string TestCode::tofino_shell() {return R"(
     %0% // Define struct headers_t{}; struct local_metadata_t{}
     parser ingress_parser(packet_in packet, out headers_t hdr,

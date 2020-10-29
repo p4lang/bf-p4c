@@ -6,7 +6,6 @@
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/strengthReduction.h"
 #include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/common/slice.h"
 
 namespace BFN {
 
@@ -52,7 +51,8 @@ class EliminateWidthCasts : public Transform {
     // Steve and Yuan.
     const IR::Node* preorder(IR::SelectExpression *expr) override {
         prune();
-        return expr; }
+        return expr;
+    }
 };
 
 /**
@@ -70,26 +70,7 @@ class RewriteCastToReinterpretCast : public Transform {
 
  public:
     explicit RewriteCastToReinterpretCast(P4::TypeMap* typeMap) : typeMap(typeMap) {}
-    const IR::Node* preorder(IR::Cast* expression) override {
-        const IR::Type *srcType = expression->expr->type;
-        const IR::Type *dstType = expression->destType;
-
-        if (srcType->is<IR::Type_Boolean>() || dstType->is<IR::Type_Boolean>()) {
-            auto retval = new IR::BFN::ReinterpretCast(expression->srcInfo,
-                                                       expression->destType, expression->expr);
-            typeMap->setType(retval, expression->destType);
-            return retval;
-        } else if (srcType->is<IR::Type_Bits>() && dstType->is<IR::Type_Bits>()) {
-            if (srcType->width_bits() != dstType->width_bits())
-                return expression;
-            if (srcType->to<IR::Type_Bits>()->isSigned != dstType->to<IR::Type_Bits>()->isSigned) {
-                auto retval = new IR::BFN::ReinterpretCast(expression->srcInfo,
-                                                           expression->destType, expression->expr);
-                typeMap->setType(retval, expression->destType);
-                return retval; }
-        }
-        return expression;
-    }
+    const IR::Node* preorder(IR::Cast* expression) override;
 };
 
 /**
@@ -105,32 +86,7 @@ class RewriteCastToReinterpretCast : public Transform {
 class SimplifyRedundantCasts : public Transform {
  public:
     SimplifyRedundantCasts() {}
-
-    const IR::Node* preorder(IR::Cast* expression) override {
-        const IR::Type *srcType = expression->expr->type;
-        const IR::Type *dstType = expression->destType;
-
-        if (!srcType->is<IR::Type_Bits>() || !dstType->is<IR::Type_Bits>())
-            return expression;
-
-        if (srcType->width_bits() != dstType->width_bits())
-            return expression;
-
-        if (expression->expr->is<IR::Cast>()) {
-            const IR::Cast *innerCast = expression->expr->to<IR::Cast>();
-            if (srcType->to<IR::Type_Bits>()->isSigned == dstType->to<IR::Type_Bits>()->isSigned)
-                return expression;
-            if (dstType->width_bits() == innerCast->expr->type->width_bits())
-                return innerCast->expr;
-        } else {
-            if (srcType->to<IR::Type_Bits>()->isSigned != dstType->to<IR::Type_Bits>()->isSigned)
-                return expression;
-            if (dstType->width_bits() == srcType->width_bits())
-                return expression->expr;
-        }
-
-        return expression;
-    }
+    const IR::Node* preorder(IR::Cast* expression) override;
 };
 
 /**
@@ -148,55 +104,7 @@ class SimplifyRedundantCasts : public Transform {
 class SimplifyNestedCasts : public Transform {
  public:
     SimplifyNestedCasts() {}
-
-    const IR::Node* preorder(IR::Cast* expression) override {
-        if (!expression->expr->is<IR::Cast>())
-            return expression;
-
-        const IR::Type *dstType = expression->destType;
-        auto secondCast = expression->expr->to<IR::Cast>();
-
-        // stop if not a nested cast
-        if (!secondCast)
-            return expression;
-
-        // stop if more than two levels of nested casts.
-        if (secondCast->expr->is<IR::Cast>()) {
-            ::error("Expression %1% is too complex to handle, "
-                    "consider simplifying the nested casts.", expression);
-            return expression; }
-
-        const IR::Type *srcType = secondCast->destType;
-        auto innerExpr = secondCast->expr;
-
-        if (!srcType->is<IR::Type_Bits>() || !dstType->is<IR::Type_Bits>() ||
-                !innerExpr->type->is<IR::Type_Bits>())
-            return expression;
-
-        // only handle (bit<a>)(bit<b>)(bit<c>)
-        if (srcType->to<IR::Type_Bits>()->isSigned ||
-            dstType->to<IR::Type_Bits>()->isSigned ||
-            innerExpr->type->to<IR::Type_Bits>()->isSigned)
-            return expression;
-
-        // given a expression (bit<a>)(bit<b>)(md), where the type of md is
-        // bit<c>, we need to handle the following four cases:
-        // case 1: a > b > c, the expression should be simplified to (bit<a>)(md);
-        // case 2: a > b < c, the expression should be simplified to (bit<a>)(slice(md, b-1, 0))
-        //    we reject this expression for now.
-        // case 3: a < b > c, the expression should be simplified to (bit<a>)(md);
-        // case 4: a < b < c, the expression should be simplified to (bit<a>)(md);
-        if (dstType->width_bits() <= srcType->width_bits()) {
-            return new IR::Cast(dstType, innerExpr);
-        } else if (dstType->width_bits() > srcType->width_bits() &&
-                   srcType->width_bits() > innerExpr->type->width_bits()) {
-            return new IR::Cast(dstType, innerExpr);
-        } else {
-            ::error("Expression %1% is too complex to handle, "
-                    "consider simplifying the nested casts.", expression); }
-
-        return expression;
-    }
+    const IR::Node* preorder(IR::Cast* expression) override;
 };
 
 /**
@@ -211,186 +119,25 @@ class SimplifyNestedCasts : public Transform {
 class SimplifyOperationBinary : public Transform {
  public:
     SimplifyOperationBinary() {}
-    const IR::Node* preorder(IR::Cast *expression) {
-        if (!expression->expr->is<IR::Operation_Binary>())
-            return expression;
-
-        // cannot cast lhs and rhs to boolean on
-        // a bitwise binary operation.
-        if (expression->destType->is<IR::Type_Boolean>())
-            return expression;
-
-        auto binop = expression->expr->to<IR::Operation_Binary>();
-        IR::Expression* left = nullptr;
-        IR::Expression* right = nullptr;
-
-        // do not simplify if any operand is not bit type
-        if (!binop->left->type->is<IR::Type_Bits>() || !binop->right->type->is<IR::Type_Bits>())
-            return expression;
-
-        // do not simplify if any operand is signed bit type
-        if (binop->left->type->to<IR::Type_Bits>()->isSigned ||
-            binop->right->type->to<IR::Type_Bits>()->isSigned)
-            return expression;
-
-        if (expression->type->width_bits() > binop->type->width_bits()) {
-            // widening cast
-            if (binop->is<IR::Add>() || binop->is<IR::Sub>() || binop->is<IR::Mul>() ||
-                binop->is<IR::AddSat>() || binop->is<IR::SubSat>()) {
-                // would change carry/overflow/saturate behavior, so can't do it.
-                return expression; }
-        } else if (expression->type->width_bits() < binop->type->width_bits()) {
-            // narrowing cast
-            if (binop->is<IR::AddSat>() || binop->is<IR::SubSat>() ||
-                binop->is<IR::Div>() || binop->is<IR::Mod>()) {
-                // would change saturate or rounding behavior, so can't do it.
-                return expression; } }
-
-        if (binop->left->is<IR::Constant>()) {
-            auto cst = binop->left->to<IR::Constant>();
-            left = new IR::Constant(expression->destType, cst->value, cst->base);
-        } else {
-            left = new IR::Cast(expression->destType, binop->left); }
-
-        if (binop->right->is<IR::Constant>()) {
-            auto cst = binop->right->to<IR::Constant>();
-            right = new IR::Constant(expression->destType, cst->value, cst->base);
-        } else {
-            right = new IR::Cast(expression->destType, binop->right); }
-
-        if (auto op = expression->expr->to<IR::Add>())
-            return new IR::Add(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::Sub>())
-            return new IR::Sub(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::AddSat>())
-            return new IR::AddSat(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::SubSat>())
-            return new IR::SubSat(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::BAnd>())
-            return new IR::BAnd(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::BOr>())
-            return new IR::BOr(op->srcInfo, left, right);
-        if (auto op = expression->expr->to<IR::BXor>())
-            return new IR::BXor(op->srcInfo, left, right);
-        return expression;
-    }
+    const IR::Node* preorder(IR::Cast *expression) override;
 };
 
-struct SliceInfo {
-    int hi;
-    int lo;
-    const IR::Expression* expr;
-
-    SliceInfo(int hi, int lo, const IR::Expression* expr) :
-            hi(hi), lo(lo), expr(expr) {}
-};
-
-/** replace concat ++ operations with mulitple operations on slices in the contexts
- * where it works
- *  - immediately on the RHS of an assignment
- *  - directly in an == or != comparison
- */
+/// replace concat ++ operations with multiple operations on slices in the contexts.
 class RewriteConcatToSlices : public Transform {
  public:
-    RewriteConcatToSlices() {}
-    int tmpvar_created = 0;
-
     // do not simplify '++' in apply functions.
     const IR::Node* preorder(IR::Function* func) override {
         prune();
-        return func; }
-
-    safe_vector<const IR::Declaration_Variable *> temps;
-    safe_vector<const IR::AssignmentStatement *> write_to_temps;
-    safe_vector<const IR::AssignmentStatement *> read_from_temps;
-
-
-    void build_assignments(const IR::Expression *l_value, const IR::Expression *r_value,
-            Util::SourceInfo srcInfo) {
-        IR::ID id("$concat_to_slice" + std::to_string(tmpvar_created++));
-        temps.push_back(new IR::Declaration_Variable(id, r_value->type));
-        auto pe = new IR::PathExpression(r_value->type, new IR::Path(id));
-        write_to_temps.push_back(new IR::AssignmentStatement(srcInfo, pe, r_value));
-        read_from_temps.push_back(new IR::AssignmentStatement(srcInfo, l_value, pe));
+        return func;
     }
-
-    void collect_assignment_statements(const IR::Concat *c, const IR::Expression *l_value,
-            Util::SourceInfo srcInfo) {
-        int lsize = c->left->type->width_bits();
-        int rsize = c->right->type->width_bits();
-        auto left_l_value = MakeSlice(l_value, rsize, rsize + lsize - 1);
-        auto right_l_value = MakeSlice(l_value, 0, rsize - 1);
-        if (auto left_c = c->left->to<IR::Concat>()) {
-            collect_assignment_statements(left_c, left_l_value, srcInfo);
-        } else {
-            build_assignments(left_l_value, c->left, srcInfo);
-        }
-
-        if (auto right_c = c->right->to<IR::Concat>()) {
-            collect_assignment_statements(right_c, right_l_value, srcInfo);
-        } else {
-            build_assignments(right_l_value, c->right, srcInfo);
-        }
-    }
-
     const IR::BlockStatement *preorder(IR::BlockStatement *blk) override {
         if (blk->getAnnotation("in_hash")) prune();
         return blk;
     }
-
-    const IR::Node* preorder(IR::AssignmentStatement* stmt) override {
-        if (auto c = stmt->right->to<IR::Concat>()) {
-            temps.clear();
-            write_to_temps.clear();
-            read_from_temps.clear();
-            collect_assignment_statements(c, stmt->left, stmt->srcInfo);
-            auto *rv = new IR::BlockStatement;
-            // In order to maintain sequentiality, especially if any part of the write expression is
-            // within the read expression, all writes to temp variables are done before all
-            // reads from temp variables
-            for (auto entry : temps)
-                rv->components.push_back(entry);
-            for (auto assign : write_to_temps)
-                rv->components.push_back(assign);
-            for (auto assign : read_from_temps)
-                rv->components.push_back(assign);
-            temps.clear();
-            write_to_temps.clear();
-            read_from_temps.clear();
-            return rv;
-        }
-        return stmt;
-    }
-    const IR::Node* preorder(IR::Equ *eq) override {
-        if (auto c = eq->left->to<IR::Concat>()) {
-            int rsize = c->right->type->width_bits();
-            int lsize = c->left->type->width_bits();
-            return new IR::LAnd(
-                new IR::Equ(eq->srcInfo, c->left, MakeSlice(eq->right, rsize, rsize + lsize - 1)),
-                new IR::Equ(eq->srcInfo, c->right, MakeSlice(eq->right, 0, rsize - 1))); }
-        if (auto c = eq->right->to<IR::Concat>()) {
-            int rsize = c->right->type->width_bits();
-            int lsize = c->left->type->width_bits();
-            return new IR::LAnd(
-                new IR::Equ(eq->srcInfo, MakeSlice(eq->left, rsize, rsize + lsize - 1), c->left),
-                new IR::Equ(eq->srcInfo, MakeSlice(eq->left, 0, rsize - 1), c->right)); }
-        return eq;
-    }
-    const IR::Node* preorder(IR::Neq *ne) override {
-        if (auto c = ne->left->to<IR::Concat>()) {
-            int rsize = c->right->type->width_bits();
-            int lsize = c->left->type->width_bits();
-            return new IR::LOr(
-                new IR::Neq(ne->srcInfo, c->left, MakeSlice(ne->right, rsize, rsize + lsize - 1)),
-                new IR::Neq(ne->srcInfo, c->right, MakeSlice(ne->right, 0, rsize - 1))); }
-        if (auto c = ne->right->to<IR::Concat>()) {
-            int rsize = c->right->type->width_bits();
-            int lsize = c->left->type->width_bits();
-            return new IR::LOr(
-                new IR::Neq(ne->srcInfo, MakeSlice(ne->left, rsize, rsize + lsize - 1), c->left),
-                new IR::Neq(ne->srcInfo, MakeSlice(ne->left, 0, rsize - 1), c->right)); }
-        return ne;
-    }
+    const IR::Node* preorder(IR::AssignmentStatement* stmt) override;
+    const IR::Node* preorder(IR::IfStatement* stmt) override;
+    const IR::Node* preorder(IR::Equ *eq) override;
+    const IR::Node* preorder(IR::Neq *ne) override;
 };
 
 class StrengthReduction : public PassManager {

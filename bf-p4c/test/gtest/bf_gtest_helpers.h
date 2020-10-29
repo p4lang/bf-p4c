@@ -134,6 +134,16 @@ class TestCode {
     static std::string empty_state() {return "state start {transition accept;}";}
     static std::string empty_appy() {return "apply {}";}
 
+    /** 'min_control_shell' is a minimal program, requiring insertions for:
+     *   %0%     Defines for 'struct headers_t' and 'struct local_metadata_t'.
+     *   %1%     A control ingress_control block e.g. 'empty_appy()'.
+     *  The 'min_control_shell_marker identifies the block within the 'min_control_shell' string.
+     */
+    static std::string min_control_shell();  // See cpp file for the code.
+    static std::string min_control_shell_marker() {
+        return"control testingress" + any_to_brace();
+    }
+
     /** 'tofino_shell' is a tofino program, requiring insertions for:
      *   %0%     Defines for 'struct headers_t' and 'struct local_metadata_t'.
      *   %1%     A parser ingress_parser block e.g. 'empty_state()'.
@@ -154,11 +164,15 @@ class TestCode {
     // TODO would a smaller test program (as used in test_bf_gtest_helpers.cpp) be of general value?
 
 
-    /// The header file to be used when building the 'code'.
+    /**  The header file to prefix the 'code' with.
+     *  N.B. 98% of the test time can be taken up processing boiler-plate.
+     *       Front-end and Mid-end passes, where possible, should minimise unnecessary code
+     *       e.g. preferably use 'Hdr::None', or 'Hdr::V1model_*', rather than 'Hdr::Tofino1arch'.
+     */
     enum class Hdr {None, Tofino1arch, Tofino2arch, Tofino3arch, V1model_2018, V1model_2020};
 
-    /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'
-     *  We state the 'header' we want and our 'code', with optional %N% insertion points.
+    /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'.
+     *  State the 'header' needed and the 'code' (with optional %N% insertion points).
      *  The %N% entires are repalced by the 'insertion' elements e.g.
      *     TestCode(Hdr::None,                                      // No header required.
      *              R"      control TestIngress<H, M>(inout H hdr, inout M meta);
@@ -169,7 +183,7 @@ class TestCode {
      *                      }
      *                      TestPackage(ti()) main;)",              // Our program.
      *              {"struct Hd{}; struct Md{};", "apply{}"},       // replaces %0% & %1%.
-     *              "control ti"+any_to_brace(),                    // The start of the block.
+     *              "control ti" + any_to_brace(),                  // The start of the block.
      *              {"-S"});                                        // Commandline options.
      */
     TestCode(Hdr header,
@@ -177,6 +191,20 @@ class TestCode {
              const std::initializer_list<std::string>& insertion = {},  ///< Default: none.
              const std::string& blockMarker = "",                       ///< Default: all code.
              const std::initializer_list<std::string>& options = {});   ///< Default: tna & P4_16.
+
+    /** See test_bf_gtest_helpers.cpp for example usage of 'TestControlBlock'.
+     *  TestControlBlock() is a handy wrapper for testing minimal control block P4 programs.
+     *  N.B. 98% of the test time can be taken up processing boiler-plate.
+     *       If this wrapper is not quite right, create your own minimal code block!
+     *
+     * @param defines   Must contain a definition of 'struct Headers'.
+     * @param block     The code inserted into 'control testingress(inout Headers headers){%1%}'.
+     */
+    static TestCode TestControlBlock(const std::string& defines, const std::string& block) {
+        std::initializer_list<std::string> insert = {defines, block};
+        return TestCode(TestCode::Hdr::None, min_control_shell(),
+                        insert, min_control_shell_marker());
+    }
 
     /// Sets the flags to be used by other member functions.
     void flags(Match::Flag f) { flag = f; }

@@ -241,6 +241,10 @@ TEST(testBfGtestHelper, TestCodeTestCodeBad) {
     // Multiple insertions tested below.
 }
 
+TEST(testBfGtestHelper, TestCodeTestControlBlock) {
+    TestCode(TestCode::TestControlBlock(EmptyDefs, EmptyAppy));
+}
+
 TEST(testBfGtestHelper, TestCodeGetBlock) {
     auto blk = TestCode(TestCode::Hdr::Tofino1arch, Code,
                         {EmptyDefs, "\napply\n\n{\n\n}\n"}, Marker);

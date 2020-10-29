@@ -1219,6 +1219,7 @@ if (ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dominator_tree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/dynamic_dep_metrics.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/elim_cast.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/jbay_next_table.cpp
