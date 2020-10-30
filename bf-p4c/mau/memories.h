@@ -256,6 +256,17 @@ struct Memories {
         safe_vector<UniqueId>                    dleft_learn;
         safe_vector<UniqueId>                    dleft_match;
 
+        int get_way(int row, int col) {
+            for (int i = 0; i < ways.size(); i++) {
+                auto w = ways[i];
+                for (auto ram : w.rams) {
+                    if ((ram.first == row) && (ram.second == col))
+                        return i;
+                }
+            }
+            return -1;
+        }
+
         void clear_allocation() {
             row.clear();
             color_mapram.clear();

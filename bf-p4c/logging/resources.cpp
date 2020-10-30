@@ -502,10 +502,14 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
     */
 
     auto mkItem = [](Util::JsonArray *parent, const cstring tableName, const cstring matchType,
-                     int r, int c, const cstring &colName) {
+                     const int r, const int c, const cstring &colName, const int w = -1) {
         auto *item = new Util::JsonObject();
+        std::string detail = "";
         item->emplace("row", new Util::JsonValue(r));
         item->emplace(colName, new Util::JsonValue(c));
+        if (w >= 0) {
+            item->emplace("way", new Util::JsonValue(w));
+        }
         BFN::Visualization::usagesToCtxJson(item, tableName + "", matchType + "");
         parent->append(item);
     };
@@ -550,9 +554,11 @@ void Visualization::gen_memories(unsigned int stage, Util::JsonObject *parent) {
             case Memories::Use::ACTIONDATA:
                 for (auto &r : memuse.row) {
                     for (auto &c : r.col)
-                        mkItem(rams, used_by, memTypeName, r.row, c, "column");
+                        mkItem(rams, used_by, memTypeName, r.row, c,
+                                 "column", memuse.get_way(r.row, c));
                     if ((r.stash_unit == 0) || (r.stash_unit == 1))
-                        mkItem(stashes, used_by, memTypeName, r.row, r.stash_unit, "unit_id"); }
+                        mkItem(stashes, used_by, memTypeName, r.row,
+                                r.stash_unit, "unit_id"); }
                 break;
             case Memories::Use::TERNARY:
                 for (auto &r : memuse.row)
@@ -888,7 +894,7 @@ void Visualization::gen_tind_result_buses(unsigned int stageNo, Util::JsonObject
 
 std::ostream &operator<<(std::ostream &out, const Visualization &vis) {
     auto res_json = new Util::JsonObject();
-    res_json->emplace("schema_version", new Util::JsonValue("1.4.0"));
+    res_json->emplace("schema_version", new Util::JsonValue("1.4.1"));
     res_json->emplace("program_name",
                       new Util::JsonValue(BackendOptions().programName + ".p4"));
     res_json->emplace("run_id", new Util::JsonValue(RunId::getId()));
