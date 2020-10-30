@@ -2268,6 +2268,13 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     int vpn_ctr = 0;
     bool no_vpns = false;
+    int minvpn, spare_vpn;
+    json::vector spare_mem;
+
+    // Retrieve the Spare VPN
+    if (skip_spare_bank)
+        layout_vpn_bounds(minvpn, spare_vpn, false);
+
     for (auto &row : layout) {
         int word = row.word >= 0 ? row.word : 0;
         auto vpn_itr = row.vpns.begin();
@@ -2286,7 +2293,15 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             //  1 -> 0   92
             //       1   93
             //  E.g. VPN 0 has Ram 90 with word 0 and Ram 91 with word 1
-            mem_units[vpn_ctr][word] = memunit(row.row, col); } }
+            if (skip_spare_bank && spare_vpn == vpn_ctr) {
+                spare_mem.push_back(memunit(row.row, col));
+                if (table_type() == SELECTION || table_type() == COUNTER ||
+                    table_type() == METER || table_type() == STATEFUL)
+                    continue;
+            }
+            mem_units[vpn_ctr][word] = memunit(row.row, col);
+        }
+    }
     if (mem_units.size() == 0) return nullptr;
     int vpn = 0;
     for (auto &mem_unit : mem_units) {
@@ -2302,13 +2317,6 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             }
         }
         if (mem.size() != 0) {
-            if (skip_spare_bank && &mem_unit == &mem_units.back()) {
-                if (mem.size() == 1)
-                    mra["spare_bank_memory_unit"] = mem[0]->clone();
-                else
-                    mra["spare_bank_memory_unit"] = mem.clone();
-                if (table_type() == SELECTION || table_type() == COUNTER ||
-                        table_type() == METER || table_type() == STATEFUL) break; }
             json::map tmp;
             tmp["memory_units"] = std::move(mem);
             json::vector vpns;
@@ -2320,7 +2328,18 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(
             mem_units_and_vpns.push_back(std::move(tmp));
         }
         vpn++;
-     }
+    }
+    if (skip_spare_bank && spare_mem.size() != 0) {
+        if (spare_mem.size() == 1)
+            mra["spare_bank_memory_unit"] = spare_mem[0]->clone();
+        else
+#if 0
+            // FIXME: Emit the vector once supported by the driver
+            mra["spare_bank_memory_unit"] = spare_mem.clone();
+#else
+            mra["spare_bank_memory_unit"] = spare_mem[0]->clone();
+#endif
+    }
     return json::mkuniq<json::map>(std::move(mra));
 }
 

@@ -42,6 +42,8 @@ struct Memories {
     static constexpr int NUM_IDLETIME_BUS = 10;
     static constexpr int MAX_PARTITION_RAMS_PER_ROW = 5;
     static constexpr int MATCH_CENTRAL_ROW = 4;
+    static constexpr int MAX_STATS_ROW_PER_ALU = 3;
+    static constexpr int MAX_STATS_RAM_PER_ALU = MAPRAM_COLUMNS * MAX_STATS_ROW_PER_ALU;
 
     static constexpr int LOGICAL_ROW_MISSING_OFLOW = 8;
 
@@ -358,6 +360,7 @@ struct Memories {
         int logical_table = -1;  // For ATCAM tables, which logical table this partition is based
         int vpn_increment = 1;
         int vpn_offset = 0;
+        int vpn_spare = 0;
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
         const IR::MAU::AttachedMemory *attached = nullptr;
         UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP;

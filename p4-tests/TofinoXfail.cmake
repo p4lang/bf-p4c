@@ -1897,3 +1897,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/errors/counter2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "error: .*: type Counter has no matching constructor"
+  extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
+)
+

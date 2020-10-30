@@ -676,10 +676,10 @@ class Table {
             return row.vpns.at(col - row.cols.begin()); }
         BUG();
         return 0; }
-    void layout_vpn_bounds(int &min, int &max, bool spare = false) {
+    void layout_vpn_bounds(int &min, int &max, bool spare = false) const {
         min = 1000000; max = -1;
-        for (Layout &row : layout)
-            for (auto v : row.vpns) {
+        for (const Layout &row : layout)
+            for (const auto v : row.vpns) {
                 if (v < min) min = v;
                 if (v > max) max = v; }
         if (spare && max > min) --max; }
@@ -1641,8 +1641,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
         width = period = 1; depth = layout_size(); period_name = 0; }
     bool                global_binding = false;
     bool                output_used = false;
+    int                 home_lineno = -1;
+    std::set<int, std::greater<int>> home_rows;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) const override;
 public:
+    void add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const;
     template<class REGS> void write_regs(REGS &regs);
     FOR_ALL_REGISTER_SETS(TARGET_OVERLOAD,
         void write_regs, (mau_regs &regs), override {
@@ -1660,6 +1663,7 @@ public:
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     enum { NONE = 0, PACKETS = 1, BYTES = 2, BOTH = 3 } type = NONE;
     int teop = -1;
+    bool teop_initialized = false;
     int bytecount_adjust = 0;
     table_type_t table_type() const override { return COUNTER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
@@ -1670,9 +1674,11 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
             write_merge_regs<decltype(regs)>(regs, match, type, bus, args); })
 
     template<class REGS> void setup_teop_regs(REGS &regs, int stats_group_index);
+    template<class REGS> void write_alu_vpn_range(REGS &regs);
 
 #if HAVE_JBAY || HAVE_CLOUDBREAK
     template<class REGS> void setup_teop_regs_2(REGS &regs, int stats_group_index);
+    template<class REGS> void write_alu_vpn_range_2(REGS &regs);
 #endif
 
     struct lrt_params {   // largest recent with threshold paramters

@@ -2036,6 +2036,8 @@ void Memories::swbox_bus_stateful_alus() {
 /* Calculates the necessary size and requirements for any meter and counter tables within
    the stage */
 void Memories::swbox_bus_meters_counters() {
+    int vpn_spare = 0;
+
     for (auto *ta : stats_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
@@ -2049,9 +2051,29 @@ void Memories::swbox_bus_meters_counters() {
                                             : ta->attached_entries.at(stats).entries;
                 if (entries == 0) continue;
                 int depth = mems_needed(entries, SRAM_DEPTH, per_row, true);
+
+                // JBay has no way to support a single stat SRAM group larger than 3 rows.
+                // Splitting it in 2 SRAM Group using one ALU each can provide up to 6 rows
+                // of indirect counter to match Tofino capability.
+                if ((Device::isMemoryCoreSplit()) && (depth > MAX_STATS_RAM_PER_ALU) &&
+                    !stats->direct) {
+                    auto *stats_group = new SRAM_group(ta, MAX_STATS_RAM_PER_ALU, 0,
+                                                       SRAM_group::STATS);
+                    stats_group->attached = stats;
+                    stats_group->logical_table = u_id.logical_table;
+                    stats_group->vpn_offset = depth - MAX_STATS_RAM_PER_ALU;
+
+                    // The same spare VPN value would be used for both spare bank.
+                    vpn_spare = stats_group->vpn_spare = depth - 1;
+                    synth_bus_users.insert(stats_group);
+                    depth -= ((MAX_STATS_RAM_PER_ALU) - 1);
+                }
                 auto *stats_group = new SRAM_group(ta, depth, 0, SRAM_group::STATS);
                 stats_group->attached = stats;
                 stats_group->logical_table = u_id.logical_table;
+                if (vpn_spare)
+                    stats_group->vpn_spare = vpn_spare;
+
                 synth_bus_users.insert(stats_group);
                 lt_entry++;
             }
@@ -2995,6 +3017,7 @@ void Memories::fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side) {
         alloc.home_row.emplace_back(phys_to_log_row(row, side), candidate->number);
         candidate->recent_home_row = phys_to_log_row(row, side);
     }
+    alloc.row.back().bus = lru.bus;
 
     ///> Fills out the RAM objects
     for (int k = 0; k < SRAM_COLUMNS; k++) {
@@ -3004,7 +3027,14 @@ void Memories::fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side) {
         if (lru.RAM_mask.getbit(k)) {
             sram_use[row][k] = name;
             alloc.row.back().col.push_back(k);
-            alloc.row.back().vpn.push_back(candidate->calculate_next_vpn());
+
+            // Spare VPN is global across the logical table
+            if (candidate->vpn_spare &&
+                candidate->calculate_next_vpn() == candidate->depth + candidate->vpn_offset - 1)
+                alloc.row.back().vpn.push_back(candidate->vpn_spare);
+            else
+                alloc.row.back().vpn.push_back(candidate->calculate_next_vpn());
+
             candidate->placed++;
             if (candidate->is_synth_type()) {
                 BUG_CHECK(k >= LEFT_SIDE_COLUMNS,
@@ -3012,12 +3042,15 @@ void Memories::fill_RAM_use(LogicalRowUser &lru, int row, RAM_side_t side) {
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = name;
                 mapram_inuse[row] |= 1 << (k - LEFT_SIDE_COLUMNS);
                 alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
+#if 0
+                // FIXME: VPNs are provided to assembler now
                 if (candidate->placed == candidate->depth) {
                     // This is the last RAM in a syn2port table, so it is the spare and should
                     // not have a VPN.  It turns out to not matter as we don't output the vpns
                     // for syn2port in the compiler, and let the assembler allocate them.
                     alloc.row.back().vpn.pop_back();
                 }
+#endif
             }
         }
     }

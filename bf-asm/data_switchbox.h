@@ -18,9 +18,19 @@ class DataSwitchboxSetup {
  public:
     unsigned get_home_row() { return home_row; }
     unsigned get_home_row_logical() { return home_row_logical; }
-    DataSwitchboxSetup(REGS &regs, Table *t) : regs(regs), tbl(t) {
-        top_ram_row = prev_row = home_row = tbl->layout[0].row/2U;
+    DataSwitchboxSetup(REGS &regs, Table *t, int home = -1, int next_home = -1) :
+        regs(regs), tbl(t) {
+        if (home >= 0)
+            top_ram_row = prev_row = home_row = home / 2U;
+        else
+            top_ram_row = prev_row = home_row = tbl->layout[0].row / 2U;
         bottom_ram_row = tbl->layout.back().row/2U;
+        if (next_home >= 0) {
+            for (auto it = tbl->layout.rbegin(); it != tbl->layout.rend(); ++it) {
+                if (it->row > next_home) {
+                    bottom_ram_row = it->row/2U;
+                    break; } } }
+
         // Counter ALU's are on even rows on right side of RAM array. Set
         // home_row to the correct ALU
         if (tbl->table_type() == Table::COUNTER)

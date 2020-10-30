@@ -1305,7 +1305,7 @@ void AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref) {
                                              di->type, &inst->substitution,
                                              inst->typeArguments, di->annotations,
                                              refMap, typeMap, self.stateful_selectors,
-                                             nullptr, nullptr)) {
+                                             nullptr, tt)) {
             LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
             gref->obj = self.converted[di] = att;
             obj = att;

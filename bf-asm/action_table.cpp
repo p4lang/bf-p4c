@@ -325,6 +325,20 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column"
                    || kv.key == "word") {
             /* already done in setup_layout */
+        } else if (kv.key == "logical_bus") {
+            if (CHECKTYPE2(kv.value, tSTR, tVEC)) {
+                if (kv.value.type == tSTR) {
+                    if (*kv.value.s != 'A' && *kv.value.s != 'O' && *kv.value.s != 'S')
+                        error(kv.value.lineno, "Invalid logical bus %s", kv.value.s);
+                } else {
+                    for (auto &v : kv.value.vec) {
+                        if (CHECKTYPE(v, tSTR)) {
+                            if (*v.s != 'A' && *v.s != 'O' && *v.s != 'S')
+                                error(v.lineno, "Invalid logical bus %s", v.s);
+                        }
+                    }
+                }
+            }
         } else {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name());

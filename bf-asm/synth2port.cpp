@@ -35,6 +35,31 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else if (kv.key == "format" || kv.key == "row" || kv.key == "logical_row" ||
                kv.key == "column" || kv.key == "bus") {
         /* already done in setup_layout */
+    } else if (kv.key == "logical_bus") {
+        if (CHECKTYPE2(kv.value, tSTR, tVEC)) {
+            if (kv.value.type == tSTR) {
+                if (*kv.value.s != 'A' && *kv.value.s != 'O' && *kv.value.s != 'S')
+                    error(kv.value.lineno, "Invalid logical bus %s", kv.value.s);
+            } else {
+                for (auto &v : kv.value.vec) {
+                    if (CHECKTYPE(v, tSTR)) {
+                        if (*v.s != 'A' && *v.s != 'O' && *v.s != 'S')
+                            error(v.lineno, "Invalid logical bus %s", v.s); } } } }
+    } else if (kv.key == "home_row") {
+        home_lineno = kv.value.lineno;
+        if (CHECKTYPE2(kv.value, tINT, tVEC)) {
+            if (kv.value.type == tINT) {
+                if (kv.value.i >= 0 || kv.value.i < LOGICAL_SRAM_ROWS)
+                    home_rows.insert(kv.value.i);
+                else
+                    error(kv.value.lineno, "Invalid home row %" PRId64 "", kv.value.i);
+            } else {
+                for (auto &v : kv.value.vec) {
+                    if (CHECKTYPE(v, tINT)) {
+                        if (v.i >= 0 || v.i < LOGICAL_SRAM_ROWS)
+                            home_rows.insert(v.i);
+                        else
+                            error(v.lineno, "Invalid home row %" PRId64 "", v.i); } } } }
     } else {
         return false;
     }
@@ -76,4 +101,13 @@ json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int s
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
     return &stage_tbl;
+}
+
+void Synth2Port::add_alu_indexes(json::map &stage_tbl, std::string alu_indexes) const {
+    json::vector home_alu;
+
+    for (auto row : home_rows)
+        home_alu.push_back(row/4U);
+
+    stage_tbl[alu_indexes] = home_alu.clone();
 }

@@ -1868,8 +1868,10 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     safe_vector<int> stash_rows;
     safe_vector<int> stash_cols;
     safe_vector<int> stash_units;
+    safe_vector<int> alu_rows;
+    safe_vector<char> logical_bus;
     bool logical = mem.type >= Memories::Use::COUNTER;
-    bool have_bus = !logical;
+    bool have_bus = true;
     bool have_mapcol = mem.is_twoport();
     bool have_col = false;
     bool have_word = mem.type == Memories::Use::ACTIONDATA;
@@ -1886,8 +1888,32 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
 
     for (auto &r : mem.row) {
         if (logical) {
-            row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
+            int logical_row = 2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS);
+            row.push_back(logical_row);
             have_col = true;
+            if (r.bus < 0) {
+                have_bus = false;
+            } else {
+                switch (r.bus) {
+                    case 0 /*ACTION*/:
+                        logical_bus.push_back('A');
+                        break;
+                    case 1 /*SYNTH*/:
+                        logical_bus.push_back('S');
+                        alu_rows.push_back(logical_row);
+                        break;
+                    case 2 /*OFLOW*/:
+                        logical_bus.push_back('O');
+                        break;
+                    default:
+                        logical_bus.push_back('X');
+                        break;
+                }
+                // Only provide VPN for the Counter and ActionData case until validated on
+                // the other type of logical memory type.
+                if (mem.type == Memories::Use::COUNTER)
+                    have_vpn = true;
+            }
         } else {
             row.push_back(r.row);
             bus.push_back(r.bus);
@@ -1913,7 +1939,10 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "search_bus: " << bus << std::endl;
                 out << indent << "result_bus: " << result_bus << std::endl;
             } else {
-                out << indent << "bus: " << bus << std::endl;
+                if (logical)
+                    out << indent << "logical_bus: " << logical_bus << std::endl;
+                else
+                    out << indent << "bus: " << bus << std::endl;
             }
         } else if (separate_bus) {
             out << indent << "result_bus: " << result_bus << std::endl;
@@ -1943,7 +1972,10 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
                 out << indent << "search_bus: " << bus[0] << std::endl;
                 out << indent << "result_bus: " << result_bus[0] << std::endl;
             } else {
-                out << indent << "bus: " << bus[0] << std::endl;
+                if (logical)
+                    out << indent << "logical_bus: " << logical_bus[0] << std::endl;
+                else
+                    out << indent << "bus: " << bus[0] << std::endl;
             }
         } else if (separate_bus) {
             out << indent << "result_bus: " << result_bus[0] << std::endl;
@@ -1975,6 +2007,11 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             else
                 out << indent << "- " << home_row[0] << std::endl;
         }
+    } else if (!alu_rows.empty()) {
+        if (alu_rows.size() > 1)
+            out << indent << "home_row: " << alu_rows << std::endl;
+        else
+            out << indent << "home_row: " << alu_rows[0] << std::endl;
     }
     if (!mem.color_mapram.empty()) {
         out << indent++ << "color_maprams:" << std::endl;

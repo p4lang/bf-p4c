@@ -100,6 +100,9 @@ void CounterTable::pass1() {
     // stage->table_use[timing_thread(gress)] |= Stage::USE_SELECTOR;
     int prev_row = -1;
     for (auto &row : layout) {
+        if (home_rows.count(row.row))
+            prev_row = -1;
+
         if (prev_row >= 0)
             need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
         else
@@ -199,12 +202,14 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common MeterTable::write_regs
-    Layout *home = &layout[0];
+    Layout *home = nullptr;
     bool push_on_overflow = false;
     auto &map_alu =  regs.rams.map_alu;
     auto &adrdist = regs.rams.match.adrdist;
-    DataSwitchboxSetup<REGS> swbox(regs, this);
+    DataSwitchboxSetup<REGS> *swbox = nullptr;
+    std::vector<int> stats_groups;
     int minvpn, maxvpn;
+
     layout_vpn_bounds(minvpn, maxvpn, true);
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
@@ -214,20 +219,29 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
+        auto home_it = home_rows.find(logical_row.row);
+        if (home_it != home_rows.end()) {
+            home = &logical_row;
+            swbox = new DataSwitchboxSetup<REGS>(regs, this, logical_row.row,
+                                                 (++home_it == home_rows.end()) ? -1 : *home_it);
+
+            stats_groups.push_back(swbox->get_home_row() / 2);
+
+            if (swbox->get_home_row() != row)
+                swbox->setup_row(swbox->get_home_row());
+        }
+        BUG_CHECK(home != nullptr);
         LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
-        if (&logical_row == home) {
-            if (swbox.get_home_row() != row)
-                swbox.setup_row(swbox.get_home_row()); }
-        swbox.setup_row(row);
+        swbox->setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
-            swbox.setup_row_col(row, col, *vpn);
+            swbox->setup_row_col(row, col, *vpn);
             write_mapram_regs(regs, row, *mapram, *vpn, MapRam::STATISTICS);
             if (gress)
                 regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-            int stats_group_index = swbox.get_home_row()/2;
+            int stats_group_index = swbox->get_home_row()/2;
             auto &stats = map_alu.stats_wrap[stats_group_index].stats;
             auto &stat_ctl = stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
@@ -266,61 +280,65 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
-            if (swbox.get_home_row_logical() >= 8 && logical_row.row < 8) {
+            if (swbox->get_home_row_logical() >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
                 push_on_overflow = true;
                 BUG_CHECK(options.target == TOFINO);
             } else {
-                adr_ctl.adr_dist_oflo_adr_xbar_source_index = swbox.get_home_row_logical() % 8;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = swbox->get_home_row_logical() % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::STATISTICS; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
         }
     }
-    int stats_group_index = swbox.get_home_row()/2;
     bool run_at_eop = this->run_at_eop();
-    auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[stats_group_index];
-    for (MatchTable *m : match_tables) {
-        run_at_eop = run_at_eop || m->run_at_eop();
-        adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id] |= 1U << stats_group_index;
-        auto &dump_ctl = regs.cfg_regs.stats_dump_ctl[m->logical_id];
-        dump_ctl.stats_dump_entries_per_word = format->groups();
-        if (type == BYTES || type == BOTH)
-            dump_ctl.stats_dump_has_bytes = 1;
-        if (type == PACKETS || type == BOTH)
-            dump_ctl.stats_dump_has_packets = 1;
-        dump_ctl.stats_dump_offset = minvpn;
-        dump_ctl.stats_dump_size = maxvpn;
-        if (direct) {
-            adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
-            if (m->is_ternary())
-                movereg_stats_ctl.movereg_stats_ctl_tcam = 1; }
-        movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
-        adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
-            .set_subfield(4+stats_group_index, 3*(m->logical_id%8U), 3);
-        adrdist.mau_ad_stats_virt_lt[stats_group_index] |= 1U << m->logical_id; }
-    movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
-    movereg_stats_ctl.movereg_stats_ctl_direct = direct;
-    if (run_at_eop) {
-        if (teop >= 0) {
-            setup_teop_regs(regs, stats_group_index);
+    if (home_rows.size() > 1)
+        write_alu_vpn_range(regs);
+
+    BUG_CHECK(stats_groups.size() == home_rows.size());
+    for (int &idx : stats_groups) {
+        auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[idx];
+        for (MatchTable *m : match_tables) {
+            run_at_eop = run_at_eop || m->run_at_eop();
+            adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id] |= 1U << idx;
+            auto &dump_ctl = regs.cfg_regs.stats_dump_ctl[m->logical_id];
+            dump_ctl.stats_dump_entries_per_word = format->groups();
+            if (type == BYTES || type == BOTH)
+                dump_ctl.stats_dump_has_bytes = 1;
+            if (type == PACKETS || type == BOTH)
+                dump_ctl.stats_dump_has_packets = 1;
+            dump_ctl.stats_dump_offset = minvpn;
+            dump_ctl.stats_dump_size = maxvpn;
+            if (direct) {
+                adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
+                if (m->is_ternary())
+                    movereg_stats_ctl.movereg_stats_ctl_tcam = 1; }
+            movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
+            adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
+                .set_subfield(4+idx, 3*(m->logical_id%8U), 3);
+            adrdist.mau_ad_stats_virt_lt[idx] |= 1U << m->logical_id; }
+        movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
+        movereg_stats_ctl.movereg_stats_ctl_direct = direct;
+        if (run_at_eop) {
+            if (teop >= 0) {
+                setup_teop_regs(regs, idx);
+            } else {
+                adrdist.deferred_ram_ctl[MoveReg::STATS][idx].deferred_ram_en = 1;
+                adrdist.deferred_ram_ctl[MoveReg::STATS][idx].deferred_ram_thread = gress;
+                if (gress)
+                    regs.cfg_regs.mau_cfg_dram_thread |= 1 << idx;
+                movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+            }
+            adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |=
+                1 << (4 + idx);
         } else {
-            adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_en = 1;
-            adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
-            if (gress)
-                regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
-            movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+            adrdist.packet_action_at_headertime[0][idx] = 1;
+            adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en |= 1 << idx;
         }
-        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
-            |= 1 << (4 + stats_group_index);
-    } else {
-        adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
-        adrdist.stats_bubble_req[timing_thread(gress)].bubble_req_1x_class_en
-            |= 1 << stats_group_index;
+        if (push_on_overflow) {
+            adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+            adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }
     }
-    if (push_on_overflow) {
-        adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
-        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) const {
@@ -328,7 +346,15 @@ void CounterTable::gen_tbl_cfg(json::vector &out) const {
     int size = (layout_size() - 1)*1024*format->groups();
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
-    add_alu_index(stage_tbl, "stats_alu_index");
+    if (home_rows.size() > 1)
+#if 0
+        // FIXME: Emit the vector once supported by the driver
+        add_alu_indexes(stage_tbl, "stats_alu_index");
+#else
+        add_alu_index(stage_tbl, "stats_alu_index");
+#endif
+    else
+        add_alu_index(stage_tbl, "stats_alu_index");
     // FIXME: Eliminated by DRV-1856
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
