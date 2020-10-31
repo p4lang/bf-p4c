@@ -1730,7 +1730,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
 
     int                 sweep_interval = 2;
 public:
-    enum { IDLE_MAP_ADDR = 0, STATS_MAP_ADDR = 1 }  color_mapram_addr = IDLE_MAP_ADDR;
+    enum { NO_COLOR_MAP, IDLE_MAP_ADDR, STATS_MAP_ADDR }  color_mapram_addr = NO_COLOR_MAP;
     int direct_shiftcount() const override;
     int indirect_shiftcount() const override;
     int address_shift() const override;

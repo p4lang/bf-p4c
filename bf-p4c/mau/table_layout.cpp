@@ -1408,12 +1408,19 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
     auto *ba = findContext<IR::MAU::BackendAttached>();
     bitvec possible;
     possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::STATS));
+    bool need_stats = false;
 
     // In uArch section 6.4.3.5.3 Hash Distribution, the hash distribution unit can create
     // stats and meter addresses, but not idletime address.  Thus if the meter is accessed
     // by hash distribution, then the color mapram must be addressed by stats
     if (ba->addr_location != IR::MAU::AddrLocation::HASH)
         possible.setbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME));
+
+    // Can't use idletime if the meter is shared as only one logical table can write
+    // to an idletime bus
+    if (!mtr->direct && self.att_info.tables_from_attached(mtr).size() > 1) {
+        need_stats = true;
+        possible.clrbit(static_cast<int>(IR::MAU::ColorMapramAddress::IDLETIME)); }
 
     auto pos = self.possible_addresses.find(mtr);
     if (pos != self.possible_addresses.end())
@@ -1426,9 +1433,8 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const IR::MAU::Meter 
 
     if (possible.empty()) {
         ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
-                "The meter %1% requires either an idletime or stats address bus to return "
-                "a color value, and no bus is available.", mtr);
-    }
+                "The meter %1% requires %2% stats address bus to return a color value, and no "
+                "bus is available.", mtr, need_stats ? "a" : "either an idletime or"); }
     self.possible_addresses[mtr] = possible;
     return false;
 }
@@ -1477,7 +1483,7 @@ TableLayout::TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia)
     addPasses({
         new ValidateTableSize,
         &att_info,
-        new MeterColorMapramAddress,
+        new MeterColorMapramAddress(att_info),
         new RandomExternUsedOncePerAction,
         new DoTableLayout(p, lc, att_info),
         new ValidateActionProfileFormat(lc),

@@ -5255,9 +5255,16 @@ control downlink_eg_qppb_acl(inout switch_header_t hdr, inout switch_egress_meta
 
 control downlink_eg_qos_acl(inout switch_header_t hdr, inout switch_lookup_fields_t lkp, inout switch_egress_metadata_t eg_md)(switch_uint32_t ipv4_table_size=1024, switch_uint32_t ipv6_table_size=512) {
     Counter<bit<32>, bit<16>>(ipv4_table_size + ipv6_table_size, CounterType_t.PACKETS_AND_BYTES) stats;
+    bit<16> save_stats_id;
+    bool trigger_counter = false;
     Meter<bit<12>>(ipv4_table_size + ipv6_table_size, MeterType_t.PACKETS) meter;
     action set_qos(bit<16> stats_id, switch_meter_index_t meter_id, bit<1> set_dscp, bit<6> dscp) {
-        stats.count(stats_id);
+        // Shared meters require the stats bus for color as idletime busses can't be shared
+        // between logical tables.  So a shared meter can't be combined with a counter.  Avoid
+        // this problem by setting a flag to trigger the counter later
+        // stats.count(stats_id);
+        trigger_counter = true;
+        save_stats_id = stats_id;
         eg_md.qos.acl_meter_color = (bit<2>)meter.execute(meter_id);
         eg_md.qos.acl_set_dscp = set_dscp;
         eg_md.qos.acl_dscp = dscp;
@@ -5324,6 +5331,8 @@ control downlink_eg_qos_acl(inout switch_header_t hdr, inout switch_lookup_field
         } else if (eg_md.lkp.ip_type == SWITCH_IP_TYPE_IPV6) {
             ipv6_acl.apply();
         }
+        if (trigger_counter)
+            stats.count(save_stats_id);
     }
 }
 

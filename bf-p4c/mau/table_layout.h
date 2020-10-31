@@ -154,6 +154,7 @@ class RandomExternUsedOncePerAction : public MauInspector {
 class MeterColorMapramAddress : public PassManager {
     ordered_map<const IR::MAU::Table *, bitvec> occupied_buses;
     ordered_map<const IR::MAU::Meter *, bitvec> possible_addresses;
+    const SplitAttachedInfo &att_info;
 
     Visitor::profile_t init_apply(const IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
@@ -194,7 +195,7 @@ class MeterColorMapramAddress : public PassManager {
     };
 
  public:
-    MeterColorMapramAddress() {
+    explicit MeterColorMapramAddress(const SplitAttachedInfo &att_info) : att_info(att_info) {
         addPasses({
             new FindBusUsers(*this),
             new DetermineMeterReqs(*this),

@@ -205,6 +205,10 @@ class SplitAttachedInfo : public PassManager {
         return table_to_attached_map.at(tbl->name);
     }
 
+    const ordered_set<const IR::MAU::Table *> &
+    tables_from_attached(const IR::Attached *att) const {
+        return attached_to_table_map.at(att->name); }
+
  private:
     int addr_bits_to_phv_on_split(const IR::MAU::Table *tbl) const;
     bool enable_to_phv_on_split(const IR::MAU::Table *tbl) const;

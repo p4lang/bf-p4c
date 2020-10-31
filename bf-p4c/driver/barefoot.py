@@ -667,6 +667,7 @@ class BarefootBackend(BackendDriver):
         except:
             pass
             # raise
+        return 1
 
     def runCleaner(self):
         if self._verbose:

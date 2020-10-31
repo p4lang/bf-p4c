@@ -150,6 +150,8 @@ void MeterTable::pass1() {
     alloc_maprams();
     if (color_maprams.empty() && type != LPF && type != RED)
         error(lineno, "Missing color_maprams in meter table %s", name());
+    if (uses_colormaprams() && color_mapram_addr == NO_COLOR_MAP)
+        error(lineno, "Missing color mapram address type in table %s", name());
     for (auto &r : color_maprams) {
         for (auto col : r.cols) {
             if (Table *old = stage->mapram_use[r.row][col])
@@ -190,6 +192,8 @@ void MeterTable::pass2() {
             }
         }
     }
+    if (get_match_tables().size() > 1 && color_mapram_addr == IDLE_MAP_ADDR)
+        error(lineno, "Shared meter cannot use idletime addressing for color maprams");
 }
 
 void MeterTable::pass3() {
@@ -434,13 +438,14 @@ void MeterTable::write_regs(REGS &regs) {
             if (run_at_eop()) movereg_meter_ctl.movereg_meter_ctl_deferred = 1;
             movereg_meter_ctl.movereg_ad_meter_shift = 7;
             movereg_meter_ctl.movereg_meter_ctl_lt = logical_id;
-            if (direct) {
+            if (direct)
                 movereg_meter_ctl.movereg_meter_ctl_direct = 1;
-                adrdist.movereg_ad_direct[1] |= 1U << logical_id; }
-            // FIXME -- should these be set for all match tables attached to?
             movereg_meter_ctl.movereg_meter_ctl_color_en = 1;
-            adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[logical_id/8U]
-                .set_subfield(4 | meter_group_index, 3 * (logical_id%8U), 3);
+            for (MatchTable *m : match_tables) {
+                if (direct)
+                    adrdist.movereg_ad_direct[1] |= 1U << m->logical_id;
+                adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U]
+                    .set_subfield(4 | meter_group_index, 3 * (m->logical_id%8U), 3); }
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= UPPER_MATCH_CENTRAL_FIRST_LOGICAL_ROW &&
@@ -490,7 +495,8 @@ void MeterTable::write_regs(REGS &regs) {
         auto vpn = row.vpns.begin();
         if (color_mapram_addr == STATS_MAP_ADDR) {
             BUG_CHECK((row.row % 2) == 0);
-            adrdist.mau_ad_stats_virt_lt[row.row / 2] |= (1U << logical_id);
+            for (MatchTable *m : match_tables)
+                adrdist.mau_ad_stats_virt_lt[row.row / 2] |= (1U << m->logical_id);
         }
         // Enable the row to be used (even if only color maprams are on this row)
         map_alu_row.i2portctl.synth2port_ctl.synth2port_enable = 1;
