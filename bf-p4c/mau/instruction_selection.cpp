@@ -380,8 +380,13 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
             // Have to put these instructions at the highest level of the instruction
             created_instrs.push_back(makeInstr(prim->operands[idx], output)); }
         rv = nullptr;
-        if (!prim->type->is<IR::Type::Void>())
+        if (prim->type->is<IR::Type::Void>()) {
+        } else if (prim->type->is<IR::Type::Bits>() || prim->type->is<IR::Type_Enum>() ||
+                   prim->type->is<IR::Type::Boolean>()) {
             rv = makeInstr(new IR::TempVar(prim->type), 0);
+        } else {
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: %2% return type must be simple "
+                  "(void, bit, bool or enum), not complex", prim, objType); }
     } else if (prim->name == "Register.clear" || prim->name == "DirectRegister.clear") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         meter_type = IR::MAU::MeterType::STFUL_CLEAR;
