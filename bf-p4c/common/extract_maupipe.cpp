@@ -365,7 +365,8 @@ class ActionBodySetup : public Inspector {
 };
 
 static const IR::MAU::Action *createActionFunction(const IR::P4Action *ac,
-                                                   const IR::Vector<IR::Argument> *args) {
+                                                   const IR::Vector<IR::Argument> *args,
+                                                   const Visitor::Context *ctxt) {
     auto rv = new IR::MAU::Action(ac->srcInfo, ac->name, ac->annotations);
     rv->name.name = ac->externalName();
     ActionArgSetup aas;
@@ -387,7 +388,7 @@ static const IR::MAU::Action *createActionFunction(const IR::P4Action *ac,
                 aas.add_arg(param->name, args->at(arg_idx++)->expression); } }
     if (arg_idx != (args ? args->size(): 0))
         error("%s: Too many args for %s", args->srcInfo, ac);
-    ac->body->apply(ActionBodySetup(rv));
+    ac->body->apply(ActionBodySetup(rv), ctxt);
     ActionFunctionSetup afs(&aas);
     return rv->apply(afs)->to<IR::MAU::Action>();
 }
@@ -1499,7 +1500,10 @@ class GetBackendTables : public MauInspector {
             // the createBuiltin pass in frontend has already converted IR::PathExpression
             // to IR::MethodCallExpression.
             auto mce = act->expression->to<IR::MethodCallExpression>();
-            auto newaction = createActionFunction(decl, mce->arguments);
+            auto newaction = createActionFunction(decl, mce->arguments,
+                // if this is a @hidden table it was probably created from statements in
+                // the apply, so include that context when looking for @in_hash annotations
+                table->getAnnotations()->getSingle("hidden") ? getContext() : nullptr);
             SetupActionProperties sap(table, act, refMap);
             auto newaction_props = newaction->apply(sap)->to<IR::MAU::Action>();
             if (!tt->actions.count(newaction_props->name.originalName))
